@@ -12,7 +12,6 @@ import io.temporal.common.RetryOptions
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import java.lang.reflect.InvocationTargetException
 import java.time.Duration
 
 /**

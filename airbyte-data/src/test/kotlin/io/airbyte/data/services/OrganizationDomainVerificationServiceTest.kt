@@ -4,7 +4,6 @@
 
 package io.airbyte.data.services
 
-import io.airbyte.config.OrganizationEmailDomain
 import io.airbyte.config.SsoConfig
 import io.airbyte.config.SsoConfigStatus
 import io.airbyte.data.repositories.OrganizationDomainVerificationRepository
@@ -16,7 +15,6 @@ import io.airbyte.domain.models.DomainVerificationStatus
 import io.airbyte.domain.models.OrganizationDomainVerification
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested

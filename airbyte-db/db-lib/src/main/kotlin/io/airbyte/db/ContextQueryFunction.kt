@@ -5,7 +5,6 @@
 package io.airbyte.db
 
 import org.jooq.DSLContext
-import java.sql.SQLException
 
 /**
  * Query.

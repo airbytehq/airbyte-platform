@@ -36,7 +36,6 @@ import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.json.Jsons.serialize
-import io.airbyte.commons.server.builder.manifest.processor.ManifestProcessor
 import io.airbyte.commons.server.builder.manifest.processor.ManifestServerManifestProcessor
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater
@@ -72,7 +71,6 @@ import io.airbyte.oauth.declarative.DeclarativeOAuthFlow
 import io.airbyte.protocol.models.v0.AdvancedAuth
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
-import io.airbyte.validation.json.JsonValidationException
 import io.mockk.mockk
 import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
@@ -83,7 +81,6 @@ import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
-import java.io.IOException
 import java.net.URI
 import java.time.OffsetDateTime
 import java.util.Map

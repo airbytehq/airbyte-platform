@@ -9,7 +9,6 @@ import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
-import io.airbyte.domain.models.OrganizationId
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

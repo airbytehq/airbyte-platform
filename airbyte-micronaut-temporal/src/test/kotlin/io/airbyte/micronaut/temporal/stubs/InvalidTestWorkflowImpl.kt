@@ -5,7 +5,6 @@
 package io.airbyte.micronaut.temporal.stubs
 
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
-import io.airbyte.commons.temporal.exception.RetryableException
 
 open class InvalidTestWorkflowImpl : TestWorkflow {
   @TemporalActivityStub(activityOptionsBeanName = "missingActivityOptions")

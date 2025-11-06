@@ -27,7 +27,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.mockito.quality.Strictness
 import org.openapitools.client.infrastructure.ClientException
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 

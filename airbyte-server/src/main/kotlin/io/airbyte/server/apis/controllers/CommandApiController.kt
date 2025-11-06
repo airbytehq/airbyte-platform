@@ -4,7 +4,6 @@
 
 package io.airbyte.server.apis.controllers
 
-import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.generated.CommandApi
 import io.airbyte.api.model.generated.CancelCommandRequest
 import io.airbyte.api.model.generated.CancelCommandResponse
@@ -62,7 +61,6 @@ import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
-import io.micronaut.http.server.exceptions.NotFoundException
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule

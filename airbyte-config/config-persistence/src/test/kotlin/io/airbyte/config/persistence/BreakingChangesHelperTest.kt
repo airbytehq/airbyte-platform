@@ -15,7 +15,6 @@ import io.airbyte.config.DestinationConnection
 import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.persistence.BreakingChangesHelper.WorkspaceBreakingChangeInfo
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ScopedConfigurationService
@@ -27,7 +26,6 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import java.io.IOException
 import java.util.UUID
 import java.util.stream.Stream
 

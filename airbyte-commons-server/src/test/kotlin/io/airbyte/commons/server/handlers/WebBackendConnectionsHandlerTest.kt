@@ -8,8 +8,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStream
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AttemptRead
 import io.airbyte.api.model.generated.AttemptStatus
 import io.airbyte.api.model.generated.CatalogDiff
@@ -22,7 +20,6 @@ import io.airbyte.api.model.generated.ConnectionStateType
 import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.ConnectionUpdate
 import io.airbyte.api.model.generated.DestinationRead
-import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.FieldAdd
 import io.airbyte.api.model.generated.FieldRemove
 import io.airbyte.api.model.generated.FieldTransform
@@ -42,7 +39,6 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.StreamTransform
 import io.airbyte.api.model.generated.StreamTransformUpdateStream
-import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.model.generated.Tag
 import io.airbyte.api.model.generated.WebBackendConnectionCreate
 import io.airbyte.api.model.generated.WebBackendConnectionListFilters
@@ -73,7 +69,6 @@ import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.helpers.CatalogConfigDiffHelper
 import io.airbyte.commons.server.helpers.ConnectionHelpers
-import io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_NAME
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateApiCatalogWithTwoFields
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateBasicApiCatalog
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateBasicConfiguredAirbyteCatalog
@@ -100,7 +95,6 @@ import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
@@ -123,12 +117,8 @@ import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
-import io.airbyte.protocol.models.JsonSchemaType
-import io.airbyte.protocol.models.v0.CatalogHelpers
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import io.airbyte.protocol.models.v0.Field
 import io.airbyte.validation.json.JsonSchemaValidator
-import io.airbyte.validation.json.JsonValidationException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -142,7 +132,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import java.io.IOException
 import java.lang.reflect.Method
 import java.time.Instant
 import java.util.Arrays

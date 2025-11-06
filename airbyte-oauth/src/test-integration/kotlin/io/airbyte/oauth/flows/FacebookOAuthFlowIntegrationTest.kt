@@ -6,14 +6,12 @@ package io.airbyte.oauth.flows
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SourceOAuthParameter
-import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.services.OAuthService
 import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.CLIENT_ID_KEY
 import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.OAuthFlowImplementation
 import io.airbyte.oauth.flows.facebook.FacebookMarketingOAuthFlow
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -21,7 +19,6 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
-import java.io.IOException
 import java.net.http.HttpClient
 import java.nio.file.Files
 import java.nio.file.Path

@@ -27,7 +27,6 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.UserId
 import io.airbyte.publicApi.server.generated.apis.PublicGroupMembersApi
 import io.airbyte.publicApi.server.generated.models.GroupMemberAddRequest
-import io.airbyte.publicApi.server.generated.models.GroupMembersResponse
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.DELETE

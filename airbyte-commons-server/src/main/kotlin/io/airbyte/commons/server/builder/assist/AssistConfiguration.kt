@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.builder.assist
 
-import java.io.IOException
 import java.net.HttpURLConnection
 
 /**

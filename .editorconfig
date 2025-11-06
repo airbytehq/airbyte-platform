@@ -27,6 +27,7 @@ ij_json_wrap_long_lines = false
 indent_size = 2
 max_line_length = 150
 ij_kotlin_packages_to_use_import_on_demand = unset
+ktlint_standard_no-unused-imports = enabled
 
 [{*.markdown,*.md}]
 ij_markdown_force_one_space_after_blockquote_symbol = true

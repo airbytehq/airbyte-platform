@@ -15,7 +15,6 @@ import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.MetricTags.SECRET_COORDINATES_UPDATED
 import io.airbyte.validation.json.JsonSchemaValidator
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton

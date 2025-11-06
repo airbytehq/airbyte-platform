@@ -17,7 +17,6 @@ import io.airbyte.config.SupportLevel
 import io.airbyte.config.Tag
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
@@ -34,14 +33,11 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.test.utils.BaseConfigDatabaseTest
-import io.airbyte.validation.json.JsonValidationException
 import io.mockk.every
 import io.mockk.mockk
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
-import java.io.IOException
-import java.sql.SQLException
 import java.util.UUID
 import java.util.stream.Collectors
 

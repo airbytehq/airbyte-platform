@@ -14,7 +14,6 @@ import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData
 import io.airbyte.config.persistence.BreakingChangesHelper
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
@@ -24,7 +23,6 @@ import io.airbyte.featureflag.NotifyBreakingChangesOnSupportStateUpdate
 import io.airbyte.featureflag.Workspace
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID

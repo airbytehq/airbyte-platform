@@ -36,7 +36,6 @@ import io.airbyte.config.helpers.ConnectorRegistryConverters.toRcSourceDefinitio
 import io.airbyte.config.helpers.ConnectorRegistryConverters.toStandardDestinationDefinition
 import io.airbyte.config.helpers.ConnectorRegistryConverters.toStandardSourceDefinition
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

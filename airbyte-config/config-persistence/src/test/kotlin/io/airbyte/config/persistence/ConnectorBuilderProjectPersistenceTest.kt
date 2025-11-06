@@ -43,7 +43,6 @@ import org.junit.function.ThrowingRunnable
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import java.io.IOException
 import java.util.Arrays
 import java.util.Optional
 import java.util.UUID

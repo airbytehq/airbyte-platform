@@ -16,14 +16,11 @@ import io.airbyte.commons.server.handlers.helpers.ConnectionMatcher
 import io.airbyte.commons.server.handlers.helpers.DestinationMatcher
 import io.airbyte.commons.server.handlers.helpers.SourceMatcher
 import io.airbyte.config.StandardSync
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.io.IOException
 
 /**
  * Handles matching connections to search criteria.

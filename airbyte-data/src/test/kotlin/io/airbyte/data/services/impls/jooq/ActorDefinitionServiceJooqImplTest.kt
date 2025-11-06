@@ -5,7 +5,6 @@
 package io.airbyte.data.services.impls.jooq
 
 import io.airbyte.commons.json.Jsons.clone
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectionTimelineEventService
@@ -17,13 +16,10 @@ import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import java.io.IOException
-import java.sql.SQLException
 import java.util.UUID
 
 internal class ActorDefinitionServiceJooqImplTest : BaseConfigDatabaseTest() {

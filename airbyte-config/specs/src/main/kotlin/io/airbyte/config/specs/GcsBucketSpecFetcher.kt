@@ -5,7 +5,6 @@
 package io.airbyte.config.specs
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.api.client.util.Preconditions
 import com.google.cloud.storage.Blob
 import com.google.cloud.storage.Storage
 import io.airbyte.commons.annotation.InternalForTesting

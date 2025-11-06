@@ -16,7 +16,6 @@ import org.mockito.ArgumentMatchers
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
-import java.io.IOException
 import java.util.concurrent.Callable
 
 @ExtendWith(MockitoExtension::class)

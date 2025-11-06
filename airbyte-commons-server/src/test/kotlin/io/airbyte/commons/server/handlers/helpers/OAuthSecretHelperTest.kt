@@ -14,11 +14,9 @@ import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper.setSecretsIn
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper.validateOauthParamConfigAndReturnAdvancedAuthSecretSpec
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
-import java.io.IOException
 
 internal class OAuthSecretHelperTest {
   @Test

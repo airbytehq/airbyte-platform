@@ -18,7 +18,6 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SourceService
@@ -30,7 +29,6 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.oauth.OAuthImplementationFactory
-import io.airbyte.validation.json.JsonValidationException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -39,7 +37,6 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 

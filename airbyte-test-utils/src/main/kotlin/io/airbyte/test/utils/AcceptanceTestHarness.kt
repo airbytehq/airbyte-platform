@@ -39,10 +39,6 @@ import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.resources.Resources
-import io.airbyte.commons.temporal.TemporalUtils
-import io.airbyte.commons.temporal.TemporalWorkflowUtils
-import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
-import io.airbyte.commons.temporal.scheduling.state.WorkflowState
 import io.airbyte.db.Database
 import io.airbyte.db.factory.DataSourceFactory.close
 import io.airbyte.db.jdbc.JdbcUtils
@@ -50,7 +46,6 @@ import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.Flag
 import io.airbyte.featureflag.tests.TestFlagsSetter
 import io.airbyte.featureflag.tests.TestFlagsSetter.FlagOverride
-import io.airbyte.micronaut.runtime.AirbyteTemporalConfig
 import io.airbyte.test.utils.Databases.createDataSource
 import io.airbyte.test.utils.Databases.createDslContext
 import io.airbyte.test.utils.Databases.listAllTables
@@ -59,7 +54,6 @@ import io.airbyte.test.utils.GKEPostgresConfig.getDataSource
 import io.airbyte.test.utils.GKEPostgresConfig.runSqlScript
 import io.airbyte.test.utils.PostgreSQLContainerHelper.runSqlScript
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.temporal.client.WorkflowClient
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.openapitools.client.infrastructure.ClientException
@@ -70,14 +64,11 @@ import org.testcontainers.utility.DockerImageName
 import org.testcontainers.utility.MountableFile
 import java.io.IOException
 import java.net.Inet4Address
-import java.net.URISyntaxException
 import java.net.UnknownHostException
 import java.nio.file.Path
-import java.sql.SQLException
 import java.time.Duration
 import java.time.Instant
 import java.util.Locale
-import java.util.Optional
 import java.util.UUID
 import javax.sql.DataSource
 

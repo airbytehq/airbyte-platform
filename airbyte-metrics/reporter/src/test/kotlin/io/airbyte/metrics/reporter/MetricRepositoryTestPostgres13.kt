@@ -5,7 +5,6 @@
 package io.airbyte.metrics.reporter
 
 import io.airbyte.db.factory.DSLContextFactory.create
-import io.airbyte.db.init.DatabaseInitializationException
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
@@ -17,7 +16,6 @@ import org.jooq.JSONB
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.BeforeAll
 import org.testcontainers.containers.PostgreSQLContainer
-import java.io.IOException
 import java.util.UUID
 
 object MetricRepositoryTestPostgres13 : MetricRepositoryTest() {

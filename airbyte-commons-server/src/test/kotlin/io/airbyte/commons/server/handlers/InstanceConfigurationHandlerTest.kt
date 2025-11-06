@@ -22,14 +22,12 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.User
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.micronaut.runtime.AirbyteAnalyticsConfig
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.airbyte.micronaut.runtime.AnalyticsTrackingStrategy
-import io.airbyte.validation.json.JsonValidationException
 import io.fabric8.kubernetes.api.model.Node
 import io.fabric8.kubernetes.api.model.NodeList
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation
@@ -46,11 +44,9 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.io.IOException
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
-import java.util.Arrays
 import java.util.Base64
 import java.util.Date
 import java.util.Optional

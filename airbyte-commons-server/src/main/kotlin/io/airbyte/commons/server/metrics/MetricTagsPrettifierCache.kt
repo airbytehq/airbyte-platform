@@ -9,7 +9,6 @@ import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.cache.annotation.Cacheable
-import jakarta.inject.Singleton
 import java.util.UUID
 
 val logger = KotlinLogging.logger {}

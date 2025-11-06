@@ -7,7 +7,6 @@ package io.airbyte.commons.server.builder.assist
 import io.airbyte.micronaut.runtime.AirbyteConnectorBuilderConfig
 import jakarta.inject.Singleton
 import org.jooq.tools.StringUtils
-import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.MalformedURLException
 import java.net.ProtocolException

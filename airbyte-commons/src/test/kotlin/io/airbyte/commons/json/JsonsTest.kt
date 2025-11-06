@@ -39,7 +39,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.Objects
 import java.util.Optional

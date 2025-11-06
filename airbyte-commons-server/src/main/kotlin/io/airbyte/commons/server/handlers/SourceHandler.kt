@@ -77,10 +77,8 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.Map
 import java.util.Optional
 import java.util.UUID

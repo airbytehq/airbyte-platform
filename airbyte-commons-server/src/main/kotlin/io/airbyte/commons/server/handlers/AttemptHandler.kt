@@ -39,7 +39,6 @@ import io.airbyte.config.SyncStats
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.StatePersistence
 import io.airbyte.config.persistence.helper.GenerationBumper
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.StreamAttemptMetadataService
@@ -48,7 +47,6 @@ import io.airbyte.featureflag.EnableResumableFullRefresh
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton

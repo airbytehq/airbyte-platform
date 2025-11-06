@@ -15,7 +15,6 @@ import io.airbyte.config.persistence.StatePersistence
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.metrics.lib.MetricTags
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.Map
 import java.util.Optional
 import java.util.UUID

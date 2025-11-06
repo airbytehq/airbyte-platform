@@ -6,10 +6,8 @@ package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Dataplane
 import io.airbyte.data.repositories.entities.DataplaneGroup
-import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
-import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,7 +20,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.time.OffsetDateTime
 import java.util.UUID
-import kotlin.booleanArrayOf
 
 @MicronautTest
 class DataplaneRepositoryTest : AbstractConfigRepositoryTest() {

@@ -9,7 +9,6 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionContextRead
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionRead
-import io.airbyte.api.client.model.generated.ConnectionSchedule
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.client.model.generated.ConnectionScheduleType
 import io.airbyte.api.client.model.generated.ConnectionStatus

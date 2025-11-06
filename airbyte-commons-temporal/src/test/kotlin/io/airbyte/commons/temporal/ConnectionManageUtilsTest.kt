@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.temporal
 
-import io.airbyte.commons.temporal.exception.DeletedWorkflowException
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.metrics.MetricClient
 import io.temporal.client.BatchRequest

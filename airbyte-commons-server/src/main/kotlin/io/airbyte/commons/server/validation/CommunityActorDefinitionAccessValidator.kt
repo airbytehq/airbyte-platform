@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.validation
 
-import io.airbyte.commons.server.errors.ApplicationErrorKnownException
 import jakarta.inject.Singleton
 import java.util.UUID
 

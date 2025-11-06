@@ -7,7 +7,6 @@ package io.airbyte.commons.temporal
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.temporal.config.TemporalQueueConfiguration
-import io.airbyte.commons.temporal.exception.DeletedWorkflowException
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.JobInformation
@@ -59,7 +58,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.capture
 import org.mockito.kotlin.eq
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID

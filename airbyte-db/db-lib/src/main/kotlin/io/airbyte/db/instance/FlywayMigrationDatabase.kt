@@ -9,7 +9,6 @@ import io.airbyte.db.factory.DSLContextFactory.create
 import io.airbyte.db.factory.DataSourceFactory.close
 import io.airbyte.db.factory.DataSourceFactory.create
 import io.airbyte.db.factory.FlywayFactory.create
-import io.airbyte.db.init.DatabaseInitializationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.Flyway
 import org.jooq.DSLContext
@@ -18,7 +17,6 @@ import org.jooq.impl.DSL
 import org.jooq.meta.postgres.PostgresDatabase
 import org.jooq.tools.jdbc.JDBCUtils
 import org.testcontainers.containers.PostgreSQLContainer
-import java.io.IOException
 import java.sql.Connection
 import javax.sql.DataSource
 

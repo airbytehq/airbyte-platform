@@ -35,7 +35,6 @@ import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
-import java.io.IOException
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.stream.Stream

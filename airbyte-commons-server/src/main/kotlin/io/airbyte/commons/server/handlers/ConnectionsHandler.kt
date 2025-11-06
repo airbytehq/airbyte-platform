@@ -92,9 +92,7 @@ import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.protocol.CatalogDiffHelpers.getCatalogDiff
 import io.airbyte.commons.server.converters.ApiPojoConverters
-import io.airbyte.commons.server.converters.CatalogDiffConverters.streamTransformToApi
 import io.airbyte.commons.server.converters.ConnectionHelper
 import io.airbyte.commons.server.converters.ConnectionHelper.Companion.validateCatalogDoesntContainDuplicateStreamNames
 import io.airbyte.commons.server.converters.ConnectionHelper.Companion.validateWorkspace
@@ -140,13 +138,11 @@ import io.airbyte.config.ScopeType
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamDescriptorForDestination
-import io.airbyte.config.helpers.CatalogHelpers.Companion.configuredCatalogToCatalog
 import io.airbyte.config.helpers.ScheduleHelpers.getIntervalInSecond
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.StatePersistence
 import io.airbyte.config.persistence.StreamGenerationRepository
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal

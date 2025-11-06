@@ -22,7 +22,6 @@ import io.airbyte.config.UserPermission
 import io.airbyte.config.helpers.PermissionHelper.definedPermissionGrantsTargetPermission
 import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.data.ConfigNotFoundException
-import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
 import io.airbyte.data.services.WorkspaceService

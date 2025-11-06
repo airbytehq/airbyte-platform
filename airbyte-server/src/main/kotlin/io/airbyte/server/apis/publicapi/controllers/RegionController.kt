@@ -10,7 +10,6 @@ import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
-import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.PublicRegionsApi
 import io.airbyte.publicApi.server.generated.models.RegionCreateRequest

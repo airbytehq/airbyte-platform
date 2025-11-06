@@ -6,8 +6,6 @@ package io.airbyte.commons.server.handlers
 
 import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.CatalogConfigDiff
 import io.airbyte.api.model.generated.CatalogDiff
 import io.airbyte.api.model.generated.ConnectionCreate
@@ -59,7 +57,6 @@ import io.airbyte.config.RefreshStream
 import io.airbyte.config.Tag
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
-import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
@@ -76,10 +73,7 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Singleton
-import jakarta.validation.Valid
-import java.io.IOException
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID

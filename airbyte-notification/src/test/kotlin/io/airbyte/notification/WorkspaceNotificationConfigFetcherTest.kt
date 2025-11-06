@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import java.io.IOException
 import java.util.UUID
 
 internal class WorkspaceNotificationConfigFetcherTest {

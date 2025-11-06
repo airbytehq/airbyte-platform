@@ -9,7 +9,6 @@ import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.TemporalTaskQueueUtils.getTaskQueue
 import io.airbyte.commons.temporal.TemporalWorkflowUtils.buildStartWorkflowInput
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
-import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.commons.temporal.scheduling.CheckCommandApiInput
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.JobInformation

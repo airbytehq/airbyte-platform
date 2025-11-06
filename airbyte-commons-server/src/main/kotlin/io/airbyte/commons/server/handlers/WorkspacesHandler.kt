@@ -35,7 +35,6 @@ import io.airbyte.commons.server.converters.WorkspaceConverter.domainToApiModel
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter.toPersistenceWrite
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException
 import io.airbyte.commons.server.errors.InternalServerKnownException
-import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.commons.server.handlers.helpers.validateWorkspace
 import io.airbyte.commons.server.limits.ConsumptionService
 import io.airbyte.commons.server.limits.ProductLimitsProvider
@@ -62,13 +61,11 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.HydrateLimits
 import io.airbyte.featureflag.Workspace
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.core.util.CollectionUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.tools.StringUtils
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier

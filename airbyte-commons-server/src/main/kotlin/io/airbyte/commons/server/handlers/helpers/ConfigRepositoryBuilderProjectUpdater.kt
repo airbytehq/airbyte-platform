@@ -5,9 +5,7 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectorBuilderService
-import java.io.IOException
 
 class ConfigRepositoryBuilderProjectUpdater(
   private val connectorBuilderService: ConnectorBuilderService,

@@ -7,13 +7,11 @@ package io.airbyte.db.instance.jobs
 import io.airbyte.commons.resources.Resources
 import io.airbyte.db.Database
 import io.airbyte.db.factory.DatabaseCheckFactory.Companion.createJobsDatabaseInitializer
-import io.airbyte.db.init.DatabaseInitializationException
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.DatabaseMigrator
 import io.airbyte.db.instance.test.TestDatabaseProvider
 import org.flywaydb.core.Flyway
 import org.jooq.DSLContext
-import java.io.IOException
 
 /**
  * Jobs db test provider.

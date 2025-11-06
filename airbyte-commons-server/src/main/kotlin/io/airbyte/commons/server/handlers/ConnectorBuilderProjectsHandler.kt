@@ -78,13 +78,11 @@ import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToRootSpan
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.Map
 import java.util.Objects
 import java.util.Optional

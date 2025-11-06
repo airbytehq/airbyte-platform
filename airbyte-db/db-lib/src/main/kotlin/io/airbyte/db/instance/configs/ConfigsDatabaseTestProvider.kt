@@ -8,7 +8,6 @@ import io.airbyte.commons.resources.Resources
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.factory.DatabaseCheckFactory.Companion.createConfigsDatabaseInitializer
-import io.airbyte.db.init.DatabaseInitializationException
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.DatabaseMigrator
 import io.airbyte.db.instance.test.TestDatabaseProvider
@@ -16,7 +15,6 @@ import org.flywaydb.core.Flyway
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.impl.DSL
-import java.io.IOException
 import java.time.OffsetDateTime
 import java.util.UUID
 

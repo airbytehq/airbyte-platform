@@ -25,7 +25,6 @@ import io.airbyte.config.helpers.ConnectorRegistryConverters
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingFailureReason
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingSuccessOutcome
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver
-import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.config.specs.DefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
@@ -36,7 +35,6 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import io.airbyte.validation.json.JsonValidationException
 import io.micrometer.core.instrument.Counter
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -53,7 +51,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
-import java.io.IOException
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID

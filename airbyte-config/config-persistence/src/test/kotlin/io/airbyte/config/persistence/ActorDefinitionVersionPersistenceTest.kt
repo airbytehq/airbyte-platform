@@ -31,7 +31,6 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.test.utils.BaseConfigDatabaseTest
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -40,7 +39,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
-import java.io.IOException
 import java.util.Map
 import java.util.UUID
 import org.mockito.Mockito.`when` as whenever

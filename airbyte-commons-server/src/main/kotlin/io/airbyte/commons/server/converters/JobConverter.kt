@@ -45,10 +45,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobConfigProxy
-import io.airbyte.config.JobOutput
 import io.airbyte.config.RefreshStream
-import io.airbyte.config.StandardSyncOutput
-import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.micronaut.core.util.CollectionUtils

@@ -12,7 +12,6 @@ import io.airbyte.config.ScopeType
 import io.airbyte.config.SecretPersistenceConfig
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.secrets.SecretsRepositoryReader
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.db.ContextQueryFunction
@@ -28,8 +27,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import java.io.IOException
-import java.sql.SQLException
 import java.util.Optional
 import java.util.UUID
 

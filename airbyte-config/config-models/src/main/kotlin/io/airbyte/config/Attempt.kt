@@ -6,7 +6,6 @@ package io.airbyte.config
 
 import jakarta.annotation.Nonnull
 import java.nio.file.Path
-import java.util.Optional
 
 /**
  * POJO / accessors for the attempt domain model.

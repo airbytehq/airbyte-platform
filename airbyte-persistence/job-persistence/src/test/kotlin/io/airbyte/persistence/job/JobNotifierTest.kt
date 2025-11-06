@@ -23,7 +23,6 @@ import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
@@ -32,12 +31,10 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.notification.NotificationClient
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
-import java.io.IOException
 import java.time.Instant
 import java.util.UUID
 

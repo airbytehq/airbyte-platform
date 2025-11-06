@@ -10,7 +10,6 @@ import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.validation.json.JsonSchemaValidator
 import java.io.Closeable
-import java.io.IOException
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ExecutorService
 

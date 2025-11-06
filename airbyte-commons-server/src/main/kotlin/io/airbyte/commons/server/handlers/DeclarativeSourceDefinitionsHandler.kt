@@ -17,7 +17,6 @@ import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector
 import io.airbyte.config.DeclarativeManifest
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import io.airbyte.data.services.ConnectorBuilderService
 import io.airbyte.data.services.DeclarativeManifestImageVersionService
@@ -25,7 +24,6 @@ import io.airbyte.data.services.WorkspaceService
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
-import java.io.IOException
 import java.util.UUID
 import java.util.stream.Collectors
 

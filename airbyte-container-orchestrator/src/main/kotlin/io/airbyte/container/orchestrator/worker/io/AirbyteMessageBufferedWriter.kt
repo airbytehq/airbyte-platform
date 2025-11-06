@@ -9,7 +9,6 @@ import io.airbyte.commons.protocol.serde.AirbyteMessageSerializer
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import java.io.BufferedWriter
-import java.io.IOException
 import java.util.Optional
 
 /**

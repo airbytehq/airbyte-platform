@@ -52,7 +52,6 @@ import io.airbyte.commons.logging.LogEvents
 import io.airbyte.commons.logging.LogUtils
 import io.airbyte.commons.server.converters.ConfigurationUpdate
 import io.airbyte.commons.server.converters.JobConverter
-import io.airbyte.commons.server.errors.EntityDeletedException
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter

@@ -7,7 +7,6 @@ package io.airbyte.data.services
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorCatalogFetchEvent
 import io.airbyte.config.ActorCatalogWithUpdatedAt
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.DestinationCatalog
 import java.io.IOException

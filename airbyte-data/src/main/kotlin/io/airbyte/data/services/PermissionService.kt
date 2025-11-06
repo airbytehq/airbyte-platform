@@ -6,7 +6,6 @@ package io.airbyte.data.services
 
 import io.airbyte.config.Permission
 import io.airbyte.data.repositories.OrgMemberCount
-import io.airbyte.domain.models.WorkspaceId
 import java.util.UUID
 
 /**

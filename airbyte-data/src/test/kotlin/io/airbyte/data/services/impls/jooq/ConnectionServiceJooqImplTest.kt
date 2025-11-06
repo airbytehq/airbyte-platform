@@ -4,8 +4,6 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.BasicSchedule
@@ -27,7 +25,6 @@ import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.mapper.configs.HashingConfig
 import io.airbyte.config.mapper.configs.HashingMapperConfig
 import io.airbyte.config.mapper.configs.HashingMethods
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.shared.ConnectionCronSchedule
 import io.airbyte.data.services.shared.ConnectionJobStatus
 import io.airbyte.data.services.shared.ConnectionWithJobInfo
@@ -56,7 +53,6 @@ import io.airbyte.protocol.models.v0.CatalogHelpers.fieldsToJsonSchema
 import io.airbyte.protocol.models.v0.Field
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import io.airbyte.test.utils.Databases
-import io.airbyte.validation.json.JsonValidationException
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.SQLDialect
@@ -69,8 +65,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.testcontainers.containers.PostgreSQLContainer
-import java.io.IOException
-import java.sql.SQLException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset

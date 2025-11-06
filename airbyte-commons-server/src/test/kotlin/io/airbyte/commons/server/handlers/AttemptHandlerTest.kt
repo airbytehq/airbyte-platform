@@ -56,7 +56,6 @@ import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
-import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.config.persistence.StatePersistence
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.config.persistence.helper.GenerationBumper
@@ -70,7 +69,6 @@ import io.airbyte.featureflag.Flag
 import io.airbyte.featureflag.TestClient
 import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -84,7 +82,6 @@ import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
-import java.io.IOException
 import java.nio.file.Path
 import java.util.Arrays
 import java.util.Map

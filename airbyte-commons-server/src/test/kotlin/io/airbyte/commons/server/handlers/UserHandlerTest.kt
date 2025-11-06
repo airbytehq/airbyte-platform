@@ -43,18 +43,15 @@ import io.airbyte.config.UserPermission
 import io.airbyte.config.WorkspaceUserAccessInfo
 import io.airbyte.config.helpers.AuthenticatedUserConverter
 import io.airbyte.config.helpers.AuthenticatedUserConverter.toUser
-import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.ApplicationService
 import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
-import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
 import io.airbyte.featureflag.TestClient
-import io.airbyte.validation.json.JsonValidationException
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.validation.Valid
@@ -77,7 +74,6 @@ import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import java.io.IOException
 import java.util.Arrays
 import java.util.Optional
 import java.util.UUID

@@ -13,7 +13,6 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
-import io.airbyte.config.Attempt
 import io.airbyte.config.AttemptSyncConfig
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConnectorJobOutput
@@ -28,7 +27,6 @@ import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSync
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
@@ -42,9 +40,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.validation.json.JsonSchemaValidator
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.Collections
 import java.util.List
 import java.util.Locale

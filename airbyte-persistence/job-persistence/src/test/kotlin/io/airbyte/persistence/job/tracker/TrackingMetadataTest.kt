@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.nio.file.Path
-import java.util.Optional
 import java.util.UUID
 
 internal class TrackingMetadataTest {

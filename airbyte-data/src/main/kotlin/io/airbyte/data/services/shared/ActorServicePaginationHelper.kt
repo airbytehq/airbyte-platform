@@ -18,7 +18,6 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
-import java.io.IOException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset

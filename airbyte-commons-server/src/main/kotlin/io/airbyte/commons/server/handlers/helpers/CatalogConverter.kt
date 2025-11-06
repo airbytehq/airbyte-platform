@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.api.client.util.Preconditions
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration

@@ -6,7 +6,6 @@ package io.airbyte.cron.jobs
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.DomainVerificationsApi
-import io.airbyte.api.client.model.generated.DomainVerificationIdRequestBody
 import io.airbyte.api.client.model.generated.DomainVerificationListResponse
 import io.airbyte.api.client.model.generated.DomainVerificationResponse
 import io.mockk.every

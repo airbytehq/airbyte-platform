@@ -45,7 +45,6 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.temporal.api.common.v1.WorkflowExecution
 import io.temporal.api.common.v1.WorkflowType
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
 import io.temporal.api.filter.v1.StatusFilter

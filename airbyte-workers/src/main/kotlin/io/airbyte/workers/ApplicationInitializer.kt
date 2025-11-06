@@ -9,12 +9,10 @@ import io.airbyte.commons.temporal.TemporalInitializationUtils
 import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.commons.temporal.config.TemporalQueueConfiguration
-import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateWorkflow
 import io.airbyte.config.MaxWorkersConfig
 import io.airbyte.micronaut.runtime.AirbyteDataPlaneQueueConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.micronaut.temporal.TemporalProxyHelper
-import io.airbyte.workers.temporal.TemporalWorkerShutdownHook
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl
 import io.airbyte.workers.temporal.jobpostprocessing.JobPostProcessingWorkflowImpl

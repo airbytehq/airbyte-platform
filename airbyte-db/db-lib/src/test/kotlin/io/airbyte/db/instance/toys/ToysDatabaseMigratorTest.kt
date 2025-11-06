@@ -8,14 +8,12 @@ import io.airbyte.commons.resources.Resources
 import io.airbyte.db.Database
 import io.airbyte.db.check.DatabaseAvailabilityCheck
 import io.airbyte.db.factory.FlywayFactory.create
-import io.airbyte.db.init.DatabaseInitializationException
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.DatabaseMigrator
 import io.airbyte.test.utils.AbstractDatabaseTest
 import org.jooq.DSLContext
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import java.io.IOException
 import javax.sql.DataSource
 
 private const val PRE_MIGRATION_SCHEMA_DUMP = "toys_database/pre_migration_schema.txt"

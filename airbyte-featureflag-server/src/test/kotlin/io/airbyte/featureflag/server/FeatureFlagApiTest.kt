@@ -8,14 +8,12 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.featureflag.server.model.Context
 import io.airbyte.featureflag.server.model.FeatureFlag
 import io.airbyte.featureflag.server.model.Rule
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.env.Environment
 import io.micronaut.core.util.SupplierUtil
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.client.HttpClient
-import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import io.micronaut.runtime.server.EmbeddedServer
 import io.micronaut.test.annotation.MockBean

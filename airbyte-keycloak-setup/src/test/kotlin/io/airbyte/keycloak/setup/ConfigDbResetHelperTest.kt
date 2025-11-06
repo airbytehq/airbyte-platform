@@ -13,7 +13,6 @@ import org.jooq.impl.TableImpl
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.sql.SQLException
 import java.util.UUID
 
 internal class ConfigDbResetHelperTest : BaseConfigDatabaseTest() {

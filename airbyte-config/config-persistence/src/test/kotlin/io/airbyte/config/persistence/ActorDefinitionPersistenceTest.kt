@@ -41,7 +41,6 @@ import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -49,8 +48,6 @@ import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
-import java.io.IOException
-import java.sql.SQLException
 import java.util.UUID
 
 internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {

@@ -19,7 +19,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.sql.SQLException
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.util.Map

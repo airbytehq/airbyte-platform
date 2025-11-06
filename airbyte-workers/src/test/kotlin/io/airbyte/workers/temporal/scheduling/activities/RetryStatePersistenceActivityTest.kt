@@ -22,7 +22,6 @@ import org.mockito.Mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
-import java.io.IOException
 import java.util.UUID
 import java.util.stream.Stream
 

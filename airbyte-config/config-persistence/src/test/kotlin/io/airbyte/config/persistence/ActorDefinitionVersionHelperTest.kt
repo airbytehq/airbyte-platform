@@ -13,10 +13,8 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitio
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.Companion.hasAlphaOrBetaVersion
 import io.airbyte.config.persistence.versionoverrides.ConfigurationDefinitionVersionOverrideProvider
 import io.airbyte.config.persistence.versionoverrides.DefinitionVersionOverrideProvider
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -25,7 +23,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
-import java.io.IOException
 import java.util.Map
 import java.util.Optional
 import java.util.UUID

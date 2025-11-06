@@ -5,8 +5,6 @@
 package io.airbyte.db.instance.test
 
 import io.airbyte.db.Database
-import io.airbyte.db.init.DatabaseInitializationException
-import java.io.IOException
 
 /**
  * Create mock database in unit tests. The implementation will be responsible for: 1) constructing

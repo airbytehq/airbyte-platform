@@ -10,10 +10,6 @@ import io.airbyte.api.client.model.generated.SpecCommandOutputRequest
 import io.airbyte.api.client.model.generated.SpecCommandOutputResponse
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.workers.models.SpecApiInput
 import jakarta.inject.Singleton

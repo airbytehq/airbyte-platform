@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.mockito.Mockito.mock
-import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.Optional

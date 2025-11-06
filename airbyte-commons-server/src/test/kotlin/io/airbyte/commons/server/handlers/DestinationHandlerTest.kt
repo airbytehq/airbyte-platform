@@ -40,7 +40,6 @@ import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus
-import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers
@@ -63,14 +62,12 @@ import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
-import io.airbyte.validation.json.JsonValidationException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier

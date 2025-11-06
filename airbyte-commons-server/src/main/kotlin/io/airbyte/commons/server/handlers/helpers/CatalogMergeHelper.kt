@@ -10,7 +10,6 @@ import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.SelectedFieldInfo
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.Field
 import io.airbyte.config.helpers.FieldGenerator
 import jakarta.inject.Singleton
 import jakarta.validation.Valid

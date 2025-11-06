@@ -21,7 +21,6 @@ import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
 import io.airbyte.config.helpers.PermissionHelper
 import io.airbyte.data.auth.TokenType
-import io.airbyte.data.services.DataplaneGroupService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.context.ServerRequestContext

@@ -5,8 +5,6 @@
 package io.airbyte.commons.server.services
 
 import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
-import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.CatalogDiff
 import io.airbyte.api.model.generated.DiffCatalogsRequest
 import io.airbyte.api.model.generated.DiffCatalogsResponse

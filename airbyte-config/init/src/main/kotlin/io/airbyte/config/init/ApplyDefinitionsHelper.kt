@@ -23,7 +23,6 @@ import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingO
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.DefinitionProcessingSuccessOutcome
 import io.airbyte.config.init.ApplyDefinitionMetricsHelper.getMetricAttributes
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver
-import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.config.specs.DefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
@@ -32,12 +31,10 @@ import io.airbyte.data.services.SourceService
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull

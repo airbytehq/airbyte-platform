@@ -6,7 +6,6 @@ package io.airbyte.server.apis.publicapi.helpers
 
 import io.airbyte.commons.AUTO_DATAPLANE_GROUP
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService

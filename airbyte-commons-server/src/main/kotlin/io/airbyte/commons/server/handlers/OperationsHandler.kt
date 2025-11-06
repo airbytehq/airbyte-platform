@@ -25,11 +25,9 @@ import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.UUID
 import java.util.function.Supplier
 

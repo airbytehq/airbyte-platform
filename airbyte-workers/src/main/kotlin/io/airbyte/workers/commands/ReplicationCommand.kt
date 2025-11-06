@@ -5,14 +5,12 @@
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.CommandGetRequest
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputRequest
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputResponse
 import io.airbyte.api.client.model.generated.RunReplicateCommandRequest
 import io.airbyte.commons.converters.ApiClientConverters.Companion.toInternal
 import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.temporal.scheduling.ReplicationCommandApiInput
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason

@@ -7,15 +7,12 @@ package io.airbyte.domain.services.secrets
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Organization
-import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretsRepositoryReader
-import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.PatchField.Companion.toPatch
 import io.airbyte.domain.models.SecretConfig
 import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.domain.models.SecretReference
-import io.airbyte.domain.models.SecretReferenceId
 import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.models.SecretStorage
 import io.airbyte.domain.models.SecretStorageCreate

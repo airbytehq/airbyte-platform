@@ -14,13 +14,11 @@ import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler
 import io.airbyte.config.ConnectorBuilderProject
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectorBuilderService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import java.io.IOException
 import java.util.UUID
 
 internal class ConfigRepositoryBuilderProjectUpdaterTest {

@@ -72,7 +72,6 @@ import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull

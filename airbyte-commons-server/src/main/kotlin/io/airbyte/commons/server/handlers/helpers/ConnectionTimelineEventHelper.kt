@@ -43,7 +43,6 @@ import jakarta.annotation.Nullable
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors

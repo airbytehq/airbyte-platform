@@ -5,8 +5,6 @@
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.CommandGetRequest
-import io.airbyte.api.client.model.generated.CommandGetResponse
 import io.airbyte.api.client.model.generated.FailureOrigin
 import io.airbyte.api.client.model.generated.FailureType
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputRequest

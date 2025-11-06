@@ -5,8 +5,6 @@
 package io.airbyte.commons.entitlements
 
 import com.apollographql.apollo3.exception.ApolloException
-import io.airbyte.api.problems.model.generated.ProblemEntitlementServiceData
-import io.airbyte.api.problems.throwable.generated.EntitlementServiceUnableToAddOrganizationProblem
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.data.services.OrganizationService

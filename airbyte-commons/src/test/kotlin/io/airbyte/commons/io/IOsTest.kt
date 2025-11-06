@@ -8,7 +8,6 @@ import io.airbyte.commons.io.IOs.readFile
 import io.airbyte.commons.io.IOs.writeFile
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import java.io.IOException
 import java.nio.file.Files
 
 internal class IOsTest {

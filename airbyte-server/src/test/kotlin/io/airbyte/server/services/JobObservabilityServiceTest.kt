@@ -23,7 +23,6 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.statistics.Abs
 import io.airbyte.statistics.Const
-import io.airbyte.statistics.DerivedStatRule
 import io.airbyte.statistics.Dimension
 import io.airbyte.statistics.GreaterThan
 import io.airbyte.statistics.OutlierRule

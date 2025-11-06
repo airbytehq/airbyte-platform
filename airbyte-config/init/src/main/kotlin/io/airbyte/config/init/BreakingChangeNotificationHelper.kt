@@ -17,7 +17,6 @@ import io.airbyte.notification.CustomerioNotificationClient
 import io.airbyte.notification.NotificationClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.UUID
 
 private val log = KotlinLogging.logger {}

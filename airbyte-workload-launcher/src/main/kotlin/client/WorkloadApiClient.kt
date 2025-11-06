@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher.client
 
-import com.amazonaws.internal.ExceptionUtils
 import io.airbyte.config.WorkloadConstants.Companion.LAUNCH_ERROR_SOURCE
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.workers.exception.ImagePullException

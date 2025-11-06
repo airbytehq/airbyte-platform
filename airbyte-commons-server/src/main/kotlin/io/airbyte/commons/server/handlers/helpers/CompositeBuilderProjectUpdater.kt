@@ -5,8 +5,6 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
-import io.airbyte.data.ConfigNotFoundException
-import java.io.IOException
 
   /*
    * Update multiple builder project updaters sequentially. The update method is intentionally not

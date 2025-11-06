@@ -9,7 +9,6 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.NotificationItem
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.UUID
 
 private val log = KotlinLogging.logger { }

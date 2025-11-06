@@ -8,7 +8,6 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.DEFAULT_CONNECTOR_CONFIG_DIR
-import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
 import io.airbyte.workers.pod.FileConstants.STDERR_PIPE_FILE

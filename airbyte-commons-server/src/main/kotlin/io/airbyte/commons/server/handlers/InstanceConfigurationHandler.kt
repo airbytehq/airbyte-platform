@@ -24,13 +24,11 @@ import io.airbyte.config.Organization
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.micronaut.runtime.AirbyteAnalyticsConfig
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AnalyticsTrackingStrategy
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.io.IOException

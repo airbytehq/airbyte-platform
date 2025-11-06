@@ -4,17 +4,8 @@
 
 package io.airbyte.commons.entitlements
 
-import io.airbyte.api.problems.model.generated.ProblemConnectionLockedData
-import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
-import io.airbyte.commons.entitlements.models.ConnectorEntitlement
-import io.airbyte.commons.entitlements.models.Entitlements
-import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
-import io.airbyte.commons.entitlements.models.MappersEntitlement
-import io.airbyte.config.StandardSync
 import io.airbyte.config.helpers.CronExpressionHelper
 import io.airbyte.data.services.ConnectionService
-import io.airbyte.data.services.DestinationService
-import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ConnectionCronSchedule
 import io.airbyte.domain.models.OrganizationId
 import io.github.oshai.kotlinlogging.KotlinLogging

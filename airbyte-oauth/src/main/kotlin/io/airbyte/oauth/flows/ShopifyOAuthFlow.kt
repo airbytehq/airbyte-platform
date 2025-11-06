@@ -11,7 +11,6 @@ import io.airbyte.oauth.BaseOAuth2Flow
 import io.airbyte.oauth.CLIENT_ID_KEY
 import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
-import io.airbyte.validation.json.JsonValidationException
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URI

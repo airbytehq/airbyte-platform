@@ -10,11 +10,9 @@ import io.airbyte.db.factory.DatabaseDriver
 import io.airbyte.db.jdbc.JdbcUtils
 import org.jooq.DSLContext
 import org.postgresql.PGProperty
-import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
-import java.sql.SQLException
 import javax.sql.DataSource
 
 /**

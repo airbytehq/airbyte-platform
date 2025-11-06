@@ -48,9 +48,6 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V2_1_0_008__DropWorkloadPendingStatusByDataplaneGroupIdx
-import io.airbyte.db.instance.configs.migrations.V2_1_0_010__CreateOrganizationDomainVerificationTable
-import io.airbyte.db.instance.configs.migrations.V2_1_0_011__AddMaxResourceColumnsToDataWorkerUsage
 import io.airbyte.db.instance.configs.migrations.V2_1_0_012__CreateDataplaneHeartbeatLogTable
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider

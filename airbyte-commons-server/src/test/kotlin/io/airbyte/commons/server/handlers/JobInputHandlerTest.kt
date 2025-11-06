@@ -41,7 +41,6 @@ import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.toInlined
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ScopedConfigurationService
@@ -55,7 +54,6 @@ import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
-import io.airbyte.validation.json.JsonValidationException
 import io.airbyte.workers.models.JobInput
 import io.mockk.every
 import io.mockk.mockk
@@ -63,7 +61,6 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.io.IOException
 import java.util.List
 import java.util.Map
 import java.util.UUID

@@ -7,7 +7,6 @@ package io.airbyte.test.utils
 import io.airbyte.db.Database
 import io.airbyte.db.factory.DSLContextFactory.create
 import io.airbyte.db.factory.DataSourceFactory.close
-import io.airbyte.db.init.DatabaseInitializationException
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.test.utils.Databases.createDataSource
 import org.jooq.DSLContext
@@ -17,7 +16,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.testcontainers.containers.PostgreSQLContainer
-import java.io.IOException
 import javax.sql.DataSource
 
 abstract class AbstractDatabaseTest {

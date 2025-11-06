@@ -44,7 +44,6 @@ import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
-import java.io.IOException
 import java.net.URI
 import java.time.LocalDate
 import java.util.Optional

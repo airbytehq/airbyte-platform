@@ -53,7 +53,6 @@ import io.airbyte.featureflag.UseResourceRequirementsVariant
 import io.airbyte.featureflag.Workspace
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer

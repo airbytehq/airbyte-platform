@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.Timeout
 import org.mockito.Mockito
-import java.sql.SQLException
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.concurrent.TimeUnit

@@ -10,7 +10,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.DSLContext
-import java.sql.SQLException
 
 /**
  * Helper to reset the Config DB state as part of a Keycloak Realm Reset. Cleans up old User records

@@ -15,7 +15,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 import org.jooq.DSLContext
 import org.jooq.Record
 import org.jooq.Record6
-import java.io.IOException
 import java.util.UUID
 import java.util.stream.Collectors
 

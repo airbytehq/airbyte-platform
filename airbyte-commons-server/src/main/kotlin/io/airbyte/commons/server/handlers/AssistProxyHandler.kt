@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.builder.assist.AssistConfiguration
 import io.airbyte.commons.server.builder.assist.AssistProxy
-import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 

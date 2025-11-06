@@ -5,7 +5,6 @@
 package io.airbyte.data.repositories
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.data.repositories.entities.StreamStats
 import io.airbyte.db.instance.jobs.jooq.generated.Keys
 import io.airbyte.db.instance.jobs.jooq.generated.Tables
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
@@ -13,7 +12,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.jooq.JSONB
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import java.math.BigDecimal
 import java.util.UUID
 
 @MicronautTest

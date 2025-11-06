@@ -59,11 +59,9 @@ import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.validation.json.JsonValidationException
 import io.micronaut.core.util.CollectionUtils
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
-import java.io.IOException
 import java.util.Locale
 import java.util.Optional
 import java.util.SortedMap

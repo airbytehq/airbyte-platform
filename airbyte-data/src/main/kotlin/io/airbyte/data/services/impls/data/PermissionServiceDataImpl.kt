@@ -20,7 +20,6 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
-import io.airbyte.domain.models.WorkspaceId
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import java.util.UUID

@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
 import io.airbyte.commons.entitlements.EntitlementHelper
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
@@ -16,20 +15,16 @@ import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.commons.entitlements.models.SourceWorkdayEnterpriseConnector
 import io.airbyte.commons.server.helpers.ConnectionHelpers
-import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.Cron
-import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
-import io.airbyte.config.SyncMode
 import io.airbyte.config.helpers.CronExpressionHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.domain.models.OrganizationId
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

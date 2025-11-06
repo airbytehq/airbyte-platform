@@ -19,7 +19,6 @@ import io.airbyte.config.SupportLevel
 import io.airbyte.config.Tag
 import io.airbyte.config.helpers.CatalogHelpers
 import io.airbyte.config.helpers.FieldGenerator
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.SecretPersistenceConfigService
@@ -33,15 +32,12 @@ import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.Field
 import io.airbyte.test.utils.BaseConfigDatabaseTest
-import io.airbyte.validation.json.JsonValidationException
 import org.jooq.DSLContext
 import org.jooq.Record
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import java.io.IOException
-import java.sql.SQLException
 import java.time.OffsetDateTime
 import java.util.Locale
 import java.util.UUID

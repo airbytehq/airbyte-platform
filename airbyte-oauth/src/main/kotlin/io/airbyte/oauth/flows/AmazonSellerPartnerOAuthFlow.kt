@@ -15,7 +15,6 @@ import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.GRANT_TYPE_KEY
 import io.airbyte.oauth.REDIRECT_URI_KEY
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
-import io.airbyte.validation.json.JsonValidationException
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException

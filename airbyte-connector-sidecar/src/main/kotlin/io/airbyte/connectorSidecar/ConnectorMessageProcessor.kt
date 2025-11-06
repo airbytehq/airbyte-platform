@@ -36,7 +36,6 @@ import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.MessageOrigin
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
-import io.airbyte.workers.pod.FileConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
 import jakarta.inject.Singleton

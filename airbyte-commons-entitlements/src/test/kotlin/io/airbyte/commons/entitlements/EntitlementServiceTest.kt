@@ -6,7 +6,6 @@ package io.airbyte.commons.entitlements
 
 import io.airbyte.api.problems.model.generated.ProblemEntitlementServiceData
 import io.airbyte.api.problems.throwable.generated.EntitlementServiceInvalidOrganizationStateProblem
-import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationSalesforceEnterpriseConnector
@@ -19,12 +18,10 @@ import io.airbyte.config.ActorType
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.metrics.MetricClient
-import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows

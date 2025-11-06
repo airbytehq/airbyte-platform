@@ -9,9 +9,7 @@ import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
 import io.airbyte.config.ScopeType
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 

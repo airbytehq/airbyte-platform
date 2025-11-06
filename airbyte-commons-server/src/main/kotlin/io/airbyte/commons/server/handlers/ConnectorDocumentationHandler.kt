@@ -11,13 +11,10 @@ import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.specs.RemoteDefinitionsProvider
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.annotation.Nullable
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.UUID
 
 /**

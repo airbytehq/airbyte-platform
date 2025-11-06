@@ -14,7 +14,6 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.io.IOException
 import java.net.URI
 import java.util.UUID
 

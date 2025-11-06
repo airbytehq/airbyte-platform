@@ -18,7 +18,6 @@ import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ConfigInjector
-import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
@@ -26,7 +25,6 @@ import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.persistence.job.DefaultJobCreator
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.mockito.invocation.InvocationOnMock
@@ -37,7 +35,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.mockito.stubbing.Answer
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 

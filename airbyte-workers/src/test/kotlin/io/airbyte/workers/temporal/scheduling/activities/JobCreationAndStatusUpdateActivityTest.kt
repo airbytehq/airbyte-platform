@@ -28,7 +28,6 @@ import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest
 import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody
 import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.config.AttemptFailureSummary
-import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary

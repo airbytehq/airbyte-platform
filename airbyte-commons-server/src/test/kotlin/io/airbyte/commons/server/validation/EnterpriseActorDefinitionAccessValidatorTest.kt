@@ -19,7 +19,6 @@ import org.junit.jupiter.api.function.Executable
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 

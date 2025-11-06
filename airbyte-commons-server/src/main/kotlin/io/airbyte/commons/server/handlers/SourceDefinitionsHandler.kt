@@ -17,7 +17,6 @@ import io.airbyte.api.model.generated.SourceDefinitionUpdate
 import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
-import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
@@ -38,7 +37,6 @@ import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
 import io.airbyte.config.init.SupportStateUpdater
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.specs.RemoteDefinitionsProvider
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
@@ -47,11 +45,9 @@ import io.airbyte.featureflag.HideActorDefinitionFromList
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.Workspace
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.UUID

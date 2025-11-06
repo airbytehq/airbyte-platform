@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.worker
 
-import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.io.LineGobbler
@@ -35,7 +34,6 @@ import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.model.adapter.AirbyteJsonRecordAdapter
 import io.airbyte.container.orchestrator.worker.state.StateEnricher
-import io.airbyte.container.orchestrator.worker.state.attachIdToStateMessageFromSource
 import io.airbyte.container.orchestrator.worker.util.BytesSizeHelper.byteCountToDisplaySize
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator

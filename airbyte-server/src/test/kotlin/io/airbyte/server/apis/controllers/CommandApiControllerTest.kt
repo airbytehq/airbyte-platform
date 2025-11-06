@@ -33,7 +33,6 @@ import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.config.ActorCatalog
-import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Metadata
 import io.airbyte.config.ReplicationAttemptSummary
@@ -59,7 +58,6 @@ import io.airbyte.server.services.CommandStatus
 import io.mockk.Called
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkConstructor
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach

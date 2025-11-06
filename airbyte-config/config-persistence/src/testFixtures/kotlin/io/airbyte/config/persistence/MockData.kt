@@ -53,7 +53,6 @@ import io.airbyte.config.WorkspaceServiceAccount
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.AdvancedAuth
 import io.airbyte.protocol.models.v0.AirbyteCatalog
-import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.protocol.models.v0.CatalogHelpers
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.DestinationSyncMode

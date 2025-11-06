@@ -11,7 +11,6 @@ import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ScopedConfiguration
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ScopedConfigurationService
@@ -20,7 +19,6 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.airbyte.data.services.shared.StandardSyncQuery
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.UUID
 import java.util.function.Function
 import java.util.stream.Collectors

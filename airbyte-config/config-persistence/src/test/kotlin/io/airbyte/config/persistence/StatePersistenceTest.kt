@@ -34,7 +34,6 @@ import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
 import io.airbyte.data.services.shared.ActorServicePaginationHelper
 import io.airbyte.db.ContextQueryFunction
-import io.airbyte.db.init.DatabaseInitializationException
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.AirbyteGlobalState
@@ -43,7 +42,6 @@ import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.test.utils.BaseConfigDatabaseTest
-import io.airbyte.validation.json.JsonValidationException
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.Record
@@ -54,8 +52,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito
-import java.io.IOException
-import java.sql.SQLException
 import java.util.Arrays
 import java.util.List
 import java.util.Set

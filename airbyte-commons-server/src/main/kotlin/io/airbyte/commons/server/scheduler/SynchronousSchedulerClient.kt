@@ -12,7 +12,6 @@ import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import java.io.IOException
 import java.util.UUID
 
 /**

@@ -24,7 +24,6 @@ import io.mockk.verify
 import io.mockk.verifySequence
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.io.IOException
 import java.util.UUID
 
 internal class BreakingChangeNotificationHelperTest {

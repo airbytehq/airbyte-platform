@@ -9,7 +9,6 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.NotificationType
 import io.airbyte.config.SlackNotificationConfiguration
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 

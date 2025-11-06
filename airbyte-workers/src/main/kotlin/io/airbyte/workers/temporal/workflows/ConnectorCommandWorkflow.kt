@@ -56,7 +56,6 @@ import io.temporal.failure.CanceledFailure
 import io.temporal.workflow.Workflow
 import jakarta.inject.Singleton
 import java.time.Duration
-import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 

@@ -49,7 +49,6 @@ import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.CatalogHelpers
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
@@ -63,7 +62,6 @@ import io.airbyte.persistence.job.tracker.JobTracker.Companion.configToMetadata
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.Field
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled

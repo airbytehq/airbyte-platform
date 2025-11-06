@@ -7,7 +7,6 @@ package io.airbyte.workload.launcher
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionRead
-import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.ForceRunStdioMode

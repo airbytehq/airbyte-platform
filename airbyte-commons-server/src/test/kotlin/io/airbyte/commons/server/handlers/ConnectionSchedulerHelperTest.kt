@@ -24,7 +24,6 @@ import io.airbyte.config.Schedule
 import io.airbyte.config.StandardSync
 import io.airbyte.config.helpers.CronExpressionHelper
 import io.airbyte.config.helpers.FieldGenerator
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient

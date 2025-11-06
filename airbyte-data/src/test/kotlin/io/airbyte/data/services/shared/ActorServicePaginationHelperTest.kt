@@ -36,7 +36,6 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import io.airbyte.test.utils.Databases
-import io.airbyte.validation.json.JsonValidationException
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.SQLDialect
@@ -50,8 +49,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito
 import org.testcontainers.containers.PostgreSQLContainer
-import java.io.IOException
-import java.sql.SQLException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset

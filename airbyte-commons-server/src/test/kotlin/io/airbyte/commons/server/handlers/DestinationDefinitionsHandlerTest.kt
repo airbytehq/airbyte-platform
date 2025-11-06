@@ -49,7 +49,6 @@ import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult
 import io.airbyte.config.init.SupportStateUpdater
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.specs.RemoteDefinitionsProvider
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.WorkspaceService
@@ -61,7 +60,6 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
 import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.validation.Valid
 import org.jooq.JSONB
 import org.junit.jupiter.api.Assertions
@@ -73,9 +71,7 @@ import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
-import java.io.IOException
 import java.net.URI
-import java.net.URISyntaxException
 import java.time.LocalDate
 import java.util.Date
 import java.util.Map

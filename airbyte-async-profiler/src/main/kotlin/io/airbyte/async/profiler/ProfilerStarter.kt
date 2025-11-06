@@ -7,7 +7,6 @@ package io.airbyte.async.profiler
 import io.airbyte.async.profiler.runtime.AirbyteAsyncProfilerConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Context
-import io.micronaut.context.annotation.Value
 import javax.annotation.PostConstruct
 
 private val logger = KotlinLogging.logger {}

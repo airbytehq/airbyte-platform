@@ -25,9 +25,7 @@ import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.airbyte.domain.services.sso.SsoConfigDomainService
 import io.airbyte.server.apis.execute
-import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 

@@ -17,7 +17,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import io.stigg.api.operations.GetPaywallQuery
-import io.stigg.sidecar.proto.v1.AccessDeniedReason
 import io.stigg.sidecar.proto.v1.EnumEntitlement
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementResponse
@@ -28,7 +27,6 @@ import io.stigg.sidecar.sdk.offline.EntitlementType
 import io.stigg.sidecar.sdk.offline.OfflineEntitlements
 import io.stigg.sidecar.sdk.offline.OfflineStiggConfig
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID

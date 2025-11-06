@@ -15,7 +15,6 @@ import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Context
-import io.micronaut.context.annotation.Value
 import secrets.persistence.SecretCoordinateException
 
 private val logger = KotlinLogging.logger {}

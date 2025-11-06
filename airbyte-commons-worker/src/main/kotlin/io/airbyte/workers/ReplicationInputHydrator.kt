@@ -51,7 +51,6 @@ import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import secrets.persistence.SecretCoordinateException
-import java.io.IOException
 import java.time.Duration
 import java.util.UUID
 

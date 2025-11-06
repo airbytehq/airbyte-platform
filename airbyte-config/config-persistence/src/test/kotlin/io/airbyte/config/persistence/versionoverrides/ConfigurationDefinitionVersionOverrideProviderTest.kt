@@ -22,7 +22,6 @@ import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -30,7 +29,6 @@ import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
-import java.io.IOException
 import java.util.Map
 import java.util.Optional
 import java.util.UUID

@@ -20,7 +20,6 @@ import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import java.math.BigDecimal
 import java.util.UUID
 
 class StreamStatsServiceTest {

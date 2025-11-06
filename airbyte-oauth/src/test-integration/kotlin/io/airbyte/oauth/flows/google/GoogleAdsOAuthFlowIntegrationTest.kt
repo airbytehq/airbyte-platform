@@ -14,7 +14,6 @@ import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.CLIENT_ID_KEY
 import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.REFRESH_TOKEN_KEY
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue

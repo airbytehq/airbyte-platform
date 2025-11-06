@@ -14,7 +14,6 @@ import io.airbyte.config.ConnectorRegistry
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.nio.charset.StandardCharsets
 import java.util.ArrayList
 import java.util.UUID
 import java.util.stream.Collectors

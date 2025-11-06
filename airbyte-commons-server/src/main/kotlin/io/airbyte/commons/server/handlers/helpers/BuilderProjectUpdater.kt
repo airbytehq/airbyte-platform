@@ -5,8 +5,6 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
-import io.airbyte.data.ConfigNotFoundException
-import java.io.IOException
 
 interface BuilderProjectUpdater {
   fun persistBuilderProjectUpdate(projectUpdate: ExistingConnectorBuilderProjectWithWorkspaceId)

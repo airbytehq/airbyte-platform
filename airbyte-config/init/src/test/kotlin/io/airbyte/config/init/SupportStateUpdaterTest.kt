@@ -15,7 +15,6 @@ import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNot
 import io.airbyte.config.init.SupportStateUpdater.SupportStateUpdate
 import io.airbyte.config.persistence.BreakingChangesHelper
 import io.airbyte.config.persistence.BreakingChangesHelper.WorkspaceBreakingChangeInfo
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
@@ -23,7 +22,6 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.NotifyBreakingChangesOnSupportStateUpdate
 import io.airbyte.featureflag.Workspace
-import io.airbyte.validation.json.JsonValidationException
 import io.mockk.Called
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -33,7 +31,6 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.io.IOException
 import java.time.LocalDate
 import java.util.UUID
 

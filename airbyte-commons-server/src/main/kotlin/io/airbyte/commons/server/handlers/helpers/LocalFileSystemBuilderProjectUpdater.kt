@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers.helpers
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.File
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Paths
 

@@ -17,7 +17,6 @@ import io.airbyte.domain.models.SecretStorage
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.Optional
-import java.util.stream.Collectors
 
 private val logger = KotlinLogging.logger {}
 

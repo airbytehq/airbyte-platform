@@ -72,7 +72,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream

@@ -6,8 +6,6 @@ package io.airbyte.oauth
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
-import io.airbyte.validation.json.JsonValidationException
-import java.io.IOException
 import java.util.UUID
 
 /**

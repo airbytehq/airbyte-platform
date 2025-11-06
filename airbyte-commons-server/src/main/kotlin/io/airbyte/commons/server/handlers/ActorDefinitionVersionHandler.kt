@@ -21,14 +21,11 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.UUID
 
 /**

@@ -9,7 +9,6 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.net.URI
-import java.net.URISyntaxException
 
 internal class AirbyteMessageV0SerDeTest {
   @Test

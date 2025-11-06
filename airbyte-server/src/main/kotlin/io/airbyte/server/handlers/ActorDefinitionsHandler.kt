@@ -11,7 +11,6 @@ import io.airbyte.api.model.generated.ActorDefinitionResultResponse
 import io.airbyte.api.model.generated.ActorDefinitionUpdateRequest
 import io.airbyte.api.model.generated.ActorDefinitionUpdateResponse
 import io.airbyte.api.model.generated.ActorUpdateRequest
-import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
@@ -21,11 +20,9 @@ import io.airbyte.commons.temporal.TemporalClient
 import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateInput
 import io.airbyte.commons.temporal.scheduling.SpecMetadata
 import io.airbyte.commons.temporal.scheduling.SpecRequest
-import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
 import io.airbyte.config.ScopeType
 import io.airbyte.data.services.ActorDefinitionService
-import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.server.services.CommandService
 import jakarta.inject.Singleton

@@ -16,7 +16,6 @@ import org.jooq.DSLContext
 import org.jooq.Record
 import org.jooq.Result
 import org.jooq.impl.DSL
-import java.io.IOException
 import java.util.Locale
 import java.util.Optional
 import java.util.UUID

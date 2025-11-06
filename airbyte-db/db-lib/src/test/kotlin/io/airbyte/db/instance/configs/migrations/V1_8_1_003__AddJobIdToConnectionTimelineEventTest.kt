@@ -9,7 +9,6 @@ import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.development.DevDatabaseMigrator
 import org.flywaydb.core.api.migration.BaseJavaMigration
-import org.jooq.Record
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.junit.jupiter.api.Assertions

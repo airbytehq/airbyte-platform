@@ -13,7 +13,6 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import jakarta.transaction.Transactional
 import org.jooq.DSLContext
-import org.jooq.exception.DataAccessException
 import io.micronaut.transaction.annotation.Transactional as TransactionalAdvice
 
 @Singleton

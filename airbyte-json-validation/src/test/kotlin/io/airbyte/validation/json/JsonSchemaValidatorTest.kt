@@ -7,17 +7,13 @@ package io.airbyte.validation.json
 import io.airbyte.commons.io.IOs.writeFile
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.validation.json.JsonSchemaValidator.Companion.getSchema
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
-import java.io.IOException
 import java.net.URI
-import java.net.URISyntaxException
 import java.nio.file.Files
 
 internal class JsonSchemaValidatorTest {

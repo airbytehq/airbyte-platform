@@ -22,7 +22,6 @@ import jakarta.inject.Singleton
 import org.jooq.DSLContext
 import org.jooq.Record
 import org.jooq.impl.DSL
-import java.io.IOException
 import java.util.List
 import java.util.Optional
 import java.util.UUID

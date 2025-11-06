@@ -10,7 +10,6 @@ import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.persistence.versionoverrides.DefinitionVersionOverrideProvider
 import io.airbyte.data.services.ActorDefinitionService
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
 import jakarta.inject.Named

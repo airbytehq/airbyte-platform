@@ -25,7 +25,6 @@ import io.airbyte.domain.models.SecretReferenceId
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.validation.json.JsonSchemaValidator
-import io.airbyte.validation.json.JsonValidationException
 import io.kotlintest.matchers.string.shouldStartWith
 import io.mockk.every
 import io.mockk.mockk
@@ -35,7 +34,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.io.IOException
 import java.util.UUID
 import java.util.function.Consumer
 import java.util.regex.Pattern

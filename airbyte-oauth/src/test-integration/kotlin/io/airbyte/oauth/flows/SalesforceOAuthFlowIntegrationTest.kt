@@ -9,13 +9,11 @@ import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SourceOAuthParameter
-import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.services.OAuthService
 import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.CLIENT_ID_KEY
 import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.REFRESH_TOKEN_KEY
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue

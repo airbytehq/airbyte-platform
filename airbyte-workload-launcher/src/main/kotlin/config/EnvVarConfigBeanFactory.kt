@@ -33,7 +33,6 @@ import io.fabric8.kubernetes.api.model.SecretKeySelector
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
 import io.micronaut.context.env.Environment
-import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.function.Consumer

@@ -12,17 +12,14 @@ import com.google.api.client.testing.http.MockLowLevelHttpRequest
 import com.google.api.client.testing.http.MockLowLevelHttpResponse
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SourceOAuthParameter
-import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.services.OAuthService
 import io.airbyte.oauth.CLIENT_ID_KEY
 import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.MoreOAuthParameters
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 

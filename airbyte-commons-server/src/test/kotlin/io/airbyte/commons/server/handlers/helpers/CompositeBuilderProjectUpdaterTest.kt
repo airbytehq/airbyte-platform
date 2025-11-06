@@ -5,11 +5,9 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
-import io.airbyte.data.ConfigNotFoundException
 import org.junit.Test
 import org.junit.jupiter.api.DisplayName
 import org.mockito.Mockito
-import java.io.IOException
 
 class CompositeBuilderProjectUpdaterTest {
   @Test

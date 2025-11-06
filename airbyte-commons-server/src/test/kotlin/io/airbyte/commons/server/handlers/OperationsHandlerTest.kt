@@ -22,17 +22,14 @@ import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.WebhookConfig
 import io.airbyte.config.WebhookOperationConfigs
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito
-import java.io.IOException
 import java.util.UUID
 import java.util.function.Supplier
 import java.util.stream.Collectors

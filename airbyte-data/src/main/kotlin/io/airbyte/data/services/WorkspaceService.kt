@@ -5,11 +5,8 @@
 package io.airbyte.data.services
 
 import io.airbyte.config.StandardWorkspace
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.data.services.shared.StandardSyncQuery
-import io.airbyte.validation.json.JsonValidationException
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream

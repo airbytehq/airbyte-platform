@@ -15,7 +15,6 @@ import com.google.auth.oauth2.GoogleCredentials
 import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.http.HttpStatus
-import java.io.IOException
 import java.util.concurrent.Callable
 
 /**
