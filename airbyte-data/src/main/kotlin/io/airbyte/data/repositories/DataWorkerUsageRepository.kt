@@ -18,7 +18,8 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
     """
       SELECT * from data_worker_usage
       WHERE organization_id = :organizationId
-      AND bucket_start >= :startDate AND bucket_start <= :endDate
+      AND bucket_start >= :startDate::TIMESTAMPTZ AT TIME ZONE 'UTC'
+      AND bucket_start <= :endDate::TIMESTAMPTZ AT TIME ZONE 'UTC'
     """,
   )
   fun findByOrganizationIdAndJobStartBetween(
@@ -33,9 +34,10 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
       WHERE organization_id = :organizationId
         AND workspace_id = :workspaceId
         AND dataplane_group_id = :dataplaneGroupId
-        AND bucket_start <= :bucketStart::TIMESTAMP
+        AND bucket_start <= :bucketStart::TIMESTAMPTZ AT TIME ZONE 'UTC'
       ORDER BY bucket_start DESC
       LIMIT 1
+      FOR UPDATE
     """,
   )
   fun findMostRecentUsageBucket(
@@ -58,7 +60,7 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
     WHERE organization_id = :organizationId
       AND workspace_id = :workspaceId
       AND dataplane_group_id = :dataplaneGroupId
-      AND bucket_start = DATE_TRUNC('hour', :bucketStart::TIMESTAMP)
+      AND bucket_start = DATE_TRUNC('hour', :bucketStart::TIMESTAMPTZ AT TIME ZONE 'UTC')
     """,
   )
   fun incrementExistingDataWorkerUsageBucket(
@@ -88,7 +90,7 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
     :organizationId,
     :workspaceId,
     :dataplaneGroupId,
-    DATE_TRUNC('hour', :bucketStart::TIMESTAMP),
+    DATE_TRUNC('hour', :bucketStart::TIMESTAMPTZ AT TIME ZONE 'UTC'),
     :sourceCpuRequest,
     :destinationCpuRequest,
     :orchestratorCpuRequest,
@@ -121,7 +123,7 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
     WHERE organization_id = :organizationId
       AND workspace_id = :workspaceId
       AND dataplane_group_id = :dataplaneGroupId
-      AND bucket_start = DATE_TRUNC('hour', :bucketStart::TIMESTAMP)
+      AND bucket_start = DATE_TRUNC('hour', :bucketStart::TIMESTAMPTZ AT TIME ZONE 'UTC')
     """,
   )
   fun decrementExistingDataWorkerUsageBucket(

@@ -91,7 +91,7 @@ open class DataWorkerUsageService(
     try {
       performUsageInsertion(dataWorkerUsage)
     } catch (e: Exception) {
-      logger.error(e) { "${e.message}: failed to insert $dataWorkerUsage" }
+      logger.error(e) { "${e.message}: failed to insert data worker usage: $dataWorkerUsage" }
       sendRecordMetric(
         job.id,
         false,
@@ -130,7 +130,8 @@ open class DataWorkerUsageService(
       val newSourceCpuRequest = (mostRecentUsageBucket?.sourceCpuRequest ?: 0.0) + dataWorkerUsage.sourceCpuRequest
       val newDestCpuRequest = (mostRecentUsageBucket?.destinationCpuRequest ?: 0.0) + dataWorkerUsage.destinationCpuRequest
       val newOrchCpuRequest = (mostRecentUsageBucket?.orchestratorCpuRequest ?: 0.0) + dataWorkerUsage.orchestratorCpuRequest
-      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(
+
+      val usageWithNewCpuValues =
         dataWorkerUsage.copy(
           sourceCpuRequest = newSourceCpuRequest,
           destinationCpuRequest = newDestCpuRequest,
@@ -138,8 +139,10 @@ open class DataWorkerUsageService(
           maxSourceCpuRequest = newSourceCpuRequest,
           maxDestinationCpuRequest = newDestCpuRequest,
           maxOrchestratorCpuRequest = newOrchCpuRequest,
-        ),
-      )
+        )
+      logger.info { "Data worker usage addition detected a new bucket is required. Creating a new bucket with values: $usageWithNewCpuValues" }
+
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(usageWithNewCpuValues)
     } else {
       // Otherwise we can update the existing bucket. Incrementing the current usage values
       // and calculating a new maximum will be handled by the SQL query in the repository,
@@ -217,7 +220,7 @@ open class DataWorkerUsageService(
       // that data is either missing or we've deleted a previous bucket.
       // In this case, we should not subtract the usage values, because we could
       // end up with negative values, which could be carried over to subsequent hours
-      logger.error { "Found a completed job $jobId with no prior usage recorded, skipping data worker usage" }
+      logger.error { "Found a completed job $jobId with no prior usage recorded, skipping data worker usage for $dataWorkerUsage" }
       sendRecordMetric(
         jobId,
         false,
@@ -235,7 +238,8 @@ open class DataWorkerUsageService(
       val newSourceCpuRequest = (mostRecentUsageBucket.sourceCpuRequest - dataWorkerUsage.sourceCpuRequest).coerceAtLeast(0.0)
       val newDestCpuRequest = (mostRecentUsageBucket.destinationCpuRequest - dataWorkerUsage.destinationCpuRequest).coerceAtLeast(0.0)
       val newOrchCpuRequest = (mostRecentUsageBucket.orchestratorCpuRequest - dataWorkerUsage.orchestratorCpuRequest).coerceAtLeast(0.0)
-      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(
+
+      val usageWithNewCpuValues =
         dataWorkerUsage.copy(
           sourceCpuRequest = newSourceCpuRequest,
           destinationCpuRequest = newDestCpuRequest,
@@ -243,8 +247,10 @@ open class DataWorkerUsageService(
           maxSourceCpuRequest = newSourceCpuRequest,
           maxDestinationCpuRequest = newDestCpuRequest,
           maxOrchestratorCpuRequest = newOrchCpuRequest,
-        ),
-      )
+        )
+      logger.info { "Data worker usage subtraction detected a new bucket is required. Creating a new bucket with values: $usageWithNewCpuValues" }
+
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(usageWithNewCpuValues)
     } else {
       // In this case, we only need to decrement existing values, which is handled
       // by the SQL query in the repository. We can pass in the dataWorkerUsage object as is.
@@ -362,7 +368,9 @@ open class DataWorkerUsageService(
     val workspace = retrieveWorkspaceOrNull(workspaceId) ?: return null
     val dataplaneGroupId =
       workspace.dataplaneGroupId ?: run {
-        logger.error { "Dataplane group is null for workspace $workspaceId (job ${job.id}), skipping data worker usage insertion." }
+        logger.error {
+          "Dataplane group is null for workspace $workspaceId and org id $organizationId (job ${job.id}), skipping data worker usage insertion."
+        }
         sendRecordMetric(job.id, false, operation, organizationId, workspaceId)
         return null
       }
@@ -387,8 +395,8 @@ open class DataWorkerUsageService(
       sourceCpuRequest = sourceCpu.toDouble(),
       destinationCpuRequest = destCpu.toDouble(),
       orchestratorCpuRequest = orchCpu.toDouble(),
-      bucketStart = OffsetDateTime.now(),
-      createdAt = OffsetDateTime.now(),
+      bucketStart = OffsetDateTime.now(ZoneOffset.UTC),
+      createdAt = OffsetDateTime.now(ZoneOffset.UTC),
       maxSourceCpuRequest = sourceCpu.toDouble(),
       maxDestinationCpuRequest = destCpu.toDouble(),
       maxOrchestratorCpuRequest = orchCpu.toDouble(),
