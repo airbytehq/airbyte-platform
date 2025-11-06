@@ -78,6 +78,52 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
     """,
   )
   fun isInstanceAdmin(userId: UUID): Boolean
+
+  @Query(
+    """
+    SELECT EXISTS (
+      SELECT 1 FROM permission
+      WHERE user_id = :userId
+      AND organization_id = :organizationId
+    )
+    """,
+  )
+  fun existsByUserIdAndOrganizationId(
+    userId: UUID,
+    organizationId: UUID,
+  ): Boolean
+
+  @Query(
+    """
+    SELECT EXISTS (
+      SELECT 1 FROM permission
+      WHERE group_id = :groupId
+      AND permission_type = :permissionType
+      AND organization_id = :organizationId
+    )
+    """,
+  )
+  fun existsByGroupIdAndPermissionTypeAndOrganizationId(
+    groupId: UUID,
+    permissionType: PermissionType,
+    organizationId: UUID,
+  ): Boolean
+
+  @Query(
+    """
+    SELECT EXISTS (
+      SELECT 1 FROM permission
+      WHERE group_id = :groupId
+      AND permission_type = :permissionType
+      AND workspace_id = :workspaceId
+    )
+    """,
+  )
+  fun existsByGroupIdAndPermissionTypeAndWorkspaceId(
+    groupId: UUID,
+    permissionType: PermissionType,
+    workspaceId: UUID,
+  ): Boolean
 }
 
 @Introspected

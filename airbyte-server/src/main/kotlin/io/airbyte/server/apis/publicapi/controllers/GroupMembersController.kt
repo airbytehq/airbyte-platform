@@ -17,8 +17,10 @@ import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Configs
 import io.airbyte.config.GroupMember
+import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.AlreadyGroupMemberException
 import io.airbyte.data.services.GroupService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PaginationParams
 import io.airbyte.domain.models.GroupId
 import io.airbyte.domain.models.OrganizationId
@@ -47,6 +49,8 @@ import java.util.UUID
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class GroupMembersController(
   private val groupService: GroupService,
+  private val userPersistence: UserPersistence,
+  private val organizationService: OrganizationService,
   private val trackingHelper: TrackingHelper,
   private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
@@ -133,6 +137,27 @@ open class GroupMembersController(
 
     // Check that the entitlement is working
     ensureGroupsEntitlement(group.organizationId)
+
+    // Validate that the user exists
+    val userExists = userPersistence.getUser(groupMemberAddRequest.userId).isPresent
+    if (!userExists) {
+      throw ResourceNotFoundProblem(
+        ProblemResourceData()
+          .resourceType("user")
+          .resourceId(groupMemberAddRequest.userId.toString()),
+      )
+    }
+
+    // Validate that the user is a member of the organization that owns the group
+    val userInOrganization = organizationService.isMember(groupMemberAddRequest.userId, group.organizationId.value)
+    if (!userInOrganization) {
+      throw ResourceNotFoundProblem(
+        "User ${groupMemberAddRequest.userId} is not a member of organization ${group.organizationId}",
+        ProblemResourceData()
+          .resourceType("user")
+          .resourceId(groupMemberAddRequest.userId.toString()),
+      )
+    }
 
     val member: GroupMember =
       try {

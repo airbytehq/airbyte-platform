@@ -211,6 +211,33 @@ open class GroupPermissionsController(
       throw badRequestProblem
     }
 
+    // Check for duplicate group permissions
+    val permissionTypeEnum = Permission.PermissionType.valueOf(groupPermissionCreateRequest.permissionType.name)
+    val isDuplicate =
+      when {
+        workspaceId != null -> permissionService.groupPermissionExistsForWorkspace(groupId, permissionTypeEnum, workspaceId)
+        organizationId != null -> permissionService.groupPermissionExistsForOrganization(groupId, permissionTypeEnum, organizationId)
+        else -> false
+      }
+
+    if (isDuplicate) {
+      val resourceType = if (workspaceId != null) "workspace" else "organization"
+      val resourceId = workspaceId ?: organizationId
+      val badRequestProblem =
+        BadRequestProblem(
+          ProblemMessageData().message(
+            "Group already has ${groupPermissionCreateRequest.permissionType} permission for $resourceType $resourceId",
+          ),
+        )
+      trackingHelper.trackFailuresIfAny(
+        GROUP_PERMISSIONS_PATH,
+        POST,
+        userId,
+        badRequestProblem,
+      )
+      throw badRequestProblem
+    }
+
     val permission: Permission =
       trackingHelper.callWithTracker(
         {

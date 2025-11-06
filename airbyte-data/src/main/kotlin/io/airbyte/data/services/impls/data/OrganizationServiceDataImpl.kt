@@ -105,4 +105,9 @@ class OrganizationServiceDataImpl(
       organizationRepository.update(organization.toEntity())
     }
   }
+
+  override fun isMember(
+    userId: UUID,
+    organizationId: UUID,
+  ): Boolean = permissionRepository.existsByUserIdAndOrganizationId(userId, organizationId)
 }

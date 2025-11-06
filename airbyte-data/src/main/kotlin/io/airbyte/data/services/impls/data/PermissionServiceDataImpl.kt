@@ -328,4 +328,26 @@ open class PermissionServiceDataImpl(
       Permission.PermissionType.WORKSPACE_RUNNER -> WorkspaceAuthRole.WORKSPACE_RUNNER.getAuthority()
       Permission.PermissionType.WORKSPACE_READER -> WorkspaceAuthRole.WORKSPACE_READER.getAuthority()
     }
+
+  override fun groupPermissionExistsForWorkspace(
+    groupId: UUID,
+    permissionType: Permission.PermissionType,
+    workspaceId: UUID,
+  ): Boolean =
+    permissionRepository.existsByGroupIdAndPermissionTypeAndWorkspaceId(
+      groupId,
+      permissionType.toEntity(),
+      workspaceId,
+    )
+
+  override fun groupPermissionExistsForOrganization(
+    groupId: UUID,
+    permissionType: Permission.PermissionType,
+    organizationId: UUID,
+  ): Boolean =
+    permissionRepository.existsByGroupIdAndPermissionTypeAndOrganizationId(
+      groupId,
+      permissionType.toEntity(),
+      organizationId,
+    )
 }

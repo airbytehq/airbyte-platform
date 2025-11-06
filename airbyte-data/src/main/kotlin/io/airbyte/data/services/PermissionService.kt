@@ -91,6 +91,34 @@ interface PermissionService {
   fun getPermissionsByGroupId(groupId: UUID): List<Permission>
 
   fun updatePermissions(permissions: List<Permission>)
+
+  /**
+   * Check if a group permission already exists for a given workspace
+   *
+   * @param groupId the group ID
+   * @param permissionType the permission type
+   * @param workspaceId the workspace ID
+   * @return true if the permission exists, false otherwise
+   */
+  fun groupPermissionExistsForWorkspace(
+    groupId: UUID,
+    permissionType: Permission.PermissionType,
+    workspaceId: UUID,
+  ): Boolean
+
+  /**
+   * Check if a group permission already exists for a given organization
+   *
+   * @param groupId the group ID
+   * @param permissionType the permission type
+   * @param organizationId the organization ID
+   * @return true if the permission exists, false otherwise
+   */
+  fun groupPermissionExistsForOrganization(
+    groupId: UUID,
+    permissionType: Permission.PermissionType,
+    organizationId: UUID,
+  ): Boolean
 }
 
 /**

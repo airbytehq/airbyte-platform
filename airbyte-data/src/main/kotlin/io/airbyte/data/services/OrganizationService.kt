@@ -36,4 +36,16 @@ interface OrganizationService {
   ): List<Organization>
 
   fun writeOrganization(organization: Organization)
+
+  /**
+   * Check if a user is a member of an organization.
+   *
+   * @param userId the user ID to check
+   * @param organizationId the organization ID to check
+   * @return true if the user has any permission in the organization, false otherwise
+   */
+  fun isMember(
+    userId: UUID,
+    organizationId: UUID,
+  ): Boolean
 }
