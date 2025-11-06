@@ -14,6 +14,7 @@ import { DestinationsPage, SourcesPage } from "pages/SettingsPage/pages/Connecto
 import { LicenseSettingsPage } from "pages/SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
+import { SSOOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/SSOOrganizationSettingsPage";
 
 import { RoutePaths, SettingsRoutePaths } from "../routePaths";
 
@@ -24,6 +25,7 @@ const OrganizationUsagePage = React.lazy(() => import("packages/cloud/views/bill
 export const OrganizationRoutes: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
+  const supportsSSO = useFeature(FeatureItem.AllowUpdateSSOConfig);
   const canViewOrgSettings = useGeneratedIntent(Intent.ViewOrganizationSettings, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
@@ -45,6 +47,7 @@ export const OrganizationRoutes: React.FC = () => {
           {canViewOrgSettings && (
             <Route path={SettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
           )}
+          {supportsSSO && <Route path={SettingsRoutePaths.OrganizationSSO} element={<SSOOrganizationSettingsPage />} />}
           {licenseUi && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}
           {canManageOrganizationBilling && (
             <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />

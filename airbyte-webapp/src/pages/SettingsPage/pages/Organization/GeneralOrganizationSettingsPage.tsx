@@ -14,7 +14,6 @@ import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { DiagnosticsButton } from "pages/SettingsPage/components/DiagnosticButton";
 import { RegionsTable } from "pages/SettingsPage/components/RegionsTable";
-import { UpdateSSOSettingsForm } from "pages/SettingsPage/UpdateSSOSettingsForm";
 
 import { UpdateOrganizationSettingsForm } from "../../UpdateOrganizationSettingsForm";
 
@@ -24,7 +23,6 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const isDownloadDiagnosticsFlagEnabled = useExperiment("settings.downloadDiagnostics");
   const isDownloadDiagnosticsFeatureEnabled = useFeature(FeatureItem.DiagnosticsExport);
-  const supportsSSO = useFeature(FeatureItem.AllowUpdateSSOConfig);
   const supportsRegionsTable = useFeature(FeatureItem.AllowChangeDataplanes);
 
   // if EITHER flag OR feature is enabled, provide diagnostics
@@ -51,13 +49,6 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
         </CopyButton>
       </FlexContainer>
       <UpdateOrganizationSettingsForm />
-
-      {supportsSSO && (
-        <>
-          <Separator />
-          <UpdateSSOSettingsForm />
-        </>
-      )}
 
       {supportsRegionsTable && (
         <>
