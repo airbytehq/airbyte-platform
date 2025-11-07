@@ -9,6 +9,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
+import { ViewToggleButton } from "components/ui/ViewToggleButton";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { useCreateSource, useSourceDefinitionList } from "core/api";
@@ -19,13 +20,17 @@ import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { RoutePaths, SourcePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 
+import styles from "./CreateSourcePage.module.scss";
 import { SourceForm } from "./SourceForm";
+import { SourceFormWithAgent } from "./SourceFormWithAgent";
 
 export const CreateSourcePage: React.FC = () => {
   const params = useParams<{ workspaceId: string }>();
 
   const { sourceDefinitionId } = useParams<{ sourceDefinitionId: string }>();
   const { clearAllFormChanges } = useFormChangeTrackerService();
+  const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
+  const [isAgentView, setIsAgentView] = useState(true);
 
   useTrackPage(PageTrackingCodes.SOURCE_NEW);
   const navigate = useNavigate();
@@ -74,24 +79,50 @@ export const CreateSourcePage: React.FC = () => {
   }, [isConnectorBuilderGenerateFromParamsEnabled]);
 
   return (
-    <ConnectorDocumentationWrapper>
+    <>
       <HeadTitle titles={[{ id: "sources.newSourceTitle" }]} />
-      <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-      <FormPageContent>
-        <FlexContainer justifyContent="flex-start">
-          <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
-              <FormattedMessage id="connectorBuilder.backButtonLabel" />
-            </Button>
-          </Box>
-        </FlexContainer>
-        <SourceForm
-          onSubmit={onSubmitSourceStep}
-          sourceDefinitions={sourceDefinitions}
-          selectedSourceDefinitionId={sourceDefinitionId}
-        />
-        <CloudInviteUsersHint connectorType="source" />
-      </FormPageContent>
-    </ConnectorDocumentationWrapper>
+      {isAgentAssistedSetupEnabled ? (
+        <div className={styles.pageContainer}>
+          <div className={styles.headerWrapper}>
+            <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
+            <div className={styles.toggleWrapper}>
+              <ViewToggleButton
+                leftLabel={formatMessage({ id: "connector.create.toggle.agent", defaultMessage: "Agent" })}
+                rightLabel={formatMessage({ id: "connector.create.toggle.form", defaultMessage: "Form" })}
+                isRightSelected={!isAgentView}
+                onClick={() => setIsAgentView(!isAgentView)}
+              />
+            </div>
+          </div>
+          <div className={styles.contentWrapper}>
+            <SourceFormWithAgent
+              isAgentView={isAgentView}
+              onSubmit={onSubmitSourceStep}
+              sourceDefinitions={sourceDefinitions}
+              selectedSourceDefinitionId={sourceDefinitionId}
+            />
+          </div>
+        </div>
+      ) : (
+        <ConnectorDocumentationWrapper>
+          <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
+          <FormPageContent>
+            <FlexContainer justifyContent="flex-start">
+              <Box mb="md">
+                <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
+                  <FormattedMessage id="connectorBuilder.backButtonLabel" />
+                </Button>
+              </Box>
+            </FlexContainer>
+            <SourceForm
+              onSubmit={onSubmitSourceStep}
+              sourceDefinitions={sourceDefinitions}
+              selectedSourceDefinitionId={sourceDefinitionId}
+            />
+            <CloudInviteUsersHint connectorType="source" />
+          </FormPageContent>
+        </ConnectorDocumentationWrapper>
+      )}
+    </>
   );
 };

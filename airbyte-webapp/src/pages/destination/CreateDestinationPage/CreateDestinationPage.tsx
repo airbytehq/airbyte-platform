@@ -10,6 +10,7 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
+import { ViewToggleButton } from "components/ui/ViewToggleButton";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { useCreateDestination, useDestinationDefinitionList } from "core/api";
@@ -19,6 +20,9 @@ import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { DestinationPaths, RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
+
+import styles from "./CreateDestinationPage.module.scss";
+import { DestinationFormWithAgent } from "./DestinationFormWithAgent";
 
 export const CreateDestinationPage: React.FC = () => {
   const { destinationDefinitionId, workspaceId } = useParams<{
@@ -31,6 +35,8 @@ export const CreateDestinationPage: React.FC = () => {
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { destinationDefinitions } = useDestinationDefinitionList();
   const { mutateAsync: createDestination } = useCreateDestination();
+  const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
+  const [isAgentView, setIsAgentView] = useState(true);
 
   const onSubmitDestinationForm = async (values: {
     name: string;
@@ -73,24 +79,50 @@ export const CreateDestinationPage: React.FC = () => {
   }, [isConnectorBuilderGenerateFromParamsEnabled]);
 
   return (
-    <ConnectorDocumentationWrapper>
+    <>
       <HeadTitle titles={[{ id: "destinations.newDestinationTitle" }]} />
-      <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-      <FormPageContent>
-        <FlexContainer justifyContent="flex-start">
-          <Box mb="md">
-            <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
-              <FormattedMessage id="connectorBuilder.backButtonLabel" />
-            </Button>
-          </Box>
-        </FlexContainer>
-        <DestinationForm
-          onSubmit={onSubmitDestinationForm}
-          destinationDefinitions={destinationDefinitions}
-          selectedDestinationDefinitionId={destinationDefinitionId}
-        />
-        <CloudInviteUsersHint connectorType="destination" />
-      </FormPageContent>
-    </ConnectorDocumentationWrapper>
+      {isAgentAssistedSetupEnabled ? (
+        <div className={styles.pageContainer}>
+          <div className={styles.headerWrapper}>
+            <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
+            <div className={styles.toggleWrapper}>
+              <ViewToggleButton
+                leftLabel={formatMessage({ id: "connector.create.toggle.agent", defaultMessage: "Agent" })}
+                rightLabel={formatMessage({ id: "connector.create.toggle.form", defaultMessage: "Form" })}
+                isRightSelected={!isAgentView}
+                onClick={() => setIsAgentView(!isAgentView)}
+              />
+            </div>
+          </div>
+          <div className={styles.contentWrapper}>
+            <DestinationFormWithAgent
+              isAgentView={isAgentView}
+              onSubmit={onSubmitDestinationForm}
+              destinationDefinitions={destinationDefinitions}
+              selectedDestinationDefinitionId={destinationDefinitionId}
+            />
+          </div>
+        </div>
+      ) : (
+        <ConnectorDocumentationWrapper>
+          <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
+          <FormPageContent>
+            <FlexContainer justifyContent="flex-start">
+              <Box mb="md">
+                <Button variant="clear" onClick={onGoBack} icon="chevronLeft" iconSize="lg">
+                  <FormattedMessage id="connectorBuilder.backButtonLabel" />
+                </Button>
+              </Box>
+            </FlexContainer>
+            <DestinationForm
+              onSubmit={onSubmitDestinationForm}
+              destinationDefinitions={destinationDefinitions}
+              selectedDestinationDefinitionId={destinationDefinitionId}
+            />
+            <CloudInviteUsersHint connectorType="destination" />
+          </FormPageContent>
+        </ConnectorDocumentationWrapper>
+      )}
+    </>
   );
 };

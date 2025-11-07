@@ -1,0 +1,44 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.button {
+  cursor: pointer;
+  border: variables.$border-thin solid colors.$dark-blue;
+  background-color: colors.$dark-blue;
+  padding: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template: 1fr / 1fr 1fr;
+  align-self: center;
+  flex-basis: auto;
+  flex-shrink: 0;
+  width: auto;
+  border-radius: variables.$border-radius-xs;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.text {
+  height: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: variables.$font-size-xs;
+  padding: 3px 5px;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.selected {
+  background-color: transparent;
+  color: colors.$foreground;
+}
+
+.unselected {
+  background-color: colors.$foreground;
+  color: colors.$dark-blue;
+}

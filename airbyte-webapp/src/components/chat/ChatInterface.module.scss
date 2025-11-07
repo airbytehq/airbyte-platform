@@ -1,0 +1,59 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.container {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 10%);
+}
+
+.header {
+  padding: variables.$spacing-xl;
+  background-color: colors.$foreground;
+  border-bottom: variables.$border-thin solid colors.$grey-200;
+  text-align: center;
+}
+
+.title {
+  margin: 0 0 variables.$spacing-sm;
+  color: colors.$dark-blue-900;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0;
+  color: colors.$grey-600;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.chatContainer {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; // Allows flex items to shrink
+  overflow: hidden;
+}
+
+.disabledContainer {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: colors.$grey-50;
+  color: colors.$grey-600;
+  padding: variables.$spacing-xl;
+  text-align: center;
+  gap: variables.$spacing-md;
+}
+
+.disabledMessage {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+}

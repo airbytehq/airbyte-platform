@@ -17,6 +17,7 @@ export interface Experiments {
   "connection.onboarding.sources": string;
   "connection.rateLimitedUI": boolean;
   "connections.connectionsStatusesEnabled": boolean;
+  "connector.agentAssistedSetup": boolean;
   "connector.airbyteCloudIpAddressesByDataplane": Record<string, string[]>;
   "connector.allowSavingWithoutTesting": boolean;
   "connector.suggestedDestinationConnectors": string;
@@ -56,6 +57,7 @@ export const defaultExperimentValues: Experiments = {
   "connection.onboarding.sources": "",
   "connection.rateLimitedUI": false,
   "connections.connectionsStatusesEnabled": false,
+  "connector.agentAssistedSetup": false,
   "connector.airbyteCloudIpAddressesByDataplane": {
     auto: [
       "34.106.109.131",

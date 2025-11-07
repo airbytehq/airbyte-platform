@@ -1,0 +1,48 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.typingIndicator {
+  display: flex;
+  justify-content: flex-start;
+  padding: variables.$spacing-md 0;
+}
+
+.typingDots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: colors.$grey-400;
+  animation: typing 1.4s infinite;
+
+  &:nth-child(1) {
+    animation-delay: 0ms;
+  }
+
+  &:nth-child(2) {
+    animation-delay: 200ms;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 400ms;
+  }
+}
+
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+
+  30% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}

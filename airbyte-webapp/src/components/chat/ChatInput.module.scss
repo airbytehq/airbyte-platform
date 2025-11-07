@@ -1,0 +1,158 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.chatInput {
+  flex: 0 0 auto;
+  background-color: colors.$foreground;
+  border-top: variables.$border-thin solid colors.$grey-200;
+  padding: variables.$spacing-lg;
+}
+
+.form {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.inputContainer {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  background-color: colors.$grey-50;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-xl;
+  transition: border-color variables.$transition;
+
+  &:focus-within {
+    border-color: colors.$blue-400;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 20%);
+  }
+}
+
+.textarea {
+  flex: 1;
+  min-height: 24px;
+  max-height: 120px;
+  padding: variables.$spacing-md variables.$spacing-lg;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  color: colors.$dark-blue-900;
+
+  &::placeholder {
+    color: colors.$grey-500;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.sendButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: variables.$spacing-xs;
+  background-color: colors.$blue-500;
+  color: colors.$white;
+  border: none;
+  border-radius: variables.$border-radius-lg;
+  cursor: pointer;
+  transition: all variables.$transition;
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background-color: colors.$grey-300;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: colors.$blue-600;
+    transform: translateY(-1px);
+  }
+}
+
+.stopButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: variables.$spacing-xs;
+  background-color: colors.$grey-600;
+  color: colors.$white;
+  border: none;
+  border-radius: variables.$border-radius-lg;
+  cursor: pointer;
+  transition: all variables.$transition;
+
+  &:hover {
+    background-color: colors.$grey-700;
+  }
+}
+
+.secretModeMessage {
+  margin-bottom: variables.$spacing-md;
+}
+
+.secretToggleButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: variables.$spacing-sm;
+  padding: variables.$spacing-md variables.$spacing-lg;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: colors.$grey-600;
+  font-size: 16px;
+  text-align: left;
+  transition: color variables.$transition;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    color: colors.$grey-800;
+  }
+}
+
+.secretToggleText {
+  font-style: italic;
+}
+
+.secretHideButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: variables.$spacing-xs;
+  background-color: colors.$grey-100;
+  color: colors.$grey-600;
+  border: none;
+  border-radius: variables.$border-radius-lg;
+  cursor: pointer;
+  transition: all variables.$transition;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: colors.$grey-200;
+    color: colors.$grey-800;
+  }
+}

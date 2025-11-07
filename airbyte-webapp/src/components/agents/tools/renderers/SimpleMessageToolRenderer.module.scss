@@ -1,0 +1,18 @@
+@use "scss/colors";
+
+.simpleMessageTool {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.875rem;
+  color: colors.$grey-400;
+}
+
+.icon {
+  font-size: 0.75rem;
+}
+
+.message {
+  font-style: italic;
+}

@@ -1,0 +1,92 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.toolCall {
+  margin-top: variables.$spacing-md;
+  padding: variables.$spacing-md;
+  background-color: colors.$grey-50;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-md;
+}
+
+.toolCallHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: variables.$spacing-sm;
+  margin-bottom: variables.$spacing-sm;
+}
+
+.toolCallTitle {
+  display: flex;
+  align-items: center;
+  gap: variables.$spacing-sm;
+}
+
+.toolCallIcon {
+  font-size: 16px;
+}
+
+.toolCallName {
+  font-weight: 600;
+  color: colors.$dark-blue-900;
+  font-size: 14px;
+}
+
+.toggleButton {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: variables.$border-thin solid colors.$grey-300;
+  border-radius: variables.$border-radius-sm;
+  background-color: colors.$grey-50;
+  color: colors.$grey-900;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.toggleButton:hover {
+  background-color: colors.$grey-100;
+}
+
+.toggleButton:focus-visible {
+  outline: 2px solid colors.$dark-blue-500;
+  outline-offset: 2px;
+}
+
+.toolCallArgs,
+.toolResponse {
+  margin-top: variables.$spacing-sm;
+}
+
+.toolCallArgsLabel,
+.toolResponseLabel {
+  font-weight: 500;
+  color: colors.$grey-700;
+  font-size: 13px;
+  margin-bottom: variables.$spacing-xs;
+}
+
+.toolCallArgsContent,
+.toolResponseContent {
+  margin: 0;
+  padding: variables.$spacing-sm;
+  background-color: colors.$grey-100;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-sm;
+  font-size: 12px;
+  font-family: monospace;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: colors.$dark-blue-900;
+}
+
+.toolResponse {
+  margin-top: variables.$spacing-md;
+  padding-top: variables.$spacing-md;
+  border-top: variables.$border-thin solid colors.$grey-200;
+}

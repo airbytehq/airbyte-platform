@@ -1,0 +1,119 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.messageContent {
+  max-width: 90%;
+  padding: variables.$spacing-md variables.$spacing-lg;
+  word-wrap: break-word;
+}
+
+.message {
+  display: flex;
+  margin-bottom: variables.$spacing-lg;
+
+  &--user {
+    justify-content: flex-end;
+
+    .messageContent {
+      background-color: colors.$foreground;
+      color: colors.$dark-blue-900;
+      border-radius: variables.$border-radius-lg variables.$border-radius-sm variables.$border-radius-lg
+        variables.$border-radius-lg;
+    }
+  }
+
+  &--assistant {
+    justify-content: flex-start;
+
+    .messageContent {
+      background-color: colors.$blue-40;
+      color: colors.$dark-blue-900;
+      border-radius: variables.$border-radius-sm variables.$border-radius-lg variables.$border-radius-lg
+        variables.$border-radius-lg;
+    }
+  }
+
+  &--tool {
+    justify-content: flex-start;
+
+    .messageContent {
+      background-color: transparent;
+      padding: 0;
+    }
+  }
+}
+
+.messageHeader {
+  margin-bottom: variables.$spacing-xs;
+}
+
+.messageRole {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+}
+
+.messageText {
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  position: relative;
+
+  p {
+    margin: 0 0 variables.$spacing-sm 0;
+  }
+
+  ul,
+  ol {
+    padding-left: variables.$spacing-lg;
+    margin: 0 0 variables.$spacing-sm 0;
+  }
+
+  code {
+    background-color: colors.$grey-50;
+    padding: 0 2px;
+    border-radius: variables.$border-radius-xs;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.95em;
+  }
+
+  pre {
+    background-color: colors.$grey-50;
+    border: variables.$border-thin solid colors.$grey-200;
+    border-radius: variables.$border-radius-sm;
+    padding: variables.$spacing-sm variables.$spacing-md;
+    overflow: auto;
+
+    code {
+      background: transparent;
+      padding: 0;
+    }
+  }
+}
+
+.toolCalls {
+  margin-top: variables.$spacing-md;
+}
+
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: currentColor;
+  margin-left: 2px;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0;
+  }
+}

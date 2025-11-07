@@ -1,0 +1,56 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.messageList {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: variables.$spacing-lg;
+  min-height: 0;
+}
+
+.messages {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: variables.$spacing-xl;
+}
+
+.emptyStateContent {
+  text-align: center;
+  max-width: 400px;
+}
+
+.emptyStateTitle {
+  margin: 0 0 variables.$spacing-md;
+  color: colors.$dark-blue-900;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.emptyStateText {
+  margin: 0;
+  color: colors.$grey-600;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.error {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  margin-bottom: variables.$spacing-lg;
+  background-color: colors.$red-50;
+  border: variables.$border-thin solid colors.$red-200;
+  border-radius: variables.$border-radius-md;
+  color: colors.$red-700;
+  font-size: 14px;
+  text-align: center;
+  max-width: 70%;
+  margin-left: auto;
+  margin-right: auto;
+}

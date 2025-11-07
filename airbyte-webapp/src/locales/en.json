@@ -11,7 +11,6 @@
   "notifications.airbyteUpdated": "Airbyte has been updated. Please reload the page.",
   "notifications.airbyteUpdated.reload": "Reload now",
   "webapp.deploy-preview-message": "Deploy preview for <link>#{pullRequestNumber}</link>",
-
   "workspaces.title": "Workspaces",
   "workspaces.subtitle": "Workspaces let you collaborate with team members and share connections across your team.",
   "workspaces.create": "Create workspace",
@@ -36,7 +35,6 @@
   "workspaces.status.runningSyncs": "Running syncs",
   "workspaces.status.successfulSyncs": "Successful syncs",
   "workspaces.status.failedSyncs": "Failed syncs",
-
   "proFeatures.modal.title": "Continue to experience Pro features",
   "proFeatures.modal.titleUpgrade": "Upgrade to experience Pro features",
   "proFeatures.modal.featuresTitle": "You're about to use one of the following Pro features:",
@@ -51,7 +49,6 @@
   "proFeatures.modal.button.talkToSales": "Talk to sales",
   "proFeatures.modal.button.noThanks": "No thanks",
   "proFeatures.modal.button.talkToSalesNow": "Talk to Sales now",
-
   "role.admin": "Admin",
   "role.reader": "Reader",
   "role.editor": "Editor",
@@ -68,7 +65,6 @@
   "role.member.description": "Member of {resourceType}, but cannot view anything without additional permissions",
   "role.organization.userDescription": "<b>{name}</b> is an <b>Organization {role}.</b>",
   "role.guest": "Guest",
-
   "sidebar.billing": "Billing",
   "sidebar.homepage": "Homepage",
   "sidebar.home": "Home",
@@ -101,7 +97,27 @@
   "sidebar.searchAllWorkspaces": "Search all workspaces",
   "sidebar.searchOrganizations": "Search all organizations",
   "sidebar.noOrganizationsFound": "No organizations found",
-
+  "chat.title": "AI Chat Assistant",
+  "chat.subtitle": "Ask questions and get assistance with your data integration needs",
+  "chat.message.user": "You",
+  "chat.message.assistant": "Assistant",
+  "chat.typing": "Thinking...",
+  "chat.input.placeholder": "Type your response...",
+  "chat.input.send": "Send message",
+  "chat.input.secretPlaceholder": "Enter value for {fieldName} (sensitive - not sent to AI)",
+  "chat.input.secretMode": "Secure input: Any credentials you enter will be stored securely, and not sent to the LLM.",
+  "chat.input.secretToggle": "Click to enter sensitive value",
+  "chat.empty.title": "Start a conversation",
+  "chat.empty.subtitle": "Ask any question about data integration, connectors, or how to get started with Airbyte.",
+  "chat.error": "Error: {error}",
+  "chat.toolCall.label": "Tool Call",
+  "chat.toolCall.args": "Arguments",
+  "chat.toolCall.response": "Response",
+  "chat.toolCall.expand": "Expand tool call details",
+  "chat.toolCall.collapse": "Collapse tool call details",
+  "chat.toolCall.checkConfig.configurationSummary": "Configuration summary",
+  "chat.toolCall.checkConfig.testResult": "Test Result",
+  "chat.input.stop": "stop",
   "form.error": "Error: {message}",
   "form.error.pkAndCursor.required": "Primary key and cursor are missing",
   "form.error.pk.missing": "Primary key missing",
@@ -273,7 +289,6 @@
   "form.failedValidation": "Validation failed: {error}",
   "form.deprecated": "Deprecated",
   "form.suggestions": "Suggested values",
-
   "setupForm.check.loading": "Checking the security of your installation…",
   "setupForm.check.unsecured.title": "Your Airbyte installation is unsecured",
   "setupForm.check.unsecured.open": "Your Airbyte instance is reachable from the internet and doesn't use any form of authentication. This means that any data entered will be open to the public, including any access tokens and credentials. You should <b>not</b> continue before securing your installation.",
@@ -284,7 +299,6 @@
   "setupForm.check.closed": "The security check did not reveal any vulnerabilities. Your installation likely is secure.",
   "setupForm.check.failed": "The security of your Airbyte installation couldn't be checked. Please ensure your installation is <lnk>secured</lnk>. It should use strong authentication and/or not be accessible from the internet.",
   "setupForm.submit": "Get started",
-
   "connectionForm.connectionSettings": "Connection settings",
   "connectionForm.settings.advancedButton": "Advanced",
   "connectionForm.validation.error": "The form is invalid. Please make sure that all fields are correct.",
@@ -388,7 +402,6 @@
   "connectionForm.schemaChangesBackdrop.message": "Please review the schema updates before making changes to the connection",
   "connectionForm.update.success": "Connection update succeeded",
   "connectionForm.update.failed": "Connection update failed",
-
   "connectionForm.breakingChange.deprecatedNoDeadline.message": "A pending upgrade to <b>{actor_name}</b> requires your attention.",
   "connectionForm.breakingChange.deprecated.message": "There is a new version available for the {actor_definition_name} {actor_type} connector which contains breaking changes. Upgrade your {actor_name} {actor_type} by <b>{upgrade_deadline}</b> to ensure continuous syncing. Otherwise, this connection will be automatically paused to prevent failure or unexpected behavior.",
   "connectionForm.breakingChange.unsupported.message": "There is a new version available for the {actor_definition_name} {actor_type} connector which contains breaking changes. To prevent failure or unexpected behavior, this connection was automatically paused. Upgrade your {actor_name} {actor_type} to resume syncing.",
@@ -396,7 +409,6 @@
   "connectionForm.breakingChange.autoupgrade.unsupported.message": "There is a new version available for the {actor_definition_name} {actor_type} connector which contains breaking changes. To prevent failure or unexpected behavior, this connection was automatically paused. Upgrade your {actor_name} {actor_type} to resume syncing.",
   "connectionForm.breakingChange.source.buttonLabel": "Go to Source",
   "connectionForm.breakingChange.destination.buttonLabel": "Go to Destination",
-
   "connectionForm.modal.destinationNamespace.title": "Destination namespace",
   "connectionForm.modal.destinationNamespace.option.source": "Mirror source structure",
   "connectionForm.modal.destinationNamespace.option.destination": "Destination default",
@@ -419,19 +431,15 @@
   "connectionForm.modal.destinationNamespace.table.data.exampleMySourceNamespaceEmpty": "\"another__schema\"",
   "connectionForm.modal.destinationNamespace.table.data.custom": "<symbol>custom</symbol>",
   "connectionForm.modal.destinationNamespace.learnMore.link": "Learn more",
-
   "connectionForm.modal.destinationStreamNames.input.placeholder": "prefix",
   "connectionForm.modal.destinationStreamNames.input.placeholderNext": "no prefix set",
-
   "connectionForm.backfillColumns.title": "Backfill new or renamed columns",
   "connectionForm.backfillColumns.description": "Backfill values for new or renamed columns. May incur increased destination costs.",
   "connectionForm.backfillColumns.descriptionCloud": "Backfill values for new or renamed columns for free. May incur increased destination costs.",
-
   "connectionForm.fileStream.badge": "File stream",
   "connectionForm.fileStream.tooltip.supported": "A file stream contains file attachments and all of their metadata. Enabling this stream will send all files to the destination.",
   "connectionForm.fileStream.tooltip.supported.note": "Note: this stream may be very large.",
   "connectionForm.fileStream.tooltip.unsupported": "{destinationName} does not support sending file.",
-
   "connectorForm.authenticate": "Authenticate your {connector} account",
   "connectorForm.signInWithGoogle": "Sign in with Google",
   "connectorForm.authenticate.succeeded": "Authentication succeeded!",
@@ -449,7 +457,6 @@
   "connectorForm.allowlistIp.message": "Please allow inbound traffic from the following Airbyte IPs in your firewall whether connecting directly or via SSH Tunnel (<a>more info</a>):",
   "connectorForm.allowlistIp.addressesLabel": "Airbyte IP addresses",
   "connectorBuilder.oauth.state.invalidShape": "Key \"{key}\" is required and its value must be a number",
-
   "form.sourceNamespace": "Source namespace",
   "form.sourceStreamName": "Source stream name",
   "form.destinationNamespace": "Dest. namespace",
@@ -474,13 +481,11 @@
   "form.field.cursorField": "Cursor field",
   "form.field.sourceDefinedCursor": "Source-Defined Cursor",
   "form.field.sourceDefinedPK": "Source-Defined Primary key",
-
   "preferences.headTitle": "Preferences",
   "preferences.title": "Specify your preferences",
   "preferences.anonymizeUsage": "Anonymize usage data collection",
   "preferences.collectData": "We collect data only for product improvements.",
   "preferences.anonymizeData": "Anonymize my usage data.",
-
   "onboarding.createSource": "Create a source",
   "onboarding.sourceSetUp": "Set up a new source",
   "onboarding.sourceSetUp.description": "Configure a new source from Airbyte's catalog of available connectors",
@@ -499,7 +504,6 @@
   "onboarding.fetchingSchema": "We are fetching the schema of your data. \nThis should take less than a minute, but may take a few minutes on slow internet connections or data sources with a large amount of streams.",
   "onboarding.or": "or",
   "onboarding.firstSyncStarted": "Connection created! Your first sync has started.",
-
   "sources.description": "<b>Sources</b> are where you want to <b>pull data</b> from.",
   "sources.searchIncremental": "Search cursor value for incremental",
   "sources.incrementalDefault": "{value} (default)",
@@ -593,7 +597,6 @@
   "sources.syncing": "Syncing",
   "sources.starting": "Starting…",
   "sources.sumOverAttempts": "Sum over attempts",
-
   "sources.updatesEveryMinute": "Updates every minute",
   "sources.downloadLogs": "Download logs",
   "sources.debugInfoDetails": "Debug Info details",
@@ -609,7 +612,6 @@
   "sources.createError": "Error creating source: {message}",
   "sources.updateError": "Error updating source: {message}",
   "sources.deleteError": "Error deleting source: {message}",
-
   "destination.destinationSettings": "Destination Settings",
   "destinations.newDestination": "New destination",
   "destinations.selectDestinationTitle": "Set up a new destination",
@@ -624,25 +626,19 @@
   "destinations.createError": "Error creating destination: {message}",
   "destinations.updateError": "Error updating destination: {message}",
   "destinations.deleteError": "Error deleting destination: {message}",
-
   "connector.connections.empty": "Add a {needs} for this {has}",
   "connector.connections.empty.sourceCTA": "To sync data from <b>{name}</b>, connect it with one of our {count, plural, =0 {} other {{count}+}}  destinations.",
   "connector.connections.empty.destinationCTA": "To sync data to <b>{name}</b>, connect it with one of our {count, plural, =0 {} other {{count}+}}  sources.",
   "connector.connections.empty.button": "Create a connection",
-
   "connection.stream.syncMode": "{syncMode} - {destinationSyncMode}",
-
   "destinationSyncMode.append": "Append",
   "destinationSyncMode.append_dedup": "Append + Deduped",
   "destinationSyncMode.overwrite": "Overwrite",
   "destinationSyncMode.overwrite_dedup": "Overwrite + Deduped",
-
   "syncMode.full_refresh": "Full refresh",
   "syncMode.incremental": "Incremental",
-
   "mapper.hash.optedIn": "Hashed (SHA-256)",
   "mapper.hash.optedOut": "Unhashed",
-
   "connection.onboarding.title": "<b>Connections</b> link Sources to Destinations",
   "connection.onboarding.createFirst": "Create your first connection",
   "connection.onboarding.sources": "Sources",
@@ -654,13 +650,11 @@
   "connection.onboarding.addDestination": "Connect a source in order to send data to {destination}",
   "connection.lockedTooltip": "To continue using <b>Pro</b> features, please upgrade your plan to <b>Pro</b>.",
   "connection.onboarding.moreDestinations": "Connect a source in order to send data to any of Airbyte’s {count, plural, =0 {} other {{count}+}} destinations",
-
   "connection.refreshDataRecommended": "Refresh streams recommended",
   "connection.saveWithRefresh": "Save configuration and refresh (recommended)",
   "connection.refreshDataHint": "Due to changes in the stream configuration, we recommend refreshing the connection.",
   "connection.saveWithoutRefresh": "Save configuration without refreshing streams",
   "connection.saveWithoutRefresh.description": "Note: If you do not refresh the affected streams, unexpected behavior may occur",
-
   "connection.clearDataRecommended": "Clear streams recommended",
   "connection.clearDataHint": "Due to changes in the stream configuration, we recommend clearing the affected streams. This will delete data in the destination for those streams. Please sync after clearing to bring your data up to date.",
   "connection.saveWithDataClear": "Clear data from affected streams (recommended)",
@@ -702,23 +696,19 @@
   "connection.freeHistoricalSyncs.message.initial": "Free syncs for 7 days",
   "connection.freeHistoricalSyncs.message": "{count, plural, one {Free syncs for 1 more day} other {Free syncs for # more days}}",
   "connection.freeHistoricalSyncs.tooltip": "This connection is free to sync for the first 7 days.",
-
   "connection.catalogTree.sourceDefined": "'<source defined>",
   "connection.catalogTree.sourceSchema": "'<source schema>",
   "connection.catalogTree.destinationSchema": "'<destination schema>",
   "connection.catalogTree.noStreams": "No streams",
   "connection.catalogTree.noMatchingStreams": "No matching streams",
-
   "connection.schemaUpdateNotifications.title": "Be notified when schema changes occur",
   "connection.schemaUpdateNotifications.workspaceWarning": "Connection update notifications are not enabled in this workspace. <link>Configure them here</link>.",
   "connection.schemaUpdateNotifications.subtitle": "Receive notifications when schema changes occur",
   "connection.schemaUpdateNotifications.info": "Send webhook notifications when your source schema has changed",
   "connection.schemaUpdateNotifications.error": "Unable to save the schema update notifications setting at this time.",
-
   "connection.backfillColumns.title": "Backfill new or renamed columns",
   "connection.backfillColumns.description": "Backfill values for new or renamed columns. May incur increased destination costs.",
   "connection.backfillColumns.description.cloud": "Backfill values for new or renamed columns for free. May incur increased destination costs.",
-
   "connection.geographyTitle": "Data residency",
   "connection.geographyDescription": "Choose the data processing location for this connection.",
   "connection.geography.auto": "No preference",
@@ -726,12 +716,10 @@
   "connection.geography.eu": "European Union",
   "connection.geographyUpdateError": "There was an error updating the data residency for this connection.",
   "connection.name.updateName": "Update name",
-
   "connection.newConnection": "New connection",
   "connection.newConnectionTitle": "New connection",
   "connection.noConnections": "Connection list is empty",
   "connection.disabledConnection": "Disabled connection",
-
   "connection.failedSync": "Failed sync",
   "connection.cancelledSync": "Cancelled sync",
   "connection.successSync": "Succeeded sync",
@@ -751,7 +739,6 @@
   "connection.cancelRefresh": "Cancel Refresh",
   "connection.cancelDataClear": "Cancel Clearing Data",
   "connection.updateFailed": "Failed to update connection",
-
   "connection.progress.percentage": "{percent} percent progress",
   "connection.progress.minutesRemaining": "~{value, plural, one {# minute remaining} other {# minutes remaining}}",
   "connection.progress.hoursRemaining": "~{value, plural, one {# hour remaining} other {# hours remaining}}",
@@ -763,12 +750,10 @@
   "connection.progress.progress": "Progress",
   "connection.progress.recordsSynced": "{synced, number} / {total, number} {synced, plural, one {record synced} other {records synced}} ({speed, number} records/sec)",
   "connection.progress.bytesSynced": "{synced} / {total} synced ({speed}/sec)",
-
   "connection.schemaChange.streamWithBreakingChanges": "Stream contains breaking changes",
   "connection.schemaChange.breaking": "Breaking schema changes detected",
   "connection.schemaChange.nonBreaking": "Schema changes detected",
   "connection.schemaChange.reviewAction": "Review changes",
-
   "connection.status.running": "Running",
   "connection.status.synced": "Synced",
   "connection.status.pending": "Pending",
@@ -779,13 +764,11 @@
   "connection.status.clearing": "Clearing data",
   "connection.status.paused": "Paused",
   "connection.status.undefined": "Fetching status",
-
   "connection.actions.clearData": "Clearing your data will delete all data in your destination.",
   "connection.uptimeStatus.synced": "Synced",
   "connection.uptimeStatus.incomplete": "Stopped due to error(s)",
   "connection.uptimeStatus.failed": "Stopped (action required)",
   "connection.uptimeStatus.cancelled": "Cancelled",
-
   "connection.actions.clearYourData": "Clear your data",
   "connection.actions.clearYourData.disabledConnectionTooltip": "Enable your connection to clear data",
   "connection.actions.clearYourData.runningJobTooltip": "Cannot clear data during a running sync",
@@ -802,12 +785,10 @@
   "connection.actions.cancel.confirm.body.starting": "This sync is still getting started.",
   "connection.actions.cancel.confirm.body.extractedOnly": "This sync has extracted {recordsExtracted} records so far.",
   "connection.actions.cancel.confirm.body.loaded": "This sync has loaded {recordsLoaded} records so far.",
-
   "connection.actions.cancel.confirm.submit": "Yes, cancel sync",
   "connection.actions.cancel.confirm.cancel": "No, continue sync",
   "connection.actions.cancel.clear.confirm.submit": "Yes, cancel clear",
   "connection.actions.cancel.clear.confirm.cancel": "No, continue clear",
-
   "connection.create.error": "Error creating connection: {message}",
   "connection.create.backToMappings": "Back to mappings",
   "connection.create.fields": "Fields",
@@ -847,7 +828,6 @@
   "connection.destinationFieldNamePlaceholder": "Select destination field name",
   "connection.destinationObjectName": "Destination object name",
   "connection.matchingKey": "Matching key",
-
   "connections.graph.6h": "6h",
   "connections.graph.24h": "24h",
   "connections.graph.7d": "7d",
@@ -901,14 +881,12 @@
   "connections.mappings.error.FIELD_NAME_SUFFIX_REQUIRED": "Field name suffix is required",
   "connections.mappings.submissionValidationError": "There are errors in some of the mapping configurations. Please fix them before saving.",
   "connections.mappings.aesRequiresSecrets": "You must have an external secrets manager to use an AES encryption key.",
-
   "connection.tags.title": "Tags",
   "connection.tags.add": "Add tag",
   "connection.tags.edit": "Edit tags",
   "connection.tags.create": "Create",
   "connection.tags.selectOrCreateTag": "{hasTags, select, true {Select an option or create one} other {Create a tag}}",
   "connection.tags.limitReached": "Maximum 10 tags can be added to a connection.",
-
   "connection.timeline": "Timeline",
   "connection.timeline.empty": "No events to display",
   "connection.timeline.error": "Error: ",
@@ -964,11 +942,9 @@
   "connection.timeline.connection_settings_update.descriptionWithUserMulti": "{user} changed the {field} from \"{from}\" to \"{to}\" and {otherChanges, plural, one {# other change} other {# other changes}}.",
   "connection.timeline.connection_settings_add.descriptionWithUserMulti": "{user} added a {field}: \"{to}\" and {otherChanges, plural, one {# other change} other {# other changes}}.",
   "connection.timeline.connection_settings_remove.descriptionWithUserMulti": "{user} removed the {field} (was \"{from}\") and {otherChanges, plural, one {# other change} other {# other changes}}.",
-
   "connection.timeline.connection_settings_update.descriptionWithoutUser": "<b>{field}</b> changed from \"{from}\" to \"{to}\"",
   "connection.timeline.connection_settings_add.descriptionWithoutUser": "<b>{field}</b> added: \"{to}\"",
   "connection.timeline.connection_settings_remove.descriptionWithoutUser": "<b>{field}</b> removed (was \"{from}\")",
-
   "connection.timeline.connection_settings_update.View details": "View details",
   "connection.timeline.schema_update": "Schema updated",
   "connection.timeline.schema_update.description": "{user} applied a change in the schema: {schemaMessage}",
@@ -976,7 +952,6 @@
   "connection.timeline.schema_update.streamsRemoved": "{streams, plural, one {# stream removed} other {# streams removed}}",
   "connection.timeline.schema_update.fieldChanges": "{streams, plural, one {# stream} other {# streams}} changed",
   "connection.timeline.schema_update.viewDetails": "View details",
-
   "connection.timeline.connection_schema_update": "Connection schema updated",
   "connection.timeline.connection_schema_update.description": "{user} updated the schema config: {schemaMessage}.",
   "connection.timeline.connection_schema_update.viewDetails": "View details",
@@ -987,13 +962,11 @@
   "connection.timeline.connection_schema_update.syncModesChanged": "{count, plural, one {# stream sync mode changed} other {# stream sync modes changed}}",
   "connection.timeline.connection_schema_update.cursorFieldsChanged": "{count, plural, one {# cursor field changed} other {# cursor fields changed}}",
   "connection.timeline.connection_schema_update.primaryKeysChanged": "{count, plural, one {# primary key changed} other {# primary keys changed}}",
-
   "connection.timeline.connection_schema_update.streamsAdded": "{count, plural, one {# stream added} other {# streams added}}",
   "connection.timeline.connection_schema_update.streamsRemoved": "{count, plural, one {# stream removed} other {# streams removed}}",
   "connection.timeline.connection_schema_update.fieldsAdded": "{count, plural, one {# field added} other {# fields added}}",
   "connection.timeline.connection_schema_update.fieldsRemoved": "{count, plural, one {# field removed} other {# fields removed}}",
   "connection.timeline.connection_schema_update.fieldsDataTypeChanged": "{count, plural, one {# field data type changed} other {# field data types changed}}",
-
   "connection.timeline.connection_schema_update.catalog_config_diff.streamsAndFieldsAdded": "{streamCount, plural, =0 {} one {# Stream} other {# Streams}}{bothPresent, select, true { and } other {}}{fieldCount, plural, =0 {} one {# Field} other {# Fields}} available:",
   "connection.timeline.connection_schema_update.catalog_config_diff.streamsAndFieldsRemoved": "{streamCount, plural, =0 {} one {# Stream} other {# Streams}}{bothPresent, select, true { and } other {}}{fieldCount, plural, =0 {} one {# Field} other {# Fields}} removed:",
   "connection.timeline.connection_schema_update.catalog_config_diff.streamsAndFieldsEnabled": "{streamCount, plural, =0 {} one {# Stream} other {# Streams}}{bothPresent, select, true { and } other {}}{fieldCount, plural, =0 {} one {# Field} other {# Fields}} enabled:",
@@ -1008,35 +981,30 @@
   "connection.timeline.connection_schema_update.catalog_config_diff.primaryKeysChanged.description.multiple": "{streamName} ({changedPrimaryKeys})",
   "connection.timeline.connection_schema_update.catalog_config_diff.fieldsDataTypeChanged": "{count, plural, one {Field data type changed:} other {Field data types changed:}}",
   "connection.timeline.connection_schema_update.catalog_config_diff.fieldsDataTypeChanged.description": "{fieldName} ({prevDataType} to {currentDataType})",
-
   "connection.timeline.connector_update.version": "Connector {connectorType} version changed",
   "connection.timeline.connector_update.version.description.reason.updated.USER": "{user} changed {connectorName} from {fromVersion} to {toVersion}",
   "connection.timeline.connector_update.version.description.reason.upgraded.USER": "{user} upgraded {connectorName} from {fromVersion} to {toVersion}",
   "connection.timeline.connector_update.version.description.reason.downgraded.USER": "{user} downgraded {connectorName} from {fromVersion} to {toVersion}",
   "connection.timeline.connector_update.version.description.reason.upgraded.SYSTEM": "Airbyte upgraded {connectorName} from {fromVersion} to {toVersion}",
   "connection.timeline.connector_update.version.description.reason.downgraded.SYSTEM": "Airbyte downgraded {connectorName} from {fromVersion} to {toVersion}",
-
   "connection.timeline.mapping_create": "Mapping created",
   "connection.timeline.mapping_create.hashing.description": "{user} created a <b>hashing</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_create.field_renaming.description": "{user} created a <b>field-renaming</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_create.row_filtering.description": "{user} created a <b>row-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_create.field_filtering.description": "{user} created a <b>field-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_create.encryption.description": "{user} created an <b>encryption</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
-
   "connection.timeline.mapping_update": "Mapping edited",
   "connection.timeline.mapping_update.hashing.description": "{user} updated a <b>hashing</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_update.field_renaming.description": "{user} updated a <b>field-renaming</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_update.row_filtering.description": "{user} updated a <b>row-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_update.field_filtering.description": "{user} updated a <b>field-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_update.encryption.description": "{user} updated an <b>encryption</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
-
   "connection.timeline.mapping_delete": "Mapping deleted",
   "connection.timeline.mapping_delete.hashing.description": "{user} deleted a <b>hashing</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_delete.field_renaming.description": "{user} deleted a <b>field-renaming</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_delete.row_filtering.description": "{user} deleted a <b>row-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_delete.field_filtering.description": "{user} deleted a <b>field-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_delete.encryption.description": "{user} deleted an <b>encryption</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
-
   "connection.llmSyncFailureExplanation.explain": "Explain this error",
   "connection.llmSyncFailureExplanation.title": "AI Sync Failure Explanation",
   "connection.llmSyncFailureExplanation.error": "An error occurred while generating a response. Please try again later.",
@@ -1045,7 +1013,6 @@
   "connection.llmSyncFailureExplanation.loading.examine_sync_config": "Examining sync configuration...",
   "connection.llmSyncFailureExplanation.loading.analyze_sync_failure_patterns": "Analyzing sync failure patterns...",
   "connection.llmSyncFailureExplanation.loading.investigate_root_cause": "Investigating root cause...",
-
   "connectionAutoDisabledReason.TOO_MANY_FAILED_JOBS_WITH_NO_RECENT_SUCCESS": "Airbyte disabled the connection due to consecutive failures with no recent success.",
   "connectionAutoDisabledReason.ONLY_FAILED_JOBS_RECENTLY": "Airbyte disabled the connection due to only failed jobs recently.",
   "connectionAutoDisabledReason.TOO_MANY_CONSECUTIVE_FAILED_JOBS_IN_A_ROW": "Airbyte disabled the connection due to consecutive failures.",
@@ -1059,7 +1026,6 @@
   "connectionAutoDisabledReason.INVALID_PAYMENT_METHOD": "Airbyte disabled the connection due to a billing issue.",
   "connectionAutoDisabledReason.UNSUBSCRIBED": "Airbyte disabled the connection because your Airbyte subscription ended.",
   "connectionAutoDisabledReason.MANUALLY_LOCKED": "Airbyte disabled the connection and manually locked your account due to a billing issue.",
-
   "connection.actions.error": "There was an error starting this job. Please try again.",
   "connection.actions.refreshData": "Refresh your data",
   "connection.actions.refreshConnection": "Refresh connection",
@@ -1067,7 +1033,6 @@
   "connection.actions.refreshData.notAvailable.destination": "Refreshes are not available for this destination",
   "connection.actions.refreshData.notAvailable.streams": "Refreshes are only available for connections with incremental streams",
   "connection.actions.refreshData.disabledConnectionTooltip": "Enable your connection to refresh data",
-
   "connection.actions.refreshData.description": "Refreshing your data will replace all data in your destination by reloading all data from the source.",
   "connection.actions.refreshData.confirm.title": "Are you sure you want to refresh this connection?",
   "connection.actions.refreshData.affectedStreamsList.title": "This action will refresh the following {affected} / {total} enabled streams. It will also sync all enabled streams:",
@@ -1078,7 +1043,6 @@
   "connection.actions.refreshStream.merge.description": "By electing to refresh your {value, plural, one {stream} other {streams}} and <bold>retain records</bold>, you are instructing Airbyte to keep any records in your destination that the source no longer contains. This option is recommended for analytics use cases or where downstream reporting depends on historical data.",
   "connection.actions.refreshStream.truncate.label": "Refresh {value, plural, one {stream} other {streams}} and remove records",
   "connection.actions.refreshStream.truncate.description": "By electing to refresh your {value, plural, one {stream} other {streams}} and <bold>remove records</bold>, you are instructing Airbyte to remove previously synced records that are no longer in the source. This option is recommended for database replication use cases where you expect a 1:1 mirror of the source. Use this option carefully as this is not reversible.",
-
   "connection.stream.status.failed": "Failed",
   "connection.stream.status.synced": "Synced",
   "connection.stream.status.disabled": "Disabled",
@@ -1106,12 +1070,10 @@
   "connection.stream.status.table.emptyTable.message": "Re-enable the connection to show stream sync progress",
   "connection.stream.status.table.emptyTable.callToAction": "Re-enable",
   "connection.stream.status.table.syncStarting": "Sync starting…",
-
   "connection.stream.rateLimitedMessage": "restarting in {quota}",
   "connection.stream.rateLimitedMessageNoQuota": "rate limited",
   "connection.rateLimitedMessageNoQuota": "This sync is being rate limited by the source, it will automatically resume when the source is ready.",
   "connection.rateLimitedMessageWithQuota": "This sync is being rate limited by the source. We'll try to complete syncing once the time limit is up in {quota}",
-
   "connection.stream.actions.refreshStream": "Refresh stream",
   "connection.stream.actions.refreshDisabled.destinationNotSupported": "This destination does not support refreshing data",
   "connection.stream.actions.refreshDisabled.streamNotIncremental": "Refreshing data is only supported for incremental streams",
@@ -1126,27 +1088,21 @@
   "connection.stream.actions.clearData.confirm.cancel": "No, cancel",
   "connection.stream.actions.edit": "Edit",
   "connection.stream.status.nextSync": "Next sync {sync}",
-
   "connection.overview.graph.noData": "No data yet",
   "connection.overview.graph.noData.button": "Sync now to see data",
   "connection.overview.graph.volume": "Volume",
   "connection.overview.graph.recordsEmitted": "{value, plural, one {# record} other {# records}} extracted",
   "connection.overview.graph.recordsLoaded": "{value, plural, one {# record} other {# records}} loaded",
   "connection.overview.graph.clickThrough": "Click to go to job →",
-
   "connection.overview.graph.dataMoved": "Records loaded",
   "connection.overview.graph.dataMoved.tooltipLabel": "{value, plural, one {<b>#</b> record} other {<b>#</b> records}} committed",
   "connection.overview.graph.dataMoved.tooltipLabelExtra": "Click to see jobs from this day",
-
   "connection.overview.graph.uptimeStatus": "Streams status",
   "connection.overview.graph.uptimeStatus.more": "+{moreCount} more",
-
   "connection.overview.graph.uptimeStatus.incomplete": "{count, plural, one {# stream} other {# streams}} incomplete",
   "connection.overview.graph.uptimeStatus.failed": "{count, plural, one {# stream} other {# streams}} stopped (action required)",
   "connection.overview.graph.uptimeStatus.synced": "{count, plural, one {# stream} other {# streams}} synced",
-
   "connection.overview.graph.syncsCount": "{count, plural, one {# sync} other {# syncs}}",
-
   "form.scheduleType": "Schedule type",
   "form.scheduleTypeNext": "Sync schedule",
   "form.scheduleType.message": "Choose how syncs for this connection should be scheduled",
@@ -1162,7 +1118,7 @@
   "form.cronExpression.subtitle": "Schedule a precise time for your sync using <lnk>Quartz syntax</lnk>",
   "form.frequency.placeholder": "Select a frequency",
   "form.frequency.message": "Set how frequently the sync should execute",
-
+  "connection.replicationFrequency": "Replication frequency*",
   "connection.state.title": "Connection state",
   "connection.state.warning": "Updates to connection state should be handled with extreme care.",
   "connection.state.warning.secondary": "Updates may break your syncs, requiring clearing data to fix.<br></br>Make changes only as directed by the Airbyte team.",
@@ -1177,7 +1133,6 @@
   "connection.state.error.invalidStreamStates": "The \"streamStates\" field must be set to an array",
   "connection.state.revert": "Revert changes",
   "connection.state.copyTitle": "Copy connection state",
-
   "tables.empty": "No data",
   "tables.name": "Name",
   "tables.connector": "Connector",
@@ -1227,7 +1182,6 @@
   "tables.connectors.filters.status.active": "Active",
   "tables.connectors.filters.status.inactive": "Inactive",
   "tables.connectors.filters.status.all": "All statuses",
-
   "tables.connections": "Connections",
   "tables.connections.pluralized": "{value, plural, one {# connection} other {# connections}}",
   "tables.connections.filters.empty": "No connections match your filters",
@@ -1245,7 +1199,6 @@
   "tables.connections.filters.state.all": "All connections",
   "tables.connections.filters.state.enabled": "Enabled connections",
   "tables.connections.filters.state.disabled": "Disabled connections",
-
   "admin.destinations": "Destinations",
   "admin.sources": "Sources",
   "admin.configuration": "Configuration",
@@ -1291,7 +1244,6 @@
   "admin.upgradeAll": "Upgrade all",
   "admin.upgradeAll.success": "Successfully upgraded {count, plural, one {# {type} connector} other {# {type} connectors}}",
   "admin.upgradeAll.error": "Error upgrading all {type}",
-
   "settings.userSettings": "Account",
   "settings.workspaceSettings": "Workspace",
   "settings.organization": "Organization",
@@ -1540,7 +1492,6 @@
   "settings.accessManagement.cannotEditOwnPermissions": "You cannot edit your own permissions.",
   "settings.accessManagement.ssoEnabled": "SSO enabled",
   "settings.accessManagement.enableSso": "Interested in Single Sign-On (SSO)?",
-
   "plans.standard.title": "Standard",
   "plans.standard.price": "$10 / month",
   "plans.standard.subscribe": "Subscribe",
@@ -1550,7 +1501,6 @@
   "plans.pro.contact": "Talk to Sales",
   "plans.pro.description": "For organizations looking to scale efficiently.",
   "plans.pro.features": "<li>Custom pricing for higher volumes</li><li>Unlimited workspaces</li><li>Premium support with SLA</li>",
-
   "settings.advanced": "Advanced",
   "settings.advancedSettings.title": "Advanced Settings",
   "settings.advancedSettings.description": "Advanced settings only apply for you and don't change any workspace settings.",
@@ -1560,7 +1510,6 @@
   "settings.advancedSettings.attemptStatsDescription": "Show additional details on attempts in the job history page like job ID and attempt count.",
   "settings.advancedSettings.connectionDetails": "Show extended connection information",
   "settings.advancedSettings.connectionDetailsDescription": "Show more details about a connection (e.g. connector version) on the connection page.",
-
   "settings.applications.token.new": "New access token",
   "settings.applications.token.warning": "You can only view this key once. Make sure you save this key in a safe place.",
   "settings.applications.token.download": "Download access token",
@@ -1584,7 +1533,6 @@
   "settings.application.name": "Name your application",
   "settings.application.name.placeholder": "Enter name",
   "settings.application.create.error": "There was an error creating the application.",
-
   "settings.license": "License",
   "settings.license.plan.teams": "Teams",
   "settings.license.plan.selfManagedEnterprise": "Self-Managed Enterprise",
@@ -1612,8 +1560,9 @@
   "settings.license.modalConfirm": "Ok",
   "settings.license.editorsTooltip": "Editors can create, edit, and delete connectors and connections, or can run syncs.",
   "settings.license.nodesTooltip": "A Data Worker refers to a single instance within the Airbyte environment that is equipped with up to 8 virtual CPUs (vCPUs).  Instances with greater than 8 vCPUs will count as multiple Data Workers.",
-
   "connector.connectorCount": "{count, plural, one {# connector} other {# connectors}}",
+  "connector.create.toggle.agent": "Agent",
+  "connector.create.toggle.form": "Form",
   "connector.enterprise.interest": "Interested in this connector?",
   "connector.searchPlaceholder": "Search {tabName}…",
   "connector.noSearchResults": "No results in {tabName}.",
@@ -1695,7 +1644,6 @@
   "connector.sort.usage": "Usage",
   "connector.unlicensedConnector": "{connectorName} is not included in your organization's license. You cannot use or update this connector. Please contact your administrator to resolve this.",
   "credits.talkToSales": "Talk to Sales",
-
   "docs.notFoundError": "We were not able to receive docs. Please click the link above to open docs on our website",
   "docs.metrics.supportLevel.label": "Support Level",
   "docs.metrics.connectorVersion.label": "Connector Version",
@@ -1736,7 +1684,6 @@
   "errorView.unknownError": "Unknown error occurred",
   "errors.forbidden.message": "Sorry, you don't have permission to access this page.",
   "errors.forbidden.goBack": "Back to workspaces",
-
   "frequency.basic": "Scheduled",
   "frequency.manual": "Manual",
   "frequency.cron": "Cron",
@@ -1744,7 +1691,6 @@
   "frequency.cronPreview": "Cron - {cronString} {cronTimezone}",
   "frequency.minutes": "{value} min",
   "frequency.hours": "{value, plural, one {# hour} other {# hours}}",
-
   "ui.goBack": "Go back",
   "ui.goToHome": "Go to homepage",
   "ui.input.showPassword": "Show password",
@@ -1769,7 +1715,6 @@
   "ui.combobox.buttonEditText": "Edit option",
   "ui.badge.alpha": "Alpha",
   "ui.badge.beta": "Beta",
-
   "airbyte.datatype.string": "String",
   "airbyte.datatype.binary_data": "Binary Data",
   "airbyte.datatype.date": "Date",
@@ -1788,7 +1733,6 @@
   "airbyte.datatype.union": "Union",
   "airbyte.datatype.unknown": "Unknown",
   "airbyte.datatype.boolean": "Boolean",
-
   "connectorBuilder.exit": "Exit Builder",
   "connectorBuilder.downloadYaml": "Export YAML",
   "connectorBuilder.publish": "Publish",
@@ -2132,12 +2076,9 @@
   "connectorBuilder.requestOption.injectInto.bodyJson": "Body JSON payload",
   "connectorBuilder.missingOAuthToken": "Missing necessary OAuth token. Click the \"Authenticate your account for testing\" button to populate the token.",
   "connectorBuilder.streamTemplate.hint": "To overwrite values in the template dynamically, add Component Mappings above with the value set to '{{' components_values.field_name '}}'. See more info in the <a>docs</a>.",
-
   "jobs.noAttemptsFailure": "Failed to start job.",
-
   "cloudApi.loginCallbackUrlError": "There was an error connecting to the developer portal. Please try again.",
   "upcomingFeatures.title": "Upcoming features",
-
   "jobHistory.logs.title": "Logs: {connectionName}",
   "jobHistory.logs.noLogs": "No logs",
   "jobHistory.logs.loadingJob": "Loading job...",
@@ -2172,19 +2113,15 @@
   "jobHistory.copyLinkToEvent.success": "Link copied to clipboard",
   "jobHistory.viewLogs": "View logs",
   "jobHistory.downloadLogs": "Download logs",
-
   "auth.authError": "An error occurred during authentication: {errorMessage}",
-
   "modal.closeButtonLabel": "Close dialog",
   "modal.confirmationTextDescription": "Type {confirmationText} below to confirm this action.",
-
   "copyButton.title": "Copy",
   "connectorForm.copyConfig": "Copy JSON",
   "connectorForm.copyConfig.success": "Configuration JSON copied to clipboard",
   "connectorForm.submitWithoutCheck": "Save without testing",
   "connectorForm.saveWithoutCheckSuccessful": "{name} saved successfully without testing",
   "connectorForm.submitFailed": "Failed to save {name} due to the following error: {error}",
-
   "login.haveAccount": "Already have an account?",
   "login.noAccount": "Don’t have an account?",
   "login.login": "Log in",
@@ -2229,14 +2166,12 @@
   "login.sso.invalidCompanyIdentifier": "Invalid company identifier",
   "login.sso.unknownError": "An unknown error occurred during login. Please try again.",
   "login.sso.ssoLoginRequired": "You need to log in using SSO.",
-
   "signup.details.noCreditCard": "No credit card required",
   "signup.details.instantSetup": "Instant setup",
   "signup.details.freeTrial": "30-day free trial",
   "signup.title": "Create your Airbyte account",
   "signup.method.email": "Sign up using email",
   "signup.email.redirectError": "There was an error signing up with email. Please try again.",
-
   "connection.header.frequency.tooltip": "Click to edit in Settings",
   "connection.dbtCloudJobs.cardTitle": "Transformations",
   "connection.dbtCloudJobs.addJob": "Add transformation",
@@ -2250,7 +2185,6 @@
   "connection.dbtCloudJobs.job.jobId": "Job ID",
   "connection.dbtCloudJobs.job.deleteButton": "Delete job",
   "connection.dbtCloudJobs.noIntegration": "Go to your <lnk>settings</lnk> to connect a dbt Cloud account",
-
   "settings.accountSettings.firstName": "First name",
   "settings.accountSettings.enterPassword": "Enter current password",
   "settings.accountSettings.firstName.placeholder": "Christopher",
@@ -2269,7 +2203,6 @@
   "settings.workspaceSettings.delete.confirmation.submitButtonText": "Delete workspace",
   "settings.workspaceSettings.deleteWorkspace.confirmation.title": "Delete workspace: <b>{name}</b>",
   "settings.workspaceSettings.deleteWorkspace.confirmation.text": "Deleting this workspace will remove it for all users and cancel all pending syncs. To confirm deletion, type the name of the workspace in the input field.",
-
   "settings.workspaceSettings.delete.permissionsError": "You do not have sufficient permissions to delete this workspace. Please consult with the workspace owner.",
   "settings.integrationSettings": "Integrations",
   "settings.integrationSettings.dbtCloudSettings": "dbt Cloud Integration",
@@ -2287,14 +2220,11 @@
   "settings.integrationSettings.dbtCloudSettings.form.description": "To use the dbt Cloud integration, enter your service token here. <lnk>Learn more</lnk>.",
   "settings.integrationSettings.dbtCloudSettings.form.urlLabel": "dbt Access URL",
   "settings.integrationSettings.dbtCloudSettings.form.urlPlaceholder": "cloud.getdbt.com",
-
   "userSettings.button.addNewUser": "New user",
   "modals.addUser.title": "Add new users",
   "modals.addUser.button.addUser": "Add another user",
-
   "inviteUsers.invitationsSentSuccess": "Invitations sent!",
   "inviteUsers.invitationsSentError": "Something went wrong. Please try again.",
-
   "credits.date": "Date",
   "credits.amount": "Credits",
   "credits.connection": "Connection",
@@ -2310,11 +2240,9 @@
   "credits.connection.deleted": "This connection has been deleted",
   "credits.timePeriod": "Time period",
   "credits.l24HourCredits": "Credit usage shown in the last 24 hours may be incomplete",
-
   "credits.usage": "Usage",
   "credits.emailVerification.resendConfirmation": "We sent you a new verification link.",
   "credits.emailVerification.resendConfirmationError": "There was an error sending the verification link. Please try again.",
-
   "billing.banners.manualPaymentStatusFree": "Your account will not be billed for usage. Please reach out to your contact at Airbyte for any questions.",
   "billing.banners.manualPaymentStatusInternal": "This is an Airbyte internal organization. Usage will not be billed.",
   "billing.banners.lockedPaymentStatus": "Your syncs are disabled. Please get in touch with <lnk>Airbyte Support</lnk> to unlock your account.",
@@ -2331,7 +2259,6 @@
   "billing.banners.entitlements.trialEnding": "Your trial {isTrialEndingWithin24Hours, select, true {will end at {exactTime}} other {ends {days, plural, =0 {today} =1 {tomorrow} other {in # days}}}}. Upgrade now to keep your syncs going.",
   "billing.banners.entitlements.trialEndingWithLink": "Your trial {isTrialEndingWithin24Hours, select, true {will end at {exactTime}} other {ends {days, plural, =0 {today} =1 {tomorrow} other {in # days}}}}. <lnk>Upgrade now</lnk> to keep your syncs going.",
   "billing.banners.entitlements.preTrial": "Your 30-day trial of Airbyte will start once your first sync has succeeded.",
-
   "trialEnded.modal.title": "Your 30 day trial period has ended",
   "trialEnded.modal.description": "For now, we've paused all of your syncs. Don't worry, none of your work has been lost. You can continue using Airbyte and restart your syncs simply by upgrading to one of our plans.",
   "trialEnded.modal.standard.title": "Standard",
@@ -2354,17 +2281,13 @@
   "trialEnded.modal.pro.feature.encryption": "Field hashing & encryption",
   "trialEnded.modal.pro.feature.support": "Premium support with SLA",
   "trialEnded.modal.pro.button": "Talk to Sales",
-
   "inviteUsersHint.message": "Need help from a teammate to set up the {connector}?",
   "inviteUsersHint.cta": "Invite users",
-
   "workspace.adminWorkspaceWarning": "Admin",
   "workspace.adminWorkspaceWarningTooltip": "You are not a member of this workspace. Be careful when making changes!",
-
   "cloud.inTrial": "Trial",
   "cloud.cloudForTeams": "Pro",
   "enterprise.enterprise": "Enterprise",
-
   "userInvitations.accept.success": "Invitation accepted successfully",
   "userInvitations.accept.error": "Something went wrong accepting the invitation. Please check your link.",
   "userInvitations.accept.error.email": "Current user's email address does not match invitation.",
@@ -2393,20 +2316,16 @@
   "userInvitations.cancel.error": "There was an error cancelling this invitation. Please try again.",
   "userInvitations.cancel.confirm.text": "Are you sure you want to cancel this invitation for {user} to {resource}?",
   "userInvitations.cancel.confirm.title": "Cancel invitation",
-
   "failureMessage.type.error": "Failure in {origin}",
   "failureMessage.type.warning": "Warning from {origin}",
   "failureMessage.label": "{type} {message}",
-
   "jinjaInput.suggest.examples": "{count, plural, one {Example} other {Examples}}",
   "jinjaInput.suggest.userInput.description": "Inserts a reference to the user-provided value for the `{label}` user input.",
   "jinjaInput.suggest.userInput.currentTestingValue": "Current Testing Value",
   "jinjaInput.suggest.userInput.createNew.label": "Create new user input…",
   "jinjaInput.suggest.userInput.createNew.doc": "Create a new user input and insert a reference to it here.",
-
   "embeddedSource.selectIntegration": "Select integration",
   "configTemplates.emptyState": "This organization has no available sources available to configure.",
-
   "partialUserConfig.create.tab": "Add a new integration",
   "partialUserConfig.update.tab": "Saved integrations",
   "partialUserConfig.create.title": "Create integration",
@@ -2432,7 +2351,6 @@
   "embedded.envVariables.clientSecret": "AIRBYTE_CLIENT_SECRET: ",
   "settings.embedded": "Embedded",
   "settings.embedded.templateCreateButton": "Create Config Template",
-
   "embedded.onboarding.next": "Next",
   "embedded.onboarding.selectDestination": "Select destination",
   "embedded.onboarding.backToSelectDestination": "Back to select destination",
@@ -2458,7 +2376,6 @@
   "embedded.onboarding.upsell.header": "Unlock the full power of Airbyte Embedded",
   "embedded.onboarding.upsell.description": "Harness the power of Airbyte Embedded and add hundreds of integrations into your product instantly.",
   "embedded.onboarding.talkToSales": "Talk to sales",
-
   "organization.subscription": "{subscriptionName} \u2022 ",
   "organization.members": "{count, plural, one {# member} other {# members}}",
   "organization.unhealthyWorkspaces": "Unhealthy workspaces",
@@ -2512,6 +2429,5 @@
   "onboarding.survey.primaryGoal.unifySalesPayment": "Unify sales and payment platform data",
   "onboarding.survey.primaryGoal.buildCustomConnectors": "Build custom connectors with Connector Builder for new data sources",
   "onboarding.survey.primaryGoal.other": "Other",
-
   "label.docsLink": "For more information, see <a>the docs</a>."
 }

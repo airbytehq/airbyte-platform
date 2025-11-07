@@ -1,0 +1,190 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.checkConfigurationTool {
+  margin-top: variables.$spacing-md;
+  padding: variables.$spacing-md;
+  background-color: colors.$grey-50;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-md;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: variables.$spacing-sm;
+}
+
+.titleSection {
+  display: flex;
+  align-items: flex-start;
+  gap: variables.$spacing-sm;
+  flex: 1;
+}
+
+.icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.titleContent {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-xs;
+  flex: 1;
+}
+
+.toolName {
+  font-weight: 600;
+  color: colors.$dark-blue-900;
+  font-size: 14px;
+}
+
+.statusSuccess {
+  font-size: 13px;
+  color: colors.$green-700;
+  font-weight: 500;
+}
+
+.statusError {
+  font-size: 13px;
+  color: colors.$red-700;
+  font-weight: 500;
+}
+
+.toggleButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: variables.$border-thin solid colors.$grey-300;
+  border-radius: variables.$border-radius-sm;
+  background-color: colors.$grey-50;
+  color: colors.$grey-900;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: colors.$grey-100;
+  }
+
+  &:focus-visible {
+    outline: 2px solid colors.$dark-blue-500;
+    outline-offset: 2px;
+  }
+}
+
+.expandedContent {
+  margin-top: variables.$spacing-md;
+  padding-top: variables.$spacing-md;
+  border-top: variables.$border-thin solid colors.$grey-200;
+}
+
+.section {
+  margin-bottom: variables.$spacing-md;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.sectionTitle {
+  font-weight: 600;
+  color: colors.$grey-900;
+  font-size: 13px;
+  margin-bottom: variables.$spacing-sm;
+}
+
+.sectionContent {
+  font-size: 13px;
+  color: colors.$grey-700;
+}
+
+.summaryLine {
+  margin-bottom: variables.$spacing-sm;
+
+  strong {
+    color: colors.$dark-blue-900;
+  }
+}
+
+.details {
+  margin-top: variables.$spacing-sm;
+
+  summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: colors.$dark-blue-700;
+    user-select: none;
+
+    &:hover {
+      color: colors.$dark-blue-900;
+    }
+  }
+}
+
+.codeBlock {
+  margin: variables.$spacing-sm 0 0;
+  padding: variables.$spacing-sm;
+  background-color: colors.$grey-100;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-sm;
+  font-size: 12px;
+  font-family: monospace;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: colors.$dark-blue-900;
+}
+
+.noData {
+  font-style: italic;
+  color: colors.$grey-500;
+}
+
+.resultStatus {
+  margin-bottom: variables.$spacing-xs;
+}
+
+.resultDetail {
+  margin-bottom: variables.$spacing-xs;
+  color: colors.$grey-700;
+}
+
+.successText {
+  font-weight: 600;
+  color: colors.$green-700;
+}
+
+.errorText {
+  font-weight: 600;
+  color: colors.$red-700;
+}
+
+.errorDetail {
+  margin-top: variables.$spacing-sm;
+
+  strong {
+    color: colors.$red-700;
+    display: block;
+    margin-bottom: variables.$spacing-xs;
+  }
+}
+
+.errorBlock {
+  margin: variables.$spacing-xs 0 0;
+  padding: variables.$spacing-sm;
+  background-color: colors.$red-50;
+  border: variables.$border-thin solid colors.$red-200;
+  border-radius: variables.$border-radius-sm;
+  font-size: 12px;
+  font-family: monospace;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: colors.$red-900;
+}
