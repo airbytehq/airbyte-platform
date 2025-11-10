@@ -67,6 +67,8 @@ class JobObservabilityRulesService {
       val recordsLoaded = Dimension("recordsLoaded")
       val recordsRejected = Dimension("recordsRejected")
       val averageRecordSize = Dimension("averageRecordSize")
+      val nulledValuePerRecord = Dimension("nulledValuePerRecord")
+      val truncatedValuePerRecord = Dimension("truncatedValuePerRecord")
     }
   }
 
@@ -122,6 +124,18 @@ class JobObservabilityRulesService {
         // "positive" amount of data loaded.
         threshold = dataStdDevThreshold * ReciprocalSqrt(Dim.Stream.recordsRejected.mean),
       ),
+      OutlierRule(
+        name = Dim.Stream.nulledValuePerRecord.name,
+        value = Abs(Dim.Stream.nulledValuePerRecord.zScore),
+        operator = GreaterThan,
+        threshold = Const(3.0),
+      ),
+      OutlierRule(
+        name = Dim.Stream.truncatedValuePerRecord.name,
+        value = Abs(Dim.Stream.truncatedValuePerRecord.zScore),
+        operator = GreaterThan,
+        threshold = Const(3.0),
+      ),
     )
 
   /**
@@ -139,6 +153,14 @@ class JobObservabilityRulesService {
       DerivedStatRule(
         name = Dim.Stream.averageRecordSize.name,
         value = Dim.Stream.bytesLoaded / Dim.Stream.recordsLoaded,
+      ),
+      DerivedStatRule(
+        name = Dim.Stream.nulledValuePerRecord.name,
+        value = Dimension("nulledValueCount") / Dim.Stream.recordsLoaded,
+      ),
+      DerivedStatRule(
+        name = Dim.Stream.truncatedValuePerRecord.name,
+        value = Dimension("truncatedValueCount") / Dim.Stream.recordsLoaded,
       ),
     )
 }
