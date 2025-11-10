@@ -216,19 +216,10 @@ open class DataWorkerUsageService(
       )
 
     if (mostRecentUsageBucket == null) {
-      // Edge case: if no recent bucket exists AND we have a job end event, it implies
-      // that data is either missing or we've deleted a previous bucket.
-      // In this case, we should not subtract the usage values, because we could
-      // end up with negative values, which could be carried over to subsequent hours
-      logger.error { "Found a completed job $jobId with no prior usage recorded, skipping data worker usage for $dataWorkerUsage" }
-      sendRecordMetric(
-        jobId,
-        false,
-        DECREMENT_OPERATION,
-        dataWorkerUsage.organizationId,
-        dataWorkerUsage.workspaceId,
-        dataWorkerUsage.dataplaneGroupId,
-      )
+      // Upon subtraction, if no previous bucket exists, there is nothing to subtract from.
+      // This scenario can occur because we do not perform entitlement/flag checks upon subtraction,
+      // meaning we may attempt to perform an operation for a job that should never be recorded.
+      logger.info { "Found a completed job $jobId with no prior usage recorded, skipping data worker usage for $dataWorkerUsage" }
       return
     } else if (dataWorkerUsage.bucketStart.isAfter(mostRecentUsageBucket.bucketStart.plusHours(1))) {
       // If the most recent usage is older than one hour,
