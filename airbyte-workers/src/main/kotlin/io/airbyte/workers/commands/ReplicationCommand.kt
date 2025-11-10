@@ -9,9 +9,7 @@ import io.airbyte.api.client.model.generated.ReplicateCommandOutputRequest
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputResponse
 import io.airbyte.api.client.model.generated.RunReplicateCommandRequest
 import io.airbyte.commons.converters.ApiClientConverters.Companion.toInternal
-import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Metadata
@@ -31,7 +29,6 @@ class ReplicationCommand(
   airbyteApiClient: AirbyteApiClient,
   private val featureFlagClient: FeatureFlagClient,
   private val failureConverter: FailureConverter,
-  private val catalogClientConverters: CatalogClientConverters,
 ) : ApiCommandBase<ReplicationApiInput>(airbyteApiClient) {
   override val name = "replication-command-api"
 
@@ -64,8 +61,6 @@ class ReplicationCommand(
         ),
       )
 
-    val catalog: ConfiguredAirbyteCatalog? = commandOutput.catalog?.let { catalogClientConverters.toConfiguredAirbyteInternal(it) }
-
     val replicationAttemptSummary: ReplicationAttemptSummary =
       Jsons.`object`(
         Jsons.jsonNode(commandOutput.attemptSummary ?: mapOf<Any, Any>()),
@@ -80,11 +75,11 @@ class ReplicationCommand(
         ?.let {
           ConnectorJobOutput()
             .withOutputType(ConnectorJobOutput.OutputType.REPLICATE)
-            .withReplicate(finalizeOutput(id, replicationAttemptSummary, catalog, failures))
+            .withReplicate(finalizeOutput(id, replicationAttemptSummary, failures))
             .withFailureReason(it)
         } ?: ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.REPLICATE)
-        .withReplicate(finalizeOutput(id, replicationAttemptSummary, catalog, failures))
+        .withReplicate(finalizeOutput(id, replicationAttemptSummary, failures))
 
     return output
   }
@@ -113,10 +108,9 @@ class ReplicationCommand(
   fun finalizeOutput(
     commandId: String,
     replicationAttemptSummary: ReplicationAttemptSummary,
-    catalog: ConfiguredAirbyteCatalog?,
     failures: List<FailureReason>?,
   ): StandardSyncOutput {
-    val standardSyncOutput: StandardSyncOutput = reduceReplicationOutput(replicationAttemptSummary, catalog, failures)
+    val standardSyncOutput: StandardSyncOutput = reduceReplicationOutput(replicationAttemptSummary, failures)
 
     val standardSyncOutputString = standardSyncOutput.toString()
     log.debug { "sync summary: $standardSyncOutputString" }
@@ -126,7 +120,6 @@ class ReplicationCommand(
 
   private fun reduceReplicationOutput(
     replicationAttemptSummary: ReplicationAttemptSummary,
-    catalog: ConfiguredAirbyteCatalog?,
     failures: List<FailureReason>?,
   ): StandardSyncOutput {
     val standardSyncOutput = StandardSyncOutput()
@@ -140,10 +133,7 @@ class ReplicationCommand(
     syncSummary.totalStats = replicationAttemptSummary.totalStats
     syncSummary.streamStats = replicationAttemptSummary.streamStats
     syncSummary.performanceMetrics = replicationAttemptSummary?.performanceMetrics
-    // Prefer streamCount from worker output; fallback to calculating from catalog for backwards compatibility
-    syncSummary.streamCount = replicationAttemptSummary.streamCount
-      ?: catalog?.let { it.streams.size.toLong() }
-      ?: 0L
+    syncSummary.streamCount = replicationAttemptSummary.streamCount ?: 0L
     standardSyncOutput.standardSyncSummary = syncSummary
     standardSyncOutput.failures = failures
 

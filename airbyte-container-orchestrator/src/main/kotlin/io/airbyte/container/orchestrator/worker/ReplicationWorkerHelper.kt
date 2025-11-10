@@ -235,7 +235,6 @@ class ReplicationWorkerHelper(
     val output =
       ReplicationOutput()
         .withReplicationAttemptSummary(summary)
-        .withOutputCatalog(destinationConfig.catalog)
 
     val failures = getFailureReasons(replicationWorkerState.getFailures(), output)
     ObjectMapper().also { om ->

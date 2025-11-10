@@ -219,7 +219,6 @@ class CommandApiController(
         id(replicateCommandOutputRequest.id)
         attemptSummary(output?.replicationAttemptSummary)
         failures(output?.failures?.map { apiPojoConverters.failureReasonToApi(it) })
-        catalog(output?.outputCatalog?.let { catalogConverter.toApi(it, null) })
       }
     }
 

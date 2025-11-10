@@ -9,7 +9,6 @@ import io.airbyte.api.client.model.generated.FailureOrigin
 import io.airbyte.api.client.model.generated.FailureType
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputRequest
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputResponse
-import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -32,10 +31,9 @@ class ReplicationCommandTest {
   private val airbyteApiClient: AirbyteApiClient = mockk(relaxed = true)
   private val featureFlagClient: FeatureFlagClient = mockk(relaxed = true)
   private val failureConverter: FailureConverter = mockk(relaxed = true)
-  private val catalogClientConverters: CatalogClientConverters = mockk(relaxed = true)
   private val commandApi = airbyteApiClient.commandApi
   private val replicationCommand =
-    ReplicationCommand(airbyteApiClient, featureFlagClient, failureConverter, catalogClientConverters)
+    ReplicationCommand(airbyteApiClient, featureFlagClient, failureConverter)
 
   private val connectionId = UUID.randomUUID()
   private val jobId = 1L
@@ -81,7 +79,7 @@ class ReplicationCommandTest {
     val expectedOutput =
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.REPLICATE)
-        .withReplicate(replicationCommand.finalizeOutput(commandId, replicationAttemptSummary, null, null))
+        .withReplicate(replicationCommand.finalizeOutput(commandId, replicationAttemptSummary, null))
 
     val actualOutput = replicationCommand.getOutput(commandId)
 
@@ -126,7 +124,7 @@ class ReplicationCommandTest {
     val expectedOutput =
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.REPLICATE)
-        .withReplicate(replicationCommand.finalizeOutput(commandId, replicationAttemptSummary, null, null))
+        .withReplicate(replicationCommand.finalizeOutput(commandId, replicationAttemptSummary, null))
         .withFailureReason(expectedFailureReason)
 
     val actualOutput = replicationCommand.getOutput(commandId)
@@ -253,7 +251,7 @@ class ReplicationCommandTest {
     val expectedOutput =
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.REPLICATE)
-        .withReplicate(replicationCommand.finalizeOutput(commandId, replicationAttemptSummary, null, null))
+        .withReplicate(replicationCommand.finalizeOutput(commandId, replicationAttemptSummary, null))
 
     val actualOutput = replicationCommand.getOutput(commandId)
 

@@ -87,10 +87,6 @@ internal class ReplicationJobOrchestratorTest {
             every { additionalProperties } returns emptyMap()
             every { state } returns Jsons.deserialize("{}")
           }
-        every { outputCatalog } returns
-          mockk {
-            every { streams } returns emptyList()
-          }
         every { failures } returns emptyList()
       }
     val replicationWorker =
@@ -205,10 +201,6 @@ internal class ReplicationJobOrchestratorTest {
           mockk {
             every { additionalProperties } returns emptyMap()
             every { state } returns Jsons.deserialize("{}")
-          }
-        every { outputCatalog } returns
-          mockk {
-            every { streams } returns emptyList()
           }
         every { failures } returns emptyList()
       }
@@ -329,10 +321,6 @@ internal class ReplicationJobOrchestratorTest {
             every { additionalProperties } returns emptyMap()
             every { state } returns Jsons.deserialize("{}")
           }
-        every { outputCatalog } returns
-          mockk {
-            every { streams } returns emptyList()
-          }
         every { failures } returns emptyList()
       }
     val replicationWorker =
@@ -451,10 +439,6 @@ internal class ReplicationJobOrchestratorTest {
           mockk {
             every { additionalProperties } returns emptyMap()
             every { state } returns Jsons.deserialize("{}")
-          }
-        every { outputCatalog } returns
-          mockk {
-            every { streams } returns emptyList()
           }
         every { failures } returns emptyList()
       }
