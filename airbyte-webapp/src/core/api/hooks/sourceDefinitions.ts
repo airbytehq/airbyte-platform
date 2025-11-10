@@ -1,18 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { v4 as uuid } from "uuid";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { isDefined } from "core/utils/common";
 import { trackError } from "core/utils/datadog";
 
+import { pollCommandUntilResolved } from "./commands";
 import { connectorDefinitionKeys } from "./connectorUpdates";
 import { useDefaultWorkspaceInOrganization } from "./organizations";
 import {
   createCustomSourceDefinition,
   deleteSourceDefinition,
   getSourceDefinitionForWorkspace,
+  getSpecCommandOutput,
   listLatestSourceDefinitions,
   listSourceDefinitionsForWorkspace,
+  runSpecCommand,
   updateSourceDefinition,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
@@ -98,6 +102,67 @@ export const useCreateSourceDefinition = () => {
 
   return useMutation<SourceDefinitionRead, Error, SourceDefinitionCreate>(
     (sourceDefinition) => createCustomSourceDefinition({ workspaceId, sourceDefinition }, requestOptions),
+    {
+      onSuccess: (data) => {
+        queryClient.setQueryData(sourceDefinitionKeys.lists(), (oldData: SourceDefinitions | undefined) => {
+          const newMap = new Map(oldData?.sourceDefinitionMap);
+          newMap.set(data.sourceDefinitionId, data);
+          return {
+            sourceDefinitions: [data, ...(oldData?.sourceDefinitions ?? [])],
+            sourceDefinitionMap: newMap,
+          };
+        });
+      },
+    }
+  );
+};
+
+export const useCreateSourceDefinitionCommand = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<SourceDefinitionRead, Error, SourceDefinitionCreate>(
+    async (sourceDefinition) => {
+      // 1. Run SPEC command asynchronously
+      const commandId = uuid();
+      await runSpecCommand(
+        {
+          id: commandId,
+          workspace_id: workspaceId,
+          docker_image: sourceDefinition.dockerRepository,
+          docker_image_tag: sourceDefinition.dockerImageTag,
+        },
+        requestOptions
+      );
+
+      // 2. Poll until complete
+      const status = await pollCommandUntilResolved(commandId, requestOptions);
+
+      if (status === "cancelled") {
+        throw new Error("Spec command was cancelled");
+      }
+
+      // 3. Get spec output
+      const specOutput = await getSpecCommandOutput({ id: commandId }, requestOptions);
+
+      if (specOutput.status !== "succeeded") {
+        const errorMessage = specOutput.failureReason?.externalMessage || "Failed to fetch connector spec";
+        throw new Error(errorMessage);
+      }
+
+      // 4. Create custom definition WITH the pre-fetched spec
+      return createCustomSourceDefinition(
+        {
+          workspaceId,
+          sourceDefinition: {
+            ...sourceDefinition,
+            connectorSpecification: specOutput.spec,
+          },
+        },
+        requestOptions
+      );
+    },
     {
       onSuccess: (data) => {
         queryClient.setQueryData(sourceDefinitionKeys.lists(), (oldData: SourceDefinitions | undefined) => {

@@ -13182,6 +13182,9 @@ components:
           type: string
         resourceRequirements:
           $ref: "#/components/schemas/ScopedResourceRequirements"
+        connectorSpecification:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+          description: Optional pre-fetched connector specification. If provided, the backend will skip fetching the spec.
     SourceDefinitionUpdate:
       type: object
       description: Update the SourceDefinition. Currently, the only allowed attribute to update is the default docker image version.
@@ -13984,6 +13987,9 @@ components:
           type: string
         resourceRequirements:
           $ref: "#/components/schemas/ScopedResourceRequirements"
+        connectorSpecification:
+          $ref: "#/components/schemas/DestinationDefinitionSpecification"
+          description: Optional pre-fetched connector specification. If provided, the backend will skip fetching the spec.
     DestinationDefinitionUpdate:
       type: object
       required:

@@ -1,19 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { v4 as uuid } from "uuid";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { isDefined } from "core/utils/common";
 import { trackError } from "core/utils/datadog";
 
+import { pollCommandUntilResolved } from "./commands";
 import { connectorDefinitionKeys } from "./connectorUpdates";
 import { useDefaultWorkspaceInOrganization } from "./organizations";
 import {
   createCustomDestinationDefinition,
   deleteDestinationDefinition,
   getDestinationDefinitionForWorkspace,
+  getSpecCommandOutput,
   listDestinationDefinitionsForWorkspace,
   listDestinationDefinitions,
   listLatestDestinationDefinitions,
+  runSpecCommand,
   updateDestinationDefinition,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
@@ -109,6 +113,67 @@ export const useCreateDestinationDefinition = () => {
   return useMutation<DestinationDefinitionRead, Error, DestinationDefinitionCreate>(
     (destinationDefinition) =>
       createCustomDestinationDefinition({ workspaceId, destinationDefinition }, requestOptions),
+    {
+      onSuccess: (data) => {
+        queryClient.setQueryData(destinationDefinitionKeys.lists(), (oldData: DestinationDefinitions | undefined) => {
+          const newMap = new Map(oldData?.destinationDefinitionMap);
+          newMap.set(data.destinationDefinitionId, data);
+          return {
+            destinationDefinitions: [data, ...(oldData?.destinationDefinitions ?? [])],
+            destinationDefinitionMap: newMap,
+          };
+        });
+      },
+    }
+  );
+};
+
+export const useCreateDestinationDefinitionCommand = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
+
+  return useMutation<DestinationDefinitionRead, Error, DestinationDefinitionCreate>(
+    async (destinationDefinition) => {
+      // 1. Run SPEC command asynchronously
+      const commandId = uuid();
+      await runSpecCommand(
+        {
+          id: commandId,
+          workspace_id: workspaceId,
+          docker_image: destinationDefinition.dockerRepository,
+          docker_image_tag: destinationDefinition.dockerImageTag,
+        },
+        requestOptions
+      );
+
+      // 2. Poll until complete
+      const status = await pollCommandUntilResolved(commandId, requestOptions);
+
+      if (status === "cancelled") {
+        throw new Error("Spec command was cancelled");
+      }
+
+      // 3. Get spec output
+      const specOutput = await getSpecCommandOutput({ id: commandId }, requestOptions);
+
+      if (specOutput.status !== "succeeded") {
+        const errorMessage = specOutput.failureReason?.externalMessage || "Failed to fetch connector spec";
+        throw new Error(errorMessage);
+      }
+
+      // 4. Create custom definition WITH the pre-fetched spec
+      return createCustomDestinationDefinition(
+        {
+          workspaceId,
+          destinationDefinition: {
+            ...destinationDefinition,
+            connectorSpecification: specOutput.spec,
+          },
+        },
+        requestOptions
+      );
+    },
     {
       onSuccess: (data) => {
         queryClient.setQueryData(destinationDefinitionKeys.lists(), (oldData: DestinationDefinitions | undefined) => {

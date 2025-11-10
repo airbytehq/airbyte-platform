@@ -20,6 +20,7 @@ import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
@@ -44,6 +45,7 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.HideActorDefinitionFromList
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.net.URI
@@ -319,13 +321,26 @@ open class DestinationDefinitionsHandler
       val destinationDefCreate = customDestinationDefinitionCreate.destinationDefinition
       val workspaceId = resolveWorkspaceId(customDestinationDefinitionCreate)
       val actorDefinitionVersion =
-        actorDefinitionHandlerHelper
-          .defaultDefinitionVersionFromCreate(
-            destinationDefCreate.dockerRepository,
-            destinationDefCreate.dockerImageTag,
-            destinationDefCreate.documentationUrl,
-            workspaceId,
-          ).withActorDefinitionId(id)
+        if (destinationDefCreate.connectorSpecification != null) {
+          // Use pre-fetched spec (no SPEC call needed)
+          val spec = Jsons.deserialize(destinationDefCreate.connectorSpecification.toString(), ConnectorSpecification::class.java)
+          actorDefinitionHandlerHelper
+            .defaultDefinitionVersionFromCreate(
+              spec,
+              destinationDefCreate.dockerRepository,
+              destinationDefCreate.dockerImageTag,
+              destinationDefCreate.documentationUrl.toString(),
+            ).withActorDefinitionId(id)
+        } else {
+          // Fall back to fetching spec from connector
+          actorDefinitionHandlerHelper
+            .defaultDefinitionVersionFromCreate(
+              destinationDefCreate.dockerRepository,
+              destinationDefCreate.dockerImageTag,
+              destinationDefCreate.documentationUrl,
+              workspaceId,
+            ).withActorDefinitionId(id)
+        }
 
       val scopeId = customDestinationDefinitionCreate.workspaceId ?: customDestinationDefinitionCreate.scopeId
       val scopeType =
