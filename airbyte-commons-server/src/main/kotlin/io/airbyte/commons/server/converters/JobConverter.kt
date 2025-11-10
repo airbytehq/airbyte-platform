@@ -51,13 +51,10 @@ import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.micronaut.core.util.CollectionUtils
 import jakarta.annotation.Nullable
 import jakarta.inject.Singleton
-import jakarta.validation.Valid
 import java.io.IOException
 import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.TimeUnit
-import java.util.stream.Collectors
-import java.util.stream.Stream
 
 /**
  * Convert between API and internal versions of job models.
@@ -72,9 +69,7 @@ class JobConverter(
       .job(getJobWithAttemptsRead(job).job)
       .attempts(
         job.attempts
-          .stream()
-          .map { attempt: Attempt -> this.getAttemptInfoRead(attempt) }
-          .collect(Collectors.toList<@Valid AttemptInfoRead?>()),
+          .map { attempt: Attempt -> this.getAttemptInfoRead(attempt) },
       )
 
   fun getJobInfoLightRead(job: Job): JobInfoLightRead = JobInfoLightRead().job(getJobRead(job))
@@ -159,10 +154,8 @@ class JobConverter(
         .job(getJobRead(job))
         .attempts(
           job.attempts
-            .stream()
-            .sorted(Comparator.comparingInt { obj: Attempt -> obj.attemptNumber })
-            .map { attempt: Attempt -> getAttemptRead(attempt) }
-            .toList(),
+            .sortedWith(Comparator.comparingInt { obj: Attempt -> obj.attemptNumber })
+            .map { attempt: Attempt -> getAttemptRead(attempt) },
         )
 
     @JvmStatic
@@ -196,22 +189,20 @@ class JobConverter(
       return when (job.configType) {
         ConfigType.REFRESH -> {
           jobRead.refreshConfig.streamsToRefresh
-            .stream()
             .map { streamDescriptor: io.airbyte.api.model.generated.StreamDescriptor ->
               StreamDescriptor()
                 .withName(streamDescriptor.name)
                 .withNamespace(streamDescriptor.namespace)
-            }.collect(Collectors.toList())
+            }
         }
 
         ConfigType.CLEAR, ConfigType.RESET_CONNECTION -> {
           jobRead.resetConfig.streamsToReset
-            .stream()
             .map { streamDescriptor: io.airbyte.api.model.generated.StreamDescriptor ->
               StreamDescriptor()
                 .withName(streamDescriptor.name)
                 .withNamespace(streamDescriptor.namespace)
-            }.collect(Collectors.toList())
+            }
         }
 
         else -> {
@@ -235,9 +226,7 @@ class JobConverter(
         return Optional.ofNullable(
           ResetConfig().streamsToReset(
             job.config.resetConnection.resetSourceConfiguration.streamsToReset
-              .stream()
-              .map { obj: io.airbyte.config.StreamDescriptor -> obj.toApi() }
-              .toList(),
+              .map { obj: io.airbyte.config.StreamDescriptor -> obj.toApi() },
           ),
         )
       } else {
@@ -257,10 +246,8 @@ class JobConverter(
       if (job.configType == ConfigType.REFRESH) {
         val refreshedStreams =
           job.config.refresh.streamsToRefresh
-            .stream()
-            .flatMap { refreshStream: RefreshStream -> Stream.ofNullable(refreshStream.streamDescriptor) }
-            .map { obj: io.airbyte.config.StreamDescriptor -> obj.toApi() }
-            .toList()
+            .flatMap { refreshStream: RefreshStream -> listOf(refreshStream.streamDescriptor) }
+            .mapNotNull { obj: io.airbyte.config.StreamDescriptor -> obj?.toApi() }
         if (refreshedStreams.isEmpty()) {
           return Optional.empty()
         }
@@ -328,7 +315,6 @@ class JobConverter(
       }
 
       return streamStats
-        .stream()
         .map { streamStat: StreamSyncStats ->
           AttemptStreamStats()
             .streamName(streamStat.streamName)
@@ -339,7 +325,7 @@ class JobConverter(
                 .stateMessagesEmitted(streamStat.stats.sourceStateMessagesEmitted)
                 .recordsCommitted(streamStat.stats.recordsCommitted),
             )
-        }.collect(Collectors.toList())
+        }
     }
 
     private fun getAttemptFailureSummary(attempt: Attempt): AttemptFailureSummary? {
@@ -348,13 +334,12 @@ class JobConverter(
       return AttemptFailureSummary()
         .failures(
           failureSummary.failures
-            .stream()
             .map { failureReason: FailureReason? ->
               getFailureReason(
                 failureReason,
                 TimeUnit.SECONDS.toMillis(attempt.updatedAtInSecond),
               )
-            }.toList(),
+            },
         ).partialSuccess(failureSummary.partialSuccess)
     }
 
@@ -373,7 +358,7 @@ class JobConverter(
         .externalMessage(failureReason.externalMessage)
         .internalMessage(failureReason.internalMessage)
         .stacktrace(failureReason.stacktrace)
-        .timestamp(if (failureReason.timestamp != null) failureReason.timestamp else defaultTimestamp)
+        .timestamp(failureReason.timestamp ?: defaultTimestamp)
         .retryable(failureReason.retryable)
     }
 
@@ -381,15 +366,12 @@ class JobConverter(
       val configuredCatalog = JobConfigProxy(job.config).configuredCatalog
       return if (configuredCatalog != null) {
         configuredCatalog.streams
-          .stream()
           .map { s: ConfiguredAirbyteStream ->
             io.airbyte.api.model.generated
               .StreamDescriptor()
               .name(s.stream.name)
               .namespace(s.stream.namespace)
-          }.collect(
-            Collectors.toList(),
-          )
+          }
       } else {
         listOf()
       }

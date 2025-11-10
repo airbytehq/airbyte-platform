@@ -23,7 +23,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
 import java.util.UUID
-import java.util.stream.Stream
 
 internal class RetryStatePersistenceActivityTest {
   @Mock
@@ -106,8 +105,8 @@ internal class RetryStatePersistenceActivityTest {
 
   companion object {
     @JvmStatic
-    fun persistMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    fun persistMatrix() =
+      listOf<Arguments?>(
         Arguments.of(1L, UUID.randomUUID()),
         Arguments.of(134512351235L, UUID.randomUUID()),
         Arguments.of(8L, UUID.randomUUID()),

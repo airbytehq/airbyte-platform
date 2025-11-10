@@ -40,7 +40,7 @@ internal class ProtocolVersionCheckerTest {
   @BeforeEach
   fun beforeEach() {
     clearAllMocks()
-    every { jobPersistence?.getVersion() } returns Optional.of("1.2.3")
+    every { jobPersistence.getVersion() } returns Optional.of("1.2.3")
   }
 
   @ParameterizedTest
@@ -148,7 +148,7 @@ internal class ProtocolVersionCheckerTest {
       )
     val conflicts: Map<ActorType, Set<UUID>> = protocolVersionChecker.getConflictingActorDefinitions(targetRange)
 
-    Assertions.assertEquals(java.util.Map.of<Any, Any>(), conflicts)
+    Assertions.assertEquals(emptyMap<ActorType, Set<UUID>>(), conflicts)
   }
 
   @Test
@@ -159,7 +159,7 @@ internal class ProtocolVersionCheckerTest {
     val upgradedSource = UUID.randomUUID()
     val notChangedSource = UUID.randomUUID()
     val missingSource = UUID.randomUUID()
-    val initialConflicts = java.util.Set.of(upgradedSource, notChangedSource, missingSource)
+    val initialConflicts = setOf(upgradedSource, notChangedSource, missingSource)
 
     setNewSourceDefinitions(
       listOf(
@@ -181,7 +181,7 @@ internal class ProtocolVersionCheckerTest {
     val actualConflicts =
       protocolVersionChecker.projectRemainingConflictsAfterConnectorUpgrades(targetRange, initialConflicts, ActorType.SOURCE)
 
-    val expectedConflicts = java.util.Set.of(notChangedSource, missingSource)
+    val expectedConflicts = setOf(notChangedSource, missingSource)
     Assertions.assertEquals(expectedConflicts, actualConflicts)
   }
 
@@ -192,7 +192,7 @@ internal class ProtocolVersionCheckerTest {
     val dest1 = UUID.randomUUID()
     val dest2 = UUID.randomUUID()
     val dest3 = UUID.randomUUID()
-    val initialConflicts = java.util.Set.of(dest1, dest2, dest3)
+    val initialConflicts = setOf(dest1, dest2, dest3)
 
     setNewDestinationDefinitions(
       listOf(
@@ -377,15 +377,15 @@ internal class ProtocolVersionCheckerTest {
     } returns initialActorDefinitions
 
     setNewSourceDefinitions(
-      java.util.List.of(
-        java.util.Map.entry(source1, V1_0_0),
-        java.util.Map.entry(source2, V1_0_0),
+      listOf(
+        Pair(source1, V1_0_0).toMapEntry(),
+        Pair(source2, V1_0_0).toMapEntry(),
       ),
     )
     setNewDestinationDefinitions(
-      java.util.List.of(
-        java.util.Map.entry(dest1, V1_0_0),
-        java.util.Map.entry(dest2, V0_0_0),
+      listOf(
+        Pair(dest1, V1_0_0).toMapEntry(),
+        Pair(dest2, V0_0_0).toMapEntry(),
       ),
     )
 

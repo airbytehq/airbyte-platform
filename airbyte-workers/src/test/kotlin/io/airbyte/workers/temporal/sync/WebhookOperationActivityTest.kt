@@ -21,7 +21,6 @@ import io.micronaut.http.HttpStatus
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
@@ -29,7 +28,6 @@ import java.io.IOException
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.util.List
 import java.util.UUID
 
 internal class WebhookOperationActivityTest {
@@ -105,8 +103,7 @@ internal class WebhookOperationActivityTest {
     val t =
       Assertions.assertThrows(
         FailsafeException::class.java,
-        Executable { webhookActivity.invokeWebhook(input) },
-      )
+      ) { webhookActivity.invokeWebhook(input) }
     Assertions.assertEquals(exception, t.cause)
   }
 
@@ -118,7 +115,7 @@ internal class WebhookOperationActivityTest {
     private const val WEBHOOK_AUTH_TOKEN = "fake-auth-token"
     private val WORKSPACE_WEBHOOK_CONFIGS =
       WebhookOperationConfigs().withWebhookConfigs(
-        List.of(
+        listOf(
           WebhookConfig().withId(WEBHOOK_ID).withAuthToken(WEBHOOK_AUTH_TOKEN),
         ),
       )

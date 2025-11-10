@@ -67,12 +67,12 @@ class V0_50_1_001__NotificationSettingsBackfill : BaseJavaMigration() {
         val notificationSettings = NotificationSettings()
         // By default the following notifactions are all sent via emails. At this moment customers do not have an option to turn it off.
         notificationSettings.sendOnConnectionUpdateActionRequired =
-          NotificationItem().withNotificationType(java.util.List.of(Notification.NotificationType.CUSTOMERIO))
+          NotificationItem().withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO))
         notificationSettings.sendOnConnectionUpdate =
-          NotificationItem().withNotificationType(java.util.List.of(Notification.NotificationType.CUSTOMERIO))
-        notificationSettings.sendOnSyncDisabled = NotificationItem().withNotificationType(java.util.List.of(Notification.NotificationType.CUSTOMERIO))
+          NotificationItem().withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO))
+        notificationSettings.sendOnSyncDisabled = NotificationItem().withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO))
         notificationSettings.sendOnSyncDisabledWarning =
-          NotificationItem().withNotificationType(java.util.List.of(Notification.NotificationType.CUSTOMERIO))
+          NotificationItem().withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO))
 
         // By default we do not send sendOnSuccess or sendOnFailure notifications.
         notificationSettings.sendOnSuccess = NotificationItem().withNotificationType(listOf())

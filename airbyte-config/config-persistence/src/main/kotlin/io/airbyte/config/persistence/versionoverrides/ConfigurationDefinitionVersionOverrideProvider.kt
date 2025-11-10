@@ -21,8 +21,6 @@ import java.io.IOException
 import java.util.EnumMap
 import java.util.Optional
 import java.util.UUID
-import java.util.function.Function
-import java.util.stream.Collectors
 
 @Singleton
 @Named("configurationVersionOverrideProvider")
@@ -51,7 +49,7 @@ class ConfigurationDefinitionVersionOverrideProvider(
   ): Optional<ScopedConfiguration> {
     val organizationId = getOrganizationId(workspaceId)
 
-    val scopes: MutableMap<ConfigScopeType, UUID> = EnumMap(java.util.Map.of(ConfigScopeType.WORKSPACE, workspaceId))
+    val scopes: MutableMap<ConfigScopeType, UUID> = EnumMap(mapOf(ConfigScopeType.WORKSPACE to workspaceId))
 
     // TODO: This should always be true now. We should probably warn in a log line if this is not null.
     if (organizationId != null) {
@@ -97,25 +95,14 @@ class ConfigurationDefinitionVersionOverrideProvider(
   ): List<ActorDefinitionVersionWithOverrideStatus> {
     val scopes: Map<ConfigScopeType, UUID> =
       EnumMap(
-        java.util.Map.of(
-          ConfigScopeType.WORKSPACE,
-          workspaceId,
-          ConfigScopeType.ORGANIZATION,
-          getOrganizationId(workspaceId),
+        mapOf(
+          ConfigScopeType.WORKSPACE to workspaceId,
+          ConfigScopeType.ORGANIZATION to getOrganizationId(workspaceId),
         ),
       )
 
     // Convert the List into a map for fast lookups below
-    val actorDefinitionMap =
-      actorDefinitionIds
-        .stream()
-        .collect(
-          Collectors
-            .toMap(
-              Function.identity(),
-              Function.identity(),
-            ),
-        )
+    val actorDefinitionMap = actorDefinitionIds.associateWith { it }
 
     val scopedConfigs =
       scopedConfigurationService
@@ -123,24 +110,15 @@ class ConfigurationDefinitionVersionOverrideProvider(
           ConnectorVersionKey,
           scopes,
           ConfigResourceType.ACTOR_DEFINITION,
-        ).stream()
-        .filter { scopedConfiguration: ScopedConfiguration -> actorDefinitionMap.containsKey(scopedConfiguration.resourceId) }
-        .collect(
-          Collectors
-            .toMap(
-              { obj: ScopedConfiguration -> obj.resourceId },
-              Function.identity(),
-            ),
-        )
+        ).filter { scopedConfiguration: ScopedConfiguration -> actorDefinitionMap.containsKey(scopedConfiguration.resourceId) }
+        .associateBy { it.resourceId }
 
     val overrides: MutableList<ActorDefinitionVersionWithOverrideStatus> = ArrayList()
     try {
       for (actorDefinitionVersion in actorDefinitionService
         .getActorDefinitionVersions(
           scopedConfigs.values
-            .stream()
-            .map { config: ScopedConfiguration -> UUID.fromString(config.value) }
-            .toList(),
+            .map { config: ScopedConfiguration -> UUID.fromString(config.value) },
         )) {
         val isManualOverride = scopedConfigs[actorDefinitionVersion.actorDefinitionId]!!.originType == ConfigOriginType.USER
         overrides.add(ActorDefinitionVersionWithOverrideStatus(actorDefinitionVersion, isManualOverride))

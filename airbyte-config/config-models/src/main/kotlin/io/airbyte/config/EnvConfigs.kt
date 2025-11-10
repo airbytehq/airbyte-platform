@@ -9,11 +9,9 @@ import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.TolerationPOJO.Companion.getJobKubeTolerations
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
-import java.util.Arrays
 import java.util.Optional
 import java.util.function.Function
 import java.util.function.Supplier
-import java.util.stream.Collectors
 
 /**
  * Configs from environment variables.
@@ -97,7 +95,6 @@ class EnvConfigs
       if (input == null) {
         input = ""
       }
-      println(input)
       val map =
         input
           .split(",")
@@ -122,7 +119,7 @@ class EnvConfigs
      */
     override fun getJobKubeMainContainerImagePullSecrets(): List<String> {
       val secrets = getEnvOrDefault(EnvVar.JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET, "")
-      return Arrays.stream(secrets.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()).collect(Collectors.toList())
+      return secrets.split(",")
     }
 
     // Helpers

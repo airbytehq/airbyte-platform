@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.util.stream.Stream
 
 class MapEnvVarExtensionsTest {
   @ParameterizedTest
@@ -39,16 +38,16 @@ class MapEnvVarExtensionsTest {
 
   companion object {
     @JvmStatic
-    private fun envVarMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun envVarMatrix() =
+      listOf(
         Arguments.of(mapOf("cat" to "dog", "asdf" to "ghjk")),
         Arguments.of(mapOf("asdf" to "ghjk")),
         Arguments.of(mapOf<String, String>()),
       )
 
     @JvmStatic
-    private fun refEnvVarMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun refEnvVarMatrix() =
+      listOf(
         Arguments.of(
           mapOf(
             "cat" to

@@ -48,7 +48,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.UUID
-import java.util.stream.Stream
 
 internal class ActorDefinitionVersionUpdaterTest {
   private val connectionService = mockk<ConnectionService>()
@@ -91,8 +90,8 @@ internal class ActorDefinitionVersionUpdaterTest {
         )
 
     @JvmStatic
-    fun getBreakingChangesForUpgradeMethodSource(): Stream<Arguments> =
-      Stream.of(
+    fun getBreakingChangesForUpgradeMethodSource() =
+      listOf(
         // Version increases
         Arguments.of("0.0.1", "2.0.0", listOf("1.0.0", "2.0.0")),
         Arguments.of("1.0.0", "1.0.1", listOf<String>()),

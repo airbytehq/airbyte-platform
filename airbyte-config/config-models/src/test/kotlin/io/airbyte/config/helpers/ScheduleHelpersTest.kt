@@ -8,7 +8,6 @@ import io.airbyte.config.Schedule
 import io.airbyte.config.helpers.ScheduleHelpers.getSecondsInUnit
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import java.util.Arrays
 
 internal class ScheduleHelpersTest {
   @Test
@@ -23,8 +22,6 @@ internal class ScheduleHelpersTest {
   // Will throw if a new TimeUnit is added but an appropriate mapping is not included in this method.
   @Test
   fun testAllOfTimeUnitEnumValues() {
-    Arrays
-      .stream(Schedule.TimeUnit.entries.toTypedArray())
-      .forEach { obj: Schedule.TimeUnit -> getSecondsInUnit(obj) }
+    Schedule.TimeUnit.entries.forEach { obj: Schedule.TimeUnit -> getSecondsInUnit(obj) }
   }
 }

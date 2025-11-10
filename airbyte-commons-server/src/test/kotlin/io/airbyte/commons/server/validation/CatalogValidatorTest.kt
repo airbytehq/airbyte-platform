@@ -38,7 +38,6 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.util.stream.Stream
 
 @ExtendWith(MockKExtension::class)
 internal class CatalogValidatorTest {
@@ -259,8 +258,8 @@ internal class CatalogValidatorTest {
 
   companion object {
     @JvmStatic
-    fun validSizeCatalogMatrix(): Stream<Arguments> =
-      Stream.of(
+    fun validSizeCatalogMatrix() =
+      listOf(
         Arguments.of(buildCatalog(1, MAX_FIELD_LIMIT)),
         Arguments.of(buildCatalog(MAX_FIELD_LIMIT, 1)),
         Arguments.of(buildCatalog(10, 1000)),
@@ -274,8 +273,8 @@ internal class CatalogValidatorTest {
       )
 
     @JvmStatic
-    fun tooLargeCatalogMatrix(): Stream<Arguments> =
-      Stream.of(
+    fun tooLargeCatalogMatrix() =
+      listOf(
         Arguments.of(buildCatalog(1, MAX_FIELD_LIMIT + 1)),
         Arguments.of(buildCatalog(MAX_FIELD_LIMIT + 1, 1)),
         Arguments.of(buildCatalog(10, 1001)),

@@ -144,7 +144,7 @@ object WorkerUtils {
       .map { obj: AirbyteMessage -> obj.control }
       .filter { control: AirbyteControlMessage -> control.type == AirbyteControlMessage.Type.CONNECTOR_CONFIG }
       .map { obj: AirbyteControlMessage -> obj.connectorConfig }
-      .reduce { first: AirbyteControlConnectorConfigMessage?, second: AirbyteControlConnectorConfigMessage? -> second }
+      .reduce { _: AirbyteControlConnectorConfigMessage?, second: AirbyteControlConnectorConfigMessage? -> second }
 
   /**
    * Determine if a control message has updated the config for the connector.

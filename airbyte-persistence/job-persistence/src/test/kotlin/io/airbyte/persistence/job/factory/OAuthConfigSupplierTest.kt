@@ -29,7 +29,6 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -148,7 +147,7 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
+    val oauthParameters = generateOAuthParameters()
     setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig: JsonNode =
@@ -161,7 +160,7 @@ internal class OAuthConfigSupplierTest {
   fun testOAuthMasking() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
-    val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
+    val oauthParameters = generateOAuthParameters()
     setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig =
       oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), testConnectorSpecification)
@@ -179,7 +178,7 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
+    val oauthParameters = generateOAuthParameters()
     setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig: JsonNode =
@@ -198,7 +197,7 @@ internal class OAuthConfigSupplierTest {
           .withPredicateKey(null)
           .withPredicateValue(null),
       )
-    val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
+    val oauthParameters = generateOAuthParameters()
     setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), spec)
     val expectedConfig: JsonNode = getExpectedNode(MoreOAuthParameters.SECRET_MASK)
@@ -215,7 +214,7 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
+    val oauthParameters = generateOAuthParameters()
     setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig: JsonNode =
@@ -234,7 +233,7 @@ internal class OAuthConfigSupplierTest {
           .withPredicateKey(listOf<String?>(CREDENTIALS, AUTH_TYPE))
           .withPredicateValue(""),
       )
-    val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
+    val oauthParameters = generateOAuthParameters()
     setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), spec)
     val expectedConfig: JsonNode = getExpectedNode(MoreOAuthParameters.SECRET_MASK)
@@ -246,7 +245,7 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
+    val oauthParameters = generateOAuthParameters()
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         any<StandardSourceDefinition>(),
@@ -258,7 +257,7 @@ internal class OAuthConfigSupplierTest {
     val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig = (clone(config) as ObjectNode)
     for (key in oauthParameters.keys) {
-      expectedConfig.set<JsonNode?>(key, jsonNode<Any?>(oauthParameters[key]))
+      expectedConfig.set<JsonNode?>(key, jsonNode(oauthParameters[key]))
     }
     Assertions.assertEquals(expectedConfig, actualConfig)
     assertTracking(workspaceId)
@@ -268,7 +267,7 @@ internal class OAuthConfigSupplierTest {
   fun testOAuthNoMaskingBecauseNoOAuthSpec() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
-    val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
+    val oauthParameters = generateOAuthParameters()
     setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), null)
     Assertions.assertEquals(config, actualConfig)
@@ -279,9 +278,9 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
+    val oauthParameters = generateOAuthParameters()
     val oauthParameterId = UUID.randomUUID()
-    val configuration = jsonNode<MutableMap<String?, Any?>?>(oauthParameters)
+    val configuration = jsonNode(oauthParameters)
     every {
       oAuthService.getSourceOAuthParameterOptional(
         any<UUID>(),
@@ -329,23 +328,19 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val oauthParameters: MutableMap<String?, Any?> = generateNestedOAuthParameters()
+    val oauthParameters = generateNestedOAuthParameters()
     setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig =
-      jsonNode<MutableMap<String, Any>?>(
-        Map.of<String?, Any?>(
-          EXISTING_FIELD_NAME,
-          EXISTING_FIELD_VALUE,
-          CREDENTIALS,
-          Map.of<String?, String?>(
-            API_SECRET,
-            SECRET_TWO,
-            AUTH_TYPE,
-            OAUTH,
-            API_CLIENT,
-            (oauthParameters[CREDENTIALS] as MutableMap<String?, String?>)[API_CLIENT],
-          ),
+      jsonNode(
+        mapOf(
+          EXISTING_FIELD_NAME to EXISTING_FIELD_VALUE,
+          CREDENTIALS to
+            mapOf(
+              API_SECRET to SECRET_TWO,
+              AUTH_TYPE to OAUTH,
+              API_CLIENT to (oauthParameters[CREDENTIALS] as MutableMap<String?, String?>)[API_CLIENT],
+            ),
         ),
       )
     Assertions.assertEquals(expectedConfig, actualConfig)
@@ -359,7 +354,7 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val oauthParameters: MutableMap<String?, Any?> = generateNestedOAuthParameters()
+    val oauthParameters = generateNestedOAuthParameters()
     setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig: JsonNode =
@@ -378,7 +373,7 @@ internal class OAuthConfigSupplierTest {
     // parameters
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
-    val oauthParameters: MutableMap<String?, Any?> = generateNestedOAuthParameters()
+    val oauthParameters = generateNestedOAuthParameters()
     setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig =
       oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), testConnectorSpecification)
@@ -391,7 +386,7 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val oauthParameters = Map.of<String?, Any?>(CREDENTIALS, generateSecretOAuthParameters())
+    val oauthParameters = mutableMapOf<String?, Any?>(CREDENTIALS to generateSecretOAuthParameters())
     setupOAuthParamMocks(oauthParameters, workspaceId)
 
     val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
@@ -415,11 +410,11 @@ internal class OAuthConfigSupplierTest {
   }
 
   private fun setupOAuthParamMocks(
-    oauthParameters: MutableMap<String?, Any?>?,
+    oauthParameters: Map<String?, Any?>,
     workspaceId: UUID,
   ): UUID {
     val oauthParameterId = UUID.randomUUID()
-    val configuration = jsonNode<MutableMap<String?, Any?>?>(oauthParameters)
+    val configuration = jsonNode(oauthParameters)
     every {
       oAuthService.getSourceOAuthParameterOptional(
         workspaceId,
@@ -462,7 +457,7 @@ internal class OAuthConfigSupplierTest {
         any<UUID>(),
         any<ScopeType>(),
         any<String>(),
-        any<kotlin.collections.Map<String, Any?>>(),
+        any<Map<String, Any?>>(),
       )
     }
   }
@@ -524,71 +519,56 @@ internal class OAuthConfigSupplierTest {
         )
 
     private fun generateJsonConfig(): ObjectNode =
-      jsonNode<MutableMap<String, Any>?>(
-        Map.of<String?, Any?>(
-          EXISTING_FIELD_NAME,
-          EXISTING_FIELD_VALUE,
-          CREDENTIALS,
-          Map.of<String?, String?>(
-            API_SECRET,
-            SECRET_TWO,
-            AUTH_TYPE,
-            OAUTH,
-          ),
+      jsonNode(
+        mapOf(
+          EXISTING_FIELD_NAME to EXISTING_FIELD_VALUE,
+          CREDENTIALS to
+            mapOf(
+              API_SECRET to SECRET_TWO,
+              AUTH_TYPE to OAUTH,
+            ),
         ),
       ) as ObjectNode
 
-    private fun generateOAuthParameters(): MutableMap<String?, Any?> =
-      Map.of<String?, Any?>(
-        API_SECRET,
-        SECRET_ONE,
-        API_CLIENT,
-        UUID.randomUUID().toString(),
+    private fun generateOAuthParameters(): Map<String?, Any?> =
+      mapOf(
+        API_SECRET to SECRET_ONE,
+        API_CLIENT to UUID.randomUUID().toString(),
       )
 
-    private fun generateSecretOAuthParameters(): MutableMap<String?, Any?> =
-      Map.of<String?, Any?>(
-        API_SECRET,
-        SECRET_ONE,
-        API_CLIENT,
-        secretCoordinateMap(),
+    private fun generateSecretOAuthParameters(): Map<String?, Any?> =
+      mapOf(
+        API_SECRET to SECRET_ONE,
+        API_CLIENT to secretCoordinateMap(),
       )
 
-    private fun secretCoordinateMap(): MutableMap<String?, Any?> = Map.of<String?, Any?>("_secret", "secret_coordinate")
+    private fun secretCoordinateMap() = mapOf<String?, Any?>("_secret" to "secret_coordinate")
 
-    private fun generateNestedOAuthParameters(): MutableMap<String?, Any?> = Map.of<String?, Any?>(CREDENTIALS, generateOAuthParameters())
+    private fun generateNestedOAuthParameters() = mapOf<String?, Any?>(CREDENTIALS to generateOAuthParameters())
 
     private fun getExpectedNode(apiClient: String): JsonNode =
-      jsonNode<MutableMap<String, Any>?>(
-        Map.of<String?, Any?>(
-          EXISTING_FIELD_NAME,
-          EXISTING_FIELD_VALUE,
-          CREDENTIALS,
-          Map.of<String?, String?>(
-            API_SECRET,
-            SECRET_TWO,
-            AUTH_TYPE,
-            OAUTH,
-            API_CLIENT,
-            apiClient,
-          ),
+      jsonNode(
+        mapOf(
+          EXISTING_FIELD_NAME to EXISTING_FIELD_VALUE,
+          CREDENTIALS to
+            mapOf(
+              API_SECRET to SECRET_TWO,
+              AUTH_TYPE to OAUTH,
+              API_CLIENT to apiClient,
+            ),
         ),
       )
 
-    private fun getExpectedNode(apiClient: MutableMap<String?, Any?>): JsonNode =
-      jsonNode<MutableMap<String, Any>?>(
-        Map.of<String?, Any?>(
-          EXISTING_FIELD_NAME,
-          EXISTING_FIELD_VALUE,
-          CREDENTIALS,
-          Map.of<String?, Any?>(
-            API_SECRET,
-            SECRET_TWO,
-            AUTH_TYPE,
-            OAUTH,
-            API_CLIENT,
-            apiClient,
-          ),
+    private fun getExpectedNode(apiClient: Map<String?, Any?>): JsonNode =
+      jsonNode(
+        mapOf(
+          EXISTING_FIELD_NAME to EXISTING_FIELD_VALUE,
+          CREDENTIALS to
+            mapOf(
+              API_SECRET to SECRET_TWO,
+              AUTH_TYPE to OAUTH,
+              API_CLIENT to apiClient,
+            ),
         ),
       )
   }

@@ -60,7 +60,6 @@ import org.jooq.DSLContext
 import org.jooq.Field
 import org.jooq.JSONB
 import org.jooq.Record
-import org.jooq.Record3
 import org.jooq.Record5
 import org.jooq.Result
 import org.jooq.SelectJoinStep
@@ -72,8 +71,6 @@ import java.io.IOException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
-import java.util.Arrays
-import java.util.Collections
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors
@@ -338,7 +335,7 @@ class ConnectionServiceJooqImpl
     @Trace
     fun getWorkspaceStandardSyncWithJobInfo(connectionId: UUID): ConnectionWithJobInfo {
       val connectionAndOperationIdsResult =
-        database.query({ ctx: DSLContext ->
+        database.query { ctx: DSLContext ->
           ctx
             .select(
               Tables.CONNECTION.asterisk(),
@@ -372,7 +369,7 @@ class ConnectionServiceJooqImpl
             .on(Tables.CONNECTION_TAG.CONNECTION_ID.eq(Tables.CONNECTION.ID))
             .leftJoin(
               DSL
-                .lateral<Record3<String, JobStatus, OffsetDateTime>>(
+                .lateral(
                   ctx
                     .select(
                       JOBS.SCOPE,
@@ -397,7 +394,7 @@ class ConnectionServiceJooqImpl
             .where(Tables.CONNECTION.ID.eq(connectionId))
             .groupBy(buildGroupByFields())
             .fetch()
-        })
+        }
 
       val connectionIds =
         connectionAndOperationIdsResult.stream().map { record: Record -> record.get(Tables.CONNECTION.ID) }.collect(Collectors.toList())
@@ -430,7 +427,7 @@ class ConnectionServiceJooqImpl
       val whereCondition = cursorCondition.and(filterCondition)
 
       val connectionAndOperationIdsResult =
-        database.query({ ctx: DSLContext ->
+        database.query { ctx: DSLContext ->
           ctx
             .select(
               Tables.CONNECTION.asterisk(),
@@ -469,7 +466,7 @@ class ConnectionServiceJooqImpl
             .on(Tables.CONNECTION_TAG.CONNECTION_ID.eq(Tables.CONNECTION.ID))
             .leftJoin(
               DSL
-                .lateral<Record3<String, JobStatus, OffsetDateTime>>(
+                .lateral(
                   ctx
                     .select(
                       JOBS.SCOPE,
@@ -496,7 +493,7 @@ class ConnectionServiceJooqImpl
             .orderBy(orderByFields)
             .limit(workspaceResourceCursorPagination.pageSize)
             .fetch()
-        })
+        }
 
       val connectionIds =
         connectionAndOperationIdsResult.stream().map { record: Record -> record.get(Tables.CONNECTION.ID) }.collect(Collectors.toList())
@@ -754,7 +751,7 @@ class ConnectionServiceJooqImpl
       var condition: Condition = DSL.falseCondition()
       for (statusFilter in statusFilters) {
         val statusField: Field<JobStatus> =
-          DSL.field<JobStatus>(
+          DSL.field(
             DSL.name(LATEST_JOBS, STATUS),
             JobStatus::class.java,
           )
@@ -887,7 +884,7 @@ class ConnectionServiceJooqImpl
       standardSyncQuery: StandardSyncQuery,
       filters: Filters?,
     ): Int =
-      database.query({ ctx: DSLContext ->
+      database.query { ctx: DSLContext ->
         ctx
           .selectCount()
           .from(
@@ -918,7 +915,7 @@ class ConnectionServiceJooqImpl
               .asTable("filtered_connections"),
           ).fetchSingle()
           .value1()
-      })
+      }
 
     /**
      * List connections. Paginated.
@@ -1779,7 +1776,7 @@ class ConnectionServiceJooqImpl
       for (record in result) {
         val connectionId = record.get(Tables.CONNECTION.ID)
         val standardSync =
-          DbConverter.buildStandardSync(
+          buildStandardSync(
             record,
             connectionOperationIds(connectionId),
             notificationConfigurationRecords,
@@ -1797,12 +1794,12 @@ class ConnectionServiceJooqImpl
       return database.query { ctx: DSLContext ->
         if (configId.isPresent) {
           return@query ctx
-            .selectFrom<NotificationConfigurationRecord>(Tables.NOTIFICATION_CONFIGURATION)
+            .selectFrom(Tables.NOTIFICATION_CONFIGURATION)
             .where(Tables.NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(configId.get()))
             .fetch()
         } else {
           return@query ctx
-            .selectFrom<NotificationConfigurationRecord>(Tables.NOTIFICATION_CONFIGURATION)
+            .selectFrom(Tables.NOTIFICATION_CONFIGURATION)
             .fetch()
         }
       }
@@ -2178,14 +2175,10 @@ class ConnectionServiceJooqImpl
 
         // can be null when connection has no connectionOperations
         val operationIds =
-          if (operationIdsFromRecord == null) {
-            Collections.emptyList()
-          } else {
-            Arrays
-              .stream(operationIdsFromRecord.split(OPERATION_IDS_AGG_DELIMITER.toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
-              .map { name: String? -> UUID.fromString(name) }
-              .toList()
+          operationIdsFromRecord?.split(OPERATION_IDS_AGG_DELIMITER.toRegex())?.dropLastWhile { it.isEmpty() }?.map { name: String? ->
+            UUID.fromString(name)
           }
+            ?: emptyList()
 
         val connectionId = record.get(Tables.CONNECTION.ID)
         val notificationConfigurationsForConnection =
@@ -2223,14 +2216,10 @@ class ConnectionServiceJooqImpl
 
         // can be null when connection has no connectionOperations
         val operationIds =
-          if (operationIdsFromRecord == null) {
-            emptyList()
-          } else {
-            Arrays
-              .stream(operationIdsFromRecord.split(OPERATION_IDS_AGG_DELIMITER.toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
-              .map { name: String? -> UUID.fromString(name) }
-              .toList()
+          operationIdsFromRecord?.split(OPERATION_IDS_AGG_DELIMITER.toRegex())?.dropLastWhile { it.isEmpty() }?.map { name: String? ->
+            UUID.fromString(name)
           }
+            ?: emptyList()
 
         val connectionId = record.get(Tables.CONNECTION.ID)
         val notificationConfigurationsForConnection =
@@ -2239,7 +2228,7 @@ class ConnectionServiceJooqImpl
             .filter { notificationConfiguration: NotificationConfigurationRecord -> notificationConfiguration.connectionId == connectionId }
             .toList()
         standardSyncs
-          .add(DbConverter.buildStandardSync(record, operationIds, notificationConfigurationsForConnection, tagsByConnectionId[connectionId]!!))
+          .add(buildStandardSync(record, operationIds, notificationConfigurationsForConnection, tagsByConnectionId[connectionId]!!))
       }
 
       return standardSyncs
@@ -2301,25 +2290,19 @@ class ConnectionServiceJooqImpl
 
         // can be null when connection has no connectionOperations
         val operationIds =
-          if (operationIdsFromRecord == null) {
-            emptyList()
-          } else {
-            Arrays
-              .stream(operationIdsFromRecord.split(OPERATION_IDS_AGG_DELIMITER.toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
-              .map { name: String? -> UUID.fromString(name) }
-              .toList()
+          operationIdsFromRecord?.split(OPERATION_IDS_AGG_DELIMITER.toRegex())?.dropLastWhile { it.isEmpty() }?.map { name: String? ->
+            UUID.fromString(name)
           }
+            ?: emptyList()
 
         val connectionId = record.get(Tables.CONNECTION.ID)
         val notificationConfigurationsForConnection =
           allNeededNotificationConfigurations
-            .stream()
             .filter { notificationConfiguration: NotificationConfigurationRecord -> notificationConfiguration.connectionId == connectionId }
-            .toList()
         workspaceIdToStandardSync
           .computeIfAbsent(
             record.get(Tables.ACTOR.WORKSPACE_ID),
-          ) { v: UUID? -> ArrayList() }
+          ) { _: UUID? -> mutableListOf() }
           .add(buildStandardSync(record, operationIds, notificationConfigurationsForConnection, tagsByConnectionId[connectionId]!!))
       }
 
@@ -2396,7 +2379,7 @@ class ConnectionServiceJooqImpl
               .withStreamName(record.get("stream_name", String::class.java))
               .withStreamNamespace(record.get("stream_namespace", String::class.java))
               .withConnectionIds(
-                Arrays.asList(
+                listOf(
                   *record.get(
                     "connection_ids",
                     Array<UUID>::class.java,

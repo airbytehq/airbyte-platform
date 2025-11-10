@@ -86,11 +86,11 @@ class ConnectorMessageProcessorTest {
   @Test
   fun `test that message are properly aggregated by type`() {
     every { streamFactory.create(any(), any()) } returns
-      Stream.of(
+      listOf(
         AirbyteMessage().withType(AirbyteMessage.Type.CONTROL).withAdditionalProperty("control", "one"),
         AirbyteMessage().withType(AirbyteMessage.Type.RECORD).withAdditionalProperty("record", "two"),
         AirbyteMessage().withType(AirbyteMessage.Type.RECORD).withAdditionalProperty("record", "three"),
-      )
+      ).stream()
 
     val messageByType = ConnectorMessageProcessor.getMessagesByType(InputStream.nullInputStream(), streamFactory, MessageOrigin.SOURCE)
 
@@ -431,7 +431,7 @@ class ConnectorMessageProcessorTest {
   @Test
   fun `properly make connection successful`() {
     every { streamFactory.create(any(), any()) } returns
-      Stream.of(
+      listOf(
         AirbyteMessage()
           .withType(AirbyteMessage.Type.CONNECTION_STATUS)
           .withConnectionStatus(
@@ -439,7 +439,7 @@ class ConnectorMessageProcessorTest {
               .withStatus(AirbyteConnectionStatus.Status.SUCCEEDED)
               .withMessage("working"),
           ),
-      )
+      ).stream()
 
     val output =
       connectorMessageProcessor.run(
@@ -462,7 +462,7 @@ class ConnectorMessageProcessorTest {
   @Test
   fun `properly make connection failed`() {
     every { streamFactory.create(any(), any()) } returns
-      Stream.of(
+      listOf(
         AirbyteMessage()
           .withType(AirbyteMessage.Type.CONNECTION_STATUS)
           .withConnectionStatus(
@@ -470,7 +470,7 @@ class ConnectorMessageProcessorTest {
               .withStatus(AirbyteConnectionStatus.Status.FAILED)
               .withMessage("broken"),
           ),
-      )
+      ).stream()
 
     val output =
       connectorMessageProcessor.run(
@@ -505,9 +505,9 @@ class ConnectorMessageProcessorTest {
         )
 
     every { streamFactory.create(any(), any()) } returns
-      Stream.of(
+      listOf(
         catalog,
-      )
+      ).stream()
 
     val discoveredCatalogId = UUID.randomUUID()
     every { sourceApi.writeDiscoverCatalogResult(any()) } returns DiscoverCatalogResult(catalogId = discoveredCatalogId)
@@ -547,9 +547,9 @@ class ConnectorMessageProcessorTest {
         )
 
     every { streamFactory.create(any(), any()) } returns
-      Stream.of(
+      listOf(
         catalog,
-      )
+      ).stream()
 
     val discoveredCatalogId = UUID.randomUUID()
     every { destinationApi.writeDestinationDiscoverCatalogResult(any()) } returns DiscoverCatalogResult(catalogId = discoveredCatalogId)
@@ -582,9 +582,9 @@ class ConnectorMessageProcessorTest {
         )
 
     every { streamFactory.create(any(), any()) } returns
-      Stream.of(
+      listOf(
         specMessage,
-      )
+      ).stream()
 
     val output =
       connectorMessageProcessor.run(

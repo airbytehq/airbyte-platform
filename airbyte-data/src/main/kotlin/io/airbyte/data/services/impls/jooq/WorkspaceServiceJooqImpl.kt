@@ -82,7 +82,7 @@ class WorkspaceServiceJooqImpl
       workspaceId: UUID,
       includeTombstone: Boolean,
     ): StandardWorkspace =
-      listWorkspaceQuery(Optional.of(java.util.List.of(workspaceId)), includeTombstone)
+      listWorkspaceQuery(Optional.of(listOf(workspaceId)), includeTombstone)
         .findFirst()
         .orElseThrow {
           ConfigNotFoundException(

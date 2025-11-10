@@ -9,7 +9,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
-import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -226,8 +225,8 @@ class MonoidTests {
 
   companion object {
     @JvmStatic
-    fun mergeMatrix(): Stream<Arguments> =
-      Stream.of(
+    fun mergeMatrix() =
+      listOf(
         Arguments.of(Workspace(""), Connection(""), Multi(listOf(Workspace(""), Connection("")))),
         Arguments.of(Workspace(""), Organization(""), Multi(listOf(Workspace(""), Organization("")))),
         Arguments.of(Destination(""), SourceDefinition(""), Multi(listOf(Destination(""), SourceDefinition("")))),
@@ -248,8 +247,8 @@ class MonoidTests {
       )
 
     @JvmStatic
-    fun identityMatrix(): Stream<Arguments> =
-      Stream.of(
+    fun identityMatrix() =
+      listOf(
         Arguments.of(Empty),
         Arguments.of(Workspace(UUID.randomUUID())),
         Arguments.of(Connection(UUID.randomUUID())),

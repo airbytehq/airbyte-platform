@@ -8,8 +8,6 @@ import io.airbyte.persistence.job.errorreporter.SentryExceptionHelper.SentryExce
 import io.sentry.protocol.SentryException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import java.util.List
-import java.util.Map
 
 internal class SentryExceptionHelperTest {
   val exceptionHelper: SentryExceptionHelper = SentryExceptionHelper()
@@ -63,77 +61,53 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(2, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "requests.exceptions.HTTPError",
       "400 Client Error: Bad Request for url: https://airbyte.com",
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          ABS_PATH,
-          ERROR_PATH,
-          LINE_NO,
-          31,
-          FUNCTION,
-          "read_records",
-          CONTEXT_LINE,
-          "failing_method()",
+      mutableListOf(
+        mutableMapOf(
+          ABS_PATH to ERROR_PATH,
+          LINE_NO to 31,
+          FUNCTION to "read_records",
+          CONTEXT_LINE to "failing_method()",
         ),
-        Map.of<String?, Any?>(
-          ABS_PATH,
-          ERROR_PATH,
-          LINE_NO,
-          36,
-          FUNCTION,
-          "failing_method",
-          CONTEXT_LINE,
-          "raise HTTPError(http_error_msg, response=self)",
+        mutableMapOf(
+          ABS_PATH to ERROR_PATH,
+          LINE_NO to 36,
+          FUNCTION to "failing_method",
+          CONTEXT_LINE to "raise HTTPError(http_error_msg, response=self)",
         ),
       ),
     )
 
     assertExceptionContent(
-      exceptionList.get(1)!!,
+      exceptionList[1],
       "RuntimeError",
       "My other error",
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          ABS_PATH,
-          ERROR_PATH,
-          LINE_NO,
-          39,
-          FUNCTION,
-          "<module>",
-          CONTEXT_LINE,
-          "main()",
+      mutableListOf(
+        mutableMapOf(
+          ABS_PATH to ERROR_PATH,
+          LINE_NO to 39,
+          FUNCTION to "<module>",
+          CONTEXT_LINE to "main()",
         ),
-        Map.of<String?, Any?>(
-          ABS_PATH,
-          ERROR_PATH,
-          LINE_NO,
-          13,
-          FUNCTION,
-          "main",
-          CONTEXT_LINE,
-          "sync_mode(\"incremental\")",
+        mutableMapOf(
+          ABS_PATH to ERROR_PATH,
+          LINE_NO to 13,
+          FUNCTION to "main",
+          CONTEXT_LINE to "sync_mode(\"incremental\")",
         ),
-        Map.of<String?, Any?>(
-          ABS_PATH,
-          ERROR_PATH,
-          LINE_NO,
-          17,
-          FUNCTION,
-          "sync_mode",
-          CONTEXT_LINE,
-          "incremental()",
+        mutableMapOf(
+          ABS_PATH to ERROR_PATH,
+          LINE_NO to 17,
+          FUNCTION to "sync_mode",
+          CONTEXT_LINE to "incremental()",
         ),
-        Map.of<String?, Any?>(
-          ABS_PATH,
-          ERROR_PATH,
-          LINE_NO,
-          33,
-          FUNCTION,
-          "incremental",
-          CONTEXT_LINE,
-          "raise RuntimeError(\"My other error\") from err",
+        mutableMapOf(
+          ABS_PATH to ERROR_PATH,
+          LINE_NO to 33,
+          FUNCTION to "incremental",
+          CONTEXT_LINE to "raise RuntimeError(\"My other error\") from err",
         ),
       ),
     )
@@ -159,19 +133,15 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "RuntimeError",
       null,
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          ABS_PATH,
-          ERROR_PATH,
-          LINE_NO,
-          33,
-          FUNCTION,
-          "incremental",
-          CONTEXT_LINE,
-          "raise RuntimeError()",
+      mutableListOf(
+        mutableMapOf(
+          ABS_PATH to ERROR_PATH,
+          LINE_NO to 33,
+          FUNCTION to "incremental",
+          CONTEXT_LINE to "raise RuntimeError()",
         ),
       ),
     )
@@ -215,37 +185,29 @@ internal class SentryExceptionHelperTest {
       """.trimIndent()
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "grpc._channel._InactiveRpcError",
       expectedValue,
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          ABS_PATH,
-          "/usr/local/lib/python3.9/site-packages/grpc/_channel.py",
-          LINE_NO,
-          849,
-          FUNCTION,
-          "_end_unary_response_blocking",
-          CONTEXT_LINE,
-          "raise _InactiveRpcError(state)",
+      mutableListOf(
+        mutableMapOf(
+          ABS_PATH to "/usr/local/lib/python3.9/site-packages/grpc/_channel.py",
+          LINE_NO to 849,
+          FUNCTION to "_end_unary_response_blocking",
+          CONTEXT_LINE to "raise _InactiveRpcError(state)",
         ),
       ),
     )
 
     assertExceptionContent(
-      exceptionList.get(1)!!,
+      exceptionList[1],
       "AttributeError",
       "'NoneType' object has no attribute 'from_call'",
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          ABS_PATH,
-          "/usr/local/lib/python3.9/site-packages/google/api_core/exceptions.py",
-          LINE_NO,
-          553,
-          FUNCTION,
-          "_parse_grpc_error_details",
-          CONTEXT_LINE,
-          "status = rpc_status.from_call(rpc_exc)",
+      mutableListOf(
+        mutableMapOf(
+          ABS_PATH to "/usr/local/lib/python3.9/site-packages/google/api_core/exceptions.py",
+          LINE_NO to 553,
+          FUNCTION to "_parse_grpc_error_details",
+          CONTEXT_LINE to "status = rpc_status.from_call(rpc_exc)",
         ),
       ),
     )
@@ -275,73 +237,48 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "java.lang.ArithmeticException",
       "/ by zero",
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          FILENAME,
-          "GradleWorkerMain.java",
-          LINE_NO,
-          74,
-          MODULE,
-          "worker.org.gradle.process.internal.worker.GradleWorkerMain",
-          FUNCTION,
-          "main",
+      mutableListOf(
+        mutableMapOf(
+          FILENAME to "GradleWorkerMain.java",
+          LINE_NO to 74,
+          MODULE to "worker.org.gradle.process.internal.worker.GradleWorkerMain",
+          FUNCTION to "main",
         ),
-        Map.of<String?, Any?>(
-          MODULE,
-          "jdk.proxy2.\$Proxy5",
-          FUNCTION,
-          "stop",
+        mutableMapOf(
+          MODULE to "jdk.proxy2.\$Proxy5",
+          FUNCTION to "stop",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "ThrowableCollector.java",
-          LINE_NO,
-          73,
-          MODULE,
-          "org.junit.platform.engine.support.hierarchical.ThrowableCollector",
-          FUNCTION,
-          "execute",
+        mutableMapOf(
+          FILENAME to "ThrowableCollector.java",
+          LINE_NO to 73,
+          MODULE to "org.junit.platform.engine.support.hierarchical.ThrowableCollector",
+          FUNCTION to "execute",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "NodeTestTask.java",
-          LINE_NO,
-          141,
-          MODULE,
-          "org.junit.platform.engine.support.hierarchical.NodeTestTask",
-          FUNCTION,
-          "lambda\$executeRecursively$8",
+        mutableMapOf(
+          FILENAME to "NodeTestTask.java",
+          LINE_NO to 141,
+          MODULE to "org.junit.platform.engine.support.hierarchical.NodeTestTask",
+          FUNCTION to "lambda\$executeRecursively$8",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "ExecutableInvoker.java",
-          LINE_NO,
-          115,
-          MODULE,
-          "org.junit.jupiter.engine.execution.ExecutableInvoker\$ReflectiveInterceptorCall",
-          FUNCTION,
-          "lambda\$ofVoidMethod$0",
+        mutableMapOf(
+          FILENAME to "ExecutableInvoker.java",
+          LINE_NO to 115,
+          MODULE to "org.junit.jupiter.engine.execution.ExecutableInvoker\$ReflectiveInterceptorCall",
+          FUNCTION to "lambda\$ofVoidMethod$0",
         ),
-        Map.of<String?, Any?>(
-          "isNative",
-          true,
-          MODULE,
-          "jdk.internal.reflect.NativeMethodAccessorImpl",
-          FUNCTION,
-          "invoke0",
+        mutableMapOf(
+          "isNative" to true,
+          MODULE to "jdk.internal.reflect.NativeMethodAccessorImpl",
+          FUNCTION to "invoke0",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "AirbyteTraceMessageUtilityTest.java",
-          LINE_NO,
-          61,
-          MODULE,
-          "io.airbyte.integrations.base.AirbyteTraceMessageUtilityTest",
-          FUNCTION,
-          "testCorrectStacktraceFormat",
+        mutableMapOf(
+          FILENAME to "AirbyteTraceMessageUtilityTest.java",
+          LINE_NO to 61,
+          MODULE to "io.airbyte.integrations.base.AirbyteTraceMessageUtilityTest",
+          FUNCTION to "testCorrectStacktraceFormat",
         ),
       ),
     )
@@ -377,39 +314,27 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(2, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "java.util.concurrent.CompletionException",
       "io.airbyte.workers.DefaultReplicationWorker\$DestinationException: Destination process exited with non-zero exit code 1",
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          FILENAME,
-          "Thread.java",
-          LINE_NO,
-          833,
-          MODULE,
-          "java.lang.Thread",
-          FUNCTION,
-          "run",
+      mutableListOf(
+        mutableMapOf(
+          FILENAME to "Thread.java",
+          LINE_NO to 833,
+          MODULE to "java.lang.Thread",
+          FUNCTION to "run",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "ThreadPoolExecutor.java",
-          LINE_NO,
-          635,
-          MODULE,
-          "java.util.concurrent.ThreadPoolExecutor\$Worker",
-          FUNCTION,
-          "run",
+        mutableMapOf(
+          FILENAME to "ThreadPoolExecutor.java",
+          LINE_NO to 635,
+          MODULE to "java.util.concurrent.ThreadPoolExecutor\$Worker",
+          FUNCTION to "run",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "CompletableFuture.java",
-          LINE_NO,
-          315,
-          MODULE,
-          "java.util.concurrent.CompletableFuture",
-          FUNCTION,
-          "encodeThrowable",
+        mutableMapOf(
+          FILENAME to "CompletableFuture.java",
+          LINE_NO to 315,
+          MODULE to "java.util.concurrent.CompletableFuture",
+          FUNCTION to "encodeThrowable",
         ),
       ),
     )
@@ -418,26 +343,18 @@ internal class SentryExceptionHelperTest {
       exceptionList.get(1)!!,
       "io.airbyte.workers.DefaultReplicationWorker\$DestinationException",
       "Destination process exited with non-zero exit code 1",
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          FILENAME,
-          "CompletableFuture.java",
-          LINE_NO,
-          1804,
-          MODULE,
-          "java.util.concurrent.CompletableFuture\$AsyncRun",
-          FUNCTION,
-          "run",
+      mutableListOf(
+        mutableMapOf(
+          FILENAME to "CompletableFuture.java",
+          LINE_NO to 1804,
+          MODULE to "java.util.concurrent.CompletableFuture\$AsyncRun",
+          FUNCTION to "run",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "DefaultReplicationWorker.java",
-          LINE_NO,
-          397,
-          MODULE,
-          "io.airbyte.workers.DefaultReplicationWorker",
-          FUNCTION,
-          "lambda\$getDestinationOutputRunnable$7",
+        mutableMapOf(
+          FILENAME to "DefaultReplicationWorker.java",
+          LINE_NO to 397,
+          MODULE to "io.airbyte.workers.DefaultReplicationWorker",
+          FUNCTION to "lambda\$getDestinationOutputRunnable$7",
         ),
       ),
     )
@@ -459,7 +376,7 @@ internal class SentryExceptionHelperTest {
       """.trimIndent()
 
     val optionalSentryExceptions = exceptionHelper.buildSentryExceptions(stacktrace)
-    Assertions.assertTrue(optionalSentryExceptions.isPresent())
+    Assertions.assertTrue(optionalSentryExceptions.isPresent)
 
     val parsedException = optionalSentryExceptions.get()
     val exceptionList = parsedException.exceptions
@@ -467,79 +384,51 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "io.airbyte.commons.exceptions.ConfigErrorException",
       "Some error message",
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          FILENAME,
-          "SnowflakeDestination.kt",
-          LINE_NO,
-          279,
-          MODULE,
-          "io.airbyte.integrations.destination.snowflake.SnowflakeDestinationKt",
-          FUNCTION,
-          "main",
+      mutableListOf(
+        mutableMapOf(
+          FILENAME to "SnowflakeDestination.kt",
+          LINE_NO to 279,
+          MODULE to "io.airbyte.integrations.destination.snowflake.SnowflakeDestinationKt",
+          FUNCTION to "main",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "AdaptiveDestinationRunner.kt",
-          LINE_NO,
-          68,
-          MODULE,
-          "io.airbyte.cdk.integrations.base.adaptive.AdaptiveDestinationRunner\$Runner",
-          FUNCTION,
-          "run",
+        mutableMapOf(
+          FILENAME to "AdaptiveDestinationRunner.kt",
+          LINE_NO to 68,
+          MODULE to "io.airbyte.cdk.integrations.base.adaptive.AdaptiveDestinationRunner\$Runner",
+          FUNCTION to "run",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "IntegrationRunner.kt",
-          LINE_NO,
-          116,
-          MODULE,
-          "io.airbyte.cdk.integrations.base.IntegrationRunner",
-          FUNCTION,
-          "run",
+        mutableMapOf(
+          FILENAME to "IntegrationRunner.kt",
+          LINE_NO to 116,
+          MODULE to "io.airbyte.cdk.integrations.base.IntegrationRunner",
+          FUNCTION to "run",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "SnowflakeDestination.kt",
-          LINE_NO,
-          194,
-          MODULE,
-          "io.airbyte.integrations.destination.snowflake.SnowflakeDestination",
-          FUNCTION,
-          "getSerializedMessageConsumer",
+        mutableMapOf(
+          FILENAME to "SnowflakeDestination.kt",
+          LINE_NO to 194,
+          MODULE to "io.airbyte.integrations.destination.snowflake.SnowflakeDestination",
+          FUNCTION to "getSerializedMessageConsumer",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "StagingConsumerFactory.kt",
-          LINE_NO,
-          124,
-          MODULE,
-          "io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory",
-          FUNCTION,
-          "createAsync",
+        mutableMapOf(
+          FILENAME to "StagingConsumerFactory.kt",
+          LINE_NO to 124,
+          MODULE to "io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory",
+          FUNCTION to "createAsync",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "StagingConsumerFactory.kt",
-          LINE_NO,
-          159,
-          MODULE,
-          "io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory\$Companion",
-          FUNCTION,
-          "access\$streamDescToWriteConfig",
+        mutableMapOf(
+          FILENAME to "StagingConsumerFactory.kt",
+          LINE_NO to 159,
+          MODULE to "io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory\$Companion",
+          FUNCTION to "access\$streamDescToWriteConfig",
         ),
-        Map.of<String?, Any?>(
-          FILENAME,
-          "StagingConsumerFactory.kt",
-          LINE_NO,
-          226,
-          MODULE,
-          "io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory\$Companion",
-          FUNCTION,
-          "streamDescToWriteConfig",
+        mutableMapOf(
+          FILENAME to "StagingConsumerFactory.kt",
+          LINE_NO to 226,
+          MODULE to "io.airbyte.cdk.integrations.destination.staging.StagingConsumerFactory\$Companion",
+          FUNCTION to "streamDescToWriteConfig",
         ),
       ),
     )
@@ -571,7 +460,7 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(2, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "io.temporal.failure.ApplicationFailure",
       """
       GET https://storage.googleapis.com/
@@ -580,37 +469,29 @@ internal class SentryExceptionHelperTest {
         "message" : "Invalid Credentials"
       }
       """.trimIndent(),
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          FILENAME,
-          "GoogleJsonResponseException.java",
-          LINE_NO,
-          146,
-          MODULE,
-          "com.google.api.client.googleapis.json.GoogleJsonResponseException",
-          FUNCTION,
-          "from",
+      mutableListOf(
+        mutableMapOf(
+          FILENAME to "GoogleJsonResponseException.java",
+          LINE_NO to 146,
+          MODULE to "com.google.api.client.googleapis.json.GoogleJsonResponseException",
+          FUNCTION to "from",
         ),
       ),
     )
 
     assertExceptionContent(
-      exceptionList.get(1)!!,
+      exceptionList[1],
       "org.postgresql.util.PSQLException",
       """
       ERROR: publication "airbyte_publication" does not exist
         Where: slot "airbyte_slot", output plugin "pgoutput", in the change callback, associated LSN 0/48029520
       """.trimIndent(),
-      List.of<MutableMap<String?, Any?>?>(
-        Map.of<String?, Any?>(
-          FILENAME,
-          "QueryExecutorImpl.java",
-          LINE_NO,
-          2675,
-          MODULE,
-          "org.postgresql.core.v3.QueryExecutorImpl",
-          FUNCTION,
-          "receiveErrorResponse",
+      mutableListOf(
+        mutableMapOf(
+          FILENAME to "QueryExecutorImpl.java",
+          LINE_NO to 2675,
+          MODULE to "org.postgresql.core.v3.QueryExecutorImpl",
+          FUNCTION to "receiveErrorResponse",
         ),
       ),
     )
@@ -641,10 +522,10 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "DbtDatabaseError",
       "1292 (22007): Truncated incorrect DOUBLE value: 'ABC'",
-      mutableListOf<MutableMap<String?, Any?>>(),
+      mutableListOf(),
     )
   }
 
@@ -670,10 +551,10 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "DbtDatabaseSQLCompilationError",
       "001003 (42000): SQL compilation error: syntax error line 47 at position 19 unexpected '-'.",
-      mutableListOf<MutableMap<String?, Any?>>(),
+      mutableListOf(),
     )
   }
 
@@ -708,10 +589,10 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "DbtDatabaseInvalidInputError",
       "Invalid input\ncontext:   SUPER value exceeds export size.",
-      mutableListOf<MutableMap<String?, Any?>>(),
+      mutableListOf(),
     )
   }
 
@@ -734,7 +615,7 @@ internal class SentryExceptionHelperTest {
       """.trimIndent()
 
     val optionalSentryExceptions = exceptionHelper.buildSentryExceptions(stacktrace)
-    Assertions.assertTrue(optionalSentryExceptions.isPresent())
+    Assertions.assertTrue(optionalSentryExceptions.isPresent)
 
     val parsedException = optionalSentryExceptions.get()
     val exceptionList = parsedException.exceptions
@@ -742,10 +623,10 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "DbtDatabaseSyntaxError",
       "syntax error at or near \"text\"\nLINE 6:                add column Base name text",
-      mutableListOf<MutableMap<String?, Any?>>(),
+      mutableListOf(),
     )
   }
 
@@ -781,10 +662,10 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "DbtUnhandledError",
       "(\"{'code': 503, 'message': 'The service is currently unavailable.', 'status': 'UNAVAILABLE'}: None\", {'error': {'code': 503, 'message': 'The service is currently unavailable.', 'status': 'UNAVAILABLE'}})",
-      mutableListOf<MutableMap<String?, Any?>>(),
+      mutableListOf(),
     )
   }
 
@@ -814,10 +695,10 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "DbtCompilationAmbiguousRelationError",
       "When searching for a relation, dbt found an approximate match. Instead of guessing which relation to use, dbt will move on. Please delete \"Data_integration\".\"dbo\".\"sheet1\", or rename it to be less ambiguous.",
-      mutableListOf<MutableMap<String?, Any?>>(),
+      mutableListOf(),
     )
   }
 
@@ -841,10 +722,10 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "DbtCompilationError",
       "Model 'model.airbyte_utils.banking_test' (models/generated/airbyte_tables/public/banking_test.sql) depends on a source named 'public._airbyte_raw_banking_test' which was not found",
-      mutableListOf<MutableMap<String?, Any?>>(),
+      mutableListOf(),
     )
   }
 
@@ -868,10 +749,10 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "DbtRuntimeError",
       "Code: 102. Unexpected packet from server abcdefg.eu-west-1.aws.clickhouse.cloud:8443 (expected Hello or Exception, got Unknown packet)",
-      mutableListOf<MutableMap<String?, Any?>>(),
+      mutableListOf(),
     )
   }
 
@@ -898,10 +779,10 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "DbtRuntimeDatabaseError",
       "250001 (08001): Failed to connect to DB: xyzxyz.us-east-2.aws.snowflakecomputing.com:443. The user you were trying to authenticate as differs from the user tied to the access token.",
-      mutableListOf<MutableMap<String?, Any?>>(),
+      mutableListOf(),
     )
   }
 
@@ -926,10 +807,10 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(1, exceptionList.size)
 
     assertExceptionContent(
-      exceptionList.get(0)!!,
+      exceptionList[0],
       "DbtDatabaseError",
       "Access Denied: Project upside-cloud-prod: User does not have bigquery.datasets.create permission in project upside-cloud-prod.",
-      mutableListOf<MutableMap<String?, Any?>>(),
+      mutableListOf(),
     )
   }
 
@@ -943,38 +824,38 @@ internal class SentryExceptionHelperTest {
     Assertions.assertEquals(value, exception.getValue())
 
     if (!frames.isEmpty()) {
-      val stackTrace = exception.getStacktrace()
+      val stackTrace = exception.stacktrace
       Assertions.assertNotNull(stackTrace)
-      val sentryFrames = stackTrace!!.getFrames()
+      val sentryFrames = stackTrace!!.frames
       Assertions.assertNotNull(sentryFrames)
       Assertions.assertEquals(frames.size, sentryFrames!!.size)
 
       for (i in frames.indices) {
-        val expectedFrame = frames.get(i)
-        val sentryFrame = sentryFrames.get(i)
+        val expectedFrame = frames[i]
+        val sentryFrame = sentryFrames[i]
 
         if (expectedFrame.containsKey(MODULE)) {
-          Assertions.assertEquals(expectedFrame.get(MODULE), sentryFrame.getModule())
+          Assertions.assertEquals(expectedFrame.get(MODULE), sentryFrame.module)
         }
 
         if (expectedFrame.containsKey(FILENAME)) {
-          Assertions.assertEquals(expectedFrame.get(FILENAME), sentryFrame.getFilename())
+          Assertions.assertEquals(expectedFrame.get(FILENAME), sentryFrame.filename)
         }
 
         if (expectedFrame.containsKey(ABS_PATH)) {
-          Assertions.assertEquals(expectedFrame.get(ABS_PATH), sentryFrame.getAbsPath())
+          Assertions.assertEquals(expectedFrame.get(ABS_PATH), sentryFrame.absPath)
         }
 
         if (expectedFrame.containsKey(FUNCTION)) {
-          Assertions.assertEquals(expectedFrame.get(FUNCTION), sentryFrame.getFunction())
+          Assertions.assertEquals(expectedFrame.get(FUNCTION), sentryFrame.function)
         }
 
         if (expectedFrame.containsKey(LINE_NO)) {
-          Assertions.assertEquals(expectedFrame.get(LINE_NO), sentryFrame.getLineno())
+          Assertions.assertEquals(expectedFrame.get(LINE_NO), sentryFrame.lineno)
         }
 
         if (expectedFrame.containsKey(CONTEXT_LINE)) {
-          Assertions.assertEquals(expectedFrame.get(CONTEXT_LINE), sentryFrame.getContextLine())
+          Assertions.assertEquals(expectedFrame.get(CONTEXT_LINE), sentryFrame.contextLine)
         }
 
         if (expectedFrame.containsKey("isNative")) {

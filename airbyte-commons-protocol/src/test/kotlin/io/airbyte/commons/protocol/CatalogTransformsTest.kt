@@ -14,7 +14,6 @@ import io.airbyte.config.SyncMode
 import io.airbyte.config.helpers.CatalogTransforms
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import java.util.List
 import java.util.function.Function
 
 internal class CatalogTransformsTest {
@@ -27,7 +26,7 @@ internal class CatalogTransformsTest {
         ConfiguredAirbyteCatalog::class.java,
       )
     val streamDescriptor = StreamDescriptor().withName("pokemon")
-    val streamsToReset = List.of(streamDescriptor)
+    val streamsToReset = listOf(streamDescriptor)
 
     CatalogTransforms.updateCatalogForReset(streamsToReset, configuredAirbyteCatalog)
 
@@ -60,7 +59,7 @@ internal class CatalogTransformsTest {
     val streamDescriptor = StreamDescriptor().withName("pokemon")
     val otherStreamDescriptor = StreamDescriptor().withName("other")
     val otherStreamDescriptor2 = StreamDescriptor().withName("other2").withNamespace("namespace")
-    val streamsToReset = List.of(streamDescriptor)
+    val streamsToReset = listOf(streamDescriptor)
 
     CatalogTransforms.updateCatalogForReset(streamsToReset, configuredAirbyteCatalog)
 

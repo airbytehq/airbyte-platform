@@ -25,9 +25,7 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito
-import java.util.List
 import java.util.UUID
 
 internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
@@ -49,20 +47,19 @@ internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
   @Test
   fun testReadWrite() {
     for (op in OPS) {
-      Assertions.assertEquals(op, operationService!!.getStandardSyncOperation(op.getOperationId()))
+      Assertions.assertEquals(op, operationService!!.getStandardSyncOperation(op.operationId))
     }
   }
 
   @Test
   fun testReadNotExists() {
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable {
-        operationService!!.getStandardSyncOperation(
-          UUID.randomUUID(),
-        )
-      },
-    )
+    ) {
+      operationService!!.getStandardSyncOperation(
+        UUID.randomUUID(),
+      )
+    }
   }
 
   @Test
@@ -73,25 +70,24 @@ internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
   @Test
   fun testDelete() {
     for (op in OPS) {
-      Assertions.assertEquals(op, operationService!!.getStandardSyncOperation(op.getOperationId()))
-      operationService!!.deleteStandardSyncOperation(op.getOperationId())
-      Assertions.assertThrows<ConfigNotFoundException?>(
+      Assertions.assertEquals(op, operationService!!.getStandardSyncOperation(op.operationId))
+      operationService!!.deleteStandardSyncOperation(op.operationId)
+      Assertions.assertThrows(
         ConfigNotFoundException::class.java,
-        Executable {
-          operationService!!.getStandardSyncOperation(
-            UUID.randomUUID(),
-          )
-        },
-      )
+      ) {
+        operationService!!.getStandardSyncOperation(
+          UUID.randomUUID(),
+        )
+      }
     }
   }
 
   private fun createWorkspace() {
-    val featureFlagClient: FeatureFlagClient = Mockito.mock<TestClient>(TestClient::class.java)
-    val secretsRepositoryReader = Mockito.mock<SecretsRepositoryReader>(SecretsRepositoryReader::class.java)
-    val secretsRepositoryWriter = Mockito.mock<SecretsRepositoryWriter>(SecretsRepositoryWriter::class.java)
-    val secretPersistenceConfigService = Mockito.mock<SecretPersistenceConfigService>(SecretPersistenceConfigService::class.java)
-    val metricClient = Mockito.mock<MetricClient>(MetricClient::class.java)
+    val featureFlagClient: FeatureFlagClient = Mockito.mock(TestClient::class.java)
+    val secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
+    val secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
+    val secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
+    val metricClient = Mockito.mock(MetricClient::class.java)
 
     OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization())
 
@@ -99,7 +95,7 @@ internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
     dataplaneGroupService.writeDataplaneGroup(
       DataplaneGroup()
         .withId(UUID.randomUUID())
-        .withOrganizationId(MockData.defaultOrganization()!!.getOrganizationId())
+        .withOrganizationId(MockData.defaultOrganization().organizationId)
         .withName("test")
         .withEnabled(true)
         .withTombstone(false),
@@ -113,7 +109,7 @@ internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
         .withInitialSetupComplete(true)
         .withTombstone(false)
         .withDataplaneGroupId(UUID.randomUUID())
-        .withOrganizationId(MockData.defaultOrganization()!!.getOrganizationId())
+        .withOrganizationId(MockData.defaultOrganization().organizationId)
     WorkspaceServiceJooqImpl(
       database,
       featureFlagClient,
@@ -143,6 +139,6 @@ internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
             .withExecutionUrl(WEBHOOK_OPERATION_EXECUTION_URL)
             .withExecutionBody(WEBHOOK_OPERATION_EXECUTION_BODY),
         )
-    private val OPS: MutableList<StandardSyncOperation> = List.of<StandardSyncOperation?>(WEBHOOK_OP)
+    private val OPS: List<StandardSyncOperation> = listOf(WEBHOOK_OP)
   }
 }

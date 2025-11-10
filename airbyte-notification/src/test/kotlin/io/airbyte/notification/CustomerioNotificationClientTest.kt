@@ -62,8 +62,8 @@ internal class CustomerioNotificationClientTest {
 
     val recordedRequest = mockWebServer.takeRequest()
     Assertions.assertEquals("POST", recordedRequest.method)
-    Assertions.assertEquals("/" + API_ENDPOINT, recordedRequest.path)
-    Assertions.assertEquals("Bearer " + API_KEY, recordedRequest.getHeader(HttpHeaders.AUTHORIZATION))
+    Assertions.assertEquals("/$API_ENDPOINT", recordedRequest.path)
+    Assertions.assertEquals("Bearer $API_KEY", recordedRequest.getHeader(HttpHeaders.AUTHORIZATION))
     Assertions.assertEquals("application/json; charset=utf-8", recordedRequest.getHeader(HttpHeaders.CONTENT_TYPE))
     Assertions.assertEquals("{}", recordedRequest.body.readUtf8())
   }
@@ -80,12 +80,12 @@ internal class CustomerioNotificationClientTest {
   fun testNotifyByEmailBroadcast() {
     mockWebServer.enqueue(MockResponse())
 
-    val result = customerioNotificationClient.notifyByEmailBroadcast("123", EMAIL_LIST, java.util.Map.of("key", "value"))
+    val result = customerioNotificationClient.notifyByEmailBroadcast("123", EMAIL_LIST, mapOf("key" to "value"))
     Assertions.assertTrue(result)
 
     val recordedRequest = mockWebServer.takeRequest()
     Assertions.assertEquals("/v1/campaigns/123/triggers", recordedRequest.path)
-    Assertions.assertEquals("Bearer " + API_KEY, recordedRequest.getHeader(HttpHeaders.AUTHORIZATION))
+    Assertions.assertEquals("Bearer $API_KEY", recordedRequest.getHeader(HttpHeaders.AUTHORIZATION))
 
     val reqBody = Jsons.deserialize(recordedRequest.body.readUtf8())
     reqBody["emails"].forEach(
@@ -120,19 +120,13 @@ internal class CustomerioNotificationClientTest {
     Assertions.assertEquals("/v1/campaigns/32/triggers", recordedRequest.path)
 
     val expectedData =
-      java.util.Map.of(
-        "connector_type",
-        "source",
-        "connector_name",
-        connectorName,
-        "connector_version_new",
-        breakingChange.version.serialize(),
-        "connector_version_change_description",
-        "<p>my <strong>breaking</strong> change message <a href=\"https://airbyte.io/\">link</a></p>\n",
-        "connector_version_upgrade_deadline",
-        "January 1, 2021",
-        "connector_version_migration_url",
-        breakingChange.migrationDocumentationUrl,
+      mapOf(
+        "connector_type" to "source",
+        "connector_name" to connectorName,
+        "connector_version_new" to breakingChange.version.serialize(),
+        "connector_version_change_description" to "<p>my <strong>breaking</strong> change message <a href=\"https://airbyte.io/\">link</a></p>\n",
+        "connector_version_upgrade_deadline" to "January 1, 2021",
+        "connector_version_migration_url" to breakingChange.migrationDocumentationUrl,
       )
 
     val reqBody = Jsons.deserialize(recordedRequest.body.readUtf8())
@@ -164,17 +158,12 @@ internal class CustomerioNotificationClientTest {
     Assertions.assertEquals("/v1/campaigns/33/triggers", recordedRequest.path)
 
     val expectedData =
-      java.util.Map.of(
-        "connector_type",
-        "destination",
-        "connector_name",
-        connectorName,
-        "connector_version_new",
-        breakingChange.version.serialize(),
-        "connector_version_change_description",
-        "<p>my breaking change message</p>\n",
-        "connector_version_migration_url",
-        breakingChange.migrationDocumentationUrl,
+      mapOf(
+        "connector_type" to "destination",
+        "connector_name" to connectorName,
+        "connector_version_new" to breakingChange.version.serialize(),
+        "connector_version_change_description" to "<p>my breaking change message</p>\n",
+        "connector_version_migration_url" to breakingChange.migrationDocumentationUrl,
       )
 
     val reqBody = Jsons.deserialize(recordedRequest.body.readUtf8())
@@ -218,7 +207,7 @@ internal class CustomerioNotificationClientTest {
 
     val recordedRequest = mockWebServer.takeRequest()
     Assertions.assertEquals("/v1/send/email", recordedRequest.path)
-    Assertions.assertEquals("Bearer " + API_KEY, recordedRequest.getHeader(HttpHeaders.AUTHORIZATION))
+    Assertions.assertEquals("Bearer $API_KEY", recordedRequest.getHeader(HttpHeaders.AUTHORIZATION))
   }
 
   @Test

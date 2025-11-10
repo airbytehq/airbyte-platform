@@ -35,7 +35,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
-import java.util.stream.Stream
 import kotlin.random.Random
 
 private const val PATH_BASE = "/api/v1/stream_statuses"
@@ -137,8 +136,8 @@ internal class StreamStatusesApiControllerTest {
 
   companion object {
     @JvmStatic
-    private fun invalidRunStateCauseMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun invalidRunStateCauseMatrix() =
+      listOf(
         Arguments.of(StreamStatusRunState.PENDING, StreamStatusIncompleteRunCause.FAILED),
         Arguments.of(StreamStatusRunState.PENDING, StreamStatusIncompleteRunCause.CANCELED),
         Arguments.of(StreamStatusRunState.RUNNING, StreamStatusIncompleteRunCause.FAILED),
@@ -149,8 +148,8 @@ internal class StreamStatusesApiControllerTest {
       )
 
     @JvmStatic
-    private fun validPaginationMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun validPaginationMatrix() =
+      listOf(
         Arguments.of(validPagination()),
         Arguments.of(validPagination().rowOffset(30)),
         Arguments.of(validPagination().pageSize(100).rowOffset(300)),
@@ -158,8 +157,8 @@ internal class StreamStatusesApiControllerTest {
       )
 
     @JvmStatic
-    private fun invalidListPaginationMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun invalidListPaginationMatrix() =
+      listOf(
         Arguments.of(null as Pagination?),
         Arguments.of(validPagination().pageSize(0)),
         Arguments.of(validPagination().pageSize(-1)),

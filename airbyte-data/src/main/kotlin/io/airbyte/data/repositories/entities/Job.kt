@@ -15,10 +15,9 @@ import io.micronaut.data.annotation.MappedEntity
 import io.micronaut.data.annotation.Relation
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
-import java.util.EnumSet
 
-val REPLICATION_TYPES: Set<JobConfigType> = EnumSet.of(JobConfigType.sync, JobConfigType.reset_connection, JobConfigType.refresh)
-val SYNC_REPLICATION_TYPES: Set<JobConfigType> = EnumSet.of(JobConfigType.sync, JobConfigType.refresh)
+val REPLICATION_TYPES: Set<JobConfigType> = setOf(JobConfigType.sync, JobConfigType.reset_connection, JobConfigType.refresh)
+val SYNC_REPLICATION_TYPES: Set<JobConfigType> = setOf(JobConfigType.sync, JobConfigType.refresh)
 
 val TERMINAL_STATUSES =
   setOf(

@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.oauth.BaseOAuthFlow
 import org.junit.jupiter.api.Test
-import java.util.Map
 
 internal class MicrosoftTeamsOAuthFlowTest : BaseOAuthFlowTest() {
   override val oAuthFlow: BaseOAuthFlow
@@ -19,22 +18,10 @@ internal class MicrosoftTeamsOAuthFlowTest : BaseOAuthFlowTest() {
     get() = "https://login.microsoftonline.com/test_tenant_id/oauth2/v2.0/authorize?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=offline_access+Application.Read.All+Channel.ReadBasic.All+ChannelMember.Read.All+ChannelMember.ReadWrite.All+ChannelSettings.Read.All+ChannelSettings.ReadWrite.All+Directory.Read.All+Directory.ReadWrite.All+Files.Read.All+Files.ReadWrite.All+Group.Read.All+Group.ReadWrite.All+GroupMember.Read.All+Reports.Read.All+Sites.Read.All+Sites.ReadWrite.All+TeamsTab.Read.All+TeamsTab.ReadWrite.All+User.Read.All+User.ReadWrite.All&response_type=code"
 
   override val inputOAuthConfiguration: JsonNode
-    get() =
-      Jsons.jsonNode(
-        Map.of(
-          "tenant_id",
-          "test_tenant_id",
-        ),
-      )
+    get() = Jsons.jsonNode(mapOf("tenant_id" to "test_tenant_id"))
 
   override val userInputFromConnectorConfigSpecification: JsonNode
-    get() =
-      BaseOAuthFlowTest.Companion.getJsonSchema(
-        Map.of<String, Any>(
-          "tenant_id",
-          Map.of<String, String>("type", "string"),
-        ),
-      )
+    get() = getJsonSchema(mapOf<String, Any>("tenant_id" to mapOf("type" to "string")))
 
   @Test
   override fun testEmptyInputCompleteSourceOAuth() {

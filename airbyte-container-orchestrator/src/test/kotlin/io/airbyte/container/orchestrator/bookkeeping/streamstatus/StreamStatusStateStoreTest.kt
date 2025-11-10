@@ -26,7 +26,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.AbstractMap.SimpleEntry
-import java.util.stream.Stream
 import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 
 class StreamStatusStateStoreTest {
@@ -389,8 +388,8 @@ class StreamStatusStateStoreTest {
 
   companion object {
     @JvmStatic
-    fun runStateValidTransitionMatrix(): Stream<Arguments> =
-      Stream.of(
+    fun runStateValidTransitionMatrix() =
+      listOf(
         Arguments.of(null, ApiEnum.RUNNING),
         Arguments.of(null, ApiEnum.RATE_LIMITED),
         Arguments.of(null, ApiEnum.COMPLETE),
@@ -404,8 +403,8 @@ class StreamStatusStateStoreTest {
       )
 
     @JvmStatic
-    fun runStateInvalidTransitionMatrix(): Stream<Arguments> =
-      Stream.of(
+    fun runStateInvalidTransitionMatrix() =
+      listOf(
         Arguments.of(ApiEnum.COMPLETE, ApiEnum.RUNNING),
         Arguments.of(ApiEnum.INCOMPLETE, ApiEnum.RUNNING),
         Arguments.of(ApiEnum.COMPLETE, ApiEnum.RATE_LIMITED),

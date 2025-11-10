@@ -26,7 +26,6 @@ import jakarta.inject.Singleton
 import jakarta.validation.Valid
 import java.io.IOException
 import java.time.Instant
-import java.util.List
 import java.util.UUID
 
 /**
@@ -149,7 +148,7 @@ open class NotificationsHandler {
             .streamDescriptor(StreamDescriptor().name("altered_stream"))
             .updateStream(
               StreamTransformUpdateStream().fieldTransforms(
-                List.of<@Valid FieldTransform?>(
+                listOf<@Valid FieldTransform?>(
                   FieldTransform()
                     .fieldName(listOf("path", "field"))
                     .transformType(FieldTransform.TransformTypeEnum.REMOVE_FIELD)
@@ -171,19 +170,16 @@ open class NotificationsHandler {
         TEST_DIFF,
       )
     private val NOTIFICATION_TRIGGER_TEST_MESSAGE: Map<NotificationTrigger, String> =
-      java.util.Map.of(
-        NotificationTrigger.SYNC_SUCCESS,
-        "Hello World! This is a test from Airbyte to try slack notification settings for sync successes.",
-        NotificationTrigger.SYNC_FAILURE,
-        "Hello World! This is a test from Airbyte to try slack notification settings for sync failures.",
-        NotificationTrigger.CONNECTION_UPDATE,
-        "Hello World! This is a test from Airbyte to try slack notification settings for connection update warning.",
-        NotificationTrigger.SYNC_DISABLED,
-        "Hello World! This is a test from Airbyte to try slack notification settings for sync disabled.",
-        NotificationTrigger.SYNC_DISABLED_WARNING,
-        "Hello World! This is a test from Airbyte to try slack notification settings for your sync is about to be disabled.",
-        NotificationTrigger.CONNECTION_UPDATE_ACTION_REQUIRED,
-        "Hello World! This is a test from Airbyte to try slack notification settings about your connection has been updated and action is required.",
+      mapOf(
+        NotificationTrigger.SYNC_SUCCESS to "Hello World! This is a test from Airbyte to try slack notification settings for sync successes.",
+        NotificationTrigger.SYNC_FAILURE to "Hello World! This is a test from Airbyte to try slack notification settings for sync failures.",
+        NotificationTrigger.CONNECTION_UPDATE to
+          "Hello World! This is a test from Airbyte to try slack notification settings for connection update warning.",
+        NotificationTrigger.SYNC_DISABLED to "Hello World! This is a test from Airbyte to try slack notification settings for sync disabled.",
+        NotificationTrigger.SYNC_DISABLED_WARNING to
+          "Hello World! This is a test from Airbyte to try slack notification settings for your sync is about to be disabled.",
+        NotificationTrigger.CONNECTION_UPDATE_ACTION_REQUIRED to
+          "Hello World! This is a test from Airbyte to try slack notification settings about your connection has been updated and action is required.",
       )
   }
 }

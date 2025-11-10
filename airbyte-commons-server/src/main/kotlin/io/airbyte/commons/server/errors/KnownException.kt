@@ -12,8 +12,6 @@ import java.io.PrintWriter
 import java.io.StringReader
 import java.io.StringWriter
 import java.util.UUID
-import java.util.stream.Collectors
-import java.util.stream.Stream
 
 /**
  * Exception wrapper to handle formatting API exception outputs nicely.
@@ -49,13 +47,9 @@ abstract class KnownException : RuntimeException {
     fun getStackTraceAsList(throwable: Throwable): List<String> {
       val stringWriter = StringWriter()
       throwable.printStackTrace(PrintWriter(stringWriter))
-      val stackTrace =
-        stringWriter
-          .toString()
-          .split("\n".toRegex())
-          .dropLastWhile { it.isEmpty() }
-          .toTypedArray()
-      return Stream.of(*stackTrace).collect(Collectors.toList())
+      return stringWriter
+        .toString()
+        .split("\n")
     }
 
     /**
@@ -129,7 +123,7 @@ abstract class KnownException : RuntimeException {
       val pw = PrintWriter(sw)
       try {
         throwable.printStackTrace(pw)
-      } catch (ex: RuntimeException) {
+      } catch (_: RuntimeException) {
         // Ignore any exceptions.
       }
       pw.flush()

@@ -240,7 +240,7 @@ internal class StreamStatusesRepositoryTest {
     val s14 = Fixtures.status().jobType(JobStreamStatusJobType.reset).build()
     val s15 = Fixtures.statusFrom(s8).jobType(JobStreamStatusJobType.reset).build()
 
-    repo!!.saveAll(java.util.List.of(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15))
+    repo!!.saveAll(listOf(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15))
 
     // create some filter params on various properties
     val f1 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, null)
@@ -261,21 +261,21 @@ internal class StreamStatusesRepositoryTest {
     val f14 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, JobStreamStatusJobType.sync, null)
     val f15 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, JobStreamStatusJobType.reset, null)
 
-    assertContainsSameElements(java.util.List.of(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13, s14, s15), repo!!.findAllFiltered(f1).content)
-    assertContainsSameElements(java.util.List.of(s6), repo!!.findAllFiltered(f2).content)
-    assertContainsSameElements(java.util.List.of(s7), repo!!.findAllFiltered(f3).content)
-    assertContainsSameElements(java.util.List.of(s1, s2, s3, s4, s5, s8, s9, s10, s13, s14, s15), repo!!.findAllFiltered(f4).content)
-    assertContainsSameElements(java.util.List.of(s11), repo!!.findAllFiltered(f5).content)
-    assertContainsSameElements(java.util.List.of(s1, s2, s3, s4, s5, s8, s9, s10, s14, s15), repo!!.findAllFiltered(f6).content)
-    assertContainsSameElements(java.util.List.of(s1, s2, s3, s8, s9, s14, s15), repo!!.findAllFiltered(f7).content)
-    assertContainsSameElements(java.util.List.of(s1, s2, s3, s4, s5, s11, s12, s13, s14), repo!!.findAllFiltered(f8).content)
-    assertContainsSameElements(java.util.List.of(s8, s9, s10, s15), repo!!.findAllFiltered(f9).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13, s14, s15), repo!!.findAllFiltered(f1).content)
+    assertContainsSameElements(listOf(s6), repo!!.findAllFiltered(f2).content)
+    assertContainsSameElements(listOf(s7), repo!!.findAllFiltered(f3).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s13, s14, s15), repo!!.findAllFiltered(f4).content)
+    assertContainsSameElements(listOf(s11), repo!!.findAllFiltered(f5).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s14, s15), repo!!.findAllFiltered(f6).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s8, s9, s14, s15), repo!!.findAllFiltered(f7).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s11, s12, s13, s14), repo!!.findAllFiltered(f8).content)
+    assertContainsSameElements(listOf(s8, s9, s10, s15), repo!!.findAllFiltered(f9).content)
     assertContainsSameElements(listOf(), repo!!.findAllFiltered(f10).content)
-    assertContainsSameElements(java.util.List.of(s1, s2, s3, s11, s12, s14), repo!!.findAllFiltered(f11).content)
-    assertContainsSameElements(java.util.List.of(s4, s5), repo!!.findAllFiltered(f12).content)
-    assertContainsSameElements(java.util.List.of(s3), repo!!.findAllFiltered(f13).content)
-    assertContainsSameElements(java.util.List.of(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13), repo!!.findAllFiltered(f14).content)
-    assertContainsSameElements(java.util.List.of(s14, s15), repo!!.findAllFiltered(f15).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s11, s12, s14), repo!!.findAllFiltered(f11).content)
+    assertContainsSameElements(listOf(s4, s5), repo!!.findAllFiltered(f12).content)
+    assertContainsSameElements(listOf(s3), repo!!.findAllFiltered(f13).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13), repo!!.findAllFiltered(f14).content)
+    assertContainsSameElements(listOf(s14, s15), repo!!.findAllFiltered(f15).content)
   }
 
   @Test
@@ -292,7 +292,7 @@ internal class StreamStatusesRepositoryTest {
     val s9 = Fixtures.status().build()
     val s10 = Fixtures.status().build()
 
-    repo!!.saveAll(java.util.List.of(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10))
+    repo!!.saveAll(listOf(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10))
 
     // paginate by 10 at a time
     val f1 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, StreamStatusesRepository.Pagination(0, 10))
@@ -310,17 +310,17 @@ internal class StreamStatusesRepositoryTest {
     val f9 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, StreamStatusesRepository.Pagination(3, 3))
     val f10 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, StreamStatusesRepository.Pagination(4, 3))
 
-    assertContainsSameElements(java.util.List.of(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10), repo!!.findAllFiltered(f1).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10), repo!!.findAllFiltered(f1).content)
     assertContainsSameElements(listOf(), repo!!.findAllFiltered(f2).content)
 
-    assertContainsSameElements(java.util.List.of(s1, s2, s3, s4, s5), repo!!.findAllFiltered(f3).content)
-    assertContainsSameElements(java.util.List.of(s6, s7, s8, s9, s10), repo!!.findAllFiltered(f4).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5), repo!!.findAllFiltered(f3).content)
+    assertContainsSameElements(listOf(s6, s7, s8, s9, s10), repo!!.findAllFiltered(f4).content)
     assertContainsSameElements(listOf(), repo!!.findAllFiltered(f5).content)
 
-    assertContainsSameElements(java.util.List.of(s1, s2, s3), repo!!.findAllFiltered(f6).content)
-    assertContainsSameElements(java.util.List.of(s4, s5, s6), repo!!.findAllFiltered(f7).content)
-    assertContainsSameElements(java.util.List.of(s7, s8, s9), repo!!.findAllFiltered(f8).content)
-    assertContainsSameElements(java.util.List.of(s10), repo!!.findAllFiltered(f9).content)
+    assertContainsSameElements(listOf(s1, s2, s3), repo!!.findAllFiltered(f6).content)
+    assertContainsSameElements(listOf(s4, s5, s6), repo!!.findAllFiltered(f7).content)
+    assertContainsSameElements(listOf(s7, s8, s9), repo!!.findAllFiltered(f8).content)
+    assertContainsSameElements(listOf(s10), repo!!.findAllFiltered(f9).content)
     assertContainsSameElements(listOf(), repo!!.findAllFiltered(f10).content)
   }
 
@@ -523,11 +523,11 @@ internal class StreamStatusesRepositoryTest {
         .build()
 
     jooqDslContext!!.execute(
-      "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId6 + ", '" + Fixtures.connectionId1 + "', 'running', 'sync')",
+      "insert into jobs (id, scope, status, config_type) values(${Fixtures.jobId6}, '${Fixtures.connectionId1}', 'running', 'sync')",
     )
 
     repo!!.saveAll(
-      java.util.List.of(
+      listOf(
         p1,
         p2,
         p3,
@@ -560,8 +560,8 @@ internal class StreamStatusesRepositoryTest {
     val results1 = repo!!.findAllPerRunStateByConnectionId(Fixtures.connectionId1)
     val results2 = repo!!.findAllPerRunStateByConnectionId(Fixtures.connectionId2)
 
-    assertContainsSameElements(java.util.List.of(p2, p3, r2, rate2, c1, if3, if4, ic3, ic4, reset2), results1)
-    assertContainsSameElements(java.util.List.of(p4, r3, r4, rate3, rate4, c3, c4, if2), results2)
+    assertContainsSameElements(listOf(p2, p3, r2, rate2, c1, if3, if4, ic3, ic4, reset2), results1)
+    assertContainsSameElements(listOf(p4, r3, r4, rate3, rate4, c3, c4, if2), results2)
   }
 
   @Test
@@ -665,35 +665,30 @@ internal class StreamStatusesRepositoryTest {
         .build()
 
     jooqDslContext!!.execute(
-      "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId1 + ", '" + Fixtures.connectionId1 +
-        "', 'succeeded', 'sync')",
+      "insert into jobs (id, scope, status, config_type) values (${Fixtures.jobId1}, '${Fixtures.connectionId1}', 'succeeded', 'sync')",
     )
     jooqDslContext!!.execute(
       (
-        "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId2 + ", '" + Fixtures.connectionId1 +
-          "', 'succeeded', 'refresh')"
+        "insert into jobs (id, scope, status, config_type) values (${Fixtures.jobId2}, '${Fixtures.connectionId1}', 'succeeded', 'refresh')"
       ),
     )
     jooqDslContext!!.execute(
-      "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId3 + ", '" + Fixtures.connectionId1 +
-        "', 'succeeded', 'sync')",
+      "insert into jobs (id, scope, status, config_type) values (${Fixtures.jobId3}, '${Fixtures.connectionId1}', 'succeeded', 'sync')",
     )
     jooqDslContext!!.execute(
-      "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId4 + ", '" + Fixtures.connectionId2 +
-        "', 'succeeded', 'sync')",
+      "insert into jobs (id, scope, status, config_type) values (${Fixtures.jobId4}, '${Fixtures.connectionId2}', 'succeeded', 'sync')",
     )
     jooqDslContext!!.execute(
-      "insert into jobs (id, scope, status, config_type) values (" + Fixtures.jobId5 + ", '" + Fixtures.connectionId2 +
-        "', 'succeeded', 'sync')",
+      "insert into jobs (id, scope, status, config_type) values (${Fixtures.jobId5}, '${Fixtures.connectionId2}', 'succeeded', 'sync')",
     )
 
-    repo!!.saveAll(java.util.List.of(p1, p2, p3, p4, r1, r2, r3, c1, c2, c3, f1, f2, f3))
+    repo!!.saveAll(listOf(p1, p2, p3, p4, r1, r2, r3, c1, c2, c3, f1, f2, f3))
 
     val results1 = repo!!.findLastAttemptsOfLastXJobsForConnection(Fixtures.connectionId1, 3)
     val results2 = repo!!.findLastAttemptsOfLastXJobsForConnection(Fixtures.connectionId2, 2)
 
-    assertContainsSameElements(java.util.List.of(c1, r1, r2), results1)
-    assertContainsSameElements(java.util.List.of(f2, f3), results2)
+    assertContainsSameElements(listOf(c1, r1, r2), results1)
+    assertContainsSameElements(listOf(f2, f3), results2)
   }
 
   private object Fixtures {

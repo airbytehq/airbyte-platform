@@ -89,7 +89,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.lang.invoke.MethodHandles
 import java.time.Duration
-import java.util.Map
 import java.util.Objects
 import java.util.Optional
 import java.util.UUID
@@ -144,6 +143,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
   private var connectionContext: ConnectionContext? = null
 
+  @Suppress("UNUSED")
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   override fun run(connectionUpdaterInput: ConnectionUpdaterInput) {
     try {
@@ -156,7 +156,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
        */
       val hydratedContext =
         runMandatoryActivityWithOutput(
-          Function { input: GetConnectionContextInput? -> configFetchActivity?.getConnectionContext(input!!) },
+          { input: GetConnectionContextInput? -> configFetchActivity?.getConnectionContext(input!!) },
           GetConnectionContextInput(connectionUpdaterInput.connectionId!!),
         )!!
       setConnectionContext(hydratedContext.connectionContext)
@@ -447,7 +447,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     // this differs from workflowInternalState.attemptNumber being 0-based.
     // TODO: Don't mix these bases. Bug filed https://github.com/airbytehq/airbyte/issues/27808
     val attemptNumber: Int = connectionUpdaterInput.attemptNumber!!
-    ApmTraceUtils.addTagsToTrace(Map.of<String?, Int?>(ATTEMPT_NUMBER_KEY, attemptNumber))
+    ApmTraceUtils.addTagsToTrace(mapOf(ATTEMPT_NUMBER_KEY to attemptNumber))
 
     // This is outside the retry if/else block because we will pass it to our retry manager regardless
     // of retry state.
@@ -484,7 +484,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         if (failureType == FailureReason.FailureType.CONFIG_ERROR) {
           internalFailureMessage
         } else {
-          "Job failed after too many retries for connection " + connectionId
+          "Job failed after too many retries for connection $connectionId"
         }
       failJob(connectionUpdaterInput, failureReason)
 
@@ -535,7 +535,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     autoDisableConnectionActivityInput.connectionId = connectionId
     val output =
       runMandatoryActivityWithOutput(
-        Function { input: AutoDisableConnectionActivityInput? ->
+        { input: AutoDisableConnectionActivityInput? ->
           autoDisableConnectionActivity?.autoDisableFailingConnection(input!!)
         },
         autoDisableConnectionActivityInput,
@@ -639,7 +639,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     // Use separate methods for source and destination checks
     val shouldRunSourceCheck =
       runMandatoryActivityWithOutput(
-        Function { input: JobCheckFailureInput? ->
+        { input: JobCheckFailureInput? ->
           jobCreationAndStatusUpdateActivity?.shouldRunSourceCheck(input!!)
         },
         jobStateInput,
@@ -664,7 +664,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     } else {
       val shouldRunDestinationCheck =
         runMandatoryActivityWithOutput(
-          Function { input: JobCheckFailureInput? ->
+          { input: JobCheckFailureInput? ->
             jobCreationAndStatusUpdateActivity?.shouldRunDestinationCheck(input!!)
           },
           jobStateInput,
@@ -941,6 +941,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   /**
    * Unlike `recordMetric` above, we won't fail the attempt if this metric recording fails.
    */
+  @Suppress("UNUSED")
   private fun tryRecordCountMetric(recordMetricInput: RecordMetricInput) {
     try {
       recordMetricActivity!!.recordWorkflowCountMetric(recordMetricInput)
@@ -974,7 +975,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       Workflow.getVersion(GET_FEATURE_FLAGS_TAG, Workflow.DEFAULT_VERSION, GET_FEATURE_FLAGS_CURRENT_VERSION)
 
     if (getFeatureFlagsVersion < GET_FEATURE_FLAGS_CURRENT_VERSION) {
-      return Map.of<String?, Boolean?>()
+      return mutableMapOf()
     }
 
     val getFlagsOutput =
@@ -1153,13 +1154,13 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
   private fun traceConnectionId() {
     if (connectionId != null) {
-      ApmTraceUtils.addTagsToTrace(Map.of<String?, UUID?>(CONNECTION_ID_KEY, connectionId))
+      ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to connectionId))
     }
   }
 
   private fun setConnectionId(connectionUpdaterInput: ConnectionUpdaterInput) {
     connectionId = Objects.requireNonNull<UUID?>(connectionUpdaterInput.connectionId)
-    ApmTraceUtils.addTagsToTrace(Map.of<String?, UUID?>(CONNECTION_ID_KEY, connectionId))
+    ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to connectionId))
   }
 
   private fun setConnectionContext(ctx: ConnectionContext?) {

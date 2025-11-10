@@ -159,7 +159,7 @@ class AcceptanceTestHarness(
       AirbyteStream(
         STREAM_NAME,
         expectedSchema,
-        java.util.List.of(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
+        listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL),
         false,
         listOf(),
         listOf(),
@@ -242,9 +242,9 @@ class AcceptanceTestHarness(
         )
       destinationDataSource =
         getDataSource(
-          cloudSqlInstanceUsername!!,
-          cloudSqlInstancePassword!!,
-          cloudSqlInstancePublicIp!!,
+          cloudSqlInstanceUsername,
+          cloudSqlInstancePassword,
+          cloudSqlInstancePublicIp,
           destinationDatabaseName!!,
         )
       // seed database.
@@ -546,12 +546,12 @@ class AcceptanceTestHarness(
       Thread.sleep(1000)
       try {
         job = apiClient.jobsApi.getJobInfo(JobIdRequestBody(job.id)).job
-      } catch (e: ClientException) {
+      } catch (_: ClientException) {
         // TODO(mfsiega-airbyte): consolidate our polling/retrying logic.
         log.warn { "error querying jobs api, retrying..." }
-      } catch (e: ServerException) {
+      } catch (_: ServerException) {
         log.warn { "error querying jobs api, retrying..." }
-      } catch (e: IOException) {
+      } catch (_: IOException) {
         log.warn { "error querying jobs api, retrying..." }
       }
       // if we are just waiting only log every 10 seconds to avoid spamming the logs.

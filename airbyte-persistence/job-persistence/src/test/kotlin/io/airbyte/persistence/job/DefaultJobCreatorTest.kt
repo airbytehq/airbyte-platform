@@ -74,7 +74,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.Optional
 import java.util.UUID
-import java.util.stream.Stream
 
 internal class DefaultJobCreatorTest {
   private lateinit var jobPersistence: JobPersistence
@@ -1300,8 +1299,8 @@ internal class DefaultJobCreatorTest {
         .withStreamsToRefresh(streamToRefresh.toList())
 
     @JvmStatic
-    private fun resourceOverrideMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun resourceOverrideMatrix() =
+      listOf<Arguments?>(
         Arguments.of("0.7", "0.4", "1000Mi", "2000Mi"),
         Arguments.of("0.3", null, "1000Mi", null),
         Arguments.of(null, null, null, null),
@@ -1311,8 +1310,8 @@ internal class DefaultJobCreatorTest {
       )
 
     @JvmStatic
-    private fun weirdnessOverrideMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun weirdnessOverrideMatrix() =
+      listOf<Arguments?>(
         Arguments.of("0.7"),
         Arguments.of("0.5, 1, 1000Mi, 2000Mi"),
         Arguments.of("cat burglar"),

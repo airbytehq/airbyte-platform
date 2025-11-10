@@ -16,7 +16,6 @@ import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
 import com.jayway.jsonpath.spi.mapper.MappingProvider
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.EnumSet
 import java.util.Optional
 import java.util.function.BiFunction
 import java.util.function.Function
@@ -60,13 +59,13 @@ object JsonPaths {
 
         override fun mappingProvider(): MappingProvider = mappingProvider
 
-        override fun options(): MutableSet<Option?> {
+        override fun options(): Set<Option?> {
                 /*
                  * All JsonPath queries will return a list of values. This makes parsing the outputs much easier. In
                  * cases where it is not a list, helpers in this class can assert that. See
                  * https://github.com/json-path/JsonPath in the JsonPath documentation.
                  */
-          return EnumSet.of(Option.ALWAYS_RETURN_LIST)
+          return setOf(Option.ALWAYS_RETURN_LIST)
         }
       },
     )
@@ -193,7 +192,7 @@ object JsonPaths {
     val jsonNodes = getValues(json, jsonPath)
 
     check(jsonNodes.size <= 1) { "Path returned more than one item. path: $jsonPath items: $jsonNodes" }
-    return if (jsonNodes.isEmpty()) Optional.empty<JsonNode>() else Optional.of<JsonNode>(jsonNodes.get(0))
+    return if (jsonNodes.isEmpty()) Optional.empty<JsonNode>() else Optional.of<JsonNode>(jsonNodes[0])
   }
 
   /**

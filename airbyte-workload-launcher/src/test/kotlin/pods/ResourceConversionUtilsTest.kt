@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.util.stream.Stream
 
 internal class ResourceConversionUtilsTest {
   @Test
@@ -87,8 +86,8 @@ internal class ResourceConversionUtilsTest {
 
   companion object {
     @JvmStatic
-    private fun kubeQuantityStringBytesMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun kubeQuantityStringBytesMatrix() =
+      listOf(
         Arguments.of("1G", 1000000000),
         Arguments.of("2Mi", 2097152),
         Arguments.of("5G", 5000000000),
@@ -97,8 +96,8 @@ internal class ResourceConversionUtilsTest {
       )
 
     @JvmStatic
-    private fun resourceMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun resourceMatrix() =
+      listOf(
         Arguments.of(
           ResourceRequirements()
             .withCpuRequest("0.5")

@@ -75,8 +75,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import java.io.IOException
-import java.util.List
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 import java.util.function.BiConsumer
@@ -325,9 +323,9 @@ internal class JobTrackerTest {
   @Test
   fun testTrackRefresh() {
     val expectedExtraMetadata: MutableMap<String?, Any?> =
-      mergeMaps<String?, Any?>(
+      mergeMaps(
         SYNC_CONFIG_METADATA,
-        Map.of<String?, Any?>("refresh_types", List.of<String?>(RefreshStream.RefreshType.TRUNCATE.toString())),
+        mutableMapOf("refresh_types" to listOf(RefreshStream.RefreshType.TRUNCATE.toString())),
       )
     testAsynchronous(ConfigType.REFRESH, expectedExtraMetadata)
   }
@@ -400,40 +398,42 @@ internal class JobTrackerTest {
     )
 
     jobTracker.trackSyncForInternalFailure(jobId, CONNECTION_ID, attemptNumber, jobState, exception)
-    val metadata: MutableMap<String?, Any?> = mutableMapOf<String?, Any?>()
-    metadata.put("namespace_definition", JobSyncConfig.NamespaceDefinitionType.SOURCE)
-    metadata.put("number_of_streams", 1)
-    metadata.put("internal_error_type", exception.javaClass.getName())
-    metadata.put(CONNECTOR_SOURCE_KEY, SOURCE_DEF_NAME)
-    metadata.put("internal_error_cause", exception.message)
-    metadata.put(FREQUENCY_KEY, "1 min")
-    metadata.put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
-    metadata.put("workspace_id", WORKSPACE_ID)
-    metadata.put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
-    metadata.put(ATTEMPT_STAGE_KEY, "ENDED")
-    metadata.put("attempt_completion_status", jobState)
-    metadata.put("connection_id", CONNECTION_ID)
-    metadata.put(JOB_ID_KEY, jobId.toString())
-    metadata.put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
-    metadata.put("connector_destination_version", CONNECTOR_VERSION)
-    metadata.put("attempt_id", attemptNumber)
-    metadata.put("connector_destination", DESTINATION_DEF_NAME)
-    metadata.put("operation_count", 0)
-    metadata.put("connector_destination_docker_repository", CONNECTOR_REPOSITORY)
-    metadata.put("table_prefix", false)
-    metadata.put("workspace_name", WORKSPACE_NAME)
-    metadata.put("connector_destination_definition_id", UUID2)
-    metadata.put("source_id", SOURCE_ID)
-    metadata.put("destination_id", DESTINATION_ID)
-
+    val metadata =
+      buildMap {
+        put("namespace_definition", JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        put("number_of_streams", 1)
+        put("internal_error_type", exception.javaClass.getName())
+        put(CONNECTOR_SOURCE_KEY, SOURCE_DEF_NAME)
+        put("internal_error_cause", exception.message)
+        put(FREQUENCY_KEY, "1 min")
+        put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
+        put("workspace_id", WORKSPACE_ID)
+        put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
+        put(ATTEMPT_STAGE_KEY, "ENDED")
+        put("attempt_completion_status", jobState)
+        put("connection_id", CONNECTION_ID)
+        put(JOB_ID_KEY, jobId.toString())
+        put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
+        put("connector_destination_version", CONNECTOR_VERSION)
+        put("attempt_id", attemptNumber)
+        put("connector_destination", DESTINATION_DEF_NAME)
+        put("operation_count", 0)
+        put("connector_destination_docker_repository", CONNECTOR_REPOSITORY)
+        put("table_prefix", false)
+        put("workspace_name", WORKSPACE_NAME)
+        put("connector_destination_definition_id", UUID2)
+        put("source_id", SOURCE_ID)
+        put("destination_id", DESTINATION_ID)
+      }
     verify(trackingClient).track(
-      WORKSPACE_ID,
-      ScopeType.WORKSPACE,
-      JobTracker.INTERNAL_FAILURE_SYNC_EVENT,
-      metadata
-        .mapKeys {
-          it.key!!
-        }.mapValues { it.value },
+      scopeId = WORKSPACE_ID,
+      scopeType = ScopeType.WORKSPACE,
+      action = JobTracker.INTERNAL_FAILURE_SYNC_EVENT,
+      metadata =
+        metadata
+          .mapKeys {
+            it.key
+          }.mapValues { it.value },
     )
   }
 
@@ -446,7 +446,7 @@ internal class JobTrackerTest {
   @JvmOverloads
   fun testAsynchronous(
     configType: ConfigType,
-    additionalExpectedMetadata: MutableMap<String?, Any?>? = mutableMapOf<String?, Any?>(),
+    additionalExpectedMetadata: MutableMap<String?, Any?>? = mutableMapOf(),
   ) {
     // for sync the job id is a long not a uuid.
     val jobId = 10L
@@ -486,9 +486,9 @@ internal class JobTrackerTest {
     whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
       .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
     val manualMetadata: MutableMap<String?, Any?> =
-      mergeMaps<String?, Any?>(
+      mergeMaps(
         metadata,
-        Map.of<String?, Any?>(FREQUENCY_KEY, "manual"),
+        mutableMapOf(FREQUENCY_KEY to "manual"),
         additionalExpectedMetadata,
       )
     assertCorrectMessageForEachState({ jobState: JobTracker.JobState? -> jobTracker.trackSync(job, jobState!!) }, manualMetadata)
@@ -505,9 +505,9 @@ internal class JobTrackerTest {
           .withSchedule(Schedule().withUnits(1L).withTimeUnit(Schedule.TimeUnit.MINUTES)),
       )
     val scheduledMetadata: MutableMap<String?, Any?> =
-      mergeMaps<String?, Any?>(
+      mergeMaps(
         metadata,
-        Map.of<String?, Any?>(FREQUENCY_KEY, "1 min"),
+        mutableMapOf(FREQUENCY_KEY to "1 min"),
         additionalExpectedMetadata,
       )
     assertCorrectMessageForEachState({ jobState: JobTracker.JobState? -> jobTracker.trackSync(job, jobState!!) }, scheduledMetadata)
@@ -572,7 +572,7 @@ internal class JobTrackerTest {
         ConfigType.RESET_CONNECTION,
         CONNECTION_ID.toString(),
         JobConfig(),
-        mutableListOf<Attempt>(),
+        mutableListOf(),
         JobStatus.RUNNING,
         0L,
         0L,
@@ -581,10 +581,10 @@ internal class JobTrackerTest {
       )
 
     val metadata = jobTracker.generateJobMetadata(jobId, configType, attemptId, Optional.of<Job>(previousJob)).toMutableMap()
-    Assertions.assertEquals(jobId, metadata.get("job_id"))
-    Assertions.assertEquals(attemptId, metadata.get("attempt_id"))
-    Assertions.assertEquals(configType, metadata.get("job_type"))
-    Assertions.assertEquals(ConfigType.RESET_CONNECTION, metadata.get("previous_job_type"))
+    Assertions.assertEquals(jobId, metadata["job_id"])
+    Assertions.assertEquals(attemptId, metadata["attempt_id"])
+    Assertions.assertEquals(configType, metadata["job_type"])
+    Assertions.assertEquals(ConfigType.RESET_CONNECTION, metadata["previous_job_type"])
   }
 
   fun testAsynchronousAttempt(
@@ -602,7 +602,7 @@ internal class JobTrackerTest {
         configType!!,
         LONG_JOB_ID,
       ),
-    additionalExpectedMetadata: MutableMap<String?, Any?>? = mutableMapOf<String?, Any?>(),
+    additionalExpectedMetadata: MutableMap<String?, Any?>? = mutableMapOf(),
   ) {
     val metadata = getJobMetadata(configType, LONG_JOB_ID)
     // test when frequency is manual.
@@ -637,10 +637,10 @@ internal class JobTrackerTest {
     whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
       .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
     val manualMetadata: MutableMap<String?, Any?> =
-      mergeMaps<String?, Any?>(
+      mergeMaps(
         ATTEMPT_METADATA,
         metadata,
-        Map.of<String?, Any?>(FREQUENCY_KEY, "manual"),
+        mutableMapOf(FREQUENCY_KEY to "manual"),
         additionalExpectedMetadata,
       )
 
@@ -652,39 +652,45 @@ internal class JobTrackerTest {
   }
 
   private fun configFailureJson(): JsonNode {
-    val linkedHashMap: MutableMap<String?, Any?> = LinkedHashMap()
-    linkedHashMap.put("failureOrigin", "source")
-    linkedHashMap.put("failureType", "config_error")
-    linkedHashMap.put("internalMessage", "Internal config error error msg")
-    linkedHashMap.put("externalMessage", "Config error related msg")
-    linkedHashMap.put(METADATA, mapOf<String?, String?>(SOME to METADATA))
-    linkedHashMap.put("retryable", true)
-    linkedHashMap.put("timestamp", 1010)
-    return jsonNode<MutableMap<String?, Any?>?>(linkedHashMap)
+    val linkedHashMap: MutableMap<String?, Any?> =
+      linkedMapOf(
+        "failureOrigin" to "source",
+        "failureType" to "config_error",
+        "internalMessage" to "Internal config error error msg",
+        "externalMessage" to "Config error related msg",
+        METADATA to mapOf(SOME to METADATA),
+        "retryable" to true,
+        "timestamp" to 1010,
+      )
+    return jsonNode(linkedHashMap)
   }
 
   private fun systemFailureJson(): JsonNode {
-    val linkedHashMap1: MutableMap<String?, Any?> = LinkedHashMap()
-    linkedHashMap1.put("failureOrigin", "replication")
-    linkedHashMap1.put("failureType", "system_error")
-    linkedHashMap1.put("internalMessage", "Internal system error error msg")
-    linkedHashMap1.put("externalMessage", "System error related msg")
-    linkedHashMap1.put(METADATA, mapOf<String?, String?>(SOME to METADATA))
-    linkedHashMap1.put("retryable", true)
-    linkedHashMap1.put("timestamp", 1100)
-    return jsonNode<MutableMap<String?, Any?>?>(linkedHashMap1)
+    val linkedHashMap1: MutableMap<String?, Any?> =
+      linkedMapOf(
+        "failureOrigin" to "replication",
+        "failureType" to "system_error",
+        "internalMessage" to "Internal system error error msg",
+        "externalMessage" to "System error related msg",
+        METADATA to mapOf<String?, String?>(SOME to METADATA),
+        "retryable" to true,
+        "timestamp" to 1100,
+      )
+    return jsonNode(linkedHashMap1)
   }
 
   private fun unknownFailureJson(): JsonNode {
-    val linkedHashMap2: MutableMap<String?, Any?> = LinkedHashMap()
-    linkedHashMap2.put("failureOrigin", null)
-    linkedHashMap2.put("failureType", null)
-    linkedHashMap2.put("internalMessage", "Internal unknown error error msg")
-    linkedHashMap2.put("externalMessage", "Unknown error related msg")
-    linkedHashMap2.put(METADATA, mapOf<String?, String?>(SOME to METADATA))
-    linkedHashMap2.put("retryable", true)
-    linkedHashMap2.put("timestamp", 1110)
-    return jsonNode<MutableMap<String?, Any?>?>(linkedHashMap2)
+    val linkedHashMap2: MutableMap<String?, Any?> =
+      linkedMapOf(
+        "failureOrigin" to null,
+        "failureType" to null,
+        "internalMessage" to "Internal unknown error error msg",
+        "externalMessage" to "Unknown error related msg",
+        METADATA to mapOf<String?, String?>(SOME to METADATA),
+        "retryable" to true,
+        "timestamp" to 1110,
+      )
+    return jsonNode(linkedHashMap2)
   }
 
   fun testAsynchronousAttemptWithFailures(
@@ -821,7 +827,7 @@ internal class JobTrackerTest {
       configType,
       CONNECTION_ID.toString(),
       jobConfig,
-      if (attempts != null) attempts.filterNotNull() else listOf(defaultAttempt),
+      attempts?.filterNotNull() ?: listOf(defaultAttempt),
       JobStatus.RUNNING,
       1000L,
       1000L,

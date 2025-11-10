@@ -54,7 +54,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
-import java.util.stream.Stream
 
 /**
  * Test suite for the [ApplyDefinitionsHelper] class.
@@ -1158,8 +1157,8 @@ internal class ApplyDefinitionsHelperTest {
         .withReleases(ConnectorReleasesDestination().withBreakingChanges(destinationRegistryBreakingChanges))
 
     @JvmStatic
-    fun updateScenario(): Stream<Arguments> =
-      Stream.of(
+    fun updateScenario() =
+      listOf(
         Arguments.of(true, true),
         Arguments.of(true, false),
         Arguments.of(false, false),
@@ -1167,8 +1166,8 @@ internal class ApplyDefinitionsHelperTest {
       )
 
     @JvmStatic
-    fun updateScenarioWithSeedType(): Stream<Arguments> =
-      Stream.of(
+    fun updateScenarioWithSeedType() =
+      listOf(
         Arguments.of(true, true, SeedDefinitionsProviderType.REMOTE),
         Arguments.of(true, false, SeedDefinitionsProviderType.REMOTE),
         Arguments.of(false, false, SeedDefinitionsProviderType.REMOTE),

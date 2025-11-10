@@ -25,7 +25,6 @@ import io.airbyte.metrics.MetricClient
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
@@ -35,8 +34,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.verifyNoMoreInteractions
 import org.mockito.kotlin.whenever
-import java.util.List
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -66,7 +63,7 @@ internal class JobErrorReporterTest {
         AIRBYTE_EDITION,
         AIRBYTE_VERSION,
         webUrlHelper!!,
-        jobErrorReportingClient!!,
+        jobErrorReportingClient,
         mock<MetricClient>(),
       )
 
@@ -99,8 +96,8 @@ internal class JobErrorReporterTest {
     val nonTraceMessageFailureReason = FailureReason().withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
     val replicationFailureReason = FailureReason().withFailureOrigin(FailureReason.FailureOrigin.REPLICATION)
 
-    whenever(mFailureSummary.getFailures()).thenReturn(
-      List.of<FailureReason?>(
+    whenever(mFailureSummary.failures).thenReturn(
+      listOf<FailureReason?>(
         sourceFailureReason,
         destinationFailureReason,
         nonTraceMessageFailureReason,
@@ -153,50 +150,50 @@ internal class JobErrorReporterTest {
       )
 
     val mWorkspace = mock<StandardWorkspace>()
-    whenever(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID)
+    whenever(mWorkspace.workspaceId).thenReturn(WORKSPACE_ID)
     whenever(workspaceService!!.getStandardWorkspaceFromConnection(CONNECTION_ID, true)).thenReturn(mWorkspace)
     whenever(workspaceService!!.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORGANIZATION_ID))
 
     jobErrorReporter!!.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobReportingContext, attemptConfig)
 
     val expectedSourceMetadata =
-      Map.ofEntries<String?, String?>(
-        Map.entry<String?, String?>(JOB_ID_KEY, syncJobId.toString()),
-        Map.entry<String?, String?>(WORKSPACE_ID_KEY, WORKSPACE_ID.toString()),
-        Map.entry<String?, String?>(WORKSPACE_URL_KEY, WORKSPACE_URL),
-        Map.entry<String?, String?>(CONNECTION_ID_KEY, CONNECTION_ID.toString()),
-        Map.entry<String?, String?>(CONNECTION_URL_KEY, CONNECTION_URL),
-        Map.entry<String?, String?>(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name),
-        Map.entry<String?, String?>(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
-        Map.entry<String?, String?>(FAILURE_ORIGIN_KEY, SOURCE),
-        Map.entry<String?, String?>(FAILURE_TYPE_KEY, SYSTEM_ERROR),
-        Map.entry<String?, String?>(CONNECTOR_COMMAND_KEY, READ_COMMAND),
-        Map.entry<String?, String?>(CONNECTOR_DEFINITION_ID_KEY, SOURCE_DEFINITION_ID.toString()),
-        Map.entry<String?, String?>(CONNECTOR_REPOSITORY_KEY, SOURCE_DOCKER_REPOSITORY),
-        Map.entry<String?, String?>(CONNECTOR_NAME_KEY, SOURCE_DEFINITION_NAME),
-        Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, SOURCE_RELEASE_STAGE.toString()),
-        Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, SOURCE_INTERNAL_SUPPORT_LEVEL.toString()),
-        Map.entry<String?, String?>(ORGANIZATION_ID_META_KEY, ORGANIZATION_ID.toString()),
+      mapOf<String?, String?>(
+        JOB_ID_KEY to syncJobId.toString(),
+        WORKSPACE_ID_KEY to WORKSPACE_ID.toString(),
+        WORKSPACE_URL_KEY to WORKSPACE_URL,
+        CONNECTION_ID_KEY to CONNECTION_ID.toString(),
+        CONNECTION_URL_KEY to CONNECTION_URL,
+        AIRBYTE_EDITION_KEY to AIRBYTE_EDITION.name,
+        AIRBYTE_VERSION_KEY to AIRBYTE_VERSION,
+        FAILURE_ORIGIN_KEY to SOURCE,
+        FAILURE_TYPE_KEY to SYSTEM_ERROR,
+        CONNECTOR_COMMAND_KEY to READ_COMMAND,
+        CONNECTOR_DEFINITION_ID_KEY to SOURCE_DEFINITION_ID.toString(),
+        CONNECTOR_REPOSITORY_KEY to SOURCE_DOCKER_REPOSITORY,
+        CONNECTOR_NAME_KEY to SOURCE_DEFINITION_NAME,
+        CONNECTOR_RELEASE_STAGE_KEY to SOURCE_RELEASE_STAGE.toString(),
+        CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY to SOURCE_INTERNAL_SUPPORT_LEVEL.toString(),
+        ORGANIZATION_ID_META_KEY to ORGANIZATION_ID.toString(),
       )
 
     val expectedDestinationMetadata =
-      Map.ofEntries<String?, String?>(
-        Map.entry<String?, String?>(JOB_ID_KEY, syncJobId.toString()),
-        Map.entry<String?, String?>(WORKSPACE_ID_KEY, WORKSPACE_ID.toString()),
-        Map.entry<String?, String?>(WORKSPACE_URL_KEY, WORKSPACE_URL),
-        Map.entry<String?, String?>(CONNECTION_ID_KEY, CONNECTION_ID.toString()),
-        Map.entry<String?, String?>(CONNECTION_URL_KEY, CONNECTION_URL),
-        Map.entry<String?, String?>(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name),
-        Map.entry<String?, String?>(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
-        Map.entry<String?, String?>(FAILURE_ORIGIN_KEY, "destination"),
-        Map.entry<String?, String?>(FAILURE_TYPE_KEY, SYSTEM_ERROR),
-        Map.entry<String?, String?>(CONNECTOR_COMMAND_KEY, WRITE_COMMAND),
-        Map.entry<String?, String?>(CONNECTOR_DEFINITION_ID_KEY, DESTINATION_DEFINITION_ID.toString()),
-        Map.entry<String?, String?>(CONNECTOR_REPOSITORY_KEY, DESTINATION_DOCKER_REPOSITORY),
-        Map.entry<String?, String?>(CONNECTOR_NAME_KEY, DESTINATION_DEFINITION_NAME),
-        Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, DESTINATION_RELEASE_STAGE.toString()),
-        Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, DESTINATION_INTERNAL_SUPPORT_LEVEL.toString()),
-        Map.entry<String?, String?>(ORGANIZATION_ID_META_KEY, ORGANIZATION_ID.toString()),
+      mapOf<String?, String?>(
+        JOB_ID_KEY to syncJobId.toString(),
+        WORKSPACE_ID_KEY to WORKSPACE_ID.toString(),
+        WORKSPACE_URL_KEY to WORKSPACE_URL,
+        CONNECTION_ID_KEY to CONNECTION_ID.toString(),
+        CONNECTION_URL_KEY to CONNECTION_URL,
+        AIRBYTE_EDITION_KEY to AIRBYTE_EDITION.name,
+        AIRBYTE_VERSION_KEY to AIRBYTE_VERSION,
+        FAILURE_ORIGIN_KEY to "destination",
+        FAILURE_TYPE_KEY to SYSTEM_ERROR,
+        CONNECTOR_COMMAND_KEY to WRITE_COMMAND,
+        CONNECTOR_DEFINITION_ID_KEY to DESTINATION_DEFINITION_ID.toString(),
+        CONNECTOR_REPOSITORY_KEY to DESTINATION_DOCKER_REPOSITORY,
+        CONNECTOR_NAME_KEY to DESTINATION_DEFINITION_NAME,
+        CONNECTOR_RELEASE_STAGE_KEY to DESTINATION_RELEASE_STAGE.toString(),
+        CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY to DESTINATION_INTERNAL_SUPPORT_LEVEL.toString(),
+        ORGANIZATION_ID_META_KEY to ORGANIZATION_ID.toString(),
       )
 
     verify(jobErrorReportingClient).reportJobFailureReason(
@@ -231,7 +228,7 @@ internal class JobErrorReporterTest {
     val attemptConfig =
       AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), State())
 
-    whenever(mFailureSummary.getFailures()).thenReturn(List.of<FailureReason?>(sourceFailureReason))
+    whenever(mFailureSummary.failures).thenReturn(listOf<FailureReason?>(sourceFailureReason))
 
     whenever(sourceService!!.getSourceDefinitionFromConnection(CONNECTION_ID))
       .thenReturn(
@@ -249,7 +246,7 @@ internal class JobErrorReporterTest {
       )
 
     val mWorkspace = mock<StandardWorkspace>()
-    whenever(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID)
+    whenever(mWorkspace.workspaceId).thenReturn(WORKSPACE_ID)
     whenever(workspaceService!!.getStandardWorkspaceFromConnection(CONNECTION_ID, true)).thenReturn(mWorkspace)
     whenever(webUrlHelper!!.getConnectionUrl(WORKSPACE_ID, CONNECTION_ID)).thenReturn(CONNECTION_URL)
 
@@ -259,26 +256,24 @@ internal class JobErrorReporterTest {
         any<StandardWorkspace>(),
         eq(sourceFailureReason),
         any<String>(),
-        any<kotlin.collections.Map<String?, String?>>(),
+        any<Map<String?, String?>>(),
         any<AttemptConfigReportingContext>(),
       )
 
-    Assertions.assertDoesNotThrow(
-      Executable {
-        jobErrorReporter!!.reportSyncJobFailure(
-          CONNECTION_ID,
-          mFailureSummary,
-          jobContext,
-          attemptConfig,
-        )
-      },
-    )
+    Assertions.assertDoesNotThrow {
+      jobErrorReporter!!.reportSyncJobFailure(
+        CONNECTION_ID,
+        mFailureSummary,
+        jobContext,
+        attemptConfig,
+      )
+    }
     verify(jobErrorReportingClient, times(1))
       .reportJobFailureReason(
         any<StandardWorkspace>(),
         any<FailureReason>(),
         any<String>(),
-        any<kotlin.collections.Map<String?, String?>>(),
+        any<Map<String?, String?>>(),
         any<AttemptConfigReportingContext>(),
       )
   }
@@ -307,18 +302,18 @@ internal class JobErrorReporterTest {
     jobErrorReporter!!.reportSourceCheckJobFailure(SOURCE_DEFINITION_ID, null, failureReason, jobContext)
 
     val expectedMetadata =
-      Map.ofEntries<String?, String?>(
-        Map.entry<String?, String?>(JOB_ID_KEY, JOB_ID.toString()),
-        Map.entry<String?, String?>(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name),
-        Map.entry<String?, String?>(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
-        Map.entry<String?, String?>(FAILURE_ORIGIN_KEY, SOURCE),
-        Map.entry<String?, String?>(FAILURE_TYPE_KEY, SYSTEM_ERROR),
-        Map.entry<String?, String?>(CONNECTOR_DEFINITION_ID_KEY, SOURCE_DEFINITION_ID.toString()),
-        Map.entry<String?, String?>(CONNECTOR_REPOSITORY_KEY, SOURCE_DOCKER_REPOSITORY),
-        Map.entry<String?, String?>(CONNECTOR_NAME_KEY, SOURCE_DEFINITION_NAME),
-        Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, SOURCE_RELEASE_STAGE.toString()),
-        Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, SOURCE_INTERNAL_SUPPORT_LEVEL.toString()),
-        Map.entry<String?, String?>(CONNECTOR_COMMAND_KEY, CHECK_COMMAND),
+      mapOf<String?, String?>(
+        JOB_ID_KEY to JOB_ID.toString(),
+        AIRBYTE_EDITION_KEY to AIRBYTE_EDITION.name,
+        AIRBYTE_VERSION_KEY to AIRBYTE_VERSION,
+        FAILURE_ORIGIN_KEY to SOURCE,
+        FAILURE_TYPE_KEY to SYSTEM_ERROR,
+        CONNECTOR_DEFINITION_ID_KEY to SOURCE_DEFINITION_ID.toString(),
+        CONNECTOR_REPOSITORY_KEY to SOURCE_DOCKER_REPOSITORY,
+        CONNECTOR_NAME_KEY to SOURCE_DEFINITION_NAME,
+        CONNECTOR_RELEASE_STAGE_KEY to SOURCE_RELEASE_STAGE.toString(),
+        CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY to SOURCE_INTERNAL_SUPPORT_LEVEL.toString(),
+        CONNECTOR_COMMAND_KEY to CHECK_COMMAND,
       )
 
     verify(jobErrorReportingClient)
@@ -367,28 +362,28 @@ internal class JobErrorReporterTest {
       )
 
     val mWorkspace = mock<StandardWorkspace>()
-    whenever(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID)
+    whenever(mWorkspace.workspaceId).thenReturn(WORKSPACE_ID)
     whenever(workspaceService!!.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace)
     whenever(workspaceService!!.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORGANIZATION_ID))
 
     jobErrorReporter!!.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext)
 
     val expectedMetadata =
-      Map.ofEntries<String?, String?>(
-        Map.entry<String?, String?>(JOB_ID_KEY, JOB_ID.toString()),
-        Map.entry<String?, String?>(WORKSPACE_ID_KEY, WORKSPACE_ID.toString()),
-        Map.entry<String?, String?>(WORKSPACE_URL_KEY, WORKSPACE_URL),
-        Map.entry<String?, String?>(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name),
-        Map.entry<String?, String?>(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
-        Map.entry<String?, String?>(FAILURE_ORIGIN_KEY, "destination"),
-        Map.entry<String?, String?>(FAILURE_TYPE_KEY, SYSTEM_ERROR),
-        Map.entry<String?, String?>(CONNECTOR_DEFINITION_ID_KEY, DESTINATION_DEFINITION_ID.toString()),
-        Map.entry<String?, String?>(CONNECTOR_REPOSITORY_KEY, DESTINATION_DOCKER_REPOSITORY),
-        Map.entry<String?, String?>(CONNECTOR_NAME_KEY, DESTINATION_DEFINITION_NAME),
-        Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, DESTINATION_RELEASE_STAGE.toString()),
-        Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, DESTINATION_INTERNAL_SUPPORT_LEVEL.toString()),
-        Map.entry<String?, String?>(CONNECTOR_COMMAND_KEY, CHECK_COMMAND),
-        Map.entry<String?, String?>(ORGANIZATION_ID_META_KEY, ORGANIZATION_ID.toString()),
+      mapOf<String?, String?>(
+        JOB_ID_KEY to JOB_ID.toString(),
+        WORKSPACE_ID_KEY to WORKSPACE_ID.toString(),
+        WORKSPACE_URL_KEY to WORKSPACE_URL,
+        AIRBYTE_EDITION_KEY to AIRBYTE_EDITION.name,
+        AIRBYTE_VERSION_KEY to AIRBYTE_VERSION,
+        FAILURE_ORIGIN_KEY to "destination",
+        FAILURE_TYPE_KEY to SYSTEM_ERROR,
+        CONNECTOR_DEFINITION_ID_KEY to DESTINATION_DEFINITION_ID.toString(),
+        CONNECTOR_REPOSITORY_KEY to DESTINATION_DOCKER_REPOSITORY,
+        CONNECTOR_NAME_KEY to DESTINATION_DEFINITION_NAME,
+        CONNECTOR_RELEASE_STAGE_KEY to DESTINATION_RELEASE_STAGE.toString(),
+        CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY to DESTINATION_INTERNAL_SUPPORT_LEVEL.toString(),
+        CONNECTOR_COMMAND_KEY to CHECK_COMMAND,
+        ORGANIZATION_ID_META_KEY to ORGANIZATION_ID.toString(),
       )
 
     verify(jobErrorReportingClient)
@@ -439,18 +434,18 @@ internal class JobErrorReporterTest {
     jobErrorReporter!!.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, null, failureReason, jobContext)
 
     val expectedMetadata =
-      Map.ofEntries<String?, String?>(
-        Map.entry<String?, String?>(JOB_ID_KEY, JOB_ID.toString()),
-        Map.entry<String?, String?>(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name),
-        Map.entry<String?, String?>(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
-        Map.entry<String?, String?>(FAILURE_ORIGIN_KEY, "destination"),
-        Map.entry<String?, String?>(FAILURE_TYPE_KEY, SYSTEM_ERROR),
-        Map.entry<String?, String?>(CONNECTOR_DEFINITION_ID_KEY, DESTINATION_DEFINITION_ID.toString()),
-        Map.entry<String?, String?>(CONNECTOR_REPOSITORY_KEY, DESTINATION_DOCKER_REPOSITORY),
-        Map.entry<String?, String?>(CONNECTOR_NAME_KEY, DESTINATION_DEFINITION_NAME),
-        Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, DESTINATION_RELEASE_STAGE.toString()),
-        Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, DESTINATION_INTERNAL_SUPPORT_LEVEL.toString()),
-        Map.entry<String?, String?>(CONNECTOR_COMMAND_KEY, CHECK_COMMAND),
+      mapOf<String?, String?>(
+        JOB_ID_KEY to JOB_ID.toString(),
+        AIRBYTE_EDITION_KEY to AIRBYTE_EDITION.name,
+        AIRBYTE_VERSION_KEY to AIRBYTE_VERSION,
+        FAILURE_ORIGIN_KEY to "destination",
+        FAILURE_TYPE_KEY to SYSTEM_ERROR,
+        CONNECTOR_DEFINITION_ID_KEY to DESTINATION_DEFINITION_ID.toString(),
+        CONNECTOR_REPOSITORY_KEY to DESTINATION_DOCKER_REPOSITORY,
+        CONNECTOR_NAME_KEY to DESTINATION_DEFINITION_NAME,
+        CONNECTOR_RELEASE_STAGE_KEY to DESTINATION_RELEASE_STAGE.toString(),
+        CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY to DESTINATION_INTERNAL_SUPPORT_LEVEL.toString(),
+        CONNECTOR_COMMAND_KEY to CHECK_COMMAND,
       )
 
     verify(jobErrorReportingClient)
@@ -480,28 +475,28 @@ internal class JobErrorReporterTest {
       )
 
     val mWorkspace = mock<StandardWorkspace>()
-    whenever(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID)
+    whenever(mWorkspace.workspaceId).thenReturn(WORKSPACE_ID)
     whenever(workspaceService!!.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace)
     whenever(workspaceService!!.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORGANIZATION_ID))
 
     jobErrorReporter!!.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext)
 
     val expectedMetadata =
-      Map.ofEntries<String?, String?>(
-        Map.entry<String?, String?>(JOB_ID_KEY, JOB_ID.toString()),
-        Map.entry<String?, String?>(WORKSPACE_ID_KEY, WORKSPACE_ID.toString()),
-        Map.entry<String?, String?>(WORKSPACE_URL_KEY, WORKSPACE_URL),
-        Map.entry<String?, String?>(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name),
-        Map.entry<String?, String?>(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
-        Map.entry<String?, String?>(FAILURE_ORIGIN_KEY, SOURCE),
-        Map.entry<String?, String?>(FAILURE_TYPE_KEY, SYSTEM_ERROR),
-        Map.entry<String?, String?>(CONNECTOR_DEFINITION_ID_KEY, SOURCE_DEFINITION_ID.toString()),
-        Map.entry<String?, String?>(CONNECTOR_REPOSITORY_KEY, SOURCE_DOCKER_REPOSITORY),
-        Map.entry<String?, String?>(CONNECTOR_NAME_KEY, SOURCE_DEFINITION_NAME),
-        Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, SOURCE_RELEASE_STAGE.toString()),
-        Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, SOURCE_INTERNAL_SUPPORT_LEVEL.toString()),
-        Map.entry<String?, String?>(CONNECTOR_COMMAND_KEY, DISCOVER_COMMAND),
-        Map.entry<String?, String?>(ORGANIZATION_ID_META_KEY, ORGANIZATION_ID.toString()),
+      mapOf<String?, String?>(
+        JOB_ID_KEY to JOB_ID.toString(),
+        WORKSPACE_ID_KEY to WORKSPACE_ID.toString(),
+        WORKSPACE_URL_KEY to WORKSPACE_URL,
+        AIRBYTE_EDITION_KEY to AIRBYTE_EDITION.name,
+        AIRBYTE_VERSION_KEY to AIRBYTE_VERSION,
+        FAILURE_ORIGIN_KEY to SOURCE,
+        FAILURE_TYPE_KEY to SYSTEM_ERROR,
+        CONNECTOR_DEFINITION_ID_KEY to SOURCE_DEFINITION_ID.toString(),
+        CONNECTOR_REPOSITORY_KEY to SOURCE_DOCKER_REPOSITORY,
+        CONNECTOR_NAME_KEY to SOURCE_DEFINITION_NAME,
+        CONNECTOR_RELEASE_STAGE_KEY to SOURCE_RELEASE_STAGE.toString(),
+        CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY to SOURCE_INTERNAL_SUPPORT_LEVEL.toString(),
+        CONNECTOR_COMMAND_KEY to DISCOVER_COMMAND,
+        ORGANIZATION_ID_META_KEY to ORGANIZATION_ID.toString(),
       )
 
     verify(jobErrorReportingClient)
@@ -533,18 +528,18 @@ internal class JobErrorReporterTest {
     jobErrorReporter!!.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, null, failureReason, jobContext)
 
     val expectedMetadata =
-      Map.ofEntries<String?, String?>(
-        Map.entry<String?, String?>(JOB_ID_KEY, JOB_ID.toString()),
-        Map.entry<String?, String?>(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name),
-        Map.entry<String?, String?>(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
-        Map.entry<String?, String?>(FAILURE_ORIGIN_KEY, SOURCE),
-        Map.entry<String?, String?>(FAILURE_TYPE_KEY, SYSTEM_ERROR),
-        Map.entry<String?, String?>(CONNECTOR_DEFINITION_ID_KEY, SOURCE_DEFINITION_ID.toString()),
-        Map.entry<String?, String?>(CONNECTOR_REPOSITORY_KEY, SOURCE_DOCKER_REPOSITORY),
-        Map.entry<String?, String?>(CONNECTOR_NAME_KEY, SOURCE_DEFINITION_NAME),
-        Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, SOURCE_RELEASE_STAGE.toString()),
-        Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, SOURCE_INTERNAL_SUPPORT_LEVEL.toString()),
-        Map.entry<String?, String?>(CONNECTOR_COMMAND_KEY, DISCOVER_COMMAND),
+      mapOf<String?, String?>(
+        JOB_ID_KEY to JOB_ID.toString(),
+        AIRBYTE_EDITION_KEY to AIRBYTE_EDITION.name,
+        AIRBYTE_VERSION_KEY to AIRBYTE_VERSION,
+        FAILURE_ORIGIN_KEY to SOURCE,
+        FAILURE_TYPE_KEY to SYSTEM_ERROR,
+        CONNECTOR_DEFINITION_ID_KEY to SOURCE_DEFINITION_ID.toString(),
+        CONNECTOR_REPOSITORY_KEY to SOURCE_DOCKER_REPOSITORY,
+        CONNECTOR_NAME_KEY to SOURCE_DEFINITION_NAME,
+        CONNECTOR_RELEASE_STAGE_KEY to SOURCE_RELEASE_STAGE.toString(),
+        CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY to SOURCE_INTERNAL_SUPPORT_LEVEL.toString(),
+        CONNECTOR_COMMAND_KEY to DISCOVER_COMMAND,
       )
 
     verify(jobErrorReportingClient)
@@ -587,14 +582,14 @@ internal class JobErrorReporterTest {
     jobErrorReporter!!.reportSpecJobFailure(failureReason, jobContext)
 
     val expectedMetadata =
-      Map.ofEntries<String?, String?>(
-        Map.entry<String?, String?>(JOB_ID_KEY, JOB_ID.toString()),
-        Map.entry<String?, String?>(AIRBYTE_EDITION_KEY, AIRBYTE_EDITION.name),
-        Map.entry<String?, String?>(AIRBYTE_VERSION_KEY, AIRBYTE_VERSION),
-        Map.entry<String?, String?>(FAILURE_ORIGIN_KEY, SOURCE),
-        Map.entry<String?, String?>(FAILURE_TYPE_KEY, SYSTEM_ERROR),
-        Map.entry<String?, String?>(CONNECTOR_REPOSITORY_KEY, SOURCE_DOCKER_REPOSITORY),
-        Map.entry<String?, String?>(CONNECTOR_COMMAND_KEY, SPEC_COMMAND),
+      mapOf<String?, String?>(
+        JOB_ID_KEY to JOB_ID.toString(),
+        AIRBYTE_EDITION_KEY to AIRBYTE_EDITION.name,
+        AIRBYTE_VERSION_KEY to AIRBYTE_VERSION,
+        FAILURE_ORIGIN_KEY to SOURCE,
+        FAILURE_TYPE_KEY to SYSTEM_ERROR,
+        CONNECTOR_REPOSITORY_KEY to SOURCE_DOCKER_REPOSITORY,
+        CONNECTOR_COMMAND_KEY to SPEC_COMMAND,
       )
 
     verify(jobErrorReportingClient)
@@ -675,14 +670,14 @@ internal class JobErrorReporterTest {
     private val SOURCE_DEFINITION_VERSION_ID: UUID = UUID.randomUUID()
     private const val SOURCE_DEFINITION_NAME = "stripe"
     private const val SOURCE_DOCKER_REPOSITORY = "airbyte/source-stripe"
-    private val SOURCE_DOCKER_IMAGE: String = SOURCE_DOCKER_REPOSITORY + ":" + DOCKER_IMAGE_TAG
+    private const val SOURCE_DOCKER_IMAGE: String = "$SOURCE_DOCKER_REPOSITORY:$DOCKER_IMAGE_TAG"
     private val SOURCE_RELEASE_STAGE = ReleaseStage.BETA
     private const val SOURCE_INTERNAL_SUPPORT_LEVEL = 200L
     private val DESTINATION_DEFINITION_ID: UUID = UUID.randomUUID()
     private val DESTINATION_DEFINITION_VERSION_ID: UUID = UUID.randomUUID()
     private const val DESTINATION_DEFINITION_NAME = "snowflake"
     private const val DESTINATION_DOCKER_REPOSITORY = "airbyte/destination-snowflake"
-    private val DESTINATION_DOCKER_IMAGE: String = DESTINATION_DOCKER_REPOSITORY + ":" + DOCKER_IMAGE_TAG
+    private const val DESTINATION_DOCKER_IMAGE: String = "$DESTINATION_DOCKER_REPOSITORY:$DOCKER_IMAGE_TAG"
     private val DESTINATION_RELEASE_STAGE = ReleaseStage.BETA
     private const val DESTINATION_INTERNAL_SUPPORT_LEVEL = 100L
     private const val FROM_TRACE_MESSAGE = "from_trace_message"

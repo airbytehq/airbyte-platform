@@ -153,7 +153,7 @@ object ApmTraceUtils {
   ) {
     if (span != null) {
       span.setTag(Tags.ERROR, true)
-      span.log(java.util.Map.of(Fields.ERROR_OBJECT, t))
+      span.log(mapOf(Fields.ERROR_OBJECT to t))
     }
   }
 
@@ -181,7 +181,7 @@ object ApmTraceUtils {
     val activeSpan = GlobalTracer.get().activeSpan()
     if (activeSpan != null) {
       activeSpan.setTag(Tags.ERROR, true)
-      activeSpan.log(java.util.Map.of(Fields.ERROR_OBJECT, t))
+      activeSpan.log(mapOf(Fields.ERROR_OBJECT to t))
     }
     if (activeSpan is MutableSpan) {
       val localRootSpan = (activeSpan as MutableSpan).localRootSpan

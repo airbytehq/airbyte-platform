@@ -19,7 +19,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
-import java.util.stream.Stream
 
 class ReplicationInputMapperTest {
   @ParameterizedTest
@@ -67,8 +66,8 @@ class ReplicationInputMapperTest {
 
   companion object {
     @JvmStatic
-    fun useFileTransferFormat(): Stream<Arguments> =
-      Stream.of(
+    fun useFileTransferFormat() =
+      listOf(
         Arguments.of(Fixtures.fileEnabledActivityInputViaSourceConfigFlag),
         Arguments.of(Fixtures.fileEnabledActivityInputViaSourceConfigDeliveryMethod),
         Arguments.of(Fixtures.fileEnabledActivityInputViaInputFlag),

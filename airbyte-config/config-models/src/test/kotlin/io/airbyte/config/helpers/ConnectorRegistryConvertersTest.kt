@@ -43,7 +43,6 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import java.util.List
 import java.util.UUID
 
 internal class ConnectorRegistryConvertersTest {
@@ -130,7 +129,7 @@ internal class ConnectorRegistryConvertersTest {
         .withReleases(ConnectorReleasesSource().withBreakingChanges(sourceRegistryBreakingChanges))
 
     val convertedAdv = toActorDefinitionVersion(registrySourceDef)
-    assertEquals(SupportLevel.NONE, convertedAdv.getSupportLevel())
+    assertEquals(SupportLevel.NONE, convertedAdv.supportLevel)
     assertFalse(convertedAdv.getSupportsFileTransfer())
   }
 
@@ -212,7 +211,7 @@ internal class ConnectorRegistryConvertersTest {
         .withReleases(ConnectorReleasesDestination().withBreakingChanges(destinationBreakingChanges))
 
     val convertedAdv = toActorDefinitionVersion(registryDestinationDef)
-    assertEquals(SupportLevel.NONE, convertedAdv.getSupportLevel())
+    assertEquals(SupportLevel.NONE, convertedAdv.supportLevel)
   }
 
   @Test
@@ -507,7 +506,7 @@ internal class ConnectorRegistryConvertersTest {
           .withDeadlineAction(DEADLINE_ACTION)
           .withMigrationDocumentationUrl(DOCUMENTATION_URL)
           .withScopedImpact(
-            List.of<BreakingChangeScope?>(breakingChangeScope),
+            listOf(breakingChangeScope),
           ),
       )
 
@@ -520,7 +519,7 @@ internal class ConnectorRegistryConvertersTest {
           .withDeadlineAction(DEADLINE_ACTION)
           .withMigrationDocumentationUrl(DOCUMENTATION_URL)
           .withScopedImpact(
-            List.of<BreakingChangeScope?>(breakingChangeScope),
+            listOf(breakingChangeScope),
           ),
       )
 
@@ -534,7 +533,7 @@ internal class ConnectorRegistryConvertersTest {
       )
 
     private val expectedBreakingChanges =
-      List.of<ActorDefinitionBreakingChange?>(
+      listOf(
         ActorDefinitionBreakingChange()
           .withActorDefinitionId(DEF_ID)
           .withVersion(Version(PROTOCOL_VERSION))
@@ -542,7 +541,7 @@ internal class ConnectorRegistryConvertersTest {
           .withUpgradeDeadline(UPGRADE_DEADLINE)
           .withDeadlineAction(DEADLINE_ACTION)
           .withMessage(SAMPLE_MESSAGE)
-          .withScopedImpact(List.of<BreakingChangeScope?>(breakingChangeScope)),
+          .withScopedImpact(listOf(breakingChangeScope)),
       )
   }
 }

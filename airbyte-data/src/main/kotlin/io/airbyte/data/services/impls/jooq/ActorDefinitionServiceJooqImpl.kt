@@ -278,7 +278,7 @@ class ActorDefinitionServiceJooqImpl
      * @throws IOException - you never know when you io
      */
     override fun getActorDefinitionVersion(actorDefinitionVersionId: UUID): ActorDefinitionVersion =
-      getActorDefinitionVersions(java.util.List.of(actorDefinitionVersionId))
+      getActorDefinitionVersions(listOf(actorDefinitionVersionId))
         .stream()
         .findFirst()
         .orElseThrow {

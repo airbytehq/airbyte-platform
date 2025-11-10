@@ -4,7 +4,6 @@
 
 package io.airbyte.metrics.lib
 
-import java.util.Map
 import java.util.UUID
 
 /**
@@ -17,7 +16,7 @@ object TracingHelper {
   @JvmStatic
   fun addConnection(connectionId: UUID?) {
     if (connectionId != null) {
-      ApmTraceUtils.addTagsToTrace(Map.of<String, Any>(ApmTraceConstants.Tags.CONNECTION_ID_KEY, connectionId))
+      ApmTraceUtils.addTagsToTrace(mapOf(ApmTraceConstants.Tags.CONNECTION_ID_KEY to connectionId))
     }
   }
 
@@ -27,7 +26,7 @@ object TracingHelper {
   @JvmStatic
   fun addWorkspace(workspaceId: UUID?) {
     if (workspaceId != null) {
-      ApmTraceUtils.addTagsToTrace(Map.of<String, Any>(ApmTraceConstants.Tags.WORKSPACE_ID_KEY, workspaceId))
+      ApmTraceUtils.addTagsToTrace(mapOf(ApmTraceConstants.Tags.WORKSPACE_ID_KEY to workspaceId))
     }
   }
 
@@ -39,7 +38,7 @@ object TracingHelper {
     sourceId: UUID?,
     destinationId: UUID?,
   ) {
-    val tags: MutableMap<String, Any> = HashMap()
+    val tags: MutableMap<String, Any> = hashMapOf()
     if (sourceId != null) {
       tags[ApmTraceConstants.Tags.SOURCE_ID_KEY] = sourceId
     }

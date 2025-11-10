@@ -131,7 +131,7 @@ class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTable : BaseJavaMigrat
         .stream()
         .forEach { record: Record2<UUID, UUID> ->
           actorDefinitionIdToWorkspaceIdList.add(
-            java.util.List.of(
+            listOf(
               record.getValue(ACTOR_DEFINITION_ID_COLUMN),
               record.getValue(WORKSPACE_ID_COLUMN),
             ),

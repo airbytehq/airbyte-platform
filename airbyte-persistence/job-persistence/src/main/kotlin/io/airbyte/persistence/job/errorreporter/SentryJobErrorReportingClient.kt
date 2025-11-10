@@ -15,7 +15,6 @@ import io.sentry.SentryOptions
 import io.sentry.protocol.Message
 import io.sentry.protocol.SentryException
 import io.sentry.protocol.User
-import java.util.List
 
 /**
  * Sentry implementation for job error reporting.
@@ -53,7 +52,7 @@ class SentryJobErrorReportingClient internal constructor(
       // enhance event fingerprint to ensure separate grouping per connector
       val releaseParts = release.split("@".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
       if (releaseParts.size > 0) {
-        event.fingerprints = List.of("{{ default }}", releaseParts[0])
+        event.fingerprints = listOf("{{ default }}", releaseParts[0])
       }
     }
 
@@ -100,7 +99,7 @@ class SentryJobErrorReportingClient internal constructor(
 
         val sentryException = SentryException()
         sentryException.value = normalizedStacktrace
-        event.exceptions = List.of(sentryException)
+        event.exceptions = listOf(sentryException)
       }
     }
 

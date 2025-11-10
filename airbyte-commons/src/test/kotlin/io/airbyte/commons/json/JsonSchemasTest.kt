@@ -19,18 +19,17 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
 import java.util.function.BiConsumer
-import java.util.stream.Stream
 
 internal class JsonSchemasTest {
   @Test
   fun testMutateTypeToArrayStandard() {
     val expectedWithoutType = Jsons.deserialize("{\"test\":\"abc\"}")
-    val actualWithoutType = clone<JsonNode>(expectedWithoutType)
+    val actualWithoutType = clone(expectedWithoutType)
     mutateTypeToArrayStandard(expectedWithoutType)
     Assertions.assertEquals(expectedWithoutType, actualWithoutType)
 
     val expectedWithArrayType = Jsons.deserialize("{\"test\":\"abc\", \"type\":[\"object\"]}")
-    val actualWithArrayType = clone<JsonNode>(expectedWithArrayType)
+    val actualWithArrayType = clone(expectedWithArrayType)
     mutateTypeToArrayStandard(actualWithArrayType)
     Assertions.assertEquals(expectedWithoutType, actualWithoutType)
 
@@ -52,10 +51,10 @@ internal class JsonSchemasTest {
     val inOrder = Mockito.inOrder(mock)
     inOrder
       .verify(mock)
-      .accept(jsonWithAllTypes, mutableListOf<JsonSchemas.FieldNameOrList>())
+      .accept(jsonWithAllTypes, mutableListOf())
     inOrder.verify(mock).accept(
       jsonWithAllTypes.get(PROPERTIES).get(NAME),
-      mutableListOf<JsonSchemas.FieldNameOrList>(
+      mutableListOf(
         fieldName(NAME),
       ),
     )
@@ -66,7 +65,7 @@ internal class JsonSchemasTest {
         .get(
           PROPERTIES,
         ).get("first"),
-      mutableListOf<JsonSchemas.FieldNameOrList>(fieldName(NAME), fieldName("first")),
+      mutableListOf(fieldName(NAME), fieldName("first")),
     )
     inOrder.verify(mock).accept(
       jsonWithAllTypes
@@ -75,17 +74,17 @@ internal class JsonSchemasTest {
         .get(
           PROPERTIES,
         ).get("last"),
-      mutableListOf<JsonSchemas.FieldNameOrList>(fieldName(NAME), fieldName("last")),
+      mutableListOf(fieldName(NAME), fieldName("last")),
     )
     inOrder.verify(mock).accept(
       jsonWithAllTypes.get(PROPERTIES).get(COMPANY),
-      mutableListOf<JsonSchemas.FieldNameOrList>(
+      mutableListOf(
         fieldName(COMPANY),
       ),
     )
     inOrder.verify(mock).accept(
       jsonWithAllTypes.get(PROPERTIES).get(PETS),
-      mutableListOf<JsonSchemas.FieldNameOrList>(
+      mutableListOf(
         fieldName(PETS),
       ),
     )
@@ -93,7 +92,7 @@ internal class JsonSchemasTest {
       jsonWithAllTypes.get(PROPERTIES).get(PETS).get(
         ITEMS,
       ),
-      mutableListOf<JsonSchemas.FieldNameOrList>(fieldName(PETS), list()),
+      mutableListOf(fieldName(PETS), list()),
     )
     inOrder.verify(mock).accept(
       jsonWithAllTypes
@@ -103,7 +102,7 @@ internal class JsonSchemasTest {
           ITEMS,
         ).get(PROPERTIES)
         .get("type"),
-      mutableListOf<JsonSchemas.FieldNameOrList>(fieldName(PETS), list(), fieldName("type")),
+      mutableListOf(fieldName(PETS), list(), fieldName("type")),
     )
     inOrder.verify(mock).accept(
       jsonWithAllTypes
@@ -113,7 +112,7 @@ internal class JsonSchemasTest {
           ITEMS,
         ).get(PROPERTIES)
         .get("number"),
-      mutableListOf<JsonSchemas.FieldNameOrList>(fieldName(PETS), list(), fieldName("number")),
+      mutableListOf(fieldName(PETS), list(), fieldName("number")),
     )
     inOrder.verifyNoMoreInteractions()
   }
@@ -139,13 +138,13 @@ internal class JsonSchemasTest {
     val inOrder = Mockito.inOrder(mock)
     inOrder
       .verify(mock)
-      .accept(jsonWithAllTypes, mutableListOf<JsonSchemas.FieldNameOrList>())
+      .accept(jsonWithAllTypes, mutableListOf())
     inOrder
       .verify(mock)
-      .accept(jsonWithAllTypes.get(compositeKeyword).get(0), mutableListOf<JsonSchemas.FieldNameOrList>())
+      .accept(jsonWithAllTypes.get(compositeKeyword).get(0), mutableListOf())
     inOrder
       .verify(mock)
-      .accept(jsonWithAllTypes.get(compositeKeyword).get(1), mutableListOf<JsonSchemas.FieldNameOrList>())
+      .accept(jsonWithAllTypes.get(compositeKeyword).get(1), mutableListOf())
     inOrder.verify(mock).accept(
       jsonWithAllTypes
         .get(compositeKeyword)
@@ -153,16 +152,16 @@ internal class JsonSchemasTest {
         .get(
           PROPERTIES,
         ).get("prop1"),
-      mutableListOf<JsonSchemas.FieldNameOrList>(fieldName("prop1")),
+      mutableListOf(fieldName("prop1")),
     )
     inOrder
       .verify(mock)
-      .accept(jsonWithAllTypes.get(compositeKeyword).get(2), mutableListOf<JsonSchemas.FieldNameOrList>())
+      .accept(jsonWithAllTypes.get(compositeKeyword).get(2), mutableListOf())
     inOrder.verify(mock).accept(
       jsonWithAllTypes.get(compositeKeyword).get(2).get(
         ITEMS,
       ),
-      mutableListOf<JsonSchemas.FieldNameOrList>(list()),
+      mutableListOf(list()),
     )
     inOrder
       .verify(mock)
@@ -172,7 +171,7 @@ internal class JsonSchemasTest {
           .get(3)
           .get(compositeKeyword)
           .get(0),
-        mutableListOf<JsonSchemas.FieldNameOrList>(),
+        mutableListOf(),
       )
     inOrder
       .verify(mock)
@@ -182,13 +181,13 @@ internal class JsonSchemasTest {
           .get(3)
           .get(compositeKeyword)
           .get(1),
-        mutableListOf<JsonSchemas.FieldNameOrList>(),
+        mutableListOf(),
       )
     inOrder.verify(mock).accept(
       jsonWithAllTypes.get(compositeKeyword).get(3).get(compositeKeyword).get(1).get(
         ITEMS,
       ),
-      mutableListOf<JsonSchemas.FieldNameOrList>(list()),
+      mutableListOf(list()),
     )
     inOrder.verifyNoMoreInteractions()
   }
@@ -205,16 +204,16 @@ internal class JsonSchemasTest {
     val inOrder = Mockito.inOrder(mock)
     inOrder
       .verify(mock)
-      .accept(jsonWithAllTypes, mutableListOf<JsonSchemas.FieldNameOrList>())
+      .accept(jsonWithAllTypes, mutableListOf())
     inOrder.verify(mock).accept(
       jsonWithAllTypes.get(PROPERTIES).get(COMPANY),
-      mutableListOf<JsonSchemas.FieldNameOrList>(
+      mutableListOf(
         fieldName(COMPANY),
       ),
     )
     inOrder.verify(mock).accept(
       jsonWithAllTypes.get(ITEMS),
-      mutableListOf<JsonSchemas.FieldNameOrList>(
+      mutableListOf(
         list(),
       ),
     )
@@ -222,7 +221,7 @@ internal class JsonSchemasTest {
       jsonWithAllTypes.get(ITEMS).get(PROPERTIES).get(
         USER,
       ),
-      mutableListOf<JsonSchemas.FieldNameOrList>(list(), fieldName(USER)),
+      mutableListOf(list(), fieldName(USER)),
     )
     inOrder.verifyNoMoreInteractions()
   }
@@ -241,7 +240,7 @@ internal class JsonSchemasTest {
     val inOrder = Mockito.inOrder(mock)
     inOrder
       .verify(mock)
-      .accept(jsonWithAllTypes, mutableListOf<JsonSchemas.FieldNameOrList>())
+      .accept(jsonWithAllTypes, mutableListOf())
     inOrder.verify(mock).accept(
       jsonWithAllTypes
         .get(compositeKeyword)
@@ -249,7 +248,7 @@ internal class JsonSchemasTest {
         .get(
           PROPERTIES,
         ).get(COMPANY),
-      mutableListOf<JsonSchemas.FieldNameOrList>(fieldName(COMPANY)),
+      mutableListOf(fieldName(COMPANY)),
     )
     inOrder.verify(mock).accept(
       jsonWithAllTypes
@@ -258,11 +257,11 @@ internal class JsonSchemasTest {
         .get(
           PROPERTIES,
         ).get("organization"),
-      mutableListOf<JsonSchemas.FieldNameOrList>(fieldName("organization")),
+      mutableListOf(fieldName("organization")),
     )
     inOrder.verify(mock).accept(
       jsonWithAllTypes.get(ITEMS),
-      mutableListOf<JsonSchemas.FieldNameOrList>(
+      mutableListOf(
         list(),
       ),
     )
@@ -270,7 +269,7 @@ internal class JsonSchemasTest {
       jsonWithAllTypes.get(ITEMS).get(PROPERTIES).get(
         USER,
       ),
-      mutableListOf<JsonSchemas.FieldNameOrList>(list(), fieldName("user")),
+      mutableListOf(list(), fieldName("user")),
     )
     inOrder.verifyNoMoreInteractions()
   }
@@ -307,8 +306,8 @@ internal class JsonSchemasTest {
     private const val USER = "user"
 
     @JvmStatic
-    private fun allowsAdditionalPropertiesTestCases(): Stream<Arguments?> =
-      Stream.of<Arguments?>( // When additionalProperties is not specified, should default to true
+    private fun allowsAdditionalPropertiesTestCases() =
+      listOf<Arguments?>( // When additionalProperties is not specified, should default to true
         Arguments.of(
           "{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}}}",
           true,

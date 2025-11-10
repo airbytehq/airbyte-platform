@@ -177,19 +177,13 @@ class CustomerioNotificationClient(
       return notifyByEmailBroadcast(
         BREAKING_CHANGE_WARNING_BROADCAST_ID,
         receiverEmails,
-        java.util.Map.of(
-          CONNECTOR_NAME,
-          connectorName,
-          CONNECTOR_TYPE,
-          actorType.value(),
-          CONNECTOR_VERSION_NEW,
-          breakingChange.version.serialize(),
-          CONNECTOR_VERSION_UPGRADE_DEADLINE,
-          formatDate(breakingChange.upgradeDeadline),
-          CONNECTOR_VERSION_CHANGE_DESCRIPTION,
-          convertMarkdownToHtml(breakingChange.message),
-          CONNECTOR_VERSION_MIGRATION_URL,
-          breakingChange.migrationDocumentationUrl,
+        mapOf(
+          CONNECTOR_NAME to connectorName,
+          CONNECTOR_TYPE to actorType.value(),
+          CONNECTOR_VERSION_NEW to breakingChange.version.serialize(),
+          CONNECTOR_VERSION_UPGRADE_DEADLINE to formatDate(breakingChange.upgradeDeadline),
+          CONNECTOR_VERSION_CHANGE_DESCRIPTION to convertMarkdownToHtml(breakingChange.message),
+          CONNECTOR_VERSION_MIGRATION_URL to breakingChange.migrationDocumentationUrl,
         ),
       )
     } catch (e: IOException) {
@@ -208,17 +202,12 @@ class CustomerioNotificationClient(
       return notifyByEmailBroadcast(
         BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID,
         receiverEmails,
-        java.util.Map.of(
-          CONNECTOR_NAME,
-          connectorName,
-          CONNECTOR_TYPE,
-          actorType.value(),
-          CONNECTOR_VERSION_NEW,
-          breakingChange.version.serialize(),
-          CONNECTOR_VERSION_CHANGE_DESCRIPTION,
-          convertMarkdownToHtml(breakingChange.message),
-          CONNECTOR_VERSION_MIGRATION_URL,
-          breakingChange.migrationDocumentationUrl,
+        mapOf(
+          CONNECTOR_NAME to connectorName,
+          CONNECTOR_TYPE to actorType.value(),
+          CONNECTOR_VERSION_NEW to breakingChange.version.serialize(),
+          CONNECTOR_VERSION_CHANGE_DESCRIPTION to convertMarkdownToHtml(breakingChange.message),
+          CONNECTOR_VERSION_MIGRATION_URL to breakingChange.migrationDocumentationUrl,
         ),
       )
     } catch (e: IOException) {
@@ -237,19 +226,13 @@ class CustomerioNotificationClient(
       return notifyByEmailBroadcast(
         BREAKING_CHANGE_SYNCS_UPCOMING_UPGRADE_BROADCAST_ID,
         receiverEmails,
-        java.util.Map.of(
-          CONNECTOR_NAME,
-          connectorName,
-          CONNECTOR_TYPE,
-          actorType.value(),
-          CONNECTOR_VERSION_NEW,
-          breakingChange.version.serialize(),
-          CONNECTOR_VERSION_UPGRADE_DEADLINE,
-          formatDate(breakingChange.upgradeDeadline),
-          CONNECTOR_VERSION_CHANGE_DESCRIPTION,
-          convertMarkdownToHtml(breakingChange.message),
-          CONNECTOR_VERSION_MIGRATION_URL,
-          breakingChange.migrationDocumentationUrl,
+        mapOf(
+          CONNECTOR_NAME to connectorName,
+          CONNECTOR_TYPE to actorType.value(),
+          CONNECTOR_VERSION_NEW to breakingChange.version.serialize(),
+          CONNECTOR_VERSION_UPGRADE_DEADLINE to formatDate(breakingChange.upgradeDeadline),
+          CONNECTOR_VERSION_CHANGE_DESCRIPTION to convertMarkdownToHtml(breakingChange.message),
+          CONNECTOR_VERSION_MIGRATION_URL to breakingChange.migrationDocumentationUrl,
         ),
       )
     } catch (e: IOException) {
@@ -268,17 +251,12 @@ class CustomerioNotificationClient(
       return notifyByEmailBroadcast(
         BREAKING_CHANGE_SYNCS_UPGRADED_BROADCAST_ID,
         receiverEmails,
-        java.util.Map.of(
-          CONNECTOR_NAME,
-          connectorName,
-          CONNECTOR_TYPE,
-          actorType.value(),
-          CONNECTOR_VERSION_NEW,
-          breakingChange.version.serialize(),
-          CONNECTOR_VERSION_CHANGE_DESCRIPTION,
-          convertMarkdownToHtml(breakingChange.message),
-          CONNECTOR_VERSION_MIGRATION_URL,
-          breakingChange.migrationDocumentationUrl,
+        mapOf(
+          CONNECTOR_NAME to connectorName,
+          CONNECTOR_TYPE to actorType.value(),
+          CONNECTOR_VERSION_NEW to breakingChange.version.serialize(),
+          CONNECTOR_VERSION_CHANGE_DESCRIPTION to convertMarkdownToHtml(breakingChange.message),
+          CONNECTOR_VERSION_MIGRATION_URL to breakingChange.migrationDocumentationUrl,
         ),
       )
     } catch (e: IOException) {
@@ -366,17 +344,12 @@ class CustomerioNotificationClient(
 
     val payload =
       Jsons.serialize(
-        java.util.Map.of(
-          "emails",
-          emails,
-          "data",
-          data,
-          "email_add_duplicates",
-          true,
-          "email_ignore_missing",
-          true,
-          "id_ignore_missing",
-          true,
+        mapOf(
+          "emails" to emails,
+          "data" to data,
+          "email_add_duplicates" to true,
+          "email_ignore_missing" to true,
+          "id_ignore_missing" to true,
         ),
       )
 

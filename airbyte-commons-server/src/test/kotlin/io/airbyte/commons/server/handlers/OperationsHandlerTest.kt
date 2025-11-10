@@ -28,12 +28,9 @@ import io.airbyte.data.services.WorkspaceService
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito
 import java.util.UUID
 import java.util.function.Supplier
-import java.util.stream.Collectors
-import java.util.stream.Stream
 
 internal class OperationsHandlerTest {
   lateinit var workspaceService: WorkspaceService
@@ -74,7 +71,7 @@ internal class OperationsHandlerTest {
 
   @Test
   fun testCreateWebhookOperation() {
-    Mockito.`when`<UUID?>(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID)
+    Mockito.`when`(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID)
     val webhookConfig =
       io.airbyte.api.model.generated
         .OperatorWebhook()
@@ -87,7 +84,7 @@ internal class OperationsHandlerTest {
         )
     val operationCreate =
       OperationCreate()
-        .workspaceId(standardSyncOperation.getWorkspaceId())
+        .workspaceId(standardSyncOperation.workspaceId)
         .name(WEBHOOK_OPERATION_NAME)
         .operatorConfiguration(
           OperatorConfiguration()
@@ -108,7 +105,7 @@ internal class OperationsHandlerTest {
 
     val expectedPersistedOperation =
       StandardSyncOperation()
-        .withWorkspaceId(standardSyncOperation.getWorkspaceId())
+        .withWorkspaceId(standardSyncOperation.workspaceId)
         .withOperationId(WEBHOOK_OPERATION_ID)
         .withName(WEBHOOK_OPERATION_NAME)
         .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
@@ -125,17 +122,17 @@ internal class OperationsHandlerTest {
         ).withTombstone(false)
 
     val workspace = StandardWorkspace().withWebhookOperationConfigs(webhookOperationConfig)
-    Mockito.`when`<StandardWorkspace?>(workspaceService.getWorkspaceWithSecrets(operationCreate.getWorkspaceId(), false)).thenReturn(workspace)
+    Mockito.`when`(workspaceService.getWorkspaceWithSecrets(operationCreate.workspaceId, false)).thenReturn(workspace)
     Mockito
-      .`when`<StandardSyncOperation?>(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID))
+      .`when`(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID))
       .thenReturn(expectedPersistedOperation)
 
     val actualOperationRead = operationsHandler.createOperation(operationCreate)
 
-    Assertions.assertEquals(operationCreate.getWorkspaceId(), actualOperationRead.getWorkspaceId())
-    Assertions.assertEquals(WEBHOOK_OPERATION_ID, actualOperationRead.getOperationId())
-    Assertions.assertEquals(WEBHOOK_OPERATION_NAME, actualOperationRead.getName())
-    Assertions.assertEquals(OperatorType.WEBHOOK, actualOperationRead.getOperatorConfiguration().getOperatorType())
+    Assertions.assertEquals(operationCreate.workspaceId, actualOperationRead.workspaceId)
+    Assertions.assertEquals(WEBHOOK_OPERATION_ID, actualOperationRead.operationId)
+    Assertions.assertEquals(WEBHOOK_OPERATION_NAME, actualOperationRead.name)
+    Assertions.assertEquals(OperatorType.WEBHOOK, actualOperationRead.operatorConfiguration.operatorType)
 
     // NOTE: we expect the server to dual-write on read until the frontend moves to the new format.
     val expectedWebhookConfigRead =
@@ -147,7 +144,7 @@ internal class OperationsHandlerTest {
             DBT_CLOUD_WEBHOOK_JOB_ID,
           ),
         ).executionBody(EXECUTION_BODY)
-    Assertions.assertEquals(expectedWebhookConfigRead, actualOperationRead.getOperatorConfiguration().getWebhook())
+    Assertions.assertEquals(expectedWebhookConfigRead, actualOperationRead.operatorConfiguration.webhook)
 
     Mockito
       .verify(operationService)
@@ -201,7 +198,7 @@ internal class OperationsHandlerTest {
 
     val persistedOperation =
       StandardSyncOperation()
-        .withWorkspaceId(standardSyncOperation.getWorkspaceId())
+        .withWorkspaceId(standardSyncOperation.workspaceId)
         .withOperationId(WEBHOOK_OPERATION_ID)
         .withName(WEBHOOK_OPERATION_NAME)
         .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
@@ -209,7 +206,7 @@ internal class OperationsHandlerTest {
 
     val updatedOperation =
       StandardSyncOperation()
-        .withWorkspaceId(standardSyncOperation.getWorkspaceId())
+        .withWorkspaceId(standardSyncOperation.workspaceId)
         .withOperationId(WEBHOOK_OPERATION_ID)
         .withName(WEBHOOK_OPERATION_NAME)
         .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)
@@ -217,7 +214,7 @@ internal class OperationsHandlerTest {
 
     val workspace = StandardWorkspace()
     Mockito
-      .`when`(workspaceService.getWorkspaceWithSecrets(standardSyncOperation.getWorkspaceId(), false))
+      .`when`(workspaceService.getWorkspaceWithSecrets(standardSyncOperation.workspaceId, false))
       .thenReturn(workspace)
     Mockito
       .`when`(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID))
@@ -226,9 +223,9 @@ internal class OperationsHandlerTest {
 
     val actualOperationRead = operationsHandler.updateOperation(operationUpdate)
 
-    Assertions.assertEquals(WEBHOOK_OPERATION_ID, actualOperationRead.getOperationId())
-    Assertions.assertEquals(WEBHOOK_OPERATION_NAME, actualOperationRead.getName())
-    Assertions.assertEquals(OperatorType.WEBHOOK, actualOperationRead.getOperatorConfiguration().getOperatorType())
+    Assertions.assertEquals(WEBHOOK_OPERATION_ID, actualOperationRead.operationId)
+    Assertions.assertEquals(WEBHOOK_OPERATION_NAME, actualOperationRead.name)
+    Assertions.assertEquals(OperatorType.WEBHOOK, actualOperationRead.operatorConfiguration.operatorType)
     val expectedWebhookConfigRead =
       webhookConfig
         .executionUrl(
@@ -238,13 +235,13 @@ internal class OperationsHandlerTest {
             DBT_CLOUD_WEBHOOK_JOB_ID,
           ),
         ).executionBody(EXECUTION_BODY)
-    Assertions.assertEquals(expectedWebhookConfigRead, actualOperationRead.getOperatorConfiguration().getWebhook())
+    Assertions.assertEquals(expectedWebhookConfigRead, actualOperationRead.operatorConfiguration.webhook)
 
     Mockito
       .verify(operationService)
       .writeStandardSyncOperation(
         persistedOperation.withOperatorWebhook(
-          persistedOperation.getOperatorWebhook().withExecutionUrl(
+          persistedOperation.operatorWebhook.withExecutionUrl(
             String.format(
               EXECUTION_URL_TEMPLATE,
               NEW_DBT_CLOUD_WEBHOOK_ACCOUNT_ID,
@@ -258,10 +255,10 @@ internal class OperationsHandlerTest {
   @Test
   fun testGetOperation() {
     Mockito
-      .`when`(operationService.getStandardSyncOperation(standardSyncOperation.getOperationId()))
+      .`when`(operationService.getStandardSyncOperation(standardSyncOperation.operationId))
       .thenReturn(standardSyncOperation)
 
-    val operationIdRequestBody = OperationIdRequestBody().operationId(standardSyncOperation.getOperationId())
+    val operationIdRequestBody = OperationIdRequestBody().operationId(standardSyncOperation.operationId)
     val actualOperationRead = operationsHandler.getOperation(operationIdRequestBody)
 
     val expectedOperationRead = generateOperationRead()
@@ -271,9 +268,9 @@ internal class OperationsHandlerTest {
 
   private fun generateOperationRead(): OperationRead? =
     OperationRead()
-      .workspaceId(standardSyncOperation.getWorkspaceId())
-      .operationId(standardSyncOperation.getOperationId())
-      .name(standardSyncOperation.getName())
+      .workspaceId(standardSyncOperation.workspaceId)
+      .operationId(standardSyncOperation.operationId)
+      .name(standardSyncOperation.name)
       .operatorConfiguration(
         OperatorConfiguration()
           .operatorType(OperatorType.WEBHOOK)
@@ -282,8 +279,8 @@ internal class OperationsHandlerTest {
               .OperatorWebhook()
               .webhookConfigId(WEBHOOK_CONFIG_ID)
               .webhookType(WebhookTypeEnum.DBT_CLOUD)
-              .executionUrl(operatorWebhook.getExecutionUrl())
-              .executionBody(operatorWebhook.getExecutionBody())
+              .executionUrl(operatorWebhook.executionUrl)
+              .executionBody(operatorWebhook.executionBody)
               .dbtCloud(
                 OperatorWebhookDbtCloud()
                   .accountId(DBT_CLOUD_WEBHOOK_ACCOUNT_ID)
@@ -297,35 +294,35 @@ internal class OperationsHandlerTest {
     val connectionId = UUID.randomUUID()
 
     Mockito
-      .`when`<StandardSync?>(connectionService.getStandardSync(connectionId))
+      .`when`(connectionService.getStandardSync(connectionId))
       .thenReturn(
         StandardSync()
-          .withOperationIds(listOf<UUID?>(standardSyncOperation.getOperationId())),
+          .withOperationIds(listOf<UUID?>(standardSyncOperation.operationId)),
       )
 
     Mockito
-      .`when`<StandardSyncOperation?>(operationService.getStandardSyncOperation(standardSyncOperation.getOperationId()))
+      .`when`(operationService.getStandardSyncOperation(standardSyncOperation.operationId))
       .thenReturn(standardSyncOperation)
 
     Mockito
-      .`when`<List<StandardSyncOperation>?>(operationService.listStandardSyncOperations())
-      .thenReturn(listOf<StandardSyncOperation>(standardSyncOperation))
+      .`when`(operationService.listStandardSyncOperations())
+      .thenReturn(listOf(standardSyncOperation))
 
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val actualOperationReadList = operationsHandler.listOperationsForConnection(connectionIdRequestBody)
 
-    Assertions.assertEquals(generateOperationRead(), actualOperationReadList.getOperations().get(0))
+    Assertions.assertEquals(generateOperationRead(), actualOperationReadList.operations[0])
   }
 
   @Test
   fun testDeleteOperation() {
-    val operationIdRequestBody = OperationIdRequestBody().operationId(standardSyncOperation.getOperationId())
+    val operationIdRequestBody = OperationIdRequestBody().operationId(standardSyncOperation.operationId)
 
     val spiedOperationsHandler = Mockito.spy(operationsHandler)
 
     spiedOperationsHandler.deleteOperation(operationIdRequestBody)
 
-    Mockito.verify(operationService).deleteStandardSyncOperation(standardSyncOperation.getOperationId())
+    Mockito.verify(operationService).deleteStandardSyncOperation(standardSyncOperation.operationId)
   }
 
   @Test
@@ -334,25 +331,25 @@ internal class OperationsHandlerTest {
     val otherConnectionId = UUID.randomUUID()
     val operationId = UUID.randomUUID()
     val remainingOperationId = UUID.randomUUID()
-    val toDelete = Stream.of(standardSyncOperation.getOperationId(), operationId).collect(Collectors.toList())
+    val toDelete = mutableListOf(standardSyncOperation.operationId, operationId)
     val sync =
       StandardSync()
         .withConnectionId(syncConnectionId)
-        .withOperationIds(listOf<UUID?>(standardSyncOperation.getOperationId(), operationId, remainingOperationId))
-    Mockito.`when`<List<StandardSync>?>(connectionService.listStandardSyncs()).thenReturn(
+        .withOperationIds(listOf<UUID?>(standardSyncOperation.operationId, operationId, remainingOperationId))
+    Mockito.`when`(connectionService.listStandardSyncs()).thenReturn(
       listOf<StandardSync>(
         sync,
         StandardSync()
           .withConnectionId(otherConnectionId)
-          .withOperationIds(listOf<UUID?>(standardSyncOperation.getOperationId())),
+          .withOperationIds(listOf<UUID?>(standardSyncOperation.operationId)),
       ),
     )
     val operation = StandardSyncOperation().withOperationId(operationId)
     val remainingOperation = StandardSyncOperation().withOperationId(remainingOperationId)
-    Mockito.`when`<StandardSyncOperation?>(operationService.getStandardSyncOperation(operationId)).thenReturn(operation)
-    Mockito.`when`<StandardSyncOperation?>(operationService.getStandardSyncOperation(remainingOperationId)).thenReturn(remainingOperation)
+    Mockito.`when`(operationService.getStandardSyncOperation(operationId)).thenReturn(operation)
+    Mockito.`when`(operationService.getStandardSyncOperation(remainingOperationId)).thenReturn(remainingOperation)
     Mockito
-      .`when`<StandardSyncOperation?>(operationService.getStandardSyncOperation(standardSyncOperation.getOperationId()))
+      .`when`(operationService.getStandardSyncOperation(standardSyncOperation.operationId))
       .thenReturn(standardSyncOperation)
 
     // first, test that a remaining operation results in proper call
@@ -363,7 +360,7 @@ internal class OperationsHandlerTest {
     // next, test that removing all operations results in proper call
     toDelete.add(remainingOperationId)
     operationsHandler.deleteOperationsForConnection(sync, toDelete)
-    Mockito.verify(operationService).updateConnectionOperationIds(syncConnectionId, mutableSetOf<UUID>())
+    Mockito.verify(operationService).updateConnectionOperationIds(syncConnectionId, mutableSetOf())
   }
 
   @Test
@@ -374,50 +371,46 @@ internal class OperationsHandlerTest {
   @Test
   fun testDbtCloudRegex() {
     // Validate that a non-url is rejected.
-    Assertions.assertThrows(IllegalArgumentException::class.java, Executable { checkDbtCloudUrl("not-a-url") })
+    Assertions.assertThrows(IllegalArgumentException::class.java) { checkDbtCloudUrl("not-a-url") }
     // Validate that the URL is anchored to the beginning.
     Assertions.assertThrows(
       IllegalArgumentException::class.java,
-      Executable {
-        checkDbtCloudUrl(
-          "some-nonsense-" +
-            String.format(
-              EXECUTION_URL_TEMPLATE,
-              DBT_CLOUD_WEBHOOK_ACCOUNT_ID,
-              DBT_CLOUD_WEBHOOK_JOB_ID,
-            ),
-        )
-      },
-    )
-    // Validate that the URL is anchored to the end.
-    Assertions.assertThrows(
-      IllegalArgumentException::class.java,
-      Executable {
-        checkDbtCloudUrl(
+    ) {
+      checkDbtCloudUrl(
+        "some-nonsense-" +
           String.format(
             EXECUTION_URL_TEMPLATE,
             DBT_CLOUD_WEBHOOK_ACCOUNT_ID,
             DBT_CLOUD_WEBHOOK_JOB_ID,
-          ) + "-some-nonsense",
-        )
-      },
-    )
+          ),
+      )
+    }
+    // Validate that the URL is anchored to the end.
+    Assertions.assertThrows(
+      IllegalArgumentException::class.java,
+    ) {
+      checkDbtCloudUrl(
+        String.format(
+          EXECUTION_URL_TEMPLATE,
+          DBT_CLOUD_WEBHOOK_ACCOUNT_ID,
+          DBT_CLOUD_WEBHOOK_JOB_ID,
+        ) + "-some-nonsense",
+      )
+    }
     // Validate that the account id must be an integer.
     Assertions.assertThrows(
       IllegalArgumentException::class.java,
-      Executable { checkDbtCloudUrl("https://cloud.getdbt.com/api/v2/accounts/abc/jobs/123/run/") },
-    )
+    ) { checkDbtCloudUrl("https://cloud.getdbt.com/api/v2/accounts/abc/jobs/123/run/") }
     // Validate that the job id must be an integer.
     Assertions.assertThrows(
       IllegalArgumentException::class.java,
-      Executable { checkDbtCloudUrl("https://cloud.getdbt.com/api/v2/accounts/123/jobs/abc/run/") },
-    )
+    ) { checkDbtCloudUrl("https://cloud.getdbt.com/api/v2/accounts/123/jobs/abc/run/") }
   }
 
   private fun checkDbtCloudUrl(urlToCheck: String?) {
     val persistedOperation =
       StandardSyncOperation()
-        .withWorkspaceId(standardSyncOperation.getWorkspaceId())
+        .withWorkspaceId(standardSyncOperation.workspaceId)
         .withOperationId(WEBHOOK_OPERATION_ID)
         .withName(WEBHOOK_OPERATION_NAME)
         .withOperatorType(StandardSyncOperation.OperatorType.WEBHOOK)

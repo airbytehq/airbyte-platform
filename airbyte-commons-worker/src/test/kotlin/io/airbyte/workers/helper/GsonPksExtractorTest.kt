@@ -12,7 +12,6 @@ import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.SyncMode
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import java.util.List
 
 internal class GsonPksExtractorTest {
   private val gsonPksExtractor = GsonPksExtractor()
@@ -32,7 +31,7 @@ internal class GsonPksExtractorTest {
       
       """.trimIndent()
 
-    val configureAirbyteCatalog = getCatalogWithPk(STREAM_NAME, java.util.List.of(java.util.List.of(FIELD_1_NAME)) as List<List<String>>?)
+    val configureAirbyteCatalog = getCatalogWithPk(STREAM_NAME, listOf(listOf(FIELD_1_NAME)) as List<List<String>>?)
 
     Assertions.assertEquals("field1=[MISSING]", gsonPksExtractor.extractPks(configureAirbyteCatalog, record))
   }
@@ -52,7 +51,7 @@ internal class GsonPksExtractorTest {
       
       """.trimIndent()
 
-    val configureAirbyteCatalog = getCatalogWithPk(STREAM_NAME, java.util.List.of(java.util.List.of(FIELD_1_NAME)) as List<List<String>>?)
+    val configureAirbyteCatalog = getCatalogWithPk(STREAM_NAME, listOf(listOf(FIELD_1_NAME)) as List<List<String>>?)
 
     Assertions.assertEquals("field1=value", gsonPksExtractor.extractPks(configureAirbyteCatalog, record))
   }
@@ -75,7 +74,7 @@ internal class GsonPksExtractorTest {
       """.trimIndent()
 
     val configureAirbyteCatalog =
-      getCatalogWithPk(STREAM_NAME, java.util.List.of(java.util.List.of("level1", FIELD_1_NAME)) as List<List<String>>?)
+      getCatalogWithPk(STREAM_NAME, listOf(listOf("level1", FIELD_1_NAME)) as List<List<String>>?)
 
     Assertions.assertEquals("level1.field1=value", gsonPksExtractor.extractPks(configureAirbyteCatalog, record))
   }
@@ -97,7 +96,7 @@ internal class GsonPksExtractorTest {
       """.trimIndent()
 
     val configureAirbyteCatalog =
-      getCatalogWithPk(STREAM_NAME, java.util.List.of(java.util.List.of(FIELD_1_NAME), java.util.List.of("field2")) as List<List<String>>?)
+      getCatalogWithPk(STREAM_NAME, listOf(listOf(FIELD_1_NAME), listOf("field2")) as List<List<String>>?)
 
     Assertions.assertEquals("field1=value,field2=value2", gsonPksExtractor.extractPks(configureAirbyteCatalog, record))
   }
@@ -125,7 +124,7 @@ internal class GsonPksExtractorTest {
         longStringBuilder,
       )
 
-    val configureAirbyteCatalog = getCatalogWithPk(STREAM_NAME, java.util.List.of(java.util.List.of(FIELD_1_NAME)) as List<List<String>>?)
+    val configureAirbyteCatalog = getCatalogWithPk(STREAM_NAME, listOf(listOf(FIELD_1_NAME)) as List<List<String>>?)
 
     Assertions.assertEquals("field1=value", gsonPksExtractor.extractPks(configureAirbyteCatalog, record))
   }
@@ -136,12 +135,12 @@ internal class GsonPksExtractorTest {
   ): ConfiguredAirbyteCatalog =
     ConfiguredAirbyteCatalog()
       .withStreams(
-        List.of<ConfiguredAirbyteStream>(
+        listOf(
           ConfiguredAirbyteStream(
-            AirbyteStream(streamName, emptyObject(), List.of<SyncMode?>(SyncMode.INCREMENTAL)),
+            AirbyteStream(streamName, emptyObject(), listOf(SyncMode.INCREMENTAL)),
             SyncMode.INCREMENTAL,
             DestinationSyncMode.APPEND_DEDUP,
-          ).withPrimaryKey(pksList as kotlin.collections.List<kotlin.collections.List<String>>?),
+          ).withPrimaryKey(pksList as List<List<String>>?),
         ),
       )
 

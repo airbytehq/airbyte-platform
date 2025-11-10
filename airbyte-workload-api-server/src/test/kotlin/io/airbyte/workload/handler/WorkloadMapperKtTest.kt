@@ -16,7 +16,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
-import java.util.stream.Stream
 
 class WorkloadMapperKtTest {
   @ParameterizedTest
@@ -199,8 +198,8 @@ class WorkloadMapperKtTest {
 
   companion object {
     @JvmStatic
-    fun priorityMatrix(): Stream<Arguments> =
-      Stream.of(
+    fun priorityMatrix() =
+      listOf(
         Arguments.of(null, null),
         Arguments.of(0, WorkloadPriority.DEFAULT),
         Arguments.of(1, WorkloadPriority.HIGH),

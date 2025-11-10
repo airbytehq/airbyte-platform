@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers
 
 import datadog.trace.api.Trace
-import io.airbyte.api.model.generated.AttemptInfoRead
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead
@@ -28,7 +27,6 @@ import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.StreamDescriptor
-import io.airbyte.api.model.generated.StreamStats
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem
 import io.airbyte.api.model.generated.WorkflowStateRead
 import io.airbyte.commons.enums.convertTo
@@ -67,7 +65,6 @@ import java.util.Optional
 import java.util.SortedMap
 import java.util.TreeMap
 import java.util.UUID
-import java.util.function.Function
 import java.util.stream.Collectors
 
 /**
@@ -97,10 +94,9 @@ class JobHistoryHandler(
 
     val configTypes =
       request.configTypes
-        .stream()
         .map { type: JobConfigType ->
           type.convertTo<ConfigType>()
-        }.collect(Collectors.toSet())
+        }.toSet()
 
     val configId = request.configId
 
@@ -111,7 +107,7 @@ class JobHistoryHandler(
         DEFAULT_PAGE_SIZE
       }
 
-    val tags: MutableMap<String?, Any?> = HashMap(java.util.Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()))
+    val tags: MutableMap<String?, Any?> = HashMap(mapOf(MetricTags.CONFIG_TYPES to configTypes.toString()))
     if (configId != null) {
       tags[MetricTags.CONNECTION_ID] = configId
     }
@@ -141,7 +137,7 @@ class JobHistoryHandler(
         )
       }
 
-    val jobReads = jobs.stream().map { obj: Job -> getJobWithAttemptsRead(obj) }.collect(Collectors.toList())
+    val jobReads = jobs.map { obj: Job -> getJobWithAttemptsRead(obj) }
 
     hydrateWithStats(
       jobReads,
@@ -169,10 +165,9 @@ class JobHistoryHandler(
 
     val configTypes =
       request.configTypes
-        .stream()
         .map { type: JobConfigType ->
           type.convertTo<ConfigType>()
-        }.collect(Collectors.toSet())
+        }.toSet()
 
     val configId = request.configId
 
@@ -183,7 +178,7 @@ class JobHistoryHandler(
         DEFAULT_PAGE_SIZE
       }
 
-    val tags: MutableMap<String?, Any?> = HashMap(java.util.Map.of(MetricTags.CONFIG_TYPES, configTypes.toString()))
+    val tags: MutableMap<String?, Any?> = hashMapOf(MetricTags.CONFIG_TYPES to configTypes.toString())
     if (configId != null) {
       tags[MetricTags.CONNECTION_ID] = configId
     }
@@ -241,10 +236,9 @@ class JobHistoryHandler(
 
     val configTypes =
       request.configTypes
-        .stream()
         .map { type: JobConfigType ->
           type.convertTo<ConfigType>()
-        }.collect(Collectors.toSet())
+        }.toSet()
 
     val pageSize =
       if (request.pagination != null && request.pagination.pageSize != null) {
@@ -355,9 +349,7 @@ class JobHistoryHandler(
 
     val jobReads =
       jobs
-        .stream()
         .map { obj: Job -> getJobWithAttemptsRead(obj) }
-        .collect(Collectors.toList())
 
     return getConnectionSyncProgressInternal(connectionIdRequestBody, jobs, jobReads)
   }
@@ -378,15 +370,7 @@ class JobHistoryHandler(
 
     // Create a map from the stream stats list
     val streamStatsMap =
-      runningJob
-        .job.streamAggregatedStats
-        .stream()
-        .collect(
-          Collectors.toMap<@Valid StreamStats?, String, StreamStats?>(
-            { streamStats: StreamStats? -> streamStats!!.streamName + "-" + streamStats.streamNamespace },
-            Function.identity<@Valid StreamStats?>(),
-          ),
-        )
+      runningJob.job.streamAggregatedStats.associateBy { streamStats -> "${streamStats.streamName}-${streamStats.streamNamespace}" }
 
     // Iterate through ALL enabled streams from the job, enriching with stream stats data
     val runningJobConfigType = runningJob.job.configType
@@ -454,9 +438,7 @@ class JobHistoryHandler(
   fun getRunningSyncJobForConnections(connectionIds: List<UUID>): List<JobRead> =
     jobPersistence
       .getRunningSyncJobForConnections(connectionIds)
-      .stream()
       .map { obj: Job -> JobConverter.getJobRead(obj) }
-      .collect(Collectors.toList())
 
   private fun getSourceRead(connectionRead: ConnectionRead): SourceRead {
     val sourceIdRequestBody = SourceIdRequestBody().sourceId(connectionRead.sourceId)
@@ -498,11 +480,10 @@ class JobHistoryHandler(
 
   fun mapToDomainJobStatus(apiJobStatuses: List<JobStatus>): List<io.airbyte.config.JobStatus> =
     apiJobStatuses
-      .stream()
       .map { apiJobStatus: JobStatus ->
         io.airbyte.config.JobStatus
           .valueOf(apiJobStatus.toString().uppercase(Locale.getDefault()))
-      }.collect(Collectors.toList())
+      }
 
   data class StreamNameAndNamespace(
     val name: String,
@@ -515,18 +496,12 @@ class JobHistoryHandler(
     fun getStreamsToSyncMode(job: Job): Map<StreamNameAndNamespace, SyncMode> {
       val configuredAirbyteStreams = extractStreams(job)
       return configuredAirbyteStreams
-        .stream()
-        .collect(
-          Collectors.toMap(
-            { configuredStream: ConfiguredAirbyteStream ->
-              StreamNameAndNamespace(
-                configuredStream.stream.name,
-                configuredStream.stream.namespace,
-              )
-            },
-            ConfiguredAirbyteStream::syncMode,
-          ),
-        )
+        .associate { configuredStream ->
+          StreamNameAndNamespace(
+            configuredStream.stream.name,
+            configuredStream.stream.namespace,
+          ) to configuredStream.syncMode
+        }
     }
 
     private fun extractStreams(job: Job): List<ConfiguredAirbyteStream> {
@@ -547,9 +522,7 @@ class JobHistoryHandler(
         .job(jobWithAttemptsRead.job)
         .attempts(
           job.attempts
-            .stream()
-            .map { obj: Attempt -> JobConverter.getAttemptInfoWithoutLogsRead(obj) }
-            .collect(Collectors.toList<@Valid AttemptInfoRead?>()),
+            .map { obj: Attempt -> JobConverter.getAttemptInfoWithoutLogsRead(obj) },
         )
     }
   }

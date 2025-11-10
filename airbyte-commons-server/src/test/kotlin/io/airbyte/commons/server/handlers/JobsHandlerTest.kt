@@ -57,7 +57,6 @@ import java.io.IOException
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
-import java.util.stream.Stream
 
 class JobsHandlerTest {
   private lateinit var jobPersistence: JobPersistence
@@ -276,8 +275,8 @@ class JobsHandlerTest {
 
   companion object {
     @JvmStatic
-    fun randomObjects(): Stream<Arguments> =
-      Stream.of(
+    fun randomObjects() =
+      listOf(
         Arguments.of(123L),
         Arguments.of(true),
         Arguments.of(listOf("123", "123")),

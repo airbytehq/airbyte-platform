@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.util.stream.Stream
 
 class WorkloadPriorityTest {
   @ParameterizedTest
@@ -33,8 +32,8 @@ class WorkloadPriorityTest {
 
   companion object {
     @JvmStatic
-    fun priorityMatrix(): Stream<Arguments> =
-      Stream.of(
+    fun priorityMatrix() =
+      listOf(
         Arguments.of(0, WorkloadPriority.DEFAULT),
         Arguments.of(1, WorkloadPriority.HIGH),
       )

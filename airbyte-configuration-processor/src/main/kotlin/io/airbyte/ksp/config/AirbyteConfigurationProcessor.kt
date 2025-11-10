@@ -148,7 +148,7 @@ class AirbyteConfigurationProcessor(
         hasAnnotation(MicronautConfigurationProperties::class.qualifiedName!!, annotation)
       }
     return annotations
-      .map { annotation ->
+      .map { _ ->
         classDeclaration
           .getDeclaredProperties()
           .filter(KSPropertyDeclaration::hasBackingField)
@@ -338,7 +338,7 @@ class AirbyteConfigurationProcessor(
    * that is also annotated with the [MicronautConfigurationProperties] annotation, it will be scanned for configuration
    * properties to add to the list.
    *
-   * @param rootPrefix The root prefix, if any, to included in the generated configuration property name.
+   * @param rootPrefix The root prefix, if any, to be included in the generated configuration property name.
    * @param property The [KSPropertyDeclaration] that presents a class property mapped to a configuration property.
    * @param defaultValue The default value associated with the property.  If null, the default fallback value will
    *  be used.
@@ -388,7 +388,7 @@ class AirbyteConfigurationProcessor(
       var currentMap = nestedMap
       keyParts.forEachIndexed { index, keyPart ->
         if (index == keyParts.size - 1) {
-          currentMap.put(keyPart, value)
+          currentMap[keyPart] = value
         } else {
           if (!currentMap.containsKey(keyPart) || currentMap[keyPart] !is Map<*, *>) {
             currentMap[keyPart] = mutableMapOf<String, Any>()

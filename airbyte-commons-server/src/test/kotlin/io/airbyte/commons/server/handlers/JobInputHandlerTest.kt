@@ -27,7 +27,6 @@ import io.airbyte.config.JobConfig
 import io.airbyte.config.JobResetConnectionConfig
 import io.airbyte.config.JobStatus
 import io.airbyte.config.JobSyncConfig
-import io.airbyte.config.MapperConfig
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
@@ -49,7 +48,6 @@ import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.featureflag.TestClient
-import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -61,8 +59,6 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.util.List
-import java.util.Map
 import java.util.UUID
 
 /**
@@ -74,7 +70,7 @@ internal class JobInputHandlerTest {
   private lateinit var jobInputHandler: JobInputHandler
   private lateinit var contextBuilder: ContextBuilder
   private lateinit var sourceService: SourceService
-  private lateinit var destinatinonService: DestinationService
+  private lateinit var destinationService: DestinationService
   private lateinit var connectionService: ConnectionService
   private lateinit var scopedConfigurationService: ScopedConfigurationService
   private lateinit var secretReferenceService: SecretReferenceService
@@ -84,7 +80,7 @@ internal class JobInputHandlerTest {
 
   private lateinit var actorDefinitionVersionHelper: ActorDefinitionVersionHelper
 
-  private val apiPojoConverters = ApiPojoConverters(CatalogConverter(FieldGenerator(), mutableListOf<Mapper<out MapperConfig>>()))
+  private val apiPojoConverters = ApiPojoConverters(CatalogConverter(FieldGenerator(), mutableListOf()))
 
   @BeforeEach
   fun init() {
@@ -96,7 +92,7 @@ internal class JobInputHandlerTest {
     actorDefinitionVersionHelper = mockk()
     contextBuilder = mockk()
     sourceService = mockk()
-    destinatinonService = mockk()
+    destinationService = mockk()
     connectionService = mockk()
     scopedConfigurationService = mockk()
     secretReferenceService = mockk()
@@ -115,7 +111,7 @@ internal class JobInputHandlerTest {
         contextBuilder,
         connectionService,
         sourceService,
-        destinatinonService,
+        destinationService,
         apiPojoConverters,
         scopedConfigurationService,
         secretReferenceService,
@@ -134,12 +130,12 @@ internal class JobInputHandlerTest {
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
         .withConfiguration(DESTINATION_CONFIGURATION)
 
-    every { destinatinonService.getDestinationConnection(DESTINATION_ID) } returns destinationConnection
+    every { destinationService.getDestinationConnection(DESTINATION_ID) } returns destinationConnection
     val destinationDefinition =
       mockk<StandardDestinationDefinition> {
         every { resourceRequirements } returns null
       }
-    every { destinatinonService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID) } returns destinationDefinition
+    every { destinationService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID) } returns destinationDefinition
     every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID) } returns
       mockk<ActorDefinitionVersion> {
         every { allowedHosts } returns null
@@ -228,7 +224,7 @@ internal class JobInputHandlerTest {
     every { stateHandler.getState(ConnectionIdRequestBody().connectionId(CONNECTION_ID)) } returns
       ConnectionState()
         .stateType(ConnectionStateType.LEGACY)
-        .state(STATE.getState())
+        .state(STATE.state)
         .connectionId(CONNECTION_ID)
 
     val jobSyncConfig: JobSyncConfig =
@@ -265,7 +261,7 @@ internal class JobInputHandlerTest {
     val expectedStandardSyncInput =
       StandardSyncInput()
         .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(jobSyncConfig.getWorkspaceId())
+        .withWorkspaceId(jobSyncConfig.workspaceId)
         .withSourceId(SOURCE_ID)
         .withDestinationId(DESTINATION_ID)
         .withSourceConfiguration(INLINED_SOURCE_CONFIG_WITH_REFS)
@@ -287,15 +283,15 @@ internal class JobInputHandlerTest {
         .withAttemptId(ATTEMPT_NUMBER.toLong())
         .withConnectionId(CONNECTION_ID)
         .withWorkspaceId(WORKSPACE_ID)
-        .withDockerImage(jobSyncConfig.getSourceDockerImage())
+        .withDockerImage(jobSyncConfig.sourceDockerImage)
 
     val expectedDestinationLauncherConfig =
       IntegrationLauncherConfig()
         .withJobId(JOB_ID.toString())
         .withAttemptId(ATTEMPT_NUMBER.toLong())
         .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(jobSyncConfig.getWorkspaceId())
-        .withDockerImage(jobSyncConfig.getDestinationDockerImage())
+        .withWorkspaceId(jobSyncConfig.workspaceId)
+        .withDockerImage(jobSyncConfig.destinationDockerImage)
         .withAdditionalEnvironmentVariables(mutableMapOf<String?, String?>())
 
     val expectedJobInput =
@@ -350,7 +346,7 @@ internal class JobInputHandlerTest {
     every { stateHandler.getState(ConnectionIdRequestBody().connectionId(CONNECTION_ID)) } returns
       ConnectionState()
         .stateType(ConnectionStateType.LEGACY)
-        .state(STATE.getState())
+        .state(STATE.state)
         .connectionId(CONNECTION_ID)
 
     val jobResetConfig =
@@ -386,12 +382,12 @@ internal class JobInputHandlerTest {
     val expectedStandardSyncInput =
       StandardSyncInput()
         .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(jobResetConfig.getWorkspaceId())
+        .withWorkspaceId(jobResetConfig.workspaceId)
         .withSourceId(SOURCE_ID)
         .withDestinationId(DESTINATION_ID)
         .withSourceConfiguration(emptyObject())
         .withDestinationConfiguration(DESTINATION_CONFIG_WITH_OAUTH)
-        .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
+        .withWebhookOperationConfigs(jobResetConfig.webhookOperationConfigs)
         .withIsReset(true)
         .withUseAsyncReplicate(true)
         .withUseAsyncActivities(true)
@@ -408,7 +404,7 @@ internal class JobInputHandlerTest {
         .withJobId(JOB_ID.toString())
         .withAttemptId(ATTEMPT_NUMBER.toLong())
         .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(jobResetConfig.getWorkspaceId())
+        .withWorkspaceId(jobResetConfig.workspaceId)
         .withDockerImage(WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB)
 
     val expectedDestinationLauncherConfig =
@@ -416,8 +412,8 @@ internal class JobInputHandlerTest {
         .withJobId(JOB_ID.toString())
         .withAttemptId(ATTEMPT_NUMBER.toLong())
         .withConnectionId(CONNECTION_ID)
-        .withWorkspaceId(jobResetConfig.getWorkspaceId())
-        .withDockerImage(jobResetConfig.getDestinationDockerImage())
+        .withWorkspaceId(jobResetConfig.workspaceId)
+        .withDockerImage(jobResetConfig.destinationDockerImage)
         .withAdditionalEnvironmentVariables(mutableMapOf<String?, String?>())
 
     val expectedJobInput =
@@ -475,7 +471,7 @@ internal class JobInputHandlerTest {
       JobSyncConfig()
         .withConfiguredAirbyteCatalog(
           ConfiguredAirbyteCatalog().withStreams(
-            List.of<ConfiguredAirbyteStream>(
+            listOf(
               mockk<ConfiguredAirbyteStream> {
                 every { includeFiles } returns false
               },
@@ -500,7 +496,7 @@ internal class JobInputHandlerTest {
       JobSyncConfig()
         .withConfiguredAirbyteCatalog(
           ConfiguredAirbyteCatalog().withStreams(
-            List.of<ConfiguredAirbyteStream>(
+            listOf(
               mockk<ConfiguredAirbyteStream> {
                 every { includeFiles } returns false
               },
@@ -517,71 +513,57 @@ internal class JobInputHandlerTest {
     private val SECRET_REF_ID: UUID = UUID.randomUUID()
     private val SOURCE_CONFIGURATION =
       jsonNode(
-        Map.of<String?, Any?>(
-          "source_key",
-          "source_value",
-          "source_secret",
-          Map.of<String?, UUID?>("_secret_reference_id", SECRET_REF_ID),
+        mapOf(
+          "source_key" to "source_value",
+          "source_secret" to mapOf("_secret_reference_id" to SECRET_REF_ID),
         ),
       )
     private val SOURCE_CONFIG_WITH_OAUTH =
       jsonNode(
-        Map.of<String?, Any?>(
-          "source_key",
-          "source_value",
-          "source_secret",
-          Map.of<String?, UUID?>("_secret_reference_id", SECRET_REF_ID),
-          "oauth",
-          "oauth_value",
+        mapOf(
+          "source_key" to "source_value",
+          "source_secret" to mapOf("_secret_reference_id" to SECRET_REF_ID),
+          "oauth" to "oauth_value",
         ),
       )
     private val SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG =
       jsonNode(
-        Map.of<String?, Any?>(
-          "source_key",
-          "source_value",
-          "source_secret",
-          Map.of<String?, UUID?>("_secret_reference_id", SECRET_REF_ID),
-          "oauth",
-          "oauth_value",
-          "injected",
-          "value",
+        mapOf(
+          "source_key" to "source_value",
+          "source_secret" to mapOf("_secret_reference_id" to SECRET_REF_ID),
+          "oauth" to "oauth_value",
+          "injected" to "value",
         ),
       )
     private val SOURCE_CONFIG_WITH_REFS =
       ConfigWithSecretReferences(
         SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG,
-        Map.of<String, SecretReferenceConfig>("$.source_secret", SecretReferenceConfig(AirbyteManagedSecretCoordinate(), null, null)),
+        mapOf("$.source_secret" to SecretReferenceConfig(AirbyteManagedSecretCoordinate(), null, null)),
       )
 
     private val INLINED_SOURCE_CONFIG_WITH_REFS: JsonNode = SOURCE_CONFIG_WITH_REFS.toInlined().value
     private val DESTINATION_CONFIGURATION =
       jsonNode(
-        Map.of<String?, Any?>(
-          "destination_key",
-          "destination_value",
-          "destination_secret",
-          Map.of<String?, UUID?>("_secret_reference_id", SECRET_REF_ID),
+        mapOf(
+          "destination_key" to "destination_value",
+          "destination_secret" to mapOf("_secret_reference_id" to SECRET_REF_ID),
         ),
       )
     private val DESTINATION_CONFIG_WITH_OAUTH =
       jsonNode(
-        Map.of<String?, Any?>(
-          "destination_key",
-          "destination_value",
-          "destination_secret",
-          Map.of<String?, UUID?>("_secret_reference_id", SECRET_REF_ID),
-          "oauth",
-          "oauth_value",
+        mapOf(
+          "destination_key" to "destination_value",
+          "destination_secret" to mapOf("_secret_reference_id" to SECRET_REF_ID),
+          "oauth" to "oauth_value",
         ),
       )
     private val DESTINATION_CONFIG_WITH_REFS =
       ConfigWithSecretReferences(
         DESTINATION_CONFIG_WITH_OAUTH,
-        Map.of<String, SecretReferenceConfig>("$.destination_secret", SecretReferenceConfig(AirbyteManagedSecretCoordinate(), null, null)),
+        mapOf("$.destination_secret" to SecretReferenceConfig(AirbyteManagedSecretCoordinate(), null, null)),
       )
     private val INLINED_DESTINATION_CONFIG_WITH_REFS: JsonNode = DESTINATION_CONFIG_WITH_REFS.toInlined().value
-    private val STATE: State = State().withState(jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("state_key", "state_value")))
+    private val STATE: State = State().withState(jsonNode(mapOf("state_key" to "state_value")))
 
     private val WORKSPACE_ID: UUID = UUID.randomUUID()
     private const val JOB_ID: Long = 1

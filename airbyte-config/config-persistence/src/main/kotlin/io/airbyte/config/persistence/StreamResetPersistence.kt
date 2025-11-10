@@ -16,7 +16,6 @@ import org.jooq.impl.DSL
 import java.io.IOException
 import java.time.OffsetDateTime
 import java.util.UUID
-import java.util.stream.Stream
 
 /**
  * Persistence that contains which streams are marked as needing a reset for a connection.
@@ -41,8 +40,7 @@ class StreamResetPersistence(
           .from(Tables.STREAM_RESET)
       }.where(Tables.STREAM_RESET.CONNECTION_ID.eq(connectionId))
       .fetch(getStreamResetRecordMapper())
-      .stream()
-      .flatMap { row: StreamResetRecord -> Stream.of(StreamDescriptor().withName(row.streamName).withNamespace(row.streamNamespace)) }
+      .flatMap { row: StreamResetRecord -> listOf(StreamDescriptor().withName(row.streamName).withNamespace(row.streamNamespace)) }
       .toList()
 
   /**

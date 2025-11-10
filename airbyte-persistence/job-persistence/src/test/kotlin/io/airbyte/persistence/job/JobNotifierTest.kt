@@ -85,13 +85,13 @@ internal class JobNotifierTest {
     customerIoNotificationClient = Mockito.mock(NotificationClient::class.java)
     Mockito
       .`when`(jobNotifier.getNotificationClientsFromNotificationItem(slackNotificationItem()))
-      .thenReturn(java.util.List.of(notificationClient))
+      .thenReturn(listOf(notificationClient))
     Mockito
       .`when`(jobNotifier.getNotificationClientsFromNotificationItem(customerioAndSlackNotificationItem()))
-      .thenReturn(java.util.List.of(notificationClient, customerIoNotificationClient))
+      .thenReturn(listOf(notificationClient, customerIoNotificationClient))
     Mockito
       .`when`(jobNotifier.getNotificationClientsFromNotificationItem(customerioNotificationItem()))
-      .thenReturn(java.util.List.of(customerIoNotificationClient))
+      .thenReturn(listOf(customerIoNotificationClient))
     Mockito.`when`(jobNotifier.getNotificationClientsFromNotificationItem(noNotificationItem())).thenReturn(listOf())
 
     job = createJob()
@@ -171,7 +171,7 @@ internal class JobNotifierTest {
   fun testSuccessfulJobSendNotification() {
     val item =
       NotificationItem()
-        .withNotificationType(java.util.List.of(Notification.NotificationType.SLACK))
+        .withNotificationType(listOf(Notification.NotificationType.SLACK))
         .withSlackConfiguration(
           SlackNotificationConfiguration()
             .withWebhook("http://webhook"),
@@ -181,7 +181,7 @@ internal class JobNotifierTest {
       NotificationSettings()
         .withSendOnSuccess(item)
     workspace.notificationSettings = sendNotificationOnSuccessSetting
-    Mockito.`when`(jobNotifier.getNotificationClientsFromNotificationItem(item)).thenReturn(java.util.List.of(notificationClient))
+    Mockito.`when`(jobNotifier.getNotificationClientsFromNotificationItem(item)).thenReturn(listOf(notificationClient))
 
     Mockito.`when`(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(workspace)
     val attemptStats: List<JobPersistence.AttemptStats> = ArrayList()
@@ -213,7 +213,7 @@ internal class JobNotifierTest {
   fun testBuildNotificationMetadata() {
     val notificationItem =
       NotificationItem()
-        .withNotificationType(java.util.List.of(Notification.NotificationType.SLACK, Notification.NotificationType.CUSTOMERIO))
+        .withNotificationType(listOf(Notification.NotificationType.SLACK, Notification.NotificationType.CUSTOMERIO))
         .withSlackConfiguration(SlackNotificationConfiguration().withWebhook("http://someurl"))
     val connectionId = UUID.randomUUID()
     val metadata = jobNotifier.buildNotificationMetadata(connectionId, notificationItem)
@@ -239,7 +239,7 @@ internal class JobNotifierTest {
         StandardWorkspace()
           .withWorkspaceId(WORKSPACE_ID)
           .withCustomerId(UUID.randomUUID())
-          .withNotifications(java.util.List.of(slackNotification))
+          .withNotifications(listOf(slackNotification))
           .withEmail("")
           .withNotificationSettings(
             NotificationSettings()
@@ -253,7 +253,7 @@ internal class JobNotifierTest {
 
     private fun slackNotificationItem(): NotificationItem =
       NotificationItem()
-        .withNotificationType(java.util.List.of(Notification.NotificationType.SLACK))
+        .withNotificationType(listOf(Notification.NotificationType.SLACK))
         .withSlackConfiguration(
           SlackNotificationConfiguration()
             .withWebhook("http://random.webhook.url/hooks.slack.com/"),
@@ -265,11 +265,11 @@ internal class JobNotifierTest {
 
     private fun customerioNotificationItem(): NotificationItem =
       NotificationItem()
-        .withNotificationType(java.util.List.of(Notification.NotificationType.CUSTOMERIO))
+        .withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO))
 
     private fun customerioAndSlackNotificationItem(): NotificationItem =
       NotificationItem()
-        .withNotificationType(java.util.List.of(Notification.NotificationType.SLACK, Notification.NotificationType.CUSTOMERIO))
+        .withNotificationType(listOf(Notification.NotificationType.SLACK, Notification.NotificationType.CUSTOMERIO))
         .withSlackConfiguration(
           SlackNotificationConfiguration()
             .withWebhook("http://random.webhook.url/hooks.slack.com/"),

@@ -42,7 +42,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.OffsetDateTime
-import java.util.Set
 import java.util.UUID
 
 internal class StreamStatusesHandlerTest {
@@ -352,7 +351,7 @@ internal class StreamStatusesHandlerTest {
       )
 
     Mockito.`when`(repo!!.findLastAttemptsOfLastXJobsForConnection(connectionId, numJobs)).thenReturn(listOf(ssOne, ssTwo, ssThree))
-    Mockito.`when`(jobPersistence!!.listJobsLight(Set.of(jobOneId, jobTwoId))).thenReturn(listOf(jobOne, jobTwo))
+    Mockito.`when`(jobPersistence!!.listJobsLight(setOf(jobOneId, jobTwoId))).thenReturn(listOf(jobOne, jobTwo))
     Mockito.`when`(jobPersistence!!.getAttemptStats(Mockito.any())).thenReturn(
       mapOf(
         JobPersistence.JobAttemptPair(jobOneId, 0) to

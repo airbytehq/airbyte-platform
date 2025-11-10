@@ -37,7 +37,7 @@ object StateMessageHelper {
       val stateMessages: List<AirbyteStateMessage>
       try {
         stateMessages = Jsons.`object`(state, AirbyteStateMessageListTypeReference())
-      } catch (e: IllegalArgumentException) {
+      } catch (_: IllegalArgumentException) {
         log.warn { "Failed to convert state, falling back to legacy state wrapper" }
         return Optional.of(getLegacyStateWrapper(state))
       }
@@ -95,7 +95,7 @@ object StateMessageHelper {
     when (stateWrapper.stateType) {
       StateType.LEGACY -> State().withState(stateWrapper.legacyState)
       StateType.STREAM -> State().withState(Jsons.jsonNode(stateWrapper.stateMessages))
-      StateType.GLOBAL -> State().withState(Jsons.jsonNode(java.util.List.of(stateWrapper.global)))
+      StateType.GLOBAL -> State().withState(Jsons.jsonNode(listOf(stateWrapper.global)))
       else -> throw RuntimeException("Unexpected StateType " + stateWrapper.stateType)
     }
 

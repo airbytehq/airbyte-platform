@@ -83,12 +83,8 @@ import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import java.nio.file.Path
-import java.util.Arrays
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
-import java.util.stream.Collectors
-import java.util.stream.Stream
 
 internal class AttemptHandlerTest {
   private lateinit var jobConverter: JobConverter
@@ -144,14 +140,14 @@ internal class AttemptHandlerTest {
     val jobIdCapture = argumentCaptor<Long>()
     val attemptSyncConfigCapture = argumentCaptor<AttemptSyncConfig>()
 
-    val sourceConfig = jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("source_key", "source_val"))
-    val destinationConfig = jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("destination_key", "destination_val"))
+    val sourceConfig = jsonNode(mapOf("source_key" to "source_val"))
+    val destinationConfig = jsonNode(mapOf("destination_key" to "destination_val"))
     val state =
       ConnectionState()
         .connectionId(CONNECTION_ID)
         .stateType(ConnectionStateType.GLOBAL)
         .streamState(null)
-        .globalState(GlobalState().sharedState(jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("state_key", "state_val"))))
+        .globalState(GlobalState().sharedState(jsonNode(mapOf("state_key" to "state_val"))))
 
     val attemptSyncConfig =
       io.airbyte.api.model.generated
@@ -965,8 +961,8 @@ internal class AttemptHandlerTest {
         )
 
     @JvmStatic
-    private fun testStateClearingLogicProvider(): Stream<Arguments> =
-      Stream.of(
+    private fun testStateClearingLogicProvider() =
+      listOf(
         // streams are STREAM_INCREMENTAL, STREAM_INCREMENTAL_NOT_RESUMABLE, STREAM_FULL_REFRESH_RESUMABLE,
         // STREAM_FULL_REFRESH_NOT_RESUMABLE
         // AttemptNumber, SupportsRefresh, streams to clear
@@ -988,14 +984,14 @@ internal class AttemptHandlerTest {
       ).withSyncMode(syncMode)
 
     private fun streamDescriptorsFromNames(vararg streamNames: String?): MutableSet<StreamDescriptor?> =
-      Arrays
-        .stream<String?>(streamNames)
+      streamNames
+        .toList()
         .map { n: String? -> StreamDescriptor().withName(n) }
-        .collect(Collectors.toSet())
+        .toMutableSet()
 
     @JvmStatic
-    private fun provideCreateAttemptConfig(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun provideCreateAttemptConfig() =
+      listOf(
         Arguments.of(0, true),
         Arguments.of(1, true),
         Arguments.of(2, true),
@@ -1007,8 +1003,8 @@ internal class AttemptHandlerTest {
       )
 
     @JvmStatic
-    private fun randomObjects(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun randomObjects() =
+      listOf(
         Arguments.of(123L),
         Arguments.of(true),
         Arguments.of(mutableListOf<String?>("123", "123")),

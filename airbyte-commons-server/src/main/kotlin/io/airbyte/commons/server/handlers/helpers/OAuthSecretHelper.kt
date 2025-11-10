@@ -151,7 +151,7 @@ object OAuthSecretHelper {
   ): ConnectorSpecification {
     if (hasOAuthConfigSpecification(connectorSpecification)) {
       val newConnectorSpecificationNode = Jsons.emptyObject()
-      val airbyteSecret = java.util.Map.of("airbyte_secret", true)
+      val airbyteSecret = mapOf("airbyte_secret" to true)
       val oauthPaths = getCompleteOauthServerOutputPaths(connectorSpecification)
       for ((_, jsonPathList) in oauthPaths) {
         if (Jsons.navigateTo(oauthParamConfiguration, jsonPathList) == null) {

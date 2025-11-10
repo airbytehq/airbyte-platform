@@ -368,7 +368,7 @@ class WebBackendConnectionsHandler(
   // tracking selected streams in any reasonable way. We should update that.
   @Trace
   fun webBackendGetConnection(webBackendConnectionRequestBody: WebBackendConnectionRequestBody): WebBackendConnectionRead {
-    addTagsToTrace(java.util.Map.of(MetricTags.CONNECTION_ID, webBackendConnectionRequestBody.connectionId.toString()))
+    addTagsToTrace(mapOf(MetricTags.CONNECTION_ID to webBackendConnectionRequestBody.connectionId.toString()))
     val connectionIdRequestBody =
       ConnectionIdRequestBody()
         .connectionId(webBackendConnectionRequestBody.connectionId)

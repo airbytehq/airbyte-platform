@@ -267,7 +267,7 @@ class CatalogConverter(
   private fun toApiFieldInfo(configuredHashingMapper: MapperConfig): SelectedFieldInfo {
     require(MapperOperationName.HASHING == configuredHashingMapper.name()) { "Expected hashing mapper" }
     return SelectedFieldInfo()
-      .fieldPath(java.util.List.of(getHashedFieldName(configuredHashingMapper as HashingMapperConfig)))
+      .fieldPath(listOf(getHashedFieldName(configuredHashingMapper as HashingMapperConfig)))
   }
 
   /**

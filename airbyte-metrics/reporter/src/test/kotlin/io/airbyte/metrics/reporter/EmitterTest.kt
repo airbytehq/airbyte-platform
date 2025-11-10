@@ -15,7 +15,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.time.Duration
-import java.util.Map
 import java.util.function.Consumer
 
 internal class EmitterTest {
@@ -30,7 +29,7 @@ internal class EmitterTest {
 
   @Test
   fun testNumPendingJobs() {
-    val value = Map.of(AUTO_REGION, 101, EU_REGION, 20)
+    val value = mapOf(AUTO_REGION to 101, EU_REGION to 20)
     Mockito.`when`(repo.numberOfPendingJobsByDataplaneGroupName()).thenReturn(value)
 
     val emitter = NumPendingJobs(client, repo)
@@ -53,7 +52,7 @@ internal class EmitterTest {
 
   @Test
   fun testNumRunningJobs() {
-    val value = Map.of(SYNC_QUEUE, 101, AWS_QUEUE, 20)
+    val value = mapOf(SYNC_QUEUE to 101, AWS_QUEUE to 20)
     Mockito.`when`(repo.numberOfRunningJobsByTaskQueue()).thenReturn(value)
 
     val emitter = NumRunningJobs(client, repo)
@@ -90,7 +89,7 @@ internal class EmitterTest {
 
   @Test
   fun testOldestRunningJob() {
-    val value = Map.of(SYNC_QUEUE, 101.0, AWS_QUEUE, 20.0)
+    val value = mapOf(SYNC_QUEUE to 101.0, AWS_QUEUE to 20.0)
     Mockito.`when`(repo.oldestRunningJobAgeSecsByTaskQueue()).thenReturn(value)
 
     val emitter = OldestRunningJob(client, repo)
@@ -113,7 +112,7 @@ internal class EmitterTest {
 
   @Test
   fun testOldestPendingJob() {
-    val value = Map.of(AUTO_REGION, 101.0, EU_REGION, 20.0)
+    val value = mapOf(AUTO_REGION to 101.0, EU_REGION to 20.0)
     Mockito.`when`(repo.oldestPendingJobAgeSecsByDataplaneGroupName()).thenReturn(value)
 
     val emitter = OldestPendingJob(client, repo)
@@ -182,13 +181,10 @@ internal class EmitterTest {
   @Test
   fun testTotalJobRuntimeByTerminalState() {
     val values =
-      Map.of(
-        JobStatus.cancelled,
-        101.0,
-        JobStatus.succeeded,
-        202.0,
-        JobStatus.failed,
-        303.0,
+      mapOf(
+        JobStatus.cancelled to 101.0,
+        JobStatus.succeeded to 202.0,
+        JobStatus.failed to 303.0,
       )
     Mockito.`when`(repo.overallJobRuntimeForTerminalJobsInLastHour()).thenReturn(values)
 
@@ -210,7 +206,7 @@ internal class EmitterTest {
   @Test
   fun unusuallyLongSyncs() {
     val values =
-      java.util.List.of(
+      listOf(
         LongRunningJobMetadata("sourceImg1", "destImg1", "workspace1", "connection1"),
         LongRunningJobMetadata("sourceImg2", "destImg2", "workspace2", "connection2"),
         LongRunningJobMetadata("sourceImg3", "destImg3", "workspace3", "connection3"),

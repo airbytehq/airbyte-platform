@@ -25,7 +25,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
-import java.util.stream.Stream
 import io.airbyte.workload.launcher.pods.ORCHESTRATOR_IMAGE_NAME as REPL_ORCHESTRATOR_IMAGE_NAME
 
 internal class PodLabelerTest {
@@ -199,8 +198,8 @@ internal class PodLabelerTest {
     const val ORCHESTRATOR_IMAGE_NAME: String = "an image"
 
     @JvmStatic
-    private fun replInputWorkloadIdMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun replInputWorkloadIdMatrix() =
+      listOf(
         Arguments.of(
           UUID.randomUUID().toString(),
           UUID.randomUUID().toString(),
@@ -228,8 +227,8 @@ internal class PodLabelerTest {
       )
 
     @JvmStatic
-    private fun randomStringMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun randomStringMatrix() =
+      listOf(
         Arguments.of("random string id 1"),
         Arguments.of("RANdoM strIng Id 2"),
         Arguments.of("literally anything"),

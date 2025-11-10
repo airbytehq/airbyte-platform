@@ -43,7 +43,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
-import java.util.stream.Stream
 
 internal class PayloadKubeInputMapperTest {
   @ParameterizedTest
@@ -722,15 +721,15 @@ internal class PayloadKubeInputMapperTest {
 
   companion object {
     @JvmStatic
-    private fun replicationFlagsInputMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun replicationFlagsInputMatrix() =
+      listOf(
         Arguments.of(true),
         Arguments.of(false),
       )
 
     @JvmStatic
-    private fun connectorInputMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun connectorInputMatrix() =
+      listOf(
         Arguments.of(true, WorkloadPriority.HIGH),
         Arguments.of(false, WorkloadPriority.HIGH),
         Arguments.of(true, WorkloadPriority.HIGH),

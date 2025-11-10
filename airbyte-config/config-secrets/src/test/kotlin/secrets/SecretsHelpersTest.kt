@@ -810,7 +810,7 @@ internal class SecretsHelpersTest {
      * intended to let you treat most of the JSON involved in the tests as static files.
      */
     @JvmStatic
-    fun provideTestCases(): Stream<Arguments> =
+    fun provideTestCases() =
       Stream
         .of(
           OptionalPasswordTestCase(),

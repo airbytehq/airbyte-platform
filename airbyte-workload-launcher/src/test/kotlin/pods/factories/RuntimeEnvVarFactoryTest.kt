@@ -53,7 +53,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.ArgumentMatchers.anyList
 import java.util.UUID
-import java.util.stream.Stream
 import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
@@ -558,15 +557,15 @@ class RuntimeEnvVarFactoryTest {
 
   companion object {
     @JvmStatic
-    private fun concurrentStreamReadEnabledMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun concurrentStreamReadEnabledMatrix() =
+      listOf(
         Arguments.of(true, MYSQL_SOURCE_NAME),
         Arguments.of(true, MYSQL_SOURCE_NAME + "asdf"),
       )
 
     @JvmStatic
-    private fun concurrentStreamReadDisabledMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun concurrentStreamReadDisabledMatrix() =
+      listOf(
         Arguments.of(true, "anything else"),
         Arguments.of(true, "asdf$MYSQL_SOURCE_NAME"),
         Arguments.of(false, MYSQL_SOURCE_NAME),
@@ -575,16 +574,16 @@ class RuntimeEnvVarFactoryTest {
       )
 
     @JvmStatic
-    private fun additionalEnvironmentVariablesMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun additionalEnvironmentVariablesMatrix() =
+      listOf(
         Arguments.of(null),
         Arguments.of(mapOf("key-1" to "value-1")),
         Arguments.of(mapOf("key-1" to "value-1", "key-2" to "value-2")),
       )
 
     @JvmStatic
-    private fun orchestratorEnvVarMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun orchestratorEnvVarMatrix() =
+      listOf(
         Arguments.of(" ", CONTAINER_ORCH_JAVA_OPTS, true, false),
         Arguments.of("", CONTAINER_ORCH_JAVA_OPTS, false, true),
         Arguments.of("opts 1", "opts 1", true, true),

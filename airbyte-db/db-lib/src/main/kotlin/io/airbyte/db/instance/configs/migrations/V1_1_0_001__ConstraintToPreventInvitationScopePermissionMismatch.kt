@@ -93,14 +93,14 @@ class V1_1_0_001__ConstraintToPreventInvitationScopePermissionMismatch : BaseJav
         ),
       )
     private val ORGANIZATION_PERMISSION_TYPES: List<PermissionType?> =
-      java.util.List.of(
+      listOf(
         PermissionType.ORGANIZATION_ADMIN,
         PermissionType.ORGANIZATION_EDITOR,
         PermissionType.ORGANIZATION_RUNNER,
         PermissionType.ORGANIZATION_READER,
       )
     private val WORKSPACE_PERMISSION_TYPES: List<PermissionType?> =
-      java.util.List.of(
+      listOf(
         PermissionType.WORKSPACE_ADMIN,
         PermissionType.WORKSPACE_EDITOR,
         PermissionType.WORKSPACE_READER,

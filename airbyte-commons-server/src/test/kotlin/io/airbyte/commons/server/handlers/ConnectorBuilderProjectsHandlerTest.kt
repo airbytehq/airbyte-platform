@@ -77,17 +77,14 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import java.net.URI
 import java.time.OffsetDateTime
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
-import java.util.stream.Stream
 
 internal class ConnectorBuilderProjectsHandlerTest {
   private lateinit var declarativeManifestImageVersionService: DeclarativeManifestImageVersionService
@@ -372,7 +369,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
     Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable {
+      {
         connectorBuilderProjectsHandler.deleteConnectorBuilderProject(
           ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.builderProjectId).workspaceId(workspaceId),
         )
@@ -407,7 +404,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
     Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable { connectorBuilderProjectsHandler.publishConnectorBuilderProject(publishReq) },
+      { connectorBuilderProjectsHandler.publishConnectorBuilderProject(publishReq) },
     )
     Mockito.verify(connectorBuilderService, Mockito.never()).insertActiveDeclarativeManifest(
       anyOrNull(),
@@ -451,7 +448,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     project1.setActorDefinitionId(UUID.randomUUID())
 
     Mockito.`when`(connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId)).thenReturn(
-      Stream.of(project1, project2),
+      listOf(project1, project2).stream(),
     )
 
     val response =
@@ -483,7 +480,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     forkedProject.baseActorDefinitionVersionId = FORKED_ADV.versionId
 
     Mockito.`when`(connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId)).thenReturn(
-      Stream.of(unforkedProject, forkedProject),
+      listOf(unforkedProject, forkedProject).stream(),
     )
     Mockito
       .`when`(actorDefinitionService.getActorDefinitionVersions(listOf(FORKED_ADV.versionId)))
@@ -1575,7 +1572,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     val project =
       ConnectorBuilderProject()
         .withWorkspaceId(workspaceId)
-        .withManifestDraft(jsonNode(Map.of("spec", spec)))
+        .withManifestDraft(jsonNode(mapOf("spec" to spec)))
         .withTestingValues(testingValuesWithSecretCoordinates)
     Mockito
       .`when`(connectorBuilderService.getConnectorBuilderProject(projectId, true))
@@ -1631,8 +1628,8 @@ internal class ConnectorBuilderProjectsHandlerTest {
     val projectId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
     val redirectUrl = "https://airbyte.com/auth_flow"
-    val queryParams = Map.of<String, Any>("code", "12345")
-    val oAuthResponse = Map.of<String, Any>("accessToken", "token")
+    val queryParams = mapOf("code" to "12345")
+    val oAuthResponse = mapOf("accessToken" to "token")
 
     val oAuthConfigSpecification: OAuthConfigSpecification = Mockito.mock(OAuthConfigSpecification::class.java)
     val spec =
@@ -1640,7 +1637,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     val project =
       ConnectorBuilderProject()
         .withWorkspaceId(workspaceId)
-        .withManifestDraft(jsonNode(Map.of("spec", spec)))
+        .withManifestDraft(jsonNode(mapOf("spec" to spec)))
         .withTestingValues(testingValuesWithSecretCoordinates)
     Mockito
       .`when`(connectorBuilderService.getConnectorBuilderProject(projectId, true))

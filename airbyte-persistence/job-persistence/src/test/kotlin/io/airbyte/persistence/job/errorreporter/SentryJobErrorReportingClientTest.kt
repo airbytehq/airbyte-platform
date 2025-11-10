@@ -28,7 +28,6 @@ import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -73,14 +72,14 @@ internal class SentryJobErrorReportingClientTest {
     val sentryDSN = "https://public@sentry.example.com/1"
     val sentryHub = createSentryHubWithDSN(sentryDSN)
     Assertions.assertNotNull(sentryHub)
-    Assertions.assertEquals(sentryDSN, sentryHub.getOptions().getDsn())
-    Assertions.assertFalse(sentryHub.getOptions().isAttachStacktrace())
-    Assertions.assertFalse(sentryHub.getOptions().isEnableUncaughtExceptionHandler())
+    Assertions.assertEquals(sentryDSN, sentryHub.options.dsn)
+    Assertions.assertFalse(sentryHub.options.isAttachStacktrace)
+    Assertions.assertFalse(sentryHub.options.isEnableUncaughtExceptionHandler)
   }
 
   @Test
   fun testReportJobFailureReason() {
-    val eventCaptor = ArgumentCaptor.forClass<SentryEvent?, SentryEvent?>(SentryEvent::class.java)
+    val eventCaptor = ArgumentCaptor.forClass(SentryEvent::class.java)
 
     val failureReason =
       FailureReason()
@@ -88,7 +87,7 @@ internal class SentryJobErrorReportingClientTest {
         .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
         .withInternalMessage(ERROR_MESSAGE)
         .withTimestamp(System.currentTimeMillis())
-    val metadata = Map.of<String?, String?>("some_metadata", "some_metadata_value")
+    val metadata = mapOf<String?, String?>("some_metadata" to "some_metadata_value")
     val objectMapper = ObjectMapper()
     val sourceConfig = objectMapper.readTree("{\"sourceKey\": \"sourceValue\"}")
     val destinationConfig = objectMapper.readTree("{\"destinationKey\": \"destinationValue\"}")
@@ -97,37 +96,37 @@ internal class SentryJobErrorReportingClientTest {
 
     val attemptConfig = AttemptConfigReportingContext(sourceConfig, destinationConfig, state)
 
-    sentryErrorReportingClient!!.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, metadata, attemptConfig)
+    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, metadata, attemptConfig)
 
     verify(mockSentryHub).captureEvent(eventCaptor.capture())
     val actualEvent = eventCaptor.getValue()
-    Assertions.assertEquals("other", actualEvent.getPlatform())
-    Assertions.assertEquals("airbyte-source-stripe@1.2.3", actualEvent.getRelease())
-    Assertions.assertEquals(mutableListOf<String?>("{{ default }}", "airbyte-source-stripe"), actualEvent.getFingerprints())
+    Assertions.assertEquals("other", actualEvent.platform)
+    Assertions.assertEquals("airbyte-source-stripe@1.2.3", actualEvent.release)
+    Assertions.assertEquals(mutableListOf<String?>("{{ default }}", "airbyte-source-stripe"), actualEvent.fingerprints)
     Assertions.assertEquals("some_metadata_value", actualEvent.getTag("some_metadata"))
-    Assertions.assertNull(actualEvent.getTag(SentryJobErrorReportingClient.Companion.STACKTRACE_PARSE_ERROR_TAG_KEY))
-    Assertions.assertNull(actualEvent.getExceptions())
+    Assertions.assertNull(actualEvent.getTag(SentryJobErrorReportingClient.STACKTRACE_PARSE_ERROR_TAG_KEY))
+    Assertions.assertNull(actualEvent.exceptions)
 
-    val contexts = actualEvent.getContexts()
+    val contexts = actualEvent.contexts
     Assertions.assertNotNull(contexts)
     Assertions.assertTrue(contexts.containsKey("Failure Reason"))
     Assertions.assertTrue(contexts.containsKey("Source Configuration"))
     Assertions.assertTrue(contexts.containsKey("Destination Configuration"))
     Assertions.assertTrue(contexts.containsKey("State"))
 
-    val sentryUser = actualEvent.getUser()
+    val sentryUser = actualEvent.user
     Assertions.assertNotNull(sentryUser)
-    Assertions.assertEquals(WORKSPACE_ID.toString(), sentryUser!!.getId())
-    Assertions.assertEquals(WORKSPACE_NAME, sentryUser.getUsername())
+    Assertions.assertEquals(WORKSPACE_ID.toString(), sentryUser!!.id)
+    Assertions.assertEquals(WORKSPACE_NAME, sentryUser.username)
 
-    val message = actualEvent.getMessage()
+    val message = actualEvent.message
     Assertions.assertNotNull(message)
-    Assertions.assertEquals(ERROR_MESSAGE, message!!.getFormatted())
+    Assertions.assertEquals(ERROR_MESSAGE, message!!.formatted)
   }
 
   @Test
   fun testReportJobNoErrorOnNullAttemptConfig() {
-    val eventCaptor = ArgumentCaptor.forClass<SentryEvent?, SentryEvent?>(SentryEvent::class.java)
+    val eventCaptor = ArgumentCaptor.forClass(SentryEvent::class.java)
 
     val failureReason =
       FailureReason()
@@ -135,16 +134,16 @@ internal class SentryJobErrorReportingClientTest {
         .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
         .withInternalMessage(ERROR_MESSAGE)
         .withTimestamp(System.currentTimeMillis())
-    val metadata = Map.of<String?, String?>("some_metadata", "some_metadata_value")
+    val metadata = mapOf<String?, String?>("some_metadata" to "some_metadata_value")
 
-    sentryErrorReportingClient!!.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, metadata, null)
+    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, metadata, null)
 
     verify(mockSentryHub).captureEvent(eventCaptor.capture())
   }
 
   @Test
   fun testReportJobFailureReasonWithNoWorkspace() {
-    val eventCaptor = ArgumentCaptor.forClass<SentryEvent?, SentryEvent?>(SentryEvent::class.java)
+    val eventCaptor = ArgumentCaptor.forClass(SentryEvent::class.java)
 
     val failureReason =
       FailureReason()
@@ -156,26 +155,26 @@ internal class SentryJobErrorReportingClientTest {
     val attemptConfig =
       AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), State())
 
-    sentryErrorReportingClient!!.reportJobFailureReason(null, failureReason, DOCKER_IMAGE, Map.of<String?, String?>(), attemptConfig)
+    sentryErrorReportingClient.reportJobFailureReason(null, failureReason, DOCKER_IMAGE, emptyMap(), attemptConfig)
 
     verify(mockSentryHub).captureEvent(eventCaptor.capture())
     val actualEvent = eventCaptor.getValue()
-    val sentryUser = actualEvent.getUser()
+    val sentryUser = actualEvent.user
     Assertions.assertNull(sentryUser)
 
-    val message = actualEvent.getMessage()
+    val message = actualEvent.message
     Assertions.assertNotNull(message)
-    Assertions.assertEquals(ERROR_MESSAGE, message!!.getFormatted())
+    Assertions.assertEquals(ERROR_MESSAGE, message!!.formatted)
   }
 
   @Test
   fun testReportJobFailureReasonWithStacktrace() {
-    val eventCaptor = ArgumentCaptor.forClass<SentryEvent?, SentryEvent?>(SentryEvent::class.java)
+    val eventCaptor = ArgumentCaptor.forClass(SentryEvent::class.java)
 
     val exceptions = mutableListOf<SentryException>()
     val exception = SentryException()
-    exception.setType("RuntimeError")
-    exception.setValue("Something went wrong")
+    exception.type = "RuntimeError"
+    exception.value = "Something went wrong"
     exceptions.add(exception)
 
     val parsedException = SentryParsedException(SentryExceptionPlatform.PYTHON, exceptions)
@@ -192,19 +191,19 @@ internal class SentryJobErrorReportingClientTest {
     val attemptConfig =
       AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), State())
 
-    sentryErrorReportingClient!!.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, Map.of<String?, String?>(), attemptConfig)
+    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, emptyMap(), attemptConfig)
 
     verify(mockSentryHub).captureEvent(eventCaptor.capture())
     val actualEvent = eventCaptor.getValue()
-    Assertions.assertEquals(exceptions, actualEvent.getExceptions())
-    Assertions.assertNull(actualEvent.getTag(SentryJobErrorReportingClient.Companion.STACKTRACE_PARSE_ERROR_TAG_KEY))
-    Assertions.assertEquals("python", actualEvent.getPlatform())
-    Assertions.assertEquals("python", actualEvent.getTag(SentryJobErrorReportingClient.Companion.STACKTRACE_PLATFORM_TAG_KEY))
+    Assertions.assertEquals(exceptions, actualEvent.exceptions)
+    Assertions.assertNull(actualEvent.getTag(SentryJobErrorReportingClient.STACKTRACE_PARSE_ERROR_TAG_KEY))
+    Assertions.assertEquals("python", actualEvent.platform)
+    Assertions.assertEquals("python", actualEvent.getTag(SentryJobErrorReportingClient.STACKTRACE_PLATFORM_TAG_KEY))
   }
 
   @Test
   fun testReportJobFailureReasonWithInvalidStacktrace() {
-    val eventCaptor = ArgumentCaptor.forClass<SentryEvent?, SentryEvent?>(SentryEvent::class.java)
+    val eventCaptor = ArgumentCaptor.forClass(SentryEvent::class.java)
     val invalidStacktrace = "Invalid stacktrace\nRuntimeError: Something went wrong"
 
     whenever(mockSentryExceptionHelper!!.buildSentryExceptions(invalidStacktrace))
@@ -219,15 +218,15 @@ internal class SentryJobErrorReportingClientTest {
     val attemptConfig =
       AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), State())
 
-    sentryErrorReportingClient!!.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, Map.of<String?, String?>(), attemptConfig)
+    sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, emptyMap(), attemptConfig)
 
     verify(mockSentryHub).captureEvent(eventCaptor.capture())
     val actualEvent = eventCaptor.getValue()
-    Assertions.assertEquals("1", actualEvent.getTag(SentryJobErrorReportingClient.Companion.STACKTRACE_PARSE_ERROR_TAG_KEY))
-    val exceptions = actualEvent.getExceptions()
+    Assertions.assertEquals("1", actualEvent.getTag(SentryJobErrorReportingClient.STACKTRACE_PARSE_ERROR_TAG_KEY))
+    val exceptions = actualEvent.exceptions
     Assertions.assertNotNull(exceptions)
     Assertions.assertEquals(1, exceptions!!.size)
-    Assertions.assertEquals("Invalid stacktrace, RuntimeError: ", exceptions.get(0)!!.getValue())
+    Assertions.assertEquals("Invalid stacktrace, RuntimeError: ", exceptions[0]!!.value)
   }
 
   @Test
@@ -246,8 +245,8 @@ internal class SentryJobErrorReportingClientTest {
     SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap)
 
     Assertions.assertEquals(2, flatMap.size)
-    Assertions.assertEquals("value1", flatMap.get("key1"))
-    Assertions.assertEquals("value2", flatMap.get("key2"))
+    Assertions.assertEquals("value1", flatMap["key1"])
+    Assertions.assertEquals("value2", flatMap["key2"])
   }
 
   @Test
@@ -257,8 +256,8 @@ internal class SentryJobErrorReportingClientTest {
     SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap)
 
     Assertions.assertEquals(2, flatMap.size)
-    Assertions.assertEquals("1", flatMap.get("a.b[0].c"))
-    Assertions.assertEquals("2", flatMap.get("a.b[1].c"))
+    Assertions.assertEquals("1", flatMap["a.b[0].c"])
+    Assertions.assertEquals("2", flatMap["a.b[1].c"])
   }
 
   @Test
@@ -271,9 +270,9 @@ internal class SentryJobErrorReportingClientTest {
     SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap)
 
     Assertions.assertEquals(3, flatMap.size)
-    Assertions.assertEquals("value1", flatMap.get("key1"))
-    Assertions.assertEquals("nestedValue1", flatMap.get("nestedObject.nestedKey1"))
-    Assertions.assertEquals("nestedValue2", flatMap.get("nestedObject.nestedKey2"))
+    Assertions.assertEquals("value1", flatMap["key1"])
+    Assertions.assertEquals("nestedValue1", flatMap["nestedObject.nestedKey1"])
+    Assertions.assertEquals("nestedValue2", flatMap["nestedObject.nestedKey2"])
   }
 
   @Test
@@ -286,10 +285,10 @@ internal class SentryJobErrorReportingClientTest {
     SentryJobErrorReportingClient.flattenJsonNode("", node, flatMap)
 
     Assertions.assertEquals(4, flatMap.size)
-    Assertions.assertEquals("value1", flatMap.get("key1"))
-    Assertions.assertEquals("nestedValue1", flatMap.get("nested.nestedKey1"))
-    Assertions.assertEquals("value2", flatMap.get("nested.array[0].item"))
-    Assertions.assertEquals("value3", flatMap.get("nested.array[1].item"))
+    Assertions.assertEquals("value1", flatMap["key1"])
+    Assertions.assertEquals("nestedValue1", flatMap["nested.nestedKey1"])
+    Assertions.assertEquals("value2", flatMap["nested.array[0].item"])
+    Assertions.assertEquals("value3", flatMap["nested.array[1].item"])
   }
 
   companion object {

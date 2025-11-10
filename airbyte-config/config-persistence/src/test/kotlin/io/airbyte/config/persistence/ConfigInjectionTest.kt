@@ -41,7 +41,6 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import java.util.Map
 import java.util.UUID
 
 internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
@@ -98,7 +97,7 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
         actorServicePaginationHelper,
       )
     configInjector = ConfigInjector(ConnectorBuilderServiceJooqImpl(database))
-    exampleConfig = jsonNode(Map.of(SAMPLE_CONFIG_KEY, 123))
+    exampleConfig = jsonNode(mapOf(SAMPLE_CONFIG_KEY to 123))
   }
 
   @Test
@@ -203,7 +202,7 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
       val id = UUID.randomUUID()
 
       return StandardSourceDefinition()
-        .withName("source-def-" + id)
+        .withName("source-def-$id")
         .withSourceDefinitionId(id)
         .withTombstone(false)
     }
@@ -212,7 +211,7 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
       ActorDefinitionVersion()
         .withVersionId(UUID.randomUUID())
         .withActorDefinitionId(actorDefId)
-        .withDockerRepository("source-image-" + actorDefId)
+        .withDockerRepository("source-image-$actorDefId")
         .withDockerImageTag("1.0.0")
         .withSupportLevel(SupportLevel.COMMUNITY)
         .withInternalSupportLevel(100L)

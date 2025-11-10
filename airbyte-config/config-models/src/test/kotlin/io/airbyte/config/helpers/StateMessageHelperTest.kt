@@ -20,11 +20,7 @@ import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import org.assertj.core.api.Assertions
-import org.assertj.core.api.ThrowableAssert
 import org.junit.jupiter.api.Test
-import java.util.Arrays
-import java.util.List
-import java.util.Map
 import java.util.Optional
 
 internal class StateMessageHelperTest {
@@ -44,18 +40,18 @@ internal class StateMessageHelperTest {
   fun testLegacy() {
     val stateWrapper: Optional<StateWrapper> = getTypedState(emptyObject())
     Assertions.assertThat(stateWrapper).isNotEmpty()
-    Assertions.assertThat(stateWrapper.get().getStateType()).isEqualTo(StateType.LEGACY)
+    Assertions.assertThat(stateWrapper.get().stateType).isEqualTo(StateType.LEGACY)
   }
 
   @Test
   fun testLegacyInList() {
     val jsonState =
-      Jsons.jsonNode(List.of(Map.of("Any", "value")))
+      Jsons.jsonNode(listOf(mapOf("Any" to "value")))
 
     val stateWrapper: Optional<StateWrapper> = getTypedState(jsonState)
     Assertions.assertThat(stateWrapper).isNotEmpty()
-    Assertions.assertThat(stateWrapper.get().getStateType()).isEqualTo(StateType.LEGACY)
-    Assertions.assertThat(stateWrapper.get().getLegacyState()).isEqualTo(jsonState)
+    Assertions.assertThat(stateWrapper.get().stateType).isEqualTo(StateType.LEGACY)
+    Assertions.assertThat(stateWrapper.get().legacyState).isEqualTo(jsonState)
   }
 
   @Test
@@ -65,9 +61,9 @@ internal class StateMessageHelperTest {
         .withType(AirbyteStateType.LEGACY)
         .withData(emptyObject())
     val stateWrapper: Optional<StateWrapper> =
-      getTypedState(jsonNode(List.of(stateMessage)))
+      getTypedState(jsonNode(listOf(stateMessage)))
     Assertions.assertThat(stateWrapper).isNotEmpty()
-    Assertions.assertThat(stateWrapper.get().getStateType()).isEqualTo(StateType.LEGACY)
+    Assertions.assertThat(stateWrapper.get().stateType).isEqualTo(StateType.LEGACY)
   }
 
   @Test
@@ -79,17 +75,17 @@ internal class StateMessageHelperTest {
           AirbyteGlobalState()
             .withSharedState(emptyObject())
             .withStreamStates(
-              List.of<AirbyteStreamState?>(
+              listOf<AirbyteStreamState?>(
                 AirbyteStreamState().withStreamDescriptor(StreamDescriptor().withName("a")).withStreamState(emptyObject()),
                 AirbyteStreamState().withStreamDescriptor(StreamDescriptor().withName("b")).withStreamState(emptyObject()),
               ),
             ),
         )
     val stateWrapper: Optional<StateWrapper> =
-      getTypedState(jsonNode(List.of(stateMessage)))
+      getTypedState(jsonNode(listOf(stateMessage)))
     Assertions.assertThat(stateWrapper).isNotEmpty()
-    Assertions.assertThat(stateWrapper.get().getStateType()).isEqualTo(StateType.GLOBAL)
-    Assertions.assertThat(stateWrapper.get().getGlobal()).isEqualTo(stateMessage)
+    Assertions.assertThat(stateWrapper.get().stateType).isEqualTo(StateType.GLOBAL)
+    Assertions.assertThat(stateWrapper.get().global).isEqualTo(stateMessage)
   }
 
   @Test
@@ -107,10 +103,10 @@ internal class StateMessageHelperTest {
           AirbyteStreamState().withStreamDescriptor(StreamDescriptor().withName("b")).withStreamState(emptyObject()),
         )
     val stateWrapper: Optional<StateWrapper> =
-      getTypedState(jsonNode(List.of(stateMessage1, stateMessage2)))
+      getTypedState(jsonNode(listOf(stateMessage1, stateMessage2)))
     Assertions.assertThat(stateWrapper).isNotEmpty()
-    Assertions.assertThat(stateWrapper.get().getStateType()).isEqualTo(StateType.STREAM)
-    Assertions.assertThat(stateWrapper.get().getStateMessages()).containsExactlyInAnyOrder(stateMessage1, stateMessage2)
+    Assertions.assertThat(stateWrapper.get().stateType).isEqualTo(StateType.STREAM)
+    Assertions.assertThat(stateWrapper.get().stateMessages).containsExactlyInAnyOrder(stateMessage1, stateMessage2)
   }
 
   @Test
@@ -128,7 +124,7 @@ internal class StateMessageHelperTest {
           AirbyteGlobalState()
             .withSharedState(emptyObject())
             .withStreamStates(
-              List.of<AirbyteStreamState?>(
+              listOf(
                 AirbyteStreamState().withStreamDescriptor(StreamDescriptor().withName("a")).withStreamState(emptyObject()),
                 AirbyteStreamState().withStreamDescriptor(StreamDescriptor().withName("b")).withStreamState(emptyObject()),
               ),
@@ -136,14 +132,9 @@ internal class StateMessageHelperTest {
         )
     Assertions
       .assertThatThrownBy(
-        ThrowableAssert.ThrowingCallable {
+        {
           getTypedState(
-            jsonNode<MutableList<AirbyteStateMessage>?>(
-              List.of<AirbyteStateMessage?>(
-                stateMessage1,
-                stateMessage2,
-              ),
-            ),
+            jsonNode(listOf(stateMessage1, stateMessage2)),
           )
         },
       ).isInstanceOf(IllegalStateException::class.java)
@@ -158,7 +149,7 @@ internal class StateMessageHelperTest {
           AirbyteGlobalState()
             .withSharedState(emptyObject())
             .withStreamStates(
-              List.of<AirbyteStreamState?>(
+              listOf(
                 AirbyteStreamState().withStreamDescriptor(StreamDescriptor().withName("a")).withStreamState(emptyObject()),
                 AirbyteStreamState().withStreamDescriptor(StreamDescriptor().withName("b")).withStreamState(emptyObject()),
               ),
@@ -171,7 +162,7 @@ internal class StateMessageHelperTest {
           AirbyteGlobalState()
             .withSharedState(emptyObject())
             .withStreamStates(
-              List.of<AirbyteStreamState?>(
+              listOf(
                 AirbyteStreamState().withStreamDescriptor(StreamDescriptor().withName("a")).withStreamState(emptyObject()),
                 AirbyteStreamState().withStreamDescriptor(StreamDescriptor().withName("b")).withStreamState(emptyObject()),
               ),
@@ -179,10 +170,10 @@ internal class StateMessageHelperTest {
         )
     Assertions
       .assertThatThrownBy(
-        ThrowableAssert.ThrowingCallable {
+        {
           getTypedState(
-            jsonNode<MutableList<AirbyteStateMessage>?>(
-              List.of<AirbyteStateMessage?>(
+            jsonNode(
+              listOf(
                 stateMessage1,
                 stateMessage2,
               ),
@@ -201,7 +192,7 @@ internal class StateMessageHelperTest {
     val expectedState = State().withState(deserialize("{\"json\": \"blob\"}"))
 
     val convertedState = getState(stateWrapper)
-    Assertions.assertThat<State?>(convertedState).isEqualTo(expectedState)
+    Assertions.assertThat(convertedState).isEqualTo(expectedState)
   }
 
   @Test
@@ -241,7 +232,7 @@ internal class StateMessageHelperTest {
       )
 
     val convertedState = getState(stateWrapper)
-    Assertions.assertThat<State?>(convertedState).isEqualTo(expectedState)
+    Assertions.assertThat(convertedState).isEqualTo(expectedState)
   }
 
   @Test
@@ -250,7 +241,7 @@ internal class StateMessageHelperTest {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          Arrays.asList<AirbyteStateMessage?>(
+          arrayOf(
             AirbyteStateMessage().withType(AirbyteStateType.STREAM).withStream(
               AirbyteStreamState()
                 .withStreamDescriptor(StreamDescriptor().withNamespace("ns1").withName("name1"))
@@ -261,7 +252,7 @@ internal class StateMessageHelperTest {
                 .withStreamDescriptor(StreamDescriptor().withNamespace("ns2").withName("name2"))
                 .withStreamState(deserialize("\"state2\"")),
             ),
-          ),
+          ).toList(),
         )
     val expectedState =
       State().withState(
@@ -277,6 +268,6 @@ internal class StateMessageHelperTest {
       )
 
     val convertedState = getState(stateWrapper)
-    Assertions.assertThat<State?>(convertedState).isEqualTo(expectedState)
+    Assertions.assertThat(convertedState).isEqualTo(expectedState)
   }
 }

@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
-import java.util.Map
 import java.util.UUID
 
 abstract class MetricRepositoryTest {
@@ -940,13 +939,10 @@ abstract class MetricRepositoryTest {
       Assertions.assertEquals(3, res.size)
 
       val exp =
-        Map.of(
-          JobStatus.succeeded,
-          expAgeSecs * 1.0,
-          JobStatus.cancelled,
-          expAgeSecs * 1.0,
-          JobStatus.failed,
-          expAgeSecs * 1.0,
+        mapOf(
+          JobStatus.succeeded to expAgeSecs * 1.0,
+          JobStatus.cancelled to expAgeSecs * 1.0,
+          JobStatus.failed to expAgeSecs * 1.0,
         )
       Assertions.assertEquals(exp, res)
     }
@@ -1007,11 +1003,9 @@ abstract class MetricRepositoryTest {
       Assertions.assertEquals(2, res.size)
 
       val exp =
-        Map.of(
-          JobStatus.succeeded,
-          expAgeSecs * 1.0,
-          JobStatus.failed,
-          expAgeSecs * 1.0,
+        mapOf(
+          JobStatus.succeeded to expAgeSecs * 1.0,
+          JobStatus.failed to expAgeSecs * 1.0,
         )
       Assertions.assertEquals(exp, res)
     }

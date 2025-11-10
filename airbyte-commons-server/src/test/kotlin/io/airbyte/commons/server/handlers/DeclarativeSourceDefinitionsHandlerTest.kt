@@ -112,7 +112,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     givenSourceDefinitionAvailableInWorkspace()
     Mockito
       .`when`(connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID))
-      .thenReturn(Stream.of(DeclarativeManifest().withVersion(A_VERSION)))
+      .thenReturn(listOf(DeclarativeManifest().withVersion(A_VERSION)).stream())
 
     Assertions.assertThrows(
       ValueConflictKnownException::class.java,
@@ -331,7 +331,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   @Test
   fun whenUpdateDeclarativeManifestVersionThenSetDeclarativeSourceActiveVersion() {
     Mockito
-      .`when`<ConnectorPlatformCompatibilityValidationResult?>(
+      .`when`(
         airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(
           eq(
             AN_IMAGE_VERSION,
@@ -341,7 +341,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
     Mockito
-      .`when`<DeclarativeManifest?>(
+      .`when`(
         connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
           A_SOURCE_DEFINITION_ID,
           A_VERSION,
@@ -385,7 +385,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   @Test
   fun updateShouldNotWorkIfValidationFails() {
     Mockito
-      .`when`<ConnectorPlatformCompatibilityValidationResult?>(
+      .`when`(
         airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(
           eq(
             AN_IMAGE_VERSION,
@@ -395,7 +395,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
     Mockito
-      .`when`<DeclarativeManifest?>(
+      .`when`(
         connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(
           A_SOURCE_DEFINITION_ID,
           A_VERSION,
@@ -408,14 +408,14 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
           .withSpec(A_SPEC),
       )
     Mockito
-      .`when`<ActorDefinitionConfigInjection?>(manifestInjector.createManifestConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST))
+      .`when`(manifestInjector.createManifestConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST))
       .thenReturn(manifestConfigInjection)
     Mockito
       .`when`(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC))
       .thenReturn(adaptedConnectorSpecification)
     whenever(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION)
 
-    Assertions.assertThrows<BadRequestProblem?>(BadRequestProblem::class.java) {
+    Assertions.assertThrows(BadRequestProblem::class.java) {
       handler!!.updateDeclarativeManifestVersion(
         UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION),
       )
@@ -442,26 +442,26 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
 
     Mockito
       .`when`(connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(sourceDefinitionId))
-      .thenReturn(Stream.of(manifest1, manifest2, manifest3))
+      .thenReturn(listOf(manifest1, manifest2, manifest3).stream())
     Mockito
       .`when`(connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(sourceDefinitionId))
       .thenReturn(manifest2)
 
     val response =
       handler!!.listManifestVersions(ListDeclarativeManifestsRequestBody().workspaceId(A_WORKSPACE_ID).sourceDefinitionId(sourceDefinitionId))
-    Assertions.assertEquals(3, response.getManifestVersions().size)
+    Assertions.assertEquals(3, response.manifestVersions.size)
 
-    Assertions.assertFalse(response.getManifestVersions().get(0).getIsActive())
-    Assertions.assertTrue(response.getManifestVersions().get(1).getIsActive())
-    Assertions.assertFalse(response.getManifestVersions().get(2).getIsActive())
+    Assertions.assertFalse(response.manifestVersions[0].isActive)
+    Assertions.assertTrue(response.manifestVersions[1].isActive)
+    Assertions.assertFalse(response.manifestVersions[2].isActive)
 
-    Assertions.assertEquals(manifest1.getDescription(), response.getManifestVersions().get(0).getDescription())
-    Assertions.assertEquals(manifest2.getDescription(), response.getManifestVersions().get(1).getDescription())
-    Assertions.assertEquals(manifest3.getDescription(), response.getManifestVersions().get(2).getDescription())
+    Assertions.assertEquals(manifest1.description, response.manifestVersions[0].description)
+    Assertions.assertEquals(manifest2.description, response.manifestVersions[1].description)
+    Assertions.assertEquals(manifest3.description, response.manifestVersions[2].description)
 
-    Assertions.assertEquals(manifest1.getVersion(), response.getManifestVersions().get(0).getVersion())
-    Assertions.assertEquals(manifest2.getVersion(), response.getManifestVersions().get(1).getVersion())
-    Assertions.assertEquals(manifest3.getVersion(), response.getManifestVersions().get(2).getVersion())
+    Assertions.assertEquals(manifest1.version, response.manifestVersions[0].version)
+    Assertions.assertEquals(manifest2.version, response.manifestVersions[1].version)
+    Assertions.assertEquals(manifest3.version, response.manifestVersions[2].version)
   }
 
   private fun givenSourceDefinitionAvailableInWorkspace() {
@@ -472,7 +472,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   private fun givenSourceIsDeclarative() {
     Mockito
       .`when`(connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID))
-      .thenReturn(Stream.of(DeclarativeManifest().withVersion(ANOTHER_VERSION)))
+      .thenReturn(listOf(DeclarativeManifest().withVersion(ANOTHER_VERSION)).stream())
   }
 
   companion object {

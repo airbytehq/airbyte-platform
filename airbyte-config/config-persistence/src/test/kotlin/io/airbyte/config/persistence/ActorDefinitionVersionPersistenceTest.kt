@@ -39,7 +39,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
-import java.util.Map
 import java.util.UUID
 import org.mockito.Mockito.`when` as whenever
 
@@ -361,19 +360,19 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
     private const val PROTOCOL_VERSION = "1.0.0"
     private val SPEC: ConnectorSpecification? =
       ConnectorSpecification()
-        .withConnectionSpecification(jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("key", "value")))
+        .withConnectionSpecification(jsonNode(mapOf("key" to "value")))
         .withProtocolVersion(
           PROTOCOL_VERSION,
         )
     private val SPEC_2: ConnectorSpecification? =
       ConnectorSpecification()
-        .withConnectionSpecification(jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("key2", "value2")))
+        .withConnectionSpecification(jsonNode(mapOf("key2" to "value2")))
         .withProtocolVersion(
           PROTOCOL_VERSION,
         )
     private val SPEC_3: ConnectorSpecification? =
       ConnectorSpecification()
-        .withConnectionSpecification(jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("key3", "value3")))
+        .withConnectionSpecification(jsonNode(mapOf("key3" to "value3")))
         .withProtocolVersion(
           PROTOCOL_VERSION,
         )

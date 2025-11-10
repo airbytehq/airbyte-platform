@@ -61,16 +61,9 @@ import io.airbyte.protocol.models.v0.SyncMode
 import java.net.URI
 import java.time.Instant
 import java.time.OffsetDateTime
-import java.util.Arrays
-import java.util.List
-import java.util.Map
 import java.util.Objects
 import java.util.TreeMap
 import java.util.UUID
-import java.util.function.BinaryOperator
-import java.util.function.Function
-import java.util.function.Supplier
-import java.util.stream.Collectors
 
 object MockData {
   val WORKSPACE_ID_1: UUID = UUID.randomUUID()
@@ -202,24 +195,20 @@ object MockData {
   )
 
   val HMAC_SECRET_PAYLOAD_1: JsonNode =
-    jsonNode<MutableMap<String?, String?>?>(
+    jsonNode(
       sortMap(
-        Map.of<String?, String?>(
-          "access_id",
-          "ABCD1A1ABCDEFG1ABCDEFGH1ABC12ABCDEF1ABCDE1ABCDE1ABCDE12ABCDEF",
-          "secret",
-          "AB1AbcDEF//ABCDeFGHijKlmNOpqR1ABC1aBCDeF",
+        mutableMapOf(
+          "access_id" to "ABCD1A1ABCDEFG1ABCDEFGH1ABC12ABCDEF1ABCDE1ABCDE1ABCDE12ABCDEF",
+          "secret" to "AB1AbcDEF//ABCDeFGHijKlmNOpqR1ABC1aBCDeF",
         ),
       ),
     )
   val HMAC_SECRET_PAYLOAD_2: JsonNode =
-    jsonNode<MutableMap<String?, String?>?>(
+    jsonNode(
       sortMap(
-        Map.of<String?, String?>(
-          "access_id",
-          "ABCD1A1ABCDEFG1ABCDEFGH1ABC12ABCDEF1ABCDE1ABCDE1ABCDE12ABCDEX",
-          "secret",
-          "AB1AbcDEF//ABCDeFGHijKlmNOpqR1ABC1aBCDeX",
+        mutableMapOf(
+          "access_id" to "ABCD1A1ABCDEFG1ABCDEFGH1ABC12ABCDEF1ABCDE1ABCDE1ABCDE12ABCDEX",
+          "secret" to "AB1AbcDEF//ABCDeFGHijKlmNOpqR1ABC1aBCDeX",
         ),
       ),
     )
@@ -288,7 +277,7 @@ object MockData {
       .withOrganizationId(DEFAULT_ORGANIZATION_ID)
       .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
 
-  fun users(): MutableList<AuthenticatedUser?> {
+  fun users(): List<AuthenticatedUser?> {
     val user1 =
       AuthenticatedUser()
         .withUserId(CREATOR_USER_ID_1)
@@ -354,23 +343,23 @@ object MockData {
         .withNews(true)
         .withUiMetadata(null)
 
-    return Arrays.asList<AuthenticatedUser?>(user1, user2, user3, user4, user5)
+    return listOf(user1, user2, user3, user4, user5)
   }
 
-  fun permissions(): MutableList<Permission?> =
-    Arrays.asList<Permission?>(permission1, permission2, permission3, permission4, permission5, permission6, permission7, permission8)
+  fun permissions(): List<Permission?> =
+    listOf(permission1, permission2, permission3, permission4, permission5, permission6, permission7, permission8)
 
-  fun organizations(): MutableList<Organization?> {
+  fun organizations(): List<Organization?> {
     val organization1 =
       Organization().withOrganizationId(ORGANIZATION_ID_1).withName("organization-1").withEmail("email@email.com")
     val organization2 =
       Organization().withOrganizationId(ORGANIZATION_ID_2).withName("organization-2").withEmail("email2@email.com")
     val organization3 =
       Organization().withOrganizationId(ORGANIZATION_ID_3).withName("organization-3").withEmail("emai3l@email.com")
-    return Arrays.asList<Organization?>(organization1, organization2, organization3)
+    return listOf(organization1, organization2, organization3)
   }
 
-  fun ssoConfigs(): MutableList<SsoConfig?> {
+  fun ssoConfigs(): List<SsoConfig?> {
     val ssoConfig1 =
       SsoConfig()
         .withSsoConfigId(SSO_CONFIG_ID_1)
@@ -381,10 +370,10 @@ object MockData {
         .withSsoConfigId(SSO_CONFIG_ID_2)
         .withOrganizationId(ORGANIZATION_ID_2)
         .withKeycloakRealm("realm-2")
-    return Arrays.asList<SsoConfig?>(ssoConfig1, ssoConfig2)
+    return listOf(ssoConfig1, ssoConfig2)
   }
 
-  fun standardWorkspaces(): MutableList<StandardWorkspace?> {
+  fun standardWorkspaces(): List<StandardWorkspace?> {
     val notification =
       Notification()
         .withNotificationType(Notification.NotificationType.SLACK)
@@ -405,13 +394,13 @@ object MockData {
         .withSecurityUpdates(true)
         .withDisplaySetupWizard(true)
         .withTombstone(false)
-        .withNotifications(mutableListOf<Notification?>(notification))
+        .withNotifications(listOf<Notification?>(notification))
         .withFirstCompletedSync(true)
         .withFeedbackDone(true)
         .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withWebhookOperationConfigs(
           jsonNode<WebhookOperationConfigs?>(
-            WebhookOperationConfigs().withWebhookConfigs(List.of<WebhookConfig?>(WebhookConfig().withId(WEBHOOK_CONFIG_ID).withName("name"))),
+            WebhookOperationConfigs().withWebhookConfigs(listOf(WebhookConfig().withId(WEBHOOK_CONFIG_ID).withName("name"))),
           ),
         ).withOrganizationId(DEFAULT_ORGANIZATION_ID)
 
@@ -435,7 +424,7 @@ object MockData {
         .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)
 
-    return Arrays.asList<StandardWorkspace?>(workspace1, workspace2, workspace3)
+    return listOf(workspace1, workspace2, workspace3)
   }
 
   fun publicSourceDefinition(): StandardSourceDefinition? =
@@ -503,8 +492,8 @@ object MockData {
       .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#" + version)
       .withUpgradeDeadline("2020-01-01")
 
-  fun standardSourceDefinitions(): MutableList<StandardSourceDefinition?> =
-    Arrays.asList<StandardSourceDefinition?>(
+  fun standardSourceDefinitions(): List<StandardSourceDefinition?> =
+    listOf(
       publicSourceDefinition(),
       grantableSourceDefinition1(),
       grantableSourceDefinition2(),
@@ -518,7 +507,7 @@ object MockData {
       .withAdvancedAuth(AdvancedAuth().withAuthFlowType(AdvancedAuth.AuthFlowType.OAUTH_2_0))
       .withChangelogUrl(URI.create("whatever"))
       .withSupportedDestinationSyncModes(
-        Arrays.asList<DestinationSyncMode?>(
+        listOf(
           DestinationSyncMode.APPEND,
           DestinationSyncMode.OVERWRITE,
           DestinationSyncMode.APPEND_DEDUP,
@@ -568,15 +557,15 @@ object MockData {
       .withPublic(false)
       .withCustom(true)
 
-  fun standardDestinationDefinitions(): MutableList<StandardDestinationDefinition?> =
-    Arrays.asList<StandardDestinationDefinition?>(
+  fun standardDestinationDefinitions(): List<StandardDestinationDefinition?> =
+    listOf(
       publicDestinationDefinition(),
       grantableDestinationDefinition1(),
       grantableDestinationDefinition2(),
       customDestinationDefinition(),
     )
 
-  fun sourceConnections(): MutableList<SourceConnection?> {
+  fun sourceConnections(): List<SourceConnection?> {
     val sourceConnection1 =
       SourceConnection()
         .withName("source-1")
@@ -601,10 +590,10 @@ object MockData {
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(emptyObject())
         .withSourceId(SOURCE_ID_3)
-    return Arrays.asList<SourceConnection?>(sourceConnection1, sourceConnection2, sourceConnection3)
+    return listOf(sourceConnection1, sourceConnection2, sourceConnection3)
   }
 
-  fun destinationConnections(): MutableList<DestinationConnection?> {
+  fun destinationConnections(): List<DestinationConnection?> {
     val destinationConnection1 =
       DestinationConnection()
         .withName("destination-1")
@@ -629,10 +618,10 @@ object MockData {
         .withWorkspaceId(WORKSPACE_ID_2)
         .withConfiguration(emptyObject())
         .withDestinationId(DESTINATION_ID_3)
-    return Arrays.asList<DestinationConnection?>(destinationConnection1, destinationConnection2, destinationConnection3)
+    return listOf(destinationConnection1, destinationConnection2, destinationConnection3)
   }
 
-  fun sourceOauthParameters(): MutableList<SourceOAuthParameter?> {
+  fun sourceOauthParameters(): List<SourceOAuthParameter?> {
     val sourceOAuthParameter1 =
       SourceOAuthParameter()
         .withConfiguration(jsonNode<String?>(CONNECTION_SPECIFICATION))
@@ -656,10 +645,10 @@ object MockData {
         .withConfiguration(jsonNode<String?>(CONNECTION_SPECIFICATION))
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_4)
         .withOauthParameterId(SOURCE_OAUTH_PARAMETER_ID_4)
-    return Arrays.asList<SourceOAuthParameter?>(sourceOAuthParameter1, sourceOAuthParameter2, sourceOAuthParameter3, sourceOAuthParameter4)
+    return listOf(sourceOAuthParameter1, sourceOAuthParameter2, sourceOAuthParameter3, sourceOAuthParameter4)
   }
 
-  fun destinationOauthParameters(): MutableList<DestinationOAuthParameter?> {
+  fun destinationOauthParameters(): List<DestinationOAuthParameter?> {
     val destinationOAuthParameter1 =
       DestinationOAuthParameter()
         .withConfiguration(jsonNode<String?>(CONNECTION_SPECIFICATION))
@@ -683,7 +672,7 @@ object MockData {
         .withConfiguration(jsonNode<String?>(CONNECTION_SPECIFICATION))
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_4)
         .withOauthParameterId(DESTINATION_OAUTH_PARAMETER_ID_4)
-    return Arrays.asList<DestinationOAuthParameter?>(
+    return listOf(
       destinationOAuthParameter1,
       destinationOAuthParameter2,
       destinationOAuthParameter3,
@@ -691,7 +680,7 @@ object MockData {
     )
   }
 
-  fun standardSyncOperations(): MutableList<StandardSyncOperation?> {
+  fun standardSyncOperations(): List<StandardSyncOperation?> {
     val standardSyncOperation1 =
       StandardSyncOperation()
         .withName("operation-1")
@@ -744,10 +733,10 @@ object MockData {
             .withExecutionUrl(WEBHOOK_OPERATION_EXECUTION_URL)
             .withExecutionBody(WEBHOOK_OPERATION_EXECUTION_BODY),
         )
-    return Arrays.asList<StandardSyncOperation?>(standardSyncOperation1, standardSyncOperation2, standardSyncOperation3, standardSyncOperation4)
+    return listOf(standardSyncOperation1, standardSyncOperation2, standardSyncOperation3, standardSyncOperation4)
   }
 
-  fun standardSyncs(): MutableList<StandardSync?> {
+  fun standardSyncs(): List<StandardSync?> {
     val resourceRequirements =
       ResourceRequirements()
         .withCpuRequest("1")
@@ -757,7 +746,7 @@ object MockData {
     val schedule = Schedule().withTimeUnit(Schedule.TimeUnit.DAYS).withUnits(1L)
     val standardSync1 =
       StandardSync()
-        .withOperationIds(Arrays.asList<UUID?>(OPERATION_ID_1, OPERATION_ID_2))
+        .withOperationIds(listOf(OPERATION_ID_1, OPERATION_ID_2))
         .withConnectionId(CONNECTION_ID_1)
         .withSourceId(SOURCE_ID_1)
         .withDestinationId(DESTINATION_ID_1)
@@ -779,7 +768,7 @@ object MockData {
 
     val standardSync2 =
       StandardSync()
-        .withOperationIds(Arrays.asList<UUID?>(OPERATION_ID_1, OPERATION_ID_2))
+        .withOperationIds(listOf(OPERATION_ID_1, OPERATION_ID_2))
         .withConnectionId(CONNECTION_ID_2)
         .withSourceId(SOURCE_ID_1)
         .withDestinationId(DESTINATION_ID_2)
@@ -800,7 +789,7 @@ object MockData {
 
     val standardSync3 =
       StandardSync()
-        .withOperationIds(Arrays.asList<UUID?>(OPERATION_ID_1, OPERATION_ID_2))
+        .withOperationIds(listOf(OPERATION_ID_1, OPERATION_ID_2))
         .withConnectionId(CONNECTION_ID_3)
         .withSourceId(SOURCE_ID_2)
         .withDestinationId(DESTINATION_ID_1)
@@ -821,7 +810,7 @@ object MockData {
 
     val standardSync4 =
       StandardSync()
-        .withOperationIds(mutableListOf<UUID?>())
+        .withOperationIds(listOf<UUID?>())
         .withConnectionId(CONNECTION_ID_4)
         .withSourceId(SOURCE_ID_2)
         .withDestinationId(DESTINATION_ID_2)
@@ -842,7 +831,7 @@ object MockData {
 
     val standardSync5 =
       StandardSync()
-        .withOperationIds(List.of<UUID?>(OPERATION_ID_3))
+        .withOperationIds(listOf(OPERATION_ID_3))
         .withConnectionId(CONNECTION_ID_5)
         .withSourceId(SOURCE_ID_3)
         .withDestinationId(DESTINATION_ID_3)
@@ -863,7 +852,7 @@ object MockData {
 
     val standardSync6 =
       StandardSync()
-        .withOperationIds(mutableListOf<UUID?>())
+        .withOperationIds(listOf<UUID?>())
         .withConnectionId(CONNECTION_ID_6)
         .withSourceId(SOURCE_ID_3)
         .withDestinationId(DESTINATION_ID_3)
@@ -884,7 +873,7 @@ object MockData {
 
     val standardSync7 =
       StandardSync()
-        .withOperationIds(mutableListOf<UUID?>())
+        .withOperationIds(listOf<UUID?>())
         .withConnectionId(CONNECTION_ID_7)
         .withSourceId(SOURCE_ID_3)
         .withDestinationId(DESTINATION_ID_3)
@@ -903,7 +892,7 @@ object MockData {
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false)
 
-    return Arrays.asList<StandardSync?>(standardSync1, standardSync2, standardSync3, standardSync4, standardSync5, standardSync6, standardSync7)
+    return listOf(standardSync1, standardSync2, standardSync3, standardSync4, standardSync5, standardSync6, standardSync7)
   }
 
   private val configuredCatalog: ConfiguredAirbyteCatalog?
@@ -938,7 +927,7 @@ object MockData {
   private fun convertToInternal(catalog: io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog?): ConfiguredAirbyteCatalog? =
     Jsons.convertValue(catalog, ConfiguredAirbyteCatalog::class.java)
 
-  fun standardSyncStates(): MutableList<StandardSyncState?> {
+  fun standardSyncStates(): List<StandardSyncState?> {
     val standardSyncState1 =
       StandardSyncState()
         .withConnectionId(CONNECTION_ID_1)
@@ -955,10 +944,10 @@ object MockData {
       StandardSyncState()
         .withConnectionId(CONNECTION_ID_4)
         .withState(State().withState(jsonNode<String?>(CONNECTION_SPECIFICATION)))
-    return mutableListOf(standardSyncState1, standardSyncState2, standardSyncState3, standardSyncState4)
+    return listOf(standardSyncState1, standardSyncState2, standardSyncState3, standardSyncState4)
   }
 
-  fun actorCatalogs(): MutableList<ActorCatalog?> {
+  fun actorCatalogs(): List<ActorCatalog?> {
     val actorCatalog1 =
       ActorCatalog()
         .withId(ACTOR_CATALOG_ID_1)
@@ -977,10 +966,10 @@ object MockData {
         .withCatalog(deserialize("{}"))
         .withCatalogType(CatalogType.SOURCE_CATALOG)
         .withCatalogHash("SomeOtherHash")
-    return mutableListOf(actorCatalog1, actorCatalog2, actorCatalog3)
+    return listOf(actorCatalog1, actorCatalog2, actorCatalog3)
   }
 
-  fun actorCatalogFetchEvents(): MutableList<ActorCatalogFetchEvent?> {
+  fun actorCatalogFetchEvents(): List<ActorCatalogFetchEvent?> {
     val actorCatalogFetchEvent1 =
       ActorCatalogFetchEvent()
         .withId(ACTOR_CATALOG_FETCH_EVENT_ID_1)
@@ -995,10 +984,10 @@ object MockData {
         .withActorId(SOURCE_ID_2)
         .withConfigHash("1395")
         .withConnectorVersion("1.42.0")
-    return mutableListOf(actorCatalogFetchEvent1, actorCatalogFetchEvent2)
+    return listOf(actorCatalogFetchEvent1, actorCatalogFetchEvent2)
   }
 
-  fun actorCatalogFetchEventsSameSource(): MutableList<ActorCatalogFetchEvent?> {
+  fun actorCatalogFetchEventsSameSource(): List<ActorCatalogFetchEvent?> {
     val actorCatalogFetchEvent1 =
       ActorCatalogFetchEvent()
         .withId(ACTOR_CATALOG_FETCH_EVENT_ID_1)
@@ -1013,7 +1002,7 @@ object MockData {
         .withActorId(SOURCE_ID_1)
         .withConfigHash(CONFIG_HASH)
         .withConnectorVersion(CONNECTOR_VERSION)
-    return mutableListOf(actorCatalogFetchEvent1, actorCatalogFetchEvent2)
+    return listOf(actorCatalogFetchEvent1, actorCatalogFetchEvent2)
   }
 
   fun defaultOrganization(): Organization =
@@ -1022,7 +1011,7 @@ object MockData {
       .withName("default org")
       .withEmail("test@test.com")
 
-  fun actorCatalogFetchEventsForAggregationTest(): MutableList<ActorCatalogFetchEventWithCreationDate?> {
+  fun actorCatalogFetchEventsForAggregationTest(): List<ActorCatalogFetchEventWithCreationDate?> {
     val now = OffsetDateTime.now()
     val yesterday = OffsetDateTime.now().minusDays(1L)
 
@@ -1054,7 +1043,7 @@ object MockData {
         .withActorId(SOURCE_ID_3)
         .withConfigHash(CONFIG_HASH)
         .withConnectorVersion(CONNECTOR_VERSION)
-    return mutableListOf(
+    return listOf(
       ActorCatalogFetchEventWithCreationDate(actorCatalogFetchEvent1, now),
       ActorCatalogFetchEventWithCreationDate(actorCatalogFetchEvent2, yesterday),
       ActorCatalogFetchEventWithCreationDate(actorCatalogFetchEvent3, now),
@@ -1062,7 +1051,7 @@ object MockData {
     )
   }
 
-  fun workspaceServiceAccounts(): MutableList<WorkspaceServiceAccount?> {
+  fun workspaceServiceAccounts(): List<WorkspaceServiceAccount?> {
     val workspaceServiceAccount =
       WorkspaceServiceAccount()
         .withWorkspaceId(WORKSPACE_ID_1)
@@ -1071,7 +1060,7 @@ object MockData {
         .withServiceAccountEmail("a1e5ac98-7531-48e1-943b-b46636@random-gcp-project.abc.abcdefghijklmno.com")
         .withJsonCredential(deserialize(MOCK_SERVICE_ACCOUNT_1))
 
-    return mutableListOf(workspaceServiceAccount)
+    return listOf(workspaceServiceAccount)
   }
 
   fun declarativeManifest(): DeclarativeManifest? {
@@ -1101,16 +1090,7 @@ object MockData {
   fun activeDeclarativeManifest(): ActiveDeclarativeManifest? = ActiveDeclarativeManifest().withActorDefinitionId(UUID.randomUUID()).withVersion(1L)
 
   private fun sortMap(originalMap: MutableMap<String?, String?>): MutableMap<String?, String?> =
-    originalMap.entries
-      .stream()
-      .collect(
-        Collectors.toMap(
-          Function { entry -> entry.key },
-          Function { entry -> entry.value },
-          BinaryOperator { oldValue: String?, newValue: String? -> newValue },
-          Supplier { TreeMap<String?, String?>() },
-        ),
-      )
+    originalMap.entries.associateTo(TreeMap()) { it.key to it.value }
 
   fun now(): Instant = NOW
 
@@ -1118,12 +1098,12 @@ object MockData {
     val actorCatalogFetchEvent: ActorCatalogFetchEvent?,
     val createdAt: OffsetDateTime?,
   ) {
-    override fun equals(o: Any?): Boolean {
-      if (o == null || javaClass != o.javaClass) {
+    override fun equals(other: Any?): Boolean {
+      if (other == null || javaClass != other.javaClass) {
         return false
       }
-      val that = o as ActorCatalogFetchEventWithCreationDate
-      return actorCatalogFetchEvent == that.actorCatalogFetchEvent && createdAt == that.createdAt
+      val that = other as ActorCatalogFetchEventWithCreationDate
+      return actorCatalogFetchEvent == that.actorCatalogFetchEvent && createdAt?.equals(that.createdAt) ?: (that.createdAt == null)
     }
 
     override fun hashCode(): Int = Objects.hash(actorCatalogFetchEvent, createdAt)

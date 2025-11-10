@@ -74,8 +74,6 @@ import org.mockito.Mockito
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.any
 import org.mockito.stubbing.Answer
-import java.util.List
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -94,35 +92,35 @@ internal class ReplicationInputHydratorTest {
 
   @BeforeEach
   fun setup() {
-    mapperSecretHydrationHelper = Mockito.mock<MapperSecretHydrationHelper>(MapperSecretHydrationHelper::class.java)
-    connectorSecretsHydrator = Mockito.mock<ConnectorSecretsHydrator>(ConnectorSecretsHydrator::class.java)
-    airbyteApiClient = Mockito.mock<AirbyteApiClient>(AirbyteApiClient::class.java)
-    attemptApi = Mockito.mock<AttemptApi?>(AttemptApi::class.java)
-    connectionApi = Mockito.mock<ConnectionApi>(ConnectionApi::class.java)
-    stateApi = Mockito.mock<StateApi>(StateApi::class.java)
-    jobsApi = Mockito.mock<JobsApi>(JobsApi::class.java)
-    secretsPersistenceConfigApi = Mockito.mock<SecretsPersistenceConfigApi?>(SecretsPersistenceConfigApi::class.java)
-    actorDefinitionVersionApi = Mockito.mock<ActorDefinitionVersionApi?>(ActorDefinitionVersionApi::class.java)
-    destinationApi = Mockito.mock<DestinationApi>(DestinationApi::class.java)
+    mapperSecretHydrationHelper = Mockito.mock(MapperSecretHydrationHelper::class.java)
+    connectorSecretsHydrator = Mockito.mock(ConnectorSecretsHydrator::class.java)
+    airbyteApiClient = Mockito.mock(AirbyteApiClient::class.java)
+    attemptApi = Mockito.mock(AttemptApi::class.java)
+    connectionApi = Mockito.mock(ConnectionApi::class.java)
+    stateApi = Mockito.mock(StateApi::class.java)
+    jobsApi = Mockito.mock(JobsApi::class.java)
+    secretsPersistenceConfigApi = Mockito.mock(SecretsPersistenceConfigApi::class.java)
+    actorDefinitionVersionApi = Mockito.mock(ActorDefinitionVersionApi::class.java)
+    destinationApi = Mockito.mock(DestinationApi::class.java)
     resumableFullRefreshStatsHelper = Mockito.mock(ResumableFullRefreshStatsHelper::class.java)
     catalogClientConverters = CatalogClientConverters(FieldGenerator())
     backfillHelper = BackfillHelper(catalogClientConverters!!)
     metricClient = Mockito.mock(MetricClient::class.java)
-    Mockito.`when`<String?>(destinationApi!!.baseUrl).thenReturn("http://localhost:8001/api")
-    Mockito.`when`<DestinationRead?>(destinationApi!!.getDestination(any<DestinationIdRequestBody>())).thenReturn(
+    Mockito.`when`(destinationApi!!.baseUrl).thenReturn("http://localhost:8001/api")
+    Mockito.`when`(destinationApi!!.getDestination(any<DestinationIdRequestBody>())).thenReturn(
       DESTINATION_READ,
     )
-    Mockito.`when`<AttemptApi?>(airbyteApiClient.attemptApi).thenReturn(attemptApi)
-    Mockito.`when`<ConnectionApi?>(airbyteApiClient.connectionApi).thenReturn(connectionApi)
-    Mockito.`when`<DestinationApi?>(airbyteApiClient.destinationApi).thenReturn(destinationApi)
-    Mockito.`when`<StateApi?>(airbyteApiClient.stateApi).thenReturn(stateApi)
-    Mockito.`when`<JobsApi?>(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-    Mockito.`when`<SecretsPersistenceConfigApi?>(airbyteApiClient.secretPersistenceConfigApi).thenReturn(secretsPersistenceConfigApi)
-    Mockito.`when`<ActorDefinitionVersionApi?>(airbyteApiClient.actorDefinitionVersionApi).thenReturn(actorDefinitionVersionApi)
-    Mockito.`when`<DestinationApi?>(airbyteApiClient.destinationApi).thenReturn(destinationApi)
-    Mockito.`when`<ConnectionState?>(stateApi.getState(ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(CONNECTION_STATE_RESPONSE)
+    Mockito.`when`(airbyteApiClient.attemptApi).thenReturn(attemptApi)
+    Mockito.`when`(airbyteApiClient.connectionApi).thenReturn(connectionApi)
+    Mockito.`when`(airbyteApiClient.destinationApi).thenReturn(destinationApi)
+    Mockito.`when`(airbyteApiClient.stateApi).thenReturn(stateApi)
+    Mockito.`when`(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+    Mockito.`when`(airbyteApiClient.secretPersistenceConfigApi).thenReturn(secretsPersistenceConfigApi)
+    Mockito.`when`(airbyteApiClient.actorDefinitionVersionApi).thenReturn(actorDefinitionVersionApi)
+    Mockito.`when`(airbyteApiClient.destinationApi).thenReturn(destinationApi)
+    Mockito.`when`(stateApi.getState(ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(CONNECTION_STATE_RESPONSE)
     Mockito
-      .`when`<ConfiguredAirbyteCatalog?>(
+      .`when`(
         mapperSecretHydrationHelper.hydrateMapperSecrets(
           any<ConfiguredAirbyteCatalog>(),
           any<Boolean>(),
@@ -167,10 +165,10 @@ internal class ReplicationInputHydratorTest {
       null, // unused
       ConnectionContext().withWorkspaceId(UUID.randomUUID()).withOrganizationId(UUID.randomUUID()),
       null,
-      mutableListOf<String>(),
+      listOf(),
       false,
       false,
-      Map.of<String, Any?>(),
+      emptyMap(),
       null,
       supportsRefresh,
       null,
@@ -190,20 +188,19 @@ internal class ReplicationInputHydratorTest {
 
     val replicationActivityInput = getDefaultReplicationActivityInputForTest(withRefresh)
     val replicationInput = replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput)
-    Assert.assertEquals(EXPECTED_STATE, replicationInput.getState())
+    Assert.assertEquals(EXPECTED_STATE, replicationInput.state)
     Assert.assertEquals(
       1,
       replicationInput
-        .getCatalog()
+        .catalog
         .streams.size
         .toLong(),
     )
     Assert.assertEquals(
       TEST_STREAM_NAME,
       replicationInput
-        .getCatalog()
-        .streams
-        .get(0)
+        .catalog
+        .streams[0]
         .stream.name,
     )
   }
@@ -220,7 +217,7 @@ internal class ReplicationInputHydratorTest {
     val replicationInputHydrator = this.replicationInputHydrator
     val input = getDefaultReplicationActivityInputForTest(withRefresh)
     input.isReset = true
-    Mockito.`when`<JobOptionalRead?>(jobsApi.getLastReplicationJob(ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(
+    Mockito.`when`(jobsApi.getLastReplicationJob(ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(
       JobOptionalRead(
         JobRead(
           JOB_ID,
@@ -231,7 +228,7 @@ internal class ReplicationInputHydratorTest {
           JobStatus.CANCELLED,
           null,
           null,
-          ResetConfig(List.of<StreamDescriptor>(StreamDescriptor(TEST_STREAM_NAME, TEST_STREAM_NAMESPACE))),
+          ResetConfig(listOf(StreamDescriptor(TEST_STREAM_NAME, TEST_STREAM_NAMESPACE))),
           null,
           null,
           null,
@@ -242,11 +239,11 @@ internal class ReplicationInputHydratorTest {
     Assert.assertEquals(
       1,
       replicationInput
-        .getCatalog()
+        .catalog
         .streams.size
         .toLong(),
     )
-    Assert.assertEquals(SyncMode.FULL_REFRESH, replicationInput.getCatalog().streams[0].syncMode)
+    Assert.assertEquals(SyncMode.FULL_REFRESH, replicationInput.catalog.streams[0].syncMode)
   }
 
   @ParameterizedTest
@@ -265,15 +262,14 @@ internal class ReplicationInputHydratorTest {
 
     input.schemaRefreshOutput = RefreshSchemaActivityOutput(toDomain(CATALOG_DIFF))
     val replicationInput = replicationInputHydrator.getHydratedReplicationInput(input)
-    val typedState: Optional<StateWrapper> = getTypedState(replicationInput.getState().getState())
+    val typedState: Optional<StateWrapper> = getTypedState(replicationInput.state.state)
     Assert.assertEquals(
       JsonNodeFactory.instance.nullNode(),
       typedState
         .get()
-        .getStateMessages()
-        .get(0)
-        .getStream()
-        .getStreamState(),
+        .stateMessages[0]
+        .stream
+        .streamState,
     )
   }
 
@@ -301,15 +297,15 @@ internal class ReplicationInputHydratorTest {
     replicationInputHydrator.trackBackfillAndResume(
       1L,
       2L,
-      List.of<io.airbyte.config.StreamDescriptor?>(stream1, stream2, stream4),
-      List.of<io.airbyte.config.StreamDescriptor?>(stream1, stream3, stream4),
+      listOf(stream1, stream2, stream4),
+      listOf(stream1, stream3, stream4),
     )
 
     val expectedRequest =
       SaveStreamAttemptMetadataRequestBody(
         1,
         2,
-        List.of<StreamAttemptMetadata>(
+        listOf(
           StreamAttemptMetadata("s1", true, true, "ns1"),
           StreamAttemptMetadata("s1", false, true, null),
           StreamAttemptMetadata("s1", true, false, "ns2"),
@@ -318,14 +314,14 @@ internal class ReplicationInputHydratorTest {
       )
 
     val captor =
-      ArgumentCaptor.forClass<SaveStreamAttemptMetadataRequestBody?, SaveStreamAttemptMetadataRequestBody?>(
+      ArgumentCaptor.forClass(
         SaveStreamAttemptMetadataRequestBody::class.java,
       )
     Mockito.verify<AttemptApi?>(attemptApi).saveStreamMetadata(captor.capture())
     Assert.assertEquals(expectedRequest.jobId, captor.getValue()!!.jobId)
     Assert.assertEquals(expectedRequest.attemptNumber.toLong(), captor.getValue()!!.attemptNumber.toLong())
     CollectionAssert
-      .assertThatCollection<StreamAttemptMetadata>(captor.getValue()!!.streamMetadata)
+      .assertThatCollection(captor.getValue()!!.streamMetadata)
       .containsExactlyInAnyOrderElementsOf(expectedRequest.streamMetadata)
   }
 
@@ -348,7 +344,7 @@ internal class ReplicationInputHydratorTest {
     replicationInputHydrator.trackBackfillAndResume(
       1L,
       2L,
-      List.of<io.airbyte.config.StreamDescriptor?>(stream1, stream2, stream4),
+      listOf(stream1, stream2, stream4),
       null,
     )
 
@@ -356,7 +352,7 @@ internal class ReplicationInputHydratorTest {
       SaveStreamAttemptMetadataRequestBody(
         1,
         2,
-        List.of<StreamAttemptMetadata>(
+        listOf(
           StreamAttemptMetadata("s1", false, true, "ns1"),
           StreamAttemptMetadata("s1", false, true, null),
           StreamAttemptMetadata("s2", false, true, null),
@@ -364,14 +360,14 @@ internal class ReplicationInputHydratorTest {
       )
 
     val captor =
-      ArgumentCaptor.forClass<SaveStreamAttemptMetadataRequestBody?, SaveStreamAttemptMetadataRequestBody?>(
+      ArgumentCaptor.forClass(
         SaveStreamAttemptMetadataRequestBody::class.java,
       )
     Mockito.verify<AttemptApi?>(attemptApi).saveStreamMetadata(captor.capture())
     Assert.assertEquals(expectedRequest.jobId, captor.getValue()!!.jobId)
     Assert.assertEquals(expectedRequest.attemptNumber.toLong(), captor.getValue()!!.attemptNumber.toLong())
     CollectionAssert
-      .assertThatCollection<StreamAttemptMetadata>(captor.getValue()!!.streamMetadata)
+      .assertThatCollection(captor.getValue()!!.streamMetadata)
       .containsExactlyInAnyOrderElementsOf(expectedRequest.streamMetadata)
   }
 
@@ -396,14 +392,14 @@ internal class ReplicationInputHydratorTest {
       1L,
       2L,
       null,
-      List.of<io.airbyte.config.StreamDescriptor?>(stream1, stream3, stream4),
+      listOf(stream1, stream3, stream4),
     )
 
     val expectedRequest =
       SaveStreamAttemptMetadataRequestBody(
         1,
         2,
-        List.of<StreamAttemptMetadata>(
+        listOf(
           StreamAttemptMetadata("s1", true, false, "ns1"),
           StreamAttemptMetadata("s1", true, false, "ns2"),
           StreamAttemptMetadata("s2", true, false, null),
@@ -411,21 +407,21 @@ internal class ReplicationInputHydratorTest {
       )
 
     val captor =
-      ArgumentCaptor.forClass<SaveStreamAttemptMetadataRequestBody?, SaveStreamAttemptMetadataRequestBody?>(
+      ArgumentCaptor.forClass(
         SaveStreamAttemptMetadataRequestBody::class.java,
       )
     Mockito.verify<AttemptApi?>(attemptApi).saveStreamMetadata(captor.capture())
     Assert.assertEquals(expectedRequest.jobId, captor.getValue()!!.jobId)
     Assert.assertEquals(expectedRequest.attemptNumber.toLong(), captor.getValue()!!.attemptNumber.toLong())
     CollectionAssert
-      .assertThatCollection<StreamAttemptMetadata>(captor.getValue()!!.streamMetadata)
+      .assertThatCollection(captor.getValue()!!.streamMetadata)
       .containsExactlyInAnyOrderElementsOf(expectedRequest.streamMetadata)
   }
 
   private fun mockEnableBackfillForConnection(withRefresh: Boolean) {
     if (withRefresh) {
       Mockito
-        .`when`<ConnectionRead?>(connectionApi.getConnectionForJob(ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
+        .`when`(connectionApi.getConnectionForJob(ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
         .thenReturn(
           ConnectionRead(
             CONNECTION_ID,
@@ -458,7 +454,7 @@ internal class ReplicationInputHydratorTest {
         )
     } else {
       Mockito
-        .`when`<ConnectionRead?>(connectionApi.getConnection(ConnectionIdRequestBody(CONNECTION_ID)))
+        .`when`(connectionApi.getConnection(ConnectionIdRequestBody(CONNECTION_ID)))
         .thenReturn(
           ConnectionRead(
             CONNECTION_ID,
@@ -494,7 +490,7 @@ internal class ReplicationInputHydratorTest {
 
   private fun mockRefresh() {
     Mockito
-      .`when`<ConnectionRead?>(connectionApi.getConnectionForJob(ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
+      .`when`(connectionApi.getConnectionForJob(ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
       .thenReturn(
         ConnectionRead(
           CONNECTION_ID,
@@ -528,7 +524,7 @@ internal class ReplicationInputHydratorTest {
 
   private fun mockNonRefresh() {
     Mockito
-      .`when`<ConnectionRead?>(connectionApi.getConnection(ConnectionIdRequestBody(CONNECTION_ID)))
+      .`when`(connectionApi.getConnection(ConnectionIdRequestBody(CONNECTION_ID)))
       .thenReturn(
         ConnectionRead(
           CONNECTION_ID,
@@ -572,12 +568,12 @@ internal class ReplicationInputHydratorTest {
     private const val TEST_STREAM_NAMESPACE = "test-stream-namespace"
     private val SYNC_CATALOG =
       AirbyteCatalog(
-        List.of<AirbyteStreamAndConfiguration>(
+        listOf(
           AirbyteStreamAndConfiguration(
             AirbyteStream(
               TEST_STREAM_NAME,
               emptyObject(),
-              List.of<io.airbyte.api.client.model.generated.SyncMode?>(io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL),
+              listOf(io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL),
               null,
               null,
               null,
@@ -663,7 +659,7 @@ internal class ReplicationInputHydratorTest {
     private const val USE_RUNTIME_PERSISTENCE = false
     private val CATALOG_DIFF =
       CatalogDiff(
-        List.of<StreamTransform>(
+        listOf(
           StreamTransform(
             StreamTransform.TransformType.UPDATE_STREAM,
             StreamDescriptor(
@@ -671,7 +667,7 @@ internal class ReplicationInputHydratorTest {
               SYNC_CATALOG.streams[0].stream!!.namespace,
             ),
             StreamTransformUpdateStream(
-              List.of<FieldTransform>(
+              listOf(
                 FieldTransform(
                   FieldTransform.TransformType.ADD_FIELD,
                   mutableListOf<String>(),

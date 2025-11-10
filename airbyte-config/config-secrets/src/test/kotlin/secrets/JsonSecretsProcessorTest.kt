@@ -17,7 +17,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
-import java.util.stream.Stream
 
 internal class JsonSecretsProcessorTest {
   companion object {
@@ -199,8 +198,8 @@ internal class JsonSecretsProcessorTest {
     private const val SIMPLE = "simple"
 
     @JvmStatic
-    private fun scenarioProvider(): Stream<Arguments?>? =
-      Stream.of<Arguments?>(
+    private fun scenarioProvider() =
+      listOf<Arguments?>(
         Arguments.of(ARRAY, true),
         Arguments.of(ARRAY, false),
         Arguments.of(ARRAY_OF_ONEOF, true),
@@ -223,8 +222,8 @@ internal class JsonSecretsProcessorTest {
       )
 
     @JvmStatic
-    private fun scenarioProviderNoOp(): Stream<Arguments> =
-      Stream.of(
+    private fun scenarioProviderNoOp() =
+      listOf(
         Arguments.of(ARRAY, true),
         Arguments.of(ARRAY, false),
         Arguments.of(ARRAY_OF_ONEOF, true),

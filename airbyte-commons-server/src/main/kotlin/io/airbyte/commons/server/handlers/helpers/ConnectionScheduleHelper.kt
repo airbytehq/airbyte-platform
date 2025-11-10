@@ -37,7 +37,6 @@ import jakarta.inject.Singleton
 import org.joda.time.DateTimeZone
 import org.quartz.CronExpression
 import java.text.ParseException
-import java.util.List
 import java.util.Locale
 
 /**
@@ -92,7 +91,7 @@ class ConnectionScheduleHelper(
             featureFlagClient.boolVariation(
               SubOneHourSyncSchedules,
               Multi(
-                List.of(Organization(organizationId), Workspace(workspaceId)),
+                listOf(Organization(organizationId), Workspace(workspaceId)),
               ),
             ) ||
               entitlementService.checkEntitlement(OrganizationId(organizationId), FasterSyncFrequencyEntitlement).isEntitled
@@ -149,7 +148,7 @@ class ConnectionScheduleHelper(
           featureFlagClient.boolVariation(
             SubOneHourSyncSchedules,
             Multi(
-              List.of(Organization(organizationId), Workspace(workspaceId)),
+              listOf(Organization(organizationId), Workspace(workspaceId)),
             ),
           ) ||
             entitlementService.checkEntitlement(OrganizationId(organizationId), FasterSyncFrequencyEntitlement).isEntitled

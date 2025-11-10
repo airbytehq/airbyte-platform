@@ -25,11 +25,9 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -60,32 +58,26 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
           ConnectorVersionKey,
           ConfigResourceType.ACTOR_DEFINITION,
           ACTOR_DEFINITION_ID,
-          Map.of<ConfigScopeType, UUID>(
-            ConfigScopeType.ORGANIZATION,
-            ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE,
-            WORKSPACE_ID,
-            ConfigScopeType.ACTOR,
-            ACTOR_ID,
+          mapOf(
+            ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+            ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+            ConfigScopeType.ACTOR to ACTOR_ID,
           ),
         ),
       ).thenReturn(Optional.empty())
 
     val optResult: Optional<ActorDefinitionVersionWithOverrideStatus> =
       overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
-    Assertions.assertTrue(optResult.isEmpty())
+    Assertions.assertTrue(optResult.isEmpty)
 
     Mockito.verify(mScopedConfigurationService).getScopedConfiguration(
       ConnectorVersionKey,
       ConfigResourceType.ACTOR_DEFINITION,
       ACTOR_DEFINITION_ID,
-      Map.of<ConfigScopeType, UUID>(
-        ConfigScopeType.ORGANIZATION,
-        ORGANIZATION_ID,
-        ConfigScopeType.WORKSPACE,
-        WORKSPACE_ID,
-        ConfigScopeType.ACTOR,
-        ACTOR_ID,
+      mapOf(
+        ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+        ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+        ConfigScopeType.ACTOR to ACTOR_ID,
       ),
     )
 
@@ -112,13 +104,10 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
           ConnectorVersionKey,
           ConfigResourceType.ACTOR_DEFINITION,
           ACTOR_DEFINITION_ID,
-          Map.of<ConfigScopeType, UUID>(
-            ConfigScopeType.ORGANIZATION,
-            ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE,
-            WORKSPACE_ID,
-            ConfigScopeType.ACTOR,
-            ACTOR_ID,
+          mapOf(
+            ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+            ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+            ConfigScopeType.ACTOR to ACTOR_ID,
           ),
         ),
       ).thenReturn(Optional.of(versionConfig))
@@ -128,7 +117,7 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
     val optResult: Optional<ActorDefinitionVersionWithOverrideStatus> =
       overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
 
-    Assertions.assertTrue(optResult.isPresent())
+    Assertions.assertTrue(optResult.isPresent)
     Assertions.assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion)
 
     val expectedOverrideStatus = originTypeStr == "user"
@@ -138,13 +127,10 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
       ConnectorVersionKey,
       ConfigResourceType.ACTOR_DEFINITION,
       ACTOR_DEFINITION_ID,
-      Map.of<ConfigScopeType, UUID>(
-        ConfigScopeType.ORGANIZATION,
-        ORGANIZATION_ID,
-        ConfigScopeType.WORKSPACE,
-        WORKSPACE_ID,
-        ConfigScopeType.ACTOR,
-        ACTOR_ID,
+      mapOf(
+        ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+        ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+        ConfigScopeType.ACTOR to ACTOR_ID,
       ),
     )
     Mockito.verify(mActorDefinitionService).getActorDefinitionVersion(versionId)
@@ -172,11 +158,9 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
           ConnectorVersionKey,
           ConfigResourceType.ACTOR_DEFINITION,
           ACTOR_DEFINITION_ID,
-          Map.of<ConfigScopeType, UUID>(
-            ConfigScopeType.ORGANIZATION,
-            ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE,
-            WORKSPACE_ID,
+          mapOf(
+            ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+            ConfigScopeType.WORKSPACE to WORKSPACE_ID,
           ),
         ),
       ).thenReturn(Optional.of(versionConfig))
@@ -186,7 +170,7 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
     val optResult: Optional<ActorDefinitionVersionWithOverrideStatus> =
       overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null)
 
-    Assertions.assertTrue(optResult.isPresent())
+    Assertions.assertTrue(optResult.isPresent)
     Assertions.assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion)
 
     val expectedOverrideStatus = originTypeStr == "user"
@@ -196,11 +180,9 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
       ConnectorVersionKey,
       ConfigResourceType.ACTOR_DEFINITION,
       ACTOR_DEFINITION_ID,
-      Map.of<ConfigScopeType, UUID>(
-        ConfigScopeType.ORGANIZATION,
-        ORGANIZATION_ID,
-        ConfigScopeType.WORKSPACE,
-        WORKSPACE_ID,
+      mapOf(
+        ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+        ConfigScopeType.WORKSPACE to WORKSPACE_ID,
       ),
     )
     Mockito.verify(mActorDefinitionService).getActorDefinitionVersion(versionId)
@@ -226,13 +208,10 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
           ConnectorVersionKey,
           ConfigResourceType.ACTOR_DEFINITION,
           ACTOR_DEFINITION_ID,
-          Map.of<ConfigScopeType, UUID>(
-            ConfigScopeType.ORGANIZATION,
-            ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE,
-            WORKSPACE_ID,
-            ConfigScopeType.ACTOR,
-            ACTOR_ID,
+          mapOf(
+            ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+            ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+            ConfigScopeType.ACTOR to ACTOR_ID,
           ),
         ),
       ).thenReturn(Optional.of(versionConfig))
@@ -243,20 +222,16 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
 
     Assertions.assertThrows(
       RuntimeException::class.java,
-      Executable { overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID) },
-    )
+    ) { overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID) }
 
     Mockito.verify(mScopedConfigurationService).getScopedConfiguration(
       ConnectorVersionKey,
       ConfigResourceType.ACTOR_DEFINITION,
       ACTOR_DEFINITION_ID,
-      Map.of<ConfigScopeType, UUID>(
-        ConfigScopeType.ORGANIZATION,
-        ORGANIZATION_ID,
-        ConfigScopeType.WORKSPACE,
-        WORKSPACE_ID,
-        ConfigScopeType.ACTOR,
-        ACTOR_ID,
+      mapOf(
+        ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+        ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+        ConfigScopeType.ACTOR to ACTOR_ID,
       ),
     )
     Mockito.verify(mActorDefinitionService).getActorDefinitionVersion(versionId)
@@ -267,7 +242,7 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testBCPinIntegrityMetricsEmitted(withMismatchedVersions: Boolean?) {
-    val versionId: UUID = OVERRIDE_VERSION.getVersionId()
+    val versionId: UUID = OVERRIDE_VERSION.versionId
     val breakingChangePin =
       ScopedConfiguration()
         .withId(UUID.randomUUID())
@@ -284,13 +259,10 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
           ConnectorVersionKey,
           ConfigResourceType.ACTOR_DEFINITION,
           ACTOR_DEFINITION_ID,
-          Map.of<ConfigScopeType, UUID>(
-            ConfigScopeType.ORGANIZATION,
-            ORGANIZATION_ID,
-            ConfigScopeType.WORKSPACE,
-            WORKSPACE_ID,
-            ConfigScopeType.ACTOR,
-            ACTOR_ID,
+          mapOf(
+            ConfigScopeType.ORGANIZATION to ORGANIZATION_ID,
+            ConfigScopeType.WORKSPACE to WORKSPACE_ID,
+            ConfigScopeType.ACTOR to ACTOR_ID,
           ),
         ),
       ).thenReturn(Optional.of(breakingChangePin))
@@ -300,7 +272,7 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
     val optResult: Optional<ActorDefinitionVersionWithOverrideStatus> =
       overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
 
-    Assertions.assertTrue(optResult.isPresent())
+    Assertions.assertTrue(optResult.isPresent)
     Assertions.assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion)
   }
 
@@ -320,9 +292,8 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
         .withProtocolVersion("0.2.0")
         .withConnectionSpecification(
           jsonNode(
-            Map.of(
-              "key",
-              "value",
+            mapOf(
+              "key" to "value",
             ),
           ),
         )
@@ -331,9 +302,8 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
         .withProtocolVersion("0.2.0")
         .withConnectionSpecification(
           jsonNode(
-            Map.of(
-              "theSpec",
-              "goesHere",
+            mapOf(
+              "theSpec" to "goesHere",
             ),
           ),
         )
@@ -344,7 +314,7 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSpec(SPEC)
-        .withProtocolVersion(SPEC.getProtocolVersion())
+        .withProtocolVersion(SPEC.protocolVersion)
         .withDocumentationUrl(DOCS_URL)
         .withReleaseStage(ReleaseStage.BETA)
         .withSuggestedStreams(SUGGESTED_STREAMS)
@@ -356,7 +326,7 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withDockerImageTag(DOCKER_IMAGE_TAG_2)
         .withSpec(SPEC_2)
-        .withProtocolVersion(SPEC_2.getProtocolVersion())
+        .withProtocolVersion(SPEC_2.protocolVersion)
         .withDocumentationUrl(DOCS_URL)
         .withReleaseStage(ReleaseStage.BETA)
         .withSuggestedStreams(SUGGESTED_STREAMS)

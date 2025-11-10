@@ -9,8 +9,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.sentry.protocol.SentryException
 import io.sentry.protocol.SentryStackFrame
 import io.sentry.protocol.SentryStackTrace
-import java.util.Arrays
-import java.util.Collections
 import java.util.EnumMap
 import java.util.Optional
 import java.util.regex.Pattern
@@ -52,7 +50,7 @@ class SentryExceptionHelper {
     OTHER("other"),
     ;
 
-    override fun toString(): String = value.toString()
+    override fun toString(): String = value
   }
 
   /**
@@ -126,7 +124,7 @@ class SentryExceptionHelper {
           val remaining = exceptionStr.substring(lastMatchIdx)
           val parts = remaining.split(":".toRegex(), limit = 2).toTypedArray()
 
-          if (parts.size > 0) {
+          if (parts.isNotEmpty()) {
             sentryException.type = parts[0].trim { it <= ' ' }
             if (parts.size == 2) {
               sentryException.value = parts[1].trim { it <= ' ' }
@@ -158,7 +156,7 @@ class SentryExceptionHelper {
 
         val framePattern =
           Pattern.compile(
-            "\n\tat (?:[\\w.$/]+/)?(?<module>[\\w$.]+)\\.(?<function>[\\w<>$]+)\\((?:(?<filename>[\\w]+\\.(?<extension>java|kt)):(?<lineno>\\d+)\\)|(?<desc>[\\w\\s]*))",
+            "\n\tat (?:[\\w.$/]+/)?(?<module>[\\w$.]+)\\.(?<function>[\\w<>$]+)\\((?:(?<filename>\\w+\\.(?<extension>java|kt)):(?<lineno>\\d+)\\)|(?<desc>[\\w\\s]*))",
           )
         val matcher = framePattern.matcher(exceptionStr)
 
@@ -185,7 +183,7 @@ class SentryExceptionHelper {
         }
 
         if (!stackFrames.isEmpty()) {
-          Collections.reverse(stackFrames)
+          stackFrames.reverse()
           stackTrace.frames = stackFrames
 
           val sentryException = SentryException()
@@ -195,7 +193,7 @@ class SentryExceptionHelper {
           val sections = exceptionStr.split("\n\tat ".toRegex(), limit = 2).toTypedArray()
           val headerParts = sections[0].split(": ".toRegex(), limit = 2).toTypedArray()
 
-          if (headerParts.size > 0) {
+          if (headerParts.isNotEmpty()) {
             sentryException.type = headerParts[0].trim { it <= ' ' }
             if (headerParts.size == 2) {
               sentryException.value = headerParts[1].trim { it <= ' ' }
@@ -275,7 +273,7 @@ class SentryExceptionHelper {
               break
               // Database Error: Invalid input
             } else if (stacktraceLines[i + 1].contains("Invalid input")) {
-              for (followingLine in Arrays.copyOfRange<String>(stacktraceLines, i + 1, stacktraceLines.size)) {
+              for (followingLine in stacktraceLines.copyOfRange(i + 1, stacktraceLines.size)) {
                 if (followingLine.trim { it <= ' ' }.startsWith("context:")) {
                   errorMessageAndType[ErrorMapKeys.ERROR_MAP_MESSAGE_KEY] =
                     String.format(
@@ -326,12 +324,12 @@ class SentryExceptionHelper {
             // Runtime Errors
           } else if (stacktraceLines[i].contains("Runtime Error")) {
             // Runtime Error: Database error
-            for (followingLine in Arrays.copyOfRange<String>(stacktraceLines, i + 1, stacktraceLines.size)) {
+            for (followingLine in stacktraceLines.copyOfRange(i + 1, stacktraceLines.size)) {
               if ("Database Error" == followingLine.trim { it <= ' ' }) {
                 errorMessageAndType[ErrorMapKeys.ERROR_MAP_MESSAGE_KEY] =
                   String.format(
                     "%s",
-                    stacktraceLines[Arrays.stream(stacktraceLines).toList().indexOf(followingLine) + 1]
+                    stacktraceLines[stacktraceLines.indexOf(followingLine) + 1]
                       .trim { it <= ' ' },
                   )
                 errorMessageAndType[ErrorMapKeys.ERROR_MAP_TYPE_KEY] = "DbtRuntimeDatabaseError"
@@ -352,7 +350,7 @@ class SentryExceptionHelper {
             errorMessageAndType[ErrorMapKeys.ERROR_MAP_MESSAGE_KEY] = stacktraceLines[i + 1].trim { it <= ' ' }
             break
           }
-        } catch (e: ArrayIndexOutOfBoundsException) {
+        } catch (_: ArrayIndexOutOfBoundsException) {
           // this means our logic is slightly off, our assumption of where error lines are is incorrect
           log.warn { "Failed trying to parse useful error message out of dbt error, defaulting to full stacktrace" }
         }

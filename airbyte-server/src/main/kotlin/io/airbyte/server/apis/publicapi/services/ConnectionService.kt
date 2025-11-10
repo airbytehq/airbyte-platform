@@ -28,7 +28,6 @@ import io.airbyte.server.apis.publicapi.mappers.ConnectionsResponseMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
 import jakarta.inject.Singleton
-import java.util.Collections
 import java.util.UUID
 
 interface ConnectionService {
@@ -53,8 +52,8 @@ interface ConnectionService {
   ): ConnectionResponse
 
   fun listConnectionsForWorkspaces(
-    workspaceIds: List<UUID> = Collections.emptyList(),
-    tagIds: List<UUID> = Collections.emptyList(),
+    workspaceIds: List<UUID> = emptyList(),
+    tagIds: List<UUID> = emptyList(),
     limit: Int = 20,
     offset: Int = 0,
     includeDeleted: Boolean = false,

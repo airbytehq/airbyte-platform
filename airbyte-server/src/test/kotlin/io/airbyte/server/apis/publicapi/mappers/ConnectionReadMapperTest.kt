@@ -18,7 +18,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
-import java.util.stream.Stream
 
 internal class ConnectionReadMapperTest {
   @Test
@@ -61,8 +60,8 @@ internal class ConnectionReadMapperTest {
 
   companion object {
     @JvmStatic
-    fun validSyncModeCombinations(): Stream<Arguments> =
-      Stream.of(
+    fun validSyncModeCombinations() =
+      listOf(
         // FULL_REFRESH combinations
         Arguments.of(SyncMode.FULL_REFRESH, DestinationSyncMode.OVERWRITE, ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE),
         Arguments.of(SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND, ConnectionSyncModeEnum.FULL_REFRESH_APPEND),

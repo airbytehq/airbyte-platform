@@ -15,7 +15,6 @@ import io.airbyte.config.persistence.StatePersistence
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.metrics.lib.MetricTags
 import jakarta.inject.Singleton
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -35,7 +34,7 @@ open class StateHandler(
 
   fun createOrUpdateState(connectionStateCreateOrUpdate: ConnectionStateCreateOrUpdate): ConnectionState {
     val connectionId = connectionStateCreateOrUpdate.connectionId
-    addTagsToTrace(Map.of(MetricTags.CONNECTION_ID, connectionId))
+    addTagsToTrace(mapOf(MetricTags.CONNECTION_ID to connectionId))
 
     val convertedCreateOrUpdate = toInternal(connectionStateCreateOrUpdate.connectionState)
     statePersistence.updateOrCreateState(connectionId, convertedCreateOrUpdate)

@@ -61,7 +61,7 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
     // Facebook does not have refresh token but calls it "long lived access token" instead:
     // see https://developers.facebook.com/docs/facebook-login/access-tokens/refreshing
     require(data.has(ACCESS_TOKEN)) { "Missing 'access_token' in query params from $ACCESS_TOKEN_URL" }
-    return java.util.Map.of<String, Any>(ACCESS_TOKEN, data[ACCESS_TOKEN].asText())
+    return mapOf(ACCESS_TOKEN to data[ACCESS_TOKEN].asText())
   }
 
   override fun completeOAuthFlow(
@@ -84,7 +84,7 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
     require(data.containsKey(ACCESS_TOKEN))
     val shortLivedAccessToken = data[ACCESS_TOKEN] as String?
     val longLivedAccessToken = getLongLivedAccessToken(clientId, clientSecret, shortLivedAccessToken)
-    return java.util.Map.of<String, Any>(ACCESS_TOKEN, longLivedAccessToken)
+    return mapOf(ACCESS_TOKEN to longLivedAccessToken)
   }
 
   protected fun createLongLivedTokenURI(

@@ -21,7 +21,6 @@ import org.mockito.Mockito
 import java.net.http.HttpClient
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Collections
 import java.util.Optional
 import java.util.UUID
 
@@ -92,14 +91,13 @@ class LinkedinAdsOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
 
     log.info { "Response from completing OAuth Flow is: $params" }
     assertTrue(params.containsKey("credentials"))
-    val credentials =
-      Collections.unmodifiableMap(params["credentials"] as Map<String, Any>?)
-    assertTrue(credentials.containsKey(REFRESH_TOKEN_KEY))
-    assertTrue(credentials[REFRESH_TOKEN_KEY].toString().isNotEmpty())
+    val credentials = params["credentials"] as Map<String, Any>?
+    assertTrue(credentials?.containsKey(REFRESH_TOKEN_KEY) ?: false)
+    assertTrue(credentials?.get(REFRESH_TOKEN_KEY)?.toString()?.isNotEmpty() ?: false)
   }
 
   companion object {
-    protected val CREDENTIALS_PATH: Path = Path.of("secrets/config_oauth.json")
-    protected const val REDIRECT_URL: String = "http://localhost:3000/auth_flow"
+    private val CREDENTIALS_PATH: Path = Path.of("secrets/config_oauth.json")
+    private const val REDIRECT_URL: String = "http://localhost:3000/auth_flow"
   }
 }

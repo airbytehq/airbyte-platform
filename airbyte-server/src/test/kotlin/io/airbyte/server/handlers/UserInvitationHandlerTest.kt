@@ -43,7 +43,6 @@ import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import java.util.Optional
 import java.util.UUID
@@ -120,9 +119,9 @@ internal class UserInvitationHandlerTest {
     @Nested
     internal inner class CreateAndSendInvitation {
       private fun setupSendInvitationMocks() {
-        Mockito.`when`<String>(webUrlHelper!!.baseUrl).thenReturn(webappBaseUrl)
-        Mockito.`when`<UserInvitation>(service!!.createUserInvitation(userInvitation)).thenReturn(userInvitation)
-        Mockito.`when`<StandardWorkspace>(workspaceService!!.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(
+        Mockito.`when`(webUrlHelper!!.baseUrl).thenReturn(webappBaseUrl)
+        Mockito.`when`(service!!.createUserInvitation(userInvitation)).thenReturn(userInvitation)
+        Mockito.`when`(workspaceService!!.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(
           StandardWorkspace().withName(
             workspaceName,
           ),
@@ -131,7 +130,7 @@ internal class UserInvitationHandlerTest {
 
       @BeforeEach
       fun setup() {
-        Mockito.`when`<UserInvitation>(mapper!!.toDomain(userInvitationCreateRequestBody)).thenReturn(
+        Mockito.`when`(mapper!!.toDomain(userInvitationCreateRequestBody)).thenReturn(
           userInvitation,
         )
       }
@@ -141,14 +140,14 @@ internal class UserInvitationHandlerTest {
         setupSendInvitationMocks()
 
         // the workspace is in an org.
-        Mockito.`when`<Optional<UUID>>(workspaceService!!.getOrganizationIdFromWorkspaceId(workspaceId)).thenReturn(
+        Mockito.`when`(workspaceService!!.getOrganizationIdFromWorkspaceId(workspaceId)).thenReturn(
           Optional.of<UUID>(
             orgId,
           ),
         )
 
         // no existing user has the invited email.
-        Mockito.`when`<Optional<User>>(userPersistence!!.getUserByEmail(invitedEmail)).thenReturn(Optional.empty<User>())
+        Mockito.`when`(userPersistence!!.getUserByEmail(invitedEmail)).thenReturn(Optional.empty<User>())
 
         // call the handler method under test.
         val result: UserInvitationCreateResponse =
@@ -166,7 +165,7 @@ internal class UserInvitationHandlerTest {
         setupSendInvitationMocks()
 
         // the workspace is not in any org.
-        Mockito.`when`<Optional<UUID>>(workspaceService!!.getOrganizationIdFromWorkspaceId(workspaceId)).thenReturn(Optional.empty<UUID>())
+        Mockito.`when`(workspaceService!!.getOrganizationIdFromWorkspaceId(workspaceId)).thenReturn(Optional.empty<UUID>())
 
         // call the handler method under test.
         val result: UserInvitationCreateResponse =
@@ -184,7 +183,7 @@ internal class UserInvitationHandlerTest {
         setupSendInvitationMocks()
 
         // the workspace is in an org.
-        Mockito.`when`<Optional<UUID>>(workspaceService!!.getOrganizationIdFromWorkspaceId(workspaceId)).thenReturn(
+        Mockito.`when`(workspaceService!!.getOrganizationIdFromWorkspaceId(workspaceId)).thenReturn(
           Optional.of<UUID>(
             orgId,
           ),
@@ -192,13 +191,13 @@ internal class UserInvitationHandlerTest {
 
         // a user with the email exists, but is not in the workspace's org.
         val userWithEmail = User().withUserId(UUID.randomUUID()).withEmail(invitedEmail)
-        Mockito.`when`<Optional<User>>(userPersistence!!.getUserByEmail(invitedEmail)).thenReturn(Optional.of<User>(userWithEmail))
+        Mockito.`when`(userPersistence!!.getUserByEmail(invitedEmail)).thenReturn(Optional.of(userWithEmail))
 
         // the org has a user with a different email, but not the one we're inviting.
         val otherUserInOrg = User().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io")
         Mockito
-          .`when`<List<UserPermission>>(permissionHandler!!.listUsersInOrganization(orgId))
-          .thenReturn(java.util.List.of<UserPermission>(UserPermission().withUser(otherUserInOrg)))
+          .`when`(permissionHandler!!.listUsersInOrganization(orgId))
+          .thenReturn(listOf(UserPermission().withUser(otherUserInOrg)))
 
         // call the handler method under test.
         val result: UserInvitationCreateResponse =
@@ -213,9 +212,9 @@ internal class UserInvitationHandlerTest {
 
       @Test
       fun testThrowsConflictExceptionOnDuplicateInvitation() {
-        Mockito.`when`<UserInvitation>(service!!.createUserInvitation(userInvitation)).thenAnswer { throw InvitationDuplicateException("duplicate") }
+        Mockito.`when`(service!!.createUserInvitation(userInvitation)).thenAnswer { throw InvitationDuplicateException("duplicate") }
 
-        Assertions.assertThrows<ConflictException>(
+        Assertions.assertThrows(
           ConflictException::class.java,
         ) {
           handler!!.createInvitationOrPermission(
@@ -283,7 +282,7 @@ internal class UserInvitationHandlerTest {
     internal inner class DirectlyAddPermission {
       @BeforeEach
       fun setup() {
-        Mockito.`when`<StandardWorkspace>(workspaceService!!.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(
+        Mockito.`when`(workspaceService!!.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(
           StandardWorkspace().withName(
             workspaceName,
           ),
@@ -349,7 +348,7 @@ internal class UserInvitationHandlerTest {
           .sendNotificationOnInvitingExistingUser(
             emailConfigCaptor.capture(),
             eq<String>(currentUser.name),
-            eq<String>(workspaceName),
+            eq(workspaceName),
           )
 
         Assertions.assertEquals(invitedEmail, emailConfigCaptor.firstValue.to)
@@ -505,14 +504,14 @@ internal class UserInvitationHandlerTest {
     val workspaceId = UUID.randomUUID()
     val organizationId = UUID.randomUUID()
     val workspaceInvitations =
-      java.util.List.of(
+      listOf(
         Mockito.mock(
           UserInvitation::class.java,
         ),
         Mockito.mock(UserInvitation::class.java),
       )
     val organizationInvitations =
-      java.util.List.of(
+      listOf(
         Mockito.mock(
           UserInvitation::class.java,
         ),

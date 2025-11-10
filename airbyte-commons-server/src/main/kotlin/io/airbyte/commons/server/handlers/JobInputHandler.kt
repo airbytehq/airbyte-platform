@@ -88,7 +88,7 @@ open class JobInputHandler(
    */
   fun getJobInput(input: SyncInput): Any {
     try {
-      addTagsToTrace(java.util.Map.of(ATTEMPT_NUMBER_KEY, input.attemptNumber, JOB_ID_KEY, input.jobId))
+      addTagsToTrace(mapOf(ATTEMPT_NUMBER_KEY to input.attemptNumber, JOB_ID_KEY to input.jobId))
       val jobId = input.jobId
       val attempt = Math.toIntExact(input.attemptNumber.toLong())
 
@@ -157,7 +157,7 @@ open class JobInputHandler(
           config,
           destinationVersion,
           attemptSyncConfig.destinationConfiguration,
-          java.util.Map.of(),
+          emptyMap(),
         )
 
       val featureFlagContext: MutableList<Context> = ArrayList()
@@ -403,11 +403,11 @@ open class JobInputHandler(
   }
 
   private fun getNetworkSecurityTokens(workspaceId: UUID): List<String> {
-    val scopes = java.util.Map.of(ConfigScopeType.WORKSPACE, workspaceId)
+    val scopes = mapOf(ConfigScopeType.WORKSPACE to workspaceId)
     try {
       val podLabelConfigurations =
         scopedConfigurationService.getScopedConfigurations(NetworkSecurityTokenKey, scopes)
-      return podLabelConfigurations.stream().map { obj: ScopedConfiguration -> obj.value }.toList()
+      return podLabelConfigurations.map { obj: ScopedConfiguration -> obj.value }
     } catch (e: IllegalArgumentException) {
       log.error { e.message }
       return emptyList()

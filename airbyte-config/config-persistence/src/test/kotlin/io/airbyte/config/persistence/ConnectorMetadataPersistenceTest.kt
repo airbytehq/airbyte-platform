@@ -44,15 +44,12 @@ import org.jooq.exception.DataAccessException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
-import java.util.List
-import java.util.Map
 import java.util.UUID
 import org.mockito.Mockito.`when` as whenever
 
@@ -155,30 +152,30 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
   fun testWriteConnectorMetadataForSource() {
     // Initial insert
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()
-    val actorDefinitionVersion1: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId())
+    val actorDefinitionVersion1: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.sourceDefinitionId)
 
     sourceService!!.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion1, emptyList())
 
-    var sourceDefinitionFromDB = sourceService!!.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())
+    var sourceDefinitionFromDB = sourceService!!.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId)
     val actorDefinitionVersionFromDB =
       actorDefinitionService!!.getActorDefinitionVersion(
-        actorDefinitionVersion1.getActorDefinitionId(),
-        actorDefinitionVersion1.getDockerImageTag(),
+        actorDefinitionVersion1.actorDefinitionId,
+        actorDefinitionVersion1.dockerImageTag,
       )
 
-    Assertions.assertTrue(actorDefinitionVersionFromDB.isPresent())
-    val firstVersionId = actorDefinitionVersionFromDB.get().getVersionId()
+    Assertions.assertTrue(actorDefinitionVersionFromDB.isPresent)
+    val firstVersionId = actorDefinitionVersionFromDB.get().versionId
 
     Assertions.assertEquals(actorDefinitionVersion1.withVersionId(firstVersionId), actorDefinitionVersionFromDB.get())
-    Assertions.assertEquals(firstVersionId, sourceDefinitionFromDB.getDefaultVersionId())
+    Assertions.assertEquals(firstVersionId, sourceDefinitionFromDB.defaultVersionId)
     Assertions.assertEquals(sourceDefinition.withDefaultVersionId(firstVersionId), sourceDefinitionFromDB)
 
     // Updating an existing source definition/version
     val sourceDefinition2 = sourceDefinition.withName("updated name")
     val actorDefinitionVersion2: ActorDefinitionVersion =
-      createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(UPGRADE_IMAGE_TAG)
+      createBaseActorDefVersion(sourceDefinition.sourceDefinitionId).withDockerImageTag(UPGRADE_IMAGE_TAG)
     val scopedImpact =
-      List.of<BreakingChangeScope?>(
+      listOf<BreakingChangeScope?>(
         BreakingChangeScope()
           .withScopeType(BreakingChangeScope.ScopeType.STREAM)
           .withImpactedScopes(mutableListOf<Any?>("stream_a", "stream_b")),
@@ -192,20 +189,20 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
       )
     sourceService!!.writeConnectorMetadata(sourceDefinition2, actorDefinitionVersion2, breakingChanges)
 
-    sourceDefinitionFromDB = sourceService!!.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())
+    sourceDefinitionFromDB = sourceService!!.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId)
     val actorDefinitionVersion2FromDB =
       actorDefinitionService!!.getActorDefinitionVersion(
         actorDefinitionVersion2.getActorDefinitionId(),
         actorDefinitionVersion2.getDockerImageTag(),
       )
     val breakingChangesForDefFromDb =
-      actorDefinitionService!!.listBreakingChangesForActorDefinition(sourceDefinition2.getSourceDefinitionId())
+      actorDefinitionService!!.listBreakingChangesForActorDefinition(sourceDefinition2.sourceDefinitionId)
 
     Assertions.assertTrue(actorDefinitionVersion2FromDB.isPresent())
     val newADVId = actorDefinitionVersion2FromDB.get().getVersionId()
 
     Assertions.assertNotEquals(firstVersionId, newADVId)
-    Assertions.assertEquals(newADVId, sourceDefinitionFromDB.getDefaultVersionId())
+    Assertions.assertEquals(newADVId, sourceDefinitionFromDB.defaultVersionId)
     Assertions.assertEquals(sourceDefinition2.withDefaultVersionId(newADVId), sourceDefinitionFromDB)
     org.assertj.core.api.Assertions
       .assertThat<ActorDefinitionBreakingChange?>(breakingChangesForDefFromDb)
@@ -219,32 +216,32 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
   fun testWriteConnectorMetadataForDestination() {
     // Initial insert
     val destinationDefinition: StandardDestinationDefinition = createBaseDestDef()
-    val actorDefinitionVersion1: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId())
+    val actorDefinitionVersion1: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.destinationDefinitionId)
 
     destinationService!!.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion1, emptyList())
 
     var destinationDefinitionFromDB =
-      destinationService!!.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())
+      destinationService!!.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId)
     val actorDefinitionVersionFromDB =
       actorDefinitionService!!.getActorDefinitionVersion(
         actorDefinitionVersion1.getActorDefinitionId(),
         actorDefinitionVersion1.getDockerImageTag(),
       )
 
-    Assertions.assertTrue(actorDefinitionVersionFromDB.isPresent())
-    val firstVersionId = actorDefinitionVersionFromDB.get().getVersionId()
+    Assertions.assertTrue(actorDefinitionVersionFromDB.isPresent)
+    val firstVersionId = actorDefinitionVersionFromDB.get().versionId
 
     Assertions.assertEquals(actorDefinitionVersion1.withVersionId(firstVersionId), actorDefinitionVersionFromDB.get())
-    Assertions.assertEquals(firstVersionId, destinationDefinitionFromDB.getDefaultVersionId())
+    Assertions.assertEquals(firstVersionId, destinationDefinitionFromDB.defaultVersionId)
     Assertions.assertEquals(destinationDefinition.withDefaultVersionId(firstVersionId), destinationDefinitionFromDB)
 
     // Updating an existing destination definition/version
     val destinationDefinition2 = destinationDefinition.withName("updated name")
     val actorDefinitionVersion2: ActorDefinitionVersion =
-      createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(UPGRADE_IMAGE_TAG)
+      createBaseActorDefVersion(destinationDefinition.destinationDefinitionId).withDockerImageTag(UPGRADE_IMAGE_TAG)
 
     val scopedImpact =
-      List.of<BreakingChangeScope?>(
+      listOf<BreakingChangeScope?>(
         BreakingChangeScope()
           .withScopeType(BreakingChangeScope.ScopeType.STREAM)
           .withImpactedScopes(mutableListOf<Any?>("stream_a", "stream_b")),
@@ -253,28 +250,28 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
       mutableListOf(
         MockData
           .actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG)!!
-          .withActorDefinitionId(destinationDefinition2.getDestinationDefinitionId())
+          .withActorDefinitionId(destinationDefinition2.destinationDefinitionId)
           .withScopedImpact(scopedImpact),
       )
     destinationService!!.writeConnectorMetadata(destinationDefinition2, actorDefinitionVersion2, breakingChanges)
 
-    destinationDefinitionFromDB = destinationService!!.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())
+    destinationDefinitionFromDB = destinationService!!.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId)
     val actorDefinitionVersion2FromDB =
       actorDefinitionService!!.getActorDefinitionVersion(
-        actorDefinitionVersion2.getActorDefinitionId(),
-        actorDefinitionVersion2.getDockerImageTag(),
+        actorDefinitionVersion2.actorDefinitionId,
+        actorDefinitionVersion2.dockerImageTag,
       )
     val breakingChangesForDefFromDb =
-      actorDefinitionService!!.listBreakingChangesForActorDefinition(destinationDefinition2.getDestinationDefinitionId())
+      actorDefinitionService!!.listBreakingChangesForActorDefinition(destinationDefinition2.destinationDefinitionId)
 
-    Assertions.assertTrue(actorDefinitionVersion2FromDB.isPresent())
-    val newADVId = actorDefinitionVersion2FromDB.get().getVersionId()
+    Assertions.assertTrue(actorDefinitionVersion2FromDB.isPresent)
+    val newADVId = actorDefinitionVersion2FromDB.get().versionId
 
     Assertions.assertNotEquals(firstVersionId, newADVId)
-    Assertions.assertEquals(newADVId, destinationDefinitionFromDB.getDefaultVersionId())
+    Assertions.assertEquals(newADVId, destinationDefinitionFromDB.defaultVersionId)
     Assertions.assertEquals(destinationDefinition2.withDefaultVersionId(newADVId), destinationDefinitionFromDB)
     org.assertj.core.api.Assertions
-      .assertThat<ActorDefinitionBreakingChange?>(breakingChangesForDefFromDb)
+      .assertThat(breakingChangesForDefFromDb)
       .containsExactlyInAnyOrderElementsOf(breakingChanges)
     Mockito
       .verify<ActorDefinitionVersionUpdater?>(actorDefinitionVersionUpdater)
@@ -289,15 +286,15 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     sourceService!!.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion1, emptyList())
 
     val optADVForTag = actorDefinitionService!!.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG)
-    Assertions.assertTrue(optADVForTag.isPresent())
+    Assertions.assertTrue(optADVForTag.isPresent)
     val advForTag = optADVForTag.get()
     val retrievedSourceDefinition =
-      sourceService!!.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())
-    Assertions.assertEquals(retrievedSourceDefinition.getDefaultVersionId(), advForTag.getVersionId())
+      sourceService!!.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId)
+    Assertions.assertEquals(retrievedSourceDefinition.defaultVersionId, advForTag.versionId)
 
     val updatedSpec =
       ConnectorSpecification()
-        .withConnectionSpecification(jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("key", "value2")))
+        .withConnectionSpecification(jsonNode(mapOf<String?, String?>("key" to "value2")))
         .withProtocolVersion(
           PROTOCOL_VERSION,
         )
@@ -306,13 +303,13 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     val modifiedADV: ActorDefinitionVersion = createBaseActorDefVersion(actorDefinitionId).withSpec(updatedSpec)
     sourceService!!.writeConnectorMetadata(sourceDefinition, modifiedADV, emptyList())
 
-    Assertions.assertEquals(retrievedSourceDefinition, sourceService!!.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId()))
+    Assertions.assertEquals(retrievedSourceDefinition, sourceService!!.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId))
     val optADVForTagAfterCall2 =
       actorDefinitionService!!.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG)
-    Assertions.assertTrue(optADVForTagAfterCall2.isPresent())
+    Assertions.assertTrue(optADVForTagAfterCall2.isPresent)
 
     // Modifying fields without updating image tag updates existing version
-    Assertions.assertEquals(modifiedADV.withVersionId(advForTag.getVersionId()), optADVForTagAfterCall2.get())
+    Assertions.assertEquals(modifiedADV.withVersionId(advForTag.versionId), optADVForTagAfterCall2.get())
 
     // Modifying docker image tag creates a new version
     val newADV: ActorDefinitionVersion =
@@ -320,13 +317,13 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     sourceService!!.writeConnectorMetadata(sourceDefinition, newADV, emptyList())
 
     val optADVForTag2 = actorDefinitionService!!.getActorDefinitionVersion(actorDefinitionId, UPGRADE_IMAGE_TAG)
-    Assertions.assertTrue(optADVForTag2.isPresent())
+    Assertions.assertTrue(optADVForTag2.isPresent)
     val advForTag2 = optADVForTag2.get()
 
     // Versioned data is updated as well as the version id
-    Assertions.assertEquals(advForTag2, newADV.withVersionId(advForTag2.getVersionId()))
-    Assertions.assertNotEquals(advForTag2.getVersionId(), advForTag.getVersionId())
-    Assertions.assertNotEquals(advForTag2.getSpec(), advForTag.getSpec())
+    Assertions.assertEquals(advForTag2, newADV.withVersionId(advForTag2.versionId))
+    Assertions.assertNotEquals(advForTag2.versionId, advForTag.versionId)
+    Assertions.assertNotEquals(advForTag2.spec, advForTag.spec)
     Mockito
       .verify<ActorDefinitionVersionUpdater?>(actorDefinitionVersionUpdater)
       .updateSourceDefaultVersion(sourceDefinition, newADV, emptyList())
@@ -338,9 +335,9 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     // Initial insert
     val customSourceDefinition: StandardSourceDefinition = createBaseSourceDef().withCustom(true)
     val customDestinationDefinition: StandardDestinationDefinition = createBaseDestDef().withCustom(true)
-    val sourceActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(customSourceDefinition.getSourceDefinitionId())
+    val sourceActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(customSourceDefinition.sourceDefinitionId)
     val destinationActorDefinitionVersion: ActorDefinitionVersion =
-      createBaseActorDefVersion(customDestinationDefinition.getDestinationDefinitionId())
+      createBaseActorDefVersion(customDestinationDefinition.destinationDefinitionId)
     sourceService!!.writeConnectorMetadata(customSourceDefinition, sourceActorDefinitionVersion, emptyList())
     destinationService!!.writeConnectorMetadata(
       customDestinationDefinition,
@@ -350,19 +347,19 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
 
     // Update
     Assertions.assertDoesNotThrow(
-      Executable {
+      {
         sourceService!!.writeConnectorMetadata(
           customSourceDefinition,
-          createBaseActorDefVersion(customSourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag),
+          createBaseActorDefVersion(customSourceDefinition.sourceDefinitionId).withDockerImageTag(dockerImageTag),
           emptyList(),
         )
       },
     )
     Assertions.assertDoesNotThrow(
-      Executable {
+      {
         destinationService!!.writeConnectorMetadata(
           customDestinationDefinition,
-          createBaseActorDefVersion(customDestinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag),
+          createBaseActorDefVersion(customDestinationDefinition.destinationDefinitionId).withDockerImageTag(dockerImageTag),
           emptyList(),
         )
       },
@@ -375,8 +372,8 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     // Initial insert
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()
     val destinationDefinition: StandardDestinationDefinition = createBaseDestDef()
-    val sourceActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId())
-    val destinationActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId())
+    val sourceActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.sourceDefinitionId)
+    val destinationActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.destinationDefinitionId)
     sourceService!!.writeConnectorMetadata(sourceDefinition, sourceActorDefinitionVersion, emptyList())
     destinationService!!.writeConnectorMetadata(
       destinationDefinition,
@@ -386,19 +383,19 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
 
     // Update
     Assertions.assertDoesNotThrow(
-      Executable {
+      {
         sourceService!!.writeConnectorMetadata(
           sourceDefinition,
-          createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag),
+          createBaseActorDefVersion(sourceDefinition.sourceDefinitionId).withDockerImageTag(dockerImageTag),
           emptyList(),
         )
       },
     )
     Assertions.assertDoesNotThrow(
-      Executable {
+      {
         destinationService!!.writeConnectorMetadata(
           destinationDefinition,
-          createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag),
+          createBaseActorDefVersion(destinationDefinition.destinationDefinitionId).withDockerImageTag(dockerImageTag),
           emptyList(),
         )
       },
@@ -414,8 +411,8 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     // Initial insert
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()
     val destinationDefinition: StandardDestinationDefinition = createBaseDestDef()
-    val sourceActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId())
-    val destinationActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId())
+    val sourceActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.sourceDefinitionId)
+    val destinationActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.destinationDefinitionId)
     sourceService!!.writeConnectorMetadata(sourceDefinition, sourceActorDefinitionVersion, emptyList())
     destinationService!!.writeConnectorMetadata(
       destinationDefinition,
@@ -425,50 +422,50 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
 
     val sourceBreakingChanges =
       listOf(
-        MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG)!!.withActorDefinitionId(sourceDefinition.getSourceDefinitionId()),
+        MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG)!!.withActorDefinitionId(sourceDefinition.sourceDefinitionId),
       )
     val destinationBreakingChanges =
       listOf(
-        MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG)!!.withActorDefinitionId(destinationDefinition.getDestinationDefinitionId()),
+        MockData.actorDefinitionBreakingChange(UPGRADE_IMAGE_TAG)!!.withActorDefinitionId(destinationDefinition.destinationDefinitionId),
       )
 
     // Update
     if (upgradeShouldSucceed) {
       Assertions.assertDoesNotThrow(
-        Executable {
+        {
           sourceService!!.writeConnectorMetadata(
             sourceDefinition,
-            createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag),
+            createBaseActorDefVersion(sourceDefinition.sourceDefinitionId).withDockerImageTag(dockerImageTag),
             sourceBreakingChanges,
           )
         },
       )
       Assertions.assertDoesNotThrow(
-        Executable {
+        {
           destinationService!!.writeConnectorMetadata(
             destinationDefinition,
-            createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag),
+            createBaseActorDefVersion(destinationDefinition.destinationDefinitionId).withDockerImageTag(dockerImageTag),
             destinationBreakingChanges,
           )
         },
       )
     } else {
-      Assertions.assertThrows<IllegalArgumentException?>(
+      Assertions.assertThrows(
         IllegalArgumentException::class.java,
-        Executable {
+        {
           sourceService!!.writeConnectorMetadata(
             sourceDefinition,
-            createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withDockerImageTag(dockerImageTag),
+            createBaseActorDefVersion(sourceDefinition.sourceDefinitionId).withDockerImageTag(dockerImageTag),
             sourceBreakingChanges,
           )
         },
       )
-      Assertions.assertThrows<IllegalArgumentException?>(
+      Assertions.assertThrows(
         IllegalArgumentException::class.java,
-        Executable {
+        {
           destinationService!!.writeConnectorMetadata(
             destinationDefinition,
-            createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId()).withDockerImageTag(dockerImageTag),
+            createBaseActorDefVersion(destinationDefinition.destinationDefinitionId).withDockerImageTag(dockerImageTag),
             destinationBreakingChanges,
           )
         },
@@ -481,16 +478,16 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     val initialADVId = UUID.randomUUID()
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()
     val actorDefinitionVersion1: ActorDefinitionVersion =
-      createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId()).withVersionId(initialADVId)
+      createBaseActorDefVersion(sourceDefinition.sourceDefinitionId).withVersionId(initialADVId)
 
     sourceService!!.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion1, emptyList())
 
-    val sourceDefId = sourceDefinition.getSourceDefinitionId()
+    val sourceDefId = sourceDefinition.sourceDefinitionId
     val sourceConnection: SourceConnection = createBaseSourceActor(sourceDefId)
     sourceService!!.writeSourceConnectionNoSecrets(sourceConnection)
 
     val initialSourceDefinitionDefaultVersionId =
-      sourceService!!.getStandardSourceDefinition(sourceDefId).getDefaultVersionId()
+      sourceService!!.getStandardSourceDefinition(sourceDefId).defaultVersionId
     Assertions.assertNotNull(initialSourceDefinitionDefaultVersionId)
 
     // Introduce a breaking change between 0.0.1 and UPGRADE_IMAGE_TAG to make the upgrade breaking, but
@@ -498,7 +495,7 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     // We want to check that the state is rolled back correctly.
     val invalidVersion = "1.0.0"
     val breakingChangesForDef =
-      List.of<ActorDefinitionBreakingChange?>(MockData.actorDefinitionBreakingChange(invalidVersion)!!.withActorDefinitionId(sourceDefId))
+      listOf(MockData.actorDefinitionBreakingChange(invalidVersion)!!.withActorDefinitionId(sourceDefId))
 
     val newVersionId = UUID.randomUUID()
     val newVersion =
@@ -510,15 +507,15 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
         .withDockerImageTag(invalidVersion)
         .withDocumentationUrl("https://www.something.new")
 
-    val updatedSourceDefinition = clone<StandardSourceDefinition>(sourceDefinition).withName("updated name")
+    val updatedSourceDefinition = clone(sourceDefinition).withName("updated name")
 
-    Assertions.assertThrows<DataAccessException?>(
+    Assertions.assertThrows(
       DataAccessException::class.java,
-      Executable { sourceService!!.writeConnectorMetadata(updatedSourceDefinition, newVersion, breakingChangesForDef) },
+      { sourceService!!.writeConnectorMetadata(updatedSourceDefinition, newVersion, breakingChangesForDef) },
     )
 
     val sourceDefinitionDefaultVersionIdAfterFailedUpgrade =
-      sourceService!!.getStandardSourceDefinition(sourceDefId).getDefaultVersionId()
+      sourceService!!.getStandardSourceDefinition(sourceDefId).defaultVersionId
     val sourceDefinitionAfterFailedUpgrade =
       sourceService!!.getStandardSourceDefinition(sourceDefId)
     val newActorDefinitionVersionAfterFailedUpgrade =
@@ -541,7 +538,6 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   companion object {
-    private val DEFAULT_ORGANIZATION_ID: UUID = UUID.randomUUID()
     private val WORKSPACE_ID: UUID = UUID.randomUUID()
     private val DATAPLANE_GROUP_ID: UUID = UUID.randomUUID()
 
@@ -554,7 +550,7 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
       val id = UUID.randomUUID()
 
       return StandardSourceDefinition()
-        .withName("source-def-" + id)
+        .withName("source-def-$id")
         .withSourceDefinitionId(id)
         .withTombstone(false)
         .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES)
@@ -563,14 +559,14 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
     private fun createBaseActorDefVersion(actorDefId: UUID?): ActorDefinitionVersion =
       ActorDefinitionVersion()
         .withActorDefinitionId(actorDefId)
-        .withDockerRepository("source-image-" + actorDefId)
+        .withDockerRepository("source-image-$actorDefId")
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withProtocolVersion(PROTOCOL_VERSION)
         .withSupportLevel(SupportLevel.CERTIFIED)
         .withInternalSupportLevel(200L)
         .withSpec(
           ConnectorSpecification()
-            .withConnectionSpecification(jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("key", "value1")))
+            .withConnectionSpecification(jsonNode(mapOf<String?, String?>("key" to "value1")))
             .withProtocolVersion(
               PROTOCOL_VERSION,
             ),
@@ -580,7 +576,7 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
       val id = UUID.randomUUID()
 
       return StandardDestinationDefinition()
-        .withName("source-def-" + id)
+        .withName("source-def-$id")
         .withDestinationDefinitionId(id)
         .withTombstone(false)
     }
@@ -592,7 +588,7 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
         .withSourceId(id)
         .withSourceDefinitionId(actorDefinitionId)
         .withWorkspaceId(WORKSPACE_ID)
-        .withName("source-" + id)
+        .withName("source-$id")
     }
   }
 }

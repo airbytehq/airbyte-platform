@@ -19,7 +19,6 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
-import java.util.EnumSet
 
 /**
  * Wrapper around the Files API for encapsulation and testing purposes.
@@ -79,7 +78,7 @@ class FileClient(
 
   companion object {
     val pipePermissions =
-      EnumSet.of(
+      setOf(
         PosixFilePermission.OWNER_READ,
         PosixFilePermission.OWNER_WRITE,
         PosixFilePermission.GROUP_READ,

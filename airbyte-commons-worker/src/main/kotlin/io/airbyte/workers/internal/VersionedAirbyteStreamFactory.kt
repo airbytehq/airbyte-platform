@@ -214,7 +214,7 @@ class VersionedAirbyteStreamFactory<T>(
   private suspend fun filterLog(message: AirbyteMessage): Boolean {
     val isLog = message.type == AirbyteMessage.Type.LOG
     if (isLog) {
-      containerLogMdcBuilder.build().use { ignored ->
+      containerLogMdcBuilder.build().use { _ ->
         withContext(MDCContext(MDC.getCopyOfContextMap())) {
           internalLog(message.log)
         }
@@ -286,7 +286,7 @@ class VersionedAirbyteStreamFactory<T>(
       return
     }
     try {
-      containerLogMdcBuilder.build().use { ignored ->
+      containerLogMdcBuilder.build().use { _ ->
         connectionId.ifPresentOrElse(
           Consumer { c: UUID? ->
             metricClient.count(
@@ -330,7 +330,7 @@ class VersionedAirbyteStreamFactory<T>(
    */
   private fun logMalformedLogMessage(line: String) {
     try {
-      containerLogMdcBuilder.build().use { ignored ->
+      containerLogMdcBuilder.build().use { _ ->
         if (line.lowercase(Locale.getDefault()).replace("\\s".toRegex(), "").contains("{\"type\":\"record\",\"record\":")) {
           // Connectors can sometimes log error messages from failing to parse an AirbyteRecordMessage.
           // Filter on record into debug to try and prevent such cases. Though this catches non-record
@@ -357,7 +357,7 @@ class VersionedAirbyteStreamFactory<T>(
   internal fun upgradeMessage(msg: AirbyteMessage): Stream<AirbyteMessage?> {
     try {
       val message: AirbyteMessage = migrator.upgrade(msg, configuredAirbyteCatalog)
-      return Stream.of(message)
+      return listOf<AirbyteMessage?>(message).stream()
     } catch (e: RuntimeException) {
       logger.warn(e) { "Failed to upgrade a message from version $protocolVersion: ${Jsons.serialize<AirbyteMessage?>(msg)}" }
       return Stream.empty()

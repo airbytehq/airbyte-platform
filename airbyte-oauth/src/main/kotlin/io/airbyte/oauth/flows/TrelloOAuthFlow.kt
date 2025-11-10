@@ -131,7 +131,7 @@ class TrelloOAuthFlow : BaseOAuthFlow {
     oAuthGetAccessToken.consumerKey = clientKey
     val accessTokenResponse = oAuthGetAccessToken.execute()
     val accessToken = accessTokenResponse.token
-    return java.util.Map.of<String, Any>("token", accessToken, "key", clientKey)
+    return mapOf("token" to accessToken, "key" to clientKey)
   }
 
   override fun getDefaultOAuthOutputPath(): List<String> = listOf()

@@ -14,7 +14,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mock
 import org.mockito.Mockito
 import java.util.UUID
-import java.util.stream.Stream
 
 internal class CheckRunProgressActivityTest {
   @Mock
@@ -55,8 +54,8 @@ internal class CheckRunProgressActivityTest {
 
   companion object {
     @JvmStatic
-    fun jobAttemptMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    fun jobAttemptMatrix() =
+      listOf<Arguments?>(
         Arguments.of(1L, 0, true),
         Arguments.of(134512351235L, 7812387, false),
         Arguments.of(8L, 32, true),

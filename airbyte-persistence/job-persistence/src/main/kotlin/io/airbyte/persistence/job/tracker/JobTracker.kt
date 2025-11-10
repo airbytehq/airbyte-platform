@@ -39,16 +39,15 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
+import io.airbyte.persistence.job.tracker.JobTracker.JobState
 import io.airbyte.validation.json.JsonSchemaValidator
 import jakarta.inject.Singleton
-import java.util.Collections
-import java.util.List
 import java.util.Locale
 import java.util.Optional
-import java.util.Set
 import java.util.UUID
-import java.util.stream.Collectors
 import kotlin.jvm.optionals.getOrNull
+
+private val TERMINAL_JOB_STATES = listOf(JobState.SUCCEEDED, JobState.FAILED)
 
 /**
  * Tracking calls to each job type.
@@ -107,9 +106,9 @@ class JobTracker
           generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId)
         val stateMetadata = generateStateMetadata(jobState)
         track(
-          workspaceId,
-          CHECK_CONNECTION_SOURCE_EVENT,
-          checkConnMetadata + failureReasonMetadata + jobMetadata + sourceDefMetadata + stateMetadata,
+          workspaceId = workspaceId,
+          action = CHECK_CONNECTION_SOURCE_EVENT,
+          metadata = checkConnMetadata + failureReasonMetadata + jobMetadata + sourceDefMetadata + stateMetadata,
         )
       }
     }
@@ -143,9 +142,9 @@ class JobTracker
           generateDestinationDefinitionMetadata(destinationDefinitionId, workspaceId, actorId)
         val stateMetadata = generateStateMetadata(jobState)
         track(
-          workspaceId,
-          CHECK_CONNECTION_DESTINATION_EVENT,
-          checkConnMetadata + failureReasonMetadata + jobMetadata + destinationDefinitionMetadata + stateMetadata,
+          workspaceId = workspaceId,
+          action = CHECK_CONNECTION_DESTINATION_EVENT,
+          metadata = checkConnMetadata + failureReasonMetadata + jobMetadata + destinationDefinitionMetadata + stateMetadata,
         )
       }
     }
@@ -181,9 +180,9 @@ class JobTracker
           }
         val stateMetadata = generateStateMetadata(jobState)
         track(
-          workspaceId,
-          DISCOVER_EVENT,
-          jobMetadata + failureReasonMetadata + actorDefMetadata + stateMetadata,
+          workspaceId = workspaceId,
+          action = DISCOVER_EVENT,
+          metadata = jobMetadata + failureReasonMetadata + actorDefMetadata + stateMetadata,
         )
       }
     }
@@ -232,7 +231,7 @@ class JobTracker
 
         val jobsHistory =
           jobPersistence.listJobsIncludingId(
-            Set.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH),
+            setOf(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH),
             connectionId.toString(),
             jobId,
             2,
@@ -255,16 +254,17 @@ class JobTracker
           )
         val refreshMetadata = generateRefreshMetadata(jobConfig)
         track(
-          workspaceId,
-          SYNC_EVENT,
-          jobMetadata +
-            jobAttemptMetadata +
-            sourceDefMetadata +
-            destinationDefMetadata +
-            syncMetadata +
-            stateMetadata +
-            syncConfigMetadata +
-            refreshMetadata,
+          workspaceId = workspaceId,
+          action = SYNC_EVENT,
+          metadata =
+            jobMetadata +
+              jobAttemptMetadata +
+              sourceDefMetadata +
+              destinationDefMetadata +
+              syncMetadata +
+              stateMetadata +
+              syncConfigMetadata +
+              refreshMetadata,
         )
       }
     }
@@ -335,18 +335,15 @@ class JobTracker
         val syncMetadata = generateSyncMetadata(standardSync)
         val stateMetadata = generateStateMetadata(jobState)
         val generalMetadata =
-          java.util.Map.of<String, Any?>(
-            "connection_id",
-            connectionId,
-            "internal_error_cause",
-            e.message,
-            "internal_error_type",
-            e.javaClass.name,
+          mapOf(
+            "connection_id" to connectionId,
+            "internal_error_cause" to e.message,
+            "internal_error_type" to e.javaClass.name,
           )
         track(
-          workspaceId,
-          INTERNAL_FAILURE_SYNC_EVENT,
-          jobMetadata + jobAttemptMetadata + sourceDefMetadata + destinationDefMetadata + syncMetadata + stateMetadata + generalMetadata,
+          workspaceId = workspaceId,
+          action = INTERNAL_FAILURE_SYNC_EVENT,
+          metadata = jobMetadata + jobAttemptMetadata + sourceDefMetadata + destinationDefMetadata + syncMetadata + stateMetadata + generalMetadata,
         )
       }
     }
@@ -356,17 +353,14 @@ class JobTracker
         val refreshTypes =
           jobConfig
             .raw
-            ?.getRefresh()
+            ?.refresh
             ?.streamsToRefresh
-            ?.stream()
             ?.map { obj: RefreshStream -> obj.refreshType }
-            ?.collect(Collectors.toSet())
-            ?.stream()
+            ?.toSet()
             ?.map { obj: RefreshStream.RefreshType -> obj.value() }
-            ?.toList()
-        return java.util.Map.of<String, Any?>("refresh_types", refreshTypes)
+        return mapOf("refresh_types" to refreshTypes)
       }
-      return java.util.Map.of()
+      return emptyMap()
     }
 
     private fun generateSyncConfigMetadata(
@@ -382,10 +376,10 @@ class JobTracker
           val sourceConfiguration = attemptSyncConfig.sourceConfiguration
           val destinationConfiguration = attemptSyncConfig.destinationConfiguration
 
-          actorConfigMetadata[CONFIG + ".source"] =
+          actorConfigMetadata["$CONFIG.source"] =
             mapToJsonString(configToMetadata(sourceConfiguration, sourceConfigSchema))
 
-          actorConfigMetadata[CONFIG + ".destination"] =
+          actorConfigMetadata["$CONFIG.destination"] =
             mapToJsonString(configToMetadata(destinationConfiguration, destinationConfigSchema))
         }
 
@@ -407,9 +401,9 @@ class JobTracker
       val output: MutableMap<String, Any?> = HashMap()
 
       for ((_, syncMode, destinationSyncMode) in catalog.streams) {
-        output[CATALOG + ".sync_mode." + syncMode.name.lowercase(Locale.getDefault())] =
+        output["$CATALOG.sync_mode.${syncMode.name.lowercase(Locale.getDefault())}"] =
           SET
-        output[CATALOG + ".destination_sync_mode." + destinationSyncMode.name.lowercase(Locale.getDefault())] =
+        output["$CATALOG.destination_sync_mode.${destinationSyncMode.name.lowercase(Locale.getDefault())}"] =
           SET
       }
 
@@ -417,7 +411,7 @@ class JobTracker
     }
 
     private fun generateSyncMetadata(standardSync: StandardSync): Map<String, Any?> {
-      val operationUsage: MutableMap<String, Any?> = HashMap()
+      val operationUsage: MutableMap<String, Any?> = hashMapOf()
       for (operationId in standardSync.operationIds) {
         val operation = operationService.getStandardSyncOperation(operationId)
         if (operation != null) {
@@ -426,7 +420,7 @@ class JobTracker
         }
       }
 
-      val streamCountData: MutableMap<String, Any?> = HashMap()
+      val streamCountData: MutableMap<String, Any?> = hashMapOf()
       val streamCount = standardSync.catalog.streams.size
       streamCountData["number_of_streams"] = streamCount
 
@@ -440,7 +434,7 @@ class JobTracker
      * the whole picture. The `check_connection_outcome` field tracks this.
      */
     private fun generateCheckConnectionMetadata(output: StandardCheckConnectionOutput?): Map<String, Any?> {
-      val metadata: MutableMap<String, Any?> = HashMap()
+      val metadata: MutableMap<String, Any?> = hashMapOf()
 
       if (output == null) {
         return metadata
@@ -450,14 +444,14 @@ class JobTracker
         metadata["check_connection_message"] = output.message
       }
       metadata["check_connection_outcome"] = output.status.toString()
-      return Collections.unmodifiableMap(metadata)
+      return metadata.toMap()
     }
 
     private fun generateFailureReasonMetadata(failureReason: FailureReason?): Map<String, Any?> {
       if (failureReason == null) {
-        return java.util.Map.of()
+        return emptyMap()
       }
-      return java.util.Map.of<String, Any?>("failure_reason", TrackingMetadata.failureReasonAsJson(failureReason).toString())
+      return mapOf("failure_reason" to TrackingMetadata.failureReasonAsJson(failureReason).toString())
     }
 
     private fun generateDestinationDefinitionMetadata(
@@ -501,25 +495,24 @@ class JobTracker
       configType: ConfigType?,
       attempt: Int,
       previousJob: Optional<Job>,
-    ): Map<String, Any?> {
-      val metadata: MutableMap<String, Any?> = HashMap()
-      if (configType != null) {
-        // This is a cosmetic fix for our job tracking.
-        // https://github.com/airbytehq/airbyte-internal-issues/issues/7671 tracks the more complete
-        // refactoring. Once that is done, this should no longer be needed as we can directly log
-        // configType.
-        val eventConfigType = if (configType == ConfigType.RESET_CONNECTION) ConfigType.CLEAR else configType
-        metadata["job_type"] = eventConfigType
-      }
-      metadata["job_id"] = jobId
-      metadata["attempt_id"] = attempt
-      previousJob.ifPresent { job: Job ->
-        if (job.configType != null) {
-          metadata["previous_job_type"] = job.configType
+    ): Map<String, Any?> =
+      buildMap {
+        configType?.let {
+          // This is a cosmetic fix for our job tracking.
+          // https://github.com/airbytehq/airbyte-internal-issues/issues/7671 tracks the more complete
+          // refactoring. Once that is done, this should no longer be needed as we can directly log
+          // configType.
+          val eventConfigType = if (configType == ConfigType.RESET_CONNECTION) ConfigType.CLEAR else configType
+          put("job_type", eventConfigType)
+        }
+        put("job_id", jobId)
+        put("attempt_id", attempt)
+        previousJob.ifPresent { job: Job ->
+          job.configType.let {
+            put("previous_job_type", job.configType)
+          }
         }
       }
-      return Collections.unmodifiableMap(metadata)
-    }
 
     private fun generateJobAttemptMetadata(
       jobId: Long,
@@ -529,7 +522,7 @@ class JobTracker
       return if (jobState != JobState.STARTED) {
         TrackingMetadata.generateJobAttemptMetadata(job)
       } else {
-        java.util.Map.of()
+        emptyMap()
       }
     }
 
@@ -544,14 +537,17 @@ class JobTracker
         val standardWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)
         if (standardWorkspace?.name != null) {
           val standardTrackingMetadata =
-            java.util.Map.of<String, Any?>(
-              "workspace_id",
-              workspaceId,
-              "workspace_name",
-              standardWorkspace.name,
+            mapOf(
+              "workspace_id" to workspaceId,
+              "workspace_name" to standardWorkspace.name,
             )
 
-          trackingClient.track(workspaceId, ScopeType.WORKSPACE, action, metadata + standardTrackingMetadata)
+          trackingClient.track(
+            scopeId = workspaceId,
+            scopeType = ScopeType.WORKSPACE,
+            action = action,
+            metadata = metadata + standardTrackingMetadata,
+          )
         }
       }
     }
@@ -572,7 +568,7 @@ class JobTracker
       private fun mapToJsonString(map: Map<String?, Any?>): String =
         try {
           OBJECT_MAPPER.writeValueAsString(map)
-        } catch (e: JsonProcessingException) {
+        } catch (_: JsonProcessingException) {
           "<failed to convert to JSON>"
         }
 
@@ -641,27 +637,24 @@ class JobTracker
           }
           return output
         } else if (config.isBoolean) {
-          return Collections.singletonMap<String?, Any>(null, config.asBoolean())
+          return mapOf(null to config.asBoolean())
         } else if ((!config.isTextual && !config.isNull) || (config.isTextual && !config.asText().isEmpty())) {
           // This is either non-textual (e.g. integer, array, etc) or non-empty text
-          return Collections.singletonMap<String?, Any>(null, SET)
+          return mapOf<String?, Any>(null to SET)
         } else {
           // Otherwise, this is an empty string, so just ignore it
           return emptyMap()
         }
       }
 
-      private fun generateStateMetadata(jobState: JobState): Map<String, Any?> {
-        val metadata: MutableMap<String, Any?> = HashMap()
-
-        if (JobState.STARTED == jobState) {
-          metadata["attempt_stage"] = "STARTED"
-        } else if (List.of<JobState>(JobState.SUCCEEDED, JobState.FAILED).contains(jobState)) {
-          metadata["attempt_stage"] = "ENDED"
-          metadata["attempt_completion_status"] = jobState
+      private fun generateStateMetadata(jobState: JobState): Map<String, Any?> =
+        buildMap {
+          if (JobState.STARTED == jobState) {
+            put("attempt_stage", "STARTED")
+          } else if (TERMINAL_JOB_STATES.contains(jobState)) {
+            put("attempt_stage", "ENDED")
+            put("attempt_completion_status", jobState)
+          }
         }
-
-        return Collections.unmodifiableMap(metadata)
-      }
     }
   }

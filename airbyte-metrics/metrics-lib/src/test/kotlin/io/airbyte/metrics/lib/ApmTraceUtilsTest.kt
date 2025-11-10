@@ -30,7 +30,6 @@ import org.mockito.Mockito
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.nio.file.Path
-import java.util.List
 import java.util.UUID
 
 /**
@@ -50,8 +49,8 @@ internal class ApmTraceUtilsTest {
     Mockito.`when`(tracer.activeSpan()).thenReturn(span)
     GlobalTracerTestUtil.setGlobalTracerUnconditionally(tracer)
     addTagsToTrace(TAGS)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, TAG_1), VALUE_1)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, TAG_2), VALUE_2)
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, TAG_1), VALUE_1)
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, TAG_2), VALUE_2)
   }
 
   @Test
@@ -62,11 +61,11 @@ internal class ApmTraceUtilsTest {
 
     GlobalTracerTestUtil.setGlobalTracerUnconditionally(tracer)
 
-    val attrs = List.of(MetricAttribute(TAG_1, VALUE_1), MetricAttribute(TAG_2, VALUE_2))
+    val attrs = listOf(MetricAttribute(TAG_1, VALUE_1), MetricAttribute(TAG_2, VALUE_2))
     addTagsToTrace(attrs)
 
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, TAG_1), VALUE_1)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, TAG_2), VALUE_2)
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, TAG_1), VALUE_1)
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, TAG_2), VALUE_2)
   }
 
   @Test
@@ -77,8 +76,8 @@ internal class ApmTraceUtilsTest {
     GlobalTracerTestUtil.setGlobalTracerUnconditionally(tracer)
     val tagPrefix = PREFIX
     addTagsToTrace(TAGS, tagPrefix)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, tagPrefix, TAG_1), VALUE_1)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, tagPrefix, TAG_2), VALUE_2)
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, tagPrefix, TAG_1), VALUE_1)
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, tagPrefix, TAG_2), VALUE_2)
   }
 
   @Test
@@ -86,8 +85,8 @@ internal class ApmTraceUtilsTest {
     val tagPrefix = PREFIX
     val span = Mockito.mock(Span::class.java)
     addTagsToTrace(span, TAGS, tagPrefix)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, tagPrefix, TAG_1), VALUE_1)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, tagPrefix, TAG_2), VALUE_2)
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, tagPrefix, TAG_1), VALUE_1)
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, tagPrefix, TAG_2), VALUE_2)
   }
 
   @Test
@@ -123,8 +122,8 @@ internal class ApmTraceUtilsTest {
     Mockito.`when`((activeSpan as MutableSpan).localRootSpan).thenReturn(localRootSpan)
     GlobalTracerTestUtil.setGlobalTracerUnconditionally(tracer)
     addTagsToRootSpan(TAGS)
-    Mockito.verify<MutableSpan>(localRootSpan, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, TAG_1), VALUE_1)
-    Mockito.verify<MutableSpan>(localRootSpan, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, TAG_2), VALUE_2)
+    Mockito.verify<MutableSpan>(localRootSpan, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, TAG_1), VALUE_1)
+    Mockito.verify<MutableSpan>(localRootSpan, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, TAG_2), VALUE_2)
   }
 
   @Test
@@ -148,42 +147,42 @@ internal class ApmTraceUtilsTest {
     val attemptNumber = 2L
 
     addTagsToTrace(connectionID, attemptNumber, jobId, jobRoot)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString())
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString())
     Mockito
       .verify<Span>(span, Mockito.times(1))
-      .setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString())
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString())
+      .setTag(String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString())
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId)
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString())
 
     Mockito.clearInvocations(span)
     addTagsToTrace(null, null, jobId, jobRoot)
-    Mockito.verify<Span>(span, Mockito.never()).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString())
-    Mockito.verify<Span>(span, Mockito.never()).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString())
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString())
+    Mockito.verify(span, Mockito.never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString())
+    Mockito.verify(span, Mockito.never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString())
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId)
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString())
 
     Mockito.clearInvocations(span)
     addTagsToTrace(connectionID, null, jobId, null)
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString())
-    Mockito.verify<Span>(span, Mockito.never()).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString())
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId)
-    Mockito.verify<Span>(span, Mockito.never()).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString())
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString())
+    Mockito.verify(span, Mockito.never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString())
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId)
+    Mockito.verify(span, Mockito.never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString())
 
     Mockito.clearInvocations(span)
     addTagsToTrace(null, attemptNumber, jobId, null)
     Mockito
-      .verify<Span>(span, Mockito.times(1))
-      .setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString())
-    Mockito.verify<Span>(span, Mockito.times(1)).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId)
-    Mockito.verify<Span>(span, Mockito.never()).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), jobRoot.toString())
-    Mockito.verify<Span>(span, Mockito.never()).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString())
+      .verify(span, Mockito.times(1))
+      .setTag(String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString())
+    Mockito.verify(span, Mockito.times(1)).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId)
+    Mockito.verify(span, Mockito.never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), jobRoot.toString())
+    Mockito.verify(span, Mockito.never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString())
 
     Mockito.clearInvocations(span)
     addTagsToTrace(null as UUID?, null, null, null)
-    Mockito.verify<Span>(span, Mockito.never()).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString())
-    Mockito.verify<Span>(span, Mockito.never()).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString())
-    Mockito.verify<Span>(span, Mockito.never()).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId)
-    Mockito.verify<Span>(span, Mockito.never()).setTag(kotlin.String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString())
+    Mockito.verify(span, Mockito.never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, CONNECTION_ID_KEY), connectionID.toString())
+    Mockito.verify(span, Mockito.never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, ATTEMPT_NUMBER_KEY), attemptNumber.toString())
+    Mockito.verify(span, Mockito.never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ID_KEY), jobId)
+    Mockito.verify(span, Mockito.never()).setTag(String.format(TAG_FORMAT, TAG_PREFIX, JOB_ROOT_KEY), jobRoot.toString())
   }
 
   @Test
@@ -203,10 +202,10 @@ internal class ApmTraceUtilsTest {
     GlobalTracerTestUtil.setGlobalTracerUnconditionally(tracer)
 
     recordErrorOnRootSpan(exception)
-    Mockito.verify<Span>(activeSpan, Mockito.times(1)).setTag(Tags.ERROR, true)
-    Mockito.verify<Span>(activeSpan, Mockito.times(1)).log(java.util.Map.of(Fields.ERROR_OBJECT, exception))
+    Mockito.verify(activeSpan, Mockito.times(1)).setTag(Tags.ERROR, true)
+    Mockito.verify(activeSpan, Mockito.times(1)).log(mapOf(Fields.ERROR_OBJECT to exception))
 
-    Mockito.verify(localRootSpan, Mockito.times(1)).setError(true)
+    Mockito.verify(localRootSpan, Mockito.times(1)).isError = true
     Mockito.verify(localRootSpan, Mockito.times(1)).setTag(DDTags.ERROR_MSG, exception.message)
     Mockito.verify(localRootSpan, Mockito.times(1)).setTag(DDTags.ERROR_TYPE, exception.javaClass.name)
     val expectedErrorString = StringWriter()
@@ -229,6 +228,6 @@ internal class ApmTraceUtilsTest {
     private const val VALUE_1 = "foo"
     private const val VALUE_2 = "bar"
     private const val PREFIX = "prefix"
-    private val TAGS: Map<String?, Any?> = java.util.Map.of<String?, Any?>(TAG_1, VALUE_1, TAG_2, VALUE_2)
+    private val TAGS: Map<String?, Any?> = mapOf<String?, Any?>(TAG_1 to VALUE_1, TAG_2 to VALUE_2)
   }
 }

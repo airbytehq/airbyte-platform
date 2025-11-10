@@ -19,7 +19,6 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.config.JobWebhookConfig
 import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.FieldSelectionWorkspaces.AddSchedulingJitter
 import io.airbyte.featureflag.LoadShedSchedulerBackoffMinutes
@@ -56,10 +55,7 @@ import java.text.ParseException
 import java.time.DateTimeException
 import java.time.Duration
 import java.util.Date
-import java.util.List
-import java.util.Map
 import java.util.Optional
-import java.util.Set
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
@@ -82,7 +78,7 @@ class ConfigFetchActivityImpl
     @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
     override fun getTimeToWait(input: ScheduleRetrieverInput): ScheduleRetrieverOutput {
       try {
-        ApmTraceUtils.addTagsToTrace(Map.of<String?, UUID?>(CONNECTION_ID_KEY, input.connectionId))
+        ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to input.connectionId))
         val connectionIdRequestBody = ConnectionIdRequestBody(input.connectionId!!)
         val connectionRead = airbyteApiClient.connectionApi.getConnection(connectionIdRequestBody)
         val workspaceId = airbyteApiClient.workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody).workspaceId
@@ -140,7 +136,7 @@ class ConfigFetchActivityImpl
       if (featureFlagClient.boolVariation(
           AddSchedulingJitter,
           Multi(
-            List.of<Context?>(
+            listOf(
               Workspace(workspaceId),
               Connection(connectionId),
             ),
@@ -187,16 +183,16 @@ class ConfigFetchActivityImpl
             max(0, nextRunStart - currentSecondsSupplier.get()!!),
           )
         return timeToWait
-      } else { // connectionRead.getScheduleType() == ConnectionScheduleType.CRON
+      } else {
         val scheduleCron = connectionRead.scheduleData!!.cron
         val timeZone = DateTimeZone.forID(scheduleCron!!.cronTimeZone).toTimeZone()
         try {
           val cronExpression = CronExpression(scheduleCron.cronExpression)
-          cronExpression.setTimeZone(timeZone)
+          cronExpression.timeZone = timeZone
           if (featureFlagClient.boolVariation(
               UseNewCronScheduleCalculation,
               Multi(
-                List.of<Context?>(
+                listOf(
                   Workspace(workspaceId),
                   Connection(connectionId),
                 ),
@@ -232,7 +228,7 @@ class ConfigFetchActivityImpl
               )
             val nextRunStart = cronExpression.getNextValidTimeAfter(Date(earliestNextRun))
             return Duration.ofSeconds(
-              max(0, nextRunStart.getTime() / MS_PER_SECOND - currentSecondsSupplier.get()!!),
+              max(0, nextRunStart.time / MS_PER_SECOND - currentSecondsSupplier.get()!!),
             )
           }
         } catch (e: ParseException) {
@@ -288,7 +284,7 @@ class ConfigFetchActivityImpl
             airbyteApiClient.jobsApi.getWebhookConfig(GetWebhookConfigRequest(input.jobId)).value,
             JobWebhookConfig::class.java,
           )
-        return GetWebhookConfigOutput(jobWebhookConfig.getOperationSequence(), jobWebhookConfig.getWebhookOperationConfigs())
+        return GetWebhookConfigOutput(jobWebhookConfig.operationSequence, jobWebhookConfig.webhookOperationConfigs)
       } catch (e: Exception) {
         log.warn("Fail to get the webhook config.", e)
         throw RuntimeException(e)
@@ -321,7 +317,7 @@ class ConfigFetchActivityImpl
         ConnectionScheduleDataBasicSchedule.TimeUnit.DAYS -> return TimeUnit.DAYS.toSeconds(1)
         ConnectionScheduleDataBasicSchedule.TimeUnit.WEEKS -> return TimeUnit.DAYS.toSeconds(1) * 7
         ConnectionScheduleDataBasicSchedule.TimeUnit.MONTHS -> return TimeUnit.DAYS.toSeconds(1) * 30
-        else -> throw RuntimeException("Unhandled TimeUnitEnum: " + timeUnitEnum)
+        else -> throw RuntimeException("Unhandled TimeUnitEnum: $timeUnitEnum")
       }
     }
 
@@ -331,7 +327,7 @@ class ConfigFetchActivityImpl
       private const val MS_PER_SECOND = 1000L
       private const val MIN_CRON_INTERVAL_SECONDS: Long = 60
       private val SCHEDULING_NOISE_WORKSPACE_IDS: MutableSet<UUID?> =
-        Set.of<UUID?>( // Testing
+        mutableSetOf( // Testing
           UUID.fromString("0ace5e1f-4787-43df-8919-456f5f4d03d1"),
           UUID.fromString("20810d92-41a4-4cfd-85db-fb50e77cf36b"), // Prod
           UUID.fromString("226edbc1-4a9c-4401-95a9-90435d667d9d"),

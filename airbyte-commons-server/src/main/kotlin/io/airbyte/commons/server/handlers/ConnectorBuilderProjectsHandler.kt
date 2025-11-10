@@ -83,7 +83,6 @@ import jakarta.annotation.Nullable
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.util.Map
 import java.util.Objects
 import java.util.Optional
 import java.util.UUID
@@ -712,11 +711,9 @@ open class ConnectorBuilderProjectsHandler
         getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject())
 
       val traceTags =
-        Map.of<String?, Any?>(
-          WORKSPACE_ID_KEY,
-          requestBody.workspaceId,
-          CONNECTOR_BUILDER_PROJECT_ID_KEY,
-          requestBody.builderProjectId,
+        mapOf<String?, Any?>(
+          WORKSPACE_ID_KEY to requestBody.workspaceId,
+          CONNECTOR_BUILDER_PROJECT_ID_KEY to requestBody.builderProjectId,
         )
       addTagsToTrace(traceTags)
       addTagsToRootSpan(traceTags)
@@ -768,11 +765,9 @@ open class ConnectorBuilderProjectsHandler
         getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject())
 
       val traceTags =
-        Map.of<String?, Any?>(
-          WORKSPACE_ID_KEY,
-          requestBody.workspaceId,
-          CONNECTOR_BUILDER_PROJECT_ID_KEY,
-          requestBody.builderProjectId,
+        mapOf<String?, Any?>(
+          WORKSPACE_ID_KEY to requestBody.workspaceId,
+          CONNECTOR_BUILDER_PROJECT_ID_KEY to requestBody.builderProjectId,
         )
       addTagsToTrace(traceTags)
       addTagsToRootSpan(traceTags)

@@ -12,7 +12,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import java.time.Duration
-import java.util.stream.Stream
 
 internal class RetryManagerTest1 {
   @ParameterizedTest
@@ -62,7 +61,7 @@ internal class RetryManagerTest1 {
 
   @Test
   fun noBackoffIfNoMatchingBackoffPolicy() {
-    val manager = RetryManager(null, null, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE)
+    val manager = RetryManager(null, null, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
 
     manager.incrementFailure(true)
     Assertions.assertEquals(Duration.ZERO, manager.backoff)
@@ -79,7 +78,7 @@ internal class RetryManagerTest1 {
     expectedFBCalls: Int,
     expectedSFBCalls: Int,
   ) {
-    val manager = RetryManager(fb, sfb, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE)
+    val manager = RetryManager(fb, sfb, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
 
     manager.incrementFailure(failureIsPartial)
     manager.backoff
@@ -90,8 +89,8 @@ internal class RetryManagerTest1 {
 
   companion object {
     @JvmStatic
-    private fun limitMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun limitMatrix() =
+      listOf<Arguments?>(
         Arguments.of(1, 10, 10, 10, false, false, false, true, false, true),
         Arguments.of(3, 10, 10, 10, true, false, true, true, true, true),
         Arguments.of(10, 2, 10, 10, true, true, true, false, true, true),
@@ -103,8 +102,8 @@ internal class RetryManagerTest1 {
       )
 
     @JvmStatic
-    private fun backoffPolicyMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun backoffPolicyMatrix() =
+      listOf<Arguments?>(
         Arguments.of(
           Mockito.mock(BackoffPolicy::class.java),
           Mockito.mock(BackoffPolicy::class.java),

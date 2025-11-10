@@ -12,7 +12,6 @@ import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import java.io.IOException
-import java.util.Arrays
 import java.util.UUID
 import java.util.function.Consumer
 
@@ -71,16 +70,12 @@ interface SecretsTestCase {
   @get:Throws(IOException::class)
   val expectedSecretsPaths: List<String>
     get() {
-      return Arrays
-        .stream(
-          Resources
-            .read("$name/expectedPaths")
-            .trim { it <= ' ' }
-            .split(";".toRegex())
-            .dropLastWhile { it.isEmpty() }
-            .toTypedArray(),
-        ).sorted()
-        .toList()
+      return Resources
+        .read("$name/expectedPaths")
+        .trim { it <= ' ' }
+        .split(";")
+        .dropLastWhile { it.isEmpty() }
+        .sorted()
     }
 
   companion object {

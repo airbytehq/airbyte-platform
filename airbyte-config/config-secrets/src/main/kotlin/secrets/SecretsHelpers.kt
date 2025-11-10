@@ -20,12 +20,9 @@ import io.airbyte.config.secrets.persistence.ReadOnlySecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.domain.models.SecretReferenceId
 import io.airbyte.domain.models.SecretStorageId
-import io.github.oshai.kotlinlogging.KotlinLogging
 import secrets.persistence.SecretCoordinateException
 import java.util.UUID
 import java.util.function.Supplier
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Contains most of the core logic surrounding secret coordinate extraction and insertion.

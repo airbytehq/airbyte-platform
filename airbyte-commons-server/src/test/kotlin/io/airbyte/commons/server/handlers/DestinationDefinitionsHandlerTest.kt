@@ -34,7 +34,6 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.AllowedHosts
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistryEntryMetrics
-import io.airbyte.config.MapperConfig
 import io.airbyte.config.ReleaseStage
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.ScopeType
@@ -58,7 +57,6 @@ import io.airbyte.featureflag.HideActorDefinitionFromList
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
-import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import jakarta.validation.Valid
 import org.jooq.JSONB
@@ -74,7 +72,6 @@ import org.mockito.kotlin.eq
 import java.net.URI
 import java.time.LocalDate
 import java.util.Date
-import java.util.Map
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -101,7 +98,7 @@ internal class DestinationDefinitionsHandlerTest {
   private lateinit var destinationService: DestinationService
   private lateinit var workspaceService: WorkspaceService
   private lateinit var licenseEntitlementChecker: LicenseEntitlementChecker
-  private var apiPojoConverters = ApiPojoConverters(CatalogConverter(FieldGenerator(), mutableListOf<Mapper<out MapperConfig>>()))
+  private var apiPojoConverters = ApiPojoConverters(CatalogConverter(FieldGenerator(), mutableListOf()))
 
   @BeforeEach
   fun setUp() {
@@ -156,10 +153,10 @@ internal class DestinationDefinitionsHandlerTest {
   private fun generateVersionFromDestinationDefinition(destinationDefinition: StandardDestinationDefinition): ActorDefinitionVersion {
     val spec =
       ConnectorSpecification()
-        .withConnectionSpecification(jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("foo", "bar")))
+        .withConnectionSpecification(jsonNode(mapOf("foo" to "bar")))
 
     return ActorDefinitionVersion()
-      .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+      .withActorDefinitionId(destinationDefinition.destinationDefinitionId)
       .withDockerImageTag("12.3")
       .withDockerRepository("repo")
       .withDocumentationUrl("https://hulu.com")
@@ -177,7 +174,7 @@ internal class DestinationDefinitionsHandlerTest {
   private fun generateBreakingChangesFromDestinationDefinition(destDef: StandardDestinationDefinition): MutableList<ActorDefinitionBreakingChange> {
     val breakingChange =
       ActorDefinitionBreakingChange()
-        .withActorDefinitionId(destDef.getDestinationDefinitionId())
+        .withActorDefinitionId(destDef.destinationDefinitionId)
         .withVersion(Version("1.0.0"))
         .withMessage("This is a breaking change")
         .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#1.0.0")
@@ -216,8 +213,8 @@ internal class DestinationDefinitionsHandlerTest {
       .`when`(
         actorDefinitionService.getActorDefinitionVersions(
           listOf<UUID?>(
-            destinationDefinition.getDefaultVersionId(),
-            destinationDefinitionWithOptionals.getDefaultVersionId(),
+            destinationDefinition.defaultVersionId,
+            destinationDefinitionWithOptionals.defaultVersionId,
           ),
         ),
       ).thenReturn(
@@ -229,68 +226,68 @@ internal class DestinationDefinitionsHandlerTest {
 
     val expectedDestinationDefinitionRead1 =
       DestinationDefinitionRead()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .name(destinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
+        .name(destinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
         .icon(ICON_URL)
-        .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .protocolVersion(destinationDefinitionVersion.protocolVersion)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(
           io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(destinationDefinitionVersion.getReleaseStage().value()),
-        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
+            .fromValue(destinationDefinitionVersion.releaseStage.value()),
+        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.releaseDate))
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(destinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     val expectedDestinationDefinitionReadWithOpts =
       DestinationDefinitionRead()
-        .destinationDefinitionId(destinationDefinitionWithOptionals.getDestinationDefinitionId())
-        .name(destinationDefinitionWithOptionals.getName())
-        .dockerRepository(destinationDefinitionVersionWithOptionals.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersionWithOptionals.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersionWithOptionals.getDocumentationUrl()))
+        .destinationDefinitionId(destinationDefinitionWithOptionals.destinationDefinitionId)
+        .name(destinationDefinitionWithOptionals.name)
+        .dockerRepository(destinationDefinitionVersionWithOptionals.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersionWithOptionals.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersionWithOptionals.documentationUrl))
         .icon(ICON_URL)
-        .protocolVersion(destinationDefinitionVersionWithOptionals.getProtocolVersion())
+        .protocolVersion(destinationDefinitionVersionWithOptionals.protocolVersion)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel.fromValue(
-            destinationDefinitionVersionWithOptionals.getSupportLevel().value(),
+            destinationDefinitionVersionWithOptionals.supportLevel.value(),
           ),
         ).releaseStage(
           io.airbyte.api.model.generated.ReleaseStage.fromValue(
-            destinationDefinitionVersionWithOptionals.getReleaseStage().value(),
+            destinationDefinitionVersionWithOptionals.releaseStage.value(),
           ),
-        ).releaseDate(LocalDate.parse(destinationDefinitionVersionWithOptionals.getReleaseDate()))
-        .cdkVersion(destinationDefinitionVersionWithOptionals.getCdkVersion())
-        .lastPublished(apiPojoConverters.toOffsetDateTime(destinationDefinitionVersionWithOptionals.getLastPublished()))
-        .metrics(destinationDefinitionWithOptionals.getMetrics())
+        ).releaseDate(LocalDate.parse(destinationDefinitionVersionWithOptionals.releaseDate))
+        .cdkVersion(destinationDefinitionVersionWithOptionals.cdkVersion)
+        .lastPublished(apiPojoConverters.toOffsetDateTime(destinationDefinitionVersionWithOptionals.lastPublished))
+        .metrics(destinationDefinitionWithOptionals.metrics)
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(destinationDefinitionWithOptionals.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(destinationDefinitionWithOptionals.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersionWithOptionals.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersionWithOptionals.getSupportsDataActivation())
+        ).language(destinationDefinitionVersionWithOptionals.language)
+        .supportsDataActivation(destinationDefinitionVersionWithOptionals.supportsDataActivation)
 
     val actualDestinationDefinitionReadList = destinationDefinitionsHandler.listDestinationDefinitions()
 
     Assertions.assertEquals(
       listOf<DestinationDefinitionRead?>(expectedDestinationDefinitionRead1, expectedDestinationDefinitionReadWithOpts),
-      actualDestinationDefinitionReadList.getDestinationDefinitions(),
+      actualDestinationDefinitionReadList.destinationDefinitions,
     )
   }
 
@@ -308,10 +305,10 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
       .thenReturn(workspace)
-    Mockito.`when`(workspace.getOrganizationId()).thenReturn(UUID.randomUUID())
+    Mockito.`when`(workspace.organizationId).thenReturn(UUID.randomUUID())
     Mockito
       .`when`(destinationService.listPublicDestinationDefinitions(false))
-      .thenReturn(listOf<StandardDestinationDefinition>(destinationDefinition))
+      .thenReturn(listOf(destinationDefinition))
     Mockito
       .`when`(
         actorDefinitionVersionHelper.getDestinationVersions(
@@ -320,42 +317,42 @@ internal class DestinationDefinitionsHandlerTest {
           ),
           workspaceId,
         ),
-      ).thenReturn(Map.of<UUID, ActorDefinitionVersion?>(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion))
+      ).thenReturn(mapOf(destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion))
     Mockito
       .`when`(
         licenseEntitlementChecker.checkEntitlements(
           anyOrNull(),
           eq(Entitlement.DESTINATION_CONNECTOR),
-          eq(listOf(destinationDefinition.getDestinationDefinitionId())),
+          eq(listOf(destinationDefinition.destinationDefinitionId)),
         ),
-      ).thenReturn(mapOf(destinationDefinition.getDestinationDefinitionId() to true))
+      ).thenReturn(mapOf(destinationDefinition.destinationDefinitionId to true))
 
     val expectedDestinationDefinitionRead1 =
       DestinationDefinitionRead()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .name(destinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
+        .name(destinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
         .icon(ICON_URL)
-        .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .protocolVersion(destinationDefinitionVersion.protocolVersion)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(
           io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(destinationDefinitionVersion.getReleaseStage().value()),
-        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
+            .fromValue(destinationDefinitionVersion.releaseStage.value()),
+        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.releaseDate))
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(destinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     val actualDestinationDefinitionReadList =
       destinationDefinitionsHandler
@@ -363,7 +360,7 @@ internal class DestinationDefinitionsHandlerTest {
 
     Assertions.assertEquals(
       listOf<DestinationDefinitionRead?>(expectedDestinationDefinitionRead1),
-      actualDestinationDefinitionReadList.getDestinationDefinitions(),
+      actualDestinationDefinitionReadList.destinationDefinitions,
     )
   }
 
@@ -383,7 +380,7 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
       .thenReturn(workspace)
-    Mockito.`when`(workspace.getOrganizationId()).thenReturn(UUID.randomUUID())
+    Mockito.`when`(workspace.organizationId).thenReturn(UUID.randomUUID())
 
     Mockito
       .`when`(
@@ -392,21 +389,21 @@ internal class DestinationDefinitionsHandlerTest {
           eq(Entitlement.DESTINATION_CONNECTOR),
           eq(
             listOf(
-              destinationDefinition.getDestinationDefinitionId(),
-              unentitledDestinationDefinition.getDestinationDefinitionId(),
+              destinationDefinition.destinationDefinitionId,
+              unentitledDestinationDefinition.destinationDefinitionId,
             ),
           ),
         ),
       ).thenReturn(
         mapOf(
-          destinationDefinition.getDestinationDefinitionId() to true,
-          unentitledDestinationDefinition.getDestinationDefinitionId() to false,
+          destinationDefinition.destinationDefinitionId to true,
+          unentitledDestinationDefinition.destinationDefinitionId to false,
         ),
       )
 
     Mockito
       .`when`(destinationService.listPublicDestinationDefinitions(false))
-      .thenReturn(listOf<StandardDestinationDefinition>(destinationDefinition, unentitledDestinationDefinition))
+      .thenReturn(listOf(destinationDefinition, unentitledDestinationDefinition))
     Mockito
       .`when`(
         actorDefinitionVersionHelper.getDestinationVersions(
@@ -415,23 +412,21 @@ internal class DestinationDefinitionsHandlerTest {
           ),
           workspaceId,
         ),
-      ).thenReturn(Map.of<UUID, ActorDefinitionVersion?>(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion))
+      ).thenReturn(mapOf(destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion))
 
     val actualDestinationDefinitionReadList =
       destinationDefinitionsHandler
         .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
 
     val expectedIds =
-      listOf<UUID?>(destinationDefinition.getDestinationDefinitionId())
+      listOf<UUID?>(destinationDefinition.destinationDefinitionId)
 
-    Assertions.assertEquals(expectedIds.size, actualDestinationDefinitionReadList.getDestinationDefinitions().size)
+    Assertions.assertEquals(expectedIds.size, actualDestinationDefinitionReadList.destinationDefinitions.size)
     Assertions.assertTrue(
       expectedIds.containsAll(
         actualDestinationDefinitionReadList
-          .getDestinationDefinitions()
-          .stream()
-          .map<UUID?> { obj: DestinationDefinitionRead? -> obj!!.getDestinationDefinitionId() }
-          .toList(),
+          .destinationDefinitions
+          .map { obj: DestinationDefinitionRead? -> obj!!.destinationDefinitionId },
       ),
     )
   }
@@ -449,10 +444,10 @@ internal class DestinationDefinitionsHandlerTest {
         ),
       ).thenReturn(false)
     Mockito
-      .`when`<Boolean?>(
+      .`when`(
         featureFlagClient.boolVariation(
           HideActorDefinitionFromList,
-          Multi(listOf(DestinationDefinition(hiddenDestinationDefinition.getDestinationDefinitionId()), Workspace(workspaceId))),
+          Multi(listOf(DestinationDefinition(hiddenDestinationDefinition.destinationDefinitionId), Workspace(workspaceId))),
         ),
       ).thenReturn(true)
 
@@ -460,7 +455,7 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
       .thenReturn(workspace)
-    Mockito.`when`(workspace.getOrganizationId()).thenReturn(UUID.randomUUID())
+    Mockito.`when`(workspace.organizationId).thenReturn(UUID.randomUUID())
     Mockito
       .`when`(
         licenseEntitlementChecker.checkEntitlements(
@@ -468,21 +463,21 @@ internal class DestinationDefinitionsHandlerTest {
           eq(Entitlement.DESTINATION_CONNECTOR),
           eq(
             listOf(
-              destinationDefinition.getDestinationDefinitionId(),
-              hiddenDestinationDefinition.getDestinationDefinitionId(),
+              destinationDefinition.destinationDefinitionId,
+              hiddenDestinationDefinition.destinationDefinitionId,
             ),
           ),
         ),
       ).thenReturn(
         mapOf(
-          destinationDefinition.getDestinationDefinitionId() to true,
-          hiddenDestinationDefinition.getDestinationDefinitionId() to true,
+          destinationDefinition.destinationDefinitionId to true,
+          hiddenDestinationDefinition.destinationDefinitionId to true,
         ),
       )
 
     Mockito
       .`when`(destinationService.listPublicDestinationDefinitions(false))
-      .thenReturn(listOf<StandardDestinationDefinition>(destinationDefinition, hiddenDestinationDefinition))
+      .thenReturn(listOf(destinationDefinition, hiddenDestinationDefinition))
     Mockito
       .`when`(
         actorDefinitionVersionHelper.getDestinationVersions(
@@ -491,23 +486,21 @@ internal class DestinationDefinitionsHandlerTest {
           ),
           workspaceId,
         ),
-      ).thenReturn(Map.of<UUID, ActorDefinitionVersion?>(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion))
+      ).thenReturn(mapOf(destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion))
 
     val actualDestinationDefinitionReadList =
       destinationDefinitionsHandler
         .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
 
     val expectedIds =
-      listOf<UUID?>(destinationDefinition.getDestinationDefinitionId())
+      listOf<UUID?>(destinationDefinition.destinationDefinitionId)
 
-    Assertions.assertEquals(expectedIds.size, actualDestinationDefinitionReadList.getDestinationDefinitions().size)
+    Assertions.assertEquals(expectedIds.size, actualDestinationDefinitionReadList.destinationDefinitions.size)
     Assertions.assertTrue(
       expectedIds.containsAll(
         actualDestinationDefinitionReadList
-          .getDestinationDefinitions()
-          .stream()
-          .map<UUID?> { obj: DestinationDefinitionRead? -> obj!!.getDestinationDefinitionId() }
-          .toList(),
+          .destinationDefinitions
+          .map { obj: DestinationDefinitionRead? -> obj!!.destinationDefinitionId },
       ),
     )
   }
@@ -525,7 +518,7 @@ internal class DestinationDefinitionsHandlerTest {
           false,
         ),
       ).thenReturn(
-        listOf<StandardDestinationDefinition>(usedDestinationDefinition),
+        listOf(usedDestinationDefinition),
       )
     Mockito
       .`when`(
@@ -536,10 +529,7 @@ internal class DestinationDefinitionsHandlerTest {
           workspaceId,
         ),
       ).thenReturn(
-        Map.of<UUID, ActorDefinitionVersion?>(
-          usedDestinationDefinitionVersion.getActorDefinitionId(),
-          usedDestinationDefinitionVersion,
-        ),
+        mapOf(usedDestinationDefinitionVersion.actorDefinitionId to usedDestinationDefinitionVersion),
       )
 
     val actualDestinationDefinitionReadList =
@@ -547,16 +537,14 @@ internal class DestinationDefinitionsHandlerTest {
         .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(true))
 
     val expectedIds =
-      listOf<UUID?>(usedDestinationDefinition.getDestinationDefinitionId())
+      listOf<UUID?>(usedDestinationDefinition.destinationDefinitionId)
 
-    Assertions.assertEquals(expectedIds.size, actualDestinationDefinitionReadList.getDestinationDefinitions().size)
+    Assertions.assertEquals(expectedIds.size, actualDestinationDefinitionReadList.destinationDefinitions.size)
     Assertions.assertTrue(
       expectedIds.containsAll(
         actualDestinationDefinitionReadList
-          .getDestinationDefinitions()
-          .stream()
-          .map<UUID?> { obj: DestinationDefinitionRead? -> obj!!.getDestinationDefinitionId() }
-          .toList(),
+          .destinationDefinitions
+          .map { obj: DestinationDefinitionRead? -> obj!!.destinationDefinitionId },
       ),
     )
   }
@@ -576,11 +564,11 @@ internal class DestinationDefinitionsHandlerTest {
       ).thenReturn(false)
     Mockito
       .`when`(destinationService.listPublicDestinationDefinitions(false))
-      .thenReturn(listOf<StandardDestinationDefinition>(destinationDefinition))
+      .thenReturn(listOf(destinationDefinition))
     Mockito
       .`when`(destinationService.listGrantedDestinationDefinitions(workspaceId, false))
       .thenReturn(
-        listOf<StandardDestinationDefinition>(destinationDefinition2),
+        listOf(destinationDefinition2),
       )
     Mockito
       .`when`(
@@ -592,40 +580,36 @@ internal class DestinationDefinitionsHandlerTest {
           workspaceId,
         ),
       ).thenReturn(
-        Map.of<UUID, ActorDefinitionVersion?>(
-          destinationDefinitionVersion.getActorDefinitionId(),
-          destinationDefinitionVersion,
-          destinationDefinitionVersion2.getActorDefinitionId(),
-          destinationDefinitionVersion2,
+        mapOf(
+          destinationDefinitionVersion.actorDefinitionId to destinationDefinitionVersion,
+          destinationDefinitionVersion2.actorDefinitionId to destinationDefinitionVersion2,
         ),
       )
     val workspace = Mockito.mock(StandardWorkspace::class.java)
     Mockito
       .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true))
       .thenReturn(workspace)
-    Mockito.`when`(workspace.getOrganizationId()).thenReturn(UUID.randomUUID())
+    Mockito.`when`(workspace.organizationId).thenReturn(UUID.randomUUID())
     Mockito
       .`when`(
         licenseEntitlementChecker.checkEntitlements(
           anyOrNull(),
           eq(Entitlement.DESTINATION_CONNECTOR),
-          eq(listOf(destinationDefinition.getDestinationDefinitionId())),
+          eq(listOf(destinationDefinition.destinationDefinitionId)),
         ),
-      ).thenReturn(mapOf(destinationDefinition.getDestinationDefinitionId() to true))
+      ).thenReturn(mapOf(destinationDefinition.destinationDefinitionId to true))
 
     val actualDestinationDefinitionReadList =
       destinationDefinitionsHandler
         .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(false))
 
-    val expectedIds = listOf<UUID?>(destinationDefinition.getDestinationDefinitionId(), destinationDefinition2.getDestinationDefinitionId())
-    Assertions.assertEquals(expectedIds.size, actualDestinationDefinitionReadList.getDestinationDefinitions().size)
+    val expectedIds = listOf<UUID?>(destinationDefinition.destinationDefinitionId, destinationDefinition2.destinationDefinitionId)
+    Assertions.assertEquals(expectedIds.size, actualDestinationDefinitionReadList.destinationDefinitions.size)
     Assertions.assertTrue(
       expectedIds.containsAll(
         actualDestinationDefinitionReadList
-          .getDestinationDefinitions()
-          .stream()
-          .map<UUID?> { obj: DestinationDefinitionRead? -> obj!!.getDestinationDefinitionId() }
-          .toList(),
+          .destinationDefinitions
+          .map { obj: DestinationDefinitionRead? -> obj!!.destinationDefinitionId },
       ),
     )
   }
@@ -643,7 +627,7 @@ internal class DestinationDefinitionsHandlerTest {
           false,
         ),
       ).thenReturn(
-        listOf<StandardDestinationDefinition>(usedDestinationDefinition),
+        listOf(usedDestinationDefinition),
       )
     Mockito
       .`when`(
@@ -654,9 +638,8 @@ internal class DestinationDefinitionsHandlerTest {
           workspaceId,
         ),
       ).thenReturn(
-        Map.of<UUID, ActorDefinitionVersion?>(
-          usedDestinationDefinitionVersion.getActorDefinitionId(),
-          usedDestinationDefinitionVersion,
+        mapOf(
+          usedDestinationDefinitionVersion.actorDefinitionId to usedDestinationDefinitionVersion,
         ),
       )
 
@@ -664,15 +647,13 @@ internal class DestinationDefinitionsHandlerTest {
       destinationDefinitionsHandler
         .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(true))
 
-    val expectedIds = listOf<UUID?>(usedDestinationDefinition.getDestinationDefinitionId())
-    Assertions.assertEquals(expectedIds.size, actualDestinationDefinitionReadList.getDestinationDefinitions().size)
+    val expectedIds = listOf<UUID?>(usedDestinationDefinition.destinationDefinitionId)
+    Assertions.assertEquals(expectedIds.size, actualDestinationDefinitionReadList.destinationDefinitions.size)
     Assertions.assertTrue(
       expectedIds.containsAll(
         actualDestinationDefinitionReadList
-          .getDestinationDefinitions()
-          .stream()
-          .map<UUID?> { obj: DestinationDefinitionRead? -> obj!!.getDestinationDefinitionId() }
-          .toList(),
+          .destinationDefinitions
+          .map { obj: DestinationDefinitionRead? -> obj!!.destinationDefinitionId },
       ),
     )
   }
@@ -687,46 +668,41 @@ internal class DestinationDefinitionsHandlerTest {
           false,
         ),
       ).thenReturn(
-        listOf<MutableMap.MutableEntry<StandardDestinationDefinition, Boolean>>(
-          Map.entry<StandardDestinationDefinition, Boolean>(
-            destinationDefinition,
-            false,
-          ),
-        ),
+        mapOf(destinationDefinition to false).entries.toList(),
       )
     Mockito
       .`when`(
         actorDefinitionService.getActorDefinitionVersions(
-          listOf<UUID?>(destinationDefinition.getDefaultVersionId()),
+          listOf<UUID?>(destinationDefinition.defaultVersionId),
         ),
-      ).thenReturn(listOf<ActorDefinitionVersion>(destinationDefinitionVersion))
+      ).thenReturn(listOf(destinationDefinitionVersion))
 
     val expectedDestinationDefinitionRead1 =
       DestinationDefinitionRead()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .name(destinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
+        .name(destinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
         .icon(ICON_URL)
-        .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .protocolVersion(destinationDefinitionVersion.protocolVersion)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(
           io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(destinationDefinitionVersion.getReleaseStage().value()),
-        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
+            .fromValue(destinationDefinitionVersion.releaseStage.value()),
+        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.releaseDate))
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(destinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     val expectedDestinationDefinitionOptInRead1 =
       PrivateDestinationDefinitionRead().destinationDefinition(expectedDestinationDefinitionRead1).granted(false)
@@ -738,7 +714,7 @@ internal class DestinationDefinitionsHandlerTest {
 
     Assertions.assertEquals(
       listOf<PrivateDestinationDefinitionRead?>(expectedDestinationDefinitionOptInRead1),
-      actualDestinationDefinitionOptInReadList.getDestinationDefinitions(),
+      actualDestinationDefinitionOptInReadList.destinationDefinitions,
     )
   }
 
@@ -748,43 +724,43 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(
         destinationService.getStandardDestinationDefinition(
-          destinationDefinition.getDestinationDefinitionId(),
+          destinationDefinition.destinationDefinitionId,
           true,
         ),
       ).thenReturn(destinationDefinition)
     Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
       .thenReturn(destinationDefinitionVersion)
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .name(destinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
+        .name(destinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
         .icon(ICON_URL)
-        .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .protocolVersion(destinationDefinitionVersion.protocolVersion)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(
           io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(destinationDefinitionVersion.getReleaseStage().value()),
-        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
+            .fromValue(destinationDefinitionVersion.releaseStage.value()),
+        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.releaseDate))
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(destinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     val actualDestinationDefinitionRead =
-      destinationDefinitionsHandler.getDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true)
+      destinationDefinitionsHandler.getDestinationDefinition(destinationDefinition.destinationDefinitionId, true)
 
     Assertions.assertEquals(expectedDestinationDefinitionRead, actualDestinationDefinitionRead)
   }
@@ -793,12 +769,12 @@ internal class DestinationDefinitionsHandlerTest {
   @DisplayName("getDestinationDefinitionForWorkspace should throw an exception for a missing grant")
   fun testGetDefinitionWithoutGrantForWorkspace() {
     Mockito
-      .`when`(workspaceService.workspaceCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId))
+      .`when`(workspaceService.workspaceCanUseDefinition(destinationDefinition.destinationDefinitionId, workspaceId))
       .thenReturn(false)
 
     val destinationDefinitionIdWithWorkspaceId =
       DestinationDefinitionIdWithWorkspaceId()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
         .workspaceId(workspaceId)
 
     Assertions.assertThrows(
@@ -812,14 +788,14 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(
         actorDefinitionService.scopeCanUseDefinition(
-          destinationDefinition.getDestinationDefinitionId(),
+          destinationDefinition.destinationDefinitionId,
           workspaceId,
           ScopeType.WORKSPACE.value(),
         ),
       ).thenReturn(false)
     val actorDefinitionIdWithScopeForWorkspace =
       ActorDefinitionIdWithScope()
-        .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .actorDefinitionId(destinationDefinition.destinationDefinitionId)
         .scopeId(workspaceId)
         .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
     Assertions.assertThrows(
@@ -829,14 +805,14 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(
         actorDefinitionService.scopeCanUseDefinition(
-          destinationDefinition.getDestinationDefinitionId(),
+          destinationDefinition.destinationDefinitionId,
           organizationId,
           ScopeType.ORGANIZATION.value(),
         ),
       ).thenReturn(false)
     val actorDefinitionIdWithScopeForOrganization =
       ActorDefinitionIdWithScope()
-        .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .actorDefinitionId(destinationDefinition.destinationDefinitionId)
         .scopeId(organizationId)
         .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION)
     Assertions.assertThrows(
@@ -848,49 +824,49 @@ internal class DestinationDefinitionsHandlerTest {
   @DisplayName("getDestinationDefinitionForWorkspace should return the destination definition if the grant exists")
   fun testGetDefinitionWithGrantForWorkspace() {
     Mockito
-      .`when`(workspaceService.workspaceCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId))
+      .`when`(workspaceService.workspaceCanUseDefinition(destinationDefinition.destinationDefinitionId, workspaceId))
       .thenReturn(true)
     Mockito
       .`when`(
         destinationService.getStandardDestinationDefinition(
-          destinationDefinition.getDestinationDefinitionId(),
+          destinationDefinition.destinationDefinitionId,
           true,
         ),
       ).thenReturn(destinationDefinition)
     Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
       .thenReturn(destinationDefinitionVersion)
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .name(destinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
+        .name(destinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
         .icon(ICON_URL)
-        .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .protocolVersion(destinationDefinitionVersion.protocolVersion)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(
           io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(destinationDefinitionVersion.getReleaseStage().value()),
-        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
+            .fromValue(destinationDefinitionVersion.releaseStage.value()),
+        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.releaseDate))
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(destinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     val destinationDefinitionIdWithWorkspaceId =
       DestinationDefinitionIdWithWorkspaceId()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
         .workspaceId(workspaceId)
 
     val actualDestinationDefinitionRead =
@@ -906,7 +882,7 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(
         actorDefinitionService.scopeCanUseDefinition(
-          destinationDefinition.getDestinationDefinitionId(),
+          destinationDefinition.destinationDefinitionId,
           workspaceId,
           ScopeType.WORKSPACE.value(),
         ),
@@ -914,7 +890,7 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(
         actorDefinitionService.scopeCanUseDefinition(
-          destinationDefinition.getDestinationDefinitionId(),
+          destinationDefinition.destinationDefinitionId,
           organizationId,
           ScopeType.ORGANIZATION.value(),
         ),
@@ -922,44 +898,44 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(
         destinationService.getStandardDestinationDefinition(
-          destinationDefinition.getDestinationDefinitionId(),
+          destinationDefinition.destinationDefinitionId,
           true,
         ),
       ).thenReturn(destinationDefinition)
     Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
       .thenReturn(destinationDefinitionVersion)
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .name(destinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
+        .name(destinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
         .icon(ICON_URL)
-        .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .protocolVersion(destinationDefinitionVersion.protocolVersion)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(
           io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(destinationDefinitionVersion.getReleaseStage().value()),
-        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
+            .fromValue(destinationDefinitionVersion.releaseStage.value()),
+        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.releaseDate))
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(destinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     val actorDefinitionIdWithScopeForWorkspace =
       ActorDefinitionIdWithScope()
-        .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .actorDefinitionId(destinationDefinition.destinationDefinitionId)
         .scopeId(workspaceId)
         .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
 
@@ -971,7 +947,7 @@ internal class DestinationDefinitionsHandlerTest {
 
     val actorDefinitionIdWithScopeForOrganization =
       ActorDefinitionIdWithScope()
-        .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .actorDefinitionId(destinationDefinition.destinationDefinitionId)
         .scopeId(organizationId)
         .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION)
 
@@ -988,22 +964,22 @@ internal class DestinationDefinitionsHandlerTest {
     val newDestinationDefinition = generateDestinationDefinition()
     val destinationDefinitionVersion = generateCustomVersionFromDestinationDefinition(destinationDefinition)
 
-    Mockito.`when`(uuidSupplier.get()).thenReturn(newDestinationDefinition.getDestinationDefinitionId())
+    Mockito.`when`(uuidSupplier.get()).thenReturn(newDestinationDefinition.destinationDefinitionId)
 
     val create =
       DestinationDefinitionCreate()
-        .name(newDestinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(newDestinationDefinition.getIcon())
+        .name(newDestinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
+        .icon(newDestinationDefinition.icon)
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(newDestinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
         )
 
@@ -1015,26 +991,26 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(
         actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
-          create.getDockerRepository(),
-          create.getDockerImageTag(),
-          create.getDocumentationUrl(),
-          customCreate.getWorkspaceId(),
+          create.dockerRepository,
+          create.dockerImageTag,
+          create.documentationUrl,
+          customCreate.workspaceId,
         ),
       ).thenReturn(destinationDefinitionVersion)
 
     val expectedRead =
       DestinationDefinitionRead()
-        .name(newDestinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .destinationDefinitionId(newDestinationDefinition.getDestinationDefinitionId())
+        .name(newDestinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
+        .destinationDefinitionId(newDestinationDefinition.destinationDefinitionId)
         .icon(null)
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
         .custom(true)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(io.airbyte.api.model.generated.ReleaseStage.CUSTOM)
         .resourceRequirements(
           io.airbyte.api.model.generated
@@ -1042,19 +1018,19 @@ internal class DestinationDefinitionsHandlerTest {
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(newDestinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     val actualRead = destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate)
 
     Assertions.assertEquals(expectedRead, actualRead)
     Mockito.verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(
-      create.getDockerRepository(),
-      create.getDockerImageTag(),
-      create.getDocumentationUrl(),
-      customCreate.getWorkspaceId(),
+      create.dockerRepository,
+      create.dockerImageTag,
+      create.documentationUrl,
+      customCreate.workspaceId,
     )
     Mockito.verify(destinationService).writeCustomConnectorMetadata(
       newDestinationDefinition
@@ -1075,22 +1051,22 @@ internal class DestinationDefinitionsHandlerTest {
     val newDestinationDefinition = generateDestinationDefinition()
     val destinationDefinitionVersion = generateCustomVersionFromDestinationDefinition(destinationDefinition)
 
-    Mockito.`when`(uuidSupplier.get()).thenReturn(newDestinationDefinition.getDestinationDefinitionId())
+    Mockito.`when`(uuidSupplier.get()).thenReturn(newDestinationDefinition.destinationDefinitionId)
 
     val create =
       DestinationDefinitionCreate()
-        .name(newDestinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(newDestinationDefinition.getIcon())
+        .name(newDestinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
+        .icon(newDestinationDefinition.icon)
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(newDestinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
         )
 
@@ -1104,26 +1080,26 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(
         actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
-          create.getDockerRepository(),
-          create.getDockerImageTag(),
-          create.getDocumentationUrl(),
+          create.dockerRepository,
+          create.dockerImageTag,
+          create.documentationUrl,
           workspaceId,
         ),
       ).thenReturn(destinationDefinitionVersion)
 
     val expectedRead =
       DestinationDefinitionRead()
-        .name(newDestinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .destinationDefinitionId(newDestinationDefinition.getDestinationDefinitionId())
+        .name(newDestinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
+        .destinationDefinitionId(newDestinationDefinition.destinationDefinitionId)
         .icon(null)
         .protocolVersion(DEFAULT_PROTOCOL_VERSION)
         .custom(true)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(io.airbyte.api.model.generated.ReleaseStage.CUSTOM)
         .resourceRequirements(
           io.airbyte.api.model.generated
@@ -1131,19 +1107,19 @@ internal class DestinationDefinitionsHandlerTest {
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(newDestinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     val actualRead =
       destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForWorkspace)
 
     Assertions.assertEquals(expectedRead, actualRead)
     Mockito.verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(
-      create.getDockerRepository(),
-      create.getDockerImageTag(),
-      create.getDocumentationUrl(),
+      create.dockerRepository,
+      create.dockerImageTag,
+      create.documentationUrl,
       workspaceId,
     )
     Mockito.verify(destinationService).writeCustomConnectorMetadata(
@@ -1169,17 +1145,17 @@ internal class DestinationDefinitionsHandlerTest {
     // .scopeId(organizationId)
     // .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
     //
-    // when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(),
-    // create.getDockerImageTag(),
-    // create.getDocumentationUrl(),
+    // when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.dockerRepository,
+    // create.dockerImageTag,
+    // create.documentationUrl,
     // null))
     // .thenReturn(destinationDefinitionVersion);
     //
     // destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForOrganization);
     //
-    // verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(),
-    // create.getDockerImageTag(),
-    // create.getDocumentationUrl(),
+    // verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.dockerRepository,
+    // create.dockerImageTag,
+    // create.documentationUrl,
     // null);
     // verify(destinationService).writeCustomConnectorMetadata(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
     // destinationDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
@@ -1199,18 +1175,18 @@ internal class DestinationDefinitionsHandlerTest {
 
     val create =
       DestinationDefinitionCreate()
-        .name(newDestinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
-        .icon(newDestinationDefinition.getIcon())
+        .name(newDestinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
+        .icon(newDestinationDefinition.icon)
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(newDestinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(newDestinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
         )
 
@@ -1222,10 +1198,10 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(
         actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
-          create.getDockerRepository(),
-          create.getDockerImageTag(),
-          create.getDocumentationUrl(),
-          customCreate.getWorkspaceId(),
+          create.dockerRepository,
+          create.dockerImageTag,
+          create.documentationUrl,
+          customCreate.workspaceId,
         ),
       ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
     Assertions.assertThrows(
@@ -1233,10 +1209,10 @@ internal class DestinationDefinitionsHandlerTest {
     ) { destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate) }
 
     Mockito.verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(
-      create.getDockerRepository(),
-      create.getDockerImageTag(),
-      create.getDocumentationUrl(),
-      customCreate.getWorkspaceId(),
+      create.dockerRepository,
+      create.dockerImageTag,
+      create.documentationUrl,
+      customCreate.workspaceId,
     )
     Mockito.verify(destinationService, Mockito.never()).writeCustomConnectorMetadata(
       anyOrNull(),
@@ -1268,15 +1244,15 @@ internal class DestinationDefinitionsHandlerTest {
         .withVersionId(UUID.randomUUID())
 
     val persistedUpdatedDestination =
-      clone<StandardDestinationDefinition>(updatedDestination).withDefaultVersionId(updatedDestinationDefVersion.getVersionId())
+      clone<StandardDestinationDefinition>(updatedDestination).withDefaultVersionId(updatedDestinationDefVersion.versionId)
 
     Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
       .thenReturn(destinationDefinition) // Call at the beginning of the method
       .thenReturn(persistedUpdatedDestination) // Call after we've persisted
 
     Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
       .thenReturn(destinationDefinitionVersion)
 
     Mockito
@@ -1285,7 +1261,7 @@ internal class DestinationDefinitionsHandlerTest {
           destinationDefinitionVersion,
           ActorType.DESTINATION,
           newDockerImageTag,
-          destinationDefinition.getCustom(),
+          destinationDefinition.custom,
           workspaceId,
         ),
       ).thenReturn(updatedDestinationDefVersion)
@@ -1302,44 +1278,44 @@ internal class DestinationDefinitionsHandlerTest {
     val destinationRead =
       destinationDefinitionsHandler.updateDestinationDefinition(
         DestinationDefinitionUpdate()
-          .destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
+          .destinationDefinitionId(this.destinationDefinition.destinationDefinitionId)
           .dockerImageTag(newDockerImageTag)
           .workspaceId(workspaceId),
       )
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .name(destinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
+        .name(destinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
         .dockerImageTag(newDockerImageTag)
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
         .icon(ICON_URL)
-        .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .protocolVersion(destinationDefinitionVersion.protocolVersion)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(
           io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(destinationDefinitionVersion.getReleaseStage().value()),
-        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
+            .fromValue(destinationDefinitionVersion.releaseStage.value()),
+        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.releaseDate))
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(destinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     Assertions.assertEquals(expectedDestinationDefinitionRead, destinationRead)
     Mockito.verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(
       destinationDefinitionVersion,
       ActorType.DESTINATION,
       newDockerImageTag,
-      destinationDefinition.getCustom(),
+      destinationDefinition.custom,
       workspaceId,
     )
     Mockito
@@ -1365,7 +1341,7 @@ internal class DestinationDefinitionsHandlerTest {
         resourceRequirements = null,
       )
 
-    Assertions.assertEquals(newDestinationDefinition.getName(), existingDestinationDefinition.getName())
+    Assertions.assertEquals(newDestinationDefinition.name, existingDestinationDefinition.name)
   }
 
   @Test
@@ -1381,7 +1357,7 @@ internal class DestinationDefinitionsHandlerTest {
         resourceRequirements = null,
       )
 
-    Assertions.assertEquals(newDestinationDefinition.getName(), newName)
+    Assertions.assertEquals(newDestinationDefinition.name, newName)
   }
 
   @Test
@@ -1400,22 +1376,22 @@ internal class DestinationDefinitionsHandlerTest {
         ),
       ).thenReturn(ConnectorPlatformCompatibilityValidationResult(true, ""))
     Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
       .thenReturn(destinationDefinition)
     Mockito
       .`when`(
         destinationService.getStandardDestinationDefinition(
-          destinationDefinition.getDestinationDefinitionId(),
+          destinationDefinition.destinationDefinitionId,
           true,
         ),
       ).thenReturn(destinationDefinition)
     Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
       .thenReturn(destinationDefinitionVersion)
     val currentDestination =
       destinationDefinitionsHandler
-        .getDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true)
-    val currentTag = currentDestination.getDockerImageTag()
+        .getDestinationDefinition(destinationDefinition.destinationDefinitionId, true)
+    val currentTag = currentDestination.dockerImageTag
     val newDockerImageTag = "averydifferenttagforprotocolversion"
     Assertions.assertNotEquals(newDockerImageTag, currentTag)
 
@@ -1425,7 +1401,7 @@ internal class DestinationDefinitionsHandlerTest {
           destinationDefinitionVersion,
           ActorType.DESTINATION,
           newDockerImageTag,
-          destinationDefinition.getCustom(),
+          destinationDefinition.custom,
           workspaceId,
         ),
       ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
@@ -1433,7 +1409,7 @@ internal class DestinationDefinitionsHandlerTest {
     Assertions.assertThrows(UnsupportedProtocolVersionException::class.java) {
       destinationDefinitionsHandler.updateDestinationDefinition(
         DestinationDefinitionUpdate()
-          .destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
+          .destinationDefinitionId(this.destinationDefinition.destinationDefinitionId)
           .dockerImageTag(newDockerImageTag)
           .workspaceId(workspaceId),
       )
@@ -1443,7 +1419,7 @@ internal class DestinationDefinitionsHandlerTest {
       destinationDefinitionVersion,
       ActorType.DESTINATION,
       newDockerImageTag,
-      destinationDefinition.getCustom(),
+      destinationDefinition.custom,
       workspaceId,
     )
     Mockito.verify(destinationService, Mockito.never()).writeConnectorMetadata(
@@ -1475,24 +1451,24 @@ internal class DestinationDefinitionsHandlerTest {
     Mockito
       .`when`(
         destinationService.getStandardDestinationDefinition(
-          destinationDefinition.getDestinationDefinitionId(),
+          destinationDefinition.destinationDefinitionId,
           true,
         ),
       ).thenReturn(destinationDefinition)
     Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
       .thenReturn(destinationDefinitionVersion)
     val currentDestination =
       destinationDefinitionsHandler
-        .getDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true)
-    val currentTag = currentDestination.getDockerImageTag()
+        .getDestinationDefinition(destinationDefinition.destinationDefinitionId, true)
+    val currentTag = currentDestination.dockerImageTag
     val newDockerImageTag = "12.4.0"
     Assertions.assertNotEquals(newDockerImageTag, currentTag)
 
     Assertions.assertThrows(BadRequestProblem::class.java) {
       destinationDefinitionsHandler.updateDestinationDefinition(
         DestinationDefinitionUpdate()
-          .destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
+          .destinationDefinitionId(this.destinationDefinition.destinationDefinitionId)
           .dockerImageTag(newDockerImageTag),
       )
     }
@@ -1512,15 +1488,15 @@ internal class DestinationDefinitionsHandlerTest {
     val newDestinationDefinition = DestinationRead()
 
     Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
       .thenReturn(destinationDefinition)
     Mockito
-      .`when`(destinationHandler.listDestinationsForDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+      .`when`(destinationHandler.listDestinationsForDestinationDefinition(destinationDefinition.destinationDefinitionId))
       .thenReturn(DestinationReadList().destinations(mutableListOf<@Valid DestinationRead?>(newDestinationDefinition)))
 
-    Assertions.assertFalse(destinationDefinition.getTombstone())
+    Assertions.assertFalse(destinationDefinition.tombstone)
 
-    destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinition.getDestinationDefinitionId())
+    destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinition.destinationDefinitionId)
 
     Mockito.verify(destinationHandler).deleteDestination(newDestinationDefinition)
     Mockito.verify(destinationService).updateStandardDestinationDefinition(updatedDestinationDefinition)
@@ -1530,38 +1506,38 @@ internal class DestinationDefinitionsHandlerTest {
   @DisplayName("grantDestinationDefinitionToWorkspace should correctly create a workspace grant")
   fun testGrantDestinationDefinitionToWorkspace() {
     Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
       .thenReturn(destinationDefinition)
     Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
       .thenReturn(destinationDefinitionVersion)
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .name(destinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
+        .name(destinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
         .icon(ICON_URL)
-        .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .protocolVersion(destinationDefinitionVersion.protocolVersion)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(
           io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(destinationDefinitionVersion.getReleaseStage().value()),
-        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
+            .fromValue(destinationDefinitionVersion.releaseStage.value()),
+        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.releaseDate))
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(destinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     val expectedPrivateDestinationDefinitionRead =
       PrivateDestinationDefinitionRead().destinationDefinition(expectedDestinationDefinitionRead).granted(true)
@@ -1569,14 +1545,14 @@ internal class DestinationDefinitionsHandlerTest {
     val actualPrivateDestinationDefinitionRead =
       destinationDefinitionsHandler.grantDestinationDefinitionToWorkspaceOrOrganization(
         ActorDefinitionIdWithScope()
-          .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+          .actorDefinitionId(destinationDefinition.destinationDefinitionId)
           .scopeId(workspaceId)
           .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE),
       )
 
     Assertions.assertEquals(expectedPrivateDestinationDefinitionRead, actualPrivateDestinationDefinitionRead)
     Mockito.verify(actorDefinitionService).writeActorDefinitionWorkspaceGrant(
-      destinationDefinition.getDestinationDefinitionId(),
+      destinationDefinition.destinationDefinitionId,
       workspaceId,
       ScopeType.WORKSPACE,
     )
@@ -1586,38 +1562,38 @@ internal class DestinationDefinitionsHandlerTest {
   @DisplayName("grantDestinationDefinitionToWorkspaceOrOrganization should correctly create an organization grant")
   fun testGrantDestinationDefinitionToOrganization() {
     Mockito
-      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+      .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId))
       .thenReturn(destinationDefinition)
     Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
+      .`when`(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.defaultVersionId))
       .thenReturn(destinationDefinitionVersion)
 
     val expectedDestinationDefinitionRead =
       DestinationDefinitionRead()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .name(destinationDefinition.getName())
-        .dockerRepository(destinationDefinitionVersion.getDockerRepository())
-        .dockerImageTag(destinationDefinitionVersion.getDockerImageTag())
-        .documentationUrl(URI(destinationDefinitionVersion.getDocumentationUrl()))
+        .destinationDefinitionId(destinationDefinition.destinationDefinitionId)
+        .name(destinationDefinition.name)
+        .dockerRepository(destinationDefinitionVersion.dockerRepository)
+        .dockerImageTag(destinationDefinitionVersion.dockerImageTag)
+        .documentationUrl(URI(destinationDefinitionVersion.documentationUrl))
         .icon(ICON_URL)
-        .protocolVersion(destinationDefinitionVersion.getProtocolVersion())
+        .protocolVersion(destinationDefinitionVersion.protocolVersion)
         .supportLevel(
           io.airbyte.api.model.generated.SupportLevel
-            .fromValue(destinationDefinitionVersion.getSupportLevel().value()),
+            .fromValue(destinationDefinitionVersion.supportLevel.value()),
         ).releaseStage(
           io.airbyte.api.model.generated.ReleaseStage
-            .fromValue(destinationDefinitionVersion.getReleaseStage().value()),
-        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.getReleaseDate()))
+            .fromValue(destinationDefinitionVersion.releaseStage.value()),
+        ).releaseDate(LocalDate.parse(destinationDefinitionVersion.releaseDate))
         .resourceRequirements(
           io.airbyte.api.model.generated
             .ScopedResourceRequirements()
             ._default(
               io.airbyte.api.model.generated
                 .ResourceRequirements()
-                .cpuRequest(destinationDefinition.getResourceRequirements().getDefault().getCpuRequest()),
+                .cpuRequest(destinationDefinition.resourceRequirements.default.cpuRequest),
             ).jobSpecific(mutableListOf<@Valid JobTypeResourceLimit?>()),
-        ).language(destinationDefinitionVersion.getLanguage())
-        .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation())
+        ).language(destinationDefinitionVersion.language)
+        .supportsDataActivation(destinationDefinitionVersion.supportsDataActivation)
 
     val expectedPrivateDestinationDefinitionRead =
       PrivateDestinationDefinitionRead().destinationDefinition(expectedDestinationDefinitionRead).granted(true)
@@ -1625,14 +1601,14 @@ internal class DestinationDefinitionsHandlerTest {
     val actualPrivateDestinationDefinitionRead =
       destinationDefinitionsHandler.grantDestinationDefinitionToWorkspaceOrOrganization(
         ActorDefinitionIdWithScope()
-          .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+          .actorDefinitionId(destinationDefinition.destinationDefinitionId)
           .scopeId(organizationId)
           .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION),
       )
 
     Assertions.assertEquals(expectedPrivateDestinationDefinitionRead, actualPrivateDestinationDefinitionRead)
     Mockito.verify(actorDefinitionService).writeActorDefinitionWorkspaceGrant(
-      destinationDefinition.getDestinationDefinitionId(),
+      destinationDefinition.destinationDefinitionId,
       organizationId,
       ScopeType.ORGANIZATION,
     )
@@ -1643,24 +1619,24 @@ internal class DestinationDefinitionsHandlerTest {
   fun testRevokeDestinationDefinitionFromWorkspace() {
     destinationDefinitionsHandler.revokeDestinationDefinition(
       ActorDefinitionIdWithScope()
-        .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .actorDefinitionId(destinationDefinition.destinationDefinitionId)
         .scopeId(workspaceId)
         .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE),
     )
     Mockito.verify(actorDefinitionService).deleteActorDefinitionWorkspaceGrant(
-      destinationDefinition.getDestinationDefinitionId(),
+      destinationDefinition.destinationDefinitionId,
       workspaceId,
       ScopeType.WORKSPACE,
     )
 
     destinationDefinitionsHandler.revokeDestinationDefinition(
       ActorDefinitionIdWithScope()
-        .actorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .actorDefinitionId(destinationDefinition.destinationDefinitionId)
         .scopeId(organizationId)
         .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION),
     )
     Mockito.verify(actorDefinitionService).deleteActorDefinitionWorkspaceGrant(
-      destinationDefinition.getDestinationDefinitionId(),
+      destinationDefinition.destinationDefinitionId,
       organizationId,
       ScopeType.ORGANIZATION,
     )
@@ -1682,7 +1658,7 @@ internal class DestinationDefinitionsHandlerTest {
           .withIcon("dest.svg")
           .withSpec(
             ConnectorSpecification().withConnectionSpecification(
-              jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("key", "val")),
+              jsonNode(mapOf("key" to "val")),
             ),
           ).withTombstone(false)
           .withProtocolVersion("0.2.2")
@@ -1693,13 +1669,13 @@ internal class DestinationDefinitionsHandlerTest {
           .withResourceRequirements(ScopedResourceRequirements().withDefault(ResourceRequirements().withCpuRequest("2")))
           .withLanguage("java")
       Mockito.`when`(remoteDefinitionsProvider.getDestinationDefinitions()).thenReturn(
-        mutableListOf<ConnectorRegistryDestinationDefinition>(registryDestinationDefinition!!),
+        mutableListOf(registryDestinationDefinition!!),
       )
 
-      val destinationDefinitionReadList = destinationDefinitionsHandler.listLatestDestinationDefinitions().getDestinationDefinitions()
+      val destinationDefinitionReadList = destinationDefinitionsHandler.listLatestDestinationDefinitions().destinationDefinitions
       Assertions.assertEquals(1, destinationDefinitionReadList.size)
 
-      val destinationDefinitionRead = destinationDefinitionReadList.get(0)
+      val destinationDefinitionRead = destinationDefinitionReadList[0]
       Assertions.assertEquals(
         destinationDefinitionsHandler.buildDestinationDefinitionRead(
           ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDefinition),
@@ -1716,7 +1692,7 @@ internal class DestinationDefinitionsHandlerTest {
         throw
         RuntimeException()
       }
-      Assertions.assertEquals(0, destinationDefinitionsHandler.listLatestDestinationDefinitions().getDestinationDefinitions().size)
+      Assertions.assertEquals(0, destinationDefinitionsHandler.listLatestDestinationDefinitions().destinationDefinitions.size)
     }
   }
 

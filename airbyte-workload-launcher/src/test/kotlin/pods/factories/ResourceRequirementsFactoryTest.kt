@@ -27,7 +27,6 @@ import pods.factories.ResourceRequirementsFactoryTest.Fixtures.defaultDiscoverCo
 import pods.factories.ResourceRequirementsFactoryTest.Fixtures.fileTransferReqs
 import pods.factories.ResourceRequirementsFactoryTest.Fixtures.sidecarReqs
 import pods.factories.ResourceRequirementsFactoryTest.Fixtures.specConnectorReqs
-import java.util.stream.Stream
 import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
 class ResourceRequirementsFactoryTest {
@@ -190,7 +189,7 @@ class ResourceRequirementsFactoryTest {
 
   @ParameterizedTest
   @MethodSource("requirementsMatrix")
-  fun `builds repl init reqs from orch reqs on input`(reqs: AirbyteResourceRequirements?) {
+  fun `builds repl init reqs from orchestrator reqs on input`(reqs: AirbyteResourceRequirements?) {
     val input =
       ReplicationInput()
         .withSyncResourceRequirements(
@@ -249,31 +248,31 @@ class ResourceRequirementsFactoryTest {
   }
 
   object Fixtures {
-    val defaultCheckConnectorReqs =
+    val defaultCheckConnectorReqs: AirbyteResourceRequirements =
       AirbyteResourceRequirements()
         .withCpuLimit("2")
         .withCpuRequest("1")
         .withMemoryLimit("600Mi")
         .withMemoryRequest("400Mi")
-    val defaultDiscoverConnectorReqs =
+    val defaultDiscoverConnectorReqs: AirbyteResourceRequirements =
       AirbyteResourceRequirements()
         .withCpuLimit("1")
         .withCpuRequest("0.5")
         .withMemoryLimit("300Mi")
         .withMemoryRequest("200Mi")
-    val specConnectorReqs =
+    val specConnectorReqs: AirbyteResourceRequirements =
       AirbyteResourceRequirements()
         .withCpuLimit("0.5")
         .withCpuRequest("0.2")
         .withMemoryLimit("500Mi")
         .withMemoryRequest("100Mi")
-    val sidecarReqs =
+    val sidecarReqs: AirbyteResourceRequirements =
       AirbyteResourceRequirements()
         .withCpuLimit("3")
         .withCpuRequest("3")
         .withMemoryLimit("1000Mi")
         .withMemoryRequest("800Mi")
-    val fileTransferReqs =
+    val fileTransferReqs: AirbyteResourceRequirements =
       AirbyteResourceRequirements()
         .withEphemeralStorageLimit("6Gi")
         .withEphemeralStorageRequest("100Mi")
@@ -281,8 +280,8 @@ class ResourceRequirementsFactoryTest {
 
   companion object {
     @JvmStatic
-    private fun requirementsMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun requirementsMatrix() =
+      listOf(
         Arguments.of(null),
         Arguments.of(
           AirbyteResourceRequirements()
@@ -319,6 +318,6 @@ class ResourceRequirementsFactoryTest {
       )
 
     @JvmStatic
-    private fun nonNullRequirementsMatrix() = requirementsMatrix().skip(1)
+    private fun nonNullRequirementsMatrix() = requirementsMatrix().drop(1)
   }
 }

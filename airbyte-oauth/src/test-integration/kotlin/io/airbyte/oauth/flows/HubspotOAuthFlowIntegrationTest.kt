@@ -83,7 +83,7 @@ class HubspotOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
       flowObject.completeSourceOAuth(
         workspaceId,
         definitionId,
-        java.util.Map.of(AUTH_CODE_KEY, serverHandler.paramValue),
+        mapOf(AUTH_CODE_KEY to serverHandler.paramValue),
         REDIRECT_URL,
         sourceOAuthParameter.configuration,
       )

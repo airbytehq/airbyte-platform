@@ -245,7 +245,7 @@ open class DestinationDefinitionsHandler
             !featureFlagClient.boolVariation(
               HideActorDefinitionFromList,
               Multi(
-                java.util.List.of(
+                listOf(
                   DestinationDefinition(destinationDefinition.destinationDefinitionId),
                   Workspace(workspaceId),
                 ),

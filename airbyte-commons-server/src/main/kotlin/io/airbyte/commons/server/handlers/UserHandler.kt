@@ -65,15 +65,12 @@ import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import jakarta.validation.Valid
 import org.jooq.exception.DataAccessException
 import java.io.IOException
-import java.util.Map
 import java.util.Objects
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
-import java.util.stream.Collectors
 
 /**
  * UserHandler, provides basic CRUD operation access for users. Some are migrated from Cloud
@@ -155,7 +152,7 @@ open class UserHandler
         .status(user.status?.convertTo<UserStatus>())
         .companyName(user.companyName)
         .email(user.email)
-        .metadata(if (user.uiMetadata != null) user.uiMetadata else Map.of<Any, Any>())
+        .metadata(if (user.uiMetadata != null) user.uiMetadata else emptyMap<Any, Any>())
         .news(user.news)
         .defaultWorkspaceId(user.defaultWorkspaceId)
 
@@ -224,7 +221,7 @@ open class UserHandler
           userRead.status?.convertTo<User.Status>(),
         ).withCompanyName(userRead.companyName)
         .withEmail(userRead.email)
-        .withUiMetadata(Jsons.jsonNode(if (userRead.metadata != null) userRead.metadata else Map.of<Any, Any>()))
+        .withUiMetadata(Jsons.jsonNode(userRead.metadata ?: emptyMap<Any, Any>()))
         .withNews(userRead.news)
 
     /**
@@ -266,14 +263,13 @@ open class UserHandler
       val userPermissions = permissionHandler.listInstanceAdminUsers()
       return UserWithPermissionInfoReadList().users(
         userPermissions
-          .stream()
           .map { userPermission: UserPermission ->
             UserWithPermissionInfoRead()
               .userId(userPermission.user.userId)
               .email(userPermission.user.email)
               .name(userPermission.user.name)
               .permissionId(userPermission.permission.permissionId)
-          }.collect(Collectors.toList<@Valid UserWithPermissionInfoRead?>()),
+          },
       )
     }
 
@@ -684,7 +680,6 @@ open class UserHandler
       // we exclude the default user from this list because we don't want to expose it in the UI
       return OrganizationUserReadList().users(
         userPermissions
-          .stream()
           .filter { userPermission: UserPermission -> userPermission.user.userId != DEFAULT_USER_ID }
           .map { userPermission: UserPermission ->
             OrganizationUserRead()
@@ -698,7 +693,7 @@ open class UserHandler
                   .value()
                   .toEnum<PermissionType>()!!,
               )
-          }.collect(Collectors.toList<@Valid OrganizationUserRead?>()),
+          },
       )
     }
 
@@ -706,10 +701,8 @@ open class UserHandler
       // we exclude the default user from this list because we don't want to expose it in the UI
       return WorkspaceUserAccessInfoReadList().usersWithAccess(
         accessInfos
-          .stream()
           .filter { accessInfo: WorkspaceUserAccessInfo -> accessInfo.userId != DEFAULT_USER_ID }
-          .map { accessInfo: WorkspaceUserAccessInfo -> this.buildWorkspaceUserAccessInfoRead(accessInfo) }
-          .collect(Collectors.toList<@Valid WorkspaceUserAccessInfoRead?>()),
+          .map { accessInfo: WorkspaceUserAccessInfo -> this.buildWorkspaceUserAccessInfoRead(accessInfo) },
       )
     }
 

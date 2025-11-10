@@ -45,7 +45,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.api.function.Executable
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.junit.jupiter.MockitoSettings
@@ -57,7 +56,6 @@ import java.io.IOException
 import java.time.Duration
 import java.time.Instant
 import java.util.Calendar
-import java.util.List
 import java.util.TimeZone
 import java.util.UUID
 import java.util.function.Supplier
@@ -90,11 +88,11 @@ internal class ConfigFetchActivityTest {
 
   private var configFetchActivity: ConfigFetchActivityImpl? = null
 
-  private val currentSecondsSupplier: Supplier<Long> = Supplier { Instant.now().getEpochSecond() }
+  private val currentSecondsSupplier: Supplier<Long> = Supplier { Instant.now().epochSecond }
 
   @BeforeEach
   fun setup() {
-    mFeatureFlagClient = org.mockito.Mockito.mock<TestClient>(TestClient::class.java)
+    mFeatureFlagClient = org.mockito.Mockito.mock(TestClient::class.java)
   }
 
   @Nested
@@ -215,7 +213,7 @@ internal class ConfigFetchActivityTest {
           ConfigFetchActivityImpl(
             mAirbyteApiClient,
             SYNC_JOB_MAX_ATTEMPTS,
-            Supplier { 60L * 3 },
+            { 60L * 3 },
             mFeatureFlagClient!!,
             mScheduleJitterHelper!!,
             mFfContextMapper!!,
@@ -274,7 +272,7 @@ internal class ConfigFetchActivityTest {
 
         // prior job completed 3 hours ago, so expect the next job to be scheduled
         // according to the next cron run time.
-        val threeHoursAgoSeconds = currentSecondsSupplier.get()!! - Duration.ofHours(3).toSeconds()
+        val threeHoursAgoSeconds = currentSecondsSupplier.get() - Duration.ofHours(3).toSeconds()
         whenever(mJobRead!!.startedAt).thenReturn(null)
         whenever(mJobRead.createdAt).thenReturn(threeHoursAgoSeconds)
 
@@ -322,7 +320,7 @@ internal class ConfigFetchActivityTest {
         ).thenReturn(true)
 
         // prior job completed over 24 hours ago, so expect the next job to be scheduled immediately
-        val twentyFiveHoursAgoSeconds = currentSecondsSupplier.get()!! - Duration.ofHours(25).toSeconds()
+        val twentyFiveHoursAgoSeconds = currentSecondsSupplier.get() - Duration.ofHours(25).toSeconds()
         whenever(mJobRead!!.createdAt).thenReturn(twentyFiveHoursAgoSeconds)
 
         whenever(mConnectionApi!!.getConnection(any<ConnectionIdRequestBody>()))
@@ -430,7 +428,7 @@ internal class ConfigFetchActivityTest {
         val output = configFetchActivity!!.getTimeToWait(input)
 
         // Note: compareTo returns positive if the left side is greater than the right.
-        Assertions.assertThat(output.timeToWait!!.compareTo(Duration.ofHours(12)) > 0).isTrue()
+        Assertions.assertThat(output.timeToWait!! > Duration.ofHours(12)).isTrue()
       }
     }
   }
@@ -445,7 +443,7 @@ internal class ConfigFetchActivityTest {
         ConfigFetchActivityImpl(
           mAirbyteApiClient!!,
           maxAttempt,
-          Supplier { Instant.now().getEpochSecond() },
+          { Instant.now().epochSecond },
           mFeatureFlagClient!!,
           mScheduleJitterHelper!!,
           mFfContextMapper!!,
@@ -506,23 +504,21 @@ internal class ConfigFetchActivityTest {
       whenever(mConnectionApi!!.getConnectionContext(request))
         .thenAnswer { throw IOException("bang") }
 
-      org.junit.jupiter.api.Assertions.assertThrows<RetryableException?>(
+      org.junit.jupiter.api.Assertions.assertThrows(
         RetryableException::class.java,
-        Executable {
-          configFetchActivity!!.getConnectionContext(
-            GetConnectionContextInput(
-              connectionId,
-            ),
-          )
-        },
-      )
+      ) {
+        configFetchActivity!!.getConnectionContext(
+          GetConnectionContextInput(
+            connectionId,
+          ),
+        )
+      }
     }
   }
 
   @Nested
   internal inner class TestLoadShedBackoff {
     private val connectionId: UUID = UUID.randomUUID()
-    private val request = ConnectionIdRequestBody(connectionId)
     private val connectionContext: ConnectionContext =
       ConnectionContext()
         .withConnectionId(connectionId)
@@ -532,7 +528,7 @@ internal class ConfigFetchActivityTest {
         .withDestinationDefinitionId(UUID.randomUUID())
         .withWorkspaceId(UUID.randomUUID())
         .withOrganizationId(UUID.randomUUID())
-    private val ffContext: Context = Multi(List.of<Context?>(Workspace(UUID.randomUUID()), Connection(UUID.randomUUID())))
+    private val ffContext: Context = Multi(listOf(Workspace(UUID.randomUUID()), Connection(UUID.randomUUID())))
 
     @BeforeEach
     fun setup() {

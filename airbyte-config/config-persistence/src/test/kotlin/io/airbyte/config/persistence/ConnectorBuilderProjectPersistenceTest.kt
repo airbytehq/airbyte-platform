@@ -7,7 +7,6 @@ package io.airbyte.config.persistence
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConnectorBuilderProject
 import io.airbyte.config.DataplaneGroup
@@ -39,11 +38,9 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import org.assertj.core.api.Assertions
 import org.junit.Assert
-import org.junit.function.ThrowingRunnable
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import java.util.Arrays
 import java.util.Optional
 import java.util.UUID
 import org.mockito.Mockito.`when` as whenever
@@ -119,7 +116,7 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   @Test
   fun testRead() {
     createBaseObjects()
-    val project = connectorBuilderService!!.getConnectorBuilderProject(project1!!.getBuilderProjectId(), true)
+    val project = connectorBuilderService!!.getConnectorBuilderProject(project1!!.builderProjectId, true)
     // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
     // separately asserting it isn't null
     Assertions
@@ -128,14 +125,14 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
       .ignoringFields(UPDATED_AT)
       .isEqualTo(project)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(project.getUpdatedAt())
+      .assertNotNull(project.updatedAt)
   }
 
   @Test
   fun testReadWithoutManifest() {
     createBaseObjects()
-    project1!!.setManifestDraft(null)
-    val project = connectorBuilderService!!.getConnectorBuilderProject(project1!!.getBuilderProjectId(), false)
+    project1!!.manifestDraft = null
+    val project = connectorBuilderService!!.getConnectorBuilderProject(project1!!.builderProjectId, false)
     // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
     // separately asserting it isn't null
     Assertions
@@ -144,20 +141,20 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
       .ignoringFields(UPDATED_AT)
       .isEqualTo(project)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(project.getUpdatedAt())
+      .assertNotNull(project.updatedAt)
   }
 
   @Test
   fun testReadWithLinkedDefinition() {
     createBaseObjects()
 
-    val sourceDefinition = linkSourceDefinition(project1!!.getBuilderProjectId())
+    val sourceDefinition = linkSourceDefinition(project1!!.builderProjectId)
 
     // project 1 should be associated with the newly created source definition
-    project1!!.setActorDefinitionId(sourceDefinition.getSourceDefinitionId())
-    project1!!.setActiveDeclarativeManifestVersion(MANIFEST_VERSION)
+    project1!!.actorDefinitionId = sourceDefinition.sourceDefinitionId
+    project1!!.activeDeclarativeManifestVersion = MANIFEST_VERSION
 
-    val project = connectorBuilderService!!.getConnectorBuilderProject(project1!!.getBuilderProjectId(), true)
+    val project = connectorBuilderService!!.getConnectorBuilderProject(project1!!.builderProjectId, true)
     // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
     // separately asserting it isn't null
     Assertions
@@ -166,20 +163,19 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
       .ignoringFields(UPDATED_AT)
       .isEqualTo(project)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(project.getUpdatedAt())
+      .assertNotNull(project.updatedAt)
   }
 
   @Test
   fun testReadNotExists() {
-    Assert.assertThrows<ConfigNotFoundException?>(
+    Assert.assertThrows(
       ConfigNotFoundException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.getConnectorBuilderProject(
-          UUID.randomUUID(),
-          false,
-        )
-      },
-    )
+    ) {
+      connectorBuilderService!!.getConnectorBuilderProject(
+        UUID.randomUUID(),
+        false,
+      )
+    }
   }
 
   @Test
@@ -187,8 +183,8 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     createBaseObjects()
 
     // set draft to null because it won't be returned as part of listing call
-    project1!!.setManifestDraft(null)
-    project2!!.setManifestDraft(null)
+    project1!!.manifestDraft = null
+    project2!!.manifestDraft = null
 
     val projects = connectorBuilderService!!.getConnectorBuilderProjectsByWorkspace(mainWorkspace!!).toList()
 
@@ -196,31 +192,31 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     // separately asserting it isn't null
     Assertions
       .assertThat<ConnectorBuilderProject?>(
-        ArrayList<ConnectorBuilderProject?>( // project2 comes first due to alphabetical ordering
-          Arrays.asList<ConnectorBuilderProject?>(project2, project1),
+        ArrayList( // project2 comes first due to alphabetical ordering
+          listOf(project2, project1),
         ),
       ).usingRecursiveComparison()
       .ignoringFields(UPDATED_AT)
       .isEqualTo(projects)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(projects.get(0)!!.getUpdatedAt())
+      .assertNotNull(projects[0]!!.updatedAt)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(projects.get(1)!!.getUpdatedAt())
+      .assertNotNull(projects[1]!!.updatedAt)
   }
 
   @Test
   fun testListWithLinkedDefinition() {
     createBaseObjects()
 
-    val sourceDefinition = linkSourceDefinition(project1!!.getBuilderProjectId())
+    val sourceDefinition = linkSourceDefinition(project1!!.builderProjectId)
 
     // set draft to null because it won't be returned as part of listing call
-    project1!!.setManifestDraft(null)
-    project2!!.setManifestDraft(null)
+    project1!!.manifestDraft = null
+    project2!!.manifestDraft = null
 
     // project 1 should be associated with the newly created source definition
-    project1!!.setActiveDeclarativeManifestVersion(MANIFEST_VERSION)
-    project1!!.setActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+    project1!!.activeDeclarativeManifestVersion = MANIFEST_VERSION
+    project1!!.actorDefinitionId = sourceDefinition.sourceDefinitionId
 
     val projects = connectorBuilderService!!.getConnectorBuilderProjectsByWorkspace(mainWorkspace!!).toList()
 
@@ -228,16 +224,16 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     // separately asserting it isn't null
     Assertions
       .assertThat<ConnectorBuilderProject?>(
-        ArrayList<ConnectorBuilderProject?>( // project2 comes first due to alphabetical ordering
-          Arrays.asList<ConnectorBuilderProject?>(project2, project1),
+        ArrayList( // project2 comes first due to alphabetical ordering
+          listOf(project2, project1),
         ),
       ).usingRecursiveComparison()
       .ignoringFields(UPDATED_AT)
       .isEqualTo(projects)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(projects.get(0)!!.getUpdatedAt())
+      .assertNotNull(projects[0]!!.updatedAt)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(projects.get(1)!!.getUpdatedAt())
+      .assertNotNull(projects[1]!!.updatedAt)
   }
 
   @Test
@@ -245,23 +241,23 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     createBaseObjects()
 
     // actually set draft to null for first project
-    project1!!.setManifestDraft(null)
-    project1!!.setHasDraft(false)
+    project1!!.manifestDraft = null
+    project1!!.hasDraft = false
     connectorBuilderService!!.writeBuilderProjectDraft(
-      project1!!.getBuilderProjectId(),
-      project1!!.getWorkspaceId(),
-      project1!!.getName(),
+      project1!!.builderProjectId,
+      project1!!.workspaceId,
+      project1!!.name,
       null,
       null,
-      project1!!.getBaseActorDefinitionVersionId(),
-      project1!!.getContributionPullRequestUrl(),
-      project1!!.getContributionActorDefinitionId(),
+      project1!!.baseActorDefinitionVersionId,
+      project1!!.contributionPullRequestUrl,
+      project1!!.contributionActorDefinitionId,
     )
 
     // set draft to null because it won't be returned as part of listing call
-    project2!!.setManifestDraft(null)
+    project2!!.manifestDraft = null
     // has draft is still truthy because there is a draft in the database
-    project2!!.setHasDraft(true)
+    project2!!.hasDraft = true
 
     val projects = connectorBuilderService!!.getConnectorBuilderProjectsByWorkspace(mainWorkspace!!).toList()
 
@@ -269,34 +265,34 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     // separately asserting it isn't null
     Assertions
       .assertThat<ConnectorBuilderProject?>(
-        ArrayList<ConnectorBuilderProject?>( // project2 comes first due to alphabetical ordering
-          Arrays.asList<ConnectorBuilderProject?>(project2, project1),
+        ArrayList( // project2 comes first due to alphabetical ordering
+          listOf(project2, project1),
         ),
       ).usingRecursiveComparison()
       .ignoringFields(UPDATED_AT)
       .isEqualTo(projects)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(projects.get(0)!!.getUpdatedAt())
+      .assertNotNull(projects[0]!!.updatedAt)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(projects.get(1)!!.getUpdatedAt())
+      .assertNotNull(projects[1]!!.updatedAt)
   }
 
   @Test
   fun testUpdate() {
     createBaseObjects()
-    project1!!.setName("Updated name")
-    project1!!.setManifestDraft(ObjectMapper().readTree("{}"))
+    project1!!.name = "Updated name"
+    project1!!.manifestDraft = ObjectMapper().readTree("{}")
     connectorBuilderService!!.writeBuilderProjectDraft(
-      project1!!.getBuilderProjectId(),
-      project1!!.getWorkspaceId(),
-      project1!!.getName(),
-      project1!!.getManifestDraft(),
-      project1!!.getComponentsFileContent(),
-      project1!!.getBaseActorDefinitionVersionId(),
-      project1!!.getContributionPullRequestUrl(),
-      project1!!.getContributionActorDefinitionId(),
+      project1!!.builderProjectId,
+      project1!!.workspaceId,
+      project1!!.name,
+      project1!!.manifestDraft,
+      project1!!.componentsFileContent,
+      project1!!.baseActorDefinitionVersionId,
+      project1!!.contributionPullRequestUrl,
+      project1!!.contributionActorDefinitionId,
     )
-    val project = connectorBuilderService!!.getConnectorBuilderProject(project1!!.getBuilderProjectId(), true)
+    val project = connectorBuilderService!!.getConnectorBuilderProject(project1!!.builderProjectId, true)
     // `updatedAt` is populated by DB at insertion so we exclude from the equality check while
     // separately asserting it isn't null
     Assertions
@@ -305,13 +301,13 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
       .ignoringFields(UPDATED_AT)
       .isEqualTo(project)
     org.junit.jupiter.api.Assertions
-      .assertNotNull(project.getUpdatedAt())
+      .assertNotNull(project.updatedAt)
   }
 
   @Test
   fun whenUpdateBuilderProjectAndActorDefinitionThenUpdateConnectorBuilderAndActorDefinition() {
     connectorBuilderService!!.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null, null)
-    workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0)!!.withWorkspaceId(A_WORKSPACE_ID))
+    workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces()[0]!!.withWorkspaceId(A_WORKSPACE_ID))
     sourceService!!.writeCustomConnectorMetadata(
       MockData
         .customSourceDefinition()!!
@@ -337,19 +333,19 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
 
     val updatedConnectorBuilder = connectorBuilderService!!.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, true)
     org.junit.jupiter.api.Assertions
-      .assertEquals(ANOTHER_PROJECT_NAME, updatedConnectorBuilder.getName())
+      .assertEquals(ANOTHER_PROJECT_NAME, updatedConnectorBuilder.name)
     org.junit.jupiter.api.Assertions
-      .assertEquals(ANOTHER_MANIFEST, updatedConnectorBuilder.getManifestDraft())
+      .assertEquals(ANOTHER_MANIFEST, updatedConnectorBuilder.manifestDraft)
     org.junit.jupiter.api.Assertions.assertEquals(
       ANOTHER_PROJECT_NAME,
-      sourceService!!.getStandardSourceDefinition(A_SOURCE_DEFINITION_ID).getName(),
+      sourceService!!.getStandardSourceDefinition(A_SOURCE_DEFINITION_ID).name,
     )
   }
 
   @Test
   fun givenSourceIsPublicWhenUpdateBuilderProjectAndActorDefinitionThenActorDefinitionNameIsNotUpdated() {
     connectorBuilderService!!.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null, null)
-    workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0)!!.withWorkspaceId(A_WORKSPACE_ID))
+    workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces()[0]!!.withWorkspaceId(A_WORKSPACE_ID))
     sourceService!!.writeCustomConnectorMetadata(
       MockData
         .customSourceDefinition()!!
@@ -374,13 +370,13 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     )
 
     org.junit.jupiter.api.Assertions
-      .assertEquals(A_PROJECT_NAME, sourceService!!.getStandardSourceDefinition(A_SOURCE_DEFINITION_ID).getName())
+      .assertEquals(A_PROJECT_NAME, sourceService!!.getStandardSourceDefinition(A_SOURCE_DEFINITION_ID).name)
   }
 
   @Test
   fun testUpdateWithComponentsFile() {
     connectorBuilderService!!.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null, null)
-    workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0)!!.withWorkspaceId(A_WORKSPACE_ID))
+    workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces()[0]!!.withWorkspaceId(A_WORKSPACE_ID))
     sourceService!!.writeCustomConnectorMetadata(
       MockData
         .customSourceDefinition()!!
@@ -406,31 +402,30 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
 
     val updatedConnectorBuilder = connectorBuilderService!!.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, true)
     org.junit.jupiter.api.Assertions
-      .assertEquals(ANOTHER_PROJECT_NAME, updatedConnectorBuilder.getName())
+      .assertEquals(ANOTHER_PROJECT_NAME, updatedConnectorBuilder.name)
     org.junit.jupiter.api.Assertions
-      .assertEquals(ANOTHER_MANIFEST, updatedConnectorBuilder.getManifestDraft())
+      .assertEquals(ANOTHER_MANIFEST, updatedConnectorBuilder.manifestDraft)
     org.junit.jupiter.api.Assertions
-      .assertEquals(A_COMPONENTS_FILE_CONTENT, updatedConnectorBuilder.getComponentsFileContent())
+      .assertEquals(A_COMPONENTS_FILE_CONTENT, updatedConnectorBuilder.componentsFileContent)
   }
 
   @Test
   fun testDelete() {
     createBaseObjects()
 
-    val deleted = connectorBuilderService!!.deleteBuilderProject(project1!!.getBuilderProjectId())
+    val deleted = connectorBuilderService!!.deleteBuilderProject(project1!!.builderProjectId)
     org.junit.jupiter.api.Assertions
       .assertTrue(deleted)
-    Assert.assertThrows<ConfigNotFoundException?>(
+    Assert.assertThrows(
       ConfigNotFoundException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.getConnectorBuilderProject(
-          project1!!.getBuilderProjectId(),
-          false,
-        )
-      },
-    )
+    ) {
+      connectorBuilderService!!.getConnectorBuilderProject(
+        project1!!.builderProjectId,
+        false,
+      )
+    }
     org.junit.jupiter.api.Assertions
-      .assertNotNull(connectorBuilderService!!.getConnectorBuilderProject(project2!!.getBuilderProjectId(), false))
+      .assertNotNull(connectorBuilderService!!.getConnectorBuilderProject(project2!!.builderProjectId, false))
   }
 
   @Test
@@ -438,25 +433,24 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     val connectorBuilderProject = createConnectorBuilderProject(UUID.randomUUID(), "any", false)
     val aNewActorDefinitionId = UUID.randomUUID()
 
-    connectorBuilderService!!.assignActorDefinitionToConnectorBuilderProject(connectorBuilderProject.getBuilderProjectId(), aNewActorDefinitionId)
+    connectorBuilderService!!.assignActorDefinitionToConnectorBuilderProject(connectorBuilderProject.builderProjectId, aNewActorDefinitionId)
 
     org.junit.jupiter.api.Assertions.assertEquals(
       aNewActorDefinitionId,
-      connectorBuilderService!!.getConnectorBuilderProject(connectorBuilderProject.getBuilderProjectId(), false).getActorDefinitionId(),
+      connectorBuilderService!!.getConnectorBuilderProject(connectorBuilderProject.builderProjectId, false).actorDefinitionId,
     )
   }
 
   @Test
   fun givenProjectDoesNotExistWhenGetVersionedConnectorBuilderProjectThenThrowException() {
-    Assert.assertThrows<ConfigNotFoundException?>(
+    Assert.assertThrows(
       ConfigNotFoundException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.getVersionedConnectorBuilderProject(
-          UUID.randomUUID(),
-          1L,
-        )
-      },
-    )
+    ) {
+      connectorBuilderService!!.getVersionedConnectorBuilderProject(
+        UUID.randomUUID(),
+        1L,
+      )
+    }
   }
 
   @Test
@@ -471,15 +465,14 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
       null,
       null,
     )
-    Assert.assertThrows<ConfigNotFoundException?>(
+    Assert.assertThrows(
       ConfigNotFoundException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.getVersionedConnectorBuilderProject(
-          A_BUILDER_PROJECT_ID,
-          1L,
-        )
-      },
-    )
+    ) {
+      connectorBuilderService!!.getVersionedConnectorBuilderProject(
+        A_BUILDER_PROJECT_ID,
+        1L,
+      )
+    }
   }
 
   @Test
@@ -515,53 +508,53 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
       )
 
     org.junit.jupiter.api.Assertions
-      .assertEquals(A_PROJECT_NAME, versionedConnectorBuilderProject.getName())
+      .assertEquals(A_PROJECT_NAME, versionedConnectorBuilderProject.name)
     org.junit.jupiter.api.Assertions
-      .assertEquals(A_BUILDER_PROJECT_ID, versionedConnectorBuilderProject.getBuilderProjectId())
+      .assertEquals(A_BUILDER_PROJECT_ID, versionedConnectorBuilderProject.builderProjectId)
     org.junit.jupiter.api.Assertions
-      .assertEquals(A_SOURCE_DEFINITION_ID, versionedConnectorBuilderProject.getSourceDefinitionId())
+      .assertEquals(A_SOURCE_DEFINITION_ID, versionedConnectorBuilderProject.sourceDefinitionId)
     org.junit.jupiter.api.Assertions
-      .assertEquals(ACTIVE_MANIFEST_VERSION, versionedConnectorBuilderProject.getActiveDeclarativeManifestVersion())
+      .assertEquals(ACTIVE_MANIFEST_VERSION, versionedConnectorBuilderProject.activeDeclarativeManifestVersion)
     org.junit.jupiter.api.Assertions
-      .assertEquals(MANIFEST_VERSION, versionedConnectorBuilderProject.getManifestVersion())
+      .assertEquals(MANIFEST_VERSION, versionedConnectorBuilderProject.manifestVersion)
     org.junit.jupiter.api.Assertions
-      .assertEquals(A_DESCRIPTION, versionedConnectorBuilderProject.getManifestDescription())
+      .assertEquals(A_DESCRIPTION, versionedConnectorBuilderProject.manifestDescription)
     org.junit.jupiter.api.Assertions
-      .assertEquals(A_MANIFEST, versionedConnectorBuilderProject.getManifest())
+      .assertEquals(A_MANIFEST, versionedConnectorBuilderProject.manifest)
   }
 
   @Test
   fun testDeleteBuilderProjectDraft() {
     createBaseObjects()
     org.junit.jupiter.api.Assertions.assertNotNull(
-      connectorBuilderService!!.getConnectorBuilderProject(project1!!.getBuilderProjectId(), true).getManifestDraft(),
+      connectorBuilderService!!.getConnectorBuilderProject(project1!!.builderProjectId, true).manifestDraft,
     )
-    connectorBuilderService!!.deleteBuilderProjectDraft(project1!!.getBuilderProjectId())
+    connectorBuilderService!!.deleteBuilderProjectDraft(project1!!.builderProjectId)
     org.junit.jupiter.api.Assertions.assertNull(
-      connectorBuilderService!!.getConnectorBuilderProject(project1!!.getBuilderProjectId(), true).getManifestDraft(),
+      connectorBuilderService!!.getConnectorBuilderProject(project1!!.builderProjectId, true).manifestDraft,
     )
   }
 
   @Test
   fun testDeleteManifestDraftForActorDefinitionId() {
     createBaseObjects()
-    val sourceDefinition = linkSourceDefinition(project1!!.getBuilderProjectId())
+    val sourceDefinition = linkSourceDefinition(project1!!.builderProjectId)
     org.junit.jupiter.api.Assertions.assertNotNull(
-      connectorBuilderService!!.getConnectorBuilderProject(project1!!.getBuilderProjectId(), true).getManifestDraft(),
+      connectorBuilderService!!.getConnectorBuilderProject(project1!!.builderProjectId, true).manifestDraft,
     )
-    connectorBuilderService!!.deleteManifestDraftForActorDefinition(sourceDefinition.getSourceDefinitionId(), project1!!.getWorkspaceId())
+    connectorBuilderService!!.deleteManifestDraftForActorDefinition(sourceDefinition.sourceDefinitionId, project1!!.workspaceId)
     org.junit.jupiter.api.Assertions.assertNull(
-      connectorBuilderService!!.getConnectorBuilderProject(project1!!.getBuilderProjectId(), true).getManifestDraft(),
+      connectorBuilderService!!.getConnectorBuilderProject(project1!!.builderProjectId, true).manifestDraft,
     )
   }
 
   @Test
   fun testGetConnectorBuilderProjectIdByActorDefinitionId() {
     createBaseObjects()
-    val sourceDefinition = linkSourceDefinition(project1!!.getBuilderProjectId())
+    val sourceDefinition = linkSourceDefinition(project1!!.builderProjectId)
     org.junit.jupiter.api.Assertions.assertEquals(
-      Optional.of<UUID?>(project1!!.getBuilderProjectId()),
-      connectorBuilderService!!.getConnectorBuilderProjectIdForActorDefinitionId(sourceDefinition.getSourceDefinitionId()),
+      Optional.of(project1!!.builderProjectId),
+      connectorBuilderService!!.getConnectorBuilderProjectIdForActorDefinitionId(sourceDefinition.sourceDefinitionId),
     )
   }
 
@@ -585,9 +578,9 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     val forkedSourceDefId = UUID.randomUUID()
     val forkedADV = MockData.actorDefinitionVersion()!!.withVersionId(forkedADVId).withActorDefinitionId(forkedSourceDefId)
     sourceService!!.writeConnectorMetadata(
-      MockData.standardSourceDefinitions().get(0)!!.withSourceDefinitionId(forkedSourceDefId),
+      MockData.standardSourceDefinitions()[0]!!.withSourceDefinitionId(forkedSourceDefId),
       forkedADV,
-      mutableListOf<ActorDefinitionBreakingChange>(),
+      mutableListOf(),
     )
 
     val forkedProject =
@@ -601,19 +594,19 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
         .withBaseActorDefinitionVersionId(forkedADVId)
 
     connectorBuilderService!!.writeBuilderProjectDraft(
-      forkedProject.getBuilderProjectId(),
-      forkedProject.getWorkspaceId(),
-      forkedProject.getName(),
-      forkedProject.getManifestDraft(),
-      project1!!.getComponentsFileContent(),
-      forkedProject.getBaseActorDefinitionVersionId(),
-      forkedProject.getContributionPullRequestUrl(),
-      forkedProject.getContributionActorDefinitionId(),
+      forkedProject.builderProjectId,
+      forkedProject.workspaceId,
+      forkedProject.name,
+      forkedProject.manifestDraft,
+      project1!!.componentsFileContent,
+      forkedProject.baseActorDefinitionVersionId,
+      forkedProject.contributionPullRequestUrl,
+      forkedProject.contributionActorDefinitionId,
     )
 
-    val project = connectorBuilderService!!.getConnectorBuilderProject(forkedProject.getBuilderProjectId(), false)
+    val project = connectorBuilderService!!.getConnectorBuilderProject(forkedProject.builderProjectId, false)
     org.junit.jupiter.api.Assertions
-      .assertEquals(forkedADVId, project.getBaseActorDefinitionVersionId())
+      .assertEquals(forkedADVId, project.baseActorDefinitionVersionId)
   }
 
   @Test
@@ -622,25 +615,25 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     val contributionActorDefinitionId = UUID.randomUUID()
     val contributionPullRequestUrl = "https://github.com/airbytehq/airbyte/pull/1234"
 
-    project1!!.setContributionPullRequestUrl(contributionPullRequestUrl)
-    project1!!.setContributionActorDefinitionId(contributionActorDefinitionId)
+    project1!!.contributionPullRequestUrl = contributionPullRequestUrl
+    project1!!.contributionActorDefinitionId = contributionActorDefinitionId
 
     connectorBuilderService!!.writeBuilderProjectDraft(
-      project1!!.getBuilderProjectId(),
-      project1!!.getWorkspaceId(),
-      project1!!.getName(),
-      project1!!.getManifestDraft(),
-      project1!!.getComponentsFileContent(),
-      project1!!.getBaseActorDefinitionVersionId(),
-      project1!!.getContributionPullRequestUrl(),
-      project1!!.getContributionActorDefinitionId(),
+      project1!!.builderProjectId,
+      project1!!.workspaceId,
+      project1!!.name,
+      project1!!.manifestDraft,
+      project1!!.componentsFileContent,
+      project1!!.baseActorDefinitionVersionId,
+      project1!!.contributionPullRequestUrl,
+      project1!!.contributionActorDefinitionId,
     )
 
-    val updatedProject = connectorBuilderService!!.getConnectorBuilderProject(project1!!.getBuilderProjectId(), true)
+    val updatedProject = connectorBuilderService!!.getConnectorBuilderProject(project1!!.builderProjectId, true)
     org.junit.jupiter.api.Assertions
-      .assertEquals(contributionPullRequestUrl, updatedProject.getContributionPullRequestUrl())
+      .assertEquals(contributionPullRequestUrl, updatedProject.contributionPullRequestUrl)
     org.junit.jupiter.api.Assertions
-      .assertEquals(contributionActorDefinitionId, updatedProject.getContributionActorDefinitionId())
+      .assertEquals(contributionActorDefinitionId, updatedProject.contributionActorDefinitionId)
   }
 
   private fun anyDeclarativeManifest(): DeclarativeManifest? {
@@ -681,21 +674,21 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
         .withBuilderProjectId(projectId)
         .withName(name)
         .withTombstone(deleted)
-        .withManifestDraft(ObjectMapper().readTree("{\"the_id\": \"" + projectId + "\"}"))
+        .withManifestDraft(ObjectMapper().readTree("{\"the_id\": \"$projectId\"}"))
         .withHasDraft(true)
         .withWorkspaceId(workspace)
     connectorBuilderService!!.writeBuilderProjectDraft(
-      project.getBuilderProjectId(),
-      project.getWorkspaceId(),
-      project.getName(),
-      project.getManifestDraft(),
-      project.getComponentsFileContent(),
-      project.getBaseActorDefinitionVersionId(),
-      project.getContributionPullRequestUrl(),
-      project.getContributionActorDefinitionId(),
+      project.builderProjectId,
+      project.workspaceId,
+      project.name,
+      project.manifestDraft,
+      project.componentsFileContent,
+      project.baseActorDefinitionVersionId,
+      project.contributionPullRequestUrl,
+      project.contributionActorDefinitionId,
     )
     if (deleted) {
-      connectorBuilderService!!.deleteBuilderProject(project.getBuilderProjectId())
+      connectorBuilderService!!.deleteBuilderProject(project.builderProjectId)
     }
     return project
   }
@@ -705,29 +698,29 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
 
     val sourceDefinition =
       StandardSourceDefinition()
-        .withName("source-def-" + id)
+        .withName("source-def-$id")
         .withSourceDefinitionId(id)
         .withTombstone(false)
 
     val actorDefinitionVersion =
       ActorDefinitionVersion()
-        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
-        .withDockerRepository("repo-" + id)
+        .withActorDefinitionId(sourceDefinition.sourceDefinitionId)
+        .withDockerRepository("repo-$id")
         .withDockerImageTag("0.0.1")
         .withSupportLevel(SupportLevel.COMMUNITY)
         .withInternalSupportLevel(100L)
         .withSpec(ConnectorSpecification().withProtocolVersion("0.1.0"))
 
-    sourceService!!.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf<ActorDefinitionBreakingChange>())
+    sourceService!!.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf())
     connectorBuilderService!!.insertActiveDeclarativeManifest(
       DeclarativeManifest()
-        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withActorDefinitionId(sourceDefinition.sourceDefinitionId)
         .withVersion(MANIFEST_VERSION)
         .withDescription("")
         .withManifest(Jsons.emptyObject())
         .withSpec(Jsons.emptyObject()),
     )
-    connectorBuilderService!!.assignActorDefinitionToConnectorBuilderProject(projectId, sourceDefinition.getSourceDefinitionId())
+    connectorBuilderService!!.assignActorDefinitionToConnectorBuilderProject(projectId, sourceDefinition.sourceDefinitionId)
 
     return sourceDefinition
   }

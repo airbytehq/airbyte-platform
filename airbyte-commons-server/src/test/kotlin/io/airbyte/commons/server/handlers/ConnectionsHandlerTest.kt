@@ -219,7 +219,6 @@ import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.validation.Valid
 import org.junit.Assert
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -252,7 +251,6 @@ import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-import java.util.Arrays
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer
@@ -982,19 +980,19 @@ internal class ConnectionsHandlerTest {
       assertEquals(connectionRead2, actualConnectionReadList.connections[1])
 
       val sourceSearch = SourceSearch().sourceId(UUID.randomUUID())
-      connectionSearch.setSource(sourceSearch)
+      connectionSearch.source = sourceSearch
       actualConnectionReadList = matchSearchHandler.searchConnections(connectionSearch)
       assertEquals(0, actualConnectionReadList.connections.size)
 
       sourceSearch.sourceId(connectionRead1.sourceId)
-      connectionSearch.setSource(sourceSearch)
+      connectionSearch.source = sourceSearch
       actualConnectionReadList = matchSearchHandler.searchConnections(connectionSearch)
       assertEquals(2, actualConnectionReadList.connections.size)
       assertEquals(connectionRead1, actualConnectionReadList.connections[0])
       assertEquals(connectionRead2, actualConnectionReadList.connections[1])
 
       val destinationSearch = DestinationSearch()
-      connectionSearch.setDestination(destinationSearch)
+      connectionSearch.destination = destinationSearch
       actualConnectionReadList = matchSearchHandler.searchConnections(connectionSearch)
       assertEquals(2, actualConnectionReadList.connections.size)
       assertEquals(connectionRead1, actualConnectionReadList.connections[0])
@@ -1007,7 +1005,7 @@ internal class ConnectionsHandlerTest {
           ),
         ),
       )
-      connectionSearch.setDestination(destinationSearch)
+      connectionSearch.destination = destinationSearch
       actualConnectionReadList = matchSearchHandler.searchConnections(connectionSearch)
       assertEquals(0, actualConnectionReadList.connections.size)
 
@@ -1018,7 +1016,7 @@ internal class ConnectionsHandlerTest {
           ),
         ),
       )
-      connectionSearch.setDestination(destinationSearch)
+      connectionSearch.destination = destinationSearch
       actualConnectionReadList = matchSearchHandler.searchConnections(connectionSearch)
       assertEquals(2, actualConnectionReadList.connections.size)
       assertEquals(connectionRead1, actualConnectionReadList.connections[0])
@@ -1153,10 +1151,10 @@ internal class ConnectionsHandlerTest {
       destSupportsFiles: Boolean,
     ) {
       val sourceDefinitionVersion = ActorDefinitionVersion()
-      sourceDefinitionVersion.setSupportsFileTransfer(sourceSupportsFiles)
+      sourceDefinitionVersion.supportsFileTransfer = sourceSupportsFiles
 
       val destDefinitionVersion = ActorDefinitionVersion()
-      destDefinitionVersion.setSupportsFileTransfer(destSupportsFiles)
+      destDefinitionVersion.supportsFileTransfer = destSupportsFiles
 
       val streams: MutableList<AirbyteStreamAndConfiguration?> = mutableListOf()
 
@@ -1408,8 +1406,7 @@ internal class ConnectionsHandlerTest {
         val catalogWithSelectedFields = generateApiCatalogWithTwoFields()
         // Only select one of the two fields.
         catalogWithSelectedFields
-          .streams
-          .get(0)
+          .streams[0]
           .config
           .fieldSelectionEnabled(true)
           .selectedFields(listOf<@Valid SelectedFieldInfo?>(SelectedFieldInfo().addFieldPathItem(FIELD_NAME)))
@@ -1646,8 +1643,7 @@ internal class ConnectionsHandlerTest {
 
         val fullRefreshCatalogWithSelectedFields = generateApiCatalogWithTwoFields()
         fullRefreshCatalogWithSelectedFields
-          .streams
-          .get(0)
+          .streams[0]
           .config
           .fieldSelectionEnabled(true)
           .selectedFields(listOf<@Valid SelectedFieldInfo?>(SelectedFieldInfo().addFieldPathItem(FIELD_NAME)))
@@ -1665,8 +1661,7 @@ internal class ConnectionsHandlerTest {
         standardSync
           .withFieldSelectionData(FieldSelectionData().withAdditionalProperty(streamSelectionData, true))
           .catalog
-          .streams
-          .get(0)
+          .streams[0]
           .withSyncMode(SyncMode.FULL_REFRESH)
           .withCursorField(null)
 
@@ -1677,13 +1672,12 @@ internal class ConnectionsHandlerTest {
       fun testFieldSelectionRemoveCursorFails() {
         // Test that if we try to de-select a field that's being used for the cursor, the request will fail.
         // The connection initially has a catalog with one stream, and two fields in that stream.
-        standardSync.setCatalog(generateAirbyteCatalogWithTwoFields())
+        standardSync.catalog = generateAirbyteCatalogWithTwoFields()
 
         // Send an update that sets a cursor but de-selects that field.
         val catalogForUpdate = generateApiCatalogWithTwoFields()
         catalogForUpdate
-          .streams
-          .get(0)
+          .streams[0]
           .config
           .fieldSelectionEnabled(true)
           .selectedFields(listOf<@Valid SelectedFieldInfo?>(SelectedFieldInfo().addFieldPathItem(FIELD_NAME)))
@@ -1705,13 +1699,12 @@ internal class ConnectionsHandlerTest {
         // Test that if we try to de-select a field that's being used for the primary key, the request will
         // fail.
         // The connection initially has a catalog with one stream, and two fields in that stream.
-        standardSync.setCatalog(generateAirbyteCatalogWithTwoFields())
+        standardSync.catalog = generateAirbyteCatalogWithTwoFields()
 
         // Send an update that sets a primary key but deselects that field.
         val catalogForUpdate = generateApiCatalogWithTwoFields()
         catalogForUpdate
-          .streams
-          .get(0)
+          .streams[0]
           .config
           .fieldSelectionEnabled(true)
           .selectedFields(listOf<@Valid SelectedFieldInfo?>(SelectedFieldInfo().addFieldPathItem(FIELD_NAME)))
@@ -1919,7 +1912,7 @@ internal class ConnectionsHandlerTest {
       fun throwsBadRequestExceptionOnCatalogSizeValidationError() {
         val catalog = generateBasicApiCatalog()
         val request = buildConnectionCreateRequest(standardSync, catalog)
-        whenever<ValidationError?>(
+        whenever(
           catalogValidator.fieldCount(
             eq(catalog),
             anyOrNull(),
@@ -2109,7 +2102,7 @@ internal class ConnectionsHandlerTest {
         val lockedSync =
           clone(
             standardSync,
-          ).withStatus(io.airbyte.config.StandardSync.Status.LOCKED).withStatusReason(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
+          ).withStatus(StandardSync.Status.LOCKED).withStatusReason(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
         whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(lockedSync)
 
         val connectionUpdate = ConnectionUpdate().connectionId(standardSync.connectionId).name("newName")
@@ -2289,29 +2282,24 @@ internal class ConnectionsHandlerTest {
         // the test expects the final result to include both streams.
         val catalogWithNewStream = generateBasicApiCatalog()
         catalogWithNewStream
-          .streams
-          .get(0)
+          .streams[0]
           .stream.name = azkabanUsers
         catalogWithNewStream
-          .streams
-          .get(0)
+          .streams[0]
           .config.aliasName = azkabanUsers
 
         val catalogForUpdate = generateMultipleStreamsApiCatalog(2)
         catalogForUpdate
-          .streams
-          .get(1)
+          .streams[1]
           .stream.name = azkabanUsers
         catalogForUpdate
-          .streams
-          .get(1)
+          .streams[1]
           .config.aliasName = azkabanUsers
 
         // expect two streams in the final persisted catalog -- the original unchanged stream, plus the new
         // azkabanUsers stream
         val expectedPersistedCatalog = generateMultipleStreamsConfiguredAirbyteCatalog(2)
-        expectedPersistedCatalog.streams
-          .get(1)
+        expectedPersistedCatalog.streams[1]
           .stream.name = azkabanUsers
 
         val connectionUpdate =
@@ -2346,24 +2334,20 @@ internal class ConnectionsHandlerTest {
 
         val catalogForUpdate = generateMultipleStreamsApiCatalog(3)
         catalogForUpdate
-          .streams
-          .get(0)
+          .streams[0]
           .config.syncMode = io.airbyte.api.model.generated.SyncMode.FULL_REFRESH
         catalogForUpdate
-          .streams
-          .get(2)
+          .streams[2]
           .stream.name = azkabanUsers
         catalogForUpdate
-          .streams
-          .get(2)
+          .streams[2]
           .config.aliasName = azkabanUsers
 
         // expect three streams in the final persisted catalog
         val expectedPersistedCatalog = generateMultipleStreamsConfiguredAirbyteCatalog(3)
         expectedPersistedCatalog.streams[0].withSyncMode(SyncMode.FULL_REFRESH)
         // index 1 is unchanged
-        expectedPersistedCatalog.streams
-          .get(2)
+        expectedPersistedCatalog.streams[2]
           .stream
           .withName(azkabanUsers)
 
@@ -2437,8 +2421,7 @@ internal class ConnectionsHandlerTest {
         catalogForUpdate
           .streams
           .first()
-          .config
-          .setIncludeFiles(true)
+          .config.includeFiles = true
 
         val connectionUpdate =
           ConnectionUpdate()
@@ -2484,7 +2467,7 @@ internal class ConnectionsHandlerTest {
 
       @Test
       fun testUpdateConnectionPatchValidatesMappers() {
-        standardSync.setCatalog(generateAirbyteCatalogWithTwoFields())
+        standardSync.catalog = generateAirbyteCatalogWithTwoFields()
 
         val catalogForUpdate = generateApiCatalogWithTwoFields()
         val connectionUpdate =
@@ -2527,9 +2510,9 @@ internal class ConnectionsHandlerTest {
             MapperValidationProblem::class.java,
           ) { connectionsHandler.updateConnection(connectionUpdate, null, false) }
         val problem = exception.problem as MapperValidationProblemResponse
-        assertEquals(problem.getData()!!.getErrors().size, 1)
+        assertEquals(problem.getData()!!.errors.size, 1)
         assertEquals(
-          problem.getData()!!.getErrors().first(),
+          problem.getData()!!.errors.first(),
           ProblemMapperErrorData()
             .stream(streamName)
             .error(MapperErrorType.INVALID_MAPPER_CONFIG.name)
@@ -2588,7 +2571,7 @@ internal class ConnectionsHandlerTest {
       @Test
       fun testUpdateConnectionPatchMappers() {
         // The connection initially has a catalog with one stream, and two fields in that stream.
-        standardSync.setCatalog(generateAirbyteCatalogWithTwoFields())
+        standardSync.catalog = generateAirbyteCatalogWithTwoFields()
 
         // Send an update that hashes one of the fields, using mappers
         val hashingMapper = createHashingMapper(FIELD_NAME, UUID.randomUUID())
@@ -2637,13 +2620,12 @@ internal class ConnectionsHandlerTest {
       @Test
       fun testUpdateConnectionPatchColumnSelection() {
         // The connection initially has a catalog with one stream, and two fields in that stream.
-        standardSync.setCatalog(generateAirbyteCatalogWithTwoFields())
+        standardSync.catalog = generateAirbyteCatalogWithTwoFields()
 
         // Send an update that only selects one of the fields.
         val catalogForUpdate = generateApiCatalogWithTwoFields()
         catalogForUpdate
-          .streams
-          .get(0)
+          .streams[0]
           .config
           .fieldSelectionEnabled(true)
           .selectedFields(listOf<@Valid SelectedFieldInfo?>(SelectedFieldInfo().addFieldPathItem(FIELD_NAME)))
@@ -2682,16 +2664,13 @@ internal class ConnectionsHandlerTest {
         // result that we persist and read after update should be a catalog with a single
         // stream called 'azkaban_users'.
         catalogForUpdate
-          .streams
-          .get(0)
+          .streams[0]
           .config.selected = false
         catalogForUpdate
-          .streams
-          .get(1)
+          .streams[1]
           .stream.name = azkabanUsers
         catalogForUpdate
-          .streams
-          .get(1)
+          .streams[1]
           .config.aliasName = azkabanUsers
 
         val newSourceCatalogId = UUID.randomUUID()
@@ -2714,8 +2693,7 @@ internal class ConnectionsHandlerTest {
             .operationIds(listOf<UUID?>(operationId, otherOperationId))
 
         val expectedPersistedCatalog = generateBasicConfiguredAirbyteCatalog()
-        expectedPersistedCatalog.streams
-          .get(0)
+        expectedPersistedCatalog.streams[0]
           .stream
           .withName(azkabanUsers)
 
@@ -2738,12 +2716,10 @@ internal class ConnectionsHandlerTest {
 
         val expectedCatalogInRead = generateBasicApiCatalog()
         expectedCatalogInRead
-          .streams
-          .get(0)
+          .streams[0]
           .stream.name = azkabanUsers
         expectedCatalogInRead
-          .streams
-          .get(0)
+          .streams[0]
           .config.aliasName = azkabanUsers
 
         val expectedConnectionRead =
@@ -2754,9 +2730,9 @@ internal class ConnectionsHandlerTest {
             standardSync.operationIds,
             newSourceCatalogId,
             false,
-            standardSync.getNotifySchemaChanges(),
-            standardSync.getNotifySchemaChangesByEmail(),
-            standardSync.getBackfillPreference().convertTo<SchemaChangeBackfillPreference>(),
+            standardSync.notifySchemaChanges,
+            standardSync.notifySchemaChangesByEmail,
+            standardSync.backfillPreference.convertTo<SchemaChangeBackfillPreference>(),
             standardSync
               .tags
               .stream()
@@ -2976,7 +2952,7 @@ internal class ConnectionsHandlerTest {
             .connectionId(standardSync.connectionId)
             .syncCatalog(catalog)
             .name("newName")
-        whenever<ValidationError?>(
+        whenever(
           catalogValidator.fieldCount(
             eq(catalog),
             anyOrNull(),
@@ -2996,7 +2972,7 @@ internal class ConnectionsHandlerTest {
         val deactivatedStreams = mutableListOf<String?>("user", "permission")
         val stillActiveStreams = catalogStreamNames.stream().filter { s: String? -> !deactivatedStreams.contains(s) }.toList()
 
-        catalog.setStreams(
+        catalog.streams =
           Stream
             .concat(
               stillActiveStreams.stream().map<AirbyteStreamAndConfiguration?> { name: String? -> this.buildStream(name) },
@@ -3004,15 +2980,13 @@ internal class ConnectionsHandlerTest {
                 .stream()
                 .map<AirbyteStreamAndConfiguration?> { name: String? -> this.buildStream(name) }
                 .peek { s: AirbyteStreamAndConfiguration? ->
-                  s!!.setConfig(
+                  s!!.config =
                     AirbyteStreamConfiguration()
                       .syncMode(io.airbyte.api.model.generated.SyncMode.INCREMENTAL)
                       .destinationSyncMode(DestinationSyncMode.APPEND)
-                      .selected(false),
-                  )
+                      .selected(false)
                 },
-            ).toList(),
-        )
+            ).toList()
         val request =
           ConnectionUpdate()
             .connectionId(moreComplexCatalogSync!!.connectionId)
@@ -3574,7 +3548,7 @@ internal class ConnectionsHandlerTest {
           ) // 100 records
         val attemptWithJobInfo4 = fromJob(attempt4, generateMockJob(connectionId, attempt4))
 
-        val attempts = Arrays.asList(attemptWithJobInfo1, attemptWithJobInfo2, attemptWithJobInfo3, attemptWithJobInfo4)
+        val attempts = listOf(attemptWithJobInfo1, attemptWithJobInfo2, attemptWithJobInfo3, attemptWithJobInfo4)
 
         whenever(
           jobPersistence.listAttemptsForConnectionAfterTimestamp(
@@ -4250,7 +4224,7 @@ internal class ConnectionsHandlerTest {
 
       val connectionId = standardSync.connectionId
       val failureSummary = AttemptFailureSummary()
-      failureSummary.setFailures(listOf(FailureReason().withFailureOrigin(FailureReason.FailureOrigin.DESTINATION)))
+      failureSummary.failures = listOf(FailureReason().withFailureOrigin(FailureReason.FailureOrigin.DESTINATION))
       val failedAttempt = Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L)
       val jobs =
         listOf(
@@ -4282,7 +4256,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4332,7 +4306,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4371,7 +4345,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4391,13 +4365,12 @@ internal class ConnectionsHandlerTest {
 
       val connectionId = standardSync.connectionId
       val failureSummary = AttemptFailureSummary()
-      failureSummary.setFailures(
+      failureSummary.failures =
         listOf(
           FailureReason()
             .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
             .withFailureOrigin(FailureReason.FailureOrigin.DESTINATION),
-        ),
-      )
+        )
       val attempt = Attempt(0, 0, null, null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L)
       val jobs =
         listOf(
@@ -4416,7 +4389,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4455,7 +4428,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4477,7 +4450,7 @@ internal class ConnectionsHandlerTest {
       val jobs = listOf<Job>()
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4515,7 +4488,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4553,7 +4526,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4591,7 +4564,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4629,7 +4602,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4679,7 +4652,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4717,7 +4690,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4754,7 +4727,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4791,7 +4764,7 @@ internal class ConnectionsHandlerTest {
         )
       whenever(
         jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
+          Job.REPLICATION_TYPES,
           connectionId.toString(),
           10,
         ),
@@ -4837,8 +4810,7 @@ internal class ConnectionsHandlerTest {
     @BeforeEach
     fun setup() {
       airbyteCatalog
-        .streams
-        .get(0)
+        .streams[0]
         .withSupportedSyncModes(listOf(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH))
       standardSync =
         StandardSync()
@@ -5045,7 +5017,7 @@ internal class ConnectionsHandlerTest {
     fun testSendingNotificationToManuallyApplySchemaChange() {
       // Override the non-breaking changes preference to ignore so that the changes are not
       // auto-propagated, but needs to be manually applied.
-      standardSync!!.setNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.IGNORE)
+      standardSync!!.nonBreakingChangesPreference = StandardSync.NonBreakingChangesPreference.IGNORE
       whenever(connectionService.getStandardSync(connectionId)).thenReturn(standardSync)
       val originalSync = clone(standardSync!!)
       val newField = Field.of(aDifferentColumn, JsonSchemaType.STRING)
@@ -5103,7 +5075,7 @@ internal class ConnectionsHandlerTest {
     fun testSendingNotificationToManuallyApplySchemaChangeWithPropagationDisabled() {
       // Override the non-breaking changes preference to DISABLE so that the changes are not
       // auto-propagated, but needs to be manually applied.
-      standardSync!!.setNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.DISABLE)
+      standardSync!!.nonBreakingChangesPreference = StandardSync.NonBreakingChangesPreference.DISABLE
       whenever(connectionService.getStandardSync(connectionId)).thenReturn(standardSync)
       val originalSync = clone(standardSync!!)
       val newField = Field.of(aDifferentColumn, JsonSchemaType.STRING)

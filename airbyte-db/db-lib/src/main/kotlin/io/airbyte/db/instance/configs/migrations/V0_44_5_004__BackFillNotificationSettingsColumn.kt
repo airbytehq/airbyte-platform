@@ -86,13 +86,13 @@ class V0_44_5_004__BackFillNotificationSettingsColumn : BaseJavaMigration() {
         }
         // By default the following notification are all sent via emails. At this moment customers do not have an option to turn it off.
         notificationSettings.sendOnConnectionUpdateActionRequired =
-          NotificationItem().withNotificationType(java.util.List.of(Notification.NotificationType.CUSTOMERIO))
+          NotificationItem().withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO))
         notificationSettings.sendOnConnectionUpdate =
-          NotificationItem().withNotificationType(java.util.List.of(Notification.NotificationType.CUSTOMERIO))
+          NotificationItem().withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO))
         notificationSettings.sendOnSyncDisabled =
-          NotificationItem().withNotificationType(java.util.List.of(Notification.NotificationType.CUSTOMERIO))
+          NotificationItem().withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO))
         notificationSettings.sendOnSyncDisabledWarning =
-          NotificationItem().withNotificationType(java.util.List.of(Notification.NotificationType.CUSTOMERIO))
+          NotificationItem().withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO))
         ctx
           .update(DSL.table(WORKSPACE_TABLE))
           .set(NOTIFICATION_SETTINGS_COLUMN, JSONB.valueOf(Jsons.serialize(notificationSettings)))

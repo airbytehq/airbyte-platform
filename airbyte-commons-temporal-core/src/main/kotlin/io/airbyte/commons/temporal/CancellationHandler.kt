@@ -12,7 +12,6 @@ import io.temporal.activity.ActivityExecutionContext
 import io.temporal.client.ActivityCanceledException
 import io.temporal.client.ActivityCompletionException
 import java.util.Locale
-import java.util.Map
 
 /**
  * For each call, checks if the current activity is cancelled. If it is, then it executes the
@@ -41,11 +40,9 @@ interface CancellationHandler {
     override fun checkAndHandleCancellation(onCancellationCallback: Runnable) {
       try {
         ApmTraceUtils.addTagsToTrace(
-          Map.of<String, Any>(
-            ApmTraceConstants.Tags.TEMPORAL_ACTIVITY_ID_KEY,
-            activityContext.info.activityId,
-            ApmTraceConstants.Tags.TEMPORAL_WORKFLOW_ID_KEY,
-            activityContext.info.workflowId,
+          mapOf<String?, Any?>(
+            ApmTraceConstants.Tags.TEMPORAL_ACTIVITY_ID_KEY to activityContext.info.activityId,
+            ApmTraceConstants.Tags.TEMPORAL_WORKFLOW_ID_KEY to activityContext.info.workflowId,
           ),
         )
                 /*
@@ -61,12 +58,12 @@ interface CancellationHandler {
         activityContext.heartbeat<Any?>(null)
       } catch (e: ActivityCanceledException) {
         ApmTraceUtils.addExceptionToTrace(e)
-        ApmTraceUtils.addTagsToTrace(Map.of<String, Any>(ApmTraceConstants.Tags.FAILURE_TYPES_KEY, e.javaClass.name))
+        ApmTraceUtils.addTagsToTrace(mapOf<String?, Any?>(ApmTraceConstants.Tags.FAILURE_TYPES_KEY to e.javaClass.name))
         onCancellationCallback.run()
         log.warn(e) { "Job was cancelled." }
       } catch (e: ActivityCompletionException) {
         ApmTraceUtils.addExceptionToTrace(e)
-        ApmTraceUtils.addTagsToTrace(Map.of<String, Any>(ApmTraceConstants.Tags.FAILURE_TYPES_KEY, e.javaClass.name))
+        ApmTraceUtils.addTagsToTrace(mapOf<String?, Any?>(ApmTraceConstants.Tags.FAILURE_TYPES_KEY to e.javaClass.name))
         // TODO: This is a hack to avoid having to manually destroy pod, it should be revisited
         if (!e.workflowId
             .orElse("")

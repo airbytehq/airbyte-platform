@@ -6,7 +6,6 @@ package io.airbyte.data.services.shared
 
 import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.config.ConfiguredAirbyteCatalog
-import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.SourceConnection
@@ -21,16 +20,12 @@ import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.JooqTestDbSetupHelper
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl
-import io.airbyte.db.ContextQueryFunction
 import io.airbyte.db.Database
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionRecord
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionVersionRecord
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorRecord
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
@@ -43,7 +38,6 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
-import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -54,8 +48,6 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.Locale
 import java.util.UUID
-import java.util.stream.Collectors
-import java.util.stream.Stream
 import javax.sql.DataSource
 import kotlin.math.min
 
@@ -64,16 +56,16 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
   private val sourceServiceJooqImpl: SourceServiceJooqImpl
   private val destinationServiceJooqImpl: DestinationServiceJooqImpl
   private val connectionServiceJooqImpl: ConnectionServiceJooqImpl
-  private val featureFlagClient: TestClient = Mockito.mock<TestClient>(TestClient::class.java)
+  private val featureFlagClient: TestClient = Mockito.mock(TestClient::class.java)
   private lateinit var jobDatabase: Database
   private lateinit var dataSource: DataSource
   private lateinit var dslContext: DSLContext
 
   init {
-    val metricClient = Mockito.mock<MetricClient>(MetricClient::class.java)
-    val connectionService = Mockito.mock<ConnectionService>(ConnectionService::class.java)
-    val actorDefinitionVersionUpdater = Mockito.mock<ActorDefinitionVersionUpdater>(ActorDefinitionVersionUpdater::class.java)
-    val secretPersistenceConfigService = Mockito.mock<SecretPersistenceConfigService>(SecretPersistenceConfigService::class.java)
+    val metricClient = Mockito.mock(MetricClient::class.java)
+    val connectionService = Mockito.mock(ConnectionService::class.java)
+    val actorDefinitionVersionUpdater = Mockito.mock(ActorDefinitionVersionUpdater::class.java)
+    val secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
 
     this.paginationHelper = ActorServicePaginationHelper(database!!)
     this.sourceServiceJooqImpl =
@@ -117,13 +109,13 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     Assertions.assertNotNull(result)
     Assertions.assertEquals(1, result.size) // Should have the actor from setup, but with 0 connections
-    Assertions.assertEquals(0, result.get(0).connectionCount)
+    Assertions.assertEquals(0, result[0].connectionCount)
     if (actorType == ActorType.source) {
-      Assertions.assertEquals(helper.source!!.sourceId, result.get(0).sourceConnection!!.sourceId)
+      Assertions.assertEquals(helper.source!!.sourceId, result[0].sourceConnection!!.sourceId)
     } else {
-      Assertions.assertEquals(helper.destination!!.destinationId, result.get(0).destinationConnection!!.destinationId)
+      Assertions.assertEquals(helper.destination!!.destinationId, result[0].destinationConnection!!.destinationId)
     }
-    Assertions.assertNull(result.get(0).lastSync, "Should have no last sync when no connections exist")
+    Assertions.assertNull(result[0].lastSync, "Should have no last sync when no connections exist")
   }
 
   @Test
@@ -142,9 +134,9 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     Assertions.assertNotNull(result)
     Assertions.assertEquals(1, result.size) // Should have the source from setup, but with 0 connections
-    Assertions.assertEquals(0, result.get(0)!!.connectionCount)
-    Assertions.assertEquals(helper.source!!.sourceId, result.get(0)!!.source.sourceId)
-    Assertions.assertNull(result.get(0)!!.lastSync, "Should have no last sync when no connections exist")
+    Assertions.assertEquals(0, result[0].connectionCount)
+    Assertions.assertEquals(helper.source!!.sourceId, result[0].source.sourceId)
+    Assertions.assertNull(result[0].lastSync, "Should have no last sync when no connections exist")
   }
 
   @ParameterizedTest
@@ -159,12 +151,12 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     val resultString = result.first
 
     if (expectedSubstring.isEmpty()) {
-      Assertions.assertEquals("", resultString, description + " (actor type: " + actorType + ")")
+      Assertions.assertEquals("", resultString, "$description (actor type: $actorType)")
     }
 
     Assertions.assertTrue(
       resultString.contains(expectedSubstring),
-      description + " (actor type: " + actorType + ") - Expected result to contain '" + expectedSubstring + "' but was: " + resultString,
+      "$description (actor type: $actorType) - Expected result to contain '$expectedSubstring' but was: $resultString",
     )
   }
 
@@ -179,11 +171,11 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     val result = paginationHelper.buildCursorConditionLastSyncDesc(cursor, actorType)
 
     if (expectedSubstring.isEmpty()) {
-      Assertions.assertEquals("", result, description + " (actor type: " + actorType + ")")
+      Assertions.assertEquals("", result, "$description (actor type: $actorType)")
     }
     Assertions.assertTrue(
       result.contains(expectedSubstring),
-      description + " (actor type: " + actorType + ") - Expected result to contain '" + expectedSubstring + "' but was: " + result,
+      "$description (actor type: $actorType) - Expected result to contain '$expectedSubstring' but was: $result",
     )
   }
 
@@ -202,7 +194,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     for (expectedString in expectedSubstrings) {
       Assertions.assertTrue(
         conditionStr.contains(expectedString),
-        description + " (actor type: " + actorType + ") - Expected result to contain '" + expectedString + "' but was: " + conditionStr,
+        "$description (actor type: $actorType) - Expected result to contain '$expectedString' but was: $conditionStr",
       )
     }
   }
@@ -296,13 +288,13 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     if (actorType == ActorType.source) {
       val source1 = setupHelper.source
-      source1!!.setName("source1")
+      source1!!.name = "source1"
       sourceServiceJooqImpl.writeSourceConnectionNoSecrets(source1)
 
       val source2 = createAdditionalSource(workspaceId, setupHelper)
       val destination = setupHelper.destination
-      createConnection(source1, destination!!, StandardSync.Status.ACTIVE)
-      createConnection(source2, destination, StandardSync.Status.ACTIVE)
+      createConnection(source1, destination!!, Status.ACTIVE)
+      createConnection(source2, destination, Status.ACTIVE)
 
       // Test with no filters
       var pagination =
@@ -334,13 +326,13 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       Assertions.assertEquals(1, count)
     } else {
       val destination1 = setupHelper.destination
-      destination1!!.setName("destination1")
+      destination1!!.name = "destination1"
       destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(destination1)
 
       val destination2 = createAdditionalDestination(workspaceId, setupHelper)
       val source = setupHelper.source
-      createConnection(source!!, destination1, StandardSync.Status.ACTIVE)
-      createConnection(source, destination2, StandardSync.Status.ACTIVE)
+      createConnection(source!!, destination1, Status.ACTIVE)
+      createConnection(source, destination2, Status.ACTIVE)
 
       // Test with no filters
       var pagination =
@@ -412,15 +404,15 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       adjustedExpectedWhere = adjustedExpectedWhere.replace("c.source_id", "c.destination_id")
     }
 
-    Assertions.assertEquals(adjustedExpectedWhere, result.first, testDescription + " (actor type: " + actorType + ") - WHERE clause")
-    Assertions.assertEquals(expectedParams.size, result.second!!.size, testDescription + " (actor type: " + actorType + ") - Parameter count")
+    Assertions.assertEquals(adjustedExpectedWhere, result.first, "$testDescription (actor type: $actorType) - WHERE clause")
+    Assertions.assertEquals(expectedParams.size, result.second.size, "$testDescription (actor type: $actorType) - Parameter count")
 
     // Check individual parameters
     for (i in expectedParams.indices) {
       Assertions.assertEquals(
-        expectedParams.get(i),
-        result.second!!.get(i),
-        testDescription + " (actor type: " + actorType + ") - Parameter " + i,
+        expectedParams[i],
+        result.second[i],
+        "$testDescription (actor type: $actorType) - Parameter $i",
       )
     }
   }
@@ -433,19 +425,19 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     val result = paginationHelper.buildActorFilterCondition(workspaceId, filters, actorType, false)
 
     // Verify the WHERE clause starts correctly
-    Assertions.assertTrue(result.first.startsWith("WHERE"), "Should start with WHERE (actor type: " + actorType + ")")
+    Assertions.assertTrue(result.first.startsWith("WHERE"), "Should start with WHERE (actor type: $actorType)")
 
     // Verify parameter count matches placeholder count
     val whereClause = result.first
     val parameterPlaceholders = whereClause.length - whereClause.replace("?", "").length
     Assertions.assertEquals(
       parameterPlaceholders,
-      result.second!!.size,
-      "Parameter count should match placeholder count (actor type: " + actorType + ")",
+      result.second.size,
+      "Parameter count should match placeholder count (actor type: $actorType)",
     )
 
     // Verify workspace ID is always the first parameter
-    Assertions.assertEquals(workspaceId, result.second!!.get(0), "First parameter should be workspace ID (actor type: " + actorType + ")")
+    Assertions.assertEquals(workspaceId, result.second[0], "First parameter should be workspace ID (actor type: $actorType)")
   }
 
   @ParameterizedTest
@@ -454,9 +446,9 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     val invalidId = UUID.fromString("00000000-0000-0000-0000-000000000000")
     val sortKey = if (actorType == ActorType.source) SortKey.SOURCE_NAME else SortKey.DESTINATION_NAME
 
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable {
+      {
         paginationHelper.getCursorActor(invalidId, sortKey, null, true, 10, actorType)
       },
       "Should throw ConfigNotFoundException for cursor ID of nonexistent actor",
@@ -473,20 +465,18 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     val sortKey = if (actorType == ActorType.source) SortKey.SOURCE_NAME else SortKey.DESTINATION_NAME
 
     // Test the method - it should work without throwing an exception
-    Assertions.assertDoesNotThrow(
-      Executable {
-        val result =
-          paginationHelper.getCursorActor(
-            actorId,
-            sortKey,
-            null,
-            true,
-            10,
-            actorType,
-          )
-        Assertions.assertNotNull(result, "Should return a result")
-      },
-    )
+    Assertions.assertDoesNotThrow {
+      val result =
+        paginationHelper.getCursorActor(
+          actorId,
+          sortKey,
+          null,
+          true,
+          10,
+          actorType,
+        )
+      Assertions.assertNotNull(result, "Should return a result")
+    }
   }
 
   @ParameterizedTest
@@ -581,13 +571,13 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     val initialCursor = Cursor(sortKey, null, null, null, null, null, null, null, ascending, filters)
 
-    val allResults: MutableList<SourceConnectionWithCount> = ArrayList<SourceConnectionWithCount>()
-    val seenSourceIds: MutableSet<UUID?> = HashSet<UUID?>()
+    val allResults: MutableList<SourceConnectionWithCount> = mutableListOf()
+    val seenSourceIds: MutableSet<UUID?> = mutableSetOf()
     var currentCursor: Cursor? = initialCursor
     var iterations = 0
     val maxIterations = 20 // Safety check
 
-    val seenPageSizes: MutableList<Int?> = ArrayList<Int?>()
+    val seenPageSizes: MutableList<Int?> = mutableListOf()
     // Paginate through all results
     while (iterations < maxIterations) {
       val pagination = WorkspaceResourceCursorPagination(currentCursor, pageSize)
@@ -609,7 +599,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         val sourceId = result.sourceConnection!!.sourceId
         Assertions.assertFalse(
           seenSourceIds.contains(sourceId),
-          testDescription + " - " + seenPageSizes + " - Found duplicate source ID: " + sourceId + " in iteration " + iterations,
+          "$testDescription - $seenPageSizes - Found duplicate source ID: $sourceId in iteration $iterations",
         )
         seenSourceIds.add(sourceId)
       }
@@ -617,8 +607,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       // Convert to SourceConnectionWithCount for compatibility with existing test infrastructure
       val sourceResults =
         pageResults
-          .stream()
-          .map<SourceConnectionWithCount?> { result: ActorConnectionWithCount? ->
+          .map { result: ActorConnectionWithCount? ->
             SourceConnectionWithCount(
               result!!.sourceConnection!!,
               result.actorDefinitionName,
@@ -627,11 +616,11 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
               result.connectionJobStatuses,
               result.isActive,
             )
-          }.collect(Collectors.toList())
+          }
       allResults.addAll(sourceResults)
 
       // Create cursor from last result for next page
-      val lastResult = pageResults.get(pageResults.size - 1)
+      val lastResult = pageResults[pageResults.size - 1]
       currentCursor =
         paginationHelper
           .buildCursorPagination(
@@ -645,7 +634,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       iterations++
     }
 
-    Assertions.assertTrue(iterations < maxIterations, testDescription + " - Too many iterations, possible infinite loop")
+    Assertions.assertTrue(iterations < maxIterations, "$testDescription - Too many iterations, possible infinite loop")
 
     // Get count with same filters for comparison
     val totalCount =
@@ -658,7 +647,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(
       totalCount,
       allResults.size,
-      testDescription + " - Pagination result count " + seenPageSizes + " should match total count",
+      "$testDescription - Pagination result count $seenPageSizes should match total count",
     )
     verifyResultsSorted(allResults, sortKey, ascending, testDescription)
     verifyResultsMatchFilters(allResults, filters, testDescription)
@@ -696,8 +685,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     // Convert to SourceConnectionWithCount for compatibility with existing test infrastructure
     val allResults =
       actorResults
-        .stream()
-        .map<SourceConnectionWithCount?> { result: ActorConnectionWithCount? ->
+        .map { result: ActorConnectionWithCount? ->
           SourceConnectionWithCount(
             result!!.sourceConnection!!,
             result.actorDefinitionName,
@@ -706,12 +694,12 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
             result.connectionJobStatuses,
             result.isActive,
           )
-        }.collect(Collectors.toList())
+        }.toMutableList()
 
     Assertions.assertEquals(
       allResults.size,
       count,
-      testDescription + " - Count should match actual result size",
+      "$testDescription - Count should match actual result size",
     )
     verifyResultsMatchFilters(allResults, filters, testDescription)
   }
@@ -730,13 +718,13 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     val initialCursor = Cursor(sortKey, null, null, null, null, null, null, null, ascending, filters)
 
-    val allResults: MutableList<DestinationConnectionWithCount> = ArrayList<DestinationConnectionWithCount>()
-    val seenDestinationIds: MutableSet<UUID?> = HashSet<UUID?>()
+    val allResults: MutableList<DestinationConnectionWithCount> = mutableListOf()
+    val seenDestinationIds: MutableSet<UUID?> = mutableSetOf()
     var currentCursor: Cursor? = initialCursor
     var iterations = 0
     val maxIterations = 20 // Safety check
 
-    val seenPageSizes: MutableList<Int?> = ArrayList<Int?>()
+    val seenPageSizes: MutableList<Int?> = mutableListOf()
     // Paginate through all results
     while (iterations < maxIterations) {
       val pagination = WorkspaceResourceCursorPagination(currentCursor, pageSize)
@@ -758,7 +746,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         val destinationId = result.destinationConnection!!.destinationId
         Assertions.assertFalse(
           seenDestinationIds.contains(destinationId),
-          testDescription + " - " + seenPageSizes + " - Found duplicate destination ID: " + destinationId + " in iteration " + iterations,
+          "$testDescription - $seenPageSizes - Found duplicate destination ID: $destinationId in iteration $iterations",
         )
         seenDestinationIds.add(destinationId)
       }
@@ -766,8 +754,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       // Convert to DestinationConnectionWithCount for compatibility with existing test infrastructure
       val destinationResults =
         pageResults
-          .stream()
-          .map<DestinationConnectionWithCount?> { result: ActorConnectionWithCount? ->
+          .map { result: ActorConnectionWithCount? ->
             DestinationConnectionWithCount(
               result!!.destinationConnection!!,
               result.actorDefinitionName,
@@ -776,11 +763,11 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
               result.connectionJobStatuses,
               result.isActive,
             )
-          }.collect(Collectors.toList())
+          }
       allResults.addAll(destinationResults)
 
       // Create cursor from last result for next page
-      val lastResult = pageResults.get(pageResults.size - 1)
+      val lastResult = pageResults[pageResults.size - 1]
       currentCursor =
         paginationHelper
           .buildCursorPagination(
@@ -794,7 +781,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       iterations++
     }
 
-    Assertions.assertTrue(iterations < maxIterations, testDescription + " - Too many iterations, possible infinite loop")
+    Assertions.assertTrue(iterations < maxIterations, "$testDescription - Too many iterations, possible infinite loop")
 
     // Get count with same filters for comparison
     val totalCount =
@@ -807,7 +794,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(
       totalCount,
       allResults.size,
-      testDescription + " - Pagination result count " + seenPageSizes + " should match total count",
+      "$testDescription - Pagination result count $seenPageSizes should match total count",
     )
     verifyDestinationResultsSorted(allResults, sortKey, ascending, testDescription)
     verifyDestinationResultsMatchFilters(allResults, filters, testDescription)
@@ -845,8 +832,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     // Convert to DestinationConnectionWithCount for compatibility with existing test infrastructure
     val allResults =
       actorResults
-        .stream()
-        .map<DestinationConnectionWithCount?> { result: ActorConnectionWithCount? ->
+        .map { result: ActorConnectionWithCount? ->
           DestinationConnectionWithCount(
             result!!.destinationConnection!!,
             result.actorDefinitionName,
@@ -855,12 +841,12 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
             result.connectionJobStatuses,
             result.isActive,
           )
-        }.collect(Collectors.toList())
+        }.toMutableList()
 
     Assertions.assertEquals(
       allResults.size,
       count,
-      testDescription + " - Count should match actual result size",
+      "$testDescription - Count should match actual result size",
     )
     verifyDestinationResultsMatchFilters(allResults, filters, testDescription)
   }
@@ -893,7 +879,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     val workspaceId = setupHelper.workspace!!.workspaceId
     val tags = setupHelper.tags
-    val tagIds = tags!!.stream().map<UUID?> { obj: Tag? -> obj!!.tagId }.collect(Collectors.toList())
+    val tagIds = tags!!.map { obj: Tag? -> obj!!.tagId }.toMutableList()
 
     // Create deterministic definition IDs for testing
     val sourceDefId1 = UUID.fromString("11111111-1111-1111-1111-111111111111")
@@ -906,37 +892,37 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     createDestinationDefinition(destDefId1, "test-destination-definition-1")
 
     // Create sources with different definition IDs and names
-    val sources: MutableList<SourceConnection> = ArrayList<SourceConnection>()
+    val sources: MutableList<SourceConnection> = mutableListOf()
     sources.add(setupHelper.source!!.withName("zzzzz"))
     sources.add(createAdditionalSourceWithDef(setupHelper, "ZZZZZ", sourceDefId1))
     sources.add(createAdditionalSourceWithDef(setupHelper, "YYYYY", sourceDefId2))
     sources.add(createAdditionalSourceWithDef(setupHelper, "yyyyy", sourceDefId1))
 
     // Create destinations
-    val destinations: MutableList<DestinationConnection> = ArrayList<DestinationConnection>()
+    val destinations: MutableList<DestinationConnection> = mutableListOf()
     destinations.add(setupHelper.destination!!)
     destinations.add(createAdditionalDestination(setupHelper, "dest-beta", destDefId1))
 
-    val sourceIds = sources.stream().map<UUID?> { obj: SourceConnection? -> obj!!.sourceId }.collect(Collectors.toList())
-    val connectionIds: MutableList<UUID?> = ArrayList<UUID?>()
+    val sourceIds = sources.map { obj: SourceConnection? -> obj!!.sourceId }.toMutableList()
+    val connectionIds: MutableList<UUID?> = mutableListOf()
 
     // Create connections with various configurations
     var connectionCounter = 0
     for (source in sources) {
       for (j in 0..<min(destinations.size, 2)) { // Limit connections per source
-        val destination = destinations.get(j)
+        val destination = destinations[j]
 
         val sync =
           createConnectionWithName(
             source,
             destination,
-            if (connectionCounter % 3 == 0) StandardSync.Status.INACTIVE else StandardSync.Status.ACTIVE,
+            if (connectionCounter % 3 == 0) Status.INACTIVE else Status.ACTIVE,
             "conn-" + ('a'.code + connectionCounter).toChar() + "-test-" + connectionCounter,
           )
 
         // Add tags to some connections
         if (connectionCounter % 2 == 0 && !tags.isEmpty()) {
-          sync.setTags(mutableListOf<Tag?>(tags.get(connectionCounter % tags.size)))
+          sync.tags = mutableListOf(tags[connectionCounter % tags.size])
         }
 
         connectionServiceJooqImpl.writeStandardSync(sync)
@@ -948,10 +934,9 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     val sourceDefinitionIds =
       sources
-        .stream()
-        .map<UUID?> { obj: SourceConnection? -> obj!!.sourceDefinitionId }
+        .map { obj: SourceConnection? -> obj!!.sourceDefinitionId }
         .distinct()
-        .collect(Collectors.toList())
+        .toMutableList()
 
     return ComprehensiveTestData(workspaceId, sourceIds, connectionIds, tagIds, sourceDefinitionIds, sources.size)
   }
@@ -961,61 +946,53 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     name: String?,
   ) {
     val definitionExists: Boolean =
-      database!!.query<Boolean?>(
-        ContextQueryFunction { ctx: org.jooq.DSLContext? ->
-          ctx!!.fetchExists(
-            ctx!!
-              .selectFrom<ActorDefinitionRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
-              .where(
-                io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID
-                  .eq(definitionId),
-              ),
-          )
-        },
-      )!!
+      database!!.query<Boolean?> { ctx: DSLContext? ->
+        ctx!!.fetchExists(
+          ctx
+            .selectFrom(Tables.ACTOR_DEFINITION)
+            .where(
+              Tables.ACTOR_DEFINITION.ID
+                .eq(definitionId),
+            ),
+        )
+      }!!
 
     if (!definitionExists) {
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .insertInto<ActorDefinitionRecord?>(Tables.ACTOR_DEFINITION)
-            .set<UUID?>(Tables.ACTOR_DEFINITION.ID, definitionId)
-            .set<String?>(Tables.ACTOR_DEFINITION.NAME, name)
-            .set<ActorType?>(
-              Tables.ACTOR_DEFINITION.ACTOR_TYPE,
-              ActorType.source,
-            ).set<Boolean?>(Tables.ACTOR_DEFINITION.TOMBSTONE, false)
-            .execute()
-        },
-      )
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .insertInto(Tables.ACTOR_DEFINITION)
+          .set(Tables.ACTOR_DEFINITION.ID, definitionId)
+          .set(Tables.ACTOR_DEFINITION.NAME, name)
+          .set(
+            Tables.ACTOR_DEFINITION.ACTOR_TYPE,
+            ActorType.source,
+          ).set(Tables.ACTOR_DEFINITION.TOMBSTONE, false)
+          .execute()
+      }
 
       val versionId = UUID.randomUUID()
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .insertInto<ActorDefinitionVersionRecord?>(Tables.ACTOR_DEFINITION_VERSION)
-            .set<UUID?>(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
-            .set<UUID?>(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, definitionId)
-            .set<String?>(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, "test/" + name)
-            .set<String?>(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, "latest")
-            .set<JSONB?>(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf("{}"))
-            .set<SupportLevel?>(
-              Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
-              SupportLevel.community,
-            ).set<Long?>(Tables.ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, 100L)
-            .execute()
-        },
-      )
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .insertInto(Tables.ACTOR_DEFINITION_VERSION)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, definitionId)
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, "test/$name")
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, "latest")
+          .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf("{}"))
+          .set(
+            Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
+            SupportLevel.community,
+          ).set(Tables.ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, 100L)
+          .execute()
+      }
 
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .update<ActorDefinitionRecord?>(Tables.ACTOR_DEFINITION)
-            .set<UUID?>(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
-            .where(Tables.ACTOR_DEFINITION.ID.eq(definitionId))
-            .execute()
-        },
-      )
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .update(Tables.ACTOR_DEFINITION)
+          .set(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
+          .where(Tables.ACTOR_DEFINITION.ID.eq(definitionId))
+          .execute()
+      }
     }
   }
 
@@ -1024,61 +1001,53 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     name: String?,
   ) {
     val definitionExists: Boolean =
-      database!!.query<Boolean?>(
-        ContextQueryFunction { ctx: org.jooq.DSLContext? ->
-          ctx!!.fetchExists(
-            ctx!!
-              .selectFrom<ActorDefinitionRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
-              .where(
-                io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID
-                  .eq(definitionId),
-              ),
-          )
-        },
-      )!!
+      database!!.query<Boolean?> { ctx: DSLContext? ->
+        ctx!!.fetchExists(
+          ctx
+            .selectFrom(Tables.ACTOR_DEFINITION)
+            .where(
+              Tables.ACTOR_DEFINITION.ID
+                .eq(definitionId),
+            ),
+        )
+      }!!
 
     if (!definitionExists) {
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .insertInto<ActorDefinitionRecord?>(Tables.ACTOR_DEFINITION)
-            .set<UUID?>(Tables.ACTOR_DEFINITION.ID, definitionId)
-            .set<String?>(Tables.ACTOR_DEFINITION.NAME, name)
-            .set<ActorType?>(
-              Tables.ACTOR_DEFINITION.ACTOR_TYPE,
-              ActorType.destination,
-            ).set<Boolean?>(Tables.ACTOR_DEFINITION.TOMBSTONE, false)
-            .execute()
-        },
-      )
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .insertInto(Tables.ACTOR_DEFINITION)
+          .set(Tables.ACTOR_DEFINITION.ID, definitionId)
+          .set(Tables.ACTOR_DEFINITION.NAME, name)
+          .set(
+            Tables.ACTOR_DEFINITION.ACTOR_TYPE,
+            ActorType.destination,
+          ).set(Tables.ACTOR_DEFINITION.TOMBSTONE, false)
+          .execute()
+      }
 
       val versionId = UUID.randomUUID()
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .insertInto<ActorDefinitionVersionRecord?>(Tables.ACTOR_DEFINITION_VERSION)
-            .set<UUID?>(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
-            .set<UUID?>(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, definitionId)
-            .set<String?>(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, "test/" + name)
-            .set<String?>(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, "latest")
-            .set<JSONB?>(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf("{}"))
-            .set<SupportLevel?>(
-              Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
-              SupportLevel.community,
-            ).set<Long?>(Tables.ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, 100L)
-            .execute()
-        },
-      )
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .insertInto(Tables.ACTOR_DEFINITION_VERSION)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
+          .set(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, definitionId)
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, "test/$name")
+          .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, "latest")
+          .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf("{}"))
+          .set(
+            Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
+            SupportLevel.community,
+          ).set(Tables.ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, 100L)
+          .execute()
+      }
 
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .update<ActorDefinitionRecord?>(Tables.ACTOR_DEFINITION)
-            .set<UUID?>(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
-            .where(Tables.ACTOR_DEFINITION.ID.eq(definitionId))
-            .execute()
-        },
-      )
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .update(Tables.ACTOR_DEFINITION)
+          .set(Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
+          .where(Tables.ACTOR_DEFINITION.ID.eq(definitionId))
+          .execute()
+      }
     }
   }
 
@@ -1095,22 +1064,20 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         .withName(name)
         .withTombstone(false)
 
-    database!!.query<Int?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!
-          .insertInto<ActorRecord?>(Tables.ACTOR)
-          .set<UUID?>(Tables.ACTOR.ID, source.sourceId)
-          .set<UUID?>(Tables.ACTOR.WORKSPACE_ID, source.workspaceId)
-          .set<UUID?>(Tables.ACTOR.ACTOR_DEFINITION_ID, source.sourceDefinitionId)
-          .set<String?>(Tables.ACTOR.NAME, source.name)
-          .set<JSONB?>(Tables.ACTOR.CONFIGURATION, JSONB.valueOf("{}"))
-          .set<ActorType?>(
-            Tables.ACTOR.ACTOR_TYPE,
-            ActorType.source,
-          ).set<Boolean?>(Tables.ACTOR.TOMBSTONE, false)
-          .execute()
-      },
-    )
+    database!!.query<Int?> { ctx: DSLContext? ->
+      ctx!!
+        .insertInto(Tables.ACTOR)
+        .set(Tables.ACTOR.ID, source.sourceId)
+        .set(Tables.ACTOR.WORKSPACE_ID, source.workspaceId)
+        .set(Tables.ACTOR.ACTOR_DEFINITION_ID, source.sourceDefinitionId)
+        .set(Tables.ACTOR.NAME, source.name)
+        .set(Tables.ACTOR.CONFIGURATION, JSONB.valueOf("{}"))
+        .set(
+          Tables.ACTOR.ACTOR_TYPE,
+          ActorType.source,
+        ).set(Tables.ACTOR.TOMBSTONE, false)
+        .execute()
+    }
 
     return source
   }
@@ -1128,22 +1095,20 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         .withName(name)
         .withTombstone(false)
 
-    database!!.query<Int?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!
-          .insertInto<ActorRecord?>(Tables.ACTOR)
-          .set<UUID?>(Tables.ACTOR.ID, destination.destinationId)
-          .set<UUID?>(Tables.ACTOR.WORKSPACE_ID, destination.workspaceId)
-          .set<UUID?>(Tables.ACTOR.ACTOR_DEFINITION_ID, destination.destinationDefinitionId)
-          .set<String?>(Tables.ACTOR.NAME, destination.name)
-          .set<JSONB?>(Tables.ACTOR.CONFIGURATION, JSONB.valueOf("{}"))
-          .set<ActorType?>(
-            Tables.ACTOR.ACTOR_TYPE,
-            ActorType.destination,
-          ).set<Boolean?>(Tables.ACTOR.TOMBSTONE, false)
-          .execute()
-      },
-    )
+    database!!.query<Int?> { ctx: DSLContext? ->
+      ctx!!
+        .insertInto(Tables.ACTOR)
+        .set(Tables.ACTOR.ID, destination.destinationId)
+        .set(Tables.ACTOR.WORKSPACE_ID, destination.workspaceId)
+        .set(Tables.ACTOR.ACTOR_DEFINITION_ID, destination.destinationDefinitionId)
+        .set(Tables.ACTOR.NAME, destination.name)
+        .set(Tables.ACTOR.CONFIGURATION, JSONB.valueOf("{}"))
+        .set(
+          Tables.ACTOR.ACTOR_TYPE,
+          ActorType.destination,
+        ).set(Tables.ACTOR.TOMBSTONE, false)
+        .execute()
+    }
 
     return destination
   }
@@ -1195,32 +1160,28 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     val createdAtTs = OffsetDateTime.ofInstant(Instant.ofEpochMilli(createdAt), ZoneOffset.UTC)
     val updatedAtTs = OffsetDateTime.ofInstant(Instant.ofEpochMilli(updatedAt), ZoneOffset.UTC)
 
-    jobDatabase.query<Int?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!.execute(
-          "INSERT INTO jobs (id, config_type, scope, status, created_at, updated_at) " +
-            "VALUES (?, 'sync', ?, ?::job_status, ?::timestamptz, ?::timestamptz)",
-          jobId,
-          connectionId.toString(),
-          jobStatus,
-          createdAtTs,
-          updatedAtTs,
-        )
-      },
-    )
-    jobDatabase.query<Int?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!.execute(
-          "INSERT INTO attempts (id, job_id, status, created_at, updated_at) " +
-            "VALUES (?, ?, ?::attempt_status, ?::timestamptz, ?::timestamptz)",
-          jobId,
-          jobId,
-          attemptStatus,
-          createdAtTs,
-          updatedAtTs,
-        )
-      },
-    )
+    jobDatabase.query<Int?> { ctx: DSLContext? ->
+      ctx!!.execute(
+        "INSERT INTO jobs (id, config_type, scope, status, created_at, updated_at) " +
+          "VALUES (?, 'sync', ?, ?::job_status, ?::timestamptz, ?::timestamptz)",
+        jobId,
+        connectionId.toString(),
+        jobStatus,
+        createdAtTs,
+        updatedAtTs,
+      )
+    }
+    jobDatabase.query<Int?> { ctx: DSLContext? ->
+      ctx!!.execute(
+        "INSERT INTO attempts (id, job_id, status, created_at, updated_at) " +
+          "VALUES (?, ?, ?::attempt_status, ?::timestamptz, ?::timestamptz)",
+        jobId,
+        jobId,
+        attemptStatus,
+        createdAtTs,
+        updatedAtTs,
+      )
+    }
   }
 
   private fun verifyResultsSorted(
@@ -1230,8 +1191,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     testDescription: String?,
   ) {
     for (i in 0..<results.size - 1) {
-      val current = results.get(i)
-      val next = results.get(i + 1)
+      val current = results[i]
+      val next = results[i + 1]
 
       val comparison = compareResults(current, next, sortKey)
 
@@ -1278,11 +1239,11 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         } else if (b.lastSync == null) {
           1
         } else {
-          a.lastSync!!.compareTo(b.lastSync!!)
+          a.lastSync.compareTo(b.lastSync)
         }
       }
 
-      else -> throw IllegalArgumentException("Unsupported sort key: " + sortKey)
+      else -> throw IllegalArgumentException("Unsupported sort key: $sortKey")
     }
 
   private fun getSortValue(
@@ -1293,7 +1254,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       SortKey.SOURCE_NAME -> result.source.name
       SortKey.SOURCE_DEFINITION_NAME -> result.sourceDefinitionName
       SortKey.LAST_SYNC -> if (result.lastSync != null) result.lastSync.toString() else "null"
-      else -> throw IllegalArgumentException("Unsupported sort key: " + sortKey)
+      else -> throw IllegalArgumentException("Unsupported sort key: $sortKey")
     }
 
   private fun verifyResultsMatchFilters(
@@ -1307,8 +1268,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     for (result in results) {
       // Verify search term filter
-      if (filters.searchTerm != null && filters.searchTerm!!.isNotEmpty()) {
-        val searchTerm = filters.searchTerm!!.lowercase(Locale.getDefault())
+      if (filters.searchTerm != null && filters.searchTerm.isNotEmpty()) {
+        val searchTerm = filters.searchTerm.lowercase(Locale.getDefault())
         val matches =
           result.source.name
             .lowercase(Locale.getDefault())
@@ -1325,13 +1286,13 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       }
 
       // Verify state filter (based on connection activity)
-      if (filters.states != null && filters.states!!.isNotEmpty()) {
+      if (filters.states != null && filters.states.isNotEmpty()) {
         // Active sources should have at least one connection (the SQL filtering ensures active connections
         // exist)
         // Inactive sources should have no connections or no active connections (SQL filtering ensures no
         // active connections)
-        val hasActiveFilter = filters.states!!.contains(ActorStatus.ACTIVE)
-        val hasInactiveFilter = filters.states!!.contains(ActorStatus.INACTIVE)
+        val hasActiveFilter = filters.states.contains(ActorStatus.ACTIVE)
+        val hasInactiveFilter = filters.states.contains(ActorStatus.INACTIVE)
 
         if (hasActiveFilter && !hasInactiveFilter) {
           // Only active requested - all results should have connections (SQL ensures active connections
@@ -1359,8 +1320,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     testDescription: String?,
   ) {
     for (i in 0..<results.size - 1) {
-      val current = results.get(i)
-      val next = results.get(i + 1)
+      val current = results[i]
+      val next = results[i + 1]
 
       val comparison = compareDestinationResults(current, next, sortKey)
 
@@ -1410,11 +1371,11 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         } else if (b.lastSync == null) {
           1
         } else {
-          a.lastSync!!.compareTo(b.lastSync!!)
+          a.lastSync.compareTo(b.lastSync)
         }
       }
 
-      else -> throw IllegalArgumentException("Unsupported sort key: " + sortKey)
+      else -> throw IllegalArgumentException("Unsupported sort key: $sortKey")
     }
 
   private fun getDestinationSortValue(
@@ -1425,7 +1386,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       SortKey.DESTINATION_NAME -> result.destination.name
       SortKey.DESTINATION_DEFINITION_NAME -> result.destinationDefinitionName
       SortKey.LAST_SYNC -> if (result.lastSync != null) result.lastSync.toString() else "null"
-      else -> throw IllegalArgumentException("Unsupported sort key: " + sortKey)
+      else -> throw IllegalArgumentException("Unsupported sort key: $sortKey")
     }
 
   private fun verifyDestinationResultsMatchFilters(
@@ -1439,8 +1400,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     for (result in results) {
       // Verify search term filter
-      if (filters.searchTerm != null && filters.searchTerm!!.isNotEmpty()) {
-        val searchTerm = filters.searchTerm!!.lowercase(Locale.getDefault())
+      if (filters.searchTerm != null && filters.searchTerm.isNotEmpty()) {
+        val searchTerm = filters.searchTerm.lowercase(Locale.getDefault())
         val matches =
           result.destination.name
             .lowercase(Locale.getDefault())
@@ -1457,15 +1418,15 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       }
 
       // Verify state filter (based on connection activity)
-      if (filters.states != null && filters.states!!.isNotEmpty()) {
+      if (filters.states != null && filters.states.isNotEmpty()) {
         // Active destinations should have at least one connection (the SQL filtering ensures active
         // connections
         // exist)
         // Inactive destinations should have no connections or no active connections (SQL filtering ensures
         // no
         // active connections)
-        val hasActiveFilter = filters.states!!.contains(ActorStatus.ACTIVE)
-        val hasInactiveFilter = filters.states!!.contains(ActorStatus.INACTIVE)
+        val hasActiveFilter = filters.states.contains(ActorStatus.ACTIVE)
+        val hasInactiveFilter = filters.states.contains(ActorStatus.INACTIVE)
 
         if (hasActiveFilter && !hasInactiveFilter) {
           // Only active requested - all results should have connections (SQL ensures active connections
@@ -1490,7 +1451,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
   private fun createConnection(
     source: SourceConnection,
     destination: DestinationConnection,
-    status: StandardSync.Status?,
+    status: Status?,
   ): StandardSync {
     val sync =
       StandardSync()
@@ -1498,7 +1459,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         .withSourceId(source.sourceId)
         .withDestinationId(destination.destinationId)
         .withName("standard-sync-" + UUID.randomUUID())
-        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf<ConfiguredAirbyteStream>()))
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
         .withManual(true)
         .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
         .withBreakingChange(false)
@@ -1528,7 +1489,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
   private fun createConnectionWithName(
     source: SourceConnection,
     destination: DestinationConnection,
-    status: StandardSync.Status?,
+    status: Status?,
     connectionName: String?,
   ): StandardSync {
     val sync =
@@ -1537,7 +1498,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         .withSourceId(source.sourceId)
         .withDestinationId(destination.destinationId)
         .withName(connectionName)
-        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf<ConfiguredAirbyteStream>()))
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
         .withManual(true)
         .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
         .withBreakingChange(false)
@@ -1563,15 +1524,15 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     }
 
     @JvmStatic
-    private fun actorTypeProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun actorTypeProvider() =
+      listOf<Arguments?>(
         Arguments.of(ActorType.source),
         Arguments.of(ActorType.destination),
       )
 
     @JvmStatic
-    private fun cursorConditionTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun cursorConditionTestProvider() =
+      listOf<Arguments?>(
         // Null cursor - should return empty string (test for both actor types)
         Arguments.of(null, "", "null cursor returns empty string", ActorType.source),
         Arguments.of(null, "", "null cursor returns empty string", ActorType.destination), // SOURCE_NAME sort key (only valid for source)
@@ -1662,10 +1623,10 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       )
 
     @JvmStatic
-    private fun lastSyncDescConditionTestProvider(): Stream<Arguments?> {
+    private fun lastSyncDescConditionTestProvider(): List<Arguments?> {
       val connectionId = UUID.randomUUID()
 
-      return Stream.of<Arguments?>(
+      return listOf<Arguments?>(
         // Null cursor (test for both actor types)
         Arguments.of(null, "", "null cursor returns empty string", ActorType.source),
         Arguments.of(
@@ -1714,8 +1675,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     }
 
     @JvmStatic
-    private fun filterConditionTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun filterConditionTestProvider() =
+      listOf<Arguments?>(
         // Null filters (test for both actor types)
         Arguments.of(null, mutableListOf<String?>("workspace_id"), "null filters", ActorType.source),
         Arguments.of(
@@ -1775,8 +1736,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       )
 
     @JvmStatic
-    private fun combinedWhereClauseTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun combinedWhereClauseTestProvider() =
+      listOf<Arguments?>(
         // Both empty
         Arguments.of("", "", "", "both clauses empty"), // Only filter clause
         Arguments.of("WHERE workspace_id = ?", "", "WHERE workspace_id = ?", "filter clause only"), // Only cursor clause
@@ -1790,8 +1751,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       )
 
     @JvmStatic
-    private fun buildOrderByClauseProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun buildOrderByClauseProvider() =
+      listOf<Arguments?>(
         // Source tests
         Arguments.of(ActorType.source, SortKey.SOURCE_NAME, true, "ORDER BY LOWER(a.name) ASC , a.id ASC", "Source name ascending"),
         Arguments.of(ActorType.source, SortKey.SOURCE_NAME, false, "ORDER BY LOWER(a.name) DESC , a.id DESC", "Source name descending"),
@@ -1868,9 +1829,9 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       )
 
     @JvmStatic
-    private fun buildCountFilterConditionProvider(): Stream<Arguments?> {
+    private fun buildCountFilterConditionProvider(): List<Arguments?> {
       val workspaceId = UUID.fromString("12345678-1234-1234-1234-123456789012")
-      return Stream.of<Arguments?>(
+      return listOf<Arguments?>(
         // No filters (test for both actor types)
         Arguments.of(
           workspaceId,
@@ -2042,7 +2003,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         ), // Empty states list (should be ignored) (test for both actor types)
         Arguments.of(
           workspaceId,
-          Filters("test", null, null, null, mutableListOf<ActorStatus>(), null),
+          Filters("test", null, null, null, mutableListOf(), null),
           "WHERE a.workspace_id = ?\n  AND (\n  a.name ILIKE ? OR\n  ad.name ILIKE ?\n)",
           mutableListOf(workspaceId, "%test%", "%test%"),
           "Empty states list",
@@ -2050,7 +2011,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         ),
         Arguments.of(
           workspaceId,
-          Filters("test", null, null, null, mutableListOf<ActorStatus>(), null),
+          Filters("test", null, null, null, mutableListOf(), null),
           "WHERE a.workspace_id = ?\n  AND (\n  a.name ILIKE ? OR\n  ad.name ILIKE ?\n)",
           mutableListOf(workspaceId, "%test%", "%test%"),
           "Empty states list",
@@ -2060,8 +2021,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     }
 
     @JvmStatic
-    private fun sourcePaginationTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun sourcePaginationTestProvider() =
+      listOf<Arguments?>(
         // Test all sort keys
         Arguments.of(SortKey.SOURCE_NAME, true, null, "Sort by source name ascending"),
         Arguments.of(SortKey.SOURCE_NAME, false, null, "Sort by source name descending"),
@@ -2108,8 +2069,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       )
 
     @JvmStatic
-    private fun destinationPaginationTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun destinationPaginationTestProvider() =
+      listOf<Arguments?>(
         // Test all sort keys
         Arguments.of(SortKey.DESTINATION_NAME, true, null, "Sort by destination name ascending"),
         Arguments.of(SortKey.DESTINATION_NAME, false, null, "Sort by destination name descending"),

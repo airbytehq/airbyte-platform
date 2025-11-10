@@ -31,7 +31,6 @@ import org.mockito.Mockito.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.util.List
 import java.util.Optional
 import java.util.UUID
 
@@ -87,7 +86,7 @@ internal class StateHandlerTest {
               AirbyteGlobalState()
                 .withSharedState(JSON_BLOB)
                 .withStreamStates(
-                  List.of<AirbyteStreamState?>(
+                  listOf<AirbyteStreamState?>(
                     AirbyteStreamState().withStreamDescriptor(STREAM_DESCRIPTOR1).withStreamState(JSON_BLOB),
                     AirbyteStreamState().withStreamDescriptor(STREAM_DESCRIPTOR2).withStreamState(JSON_BLOB),
                   ),
@@ -104,7 +103,7 @@ internal class StateHandlerTest {
         .streamState(null)
         .globalState(
           GlobalState().sharedState(JSON_BLOB).streamStates(
-            List.of<@Valid StreamState?>(
+            listOf<@Valid StreamState?>(
               StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR1)).streamState(JSON_BLOB),
               StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR2)).streamState(JSON_BLOB),
             ),
@@ -121,7 +120,7 @@ internal class StateHandlerTest {
         StateWrapper()
           .withStateType(StateType.STREAM)
           .withStateMessages(
-            List.of<AirbyteStateMessage?>(
+            listOf<AirbyteStateMessage?>(
               AirbyteStateMessage()
                 .withType(AirbyteStateType.STREAM)
                 .withStream(AirbyteStreamState().withStreamDescriptor(STREAM_DESCRIPTOR1).withStreamState(JSON_BLOB)),
@@ -138,7 +137,7 @@ internal class StateHandlerTest {
         .connectionId(CONNECTION_ID)
         .stateType(ConnectionStateType.STREAM)
         .streamState(
-          List.of<@Valid StreamState?>(
+          listOf<@Valid StreamState?>(
             StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR1)).streamState(JSON_BLOB),
             StreamState().streamDescriptor(toApi(STREAM_DESCRIPTOR2)).streamState(JSON_BLOB),
           ),

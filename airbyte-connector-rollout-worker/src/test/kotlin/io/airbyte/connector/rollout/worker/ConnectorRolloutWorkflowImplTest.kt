@@ -55,7 +55,6 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import java.util.UUID
-import java.util.stream.Stream
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 import kotlin.time.toJavaDuration
@@ -124,8 +123,8 @@ class ConnectorRolloutWorkflowImplTest {
     private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
 
     @JvmStatic
-    fun exceptionProvider(): Stream<Arguments> =
-      Stream.of(
+    fun exceptionProvider() =
+      listOf(
         Arguments.of(ApplicationFailure::class.java, "Simulated ApplicationFailure"),
         Arguments.of(IllegalArgumentException::class.java, "Simulated IllegalArgumentException"),
       )

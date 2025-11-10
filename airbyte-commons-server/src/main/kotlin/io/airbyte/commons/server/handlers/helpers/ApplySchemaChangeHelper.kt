@@ -160,7 +160,7 @@ class ApplySchemaChangeHelper(
                   Stream
                     .concat<@Valid SelectedFieldInfo?>(
                       streamConfig.selectedFields.stream(),
-                      newlySelectedFields.stream().map { field: String -> SelectedFieldInfo().fieldPath(java.util.List.of(field)) },
+                      newlySelectedFields.stream().map { field: String -> SelectedFieldInfo().fieldPath(listOf(field)) },
                     ).toList()
                 streamConfig.selectedFields = allSelectedFields
               }

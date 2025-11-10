@@ -113,7 +113,7 @@ internal class VersionedAirbyteStreamFactoryTest {
   fun testValid() {
     val record1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "green")
     val messageStream = stringToMessageStream(Jsons.serialize(record1))
-    val expectedStream = Stream.of(record1)
+    val expectedStream = listOf(record1)
 
     assertEquals(expectedStream.toList(), messageStream.toList())
   }
@@ -128,7 +128,7 @@ internal class VersionedAirbyteStreamFactoryTest {
       )
 
     val messageStream = stringToMessageStream(Jsons.serialize(record))
-    val expectedStream = Stream.of(record)
+    val expectedStream = listOf(record)
 
     assertEquals(expectedStream.toList(), messageStream.toList())
   }
@@ -143,7 +143,7 @@ internal class VersionedAirbyteStreamFactoryTest {
       )
 
     val messageStream = stringToMessageStream(Jsons.serialize(record))
-    val expectedStream = Stream.of(record)
+    val expectedStream = listOf(record)
 
     assertEquals(expectedStream.toList(), messageStream.toList())
   }

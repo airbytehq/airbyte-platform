@@ -91,7 +91,6 @@ import org.mockito.MockedStatic
 import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.nio.file.Path
 import java.util.Optional
@@ -262,13 +261,6 @@ internal class JobHistoryHandlerTest {
               ).streamAggregatedStats(
                 listOf(
                   StreamStats()
-                    .streamName("stream2")
-                    .recordsEmitted(5050L)
-                    .bytesEmitted(2020L)
-                    .recordsCommitted(5050L)
-                    .bytesCommitted(2020L)
-                    .recordsRejected(102L),
-                  StreamStats()
                     .streamName("stream1")
                     .streamNamespace("ns1")
                     .recordsEmitted(500L)
@@ -276,6 +268,13 @@ internal class JobHistoryHandlerTest {
                     .recordsCommitted(500L)
                     .bytesCommitted(200L)
                     .recordsRejected(50L),
+                  StreamStats()
+                    .streamName("stream2")
+                    .recordsEmitted(5050L)
+                    .bytesEmitted(2020L)
+                    .recordsCommitted(5050L)
+                    .bytesCommitted(2020L)
+                    .recordsRejected(102L),
                 ),
               ),
           ).attempts(listOf(expectedAttemptRead1, expectedAttemptRead2))
@@ -421,13 +420,6 @@ internal class JobHistoryHandlerTest {
       val expectedStreams =
         listOf(
           StreamStats()
-            .streamName("stream2")
-            .recordsEmitted(50L)
-            .bytesEmitted(20L)
-            .recordsCommitted(50L)
-            .bytesCommitted(20L)
-            .recordsRejected(2L),
-          StreamStats()
             .streamName("stream1")
             .streamNamespace("ns1")
             .recordsEmitted(5L)
@@ -435,6 +427,13 @@ internal class JobHistoryHandlerTest {
             .recordsCommitted(5L)
             .bytesCommitted(2L)
             .recordsRejected(1L),
+          StreamStats()
+            .streamName("stream2")
+            .recordsEmitted(50L)
+            .bytesEmitted(20L)
+            .recordsCommitted(50L)
+            .bytesCommitted(20L)
+            .recordsRejected(2L),
         )
 
       val firstJobWithAttemptRead =
@@ -577,13 +576,6 @@ internal class JobHistoryHandlerTest {
       val expectedStreams =
         listOf(
           StreamStats()
-            .streamName("stream2")
-            .recordsEmitted(50L)
-            .bytesEmitted(20L)
-            .recordsCommitted(50L)
-            .bytesCommitted(20L)
-            .recordsRejected(2L),
-          StreamStats()
             .streamName("stream1")
             .streamNamespace("ns1")
             .recordsEmitted(5L)
@@ -591,6 +583,13 @@ internal class JobHistoryHandlerTest {
             .recordsCommitted(5L)
             .bytesCommitted(2L)
             .recordsRejected(1L),
+          StreamStats()
+            .streamName("stream2")
+            .recordsEmitted(50L)
+            .bytesEmitted(20L)
+            .recordsCommitted(50L)
+            .bytesCommitted(20L)
+            .recordsRejected(2L),
         )
 
       val successfulJobWithAttemptRead =

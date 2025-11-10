@@ -11,7 +11,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.time.OffsetDateTime
 import java.util.UUID
-import java.util.stream.Stream
 
 class WorkloadIdGeneratorTest {
   private val generator = WorkloadIdGenerator()
@@ -98,8 +97,8 @@ class WorkloadIdGeneratorTest {
 
   companion object {
     @JvmStatic
-    private fun workloadIdArgsMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun workloadIdArgsMatrix() =
+      listOf(
         Arguments.of(UUID.randomUUID(), 12412431L.toString(), 1),
         Arguments.of(UUID.randomUUID(), "89127421", 2),
         Arguments.of(UUID.randomUUID(), UUID.randomUUID().toString(), 0),
@@ -107,8 +106,8 @@ class WorkloadIdGeneratorTest {
       )
 
     @JvmStatic
-    private fun actorTimestampMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun actorTimestampMatrix() =
+      listOf(
         Arguments.of(UUID.randomUUID(), System.currentTimeMillis() + 12412431L),
         Arguments.of(UUID.randomUUID(), 89127421L),
         Arguments.of(UUID.randomUUID(), 0),
@@ -117,13 +116,13 @@ class WorkloadIdGeneratorTest {
       )
 
     @JvmStatic
-    private fun windowSnapMatrix(): Stream<Arguments> {
+    private fun windowSnapMatrix(): List<Arguments> {
       val oneMinMs = 60000
       val tenMinMs = 600000
       val fifteenMinMs = 900000
       val thirtyMinMs = 1800000
 
-      return Stream.of(
+      return listOf(
         Arguments.of(timestampMs(16, 0, 40), timestampMs(16, 0, 0), oneMinMs),
         Arguments.of(timestampMs(15, 59, 59), timestampMs(15, 59, 0), oneMinMs),
         Arguments.of(timestampMs(0, 0, 0), timestampMs(0, 0, 0), oneMinMs),

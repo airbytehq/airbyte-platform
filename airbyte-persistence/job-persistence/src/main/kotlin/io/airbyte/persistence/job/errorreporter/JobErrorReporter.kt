@@ -71,7 +71,7 @@ class JobErrorReporter(
 
         val workspace = workspaceService.getStandardWorkspaceFromConnection(connectionId, true)
         val commonMetadata = mutableMapOf<String?, String?>()
-        commonMetadata.putAll(java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString()))
+        commonMetadata.putAll(mapOf(JOB_ID_KEY to jobContext.jobId.toString()))
         commonMetadata.putAll(getConnectionMetadata(workspace.workspaceId, connectionId))
 
         log.info { "${traceMessageFailures.size} failures to report for jobId '${jobContext.jobId}' connectionId '$connectionId'" }
@@ -140,7 +140,7 @@ class JobErrorReporter(
     val sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId)
     val metadata =
       getSourceMetadata(sourceDefinition, jobContext.dockerImage, jobContext.releaseStage, jobContext.internalSupportLevel) +
-        java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString())
+        mapOf(JOB_ID_KEY to jobContext.jobId.toString())
     reportJobFailureReason(workspace, failureReason.withFailureOrigin(FailureReason.FailureOrigin.SOURCE), jobContext.dockerImage, metadata, null)
   }
 
@@ -165,7 +165,7 @@ class JobErrorReporter(
     val destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId)
     val metadata =
       getDestinationMetadata(destinationDefinition, jobContext.dockerImage, jobContext.releaseStage, jobContext.internalSupportLevel) +
-        java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString())
+        mapOf(JOB_ID_KEY to jobContext.jobId.toString())
     reportJobFailureReason(
       workspace,
       failureReason.withFailureOrigin(FailureReason.FailureOrigin.DESTINATION),
@@ -213,7 +213,7 @@ class JobErrorReporter(
       }
     val metadata =
       actorDefMetadata +
-        java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString())
+        mapOf(JOB_ID_KEY to jobContext.jobId.toString())
     reportJobFailureReason(workspace, failureReason, jobContext.dockerImage, metadata, null)
   }
 
@@ -235,11 +235,9 @@ class JobErrorReporter(
     val dockerImage = jobContext.dockerImage
     val connectorRepository = dockerImage.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
     val metadata =
-      java.util.Map.of(
-        JOB_ID_KEY,
-        jobContext.jobId.toString(),
-        CONNECTOR_REPOSITORY_META_KEY,
-        connectorRepository,
+      mapOf<String?, String?>(
+        JOB_ID_KEY to jobContext.jobId.toString(),
+        CONNECTOR_REPOSITORY_META_KEY to connectorRepository,
       )
     reportJobFailureReason(null, failureReason, dockerImage, metadata, null)
   }
@@ -249,9 +247,9 @@ class JobErrorReporter(
     connectionId: UUID,
   ): Map<String?, String?> {
     val connectionUrl = webUrlHelper.getConnectionUrl(workspaceId, connectionId)
-    return java.util.Map.ofEntries(
-      java.util.Map.entry(CONNECTION_ID_META_KEY, connectionId.toString()),
-      java.util.Map.entry(CONNECTION_URL_META_KEY, connectionUrl),
+    return mapOf(
+      CONNECTION_ID_META_KEY to connectionId.toString(),
+      CONNECTION_URL_META_KEY to connectionUrl,
     )
   }
 
@@ -263,20 +261,18 @@ class JobErrorReporter(
   ): Map<String?, String?> {
     val connectorRepository = dockerImage.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
 
-    val metadata: MutableMap<String?, String?> =
-      HashMap(
-        java.util.Map.ofEntries(
-          java.util.Map.entry(CONNECTOR_DEFINITION_ID_META_KEY, destinationDefinition.destinationDefinitionId.toString()),
-          java.util.Map.entry(CONNECTOR_NAME_META_KEY, destinationDefinition.name),
-          java.util.Map.entry(CONNECTOR_REPOSITORY_META_KEY, connectorRepository),
-        ),
-      )
-    if (releaseStage != null) {
-      metadata[CONNECTOR_RELEASE_STAGE_META_KEY] = releaseStage.value()
-    }
-    if (internalSupportLevel != null) {
-      metadata[CONNECTOR_INTERNAL_SUPPORT_LEVEL_META_KEY] = internalSupportLevel.toString()
-    }
+    val metadata: Map<String?, String?> =
+      buildMap {
+        put(CONNECTOR_DEFINITION_ID_META_KEY, destinationDefinition.destinationDefinitionId.toString())
+        put(CONNECTOR_NAME_META_KEY, destinationDefinition.name)
+        put(CONNECTOR_REPOSITORY_META_KEY, connectorRepository)
+        releaseStage?.let {
+          put(CONNECTOR_RELEASE_STAGE_META_KEY, releaseStage.value())
+        }
+        internalSupportLevel?.let {
+          put(CONNECTOR_INTERNAL_SUPPORT_LEVEL_META_KEY, internalSupportLevel.toString())
+        }
+      }
 
     return metadata
   }
@@ -288,52 +284,50 @@ class JobErrorReporter(
     internalSupportLevel: Long?,
   ): Map<String?, String?> {
     val connectorRepository = dockerImage.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
-    val metadata: MutableMap<String?, String?> =
-      HashMap(
-        java.util.Map.ofEntries(
-          java.util.Map.entry(CONNECTOR_DEFINITION_ID_META_KEY, sourceDefinition.sourceDefinitionId.toString()),
-          java.util.Map.entry(CONNECTOR_NAME_META_KEY, sourceDefinition.name),
-          java.util.Map.entry(CONNECTOR_REPOSITORY_META_KEY, connectorRepository),
-        ),
-      )
-    if (releaseStage != null) {
-      metadata[CONNECTOR_RELEASE_STAGE_META_KEY] = releaseStage.value()
-    }
-    if (internalSupportLevel != null) {
-      metadata[CONNECTOR_INTERNAL_SUPPORT_LEVEL_META_KEY] = internalSupportLevel.toString()
-    }
+    val metadata: Map<String?, String?> =
+      buildMap {
+        put(CONNECTOR_DEFINITION_ID_META_KEY, sourceDefinition.sourceDefinitionId.toString())
+        put(CONNECTOR_NAME_META_KEY, sourceDefinition.name)
+        put(CONNECTOR_REPOSITORY_META_KEY, connectorRepository)
+        releaseStage?.let {
+          put(CONNECTOR_RELEASE_STAGE_META_KEY, releaseStage.value())
+        }
+        internalSupportLevel?.let {
+          put(CONNECTOR_INTERNAL_SUPPORT_LEVEL_META_KEY, internalSupportLevel.toString())
+        }
+      }
 
     return metadata
   }
 
   private fun getFailureReasonMetadata(failureReason: FailureReason): Map<String?, String?> {
     val failureReasonAdditionalProps =
-      if (failureReason.metadata != null) failureReason.metadata.additionalProperties else java.util.Map.of()
-    val outMetadata: MutableMap<String?, String?> = HashMap()
+      if (failureReason.metadata != null) failureReason.metadata.additionalProperties else emptyMap()
+    val outMetadata: Map<String?, String?> =
+      buildMap {
+        if (failureReasonAdditionalProps.containsKey(CONNECTOR_COMMAND_META_KEY) &&
+          failureReasonAdditionalProps[CONNECTOR_COMMAND_META_KEY] != null
+        ) {
+          put(CONNECTOR_COMMAND_META_KEY, failureReasonAdditionalProps[CONNECTOR_COMMAND_META_KEY].toString())
+        }
 
-    if (failureReasonAdditionalProps.containsKey(CONNECTOR_COMMAND_META_KEY) &&
-      failureReasonAdditionalProps[CONNECTOR_COMMAND_META_KEY] != null
-    ) {
-      outMetadata[CONNECTOR_COMMAND_META_KEY] =
-        failureReasonAdditionalProps[CONNECTOR_COMMAND_META_KEY].toString()
-    }
+        if (failureReason.failureOrigin != null) {
+          put(FAILURE_ORIGIN_META_KEY, failureReason.failureOrigin.value())
+        }
 
-    if (failureReason.failureOrigin != null) {
-      outMetadata[FAILURE_ORIGIN_META_KEY] = failureReason.failureOrigin.value()
-    }
-
-    if (failureReason.failureType != null) {
-      outMetadata[FAILURE_TYPE_META_KEY] = failureReason.failureType.value()
-    }
+        if (failureReason.failureType != null) {
+          put(FAILURE_TYPE_META_KEY, failureReason.failureType.value())
+        }
+      }
 
     return outMetadata
   }
 
   private fun getWorkspaceMetadata(workspaceId: UUID): Map<String?, String?> {
     val workspaceUrl = webUrlHelper.getWorkspaceUrl(workspaceId)
-    return java.util.Map.ofEntries(
-      java.util.Map.entry(WORKSPACE_ID_META_KEY, workspaceId.toString()),
-      java.util.Map.entry(WORKSPACE_URL_META_KEY, workspaceUrl),
+    return mapOf(
+      WORKSPACE_ID_META_KEY to workspaceId.toString(),
+      WORKSPACE_URL_META_KEY to workspaceUrl,
     )
   }
 
@@ -355,21 +349,19 @@ class JobErrorReporter(
       return
     }
 
-    val commonMetadata: MutableMap<String?, String?> =
-      HashMap(
-        java.util.Map.ofEntries(
-          java.util.Map.entry(AIRBYTE_VERSION_META_KEY, airbyteVersion),
-          java.util.Map.entry(AIRBYTE_EDITION_META_KEY, airbyteEdition.name),
-        ),
-      )
+    val commonMetadata: Map<String?, String?> =
+      buildMap {
+        put(AIRBYTE_VERSION_META_KEY, airbyteVersion)
+        put(AIRBYTE_EDITION_META_KEY, airbyteEdition.name)
 
-    if (workspace != null) {
-      val maybeOrganizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspace.workspaceId)
-      if (maybeOrganizationId.isPresent) {
-        commonMetadata[ORGANIZATION_ID_META_KEY] = maybeOrganizationId.get().toString()
+        workspace?.let {
+          val maybeOrganizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspace.workspaceId)
+          if (maybeOrganizationId.isPresent) {
+            put(ORGANIZATION_ID_META_KEY, maybeOrganizationId.get().toString())
+          }
+          putAll(getWorkspaceMetadata(workspace.workspaceId))
+        }
       }
-      commonMetadata.putAll(getWorkspaceMetadata(workspace.workspaceId))
-    }
 
     val allMetadata =
       commonMetadata +

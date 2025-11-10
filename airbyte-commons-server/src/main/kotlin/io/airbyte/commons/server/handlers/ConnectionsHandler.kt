@@ -1798,7 +1798,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         jobs =
           jobPersistence.listJobs(
             Job.SYNC_REPLICATION_TYPES,
-            java.util.Set.of(JobStatus.SUCCEEDED, JobStatus.FAILED),
+            setOf(JobStatus.SUCCEEDED, JobStatus.FAILED),
             connectionDataHistoryRequestBody.connectionId.toString(),
             connectionDataHistoryRequestBody.numberOfJobs,
           )
@@ -1898,7 +1898,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
               // Update the records loaded for the corresponding stream for that day
               val existingItem =
                 connectionStreamHistoryReadItemsByDate[attemptDateInUserTimeZone]!!
-              val key = java.util.List.of(streamNamespace, streamName)
+              val key = listOf(streamNamespace, streamName)
               if (existingItem.containsKey(key)) {
                 existingItem[key] = existingItem[key]!! + recordsCommitted
               } else {

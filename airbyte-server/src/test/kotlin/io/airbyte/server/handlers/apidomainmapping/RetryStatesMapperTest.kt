@@ -13,7 +13,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
-import java.util.stream.Stream
 
 internal class RetryStatesMapperTest {
   val mapper: RetryStatesMapper = RetryStatesMapper()
@@ -107,8 +106,8 @@ internal class RetryStatesMapperTest {
 
   companion object {
     @JvmStatic
-    fun retryStateFieldsMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    fun retryStateFieldsMatrix() =
+      listOf<Arguments?>(
         Arguments.of(Fixtures.retryId1, Fixtures.jobId1, Fixtures.connectionId1, 1, 2, 3, 4),
         Arguments.of(Fixtures.retryId2, Fixtures.jobId1, Fixtures.connectionId1, 0, 0, 9, 9),
         Arguments.of(Fixtures.retryId3, Fixtures.jobId2, Fixtures.connectionId2, 3, 2, 1, 0),

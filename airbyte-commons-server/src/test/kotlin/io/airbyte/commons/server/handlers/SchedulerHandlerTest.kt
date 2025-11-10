@@ -152,7 +152,6 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
-import java.util.stream.Stream
 
 internal class SchedulerHandlerTest {
   private lateinit var schedulerHandler: SchedulerHandler
@@ -2346,8 +2345,8 @@ internal class SchedulerHandlerTest {
         .jobInfo(baseSynchronousJobRead()!!.succeeded(false))
 
     @JvmStatic
-    private fun provideArguments(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun provideArguments() =
+      listOf<Arguments?>(
         Arguments.of(Optional.of<String?>("succeeded"), false, jobSuccessStatusSuccess),
         Arguments.of(Optional.of<String?>("succeeded"), true, jobFailedWithFailureReason),
         Arguments.of(Optional.of<String?>("failed"), false, jobSuccessStatusFailed),

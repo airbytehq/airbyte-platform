@@ -5,7 +5,6 @@
 package io.airbyte.config.persistence
 
 import io.airbyte.commons.enums.isCompatible
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.serialize
@@ -33,7 +32,6 @@ import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
 import io.airbyte.data.services.shared.ActorServicePaginationHelper
-import io.airbyte.db.ContextQueryFunction
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.AirbyteGlobalState
@@ -44,17 +42,11 @@ import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import org.jooq.DSLContext
 import org.jooq.JSONB
-import org.jooq.Record
 import org.jooq.impl.DSL
-import org.junit.Assert
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito
-import java.util.Arrays
-import java.util.List
-import java.util.Set
 import java.util.UUID
 
 internal class StatePersistenceTest : BaseConfigDatabaseTest() {
@@ -86,7 +78,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     dataplaneGroupService.writeDataplaneGroup(
       DataplaneGroup()
         .withId(DATAPLANE_GROUP_ID)
-        .withOrganizationId(MockData.defaultOrganization()!!.getOrganizationId())
+        .withOrganizationId(MockData.defaultOrganization().organizationId)
         .withName("test")
         .withEnabled(true)
         .withTombstone(false),
@@ -139,23 +131,23 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     val organizationService: OrganizationService = OrganizationServiceJooqImpl(database)
     organizationService.writeOrganization(MockData.defaultOrganization())
 
-    val workspace = MockData.standardWorkspaces().get(0)!!
+    val workspace = MockData.standardWorkspaces()[0]!!
     val sourceDefinition = MockData.publicSourceDefinition()!!
-    val sourceConnection = MockData.sourceConnections().get(0)!!
+    val sourceConnection = MockData.sourceConnections()[0]!!
     val actorDefinitionVersion =
       MockData
         .actorDefinitionVersion()!!
-        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
-        .withVersionId(sourceDefinition.getDefaultVersionId())
+        .withActorDefinitionId(sourceDefinition.sourceDefinitionId)
+        .withVersionId(sourceDefinition.defaultVersionId)
     val destinationDefinition = MockData.publicDestinationDefinition()!!
     val actorDefinitionVersion2 =
       MockData
         .actorDefinitionVersion()!!
-        .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .withVersionId(destinationDefinition.getDefaultVersionId())
-    val destinationConnection = MockData.destinationConnections().get(0)!!
+        .withActorDefinitionId(destinationDefinition.destinationDefinitionId)
+        .withVersionId(destinationDefinition.defaultVersionId)
+    val destinationConnection = MockData.destinationConnections()[0]!!
     // we don't need sync operations in this test suite, zero them out.
-    val sync = clone(MockData.standardSyncs().get(0)!!).withOperationIds(mutableListOf<UUID?>())
+    val sync = clone(MockData.standardSyncs()[0]!!).withOperationIds(mutableListOf<UUID?>())
 
     workspaceService!!.writeStandardWorkspaceNoSecrets(workspace)
     sourceService!!.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf())
@@ -164,12 +156,12 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     destinationService!!.writeDestinationConnectionNoSecrets(destinationConnection)
     connectionService!!.writeStandardSync(sync)
 
-    return sync.getConnectionId()
+    return sync.connectionId
   }
 
   @Test
   fun testReadingNonExistingState() {
-    Assertions.assertTrue(statePersistence!!.getCurrentState(UUID.randomUUID()).isEmpty())
+    Assertions.assertTrue(statePersistence!!.getCurrentState(UUID.randomUUID()).isEmpty)
   }
 
   @Test
@@ -183,9 +175,9 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     statePersistence!!.updateOrCreateState(connectionId!!, state0)
     val state1 = statePersistence!!.getCurrentState(connectionId!!)
 
-    Assertions.assertTrue(state1.isPresent())
-    Assertions.assertEquals(StateType.LEGACY, state1.get().getStateType())
-    Assertions.assertEquals(state0.getLegacyState(), state1.get().getLegacyState())
+    Assertions.assertTrue(state1.isPresent)
+    Assertions.assertEquals(StateType.LEGACY, state1.get().stateType)
+    Assertions.assertEquals(state0.legacyState, state1.get().legacyState)
 
     // Updating a state
     val newStateJson = deserialize("{\"woot\": \"new state\"}")
@@ -193,14 +185,14 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     statePersistence!!.updateOrCreateState(connectionId!!, state2)
     val state3 = statePersistence!!.getCurrentState(connectionId!!)
 
-    Assertions.assertTrue(state3.isPresent())
-    Assertions.assertEquals(StateType.LEGACY, state3.get().getStateType())
-    Assertions.assertEquals(newStateJson, state3.get().getLegacyState())
+    Assertions.assertTrue(state3.isPresent)
+    Assertions.assertEquals(StateType.LEGACY, state3.get().stateType)
+    Assertions.assertEquals(newStateJson, state3.get().legacyState)
 
     // Deleting a state
     val state4 = clone(state3.get()).withLegacyState(null)
     statePersistence!!.updateOrCreateState(connectionId!!, state4)
-    Assertions.assertTrue(statePersistence!!.getCurrentState(connectionId!!).isEmpty())
+    Assertions.assertTrue(statePersistence!!.getCurrentState(connectionId!!).isEmpty)
   }
 
   @Test
@@ -222,7 +214,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize("\"woot\""))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("s1").withNamespace("n2"))
                       .withStreamState(deserialize(STATE_ONE)),
@@ -251,7 +243,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          Arrays.asList(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -285,7 +277,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize(GLOBAL_STATE))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("s1").withNamespace("n2"))
                       .withStreamState(deserialize(STATE_ONE)),
@@ -300,36 +292,34 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     // Initial write/read loop, making sure we read what we wrote
     statePersistence!!.updateOrCreateState(connectionId!!, state0)
     val state1 = statePersistence!!.getCurrentState(connectionId!!)
-    Assertions.assertTrue(state1.isPresent())
+    Assertions.assertTrue(state1.isPresent)
     assertEquals(state0, state1.get())
 
     // Updating a state
     val state2 = clone(state1.get())
     state2
-      .getGlobal()
-      .getGlobal()
+      .global
+      .global
       .withSharedState(deserialize("\"updated shared state\""))
-      .getStreamStates()
-      .get(1)
+      .streamStates[1]
       .withStreamState(deserialize("\"updated state2\""))
     statePersistence!!.updateOrCreateState(connectionId!!, state2)
     val state3 = statePersistence!!.getCurrentState(connectionId!!)
 
-    Assertions.assertTrue(state3.isPresent())
+    Assertions.assertTrue(state3.isPresent)
     assertEquals(state2, state3.get())
 
     // Updating a state with name and namespace
     val state4 = clone(state1.get())
     state4
-      .getGlobal()
-      .getGlobal()
-      .getStreamStates()
-      .get(0)
+      .global
+      .global
+      .streamStates[0]
       .withStreamState(deserialize("\"updated state1\""))
     statePersistence!!.updateOrCreateState(connectionId!!, state4)
     val state5 = statePersistence!!.getCurrentState(connectionId!!)
 
-    Assertions.assertTrue(state5.isPresent())
+    Assertions.assertTrue(state5.isPresent)
     assertEquals(state4, state5.get())
   }
 
@@ -345,7 +335,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize(GLOBAL_STATE))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("s1").withNamespace("n2"))
                       .withStreamState(deserialize(STATE_ONE)),
@@ -371,7 +361,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize(GLOBAL_STATE))
                 .withStreamStates(
-                  List.of<AirbyteStreamState?>(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("s1"))
                       .withStreamState(deserialize(STATE_TWO)),
@@ -394,7 +384,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize(GLOBAL_STATE))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("s1").withNamespace("n2"))
                       .withStreamState(deserialize(STATE_ONE)),
@@ -409,29 +399,27 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     val partialResetResult = statePersistence!!.getCurrentState(connectionId!!).orElseThrow()
 
     Assertions.assertEquals(
-      partialReset.getGlobal().getGlobal().getSharedState(),
-      partialResetResult.getGlobal().getGlobal().getSharedState(),
+      partialReset.global.global.sharedState,
+      partialResetResult.global.global.sharedState,
     )
     // {"name": "s1"} should have been removed from the stream states
     Assertions.assertEquals(
       1,
       partialResetResult
-        .getGlobal()
-        .getGlobal()
-        .getStreamStates()
+        .global
+        .global
+        .streamStates
         .size,
     )
     Assertions.assertEquals(
       partialReset
-        .getGlobal()
-        .getGlobal()
-        .getStreamStates()
-        .get(0),
+        .global
+        .global
+        .streamStates[0],
       partialResetResult
-        .getGlobal()
-        .getGlobal()
-        .getStreamStates()
-        .get(0),
+        .global
+        .global
+        .streamStates[0],
     )
   }
 
@@ -447,7 +435,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize(GLOBAL_STATE))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("s1").withNamespace("n2"))
                       .withStreamState(deserialize(STATE_ONE)),
@@ -469,7 +457,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(null)
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("s1").withNamespace("n2"))
                       .withStreamState(null),
@@ -484,7 +472,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     statePersistence!!.updateOrCreateState(connectionId!!, state0)
     statePersistence!!.updateOrCreateState(connectionId!!, fullReset)
     val fullResetResult = statePersistence!!.getCurrentState(connectionId!!)
-    Assertions.assertTrue(fullResetResult.isEmpty())
+    Assertions.assertTrue(fullResetResult.isEmpty)
   }
 
   @Test
@@ -499,7 +487,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize(GLOBAL_STATE))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName(""))
                       .withStreamState(deserialize("\"empty name state\"")),
@@ -522,7 +510,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          Arrays.asList(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -548,9 +536,8 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     // Updating a state
     val state2 = clone(state1)
     state2
-      .getStateMessages()
-      .get(1)
-      .getStream()
+      .stateMessages[1]
+      .stream
       .withStreamState(deserialize("\"updated state s2\""))
     statePersistence!!.updateOrCreateState(connectionId!!, state2)
     val state3 = statePersistence!!.getCurrentState(connectionId!!).orElseThrow()
@@ -559,9 +546,8 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     // Updating a state with name and namespace
     val state4 = clone(state1)
     state4
-      .getStateMessages()
-      .get(0)
-      .getStream()
+      .stateMessages[0]
+      .stream
       .withStreamState(deserialize("\"updated state s1\""))
     statePersistence!!.updateOrCreateState(connectionId!!, state4)
     val state5 = statePersistence!!.getCurrentState(connectionId!!).orElseThrow()
@@ -574,7 +560,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          Arrays.asList(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -615,7 +601,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          Arrays.asList<AirbyteStateMessage?>(
+          listOf<AirbyteStateMessage?>(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -656,7 +642,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          List.of<AirbyteStateMessage?>(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -676,7 +662,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          Arrays.asList(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -701,7 +687,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          Arrays.asList(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -720,7 +706,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
         )
     statePersistence!!.updateOrCreateState(connectionId!!, fullReset)
     val fullResetResult = statePersistence!!.getCurrentState(connectionId!!)
-    Assertions.assertTrue(fullResetResult.isEmpty())
+    Assertions.assertTrue(fullResetResult.isEmpty)
   }
 
   @Test
@@ -729,7 +715,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          Arrays.asList(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -750,67 +736,62 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
 
     Assertions.assertThrows(
       IllegalStateException::class.java,
-      Executable {
-        val globalState =
-          StateWrapper()
-            .withStateType(StateType.GLOBAL)
-            .withGlobal(
-              AirbyteStateMessage()
-                .withType(AirbyteStateType.GLOBAL)
-                .withGlobal(
-                  AirbyteGlobalState()
-                    .withSharedState(deserialize(GLOBAL_STATE))
-                    .withStreamStates(
-                      Arrays.asList(
-                        AirbyteStreamState()
-                          .withStreamDescriptor(StreamDescriptor().withName(""))
-                          .withStreamState(deserialize("\"empty name state\"")),
-                        AirbyteStreamState()
-                          .withStreamDescriptor(StreamDescriptor().withName("").withNamespace(""))
-                          .withStreamState(deserialize("\"empty name and namespace state\"")),
-                      ),
+    ) {
+      val globalState =
+        StateWrapper()
+          .withStateType(StateType.GLOBAL)
+          .withGlobal(
+            AirbyteStateMessage()
+              .withType(AirbyteStateType.GLOBAL)
+              .withGlobal(
+                AirbyteGlobalState()
+                  .withSharedState(deserialize(GLOBAL_STATE))
+                  .withStreamStates(
+                    listOf(
+                      AirbyteStreamState()
+                        .withStreamDescriptor(StreamDescriptor().withName(""))
+                        .withStreamState(deserialize("\"empty name state\"")),
+                      AirbyteStreamState()
+                        .withStreamDescriptor(StreamDescriptor().withName("").withNamespace(""))
+                        .withStreamState(deserialize("\"empty name and namespace state\"")),
                     ),
-                ),
-            )
-        statePersistence!!.updateOrCreateState(connectionId!!, globalState)
-      },
-    )
+                  ),
+              ),
+          )
+      statePersistence!!.updateOrCreateState(connectionId!!, globalState)
+    }
 
     // We should be guarded against those cases let's make sure we don't make things worse if we're in
     // an inconsistent state
-    database!!.transaction<Any?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!
-          .insertInto(DSL.table(STATE))
-          .columns(DSL.field("id"), DSL.field("connection_id"), DSL.field("type"), DSL.field(STATE))
-          .values(UUID.randomUUID(), connectionId, io.airbyte.db.instance.configs.jooq.generated.enums.StateType.GLOBAL, JSONB.valueOf("{}"))
-          .execute()
-        null
-      },
-    )
+    database!!.transaction<Any?> { ctx: DSLContext? ->
+      ctx!!
+        .insertInto(DSL.table(STATE))
+        .columns(DSL.field("id"), DSL.field("connection_id"), DSL.field("type"), DSL.field(STATE))
+        .values(UUID.randomUUID(), connectionId, io.airbyte.db.instance.configs.jooq.generated.enums.StateType.GLOBAL, JSONB.valueOf("{}"))
+        .execute()
+      null
+    }
     Assertions.assertThrows(
       IllegalStateException::class.java,
-      Executable {
-        statePersistence!!.updateOrCreateState(
-          connectionId!!,
-          streamState,
-        )
-      },
-    )
+    ) {
+      statePersistence!!.updateOrCreateState(
+        connectionId!!,
+        streamState,
+      )
+    }
     Assertions.assertThrows(
       IllegalStateException::class.java,
-      Executable {
-        statePersistence!!.getCurrentState(
-          connectionId!!,
-        )
-      },
-    )
+    ) {
+      statePersistence!!.getCurrentState(
+        connectionId!!,
+      )
+    }
   }
 
   @Test
   fun testEnumCompatibility() {
     Assertions.assertTrue(
-      isCompatible<io.airbyte.db.instance.configs.jooq.generated.enums.StateType, io.airbyte.config.StateType>(),
+      isCompatible<io.airbyte.db.instance.configs.jooq.generated.enums.StateType, StateType>(),
     )
   }
 
@@ -822,36 +803,32 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
 
     // Making sure we still follow the legacy format
     val readStates: MutableList<State?> =
-      database!!.transaction<MutableList<State?>?>(
-        ContextQueryFunction { ctx: org.jooq.DSLContext? ->
-          ctx!!
-            .selectFrom(StatePersistenceTest.Companion.STATE)
-            .where(
-              org.jooq.impl.DSL
-                .field("connection_id")
-                .eq(connectionId),
-            ).fetch()
-            .map(
-              org.jooq.RecordMapper { r: org.jooq.Record? ->
-                io.airbyte.commons.json.Jsons.deserialize(
-                  r!!
-                    .get(
-                      org.jooq.impl.DSL.field(
-                        StatePersistenceTest.Companion.STATE,
-                        org.jooq.JSONB::class.java,
-                      ),
-                    )!!
-                    .data(),
-                  io.airbyte.config.State::class.java,
-                )
-              },
-            ).stream()
-            .toList()
-        },
-      )!!
+      database!!.transaction<MutableList<State?>?> { ctx: DSLContext? ->
+        ctx!!
+          .selectFrom(STATE)
+          .where(
+            DSL
+              .field("connection_id")
+              .eq(connectionId),
+          ).fetch()
+          .map { r: org.jooq.Record? ->
+            deserialize(
+              r!!
+                .get(
+                  DSL.field(
+                    STATE,
+                    JSONB::class.java,
+                  ),
+                )!!
+                .data(),
+              State::class.java,
+            )
+          }.stream()
+          .toList()
+      }!!
     Assertions.assertEquals(1, readStates.size)
 
-    Assertions.assertEquals(readStates.get(0)!!.getState(), stateWrapper.getLegacyState())
+    Assertions.assertEquals(readStates[0]!!.state, stateWrapper.legacyState)
   }
 
   @Test
@@ -860,7 +837,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          Arrays.asList(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -901,7 +878,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     statePersistence!!.updateOrCreateState(connectionId!!, clone(perStreamToModify))
 
     val toDelete =
-      Set.of<io.airbyte.config.StreamDescriptor?>(
+      setOf(
         io.airbyte.config
           .StreamDescriptor()
           .withName("del-1")
@@ -921,7 +898,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          Arrays.asList(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -953,7 +930,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize("\"woot\""))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("del-1").withNamespace("del-n1"))
                       .withStreamState(deserialize("")),
@@ -977,7 +954,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     statePersistence!!.updateOrCreateState(connectionId!!, clone(globalToModify))
 
     val toDelete =
-      Set.of<io.airbyte.config.StreamDescriptor?>(
+      setOf(
         io.airbyte.config
           .StreamDescriptor()
           .withName("del-1")
@@ -1003,7 +980,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize("\"woot\""))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("keep-1"))
                       .withStreamState(deserialize("")),
@@ -1029,7 +1006,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize("\"woot\""))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("del-1").withNamespace("del-n1"))
                       .withStreamState(deserialize("")),
@@ -1047,7 +1024,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     statePersistence!!.updateOrCreateState(connectionId!!, clone(globalToModify))
 
     val toDelete =
-      Set.of<io.airbyte.config.StreamDescriptor?>(
+      setOf(
         io.airbyte.config
           .StreamDescriptor()
           .withName("del-1")
@@ -1064,7 +1041,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
 
     val curr = statePersistence!!.getCurrentState(connectionId!!)
 
-    Assert.assertTrue(curr.isEmpty())
+    Assertions.assertTrue(curr.isEmpty)
   }
 
   @Test
@@ -1079,7 +1056,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize("\"woot\""))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("del-1").withNamespace("del-n1"))
                       .withStreamState(deserialize("")),
@@ -1100,7 +1077,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     statePersistence!!.updateOrCreateState(secondConn, clone(globalToModify))
 
     val toDelete =
-      Set.of<io.airbyte.config.StreamDescriptor?>(
+      setOf(
         io.airbyte.config
           .StreamDescriptor()
           .withName("del-1")
@@ -1148,7 +1125,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize("\"woot\""))
                 .withStreamStates(
-                  Arrays.asList(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("del-1").withNamespace("del-n1"))
                       .withStreamState(deserialize("")),
@@ -1189,7 +1166,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize("0"))
                 .withStreamStates(
-                  List.of<AirbyteStreamState?>(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("user"))
                       .withStreamState(deserialize("99")),
@@ -1210,7 +1187,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
               AirbyteGlobalState()
                 .withSharedState(deserialize("\"2024-01-01\""))
                 .withStreamStates(
-                  List.of<AirbyteStreamState?>(
+                  listOf(
                     AirbyteStreamState()
                       .withStreamDescriptor(StreamDescriptor().withName("shop"))
                       .withStreamState(deserialize("\"test\"")),
@@ -1224,19 +1201,19 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
 
     val otherConnectionId = setupSecondConnection()
     statePersistence!!.updateOrCreateState(connectionId!!, connectionState)
-    Assertions.assertTrue(statePersistence!!.getCurrentState(connectionId!!).isPresent(), "The main connection state is not present in database")
+    Assertions.assertTrue(statePersistence!!.getCurrentState(connectionId!!).isPresent, "The main connection state is not present in database")
     statePersistence!!.updateOrCreateState(otherConnectionId, otherState)
     Assertions.assertTrue(
-      statePersistence!!.getCurrentState(otherConnectionId).isPresent(),
+      statePersistence!!.getCurrentState(otherConnectionId).isPresent,
       "The other connection state is not present in database",
     )
     assertEquals(otherState, statePersistence!!.getCurrentState(otherConnectionId).get(), "The other connection state is incorrect")
 
     statePersistence!!.eraseState(connectionId!!)
-    Assertions.assertTrue(statePersistence!!.getCurrentState(connectionId!!).isEmpty(), "The main connection state is still present")
+    Assertions.assertTrue(statePersistence!!.getCurrentState(connectionId!!).isEmpty, "The main connection state is still present")
     statePersistence!!.updateOrCreateState(otherConnectionId, otherState)
     Assertions.assertTrue(
-      statePersistence!!.getCurrentState(otherConnectionId).isPresent(),
+      statePersistence!!.getCurrentState(otherConnectionId).isPresent,
       "The other connection state is no longer present in database",
     )
     assertEquals(otherState, statePersistence!!.getCurrentState(otherConnectionId).get(), "the other connection state has been altered")
@@ -1248,7 +1225,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          List.of<AirbyteStateMessage?>(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -1269,7 +1246,7 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(
-          List.of<AirbyteStateMessage?>(
+          listOf(
             AirbyteStateMessage()
               .withType(AirbyteStateType.STREAM)
               .withStream(
@@ -1288,42 +1265,42 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
         )
     val otherConnectionId = setupSecondConnection()
     statePersistence!!.updateOrCreateState(connectionId!!, connectionState)
-    Assertions.assertTrue(statePersistence!!.getCurrentState(connectionId!!).isPresent(), "The main connection state is not present in database")
+    Assertions.assertTrue(statePersistence!!.getCurrentState(connectionId!!).isPresent, "The main connection state is not present in database")
     statePersistence!!.updateOrCreateState(otherConnectionId, otherState)
     Assertions.assertTrue(
-      statePersistence!!.getCurrentState(otherConnectionId).isPresent(),
+      statePersistence!!.getCurrentState(otherConnectionId).isPresent,
       "The other connection state is not present in database",
     )
     assertEquals(otherState, statePersistence!!.getCurrentState(otherConnectionId).get(), "The other connection state is incorrect")
 
     statePersistence!!.eraseState(connectionId!!)
-    Assertions.assertTrue(statePersistence!!.getCurrentState(connectionId!!).isEmpty(), "The main connection state is still present")
+    Assertions.assertTrue(statePersistence!!.getCurrentState(connectionId!!).isEmpty, "The main connection state is still present")
     statePersistence!!.updateOrCreateState(otherConnectionId, otherState)
     Assertions.assertTrue(
-      statePersistence!!.getCurrentState(otherConnectionId).isPresent(),
+      statePersistence!!.getCurrentState(otherConnectionId).isPresent,
       "The other connection state is no longer present in database",
     )
     assertEquals(otherState, statePersistence!!.getCurrentState(otherConnectionId).get(), "the other connection state has been altered")
   }
 
   private fun setupSecondConnection(): UUID {
-    val workspace = MockData.standardWorkspaces().get(0)!!
+    val workspace = MockData.standardWorkspaces()[0]!!
     val sourceDefinition = MockData.publicSourceDefinition()!!
-    val sourceConnection = MockData.sourceConnections().get(0)!!
+    val sourceConnection = MockData.sourceConnections()[0]!!
     val actorDefinitionVersion =
       MockData
         .actorDefinitionVersion()!!
-        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
-        .withVersionId(sourceDefinition.getDefaultVersionId())
+        .withActorDefinitionId(sourceDefinition.sourceDefinitionId)
+        .withVersionId(sourceDefinition.defaultVersionId)
     val destinationDefinition = MockData.grantableDestinationDefinition1()!!
     val actorDefinitionVersion2 =
       MockData
         .actorDefinitionVersion()!!
-        .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .withVersionId(destinationDefinition.getDefaultVersionId())
-    val destinationConnection = MockData.destinationConnections().get(1)!!
+        .withActorDefinitionId(destinationDefinition.destinationDefinitionId)
+        .withVersionId(destinationDefinition.defaultVersionId)
+    val destinationConnection = MockData.destinationConnections()[1]!!
     // we don't need sync operations in this test suite, zero them out.
-    val sync = clone(MockData.standardSyncs().get(1)!!).withOperationIds(mutableListOf<UUID?>())
+    val sync = clone(MockData.standardSyncs()[1]!!).withOperationIds(mutableListOf<UUID?>())
 
     workspaceService!!.writeStandardWorkspaceNoSecrets(workspace)
     sourceService!!.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf())
@@ -1331,38 +1308,38 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     destinationService!!.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion2, mutableListOf())
     destinationService!!.writeDestinationConnectionNoSecrets(destinationConnection)
     connectionService!!.writeStandardSync(sync)
-    return sync.getConnectionId()
+    return sync.connectionId
   }
 
   private fun clone(state: StateWrapper): StateWrapper =
-    when (state.getStateType()) {
+    when (state.stateType) {
       StateType.LEGACY ->
         StateWrapper()
-          .withLegacyState(deserialize(serialize(state.getLegacyState())))
-          .withStateType(state.getStateType())
+          .withLegacyState(deserialize(serialize(state.legacyState)))
+          .withStateType(state.stateType)
 
       StateType.STREAM ->
         StateWrapper()
           .withStateMessages(
             state
-              .getStateMessages()
+              .stateMessages
               .stream()
               .map { msg: AirbyteStateMessage? ->
-                Jsons.deserialize(
+                deserialize(
                   serialize(msg),
                   AirbyteStateMessage::class.java,
                 )
               }.toList(),
-          ).withStateType(state.getStateType())
+          ).withStateType(state.stateType)
 
       StateType.GLOBAL ->
         StateWrapper()
           .withGlobal(
-            Jsons.deserialize(
-              serialize(state.getGlobal()),
+            deserialize(
+              serialize(state.global),
               AirbyteStateMessage::class.java,
             ),
-          ).withStateType(state.getStateType())
+          ).withStateType(state.stateType)
     }
 
   private fun assertEquals(

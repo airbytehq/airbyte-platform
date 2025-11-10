@@ -6,7 +6,6 @@ package io.airbyte.config
 
 import io.airbyte.config.JobConfig.ConfigType
 import jakarta.annotation.Nullable
-import java.util.EnumSet
 import java.util.Optional
 
 /**
@@ -41,7 +40,7 @@ data class Job(
     Optional.ofNullable(
       attempts
         .filter { a: Attempt -> a.status == AttemptStatus.FAILED }
-        .maxByOrNull({ obj: Attempt -> obj.createdAtInSecond }),
+        .maxByOrNull { obj: Attempt -> obj.createdAtInSecond },
     )
 
   fun getLastAttempt(): Optional<Attempt> = Optional.ofNullable(attempts.maxByOrNull { obj: Attempt -> obj.createdAtInSecond })
@@ -54,7 +53,7 @@ data class Job(
       },
     )
 
-  fun hasRunningAttempt(): Boolean = attempts.stream().anyMatch { a: Attempt -> !Attempt.isAttemptInTerminalState(a) }
+  fun hasRunningAttempt(): Boolean = attempts.any { a: Attempt -> !Attempt.isAttemptInTerminalState(a) }
 
   fun isJobInTerminalState(): Boolean = JobStatus.TERMINAL_STATUSES.contains(status)
 
@@ -66,7 +65,7 @@ data class Job(
   }
 
   companion object {
-    val REPLICATION_TYPES: Set<ConfigType> = EnumSet.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH)
-    val SYNC_REPLICATION_TYPES: Set<ConfigType> = EnumSet.of(ConfigType.SYNC, ConfigType.REFRESH)
+    val REPLICATION_TYPES: Set<ConfigType> = setOf(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH)
+    val SYNC_REPLICATION_TYPES: Set<ConfigType> = setOf(ConfigType.SYNC, ConfigType.REFRESH)
   }
 }

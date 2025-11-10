@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import java.security.SecureRandom
-import java.util.List
 
 internal class DeclarativeOAuthSpecHandlerTest {
   private val secureRandom: SecureRandom = Mockito.mock(SecureRandom::class.java)
@@ -18,27 +17,21 @@ internal class DeclarativeOAuthSpecHandlerTest {
 
   @Test
   fun testGetStateKey() {
-    val userConfig =
-      Jsons.jsonNode(
-        java.util.Map.of(
-          DeclarativeOAuthSpecHandler.STATE_KEY,
-          DeclarativeOAuthSpecHandler.STATE_VALUE,
-        ),
-      )
+    val userConfig = Jsons.jsonNode(mapOf(DeclarativeOAuthSpecHandler.STATE_KEY to DeclarativeOAuthSpecHandler.STATE_VALUE))
 
     Assertions.assertEquals(DeclarativeOAuthSpecHandler.STATE_VALUE, handler.getStateKey(userConfig))
   }
 
   @Test
   fun testGetConfigurableState() {
-    val stateConfig = Jsons.jsonNode(java.util.Map.of("min", 7, "max", 10))
+    val stateConfig = Jsons.jsonNode(mapOf("min" to 7, "max" to 10))
     Mockito.`when`(secureRandom.nextInt(ArgumentMatchers.anyInt())).thenReturn(5)
     Assertions.assertNotNull(handler.getConfigurableState(stateConfig))
   }
 
   @Test
   fun testCreateDefaultTemplateMap() {
-    val userConfig = Jsons.jsonNode(java.util.Map.of(DeclarativeOAuthSpecHandler.CLIENT_ID_KEY, TEST_CLIENT_ID))
+    val userConfig = Jsons.jsonNode(mapOf(DeclarativeOAuthSpecHandler.CLIENT_ID_KEY to TEST_CLIENT_ID))
     val templateMap: Map<String?, String?> = handler.createDefaultTemplateMap(userConfig)
     Assertions.assertEquals(
       TEST_CLIENT_ID,
@@ -50,13 +43,10 @@ internal class DeclarativeOAuthSpecHandlerTest {
   fun testGetConsentUrlTemplateValues() {
     val userConfig =
       Jsons.jsonNode(
-        java.util.Map.of(
-          DeclarativeOAuthSpecHandler.CLIENT_ID_KEY,
-          TEST_CLIENT_ID,
-          DeclarativeOAuthSpecHandler.REDIRECT_URI_KEY,
-          TEST_REDIRECT_URI,
-          DeclarativeOAuthSpecHandler.STATE_KEY,
-          TEST_STATE,
+        mapOf(
+          DeclarativeOAuthSpecHandler.CLIENT_ID_KEY to TEST_CLIENT_ID,
+          DeclarativeOAuthSpecHandler.REDIRECT_URI_KEY to TEST_REDIRECT_URI,
+          DeclarativeOAuthSpecHandler.STATE_KEY to TEST_STATE,
         ),
       )
 
@@ -77,7 +67,7 @@ internal class DeclarativeOAuthSpecHandlerTest {
 
   @Test
   fun testRenderStringTemplate() {
-    val templateValues = java.util.Map.of("key", "value")
+    val templateValues = mapOf<String?, String?>("key" to "value")
     val templateString = "{{ key }}"
     val expected = "value"
     Assertions.assertEquals(expected, handler.renderStringTemplate(templateValues, templateString))
@@ -85,29 +75,17 @@ internal class DeclarativeOAuthSpecHandlerTest {
 
   @Test
   fun testGetConfigExtractOutput() {
-    val userConfig =
-      Jsons.jsonNode(
-        java.util.Map.of(
-          DeclarativeOAuthSpecHandler.EXTRACT_OUTPUT_KEY,
-          List.of(DeclarativeOAuthSpecHandler.ACCESS_TOKEN),
-        ),
-      )
+    val userConfig = Jsons.jsonNode(mapOf(DeclarativeOAuthSpecHandler.EXTRACT_OUTPUT_KEY to listOf(DeclarativeOAuthSpecHandler.ACCESS_TOKEN)))
 
     val extractOutput = handler.getConfigExtractOutput(userConfig)
-    Assertions.assertEquals(List.of(DeclarativeOAuthSpecHandler.ACCESS_TOKEN), extractOutput)
+    Assertions.assertEquals(listOf(DeclarativeOAuthSpecHandler.ACCESS_TOKEN), extractOutput)
   }
 
   @Test
   fun testRenderCompleteOAuthHeaders() {
-    val userConfig =
-      Jsons.jsonNode(
-        java.util.Map.of(
-          DeclarativeOAuthSpecHandler.ACCESS_TOKEN_HEADERS_KEY,
-          java.util.Map.of("{{ key }}", "{{ value }}"),
-        ),
-      )
+    val userConfig = Jsons.jsonNode(mapOf(DeclarativeOAuthSpecHandler.ACCESS_TOKEN_HEADERS_KEY to mapOf("{{ key }}" to "{{ value }}")))
 
-    val templateValues = java.util.Map.of("key", "header_key", "value", "header_value")
+    val templateValues = mapOf<String?, String?>("key" to "header_key", "value" to "header_value")
     val headers = handler.renderCompleteOAuthHeaders(templateValues, userConfig)
     Assertions.assertEquals("header_value", headers["header_key"])
   }
@@ -126,16 +104,14 @@ internal class DeclarativeOAuthSpecHandlerTest {
    */
   @Test
   fun testProcessOAuthOutput() {
-    val extractOutputInputValues = List.of(DeclarativeOAuthSpecHandler.ACCESS_TOKEN, DeclarativeOAuthSpecHandler.REFRESH_TOKEN)
+    val extractOutputInputValues = listOf(DeclarativeOAuthSpecHandler.ACCESS_TOKEN, DeclarativeOAuthSpecHandler.REFRESH_TOKEN)
 
-    val userConfig = Jsons.jsonNode(java.util.Map.of(DeclarativeOAuthSpecHandler.EXTRACT_OUTPUT_KEY, extractOutputInputValues))
+    val userConfig = Jsons.jsonNode(mapOf(DeclarativeOAuthSpecHandler.EXTRACT_OUTPUT_KEY to extractOutputInputValues))
     val jsonData =
       Jsons.jsonNode(
-        java.util.Map.of(
-          DeclarativeOAuthSpecHandler.ACCESS_TOKEN,
-          ACCESS_TOKEN_TEST_VALUE,
-          DeclarativeOAuthSpecHandler.REFRESH_TOKEN,
-          REFRESH_TOKEN_TEST_VALUE,
+        mapOf(
+          DeclarativeOAuthSpecHandler.ACCESS_TOKEN to ACCESS_TOKEN_TEST_VALUE,
+          DeclarativeOAuthSpecHandler.REFRESH_TOKEN to REFRESH_TOKEN_TEST_VALUE,
         ),
       )
 
@@ -168,22 +144,20 @@ internal class DeclarativeOAuthSpecHandlerTest {
   fun testProcessOAuthOutputFromNestedDataObject() {
     val accessTokenEntry = "data.nested.auth." + DeclarativeOAuthSpecHandler.ACCESS_TOKEN
     val refreshTokenEntry = "data.nested." + DeclarativeOAuthSpecHandler.REFRESH_TOKEN
-    val extractOutputInputValues = List.of(accessTokenEntry, refreshTokenEntry)
+    val extractOutputInputValues = listOf(accessTokenEntry, refreshTokenEntry)
 
-    val userConfig = Jsons.jsonNode(java.util.Map.of(DeclarativeOAuthSpecHandler.EXTRACT_OUTPUT_KEY, extractOutputInputValues))
+    val userConfig = Jsons.jsonNode(mapOf(DeclarativeOAuthSpecHandler.EXTRACT_OUTPUT_KEY to extractOutputInputValues))
     val jsonData =
       Jsons.jsonNode(
-        java.util.Map.of(
-          "data",
-          java.util.Map.of(
-            "nested",
-            java.util.Map.of(
-              DeclarativeOAuthSpecHandler.REFRESH_TOKEN,
-              REFRESH_TOKEN_TEST_VALUE,
-              "auth",
-              java.util.Map.of(DeclarativeOAuthSpecHandler.ACCESS_TOKEN, ACCESS_TOKEN_TEST_VALUE),
+        mapOf(
+          "data" to
+            mapOf(
+              "nested" to
+                mapOf(
+                  DeclarativeOAuthSpecHandler.REFRESH_TOKEN to REFRESH_TOKEN_TEST_VALUE,
+                  "auth" to mapOf(DeclarativeOAuthSpecHandler.ACCESS_TOKEN to ACCESS_TOKEN_TEST_VALUE),
+                ),
             ),
-          ),
         ),
       )
 

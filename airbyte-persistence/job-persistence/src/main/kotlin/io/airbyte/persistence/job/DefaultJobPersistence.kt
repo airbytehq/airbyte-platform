@@ -474,14 +474,10 @@ class DefaultJobPersistence
 
     override fun getAttemptStats(jobIds: List<Long>?): Map<JobAttemptPair, JobPersistence.AttemptStats> {
       if (jobIds == null || jobIds.isEmpty()) {
-        return java.util.Map.of()
+        return emptyMap()
       }
 
-      val jobIdsStr =
-        jobIds
-          .stream()
-          .map { obj: Long -> obj.toString() }
-          .collect(Collectors.joining(","))
+      val jobIdsStr = jobIds.joinToString(",") { obj: Long -> obj.toString() }
 
       return jobDatabase.query { ctx: DSLContext ->
         // Instead of one massive join query, separate this query into two queries for better readability
@@ -1605,11 +1601,9 @@ class DefaultJobPersistence
 
       // get order by field w/ default
       val fieldMap =
-        java.util.Map.of(
-          OrderByField.CREATED_AT.enumName,
-          Tables.JOBS.CREATED_AT,
-          OrderByField.UPDATED_AT.enumName,
-          Tables.JOBS.UPDATED_AT,
+        mapOf(
+          OrderByField.CREATED_AT.enumName to Tables.JOBS.CREATED_AT,
+          OrderByField.UPDATED_AT.enumName to Tables.JOBS.UPDATED_AT,
         )
       val field = fieldMap[orderByField]!!
 

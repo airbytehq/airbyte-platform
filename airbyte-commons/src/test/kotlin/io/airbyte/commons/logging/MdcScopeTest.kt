@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.slf4j.MDC
-import java.util.Map
 
 internal class MdcScopeTest {
   @BeforeEach
@@ -20,10 +19,10 @@ internal class MdcScopeTest {
   @Test
   @DisplayName("The MDC context is properly overrided")
   fun testMDCModified() {
-    MdcScope.Builder().setExtraMdcEntries(modificationInMDC).build().use { ignored ->
+    MdcScope.Builder().setExtraMdcEntries(modificationInMDC).build().use { _ ->
       val mdcState = MDC.getCopyOfContextMap()
-      Assertions.assertThat<String?, String?>(mdcState).containsExactlyInAnyOrderEntriesOf(
-        Map.of<String?, String?>("test", "entry", "new", "will be added", "testOverride", "will override"),
+      Assertions.assertThat(mdcState).containsExactlyInAnyOrderEntriesOf(
+        mapOf("test" to "entry", "new" to "will be added", "testOverride" to "will override"),
       )
     }
   }
@@ -35,17 +34,16 @@ internal class MdcScopeTest {
       .Builder()
       .setExtraMdcEntries(modificationInMDC)
       .build()
-      .use { ignored -> }
+      .use { _ -> }
     val mdcState = MDC.getCopyOfContextMap()
 
-    Assertions.assertThat<String?, String?>(mdcState).containsAllEntriesOf(originalMap)
-    Assertions.assertThat<String?, String?>(mdcState).doesNotContainKey("new")
+    Assertions.assertThat(mdcState).containsAllEntriesOf(originalMap)
+    Assertions.assertThat(mdcState).doesNotContainKey("new")
   }
 
   companion object {
-    private val originalMap: MutableMap<String?, String?> = Map.of<String?, String?>("test", "entry", "testOverride", "should be overrided")
+    private val originalMap = mapOf("test" to "entry", "testOverride" to "should be overridden")
 
-    private val modificationInMDC: MutableMap<String?, String?> =
-      Map.of<String?, String?>("new", "will be added", "testOverride", "will override")
+    private val modificationInMDC = mapOf<String?, String?>("new" to "will be added", "testOverride" to "will override")
   }
 }

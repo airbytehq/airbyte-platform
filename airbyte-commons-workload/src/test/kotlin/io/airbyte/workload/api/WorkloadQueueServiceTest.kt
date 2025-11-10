@@ -21,7 +21,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
-import java.util.stream.Stream
 
 class WorkloadQueueServiceTest {
   private val metricClient: MetricClient = mockk()
@@ -65,8 +64,8 @@ class WorkloadQueueServiceTest {
     private const val DATAPLANE_ID = "dataplaneId"
 
     @JvmStatic
-    fun expectedQueueArgsMatrix(): Stream<Arguments> =
-      Stream.of(
+    fun expectedQueueArgsMatrix() =
+      listOf(
         Arguments.of(WorkloadType.SYNC, WorkloadPriority.DEFAULT, DATAPLANE_ID),
         Arguments.of(WorkloadType.CHECK, WorkloadPriority.HIGH, DATAPLANE_ID),
         Arguments.of(WorkloadType.CHECK, WorkloadPriority.DEFAULT, DATAPLANE_ID),

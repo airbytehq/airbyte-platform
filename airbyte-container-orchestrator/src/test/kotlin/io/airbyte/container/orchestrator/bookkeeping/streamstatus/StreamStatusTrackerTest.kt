@@ -30,7 +30,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
-import java.util.stream.Stream
 import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus as ProtocolEnum
 
@@ -401,8 +400,8 @@ class StreamStatusTrackerTest {
 
   companion object {
     @JvmStatic
-    fun runStateTransitionMatrix(): Stream<Arguments> =
-      Stream.of(
+    fun runStateTransitionMatrix() =
+      listOf(
         Arguments.of(null, ApiEnum.RUNNING),
         Arguments.of(null, ApiEnum.RATE_LIMITED),
         Arguments.of(null, ApiEnum.COMPLETE),
@@ -416,8 +415,8 @@ class StreamStatusTrackerTest {
       )
 
     @JvmStatic
-    fun runStateValues(): Stream<Arguments> =
-      Stream.of(
+    fun runStateValues() =
+      listOf(
         Arguments.of(null),
         Arguments.of(ApiEnum.RUNNING),
         Arguments.of(ApiEnum.RATE_LIMITED),

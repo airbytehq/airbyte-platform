@@ -16,7 +16,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.Optional
-import java.util.stream.Stream
 
 internal class OauthModelConverterTest {
   @ParameterizedTest
@@ -70,8 +69,8 @@ internal class OauthModelConverterTest {
 
   companion object {
     @JvmStatic
-    private fun testProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>( // oauth 1.0 with non-nested fields
+    private fun testProvider() =
+      listOf<Arguments?>( // oauth 1.0 with non-nested fields
         Arguments.of(
           AdvancedAuth.AuthFlowType.OAUTH_1_0,
           mutableListOf<String?>("auth_type"),

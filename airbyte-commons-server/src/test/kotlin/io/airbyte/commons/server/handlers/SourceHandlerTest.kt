@@ -40,8 +40,6 @@ import io.airbyte.commons.server.helpers.SourceHelpers
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.Configs
-import io.airbyte.config.JobStatus
-import io.airbyte.config.MapperConfig
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.SuggestedStreams
@@ -51,7 +49,6 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitio
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
-import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.ConfigWithSecretReferenceIdsInjected
 import io.airbyte.config.secrets.SecretsRepositoryReader
@@ -73,7 +70,6 @@ import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.domain.services.secrets.SecretStorageService
-import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.AirbyteCatalog
@@ -90,7 +86,6 @@ import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer
@@ -129,7 +124,7 @@ internal class SourceHandlerTest {
   lateinit var currentUserService: CurrentUserService
   lateinit var secretPersistence: SecretPersistence
 
-  private val catalogConverter = CatalogConverter(FieldGenerator(), mutableListOf<Mapper<out MapperConfig>>())
+  private val catalogConverter = CatalogConverter(FieldGenerator(), mutableListOf())
   private val apiPojoConverters = ApiPojoConverters(catalogConverter)
 
   @BeforeEach
@@ -891,7 +886,7 @@ internal class SourceHandlerTest {
     } answers {
       ConfigWithSecretReferences(
         secondArg(),
-        Map.of<String, SecretReferenceConfig>(),
+        mapOf(),
       )
     }
 
@@ -1103,7 +1098,7 @@ internal class SourceHandlerTest {
       "source-definition",
       connectionCount,
       null,
-      Map.of<JobStatus, Int>(),
+      emptyMap(),
       true,
     )
   }
@@ -1154,13 +1149,13 @@ internal class SourceHandlerTest {
     } answers {
       ConfigWithSecretReferences(
         secondArg(),
-        Map.of<String, SecretReferenceConfig>(),
+        mapOf(),
       )
     }
 
     val actualSourceReadList = sourceHandler.listSourcesForSourceDefinition(sourceConnection.sourceDefinitionId)
 
-    Assertions.assertEquals(expectedSourceRead, actualSourceReadList.sources.get(0))
+    Assertions.assertEquals(expectedSourceRead, actualSourceReadList.sources[0])
     verify {
       secretsProcessor.prepareSecretsForOutput(
         sourceConnection.configuration,
@@ -1214,14 +1209,14 @@ internal class SourceHandlerTest {
     } answers {
       ConfigWithSecretReferences(
         secondArg(),
-        Map.of<String, SecretReferenceConfig>(),
+        mapOf(),
       )
     }
 
     val validSourceSearch = SourceSearch().name(sourceConnection.name)
     var actualSourceReadList = sourceHandler.searchSources(validSourceSearch)
     Assertions.assertEquals(1, actualSourceReadList.sources.size)
-    Assertions.assertEquals(expectedSourceRead, actualSourceReadList.sources.get(0))
+    Assertions.assertEquals(expectedSourceRead, actualSourceReadList.sources[0])
 
     val invalidSourceSearch = SourceSearch().name("invalid")
     actualSourceReadList = sourceHandler.searchSources(invalidSourceSearch)
@@ -1282,7 +1277,7 @@ internal class SourceHandlerTest {
     } answers {
       ConfigWithSecretReferences(
         secondArg(),
-        Map.of<String, SecretReferenceConfig>(),
+        mapOf(),
       )
     }
 
@@ -1394,16 +1389,14 @@ internal class SourceHandlerTest {
     val firstStreamConfig =
       requestThree
         .catalog
-        .streams
-        .get(0)
+        .streams[0]
         .config
     Assertions.assertEquals(true, firstStreamConfig.suggested)
     Assertions.assertEquals(true, firstStreamConfig.selected)
     val secondStreamConfig =
       requestThree
         .catalog
-        .streams
-        .get(1)
+        .streams[1]
         .config
     Assertions.assertEquals(false, secondStreamConfig.suggested)
     Assertions.assertEquals(false, secondStreamConfig.selected)

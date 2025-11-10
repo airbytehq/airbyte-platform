@@ -114,7 +114,7 @@ class ReplicationInputHydrator(
    * @throws Exception from the Airbyte API
    */
   fun getHydratedReplicationInput(replicationActivityInput: ReplicationActivityInput): ReplicationInput {
-    addTagsToTrace(java.util.Map.of("api_base_url", airbyteApiClient.destinationApi.baseUrl))
+    addTagsToTrace(mapOf<String?, Any?>("api_base_url" to airbyteApiClient.destinationApi.baseUrl))
     refreshSecretsReferences(replicationActivityInput)
 
     // Retrieve the connection, which we need in a few places.

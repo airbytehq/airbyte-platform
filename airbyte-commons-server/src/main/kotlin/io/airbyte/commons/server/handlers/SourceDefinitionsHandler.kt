@@ -241,7 +241,7 @@ open class SourceDefinitionsHandler
           .filter { sourceDefinition: StandardSourceDefinition ->
             !featureFlagClient.boolVariation(
               HideActorDefinitionFromList,
-              Multi(java.util.List.of(SourceDefinition(sourceDefinition.sourceDefinitionId), Workspace(workspaceId))),
+              Multi(listOf(SourceDefinition(sourceDefinition.sourceDefinitionId), Workspace(workspaceId))),
             )
           }.toList()
 

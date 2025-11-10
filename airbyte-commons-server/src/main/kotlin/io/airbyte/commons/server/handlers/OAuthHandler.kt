@@ -96,11 +96,9 @@ open class OAuthHandler(
 ) {
   fun getSourceOAuthConsent(sourceOauthConsentRequest: SourceOauthConsentRequest): OAuthConsentRead {
     val traceTags =
-      java.util.Map.of<String?, Any?>(
-        WORKSPACE_ID_KEY,
-        sourceOauthConsentRequest.workspaceId,
-        SOURCE_DEFINITION_ID_KEY,
-        sourceOauthConsentRequest.sourceDefinitionId,
+      mapOf<String?, Any?>(
+        WORKSPACE_ID_KEY to sourceOauthConsentRequest.workspaceId,
+        SOURCE_DEFINITION_ID_KEY to sourceOauthConsentRequest.sourceDefinitionId,
       )
     addTagsToTrace(traceTags)
     addTagsToRootSpan(traceTags)
@@ -205,11 +203,9 @@ open class OAuthHandler(
 
   fun getDestinationOAuthConsent(destinationOauthConsentRequest: DestinationOauthConsentRequest): OAuthConsentRead {
     val traceTags =
-      java.util.Map.of<String?, Any?>(
-        WORKSPACE_ID_KEY,
-        destinationOauthConsentRequest.workspaceId,
-        DESTINATION_DEFINITION_ID_KEY,
-        destinationOauthConsentRequest.destinationDefinitionId,
+      mapOf<String?, Any?>(
+        WORKSPACE_ID_KEY to destinationOauthConsentRequest.workspaceId,
+        DESTINATION_DEFINITION_ID_KEY to destinationOauthConsentRequest.destinationDefinitionId,
       )
     addTagsToTrace(traceTags)
     addTagsToRootSpan(traceTags)
@@ -326,11 +322,9 @@ open class OAuthHandler(
   @InternalForTesting
   fun completeSourceOAuth(completeSourceOauthRequest: CompleteSourceOauthRequest): CompleteOAuthResponse {
     val traceTags =
-      java.util.Map.of<String?, Any?>(
-        WORKSPACE_ID_KEY,
-        completeSourceOauthRequest.workspaceId,
-        SOURCE_DEFINITION_ID_KEY,
-        completeSourceOauthRequest.sourceDefinitionId,
+      mapOf<String?, Any?>(
+        WORKSPACE_ID_KEY to completeSourceOauthRequest.workspaceId,
+        SOURCE_DEFINITION_ID_KEY to completeSourceOauthRequest.sourceDefinitionId,
       )
     addTagsToTrace(traceTags)
     addTagsToRootSpan(traceTags)
@@ -421,11 +415,9 @@ open class OAuthHandler(
 
   fun completeDestinationOAuth(completeDestinationOAuthRequest: CompleteDestinationOAuthRequest): CompleteOAuthResponse {
     val traceTags =
-      java.util.Map.of<String?, Any?>(
-        WORKSPACE_ID_KEY,
-        completeDestinationOAuthRequest.workspaceId,
-        DESTINATION_DEFINITION_ID_KEY,
-        completeDestinationOAuthRequest.destinationDefinitionId,
+      mapOf<String?, Any?>(
+        WORKSPACE_ID_KEY to completeDestinationOAuthRequest.workspaceId,
+        DESTINATION_DEFINITION_ID_KEY to completeDestinationOAuthRequest.destinationDefinitionId,
       )
     addTagsToTrace(traceTags)
     addTagsToRootSpan(traceTags)
@@ -679,7 +671,7 @@ open class OAuthHandler(
           payloadString,
           secretPersistence,
         )
-      return mapToCompleteOAuthResponse(java.util.Map.of("secretId", secretCoordinate.fullCoordinate))
+      return mapToCompleteOAuthResponse(mapOf("secretId" to secretCoordinate.fullCoordinate))
     } catch (e: JsonProcessingException) {
       throw RuntimeException("Json object could not be written to string.", e)
     }

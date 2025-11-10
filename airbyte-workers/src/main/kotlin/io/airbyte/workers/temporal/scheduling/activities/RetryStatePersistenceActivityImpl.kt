@@ -21,7 +21,6 @@ import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
-import java.util.Map
 import java.util.UUID
 
 /**
@@ -35,9 +34,9 @@ class RetryStatePersistenceActivityImpl(
 ) : RetryStatePersistenceActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   override fun hydrateRetryState(input: HydrateInput): HydrateOutput {
-    ApmTraceUtils.addTagsToTrace(Map.of<String?, UUID?>(CONNECTION_ID_KEY, input.connectionId))
+    ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to input.connectionId))
     val workspaceId = getWorkspaceId(input.connectionId!!)
-    ApmTraceUtils.addTagsToTrace(Map.of<String?, UUID?>(WORKSPACE_ID_KEY, workspaceId))
+    ApmTraceUtils.addTagsToTrace(mapOf(WORKSPACE_ID_KEY to workspaceId))
 
     val manager = client.hydrateRetryState(input.jobId, workspaceId)
 

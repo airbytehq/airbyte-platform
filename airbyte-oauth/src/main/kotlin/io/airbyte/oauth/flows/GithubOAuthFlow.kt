@@ -57,7 +57,7 @@ class GithubOAuthFlow : BaseOAuth2Flow {
     accessTokenUrl: String,
   ): Map<String, Any> {
     if (data.has("access_token")) {
-      return java.util.Map.of<String, Any>("access_token", data["access_token"].asText())
+      return mapOf<String, Any>("access_token" to data["access_token"].asText())
     } else {
       throw IOException(String.format("Missing 'access_token' in query params from %s", ACCESS_TOKEN_URL))
     }

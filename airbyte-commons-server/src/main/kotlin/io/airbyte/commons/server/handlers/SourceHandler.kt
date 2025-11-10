@@ -79,7 +79,6 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
@@ -136,9 +135,8 @@ class SourceHandler
     fun updateSourceWithOptionalSecret(partialSourceUpdate: PartialSourceUpdate): SourceRead {
       val spec = getSourceVersionForSourceId(partialSourceUpdate.sourceId).spec
       addTagsToTrace(
-        Map.of<String?, String?>(
-          SOURCE_ID,
-          partialSourceUpdate.sourceId.toString(),
+        mapOf(
+          SOURCE_ID to partialSourceUpdate.sourceId.toString(),
         ),
       )
       if (partialSourceUpdate.secretId != null && !partialSourceUpdate.secretId.isBlank()) {
@@ -159,9 +157,8 @@ class SourceHandler
               .orElse(Jsons.emptyObject()),
           )
         addTagsToTrace(
-          Map.of(
-            "oauth_secret",
-            true,
+          mapOf(
+            "oauth_secret" to true,
           ),
         )
       } else {
@@ -190,7 +187,7 @@ class SourceHandler
       // persist
       val sourceId = uuidGenerator.get()
       persistSourceConnection(
-        if (sourceCreate.name != null) sourceCreate.name else "default",
+        sourceCreate.name ?: "default",
         sourceCreate.sourceDefinitionId,
         sourceCreate.workspaceId,
         sourceId,
@@ -223,7 +220,7 @@ class SourceHandler
 
       validateSourceUpdate(partialSourceUpdate.connectionConfiguration, updatedSource, spec)
 
-      addTagsToTrace(Map.of<String?, String?>(WORKSPACE_ID, updatedSource.workspaceId.toString()))
+      addTagsToTrace(mapOf(WORKSPACE_ID to updatedSource.workspaceId.toString()))
 
       // persist
       persistSourceConnection(
@@ -257,11 +254,9 @@ class SourceHandler
       validateSourceUpdate(sourceUpdate.connectionConfiguration, updatedSource, spec)
 
       addTagsToTrace(
-        Map.of<String?, String?>(
-          WORKSPACE_ID,
-          updatedSource.workspaceId.toString(),
-          SOURCE_ID,
-          sourceId.toString(),
+        mapOf(
+          WORKSPACE_ID to updatedSource.workspaceId.toString(),
+          SOURCE_ID to sourceId.toString(),
         ),
       )
 
@@ -312,11 +307,7 @@ class SourceHandler
     fun listSourcesForWorkspace(actorListCursorPaginatedRequestBody: ActorListCursorPaginatedRequestBody): SourceReadList {
       val filters = actorListCursorPaginatedRequestBody.filters
       val pageSize =
-        if (actorListCursorPaginatedRequestBody.pageSize != null) {
-          actorListCursorPaginatedRequestBody.pageSize
-        } else {
-          DEFAULT_PAGE_SIZE
-        }
+        actorListCursorPaginatedRequestBody.pageSize ?: DEFAULT_PAGE_SIZE
 
       // Parse sort key to extract field and direction
       val sortKeyInfo =

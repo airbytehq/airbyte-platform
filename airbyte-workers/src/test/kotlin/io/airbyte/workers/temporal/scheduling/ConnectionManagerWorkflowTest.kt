@@ -97,12 +97,10 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.lang.invoke.MethodHandles
 import java.time.Duration
-import java.util.Map
 import java.util.Queue
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
-import java.util.stream.Stream
 
 // Forcing SAME_THREAD execution as we seem to face the issues described in
 // https://github.com/mockito/mockito/wiki/FAQ#is-mockito-thread-safe
@@ -117,7 +115,7 @@ import java.util.stream.Stream
 @Execution(ExecutionMode.SAME_THREAD)
 internal class ConnectionManagerWorkflowTest {
   private val mConfigFetchActivity: ConfigFetchActivity =
-    Mockito.mock<ConfigFetchActivity>(ConfigFetchActivity::class.java, Mockito.withSettings().withoutAnnotations())
+    Mockito.mock(ConfigFetchActivity::class.java, Mockito.withSettings().withoutAnnotations())
   private val mJobPostProcessingActivity: ValidateJobPostProcessingWorkflowStartedActivity =
     Mockito.mock(ValidateJobPostProcessingWorkflowStartedActivity::class.java, Mockito.withSettings().withoutAnnotations())
   private lateinit var testEnv: TestWorkflowEnvironment
@@ -128,38 +126,38 @@ internal class ConnectionManagerWorkflowTest {
 
   @BeforeEach
   fun setUp() {
-    Mockito.reset<ConfigFetchActivity?>(mConfigFetchActivity)
-    Mockito.reset<JobCreationAndStatusUpdateActivity?>(mJobCreationAndStatusUpdateActivity)
-    Mockito.reset<AutoDisableConnectionActivity?>(mAutoDisableConnectionActivity)
-    Mockito.reset<StreamResetActivity?>(mStreamResetActivity)
-    Mockito.reset<RecordMetricActivity?>(mRecordMetricActivity)
-    Mockito.reset<WorkflowConfigActivity?>(mWorkflowConfigActivity)
-    Mockito.reset<CheckRunProgressActivity?>(mCheckRunProgressActivity)
-    Mockito.reset<RetryStatePersistenceActivity?>(mRetryStatePersistenceActivity)
-    Mockito.reset<AppendToAttemptLogActivity?>(mAppendToAttemptLogActivity)
+    Mockito.reset(mConfigFetchActivity)
+    Mockito.reset(mJobCreationAndStatusUpdateActivity)
+    Mockito.reset(mAutoDisableConnectionActivity)
+    Mockito.reset(mStreamResetActivity)
+    Mockito.reset(mRecordMetricActivity)
+    Mockito.reset(mWorkflowConfigActivity)
+    Mockito.reset(mCheckRunProgressActivity)
+    Mockito.reset(mRetryStatePersistenceActivity)
+    Mockito.reset(mAppendToAttemptLogActivity)
 
     // default is to wait "forever"
-    Mockito.`when`<ScheduleRetrieverOutput?>(mConfigFetchActivity.getTimeToWait(any())).thenReturn(
+    Mockito.`when`(mConfigFetchActivity.getTimeToWait(any())).thenReturn(
       ScheduleRetrieverOutput(
         Duration.ofDays((100 * 365).toLong()),
       ),
     )
 
     // default is to not back off
-    Mockito.`when`<GetLoadShedBackoffOutput?>(mConfigFetchActivity.getLoadShedBackoff(any())).thenReturn(
+    Mockito.`when`(mConfigFetchActivity.getLoadShedBackoff(any())).thenReturn(
       GetLoadShedBackoffOutput(
         Duration.ZERO,
       ),
     )
 
-    Mockito.`when`<GetConnectionContextOutput?>(mConfigFetchActivity.getConnectionContext(any())).thenReturn(
+    Mockito.`when`(mConfigFetchActivity.getConnectionContext(any())).thenReturn(
       GetConnectionContextOutput(
         ConnectionContext().withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID),
       ),
     )
 
     Mockito
-      .`when`<JobCreationOutput?>(mJobCreationAndStatusUpdateActivity.createNewJob(any()))
+      .`when`(mJobCreationAndStatusUpdateActivity.createNewJob(any()))
       .thenReturn(
         JobCreationOutput(
           1L,
@@ -167,7 +165,7 @@ internal class ConnectionManagerWorkflowTest {
       )
 
     Mockito
-      .`when`<AttemptNumberCreationOutput?>(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()))
+      .`when`(mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()))
       .thenReturn(
         AttemptNumberCreationOutput(
           1,
@@ -175,30 +173,30 @@ internal class ConnectionManagerWorkflowTest {
       )
 
     Mockito
-      .`when`<AutoDisableConnectionOutput?>(
+      .`when`(
         mAutoDisableConnectionActivity.autoDisableFailingConnection(any()),
       ).thenReturn(AutoDisableConnectionOutput(false))
 
     Mockito
-      .`when`<Duration?>(mWorkflowConfigActivity.getWorkflowRestartDelaySeconds())
+      .`when`(mWorkflowConfigActivity.getWorkflowRestartDelaySeconds())
       .thenReturn(WORKFLOW_FAILURE_RESTART_DELAY)
     Mockito
-      .`when`<FeatureFlagFetchOutput?>(mFeatureFlagFetchActivity.getFeatureFlags(any()))
-      .thenReturn(FeatureFlagFetchOutput(Map.of<String?, Boolean?>()))
+      .`when`(mFeatureFlagFetchActivity.getFeatureFlags(any()))
+      .thenReturn(FeatureFlagFetchOutput(mutableMapOf()))
     Mockito
-      .`when`<CheckRunProgressActivity.Output?>(mCheckRunProgressActivity.checkProgress(any()))
+      .`when`(mCheckRunProgressActivity.checkProgress(any()))
       .thenReturn(CheckRunProgressActivity.Output(false)) // false == complete failure
     // just run once
-    val manager = RetryManager(null, null, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, 1, Int.Companion.MAX_VALUE)
+    val manager = RetryManager(null, null, Int.MAX_VALUE, Int.MAX_VALUE, 1, Int.MAX_VALUE)
 
     Mockito
-      .`when`<HydrateOutput?>(mRetryStatePersistenceActivity.hydrateRetryState(any()))
+      .`when`(mRetryStatePersistenceActivity.hydrateRetryState(any()))
       .thenReturn(HydrateOutput(manager))
     Mockito
-      .`when`<PersistOutput?>(mRetryStatePersistenceActivity.persistRetryState(any()))
+      .`when`(mRetryStatePersistenceActivity.persistRetryState(any()))
       .thenReturn(PersistOutput(true))
     Mockito
-      .`when`<LogOutput?>(mAppendToAttemptLogActivity.log(any()))
+      .`when`(mAppendToAttemptLogActivity.log(any()))
       .thenReturn(LogOutput(true))
 
     activityOptions =
@@ -217,9 +215,9 @@ internal class ConnectionManagerWorkflowTest {
 
     val activityOptionsBeanIdentifier = Mockito.mock(BeanIdentifier::class.java)
     val activityOptionsBeanRegistration = Mockito.mock<BeanRegistration<ActivityOptions>>()
-    Mockito.`when`<String?>(activityOptionsBeanIdentifier.getName()).thenReturn("shortActivityOptions")
-    Mockito.`when`<BeanIdentifier?>(activityOptionsBeanRegistration.getIdentifier()).thenReturn(activityOptionsBeanIdentifier)
-    Mockito.`when`<ActivityOptions?>(activityOptionsBeanRegistration.getBean()).thenReturn(activityOptions)
+    Mockito.`when`(activityOptionsBeanIdentifier.name).thenReturn("shortActivityOptions")
+    Mockito.`when`(activityOptionsBeanRegistration.getIdentifier()).thenReturn(activityOptionsBeanIdentifier)
+    Mockito.`when`(activityOptionsBeanRegistration.getBean()).thenReturn(activityOptions)
     temporalProxyHelper = TemporalProxyHelper(listOf(activityOptionsBeanRegistration))
   }
 
@@ -233,8 +231,8 @@ internal class ConnectionManagerWorkflowTest {
       .thenReturn(true)
 
     val jobRunConfig = JobRunConfig()
-    jobRunConfig.setJobId(JOB_ID.toString())
-    jobRunConfig.setAttemptId(ATTEMPT_ID.toLong())
+    jobRunConfig.jobId = JOB_ID.toString()
+    jobRunConfig.attemptId = ATTEMPT_ID.toLong()
   }
 
   @AfterEach
@@ -280,7 +278,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
       // wait to be scheduled, then to run, then schedule again
       testEnv.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() + SCHEDULE_WAIT.toMinutes() + 1))
       Mockito.verify(mConfigFetchActivity, Mockito.atLeast(2)).getTimeToWait(any())
@@ -344,7 +342,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
       testEnv.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() - 1))
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
@@ -402,7 +400,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
       testEnv.sleep(Duration.ofMinutes(1L)) // any value here, just so it's started
       workflow.submitManualSync()
 
@@ -476,7 +474,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
       testEnv.sleep(Duration.ofSeconds(30L))
 
       Mockito.reset(mConfigFetchActivity)
@@ -570,7 +568,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
       testEnv.sleep(Duration.ofSeconds(30L))
       workflow.cancelJob()
       testEnv.sleep(Duration.ofSeconds(20L))
@@ -630,11 +628,11 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
       testEnv.sleep(Duration.ofSeconds(30L))
       workflow.deleteConnection()
 
-      Companion.waitUntilDeleted(workflow)
+      waitUntilDeleted(workflow)
 
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
@@ -695,7 +693,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
       testEnv.sleep(Duration.ofSeconds(30L))
 
       Mockito
@@ -741,7 +739,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait until the middle of the run
       testEnv.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() + SleepingSyncWorkflow.RUN_TIME!!.toMinutes() / 2))
@@ -786,7 +784,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
       testEnv.sleep(Duration.ofMinutes(1))
@@ -842,7 +840,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
       testEnv.sleep(Duration.ofMinutes(1))
@@ -908,7 +906,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
       testEnv.sleep(Duration.ofMinutes(5L))
       workflow.resetConnection()
       Mockito
@@ -949,7 +947,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
       testEnv.sleep(Duration.ofMinutes(5L))
       workflow.resetConnectionAndSkipNextScheduling()
       Mockito
@@ -999,7 +997,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       testEnv.sleep(Duration.ofSeconds(30L))
       workflow.submitManualSync()
@@ -1050,7 +1048,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
       testEnv.sleep(Duration.ofMinutes(1))
@@ -1156,7 +1154,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
       testEnv.sleep(Duration.ofMinutes(1))
@@ -1209,7 +1207,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
       testEnv.sleep(Duration.ofMinutes(1))
@@ -1255,7 +1253,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
       testEnv.sleep(Duration.ofMinutes(1))
@@ -1301,7 +1299,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
       testEnv.sleep(Duration.ofMinutes(1))
@@ -1348,7 +1346,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
       testEnv.sleep(Duration.ofMinutes(1))
@@ -1395,7 +1393,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
       testEnv.sleep(Duration.ofMinutes(1))
@@ -1422,8 +1420,8 @@ internal class ConnectionManagerWorkflowTest {
         .thenReturn(true)
 
       val jobRunConfig = JobRunConfig()
-      jobRunConfig.setJobId(JOB_ID.toString())
-      jobRunConfig.setAttemptId(ATTEMPT_ID.toLong())
+      jobRunConfig.jobId = JOB_ID.toString()
+      jobRunConfig.attemptId = ATTEMPT_ID.toLong()
 
       Mockito
         .`when`(mJobCreationAndStatusUpdateActivity.createNewJob(any()))
@@ -1453,7 +1451,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
       testEnv.sleep(Duration.ofMinutes(1))
@@ -1523,7 +1521,7 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      startWorkflowAndWaitUntilReady(workflow, input)
 
       // Sleep test env for restart delay, plus a small buffer to ensure that the workflow executed the
       // logic after the delay
@@ -1605,9 +1603,9 @@ internal class ConnectionManagerWorkflowTest {
 
       val retryLimit = 2
 
-      val manager1 = RetryManager(null, null, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, retryLimit)
-      val manager2 = RetryManager(null, null, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, retryLimit, 0, 1, 0, 1)
-      val manager3 = RetryManager(null, null, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, retryLimit)
+      val manager1 = RetryManager(null, null, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, retryLimit)
+      val manager2 = RetryManager(null, null, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, retryLimit, 0, 1, 0, 1)
+      val manager3 = RetryManager(null, null, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, retryLimit)
 
       Mockito
         .`when`(mJobCreationAndStatusUpdateActivity.createNewJob(any()))
@@ -1653,55 +1651,55 @@ internal class ConnectionManagerWorkflowTest {
         ).createNewAttemptNumber(any())
 
       // run 1: hydrate pre scheduling
-      Assertions.assertThat<UUID?>(hydrateCaptor.allValues.get(0).connectionId).isEqualTo(connectionId)
-      Assertions.assertThat(hydrateCaptor.allValues.get(0).jobId).isEqualTo(null)
+      Assertions.assertThat<UUID?>(hydrateCaptor.allValues[0].connectionId).isEqualTo(connectionId)
+      Assertions.assertThat(hydrateCaptor.allValues[0].jobId).isEqualTo(null)
       // run 1: hydrate pre run
-      Assertions.assertThat<UUID?>(hydrateCaptor.allValues.get(1).connectionId).isEqualTo(connectionId)
-      Assertions.assertThat(hydrateCaptor.allValues.get(1).jobId).isEqualTo(null)
+      Assertions.assertThat<UUID?>(hydrateCaptor.allValues[1].connectionId).isEqualTo(connectionId)
+      Assertions.assertThat(hydrateCaptor.allValues[1].jobId).isEqualTo(null)
       // run 1: persist
-      Assertions.assertThat<UUID?>(persistCaptor.allValues.get(0).connectionId).isEqualTo(connectionId)
-      Assertions.assertThat(persistCaptor.allValues.get(0).jobId).isEqualTo(jobId)
+      Assertions.assertThat<UUID?>(persistCaptor.allValues[0].connectionId).isEqualTo(connectionId)
+      Assertions.assertThat(persistCaptor.allValues[0].jobId).isEqualTo(jobId)
       Assertions
         .assertThat(
           persistCaptor.allValues
-            .get(0)
+            [0]
             .manager!!
             .successivePartialFailures,
         ).isEqualTo(1)
       Assertions
         .assertThat(
           persistCaptor.allValues
-            .get(0)
+            [0]
             .manager!!
             .totalPartialFailures,
         ).isEqualTo(1)
 
       // run 2: hydrate pre scheduling
-      Assertions.assertThat<UUID?>(hydrateCaptor.allValues.get(2).connectionId).isEqualTo(connectionId)
-      Assertions.assertThat(hydrateCaptor.allValues.get(2).jobId).isEqualTo(jobId)
+      Assertions.assertThat<UUID?>(hydrateCaptor.allValues[2].connectionId).isEqualTo(connectionId)
+      Assertions.assertThat(hydrateCaptor.allValues[2].jobId).isEqualTo(jobId)
       // run 2: hydrate pre run
-      Assertions.assertThat<UUID?>(hydrateCaptor.allValues.get(3).connectionId).isEqualTo(connectionId)
-      Assertions.assertThat(hydrateCaptor.allValues.get(3).jobId).isEqualTo(jobId)
+      Assertions.assertThat<UUID?>(hydrateCaptor.allValues[3].connectionId).isEqualTo(connectionId)
+      Assertions.assertThat(hydrateCaptor.allValues[3].jobId).isEqualTo(jobId)
       // run 2: persist
-      Assertions.assertThat<UUID?>(persistCaptor.allValues.get(1).connectionId).isEqualTo(connectionId)
-      Assertions.assertThat(persistCaptor.allValues.get(1).jobId).isEqualTo(jobId)
+      Assertions.assertThat<UUID?>(persistCaptor.allValues[1].connectionId).isEqualTo(connectionId)
+      Assertions.assertThat(persistCaptor.allValues[1].jobId).isEqualTo(jobId)
       Assertions
         .assertThat(
           persistCaptor.allValues
-            .get(1)
+            [1]
             .manager!!
             .successivePartialFailures,
         ).isEqualTo(2)
       Assertions
         .assertThat(
           persistCaptor.allValues
-            .get(1)
+            [1]
             .manager!!
             .totalPartialFailures,
         ).isEqualTo(2)
       // run 3: hydrate pre scheduling
-      Assertions.assertThat<UUID?>(hydrateCaptor.allValues.get(4).connectionId).isEqualTo(connectionId)
-      Assertions.assertThat(hydrateCaptor.allValues.get(4).jobId).isEqualTo(null)
+      Assertions.assertThat<UUID?>(hydrateCaptor.allValues[4].connectionId).isEqualTo(connectionId)
+      Assertions.assertThat(hydrateCaptor.allValues[4].jobId).isEqualTo(null)
     }
 
     @ParameterizedTest
@@ -1788,7 +1786,7 @@ internal class ConnectionManagerWorkflowTest {
       val backoff = Duration.ofMinutes(1)
       val policy = BackoffPolicy(backoff, backoff)
       val manager =
-        RetryManager(policy, null, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE)
+        RetryManager(policy, null, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
       manager.successiveCompleteFailures = 1
 
       Mockito
@@ -1841,7 +1839,7 @@ internal class ConnectionManagerWorkflowTest {
       val backoff = Duration.ofMinutes(minutes)
       val policy = BackoffPolicy(backoff, backoff)
       val manager =
-        RetryManager(policy, null, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE)
+        RetryManager(policy, null, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
       manager.successiveCompleteFailures = 1
 
       Mockito
@@ -1894,7 +1892,7 @@ internal class ConnectionManagerWorkflowTest {
       val backoff = Duration.ofMinutes(minutes)
       val policy = BackoffPolicy(backoff, backoff)
       val manager =
-        RetryManager(policy, null, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE)
+        RetryManager(policy, null, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
       manager.successiveCompleteFailures = 1
 
       Mockito
@@ -1950,7 +1948,7 @@ internal class ConnectionManagerWorkflowTest {
       val backoff = Duration.ofMinutes(backoffMinutes)
       val policy = BackoffPolicy(backoff, backoff)
       val manager =
-        RetryManager(policy, null, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE, Int.Companion.MAX_VALUE)
+        RetryManager(policy, null, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
       manager.successiveCompleteFailures = 1
 
       Mockito
@@ -2103,39 +2101,39 @@ internal class ConnectionManagerWorkflowTest {
     }
   }
 
-  private inner class HasFailureFromOrigin(
+  private class HasFailureFromOrigin(
     private val expectedFailureOrigin: FailureReason.FailureOrigin?,
   ) : ArgumentMatcher<AttemptNumberFailureInput?> {
     override fun matches(arg: AttemptNumberFailureInput?): Boolean =
       arg!!
         .attemptFailureSummary!!
-        .getFailures()
+        .failures
         .stream()
-        .anyMatch { f: FailureReason? -> f!!.getFailureOrigin() == expectedFailureOrigin }
+        .anyMatch { f: FailureReason? -> f!!.failureOrigin == expectedFailureOrigin }
   }
 
-  private inner class HasFailureFromOriginWithType(
+  private class HasFailureFromOriginWithType(
     private val expectedFailureOrigin: FailureReason.FailureOrigin?,
     private val expectedFailureType: FailureReason.FailureType?,
   ) : ArgumentMatcher<AttemptNumberFailureInput?> {
     override fun matches(arg: AttemptNumberFailureInput?): Boolean {
-      val stream = arg!!.attemptFailureSummary!!.getFailures().stream()
+      val stream = arg!!.attemptFailureSummary!!.failures.stream()
       return stream.anyMatch { f: FailureReason? ->
-        f!!.getFailureOrigin() == expectedFailureOrigin && f.getFailureType() == expectedFailureType
+        f!!.failureOrigin == expectedFailureOrigin && f.failureType == expectedFailureType
       }
     }
   }
 
-  private inner class HasCancellationFailure(
+  private class HasCancellationFailure(
     private val expectedJobId: Long,
     private val expectedAttemptNumber: Int,
   ) : ArgumentMatcher<JobCancelledInputWithAttemptNumber?> {
     override fun matches(arg: JobCancelledInputWithAttemptNumber?): Boolean =
       arg!!
         .attemptFailureSummary!!
-        .getFailures()
+        .failures
         .stream()
-        .anyMatch { f: FailureReason? -> f!!.getFailureType() == FailureReason.FailureType.MANUAL_CANCELLATION } &&
+        .anyMatch { f: FailureReason? -> f!!.failureType == FailureReason.FailureType.MANUAL_CANCELLATION } &&
         arg.jobId == expectedJobId &&
         arg.attemptNumber == expectedAttemptNumber
   }
@@ -2174,11 +2172,11 @@ internal class ConnectionManagerWorkflowTest {
       mJobPostProcessingActivity,
     )
 
-    client = testEnv.getWorkflowClient()
+    client = testEnv.workflowClient
     testEnv.start()
 
     workflow =
-      client!!
+      client
         .newWorkflowStub(
           ConnectionManagerWorkflow::class.java,
           WorkflowOptions
@@ -2193,17 +2191,17 @@ internal class ConnectionManagerWorkflowTest {
     val request =
       ListClosedWorkflowExecutionsRequest
         .newBuilder()
-        .setNamespace(testEnv.getNamespace())
+        .setNamespace(testEnv.namespace)
         .setExecutionFilter(WorkflowExecutionFilter.newBuilder().setWorkflowId(WORKFLOW_ID))
         .build()
     val listResponse =
       testEnv
-        .getWorkflowService()
+        .workflowService
         .blockingStub()
         .listClosedWorkflowExecutions(request)
-    Assertions.assertThat(listResponse.getExecutionsCount()).isGreaterThanOrEqualTo(1)
+    Assertions.assertThat(listResponse.executionsCount).isGreaterThanOrEqualTo(1)
     Assertions
-      .assertThat(listResponse.getExecutionsList().get(0).getStatus())
+      .assertThat(listResponse.executionsList[0].status)
       .isEqualTo(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW)
   }
 
@@ -2243,7 +2241,7 @@ internal class ConnectionManagerWorkflowTest {
 
     testEnv.start()
 
-    Companion.startWorkflowAndWaitUntilReady(workflow, input)
+    startWorkflowAndWaitUntilReady(workflow, input)
 
     // wait for workflow to initialize
     testEnv.sleep(Duration.ofMinutes(1))
@@ -2294,7 +2292,7 @@ internal class ConnectionManagerWorkflowTest {
       mJobPostProcessingActivity,
     )
 
-    client = testEnv.getWorkflowClient()
+    client = testEnv.workflowClient
     workflow =
       client.newWorkflowStub(
         ConnectionManagerWorkflow::class.java,
@@ -2317,7 +2315,7 @@ internal class ConnectionManagerWorkflowTest {
     checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow::class.java)
     testEnv.start()
 
-    Companion.startWorkflowAndWaitUntilReady(workflow, input)
+    startWorkflowAndWaitUntilReady(workflow, input)
   }
 
   companion object {
@@ -2335,7 +2333,7 @@ internal class ConnectionManagerWorkflowTest {
     private val WORKFLOW_FAILURE_RESTART_DELAY: Duration = Duration.ofSeconds(600)
     private const val SOURCE_DOCKER_IMAGE = "some_source"
 
-    private val TEN_SECONDS = 10 * 1000
+    private const val TEN_SECONDS = 10 * 1000
     private val VERIFY_TIMEOUT: VerificationMode? = Mockito.timeout(TEN_SECONDS.toLong()).times(1)
 
     private val mJobCreationAndStatusUpdateActivity: JobCreationAndStatusUpdateActivity =
@@ -2362,9 +2360,9 @@ internal class ConnectionManagerWorkflowTest {
     private const val EVENT = "event = "
     private const val FAILED_CHECK_MESSAGE = "nope"
 
-    val maxAttemptForResetRetry: Stream<Arguments?>
+    val maxAttemptForResetRetry
       get() =
-        Stream.of<Arguments?>( // "The max attempt is 3, it will test that after a failed reset attempt the next attempt will also
+        listOf<Arguments?>( // "The max attempt is 3, it will test that after a failed reset attempt the next attempt will also
           // be a reset")
           Arguments.of(3), // "The max attempt is 3, it will test that after a failed reset job the next attempt will also be a
           // job")
@@ -2410,8 +2408,8 @@ internal class ConnectionManagerWorkflowTest {
     }
 
     @JvmStatic
-    fun getSetupFailingActivity(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    fun getSetupFailingActivity() =
+      listOf<Arguments?>(
         Arguments.of(
           Thread {
             Mockito
@@ -2448,23 +2446,23 @@ internal class ConnectionManagerWorkflowTest {
     // Since we can't directly unit test the failure path, we enumerate the core failure cases as a
     // proxy. This is deliberately incomplete as the permutations of failure cases is large.
     @JvmStatic
-    fun coreFailureTypesMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    fun coreFailureTypesMatrix() =
+      listOf<Arguments?>(
         Arguments.of(SourceAndDestinationFailureSyncWorkflow::class.java),
         Arguments.of(ReplicateFailureSyncWorkflow::class.java),
         Arguments.of(SyncWorkflowFailingOutputWorkflow::class.java),
       )
 
     @JvmStatic
-    fun noBackoffSchedulingMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    fun noBackoffSchedulingMatrix() =
+      listOf<Arguments?>(
         Arguments.of(true, Duration.ZERO),
         Arguments.of(false, Duration.ofHours(1)),
       )
 
     @JvmStatic
-    private fun backoffJobFailureMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun backoffJobFailureMatrix() =
+      listOf<Arguments?>(
         Arguments.of(1),
         Arguments.of(10),
         Arguments.of(55),

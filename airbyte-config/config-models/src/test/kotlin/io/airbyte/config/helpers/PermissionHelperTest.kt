@@ -7,7 +7,6 @@ package io.airbyte.config.helpers
 import io.airbyte.config.Permission
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import java.util.Set
 
 internal class PermissionHelperTest {
   @Test
@@ -17,7 +16,7 @@ internal class PermissionHelperTest {
     // PermissionHelper (with appropriate values of course) in order to make this test pass again.
     Assertions.assertEquals(
       PermissionHelper.GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.keys,
-      Set.of<Permission.PermissionType?>(*Permission.PermissionType.entries.toTypedArray()),
+      Permission.PermissionType.entries.toSet(),
     )
   }
 }

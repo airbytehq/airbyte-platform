@@ -79,7 +79,7 @@ class WebClientConfigurator(
 
   private fun getWebClientRedirectUris(airbyteUrl: String): List<String> {
     val normalizedWebappUrl = if (airbyteUrl.endsWith("/")) airbyteUrl else "$airbyteUrl/"
-    return java.util.List.of("$normalizedWebappUrl*", LOCAL_OSS_DEV_URI, LOCAL_CLOUD_DEV_URI)
+    return listOf("$normalizedWebappUrl*", LOCAL_OSS_DEV_URI, LOCAL_CLOUD_DEV_URI)
   }
 
   companion object {

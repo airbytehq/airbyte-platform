@@ -18,12 +18,10 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -93,7 +91,7 @@ internal class ActorDefinitionVersionHelperTest {
     Assertions.assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion)
     Assertions.assertEquals(isOverrideApplied, versionWithOverrideStatus.isOverrideApplied)
 
-    Mockito.verify<DefinitionVersionOverrideProvider?>(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
+    Mockito.verify(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
   }
 
   @Test
@@ -126,7 +124,7 @@ internal class ActorDefinitionVersionHelperTest {
     val actual = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID)
     Assertions.assertEquals(OVERRIDDEN_VERSION, actual)
 
-    Mockito.verify<DefinitionVersionOverrideProvider?>(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null)
+    Mockito.verify(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null)
   }
 
   @Test
@@ -163,7 +161,7 @@ internal class ActorDefinitionVersionHelperTest {
     Assertions.assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion)
     Assertions.assertTrue(versionWithOverrideStatus.isOverrideApplied)
 
-    Mockito.verify<DefinitionVersionOverrideProvider?>(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
+    Mockito.verify(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID)
   }
 
   @Test
@@ -196,7 +194,7 @@ internal class ActorDefinitionVersionHelperTest {
     val actual = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID)
     Assertions.assertEquals(OVERRIDDEN_VERSION, actual)
 
-    Mockito.verify<DefinitionVersionOverrideProvider?>(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null)
+    Mockito.verify(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null)
   }
 
   @Test
@@ -206,7 +204,7 @@ internal class ActorDefinitionVersionHelperTest {
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(ACTOR_DEFINITION_VERSION_ID)
 
-    Mockito.`when`<ActorDefinitionVersion?>(actorDefinitionService!!.getActorDefinitionVersion(ACTOR_DEFINITION_VERSION_ID)).thenReturn(
+    Mockito.`when`(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_VERSION_ID)).thenReturn(
       DEFAULT_VERSION,
     )
 
@@ -221,7 +219,7 @@ internal class ActorDefinitionVersionHelperTest {
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(ACTOR_DEFINITION_VERSION_ID)
 
-    Mockito.`when`<ActorDefinitionVersion?>(actorDefinitionService!!.getActorDefinitionVersion(ACTOR_DEFINITION_VERSION_ID)).thenReturn(
+    Mockito.`when`(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_VERSION_ID)).thenReturn(
       DEFAULT_VERSION,
     )
 
@@ -236,9 +234,9 @@ internal class ActorDefinitionVersionHelperTest {
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
 
     val exception =
-      Assertions.assertThrows<RuntimeException>(
+      Assertions.assertThrows(
         RuntimeException::class.java,
-        Executable { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID) },
+        { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID) },
       )
     Assertions.assertTrue(exception.message!!.contains("Default version for source is not set"))
   }
@@ -250,9 +248,9 @@ internal class ActorDefinitionVersionHelperTest {
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
 
     val exception =
-      Assertions.assertThrows<RuntimeException>(
+      Assertions.assertThrows(
         RuntimeException::class.java,
-        Executable { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID) },
+        { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID) },
       )
     Assertions.assertTrue(exception.message!!.contains("Default version for destination is not set"))
   }
@@ -280,24 +278,12 @@ internal class ActorDefinitionVersionHelperTest {
     private val SPEC: ConnectorSpecification? =
       ConnectorSpecification()
         .withConnectionSpecification(
-          jsonNode<MutableMap<String?, String?>?>(
-            Map.of<String?, String?>(
-              "key",
-              "value",
-            ),
-          ),
+          jsonNode(mapOf("key" to "value")),
         )
     private val SPEC_2: ConnectorSpecification? =
       ConnectorSpecification()
         .withConnectionSpecification(
-          jsonNode<MutableMap<String?, String?>?>(
-            Map.of<String?, String?>(
-              "key",
-              "value",
-              "key2",
-              "value2",
-            ),
-          ),
+          jsonNode(mapOf("key" to "value", "key2" to "value2")),
         )
 
     private val DEFAULT_VERSION_ID: UUID = UUID.randomUUID()

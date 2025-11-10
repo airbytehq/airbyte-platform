@@ -36,7 +36,6 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
-import java.util.stream.Stream
 
 class StreamStatusesMapperTest {
   val mapper: StreamStatusesMapper = StreamStatusesMapper()
@@ -232,8 +231,8 @@ class StreamStatusesMapperTest {
       Assertions.assertEquals(domain, mapped)
     }
 
-    private fun paginationMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun paginationMatrix() =
+      listOf(
         Arguments.of(10, 0, 0),
         Arguments.of(10, 20, 2),
         Arguments.of(5, 40, 8),
@@ -328,20 +327,20 @@ class StreamStatusesMapperTest {
   }
 
   internal class StreamStatusParamsMatrix : ArgumentsProvider {
-    override fun provideArguments(unused: ExtensionContext): Stream<Arguments> =
-      Stream.of(
+    override fun provideArguments(unused: ExtensionContext) =
+      listOf(
         Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId1, 0, Fixtures.testNamespace1, Fixtures.testName1),
         Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 1, Fixtures.testNamespace1, Fixtures.testName1),
         Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 0, "", Fixtures.testName3),
         Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId3, Fixtures.jobId2, 1, Fixtures.testNamespace2, Fixtures.testName2),
         Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId2, Fixtures.jobId3, 2, Fixtures.testNamespace2, Fixtures.testName2),
         Arguments.of(Fixtures.workspaceId2, Fixtures.connectionId3, Fixtures.jobId1, 1, Fixtures.testNamespace1, Fixtures.testName1),
-      )
+      ).stream()
   }
 
   internal class FilterParamsMatrix : ArgumentsProvider {
-    override fun provideArguments(unused: ExtensionContext): Stream<Arguments> =
-      Stream.of(
+    override fun provideArguments(unused: ExtensionContext) =
+      listOf(
         Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId1, 0, Fixtures.testNamespace1, Fixtures.testName1, SYNC),
         Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 1, Fixtures.testNamespace1, Fixtures.testName1, SYNC),
         Arguments.of(Fixtures.workspaceId1, Fixtures.connectionId1, Fixtures.jobId2, 1, Fixtures.testNamespace1, Fixtures.testName1, RESET),
@@ -366,7 +365,7 @@ class StreamStatusesMapperTest {
         Arguments.of(Fixtures.workspaceId2, null, Fixtures.jobId2, null, Fixtures.testNamespace1, Fixtures.testName1, RESET),
         Arguments.of(Fixtures.workspaceId2, Fixtures.connectionId3, null, null, Fixtures.testNamespace1, Fixtures.testName1, SYNC),
         Arguments.of(Fixtures.workspaceId2, Fixtures.connectionId3, null, null, Fixtures.testNamespace1, Fixtures.testName1, RESET),
-      )
+      ).stream()
 
     companion object {
       // shave some characters, so reformatting doesn't wrap lines below

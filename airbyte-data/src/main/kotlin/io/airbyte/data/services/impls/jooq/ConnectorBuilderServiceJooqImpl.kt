@@ -32,7 +32,6 @@ import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import java.io.IOException
 import java.time.OffsetDateTime
-import java.util.Arrays
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
@@ -952,7 +951,7 @@ class ConnectorBuilderServiceJooqImpl
       private const val INJECTED_DECLARATIVE_MANIFEST_KEY = "__injected_declarative_manifest"
 
       private val BASE_CONNECTOR_BUILDER_PROJECT_COLUMNS: List<Field<*>> =
-        Arrays.asList<Field<*>>(
+        listOf<Field<*>>(
           Tables.CONNECTOR_BUILDER_PROJECT.ID,
           Tables.CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID,
           Tables.CONNECTOR_BUILDER_PROJECT.NAME,

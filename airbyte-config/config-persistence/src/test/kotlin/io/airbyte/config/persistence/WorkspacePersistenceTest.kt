@@ -53,7 +53,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.Mockito
 import java.util.Optional
-import java.util.Set
 import java.util.UUID
 
 internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
@@ -72,16 +71,16 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
 
   @BeforeEach
   fun setup() {
-    featureFlagClient = Mockito.mock<TestClient>(TestClient::class.java)
-    secretsRepositoryReader = Mockito.mock<SecretsRepositoryReader>(SecretsRepositoryReader::class.java)
-    secretsRepositoryWriter = Mockito.mock<SecretsRepositoryWriter>(SecretsRepositoryWriter::class.java)
-    secretPersistenceConfigService = Mockito.mock<SecretPersistenceConfigService>(SecretPersistenceConfigService::class.java)
+    featureFlagClient = Mockito.mock(TestClient::class.java)
+    secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
+    secretsRepositoryWriter = Mockito.mock(SecretsRepositoryWriter::class.java)
+    secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
     dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(database!!)
     organizationService = OrganizationServiceJooqImpl(database!!)
-    connectionService = Mockito.spy<ConnectionServiceJooqImpl>(ConnectionServiceJooqImpl(database!!))
+    connectionService = Mockito.spy(ConnectionServiceJooqImpl(database!!))
 
-    val scopedConfigurationService = Mockito.mock<ScopedConfigurationService>(ScopedConfigurationService::class.java)
-    val connectionTimelineEventService = Mockito.mock<ConnectionTimelineEventService>(ConnectionTimelineEventService::class.java)
+    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
+    val connectionTimelineEventService = Mockito.mock(ConnectionTimelineEventService::class.java)
     val actorDefinitionService: ActorDefinitionService = ActorDefinitionServiceJooqImpl(database!!)
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
@@ -91,11 +90,11 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
         scopedConfigurationService,
         connectionTimelineEventService,
       )
-    val metricClient = Mockito.mock<MetricClient>(MetricClient::class.java)
-    val actorPaginationServiceHelper = Mockito.mock<ActorServicePaginationHelper>(ActorServicePaginationHelper::class.java)
+    val metricClient = Mockito.mock(MetricClient::class.java)
+    val actorPaginationServiceHelper = Mockito.mock(ActorServicePaginationHelper::class.java)
 
     sourceService =
-      Mockito.spy<SourceServiceJooqImpl>(
+      Mockito.spy(
         SourceServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -107,7 +106,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
         ),
       )
     destinationService =
-      Mockito.spy<DestinationServiceJooqImpl>(
+      Mockito.spy(
         DestinationServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -172,7 +171,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     )
 
     workspaceService =
-      Mockito.spy<WorkspaceServiceJooqImpl>(
+      Mockito.spy(
         WorkspaceServiceJooqImpl(
           database!!,
           featureFlagClient,
@@ -210,12 +209,12 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   fun assertReturnsWorkspace(workspace: StandardWorkspace) {
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
-    val expectedWorkspace = clone<StandardWorkspace>(workspace)
+    val expectedWorkspace = clone(workspace)
         /*
          * tombstone defaults to false in the db, so if the passed in workspace does not have it set, we
          * expected the workspace returned from the db to have it set to false.
          */
-    if (workspace.getTombstone() == null) {
+    if (workspace.tombstone == null) {
       expectedWorkspace.withTombstone(false)
     }
 
@@ -234,11 +233,11 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   private fun assertWorkspacesEqual(
-    expectedWorkspaces: MutableSet<StandardWorkspace?>?,
-    actualWorkspaces: MutableSet<StandardWorkspace?>?,
+    expectedWorkspaces: Set<StandardWorkspace>,
+    actualWorkspaces: Set<StandardWorkspace>,
   ) {
     Assertions
-      .assertThat<StandardWorkspace?>(actualWorkspaces)
+      .assertThat(actualWorkspaces)
       .usingRecursiveComparison()
       .ignoringFields("createdAt", "updatedAt")
       .isEqualTo(expectedWorkspaces)
@@ -283,11 +282,11 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
     org.junit.jupiter.api.Assertions.assertNull(
-      workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false).getFeedbackDone(),
+      workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false).feedbackDone,
     )
-    workspaceService.setFeedback(workspace.getWorkspaceId())
+    workspaceService.setFeedback(workspace.workspaceId)
     org.junit.jupiter.api.Assertions.assertTrue(
-      workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false).getFeedbackDone(),
+      workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false).feedbackDone,
     )
   }
 
@@ -313,8 +312,8 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     )
     destinationService.writeConnectorMetadata(
       createDestinationDefinition()!!,
-      WorkspacePersistenceTest.Companion.createActorDefinitionVersion(
-        WorkspacePersistenceTest.Companion.DESTINATION_DEFINITION_ID,
+      createActorDefinitionVersion(
+        DESTINATION_DEFINITION_ID,
         destinationReleaseStage,
       )!!,
       mutableListOf(),
@@ -323,8 +322,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     sourceService.writeSourceConnectionNoSecrets(createBaseSource()!!)
     destinationService.writeDestinationConnectionNoSecrets(createBaseDestination()!!)
 
-    org.junit.jupiter.api.Assertions
-      .assertEquals(expectation, workspaceService.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID))
+    assertEquals(expectation, workspaceService.getWorkspaceHasAlphaOrBetaConnector(WORKSPACE_ID))
   }
 
   @Test
@@ -352,7 +350,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
 
     org.junit.jupiter.api.Assertions
       .assertEquals(1, workspaces.size)
-    assertWorkspaceEquals(workspace, workspaces.get(0))
+    assertWorkspaceEquals(workspace, workspaces[0])
   }
 
   @Test
@@ -381,7 +379,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
 
     org.junit.jupiter.api.Assertions
       .assertEquals(1, workspaces.size)
-    assertWorkspaceEquals(workspace, workspaces.get(0))
+    assertWorkspaceEquals(workspace, workspaces[0])
   }
 
   @Test
@@ -416,8 +414,8 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
 
     org.junit.jupiter.api.Assertions
       .assertEquals(2, workspaces.size)
-    assertWorkspaceEquals(workspace1, workspaces.get(0))
-    assertWorkspaceEquals(workspace2, workspaces.get(1))
+    assertWorkspaceEquals(workspace1, workspaces[0])
+    assertWorkspaceEquals(workspace2, workspaces[1])
 
     workspaces =
       workspacePersistence.listWorkspacesByInstanceAdminUserPaginated(
@@ -428,7 +426,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
       )
     org.junit.jupiter.api.Assertions
       .assertEquals(1, workspaces.size)
-    assertWorkspaceEquals(workspace2, workspaces.get(0))
+    assertWorkspaceEquals(workspace2, workspaces[0])
 
     workspaces =
       workspacePersistence.listWorkspacesByInstanceAdminUserPaginated(
@@ -439,7 +437,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
       )
     org.junit.jupiter.api.Assertions
       .assertEquals(3, workspaces.size)
-    assertWorkspaceEquals(deletedWorkspace, workspaces.get(2))
+    assertWorkspaceEquals(deletedWorkspace, workspaces[2])
 
     workspaces =
       workspacePersistence.listWorkspacesByInstanceAdminUserPaginated(
@@ -478,7 +476,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
 
     org.junit.jupiter.api.Assertions
       .assertEquals(1, workspaces.size)
-    assertWorkspaceEquals(workspace, workspaces.get(0))
+    assertWorkspaceEquals(workspace, workspaces[0])
   }
 
   @Test
@@ -531,8 +529,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
 
     val actualInitialSetupComplete = workspacePersistence.getInitialSetupComplete()
 
-    org.junit.jupiter.api.Assertions
-      .assertEquals(initialSetupComplete, actualInitialSetupComplete)
+    assertEquals(initialSetupComplete, actualInitialSetupComplete)
   }
 
   @Test
@@ -616,8 +613,8 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
 
     // workspace 3 excluded because of lacking keyword, and workspace 4 excluded because no permission
     // despite keyword
-    val expectedWorkspaces = Set.of<StandardWorkspace?>(workspace1, workspace2)
-    val actualWorkspaces: MutableSet<StandardWorkspace?> = HashSet<StandardWorkspace?>(workspaces)
+    val expectedWorkspaces = setOf(workspace1, workspace2).toSortedSet { a, b -> a.workspaceId.compareTo(b.workspaceId) }
+    val actualWorkspaces = workspaces.toSortedSet { a, b -> a.workspaceId.compareTo(b.workspaceId) }
 
     assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
   }
@@ -694,10 +691,9 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
         .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER),
     )
 
-    val expectedWorkspaces = Set.of<StandardWorkspace?>(workspace1, workspace2)
+    val expectedWorkspaces = setOf(workspace1, workspace2)
 
-    val actualWorkspaces: MutableSet<StandardWorkspace?> =
-      HashSet<StandardWorkspace?>(workspacePersistence.listActiveWorkspacesByUserId(userId, Optional.empty<String>()))
+    val actualWorkspaces = workspacePersistence.listActiveWorkspacesByUserId(userId, Optional.empty<String>()).toSet()
 
     assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
   }
@@ -796,8 +792,8 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     // workspaceNoPermission excluded because no permission and wrong org
     assertEquals(2, workspaces.size)
 
-    val actualWorkspaces: MutableSet<StandardWorkspace?> = HashSet<StandardWorkspace?>(workspaces)
-    val expectedWorkspaces = Set.of<StandardWorkspace?>(workspace1, workspace2)
+    val actualWorkspaces = workspaces.toSet()
+    val expectedWorkspaces = setOf(workspace1, workspace2)
     assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
   }
 
@@ -911,8 +907,8 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     // workspace 3 excluded because no permission, other workspaces excluded because wrong org
     assertEquals(2, workspaces.size)
 
-    val actualWorkspaces: MutableSet<StandardWorkspace?> = HashSet<StandardWorkspace?>(workspaces)
-    val expectedWorkspaces = Set.of<StandardWorkspace?>(workspace1, workspace2)
+    val actualWorkspaces = workspaces.toSet()
+    val expectedWorkspaces = setOf(workspace1, workspace2)
     assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
   }
 
@@ -1034,7 +1030,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
 
     org.junit.jupiter.api.Assertions
       .assertEquals(1, secondPageWorkspaces.size)
-    assertWorkspaceEquals(workspace3, secondPageWorkspaces.get(0)) // C_workspace... (third alphabetically)
+    assertWorkspaceEquals(workspace3, secondPageWorkspaces[0]) // C_workspace... (third alphabetically)
   }
 
   @Test
@@ -1181,8 +1177,8 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     // workspaceDifferentOrg excluded due to organization filter
     assertEquals(3, workspaces.size)
 
-    val actualWorkspaces: MutableSet<StandardWorkspace?> = HashSet<StandardWorkspace?>(workspaces)
-    val expectedWorkspaces = Set.of<StandardWorkspace?>(workspace1, workspace2, workspace3)
+    val actualWorkspaces = workspaces.toSet()
+    val expectedWorkspaces = setOf(workspace1, workspace2, workspace3)
     assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
   }
 

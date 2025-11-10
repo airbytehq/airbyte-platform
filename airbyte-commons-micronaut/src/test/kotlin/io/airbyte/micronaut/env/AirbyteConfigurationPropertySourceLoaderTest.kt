@@ -28,8 +28,8 @@ internal class AirbyteConfigurationPropertySourceLoaderTest {
 
   @Test
   fun testLoadingAirbyteConfigurations() {
-    val configFiles = Stream.of(javaClass.getResource("/test-airbyte-configuration.yml"))
-    every { resourceLoader.getResources(any()) } returns configFiles
+    val configFiles = listOf(javaClass.getResource("/test-airbyte-configuration.yml"))
+    every { resourceLoader.getResources(any()) } returns configFiles.stream()
 
     val propertySource = loader.load("test", resourceLoader)
     assertTrue(propertySource.isPresent)
@@ -58,8 +58,8 @@ internal class AirbyteConfigurationPropertySourceLoaderTest {
 
   @Test
   fun testPropertySourceDetails() {
-    val configFiles = Stream.of(javaClass.getResource("/test-airbyte-configuration.yml"))
-    every { resourceLoader.getResources(any()) } returns configFiles
+    val configFiles = listOf(javaClass.getResource("/test-airbyte-configuration.yml"))
+    every { resourceLoader.getResources(any()) } returns configFiles.stream()
 
     val propertySource = loader.load("test", resourceLoader)
     assertTrue(propertySource.isPresent)

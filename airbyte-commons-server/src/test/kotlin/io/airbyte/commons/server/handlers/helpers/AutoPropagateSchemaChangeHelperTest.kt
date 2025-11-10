@@ -34,7 +34,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.whenever
-import java.util.List
 
 internal class AutoPropagateSchemaChangeHelperTest {
   private val applySchemaChangeHelper = ApplySchemaChangeHelper(CatalogConverter(FieldGenerator(), mutableListOf<Mapper<out MapperConfig>>()))
@@ -117,8 +116,8 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat(result.getStreams()).hasSize(1)
-    Assertions.assertThat(result.getStreams()[0].getStream().getJsonSchema()).isEqualTo(newSchema)
+    Assertions.assertThat(result.streams).hasSize(1)
+    Assertions.assertThat(result.streams[0].stream.jsonSchema).isEqualTo(newSchema)
   }
 
   @Test
@@ -144,12 +143,12 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat(result.getStreams()).hasSize(2)
-    Assertions.assertThat(result.getStreams()[0].getStream().getName()).isEqualTo(NAME1)
-    Assertions.assertThat(result.getStreams()[0].getStream().getJsonSchema()).isEqualTo(oldSchema)
-    Assertions.assertThat(result.getStreams()[0].getConfig().getSelected()).isTrue()
-    Assertions.assertThat(result.getStreams()[1].getStream().getName()).isEqualTo(NAME2)
-    Assertions.assertThat(result.getStreams()[1].getStream().getJsonSchema()).isEqualTo(newSchema)
+    Assertions.assertThat(result.streams).hasSize(2)
+    Assertions.assertThat(result.streams[0].stream.name).isEqualTo(NAME1)
+    Assertions.assertThat(result.streams[0].stream.jsonSchema).isEqualTo(oldSchema)
+    Assertions.assertThat(result.streams[0].config.selected).isTrue()
+    Assertions.assertThat(result.streams[1].stream.name).isEqualTo(NAME2)
+    Assertions.assertThat(result.streams[1].stream.jsonSchema).isEqualTo(newSchema)
   }
 
   @Test
@@ -175,17 +174,17 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.getStreams()).hasSize(2)
-    val stream0 = result.getStreams()[0]
-    val stream1 = result.getStreams()[1]
-    Assertions.assertThat(stream0.getStream().getName()).isEqualTo(NAME1)
-    Assertions.assertThat(stream0.getStream().getJsonSchema()).isEqualTo(oldSchema)
-    Assertions.assertThat(stream0.getConfig().getSelected()).isTrue()
-    Assertions.assertThat(stream1.getStream().getName()).isEqualTo(NAME2)
-    Assertions.assertThat(stream1.getStream().getJsonSchema()).isEqualTo(newSchema)
-    Assertions.assertThat(stream1.getConfig().getSelected()).isTrue()
-    Assertions.assertThat(stream1.getConfig().getSyncMode()).isEqualTo(SyncMode.FULL_REFRESH)
-    Assertions.assertThat(stream1.getConfig().getDestinationSyncMode()).isEqualTo(DestinationSyncMode.OVERWRITE)
+    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(2)
+    val stream0 = result.streams[0]
+    val stream1 = result.streams[1]
+    Assertions.assertThat(stream0.stream.name).isEqualTo(NAME1)
+    Assertions.assertThat(stream0.stream.jsonSchema).isEqualTo(oldSchema)
+    Assertions.assertThat(stream0.config.selected).isTrue()
+    Assertions.assertThat(stream1.stream.name).isEqualTo(NAME2)
+    Assertions.assertThat(stream1.stream.jsonSchema).isEqualTo(newSchema)
+    Assertions.assertThat(stream1.config.selected).isTrue()
+    Assertions.assertThat(stream1.config.syncMode).isEqualTo(SyncMode.FULL_REFRESH)
+    Assertions.assertThat(stream1.config.destinationSyncMode).isEqualTo(DestinationSyncMode.OVERWRITE)
   }
 
   @Test
@@ -195,7 +194,7 @@ internal class AutoPropagateSchemaChangeHelperTest {
 
     val newSchema = deserialize(NEW_SCHEMA)
     val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema)
-    newAirbyteCatalog.getStreams()[0].getStream().sourceDefinedCursor(true).sourceDefinedPrimaryKey(
+    newAirbyteCatalog.streams[0].stream.sourceDefinedCursor(true).sourceDefinedPrimaryKey(
       listOf(
         mutableListOf("test"),
       ),
@@ -216,17 +215,17 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.getStreams()).hasSize(2)
-    val stream0 = result.getStreams()[0]
-    val stream1 = result.getStreams()[1]
-    Assertions.assertThat(stream0.getStream().getName()).isEqualTo(NAME1)
-    Assertions.assertThat(stream0.getStream().getJsonSchema()).isEqualTo(oldSchema)
-    Assertions.assertThat(stream0.getConfig().getSelected()).isTrue()
-    Assertions.assertThat(stream1.getStream().getName()).isEqualTo(NAME2)
-    Assertions.assertThat(stream1.getStream().getJsonSchema()).isEqualTo(newSchema)
-    Assertions.assertThat(stream1.getConfig().getSelected()).isTrue()
-    Assertions.assertThat(stream1.getConfig().getSyncMode()).isEqualTo(SyncMode.INCREMENTAL)
-    Assertions.assertThat(stream1.getConfig().getDestinationSyncMode()).isEqualTo(DestinationSyncMode.APPEND_DEDUP)
+    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(2)
+    val stream0 = result.streams[0]
+    val stream1 = result.streams[1]
+    Assertions.assertThat(stream0.stream.name).isEqualTo(NAME1)
+    Assertions.assertThat(stream0.stream.jsonSchema).isEqualTo(oldSchema)
+    Assertions.assertThat(stream0.config.selected).isTrue()
+    Assertions.assertThat(stream1.stream.name).isEqualTo(NAME2)
+    Assertions.assertThat(stream1.stream.jsonSchema).isEqualTo(newSchema)
+    Assertions.assertThat(stream1.config.selected).isTrue()
+    Assertions.assertThat(stream1.config.syncMode).isEqualTo(SyncMode.INCREMENTAL)
+    Assertions.assertThat(stream1.config.destinationSyncMode).isEqualTo(DestinationSyncMode.APPEND_DEDUP)
   }
 
   @Test
@@ -236,7 +235,7 @@ internal class AutoPropagateSchemaChangeHelperTest {
 
     val newSchema = deserialize(NEW_SCHEMA)
     val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema)
-    newAirbyteCatalog.getStreams()[0].getStream().sourceDefinedCursor(true)
+    newAirbyteCatalog.streams[0].stream.sourceDefinedCursor(true)
 
     val transform =
       StreamTransform()
@@ -253,10 +252,10 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.getStreams()).hasSize(2)
-    val stream1 = result.getStreams()[1]
-    Assertions.assertThat(stream1.getConfig().getSyncMode()).isEqualTo(SyncMode.FULL_REFRESH)
-    Assertions.assertThat(stream1.getConfig().getDestinationSyncMode()).isEqualTo(DestinationSyncMode.OVERWRITE)
+    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(2)
+    val stream1 = result.streams[1]
+    Assertions.assertThat(stream1.config.syncMode).isEqualTo(SyncMode.FULL_REFRESH)
+    Assertions.assertThat(stream1.config.destinationSyncMode).isEqualTo(DestinationSyncMode.OVERWRITE)
   }
 
   @Test
@@ -267,8 +266,8 @@ internal class AutoPropagateSchemaChangeHelperTest {
     val newSchema = deserialize(NEW_SCHEMA)
     val newAirbyteCatalog = createAirbyteCatalogWithSchema(NAME2, newSchema)
     newAirbyteCatalog
-      .getStreams()[0]
-      .getStream()
+      .streams[0]
+      .stream
       .sourceDefinedCursor(true)
       .supportedSyncModes(listOf(SyncMode.INCREMENTAL))
 
@@ -287,10 +286,10 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.getStreams()).hasSize(2)
-    val stream1 = result.getStreams()[1]
-    Assertions.assertThat(stream1.getConfig().getSyncMode()).isEqualTo(SyncMode.INCREMENTAL)
-    Assertions.assertThat(stream1.getConfig().getDestinationSyncMode()).isEqualTo(DestinationSyncMode.APPEND)
+    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(2)
+    val stream1 = result.streams[1]
+    Assertions.assertThat(stream1.config.syncMode).isEqualTo(SyncMode.INCREMENTAL)
+    Assertions.assertThat(stream1.config.destinationSyncMode).isEqualTo(DestinationSyncMode.APPEND)
   }
 
   @Test
@@ -315,7 +314,7 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.getStreams()).hasSize(0)
+    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(0)
   }
 
   @Test
@@ -341,9 +340,9 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.getStreams()).hasSize(1)
-    Assertions.assertThat(result.getStreams()[0].getStream().getName()).isEqualTo(NAME1)
-    Assertions.assertThat(result.getStreams()[0].getStream().getJsonSchema()).isEqualTo(oldSchema)
+    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(1)
+    Assertions.assertThat(result.streams[0].stream.name).isEqualTo(NAME1)
+    Assertions.assertThat(result.streams[0].stream.jsonSchema).isEqualTo(oldSchema)
   }
 
   @Test
@@ -368,9 +367,9 @@ internal class AutoPropagateSchemaChangeHelperTest {
           SUPPORTED_DESTINATION_SYNC_MODES,
         ).catalog
 
-    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.getStreams()).hasSize(1)
-    Assertions.assertThat(result.getStreams()[0].getStream().getName()).isEqualTo(NAME1)
-    Assertions.assertThat(result.getStreams()[0].getStream().getJsonSchema()).isEqualTo(oldSchema)
+    Assertions.assertThat<@Valid AirbyteStreamAndConfiguration?>(result.streams).hasSize(1)
+    Assertions.assertThat(result.streams[0].stream.name).isEqualTo(NAME1)
+    Assertions.assertThat(result.streams[0].stream.jsonSchema).isEqualTo(oldSchema)
   }
 
   @Test
@@ -549,7 +548,7 @@ internal class AutoPropagateSchemaChangeHelperTest {
       )
 
     Assertions.assertThat(result.catalog).isEqualTo(oldAirbyteCatalog)
-    Assertions.assertThat<@Valid StreamTransform?>(result.appliedDiff.getTransforms()).isEmpty()
+    Assertions.assertThat<@Valid StreamTransform?>(result.appliedDiff.transforms).isEmpty()
     Assertions.assertThat(result.changeDescription).isEmpty()
   }
 
@@ -614,7 +613,7 @@ internal class AutoPropagateSchemaChangeHelperTest {
                   .selected(true)
                   .fieldSelectionEnabled(true)
                   .selectedFields(
-                    List.of<@Valid SelectedFieldInfo?>(
+                    listOf(
                       SelectedFieldInfo().fieldPath(mutableListOf("id")),
                       SelectedFieldInfo().fieldPath(mutableListOf("address")),
                     ),
@@ -640,12 +639,10 @@ internal class AutoPropagateSchemaChangeHelperTest {
       path: MutableList<String?>?,
     ): Int =
       catalog
-        .getStreams()[0]
-        .getConfig()
-        .getSelectedFields()
-        .stream()
+        .streams[0]
+        .config
+        .selectedFields
         .filter { selected: SelectedFieldInfo? -> selected == SelectedFieldInfo().fieldPath(path) }
-        .toList()
         .size
 
     @Test

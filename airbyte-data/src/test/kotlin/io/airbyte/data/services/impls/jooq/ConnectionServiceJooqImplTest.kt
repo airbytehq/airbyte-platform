@@ -34,19 +34,14 @@ import io.airbyte.data.services.shared.SortKey
 import io.airbyte.data.services.shared.StandardSyncQuery
 import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination
 import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination.Companion.fromValues
-import io.airbyte.db.ContextQueryFunction
 import io.airbyte.db.Database
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionRecord
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionVersionRecord
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorRecord
 import io.airbyte.db.instance.jobs.jooq.generated.Tables
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
-import io.airbyte.db.instance.jobs.jooq.generated.tables.records.JobsRecord
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.CatalogHelpers.fieldsToJsonSchema
@@ -75,14 +70,10 @@ import java.util.stream.Stream
 import javax.sql.DataSource
 
 internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
-  private val connectionServiceJooqImpl: ConnectionServiceJooqImpl
+  private val connectionServiceJooqImpl: ConnectionServiceJooqImpl = ConnectionServiceJooqImpl(database)
   private var jobDatabase: Database? = null
   private var dataSource: DataSource? = null
   private var dslContext: DSLContext? = null
-
-  init {
-    this.connectionServiceJooqImpl = ConnectionServiceJooqImpl(database)
-  }
 
   @ParameterizedTest
   @MethodSource("actorSyncsStreamTestProvider")
@@ -102,7 +93,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       val configuredStreams =
         streamsForConnection
           .stream()
-          .map<ConfiguredAirbyteStream?> { streamName: String? ->
+          .map { streamName: String? ->
             catalogHelpers.createConfiguredAirbyteStream(
               streamName!!,
               "namespace",
@@ -114,7 +105,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     // Assert both source and destination are flagged as syncing
-    for (actorId in mutableListOf<UUID>(destination!!.destinationId, source!!.sourceId)) {
+    for (actorId in mutableListOf(destination!!.destinationId, source!!.sourceId)) {
       val actorSyncsAnyListedStream = connectionServiceJooqImpl.actorSyncsAnyListedStream(actorId, streamsToCheck.filterNotNull())
       Assertions.assertEquals(actorShouldSyncAnyListedStream, actorSyncsAnyListedStream)
     }
@@ -130,7 +121,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       .withConnectionId(connectionId)
       .withSourceId(source.sourceId)
       .withDestinationId(destination.destinationId)
-      .withName("standard-sync-" + connectionId)
+      .withName("standard-sync-$connectionId")
       .withCatalog(ConfiguredAirbyteCatalog().withStreams(streams.filterNotNull()))
       .withManual(true)
       .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
@@ -158,7 +149,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val standardSyncToCreate = createStandardSync(source!!, destination!!, streams)
 
-    standardSyncToCreate.setTags(tags)
+    standardSyncToCreate.tags = tags
 
     connectionServiceJooqImpl.writeStandardSync(standardSyncToCreate)
 
@@ -186,13 +177,13 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val standardSyncToCreate = createStandardSync(source!!, destination!!, streams)
 
-    standardSyncToCreate.setTags(tags)
+    standardSyncToCreate.tags = tags
 
     connectionServiceJooqImpl.writeStandardSync(standardSyncToCreate)
 
     // update the connection with only the third tag
-    val updatedTags = mutableListOf<Tag?>(tags!![2])
-    standardSyncToCreate.setTags(updatedTags)
+    val updatedTags = mutableListOf(tags!![2])
+    standardSyncToCreate.tags = updatedTags
     connectionServiceJooqImpl.writeStandardSync(standardSyncToCreate)
 
     val standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.connectionId)
@@ -222,7 +213,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val tagsFromAnotherWorkspace = jooqTestDbSetupHelper.tagsFromAnotherWorkspace
     val tagsFromMultipleWorkspaces = Stream.concat<Tag?>(tags!!.stream(), tagsFromAnotherWorkspace!!.stream()).toList()
 
-    standardSyncToCreate.setTags(tagsFromMultipleWorkspaces)
+    standardSyncToCreate.tags = tagsFromMultipleWorkspaces
     connectionServiceJooqImpl.writeStandardSync(standardSyncToCreate)
     val standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.connectionId)
 
@@ -302,7 +293,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       createStandardSync(source!!, destination!!, streams)
         .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
         .withPrefix("prefix_")
-        .withNamespaceFormat("\${SOURCE_NAMESPACE}")
+        .withNamespaceFormat($$"${SOURCE_NAMESPACE}")
 
     connectionServiceJooqImpl.writeStandardSync(standardSync)
 
@@ -320,7 +311,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     // Get streams for destination
     val streamConfigs: List<StreamDescriptorForDestination> =
-      connectionServiceJooqImpl.listStreamsForDestination(destination!!.destinationId, null)
+      connectionServiceJooqImpl.listStreamsForDestination(destination.destinationId, null)
 
     // Should only return selected streams from active connections
     Assertions.assertEquals(2, streamConfigs.size)
@@ -332,10 +323,10 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         .filter { s: StreamDescriptorForDestination? -> "stream_a" == s!!.streamName }
         .findFirst()
         .orElseThrow()
-    Assertions.assertEquals("namespace_1", streamConfigA.getStreamNamespace())
-    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.SOURCE, streamConfigA.getNamespaceDefinition())
-    Assertions.assertEquals("\${SOURCE_NAMESPACE}", streamConfigA.getNamespaceFormat())
-    Assertions.assertEquals("prefix_", streamConfigA.getPrefix())
+    Assertions.assertEquals("namespace_1", streamConfigA.streamNamespace)
+    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.SOURCE, streamConfigA.namespaceDefinition)
+    Assertions.assertEquals("\${SOURCE_NAMESPACE}", streamConfigA.namespaceFormat)
+    Assertions.assertEquals("prefix_", streamConfigA.prefix)
 
     // Verify second stream
     val streamConfigC =
@@ -344,10 +335,10 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         .filter { s: StreamDescriptorForDestination? -> "stream_b" == s!!.streamName }
         .findFirst()
         .orElseThrow()
-    Assertions.assertEquals("namespace_2", streamConfigC.getStreamNamespace())
-    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.SOURCE, streamConfigC.getNamespaceDefinition())
-    Assertions.assertEquals("\${SOURCE_NAMESPACE}", streamConfigC.getNamespaceFormat())
-    Assertions.assertEquals("prefix_", streamConfigC.getPrefix())
+    Assertions.assertEquals("namespace_2", streamConfigC.streamNamespace)
+    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.SOURCE, streamConfigC.namespaceDefinition)
+    Assertions.assertEquals("\${SOURCE_NAMESPACE}", streamConfigC.namespaceFormat)
+    Assertions.assertEquals("prefix_", streamConfigC.prefix)
   }
 
   @Test
@@ -379,7 +370,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       )
 
     val sync2 =
-      createStandardSync(source!!, destination!!, streams2)
+      createStandardSync(source, destination, streams2)
         .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.DESTINATION)
         .withPrefix("prefix2_")
 
@@ -387,7 +378,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     // Get streams for destination
     val streamConfigs =
-      connectionServiceJooqImpl.listStreamsForDestination(destination!!.destinationId, null)
+      connectionServiceJooqImpl.listStreamsForDestination(destination.destinationId, null)
 
     Assertions.assertEquals(2, streamConfigs.size)
 
@@ -398,10 +389,10 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         .filter { s: StreamDescriptorForDestination? -> "stream_a" == s!!.streamName }
         .findFirst()
         .orElseThrow()
-    Assertions.assertEquals("namespace_1", streamConfigA.getStreamNamespace())
-    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT, streamConfigA.getNamespaceDefinition())
-    Assertions.assertEquals("custom_\${SOURCE_NAMESPACE}", streamConfigA.getNamespaceFormat())
-    Assertions.assertEquals("prefix1_", streamConfigA.getPrefix())
+    Assertions.assertEquals("namespace_1", streamConfigA.streamNamespace)
+    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT, streamConfigA.namespaceDefinition)
+    Assertions.assertEquals("custom_\${SOURCE_NAMESPACE}", streamConfigA.namespaceFormat)
+    Assertions.assertEquals("prefix1_", streamConfigA.prefix)
 
     // Verify second stream
     val streamConfigB =
@@ -410,10 +401,10 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         .filter { s: StreamDescriptorForDestination? -> "stream_b" == s!!.streamName }
         .findFirst()
         .orElseThrow()
-    Assertions.assertEquals("namespace_2", streamConfigB.getStreamNamespace())
-    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.DESTINATION, streamConfigB.getNamespaceDefinition())
-    Assertions.assertNull(streamConfigB.getNamespaceFormat())
-    Assertions.assertEquals("prefix2_", streamConfigB.getPrefix())
+    Assertions.assertEquals("namespace_2", streamConfigB.streamNamespace)
+    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.DESTINATION, streamConfigB.namespaceDefinition)
+    Assertions.assertNull(streamConfigB.namespaceFormat)
+    Assertions.assertEquals("prefix2_", streamConfigB.prefix)
   }
 
   @Test
@@ -439,170 +430,168 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     // Connection 2: Active with successful latest job
     val healthyConnection =
-      createStandardSync(source!!, destination!!, streams)
+      createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.ACTIVE)
     connectionServiceJooqImpl.writeStandardSync(healthyConnection)
 
     // Connection 3: Active with failed latest job
     val failedConnection =
-      createStandardSync(source!!, destination!!, streams)
+      createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.ACTIVE)
     connectionServiceJooqImpl.writeStandardSync(failedConnection)
 
     // Connection 4: Inactive (paused)
     val pausedConnection =
-      createStandardSync(source!!, destination!!, streams)
+      createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.INACTIVE)
     connectionServiceJooqImpl.writeStandardSync(pausedConnection)
 
     // Connection 5: Active with cancelled latest job (should count as failed)
     val cancelledConnection =
-      createStandardSync(source!!, destination!!, streams)
+      createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.ACTIVE)
     connectionServiceJooqImpl.writeStandardSync(cancelledConnection)
 
     // Connection 6: Active with incomplete latest job (should count as failed)
     val incompleteConnection =
-      createStandardSync(source!!, destination!!, streams)
+      createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.ACTIVE)
     connectionServiceJooqImpl.writeStandardSync(incompleteConnection)
 
     // Connection 7: Deprecated (should be excluded from counts)
     val deprecatedConnection =
-      createStandardSync(source!!, destination!!, streams)
+      createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.DEPRECATED)
     connectionServiceJooqImpl.writeStandardSync(deprecatedConnection)
 
     // Connection 8: Active but no sync jobs (should count as not synced)
     val notSyncedConnection =
-      createStandardSync(source!!, destination!!, streams)
+      createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.ACTIVE)
     connectionServiceJooqImpl.writeStandardSync(notSyncedConnection)
 
     // Connection 4: Inactive but last job succeeded
     val pausedWithJobSucceededConnection =
-      createStandardSync(source!!, destination!!, streams)
+      createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.INACTIVE)
     connectionServiceJooqImpl.writeStandardSync(pausedWithJobSucceededConnection)
 
     // Insert job records using raw SQL since we need to work with the jobs database
-    database!!.query<Any?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        val now = OffsetDateTime.now()
-        // Job for running connection - currently running
-        ctx!!
-          .insertInto<JobsRecord?>(Tables.JOBS)
-          .set<Long?>(Tables.JOBS.ID, 1L)
-          .set<JobConfigType?>(
-            Tables.JOBS.CONFIG_TYPE,
-            JobConfigType.sync,
-          ).set<String?>(Tables.JOBS.SCOPE, runningConnection.connectionId.toString())
-          .set<JobStatus?>(Tables.JOBS.STATUS, JobStatus.running)
-          .set<OffsetDateTime?>(Tables.JOBS.CREATED_AT, now.minusHours(1))
-          .set<OffsetDateTime?>(Tables.JOBS.UPDATED_AT, now.minusHours(1))
-          .set<JSONB?>(Tables.JOBS.CONFIG, DSL.field<JSONB?>("'{}'::jsonb", JSONB::class.java))
-          .execute()
+    database!!.query<Any?> { ctx: DSLContext? ->
+      val now = OffsetDateTime.now()
+      // Job for running connection - currently running
+      ctx!!
+        .insertInto(Tables.JOBS)
+        .set(Tables.JOBS.ID, 1L)
+        .set(
+          Tables.JOBS.CONFIG_TYPE,
+          JobConfigType.sync,
+        ).set(Tables.JOBS.SCOPE, runningConnection.connectionId.toString())
+        .set(Tables.JOBS.STATUS, JobStatus.running)
+        .set(Tables.JOBS.CREATED_AT, now.minusHours(1))
+        .set(Tables.JOBS.UPDATED_AT, now.minusHours(1))
+        .set(Tables.JOBS.CONFIG, DSL.field("'{}'::jsonb", JSONB::class.java))
+        .execute()
 
-        // Job for healthy connection - succeeded
-        ctx
-          .insertInto<JobsRecord?>(Tables.JOBS)
-          .set<Long?>(Tables.JOBS.ID, 2L)
-          .set<JobConfigType?>(
-            Tables.JOBS.CONFIG_TYPE,
-            JobConfigType.sync,
-          ).set<String?>(Tables.JOBS.SCOPE, healthyConnection.connectionId.toString())
-          .set<JobStatus?>(Tables.JOBS.STATUS, JobStatus.succeeded)
-          .set<OffsetDateTime?>(Tables.JOBS.CREATED_AT, now.minusHours(2))
-          .set<OffsetDateTime?>(Tables.JOBS.UPDATED_AT, now.minusHours(2))
-          .set<JSONB?>(Tables.JOBS.CONFIG, DSL.field<JSONB?>("'{}'::jsonb", JSONB::class.java))
-          .execute()
+      // Job for healthy connection - succeeded
+      ctx
+        .insertInto(Tables.JOBS)
+        .set(Tables.JOBS.ID, 2L)
+        .set(
+          Tables.JOBS.CONFIG_TYPE,
+          JobConfigType.sync,
+        ).set(Tables.JOBS.SCOPE, healthyConnection.connectionId.toString())
+        .set(Tables.JOBS.STATUS, JobStatus.succeeded)
+        .set(Tables.JOBS.CREATED_AT, now.minusHours(2))
+        .set(Tables.JOBS.UPDATED_AT, now.minusHours(2))
+        .set(Tables.JOBS.CONFIG, DSL.field("'{}'::jsonb", JSONB::class.java))
+        .execute()
 
-        // Job for failed connection - failed
-        ctx
-          .insertInto<JobsRecord?>(Tables.JOBS)
-          .set<Long?>(Tables.JOBS.ID, 3L)
-          .set<JobConfigType?>(
-            Tables.JOBS.CONFIG_TYPE,
-            JobConfigType.sync,
-          ).set<String?>(Tables.JOBS.SCOPE, failedConnection.connectionId.toString())
-          .set<JobStatus?>(Tables.JOBS.STATUS, JobStatus.failed)
-          .set<OffsetDateTime?>(Tables.JOBS.CREATED_AT, now.minusHours(3))
-          .set<OffsetDateTime?>(Tables.JOBS.UPDATED_AT, now.minusHours(3))
-          .set<JSONB?>(Tables.JOBS.CONFIG, DSL.field<JSONB?>("'{}'::jsonb", JSONB::class.java))
-          .execute()
+      // Job for failed connection - failed
+      ctx
+        .insertInto(Tables.JOBS)
+        .set(Tables.JOBS.ID, 3L)
+        .set(
+          Tables.JOBS.CONFIG_TYPE,
+          JobConfigType.sync,
+        ).set(Tables.JOBS.SCOPE, failedConnection.connectionId.toString())
+        .set(Tables.JOBS.STATUS, JobStatus.failed)
+        .set(Tables.JOBS.CREATED_AT, now.minusHours(3))
+        .set(Tables.JOBS.UPDATED_AT, now.minusHours(3))
+        .set(Tables.JOBS.CONFIG, DSL.field("'{}'::jsonb", JSONB::class.java))
+        .execute()
 
-        // Job for cancelled connection - cancelled (should count as failed)
-        ctx
-          .insertInto<JobsRecord?>(Tables.JOBS)
-          .set<Long?>(Tables.JOBS.ID, 4L)
-          .set<JobConfigType?>(
-            Tables.JOBS.CONFIG_TYPE,
-            JobConfigType.sync,
-          ).set<String?>(Tables.JOBS.SCOPE, cancelledConnection.connectionId.toString())
-          .set<JobStatus?>(Tables.JOBS.STATUS, JobStatus.cancelled)
-          .set<OffsetDateTime?>(Tables.JOBS.CREATED_AT, now.minusHours(4))
-          .set<OffsetDateTime?>(Tables.JOBS.UPDATED_AT, now.minusHours(4))
-          .set<JSONB?>(Tables.JOBS.CONFIG, DSL.field<JSONB?>("'{}'::jsonb", JSONB::class.java))
-          .execute()
+      // Job for cancelled connection - cancelled (should count as failed)
+      ctx
+        .insertInto(Tables.JOBS)
+        .set(Tables.JOBS.ID, 4L)
+        .set(
+          Tables.JOBS.CONFIG_TYPE,
+          JobConfigType.sync,
+        ).set(Tables.JOBS.SCOPE, cancelledConnection.connectionId.toString())
+        .set(Tables.JOBS.STATUS, JobStatus.cancelled)
+        .set(Tables.JOBS.CREATED_AT, now.minusHours(4))
+        .set(Tables.JOBS.UPDATED_AT, now.minusHours(4))
+        .set(Tables.JOBS.CONFIG, DSL.field("'{}'::jsonb", JSONB::class.java))
+        .execute()
 
-        // Job for incomplete connection - incomplete (should count as failed)
-        ctx
-          .insertInto<JobsRecord?>(Tables.JOBS)
-          .set<Long?>(Tables.JOBS.ID, 5L)
-          .set<JobConfigType?>(
-            Tables.JOBS.CONFIG_TYPE,
-            JobConfigType.sync,
-          ).set<String?>(Tables.JOBS.SCOPE, incompleteConnection.connectionId.toString())
-          .set<JobStatus?>(Tables.JOBS.STATUS, JobStatus.incomplete)
-          .set<OffsetDateTime?>(Tables.JOBS.CREATED_AT, now.minusHours(5))
-          .set<OffsetDateTime?>(Tables.JOBS.UPDATED_AT, now.minusHours(5))
-          .set<JSONB?>(Tables.JOBS.CONFIG, DSL.field<JSONB?>("'{}'::jsonb", JSONB::class.java))
-          .execute()
+      // Job for incomplete connection - incomplete (should count as failed)
+      ctx
+        .insertInto(Tables.JOBS)
+        .set(Tables.JOBS.ID, 5L)
+        .set(
+          Tables.JOBS.CONFIG_TYPE,
+          JobConfigType.sync,
+        ).set(Tables.JOBS.SCOPE, incompleteConnection.connectionId.toString())
+        .set(Tables.JOBS.STATUS, JobStatus.incomplete)
+        .set(Tables.JOBS.CREATED_AT, now.minusHours(5))
+        .set(Tables.JOBS.UPDATED_AT, now.minusHours(5))
+        .set(Tables.JOBS.CONFIG, DSL.field("'{}'::jsonb", JSONB::class.java))
+        .execute()
 
-        // Job for deprecated connection - should be excluded
-        ctx
-          .insertInto<JobsRecord?>(Tables.JOBS)
-          .set<Long?>(Tables.JOBS.ID, 6L)
-          .set<JobConfigType?>(
-            Tables.JOBS.CONFIG_TYPE,
-            JobConfigType.sync,
-          ).set<String?>(Tables.JOBS.SCOPE, deprecatedConnection.connectionId.toString())
-          .set<JobStatus?>(Tables.JOBS.STATUS, JobStatus.succeeded)
-          .set<OffsetDateTime?>(Tables.JOBS.CREATED_AT, now.minusHours(6))
-          .set<OffsetDateTime?>(Tables.JOBS.UPDATED_AT, now.minusHours(6))
-          .set<JSONB?>(Tables.JOBS.CONFIG, DSL.field<JSONB?>("'{}'::jsonb", JSONB::class.java))
-          .execute()
+      // Job for deprecated connection - should be excluded
+      ctx
+        .insertInto(Tables.JOBS)
+        .set(Tables.JOBS.ID, 6L)
+        .set(
+          Tables.JOBS.CONFIG_TYPE,
+          JobConfigType.sync,
+        ).set(Tables.JOBS.SCOPE, deprecatedConnection.connectionId.toString())
+        .set(Tables.JOBS.STATUS, JobStatus.succeeded)
+        .set(Tables.JOBS.CREATED_AT, now.minusHours(6))
+        .set(Tables.JOBS.UPDATED_AT, now.minusHours(6))
+        .set(Tables.JOBS.CONFIG, DSL.field("'{}'::jsonb", JSONB::class.java))
+        .execute()
 
-        // Add older job for healthy connection to ensure we get the latest
-        ctx
-          .insertInto<JobsRecord?>(Tables.JOBS)
-          .set<Long?>(Tables.JOBS.ID, 7L)
-          .set<JobConfigType?>(
-            Tables.JOBS.CONFIG_TYPE,
-            JobConfigType.sync,
-          ).set<String?>(Tables.JOBS.SCOPE, healthyConnection.connectionId.toString())
-          .set<JobStatus?>(Tables.JOBS.STATUS, JobStatus.failed)
-          .set<OffsetDateTime?>(Tables.JOBS.CREATED_AT, now.minusHours(10))
-          .set<OffsetDateTime?>(Tables.JOBS.UPDATED_AT, now.minusHours(10))
-          .set<JSONB?>(Tables.JOBS.CONFIG, DSL.field<JSONB?>("'{}'::jsonb", JSONB::class.java))
-          .execute()
+      // Add older job for healthy connection to ensure we get the latest
+      ctx
+        .insertInto(Tables.JOBS)
+        .set(Tables.JOBS.ID, 7L)
+        .set(
+          Tables.JOBS.CONFIG_TYPE,
+          JobConfigType.sync,
+        ).set(Tables.JOBS.SCOPE, healthyConnection.connectionId.toString())
+        .set(Tables.JOBS.STATUS, JobStatus.failed)
+        .set(Tables.JOBS.CREATED_AT, now.minusHours(10))
+        .set(Tables.JOBS.UPDATED_AT, now.minusHours(10))
+        .set(Tables.JOBS.CONFIG, DSL.field("'{}'::jsonb", JSONB::class.java))
+        .execute()
 
-        // Job for successful sync but paused connection
-        ctx
-          .insertInto<JobsRecord?>(Tables.JOBS)
-          .set<Long?>(Tables.JOBS.ID, 8L)
-          .set<JobConfigType?>(
-            Tables.JOBS.CONFIG_TYPE,
-            JobConfigType.sync,
-          ).set<String?>(Tables.JOBS.SCOPE, pausedWithJobSucceededConnection.connectionId.toString())
-          .set<JobStatus?>(Tables.JOBS.STATUS, JobStatus.succeeded)
-          .set<OffsetDateTime?>(Tables.JOBS.CREATED_AT, now.minusHours(2))
-          .set<OffsetDateTime?>(Tables.JOBS.UPDATED_AT, now.minusHours(2))
-          .set<JSONB?>(Tables.JOBS.CONFIG, DSL.field<JSONB?>("'{}'::jsonb", JSONB::class.java))
-          .execute()
-        null
-      },
-    )
+      // Job for successful sync but paused connection
+      ctx
+        .insertInto(Tables.JOBS)
+        .set(Tables.JOBS.ID, 8L)
+        .set(
+          Tables.JOBS.CONFIG_TYPE,
+          JobConfigType.sync,
+        ).set(Tables.JOBS.SCOPE, pausedWithJobSucceededConnection.connectionId.toString())
+        .set(Tables.JOBS.STATUS, JobStatus.succeeded)
+        .set(Tables.JOBS.CREATED_AT, now.minusHours(2))
+        .set(Tables.JOBS.UPDATED_AT, now.minusHours(2))
+        .set(Tables.JOBS.CONFIG, DSL.field("'{}'::jsonb", JSONB::class.java))
+        .execute()
+      null
+    }
 
     val result = connectionServiceJooqImpl.getConnectionStatusCounts(workspaceId)
 
@@ -635,7 +624,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     connectionServiceJooqImpl.writeStandardSync(activeConnection)
 
     val inactiveConnection =
-      createStandardSync(source!!, destination!!, streams)
+      createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.INACTIVE)
     connectionServiceJooqImpl.writeStandardSync(inactiveConnection)
 
@@ -673,8 +662,8 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val cursor = Cursor(sortKey, null, null, null, null, null, null, null, ascending, null)
     val fields = connectionServiceJooqImpl.buildOrderByClause(cursor)
 
-    Assertions.assertEquals(expectedFirstField, fields.get(0))
-    Assertions.assertEquals(expectedLastField, fields.get(fields.size - 1))
+    Assertions.assertEquals(expectedFirstField, fields[0])
+    Assertions.assertEquals(expectedLastField, fields[fields.size - 1])
   }
 
   @ParameterizedTest
@@ -717,7 +706,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     for (expectedString in expectedStrings) {
       Assertions.assertTrue(
         conditionStr.contains(expectedString),
-        "Expected condition to contain '" + expectedString + "' but was: " + conditionStr,
+        "Expected condition to contain '$expectedString' but was: $conditionStr",
       )
     }
   }
@@ -734,7 +723,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     for (expectedString in expectedStrings) {
       Assertions.assertTrue(
         conditionStr.contains(expectedString),
-        "Expected condition to contain '" + expectedString + "' but was: " + conditionStr,
+        "Expected condition to contain '$expectedString' but was: $conditionStr",
       )
     }
   }
@@ -747,14 +736,14 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     expectedStrings: MutableList<String>,
     description: String?,
   ) {
-    val filters = if (cursor != null) cursor.filters else null
+    val filters = cursor?.filters
     val condition = connectionServiceJooqImpl.buildConnectionFilterConditions(query, filters)
     val conditionStr = condition.toString()
 
     for (expectedString in expectedStrings) {
       Assertions.assertTrue(
         conditionStr.contains(expectedString),
-        description + " - Expected condition to contain '" + expectedString + "' but was: " + conditionStr,
+        "$description - Expected condition to contain '$expectedString' but was: $conditionStr",
       )
     }
   }
@@ -782,7 +771,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         // Should contain connection ID comparison
         Assertions.assertTrue(
           conditionString.contains(cursor.cursorId.toString()),
-          description + ": Expected connection ID in condition",
+          "$description: Expected connection ID in condition",
         )
 
         if (cursor.lastSync != null) {
@@ -791,13 +780,13 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
             conditionString.contains("latest_jobs.created_at") ||
               conditionString.contains("is not null") ||
               conditionString.contains("is null"),
-            description + ": Expected time comparison logic in condition",
+            "$description: Expected time comparison logic in condition",
           )
         } else {
           // Should contain null check logic
           Assertions.assertTrue(
             conditionString.contains("is null"),
-            description + ": Expected null check logic in condition",
+            "$description: Expected null check logic in condition",
           )
         }
       }
@@ -809,11 +798,11 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
 
-    val workspaceId = setupHelper.workspace!!.getWorkspaceId()
+    val workspaceId = setupHelper.workspace!!.workspaceId
     val destination = setupHelper.destination
     val source = setupHelper.source
 
-    val sync = createStandardSync(source!!, destination!!, mutableListOf<ConfiguredAirbyteStream?>())
+    val sync = createStandardSync(source!!, destination!!, mutableListOf())
     connectionServiceJooqImpl.writeStandardSync(sync)
 
     val pagination =
@@ -848,11 +837,11 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
 
-    val workspaceId = setupHelper.workspace!!.getWorkspaceId()
+    val workspaceId = setupHelper.workspace!!.workspaceId
     val destination = setupHelper.destination
     val source = setupHelper.source
 
-    val sync = createStandardSync(source!!, destination!!, mutableListOf<ConfiguredAirbyteStream?>())
+    val sync = createStandardSync(source!!, destination!!, mutableListOf())
     connectionServiceJooqImpl.writeStandardSync(sync)
 
     val count =
@@ -869,7 +858,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
 
-    val workspaceId = setupHelper.workspace!!.getWorkspaceId()
+    val workspaceId = setupHelper.workspace!!.workspaceId
     val query = StandardSyncQuery(workspaceId, null, null, false)
     val pageSize = 20
 
@@ -901,10 +890,10 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
 
-    val workspaceId = setupHelper.workspace!!.getWorkspaceId()
+    val workspaceId = setupHelper.workspace!!.workspaceId
     val destination = setupHelper.destination
     val source = setupHelper.source
-    val sync = createStandardSync(source!!, destination!!, mutableListOf<ConfiguredAirbyteStream?>())
+    val sync = createStandardSync(source!!, destination!!, mutableListOf())
     connectionServiceJooqImpl.writeStandardSync(sync)
 
     val query = StandardSyncQuery(workspaceId, null, null, false)
@@ -954,13 +943,13 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         filters,
       )
 
-    val allResults: MutableList<ConnectionWithJobInfo> = ArrayList<ConnectionWithJobInfo>()
-    val seenConnectionIds: MutableSet<UUID?> = HashSet<UUID?>()
+    val allResults: MutableList<ConnectionWithJobInfo> = ArrayList()
+    val seenConnectionIds = mutableSetOf<UUID>()
     var currentCursor: Cursor? = initialCursor
     var iterations = 0
     val maxIterations = 20 // Safety check to prevent infinite loops
 
-    val seenPageSizes: MutableList<Int?> = ArrayList<Int?>()
+    val seenPageSizes: MutableList<Int?> = ArrayList()
     // Paginate through all results
     while (iterations < maxIterations) {
       val pagination = WorkspaceResourceCursorPagination(currentCursor, pageSize)
@@ -982,7 +971,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         val connectionId = result.connection().connectionId
         Assertions.assertFalse(
           seenConnectionIds.contains(connectionId),
-          testDescription + " - " + seenPageSizes + " - Found duplicate connection ID: " + connectionId + " in iteration " + iterations,
+          "$testDescription - $seenPageSizes - Found duplicate connection ID: $connectionId in iteration $iterations",
         )
         seenConnectionIds.add(connectionId)
       }
@@ -1004,7 +993,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       iterations++
     }
 
-    Assertions.assertTrue(iterations < maxIterations, testDescription + " - Too many iterations, possible infinite loop")
+    Assertions.assertTrue(iterations < maxIterations, "$testDescription - Too many iterations, possible infinite loop")
 
     // Get count with same filters for comparison
     val totalCount =
@@ -1016,7 +1005,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(
       totalCount,
       allResults.size,
-      testDescription + " - Pagination result count " + seenPageSizes + " should match total count",
+      "$testDescription - Pagination result count $seenPageSizes should match total count",
     )
     verifyResultsSorted(allResults, sortKey, ascending, testDescription)
     verifyResultsMatchFilters(allResults.toMutableList(), filters, testDescription)
@@ -1058,17 +1047,17 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(
       allResults.size,
       count,
-      testDescription + " - Count should match actual result size",
+      "$testDescription - Count should match actual result size",
     )
     verifyResultsMatchFilters(allResults.toMutableList(), filters, testDescription)
   }
 
   private class ComprehensiveTestData(
     val workspaceId: UUID,
-    val connectionIds: MutableList<UUID?>?,
-    val tagIds: MutableList<UUID?>?,
-    val sourceDefinitionIds: MutableList<UUID?>?,
-    val destinationDefinitionIds: MutableList<UUID?>?,
+    val connectionIds: MutableList<UUID?>,
+    val tagIds: MutableList<UUID?>,
+    val sourceDefinitionIds: MutableList<UUID?>,
+    val destinationDefinitionIds: MutableList<UUID?>,
     val expectedTotalConnections: Int,
   )
 
@@ -1089,9 +1078,9 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
 
-    val workspaceId = setupHelper.workspace!!.getWorkspaceId()
+    val workspaceId = setupHelper.workspace!!.workspaceId
     val tags = setupHelper.tags
-    val tagIds = tags!!.stream().map<UUID?> { obj: Tag? -> obj!!.tagId }.collect(Collectors.toList())
+    val tagIds = tags!!.stream().map { obj: Tag? -> obj!!.tagId }.collect(Collectors.toList())
 
     // Create deterministic definition IDs for testing
     val sourceDefId1 = UUID.fromString("11111111-1111-1111-1111-111111111111")
@@ -1106,8 +1095,8 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     createDestinationDefinition(destDefId2, "test-destination-definition-2")
 
     // Create sources and destinations with different definition IDs
-    val sources: MutableList<SourceConnection> = ArrayList<SourceConnection>()
-    val destinations: MutableList<DestinationConnection> = ArrayList<DestinationConnection>()
+    val sources: MutableList<SourceConnection> = mutableListOf()
+    val destinations: MutableList<DestinationConnection> = mutableListOf()
 
     sources.add(setupHelper.source!!.withName("Z"))
     sources.add(createAdditionalSource(setupHelper, "z", sourceDefId1))
@@ -1117,24 +1106,21 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     destinations.add(createAdditionalDestination(setupHelper, "dest-beta", destDefId1))
     destinations.add(createAdditionalDestination(setupHelper, "dest-gamma", destDefId2))
 
-    val connectionIds: MutableList<UUID?> = ArrayList<UUID?>()
+    val connectionIds: MutableList<UUID?> = mutableListOf()
 
     // Create connections with various configurations
     var connectionCounter = 0
     for (sourceConnection in sources) {
       for (destinationConnection in destinations) {
-        val source = sourceConnection
-        val destination = destinationConnection
-
         // Create connection with varying properties
         val sync =
-          createStandardSync(source!!, destination!!, mutableListOf<ConfiguredAirbyteStream?>())
+          createStandardSync(sourceConnection, destinationConnection, mutableListOf())
             .withName("conn-" + ('a'.code + connectionCounter).toChar() + "-test-" + connectionCounter)
             .withStatus(if (connectionCounter % 3 == 0) StandardSync.Status.INACTIVE else StandardSync.Status.ACTIVE)
 
         // Add tags and jobs to some connections
-        if (connectionCounter % 2 == 0 && !tags!!.isEmpty()) {
-          sync.setTags(mutableListOf<Tag?>(tags!![connectionCounter % tags!!.size]))
+        if (connectionCounter % 2 == 0 && !tags.isEmpty()) {
+          sync.tags = mutableListOf(tags[connectionCounter % tags.size])
         }
 
         connectionServiceJooqImpl.writeStandardSync(sync)
@@ -1145,12 +1131,12 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     // Add a few more connections without jobs to test filtering
-    val source = sources.get(0)
-    val destination = destinations.get(0)
+    val source = sources[0]
+    val destination = destinations[0]
     for (i in 0..2) {
       val syncWithoutJobs =
-        createStandardSync(source, destination, mutableListOf<ConfiguredAirbyteStream?>())
-          .withName("conn-no-job-" + i)
+        createStandardSync(source, destination, mutableListOf())
+          .withName("conn-no-job-$i")
           .withStatus(StandardSync.Status.ACTIVE)
       connectionServiceJooqImpl.writeStandardSync(syncWithoutJobs)
       connectionIds.add(syncWithoutJobs.connectionId)
@@ -1158,16 +1144,14 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val sourceDefinitionIds =
       sources
-        .stream()
-        .map<UUID?> { obj: SourceConnection? -> obj!!.getSourceDefinitionId() }
+        .map { obj: SourceConnection? -> obj!!.sourceDefinitionId }
         .distinct()
-        .collect(Collectors.toList())
+        .toMutableList()
     val destinationDefinitionIds =
       destinations
-        .stream()
-        .map<UUID?> { obj: DestinationConnection? -> obj!!.getDestinationDefinitionId() }
+        .map { obj: DestinationConnection? -> obj!!.destinationDefinitionId }
         .distinct()
-        .collect(Collectors.toList())
+        .toMutableList()
 
     return ComprehensiveTestData(
       workspaceId,
@@ -1185,66 +1169,58 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   ) {
     // Check if actor_definition already exists
     val definitionExists: Boolean =
-      database!!.query<Boolean?>(
-        ContextQueryFunction { ctx: org.jooq.DSLContext? ->
-          ctx!!.fetchExists(
-            ctx!!
-              .selectFrom<ActorDefinitionRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
-              .where(
-                io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID
-                  .eq(definitionId),
-              ),
-          )
-        },
-      )!!
-
-    if (!definitionExists) {
-      // Create the actor_definition entry
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .insertInto<ActorDefinitionRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
-            .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID, definitionId)
-            .set<String?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.NAME, name)
-            .set<ActorType?>(
-              io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ACTOR_TYPE,
-              ActorType.source,
-            ).set<Boolean?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.TOMBSTONE, false)
-            .execute()
-        },
-      )
-
-      // Create the actor_definition_version entry
-      val versionId = UUID.randomUUID()
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .insertInto<ActorDefinitionVersionRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION)
-            .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
-            .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, definitionId)
-            .set<String?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, "test/" + name)
-            .set<String?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, "latest")
-            .set<JSONB?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf("{}"))
-            .set<SupportLevel?>(
-              io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
-              SupportLevel.community,
-            ).set<Long?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, 100L)
-            .execute()
-        },
-      )
-
-      // Update the actor_definition to point to this version as default
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .update<ActorDefinitionRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
-            .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
+      database!!.query<Boolean?> { ctx: DSLContext? ->
+        ctx!!.fetchExists(
+          ctx
+            .selectFrom(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
             .where(
               io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID
                 .eq(definitionId),
-            ).execute()
-        },
-      )
+            ),
+        )
+      }!!
+
+    if (!definitionExists) {
+      // Create the actor_definition entry
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .insertInto(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID, definitionId)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.NAME, name)
+          .set(
+            io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ACTOR_TYPE,
+            ActorType.source,
+          ).set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.TOMBSTONE, false)
+          .execute()
+      }
+
+      // Create the actor_definition_version entry
+      val versionId = UUID.randomUUID()
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .insertInto(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, definitionId)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, "test/$name")
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, "latest")
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf("{}"))
+          .set(
+            io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
+            SupportLevel.community,
+          ).set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, 100L)
+          .execute()
+      }
+
+      // Update the actor_definition to point to this version as default
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .update(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
+          .where(
+            io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID
+              .eq(definitionId),
+          ).execute()
+      }
     }
   }
 
@@ -1254,66 +1230,58 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   ) {
     // Check if actor_definition already exists
     val definitionExists: Boolean =
-      database!!.query<Boolean?>(
-        ContextQueryFunction { ctx: org.jooq.DSLContext? ->
-          ctx!!.fetchExists(
-            ctx!!
-              .selectFrom<ActorDefinitionRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
-              .where(
-                io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID
-                  .eq(definitionId),
-              ),
-          )
-        },
-      )!!
-
-    if (!definitionExists) {
-      // Create the actor_definition entry
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .insertInto<ActorDefinitionRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
-            .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID, definitionId)
-            .set<String?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.NAME, name)
-            .set<ActorType?>(
-              io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ACTOR_TYPE,
-              ActorType.destination,
-            ).set<Boolean?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.TOMBSTONE, false)
-            .execute()
-        },
-      )
-
-      // Create the actor_definition_version entry
-      val versionId = UUID.randomUUID()
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .insertInto<ActorDefinitionVersionRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION)
-            .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
-            .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, definitionId)
-            .set<String?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, "test/" + name)
-            .set<String?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, "latest")
-            .set<JSONB?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf("{}"))
-            .set<SupportLevel?>(
-              io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
-              SupportLevel.community,
-            ).set<Long?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, 100L)
-            .execute()
-        },
-      )
-
-      // Update the actor_definition to point to this version as default
-      database!!.query<Int?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .update<ActorDefinitionRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
-            .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
+      database!!.query<Boolean?> { ctx: DSLContext? ->
+        ctx!!.fetchExists(
+          ctx
+            .selectFrom(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
             .where(
               io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID
                 .eq(definitionId),
-            ).execute()
-        },
-      )
+            ),
+        )
+      }!!
+
+    if (!definitionExists) {
+      // Create the actor_definition entry
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .insertInto(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID, definitionId)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.NAME, name)
+          .set(
+            io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ACTOR_TYPE,
+            ActorType.destination,
+          ).set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.TOMBSTONE, false)
+          .execute()
+      }
+
+      // Create the actor_definition_version entry
+      val versionId = UUID.randomUUID()
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .insertInto(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.ID, versionId)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID, definitionId)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.DOCKER_REPOSITORY, "test/$name")
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, "latest")
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf("{}"))
+          .set(
+            io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
+            SupportLevel.community,
+          ).set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, 100L)
+          .execute()
+      }
+
+      // Update the actor_definition to point to this version as default
+      database!!.query<Int?> { ctx: DSLContext? ->
+        ctx!!
+          .update(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION)
+          .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
+          .where(
+            io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION.ID
+              .eq(definitionId),
+          ).execute()
+      }
     }
   }
 
@@ -1325,27 +1293,25 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val source =
       SourceConnection()
         .withSourceId(UUID.randomUUID())
-        .withWorkspaceId(setupHelper.workspace!!.getWorkspaceId())
+        .withWorkspaceId(setupHelper.workspace!!.workspaceId)
         .withSourceDefinitionId(sourceDefinitionId)
         .withName(name)
         .withTombstone(false)
 
-    database!!.query<Int?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!
-          .insertInto<ActorRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR)
-          .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ID, source.getSourceId())
-          .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.WORKSPACE_ID, source.getWorkspaceId())
-          .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ACTOR_DEFINITION_ID, source.getSourceDefinitionId())
-          .set<String?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.NAME, source.getName())
-          .set<JSONB?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.CONFIGURATION, JSONB.valueOf("{}"))
-          .set<ActorType?>(
-            io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ACTOR_TYPE,
-            ActorType.source,
-          ).set<Boolean?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.TOMBSTONE, false)
-          .execute()
-      },
-    )
+    database!!.query<Int?> { ctx: DSLContext? ->
+      ctx!!
+        .insertInto(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR)
+        .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ID, source.sourceId)
+        .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.WORKSPACE_ID, source.workspaceId)
+        .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ACTOR_DEFINITION_ID, source.sourceDefinitionId)
+        .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.NAME, source.name)
+        .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.CONFIGURATION, JSONB.valueOf("{}"))
+        .set(
+          io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ACTOR_TYPE,
+          ActorType.source,
+        ).set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.TOMBSTONE, false)
+        .execute()
+    }
 
     return source
   }
@@ -1358,27 +1324,25 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val destination =
       DestinationConnection()
         .withDestinationId(UUID.randomUUID())
-        .withWorkspaceId(setupHelper.workspace!!.getWorkspaceId())
+        .withWorkspaceId(setupHelper.workspace!!.workspaceId)
         .withDestinationDefinitionId(destinationDefinitionId)
         .withName(name)
         .withTombstone(false)
 
-    database!!.query<Int?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!
-          .insertInto<ActorRecord?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR)
-          .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ID, destination!!.destinationId)
-          .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.WORKSPACE_ID, destination.getWorkspaceId())
-          .set<UUID?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ACTOR_DEFINITION_ID, destination.getDestinationDefinitionId())
-          .set<String?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.NAME, destination.getName())
-          .set<JSONB?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.CONFIGURATION, JSONB.valueOf("{}"))
-          .set<ActorType?>(
-            io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ACTOR_TYPE,
-            ActorType.destination,
-          ).set<Boolean?>(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.TOMBSTONE, false)
-          .execute()
-      },
-    )
+    database!!.query<Int?> { ctx: DSLContext? ->
+      ctx!!
+        .insertInto(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR)
+        .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ID, destination!!.destinationId)
+        .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.WORKSPACE_ID, destination.workspaceId)
+        .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ACTOR_DEFINITION_ID, destination.destinationDefinitionId)
+        .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.NAME, destination.name)
+        .set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.CONFIGURATION, JSONB.valueOf("{}"))
+        .set(
+          io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.ACTOR_TYPE,
+          ActorType.destination,
+        ).set(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.TOMBSTONE, false)
+        .execute()
+    }
 
     return destination
   }
@@ -1416,32 +1380,28 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val createdAtTs = OffsetDateTime.ofInstant(Instant.ofEpochMilli(createdAt), ZoneOffset.UTC)
     val updatedAtTs = OffsetDateTime.ofInstant(Instant.ofEpochMilli(updatedAt), ZoneOffset.UTC)
 
-    jobDatabase!!.query<Int?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!.execute(
-          "INSERT INTO jobs (id, config_type, scope, status, created_at, updated_at) " +
-            "VALUES (?, 'sync', ?, ?::job_status, ?::timestamptz, ?::timestamptz)",
-          jobId,
-          connectionId.toString(),
-          jobStatus,
-          createdAtTs,
-          updatedAtTs,
-        )
-      },
-    )
-    jobDatabase!!.query<Int?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!.execute(
-          "INSERT INTO attempts (id, job_id, status, created_at, updated_at) " +
-            "VALUES (?, ?, ?::attempt_status, ?::timestamptz, ?::timestamptz)",
-          jobId,
-          jobId,
-          attemptStatus,
-          createdAtTs,
-          updatedAtTs,
-        )
-      },
-    )
+    jobDatabase!!.query<Int?> { ctx: DSLContext? ->
+      ctx!!.execute(
+        "INSERT INTO jobs (id, config_type, scope, status, created_at, updated_at) " +
+          "VALUES (?, 'sync', ?, ?::job_status, ?::timestamptz, ?::timestamptz)",
+        jobId,
+        connectionId.toString(),
+        jobStatus,
+        createdAtTs,
+        updatedAtTs,
+      )
+    }
+    jobDatabase!!.query<Int?> { ctx: DSLContext? ->
+      ctx!!.execute(
+        "INSERT INTO attempts (id, job_id, status, created_at, updated_at) " +
+          "VALUES (?, ?, ?::attempt_status, ?::timestamptz, ?::timestamptz)",
+        jobId,
+        jobId,
+        attemptStatus,
+        createdAtTs,
+        updatedAtTs,
+      )
+    }
   }
 
   private fun verifyResultsSorted(
@@ -1451,8 +1411,8 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     testDescription: String?,
   ) {
     for (i in 0..<results.size - 1) {
-      val current = results.get(i)
-      val next = results.get(i + 1)
+      val current = results[i]
+      val next = results[i + 1]
 
       val comparison = compareResults(current, next, sortKey)
 
@@ -1478,7 +1438,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     sortKey: SortKey,
   ): Int =
     when (sortKey) {
-      SortKey.CONNECTION_NAME -> a.connection().getName().compareTo(b.connection().getName())
+      SortKey.CONNECTION_NAME -> a.connection().name.compareTo(b.connection().name)
       SortKey.SOURCE_NAME -> a.sourceName().compareTo(b.sourceName())
       SortKey.DESTINATION_NAME -> a.destinationName().compareTo(b.destinationName())
       SortKey.LAST_SYNC -> {
@@ -1501,7 +1461,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     sortKey: SortKey,
   ): String? =
     when (sortKey) {
-      SortKey.CONNECTION_NAME -> result.connection().getName()
+      SortKey.CONNECTION_NAME -> result.connection().name
       SortKey.SOURCE_NAME -> result.sourceName()
       SortKey.DESTINATION_NAME -> result.destinationName()
       SortKey.LAST_SYNC -> if (result.latestJobCreatedAt().isPresent) result.latestJobCreatedAt().get().toString() else "null"
@@ -1522,7 +1482,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         val matches =
           result
             .connection()
-            .getName()
+            .name
             .lowercase(Locale.getDefault())
             .contains(searchTerm) ||
             result.sourceName().lowercase(Locale.getDefault()).contains(searchTerm) ||
@@ -1530,25 +1490,25 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         Assertions.assertTrue(
           matches,
           testDescription + " - Result should match search term '" +
-            filters.searchTerm + "' but got connection: " + result.connection().getName() +
+            filters.searchTerm + "' but got connection: " + result.connection().name +
             ", source: " + result.sourceName() + ", destination: " + result.destinationName(),
         )
       }
 
       // Verify source definition ID filter
       if (filters.sourceDefinitionIds != null && !filters.sourceDefinitionIds.isEmpty()) {
-        val sourceDefinitionId = getSourceDefinitionId(result.connection().getSourceId())
+        val sourceDefinitionId = getSourceDefinitionId(result.connection().sourceId)
         val matchesSourceDef = filters.sourceDefinitionIds.contains(sourceDefinitionId)
         Assertions.assertTrue(
           matchesSourceDef,
           testDescription + " - Result should match source definition filter. Expected one of: " +
-            filters.sourceDefinitionIds + " but got: " + sourceDefinitionId + " for connection: " + result.connection().getName(),
+            filters.sourceDefinitionIds + " but got: " + sourceDefinitionId + " for connection: " + result.connection().name,
         )
       }
 
       // Verify destination definition ID filter
       if (filters.destinationDefinitionIds != null && !filters.destinationDefinitionIds.isEmpty()) {
-        val destinationDefinitionId = getDestinationDefinitionId(result.connection().getDestinationId())
+        val destinationDefinitionId = getDestinationDefinitionId(result.connection().destinationId)
         val matchesDestDef = filters.destinationDefinitionIds.contains(destinationDefinitionId)
         Assertions.assertTrue(
           matchesDestDef,
@@ -1556,7 +1516,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
             filters.destinationDefinitionIds + " but got: " + destinationDefinitionId + " for connection: " +
             result
               .connection()
-              .getName(),
+              .name,
         )
       }
 
@@ -1564,19 +1524,18 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       if (filters.statuses != null && !filters.statuses.isEmpty()) {
         if (result.latestJobStatus().isPresent) {
           val resultStatus = mapJobStatusToConnectionJobStatus(result.latestJobStatus().get())
-
-          val matchesStatusFilter: Boolean
-          if (filters.statuses.contains(ConnectionJobStatus.HEALTHY)) {
-            // HEALTHY filter should include both HEALTHY and RUNNING (but not FAILED)
-            matchesStatusFilter = resultStatus == ConnectionJobStatus.HEALTHY || resultStatus == ConnectionJobStatus.RUNNING
-          } else {
-            // For other filters (FAILED, RUNNING), require exact match
-            matchesStatusFilter = filters.statuses.contains(resultStatus)
-          }
+          val matchesStatusFilter: Boolean =
+            if (filters.statuses.contains(ConnectionJobStatus.HEALTHY)) {
+              // HEALTHY filter should include both HEALTHY and RUNNING (but not FAILED)
+              resultStatus == ConnectionJobStatus.HEALTHY || resultStatus == ConnectionJobStatus.RUNNING
+            } else {
+              // For other filters (FAILED, RUNNING), require exact match
+              filters.statuses.contains(resultStatus)
+            }
           Assertions.assertTrue(
             matchesStatusFilter,
             testDescription + " - Status filter mismatch. " +
-              "Filter: " + filters.statuses + ", Got: " + resultStatus + " for connection: " + result.connection().getName() +
+              "Filter: " + filters.statuses + ", Got: " + resultStatus + " for connection: " + result.connection().name +
               ". Note: HEALTHY filter includes both HEALTHY and RUNNING statuses.",
           )
         } else {
@@ -1585,7 +1544,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
           if (!filters.statuses.contains(ConnectionJobStatus.HEALTHY)) {
             Assertions.fail<Any?>(
               testDescription + " - Connection without job status should not appear in " +
-                filters.statuses + " filter results: " + result.connection().getName(),
+                filters.statuses + " filter results: " + result.connection().name,
             )
           }
         }
@@ -1593,12 +1552,12 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
       // Verify state filter (connection active/inactive status)
       if (filters.states != null && !filters.states.isEmpty()) {
-        val resultState = if (result.connection().getStatus() == StandardSync.Status.ACTIVE) ActorStatus.ACTIVE else ActorStatus.INACTIVE
+        val resultState = if (result.connection().status == StandardSync.Status.ACTIVE) ActorStatus.ACTIVE else ActorStatus.INACTIVE
         val matchesState = filters.states.contains(resultState)
         Assertions.assertTrue(
           matchesState,
           testDescription + " - Result should match state filter. Expected one of: " +
-            filters.states + " but got: " + resultState + " for connection: " + result.connection().getName(),
+            filters.states + " but got: " + resultState + " for connection: " + result.connection().name,
         )
       }
 
@@ -1611,7 +1570,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
               .connection()
               .tags
               .stream()
-              .map<UUID?> { obj: Tag? -> obj!!.getTagId() }
+              .map { obj: Tag? -> obj!!.tagId }
               .toList()
           matchesTag = filters.tagIds.stream().anyMatch { o: UUID? -> resultTagIds.contains(o) }
         } else {
@@ -1627,13 +1586,13 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
                   .connection()
                   .tags
                   .stream()
-                  .map<UUID?> { obj: Tag? -> obj!!.getTagId() }
+                  .map { obj: Tag? -> obj!!.tagId }
                   .toList()
               } else {
                 "none"
               }
             ) +
-            " for connection: " + result.connection().getName(),
+            " for connection: " + result.connection().name,
         )
       }
     }
@@ -1649,35 +1608,31 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
   private fun getSourceDefinitionId(sourceId: UUID?): UUID? {
     try {
-      return database!!.query<UUID?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .select<Any?>(DSL.field("actor_definition_id"))
-            .from(DSL.table("actor"))
-            .where(DSL.field("id").eq(sourceId))
-            .and(DSL.field("actor_type").cast<String?>(String::class.java).eq("source"))
-            .fetchOneInto<UUID?>(UUID::class.java)
-        },
-      )
+      return database!!.query { ctx: DSLContext? ->
+        ctx!!
+          .select(DSL.field("actor_definition_id"))
+          .from(DSL.table("actor"))
+          .where(DSL.field("id").eq(sourceId))
+          .and(DSL.field("actor_type").cast(String::class.java).eq("source"))
+          .fetchOneInto(UUID::class.java)
+      }
     } catch (e: Exception) {
-      throw RuntimeException("Failed to get source definition ID for source: " + sourceId, e)
+      throw RuntimeException("Failed to get source definition ID for source: $sourceId", e)
     }
   }
 
   private fun getDestinationDefinitionId(destinationId: UUID?): UUID? {
     try {
-      return database!!.query<UUID?>(
-        ContextQueryFunction { ctx: DSLContext? ->
-          ctx!!
-            .select<Any?>(DSL.field("actor_definition_id"))
-            .from(DSL.table("actor"))
-            .where(DSL.field("id").eq(destinationId))
-            .and(DSL.field("actor_type").cast<String?>(String::class.java).eq("destination"))
-            .fetchOneInto<UUID?>(UUID::class.java)
-        },
-      )
+      return database!!.query { ctx: DSLContext? ->
+        ctx!!
+          .select(DSL.field("actor_definition_id"))
+          .from(DSL.table("actor"))
+          .where(DSL.field("id").eq(destinationId))
+          .and(DSL.field("actor_type").cast(String::class.java).eq("destination"))
+          .fetchOneInto(UUID::class.java)
+      }
     } catch (e: Exception) {
-      throw RuntimeException("Failed to get destination definition ID for destination: " + destinationId, e)
+      throw RuntimeException("Failed to get destination definition ID for destination: $destinationId", e)
     }
   }
 
@@ -1698,7 +1653,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @JvmStatic
-    private fun actorSyncsStreamTestProvider(): Stream<Arguments?> {
+    private fun actorSyncsStreamTestProvider(): List<Arguments?> {
       // Mock "connections" - just a list of streams that the connection syncs
       val connectionSyncingStreamA = mutableListOf<String?>("stream_a")
       val connectionSyncingStreamB = mutableListOf<String?>("stream_b")
@@ -1713,7 +1668,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       val connectionsListForActorWithOneConnectionSyncingSyncingAAndBInSeparateConnections =
         mutableListOf<MutableList<String?>?>(connectionSyncingStreamA, connectionSyncingStreamB)
 
-      return Stream.of<Arguments?>( // Single affected stream
+      return listOf<Arguments?>( // Single affected stream
         Arguments.of(connectionsListForActorWithNoConnections, mutableListOf<String?>("stream_a"), false),
         Arguments.of(connectionsListForActorWithOneConnectionSyncingStreamA, mutableListOf<String?>("stream_a"), true),
         Arguments.of(connectionsListForActorWithOneConnectionSyncingStreamB, mutableListOf<String?>("stream_a"), false),
@@ -1740,14 +1695,14 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @JvmStatic
-    private fun orderByTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun orderByTestProvider() =
+      listOf<Arguments?>(
         Arguments.of(
           SortKey.CONNECTION_NAME,
           true,
           DSL
             .lower(io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION.NAME)
-            .cast<String?>(
+            .cast(
               String::class.java,
             ).asc(),
           io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION.ID
@@ -1758,7 +1713,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
           false,
           DSL
             .lower(io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION.NAME)
-            .cast<String?>(
+            .cast(
               String::class.java,
             ).desc(),
           io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION.ID
@@ -1767,14 +1722,14 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         Arguments.of(
           SortKey.SOURCE_NAME,
           true,
-          DSL.lower(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.NAME).cast<String?>(String::class.java).asc(),
+          DSL.lower(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.NAME).cast(String::class.java).asc(),
           io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION.ID
             .asc(),
         ),
         Arguments.of(
           SortKey.SOURCE_NAME,
           false,
-          DSL.lower(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.NAME).cast<String?>(String::class.java).desc(),
+          DSL.lower(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR.NAME).cast(String::class.java).desc(),
           io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION.ID
             .desc(),
         ),
@@ -1786,7 +1741,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
               io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR
                 .`as`("dest_actor")
                 .NAME,
-            ).cast<String?>(
+            ).cast(
               String::class.java,
             ).asc(),
           io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION.ID
@@ -1800,7 +1755,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
               io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR
                 .`as`("dest_actor")
                 .NAME,
-            ).cast<String?>(
+            ).cast(
               String::class.java,
             ).desc(),
           io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION.ID
@@ -1823,9 +1778,9 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       )
 
     @JvmStatic
-    private fun sortKeyTestProvider(): Stream<Arguments?> {
+    private fun sortKeyTestProvider(): List<Arguments?> {
       val testConnectionId = UUID.randomUUID()
-      return Stream.of<Arguments?>(
+      return listOf<Arguments?>(
         Arguments.of(SortKey.CONNECTION_NAME, "connA", null, null, null, testConnectionId),
         Arguments.of(SortKey.SOURCE_NAME, null, "sourceA", null, null, testConnectionId),
         Arguments.of(SortKey.DESTINATION_NAME, null, null, "destA", null, testConnectionId),
@@ -1834,8 +1789,8 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @JvmStatic
-    private fun stateFiltersTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun stateFiltersTestProvider() =
+      listOf<Arguments?>(
         Arguments.of(mutableListOf<ActorStatus?>(ActorStatus.ACTIVE), mutableListOf<String?>("status", "active")),
         Arguments.of(mutableListOf<ActorStatus?>(ActorStatus.INACTIVE), mutableListOf<String?>("status", "inactive")),
         Arguments.of(
@@ -1846,8 +1801,8 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       )
 
     @JvmStatic
-    private fun statusFiltersTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    private fun statusFiltersTestProvider() =
+      listOf<Arguments?>(
         Arguments.of(mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.HEALTHY), mutableListOf<String?>("status")),
         Arguments.of(mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.FAILED), mutableListOf<String?>("status", "failed")),
         Arguments.of(mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.RUNNING), mutableListOf<String?>("status", "running")),
@@ -1871,7 +1826,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       )
 
     @JvmStatic
-    private fun connectionFilterConditionsTestProvider(): Stream<Arguments?> {
+    private fun connectionFilterConditionsTestProvider(): List<Arguments?> {
       val workspaceId = UUID.randomUUID()
       val sourceId = UUID.randomUUID()
       val destinationId = UUID.randomUUID()
@@ -1879,7 +1834,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       val destDefId = UUID.randomUUID()
       val tagId = UUID.randomUUID()
 
-      return Stream.of<Arguments?>( // Basic query filters - no cursor
+      return listOf<Arguments?>( // Basic query filters - no cursor
         Arguments.of(
           StandardSyncQuery(workspaceId, null, null, false),
           null,
@@ -1887,7 +1842,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
           "Basic query with workspace filter only",
         ),
         Arguments.of(
-          StandardSyncQuery(workspaceId, mutableListOf<UUID>(sourceId), mutableListOf<UUID>(destinationId), false),
+          StandardSyncQuery(workspaceId, mutableListOf(sourceId), mutableListOf(destinationId), false),
           null,
           mutableListOf<String?>("workspace_id", "source_id", "destination_id"),
           "Basic query with source and destination filters",
@@ -1933,7 +1888,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
             null,
             null,
             true,
-            Filters(null, mutableListOf<UUID>(sourceDefId), null, null, null, null),
+            Filters(null, mutableListOf(sourceDefId), null, null, null, null),
           ),
           mutableListOf<String?>("workspace_id", "actor_definition_id"),
           "Source definition filter",
@@ -1950,7 +1905,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
             null,
             null,
             true,
-            Filters(null, null, mutableListOf<UUID>(destDefId), null, null, null),
+            Filters(null, null, mutableListOf(destDefId), null, null, null),
           ),
           mutableListOf<String?>("workspace_id", "actor_definition_id"),
           "Destination definition filter",
@@ -2001,13 +1956,13 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
             null,
             null,
             true,
-            Filters(null, null, null, null, null, mutableListOf<UUID>(tagId)),
+            Filters(null, null, null, null, null, mutableListOf(tagId)),
           ),
           mutableListOf<String?>("workspace_id", "tag_id"),
           "Tag filter",
         ), // Combined filters
         Arguments.of(
-          StandardSyncQuery(workspaceId, mutableListOf<UUID>(sourceId), mutableListOf<UUID>(destinationId), false),
+          StandardSyncQuery(workspaceId, mutableListOf(sourceId), mutableListOf(destinationId), false),
           Cursor(
             SortKey.CONNECTION_NAME,
             null,
@@ -2020,11 +1975,11 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
             true,
             Filters(
               "search",
-              mutableListOf<UUID>(sourceDefId),
-              mutableListOf<UUID>(destDefId),
+              mutableListOf(sourceDefId),
+              mutableListOf(destDefId),
               listOf(ConnectionJobStatus.HEALTHY),
               listOf(ActorStatus.ACTIVE),
-              mutableListOf<UUID>(tagId),
+              mutableListOf(tagId),
             ),
           ),
           mutableListOf<String?>("workspace_id", "source_id", "destination_id", "name", "actor_definition_id", "status", "tag_id"),
@@ -2044,11 +1999,11 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
             true,
             Filters(
               null,
-              mutableListOf<UUID>(),
-              mutableListOf<UUID>(),
-              listOf<ConnectionJobStatus>(),
-              listOf<ActorStatus>(),
-              mutableListOf<UUID>(),
+              mutableListOf(),
+              mutableListOf(),
+              listOf(),
+              listOf(),
+              mutableListOf(),
             ),
           ),
           mutableListOf<String?>("workspace_id"),
@@ -2058,13 +2013,13 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @JvmStatic
-    private fun buildCursorConditionLastSyncDescTestProvider(): Stream<Arguments?> {
+    private fun buildCursorConditionLastSyncDescTestProvider(): List<Arguments?> {
       val connectionId = UUID.randomUUID()
       val anotherConnectionId = UUID.randomUUID()
       val lastSyncEpoch = 1704000000L // 2024-01-01 00:00:00 UTC
       val anotherLastSyncEpoch = 1704003600L // 2024-01-01 01:00:00 UTC
 
-      return Stream.of<Arguments?>( // Null cursor - should return no condition
+      return listOf<Arguments?>( // Null cursor - should return no condition
         Arguments.of(
           null,
           true,
@@ -2175,14 +2130,14 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @JvmStatic
-    private fun paginationTestProvider(): Stream<Arguments?> {
+    private fun paginationTestProvider(): List<Arguments?> {
       // Use the deterministic definition IDs that match createComprehensiveTestData
       val sourceDefId1 = UUID.fromString("11111111-1111-1111-1111-111111111111")
       val sourceDefId2 = UUID.fromString("22222222-2222-2222-2222-222222222222")
       val destDefId1 = UUID.fromString("33333333-3333-3333-3333-333333333333")
       val destDefId2 = UUID.fromString("44444444-4444-4444-4444-444444444444")
 
-      return Stream.of<Arguments?>( // Test all sort keys
+      return listOf<Arguments?>( // Test all sort keys
         Arguments.of(SortKey.CONNECTION_NAME, true, null, "Sort by connection name ascending"),
         Arguments.of(SortKey.CONNECTION_NAME, false, null, "Sort by connection name descending"),
         Arguments.of(SortKey.SOURCE_NAME, true, null, "Sort by source name ascending"),
@@ -2261,25 +2216,25 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         Arguments.of(
           SortKey.CONNECTION_NAME,
           true,
-          Filters(null, mutableListOf<UUID>(sourceDefId1), null, null, null, null),
+          Filters(null, mutableListOf(sourceDefId1), null, null, null, null),
           "Source definition filter - sourceDefId1",
         ),
         Arguments.of(
           SortKey.CONNECTION_NAME,
           true,
-          Filters(null, mutableListOf<UUID>(sourceDefId2), null, null, null, null),
+          Filters(null, mutableListOf(sourceDefId2), null, null, null, null),
           "Source definition filter - sourceDefId2",
         ),
         Arguments.of(
           SortKey.CONNECTION_NAME,
           true,
-          Filters(null, null, mutableListOf<UUID>(destDefId1), null, null, null),
+          Filters(null, null, mutableListOf(destDefId1), null, null, null),
           "Destination definition filter - destDefId1",
         ),
         Arguments.of(
           SortKey.CONNECTION_NAME,
           true,
-          Filters(null, null, mutableListOf<UUID>(destDefId2), null, null, null),
+          Filters(null, null, mutableListOf(destDefId2), null, null, null),
           "Destination definition filter - destDefId2",
         ),
         Arguments.of(
@@ -2287,8 +2242,8 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
           false,
           Filters(
             null,
-            mutableListOf<UUID>(sourceDefId1),
-            mutableListOf<UUID>(destDefId1),
+            mutableListOf(sourceDefId1),
+            mutableListOf(destDefId1),
             null,
             null,
             null,
@@ -2671,8 +2626,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   fun testLockConnectionsById() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setupForVersionUpgradeTest()
-
-    val organization = jooqTestDbSetupHelper.organization
 
     val destination = jooqTestDbSetupHelper.destination
     val source = jooqTestDbSetupHelper.source

@@ -7,7 +7,6 @@ package io.airbyte.workers.helper
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import io.airbyte.api.client.model.generated.CatalogDiff
 import io.airbyte.api.client.model.generated.FieldTransform
-import io.airbyte.api.client.model.generated.StreamAttributeTransform
 import io.airbyte.api.client.model.generated.StreamTransform
 import io.airbyte.api.client.model.generated.StreamTransformUpdateStream
 import io.airbyte.commons.json.Jsons.deserialize
@@ -26,7 +25,6 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import java.util.List
 import java.util.Optional
 
 @MicronautTest
@@ -37,39 +35,39 @@ internal class BackfillHelperTest {
   @Test
   fun testGetStreamsToBackfillWithNewColumn() {
     Assertions.assertEquals(
-      List.of<StreamDescriptor?>(DOMAIN_STREAM_DESCRIPTOR),
+      listOf(DOMAIN_STREAM_DESCRIPTOR),
       backfillHelper.getStreamsToBackfill(toDomain(SINGLE_STREAM_ADD_COLUMN_DIFF), INCREMENTAL_CATALOG),
     )
   }
 
   @Test
   fun testGetStreamsToBackfillExcludesFullRefresh() {
-    val testCatalog = ConfiguredAirbyteCatalog().withStreams(List.of<ConfiguredAirbyteStream>(INCREMENTAL_STREAM, FULL_REFRESH_STREAM))
+    val testCatalog = ConfiguredAirbyteCatalog().withStreams(listOf(INCREMENTAL_STREAM, FULL_REFRESH_STREAM))
     // Verify that the second stream is ignored because it's Full Refresh.
     Assertions.assertEquals(
       1,
       backfillHelper.getStreamsToBackfill(toDomain(TWO_STREAMS_ADD_COLUMN_DIFF), testCatalog).size,
     )
     Assertions.assertEquals(
-      List.of<StreamDescriptor?>(DOMAIN_STREAM_DESCRIPTOR),
+      listOf(DOMAIN_STREAM_DESCRIPTOR),
       backfillHelper.getStreamsToBackfill(toDomain(TWO_STREAMS_ADD_COLUMN_DIFF), testCatalog),
     )
   }
 
   @Test
   fun testClearStateForStreamsToBackfill() {
-    val streamsToBackfill = List.of<StreamDescriptor?>(DOMAIN_STREAM_DESCRIPTOR)
-    val updatedState = backfillHelper!!.clearStateForStreamsToBackfill(STATE, streamsToBackfill)
+    val streamsToBackfill = listOf(DOMAIN_STREAM_DESCRIPTOR)
+    val updatedState = backfillHelper.clearStateForStreamsToBackfill(STATE, streamsToBackfill)
     Assertions.assertNotNull(updatedState)
-    val typedState: Optional<StateWrapper> = getTypedState(updatedState!!.getState())
-    Assertions.assertEquals(1, typedState.get().getStateMessages().size)
+    val typedState: Optional<StateWrapper> = getTypedState(updatedState!!.state)
+    Assertions.assertEquals(1, typedState.get().stateMessages.size)
     Assertions.assertEquals(
       JsonNodeFactory.instance.nullNode(),
       typedState
         .get()
-        .getStateMessages()[0]
-        .getStream()
-        .getStreamState(),
+        .stateMessages[0]
+        .stream
+        .streamState,
     )
   }
 
@@ -91,28 +89,28 @@ internal class BackfillHelperTest {
 
     private val INCREMENTAL_STREAM =
       ConfiguredAirbyteStream(
-        AirbyteStream(STREAM_NAME, emptyObject(), List.of<SyncMode?>(SyncMode.INCREMENTAL))
+        AirbyteStream(STREAM_NAME, emptyObject(), listOf(SyncMode.INCREMENTAL))
           .withNamespace(STREAM_NAMESPACE),
         SyncMode.INCREMENTAL,
         DestinationSyncMode.APPEND,
       )
     private val FULL_REFRESH_STREAM =
       ConfiguredAirbyteStream(
-        AirbyteStream(ANOTHER_STREAM_NAME, emptyObject(), List.of<SyncMode?>(SyncMode.FULL_REFRESH))
+        AirbyteStream(ANOTHER_STREAM_NAME, emptyObject(), listOf(SyncMode.FULL_REFRESH))
           .withNamespace(ANOTHER_STREAM_NAMESPACE),
         SyncMode.FULL_REFRESH,
         DestinationSyncMode.APPEND,
       )
     private val INCREMENTAL_CATALOG =
       ConfiguredAirbyteCatalog()
-        .withStreams(List.of<ConfiguredAirbyteStream>(INCREMENTAL_STREAM))
+        .withStreams(listOf(INCREMENTAL_STREAM))
     private val SINGLE_STREAM_ADD_COLUMN_DIFF =
       CatalogDiff(
-        List.of<StreamTransform>(addFieldForStream(STREAM_DESCRIPTOR)),
+        listOf(addFieldForStream(STREAM_DESCRIPTOR)),
       )
     private val TWO_STREAMS_ADD_COLUMN_DIFF =
       CatalogDiff(
-        List.of<StreamTransform>(
+        listOf(
           addFieldForStream(STREAM_DESCRIPTOR),
           addFieldForStream(ANOTHER_STREAM_DESCRIPTOR),
         ),
@@ -121,25 +119,19 @@ internal class BackfillHelperTest {
     private val STATE: State? =
       State().withState(
         deserialize(
-          String.format(
-            """
-            [{
-              "type":"STREAM",
-              "stream":{
-                "stream_descriptor":{
-                  "name":"%s",
-                  "namespace":"%s"
-                },
-                "stream_state":{"cursor":"6","stream_name":"%s","cursor_field":["id"],"stream_namespace":"%s","cursor_record_count":1}
-              }
-            }]
-            
-            """.trimIndent(),
-            STREAM_NAME,
-            STREAM_NAMESPACE,
-            STREAM_NAME,
-            STREAM_NAMESPACE,
-          ),
+          """
+          [{
+            "type":"STREAM",
+            "stream":{
+              "stream_descriptor":{
+                "name":"$STREAM_NAME",
+                "namespace":"$STREAM_NAMESPACE"
+              },
+              "stream_state":{"cursor":"6","stream_name":"$STREAM_NAME","cursor_field":["id"],"stream_namespace":"$STREAM_NAMESPACE","cursor_record_count":1}
+            }
+          }]
+          
+          """.trimIndent(),
         ),
       )
 
@@ -148,8 +140,8 @@ internal class BackfillHelperTest {
         StreamTransform.TransformType.UPDATE_STREAM,
         streamDescriptor,
         StreamTransformUpdateStream(
-          List.of<FieldTransform>(FieldTransform(FieldTransform.TransformType.ADD_FIELD, mutableListOf<String>(), false, null, null, null)),
-          mutableListOf<StreamAttributeTransform>(),
+          listOf(FieldTransform(FieldTransform.TransformType.ADD_FIELD, mutableListOf(), false, null, null, null)),
+          mutableListOf(),
         ),
       )
   }

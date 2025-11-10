@@ -58,7 +58,6 @@ import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncStats
-import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -69,11 +68,8 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import java.nio.file.Path
-import java.util.List
 import java.util.Optional
 import java.util.UUID
-import java.util.stream.Collectors
-import java.util.stream.Stream
 
 internal class JobConverterTest {
   private lateinit var jobConverter: JobConverter
@@ -167,7 +163,7 @@ internal class JobConverterTest {
           .updatedAt(CREATED_AT)
           .startedAt(CREATED_AT),
       ).attempts(
-        List.of<@Valid AttemptInfoRead?>(
+        listOf(
           AttemptInfoRead()
             .attempt(
               AttemptRead()
@@ -182,7 +178,7 @@ internal class JobConverterTest {
                     .stateMessagesEmitted(stateMessagesEmitted)
                     .recordsCommitted(recordsCommitted),
                 ).streamStats(
-                  List.of<@Valid AttemptStreamStats?>(
+                  listOf(
                     AttemptStreamStats()
                       .streamName(streamName)
                       .stats(
@@ -199,7 +195,7 @@ internal class JobConverterTest {
                 .failureSummary(
                   AttemptFailureSummary()
                     .failures(
-                      List.of<@Valid io.airbyte.api.model.generated.FailureReason?>(
+                      listOf(
                         io.airbyte.api.model.generated
                           .FailureReason()
                           .failureOrigin(FailureOrigin.SOURCE)
@@ -234,15 +230,13 @@ internal class JobConverterTest {
     JobWithAttemptsRead()
       .job(jobInfoUnstructuredLogs.getJob())
       .attempts(
-        jobInfoUnstructuredLogs.getAttempts().stream().map<AttemptRead?> { obj: AttemptInfoRead? -> obj!!.getAttempt() }.collect(
-          Collectors.toList(),
-        ),
+        jobInfoUnstructuredLogs.attempts.map { obj: AttemptInfoRead? -> obj!!.attempt },
       )
 
   private val failureSummary: io.airbyte.config.AttemptFailureSummary? =
     io.airbyte.config
       .AttemptFailureSummary()
-      .withFailures(List.of<FailureReason?>(FAILURE_REASON))
+      .withFailures(listOf(FAILURE_REASON))
       .withPartialSuccess(partialSuccess)
 
   @Test
@@ -271,8 +265,8 @@ internal class JobConverterTest {
 
     @BeforeEach
     fun setUp() {
-      logClientManager = Mockito.mock<LogClientManager>(LogClientManager::class.java)
-      logUtils = Mockito.mock<LogUtils>(LogUtils::class.java)
+      logClientManager = Mockito.mock(LogClientManager::class.java)
+      logUtils = Mockito.mock(LogUtils::class.java)
       jobConverter = JobConverter(logClientManager, logUtils)
       val attempt =
         Attempt(
@@ -307,13 +301,13 @@ internal class JobConverterTest {
     fun testGetJobInfoRead() {
       Mockito
         .`when`(logClientManager.getLogs(ArgumentMatchers.any<Path?>()))
-        .thenReturn(LogEvents(mutableListOf<LogEvent>(), "1"))
+        .thenReturn(LogEvents(mutableListOf(), "1"))
       Assertions.assertEquals(jobInfoUnstructuredLogs, jobConverter.getJobInfoRead(job!!))
     }
 
     @Test
     fun testGetJobInfoLightRead() {
-      val expected = JobInfoLightRead().job(jobInfoUnstructuredLogs.getJob())
+      val expected = JobInfoLightRead().job(jobInfoUnstructuredLogs.job)
       Assertions.assertEquals(expected, jobConverter.getJobInfoLightRead(job!!))
     }
 
@@ -337,22 +331,22 @@ internal class JobConverterTest {
         LogEvents(listOf(LogEvent(System.currentTimeMillis(), "message", "INFO", LogSource.PLATFORM, null, null)), logEventVersion),
       )
       val jobInfoRead = jobConverter.getJobInfoRead(job!!)
-      Assertions.assertEquals(LogFormatType.STRUCTURED, jobInfoRead.getAttempts().first().getLogType())
+      Assertions.assertEquals(LogFormatType.STRUCTURED, jobInfoRead.attempts.first().logType)
       Assertions.assertEquals(
         logEventVersion,
         jobInfoRead
-          .getAttempts()
+          .attempts
           .first()
-          .getLogs()
-          .getVersion(),
+          .logs
+          .version,
       )
       Assertions.assertEquals(
         1,
         jobInfoRead
-          .getAttempts()
+          .attempts
           .first()
-          .getLogs()
-          .getEvents()
+          .logs
+          .events
           .size,
       )
     }
@@ -379,7 +373,7 @@ internal class JobConverterTest {
           ConfigType.RESET_CONNECTION,
           jobConfigId,
           resetConfig,
-          mutableListOf<Attempt>(),
+          mutableListOf(),
           JobStatus.SUCCEEDED,
           CREATED_AT,
           CREATED_AT,
@@ -398,7 +392,7 @@ internal class JobConverterTest {
               .name(ACCOUNTS),
           ),
         )
-      Assertions.assertEquals(expectedResetConfig, jobConverter.getJobInfoRead(resetJob).getJob().getResetConfig())
+      Assertions.assertEquals(expectedResetConfig, jobConverter.getJobInfoRead(resetJob).job.resetConfig)
     }
 
     @Test
@@ -413,7 +407,7 @@ internal class JobConverterTest {
           ConfigType.RESET_CONNECTION,
           jobConfigId,
           resetConfig,
-          mutableListOf<Attempt>(),
+          mutableListOf(),
           JobStatus.SUCCEEDED,
           CREATED_AT,
           CREATED_AT,
@@ -421,7 +415,7 @@ internal class JobConverterTest {
           true,
         )
 
-      Assertions.assertNull(jobConverter.getJobInfoRead(resetJob).getJob().getResetConfig())
+      Assertions.assertNull(jobConverter.getJobInfoRead(resetJob).job.resetConfig)
     }
   }
 
@@ -443,7 +437,7 @@ internal class JobConverterTest {
         .succeeded(jobSucceeded)
         .connectorConfigurationUpdated(connectorConfigUpdated)
         .logType(LogFormatType.FORMATTED)
-        .logs(AttemptInfoReadLogs().logLines(ArrayList<String?>()))
+        .logs(AttemptInfoReadLogs().logLines(emptyList()))
         .failureReason(
           io.airbyte.api.model.generated
             .FailureReason()
@@ -456,8 +450,8 @@ internal class JobConverterTest {
 
     @BeforeEach
     fun setUp() {
-      logClientManager = Mockito.mock<LogClientManager>(LogClientManager::class.java)
-      jobConverter = JobConverter(logClientManager, Mockito.mock<LogUtils?>())
+      logClientManager = Mockito.mock(LogClientManager::class.java)
+      jobConverter = JobConverter(logClientManager, Mockito.mock())
       metadata =
         SynchronousJobMetadata(
           jobId,
@@ -476,7 +470,7 @@ internal class JobConverterTest {
     fun testSynchronousJobRead() {
       Mockito
         .`when`(logClientManager.getLogs(ArgumentMatchers.any<Path?>()))
-        .thenReturn(LogEvents(mutableListOf<LogEvent>(), "1"))
+        .thenReturn(LogEvents(mutableListOf(), "1"))
       Assertions.assertEquals(synchronousJobInfoUnstructuredLogs, jobConverter.getSynchronousJobRead(metadata!!))
     }
   }
@@ -498,8 +492,8 @@ internal class JobConverterTest {
         .withTimestamp(FAILURE_TIMESTAMP)
 
     @JvmStatic
-    private fun getExtractRefreshScenarios(): Stream<Arguments> =
-      Stream.of<Arguments>(
+    private fun getExtractRefreshScenarios(): List<Arguments> =
+      listOf(
         Arguments.of(
           Job(
             1,
@@ -538,7 +532,7 @@ internal class JobConverterTest {
             JobConfig()
               .withRefresh(
                 RefreshConfig().withStreamsToRefresh(
-                  List.of<RefreshStream?>(
+                  listOf(
                     RefreshStream().withStreamDescriptor(
                       StreamDescriptor().withName("test"),
                     ),
@@ -570,7 +564,7 @@ internal class JobConverterTest {
             JobConfig()
               .withRefresh(
                 RefreshConfig().withStreamsToRefresh(
-                  List.of<RefreshStream?>(RefreshStream().withStreamDescriptor(null)),
+                  listOf(RefreshStream().withStreamDescriptor(null)),
                 ),
               ),
             mutableListOf<Attempt>(),

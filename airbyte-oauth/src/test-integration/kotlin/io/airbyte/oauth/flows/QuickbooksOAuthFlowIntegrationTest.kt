@@ -21,7 +21,6 @@ import org.mockito.Mockito
 import java.net.http.HttpClient
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Collections
 import java.util.Optional
 import java.util.UUID
 
@@ -92,16 +91,15 @@ class QuickbooksOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
 
     log.info { "Response from completing OAuth Flow is: $params" }
     assertTrue(params.containsKey("credentials"))
-    val credentials =
-      Collections.unmodifiableMap(params["credentials"] as Map<String, Any>?)
-    assertTrue(credentials.containsKey(REFRESH_TOKEN_KEY))
-    assertTrue(credentials[REFRESH_TOKEN_KEY].toString().isNotEmpty())
-    assertTrue(credentials.containsKey("access_token"))
-    assertTrue(credentials["access_token"].toString().isNotEmpty())
-    assertTrue(credentials.containsKey("token_expiry_date"))
-    assertTrue(credentials["token_expiry_date"].toString().isNotEmpty())
-    assertTrue(credentials.containsKey("realm_id"))
-    assertTrue(credentials["realm_id"].toString().isNotEmpty())
+    val credentials = params["credentials"] as Map<String, Any>?
+    assertTrue(credentials?.containsKey(REFRESH_TOKEN_KEY) ?: false)
+    assertTrue(credentials?.get(REFRESH_TOKEN_KEY)?.toString()?.isNotEmpty() ?: false)
+    assertTrue(credentials?.containsKey("access_token") ?: false)
+    assertTrue(credentials?.get("access_token")?.toString()?.isNotEmpty() ?: false)
+    assertTrue(credentials?.containsKey("token_expiry_date") ?: false)
+    assertTrue(credentials?.get("token_expiry_date").toString().isNotEmpty())
+    assertTrue(credentials?.containsKey("realm_id") ?: false)
+    assertTrue(credentials?.get("realm_id").toString().isNotEmpty())
   }
 
   companion object {

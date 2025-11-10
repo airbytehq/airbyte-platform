@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -81,7 +80,7 @@ internal class ActorDefinitionVersionResolverTest {
 
     val optResult: Optional<ActorDefinitionVersion> =
       actorDefinitionVersionResolver.resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)
-    Assertions.assertTrue(optResult.isPresent())
+    Assertions.assertTrue(optResult.isPresent)
     Assertions.assertEquals(persistedAdv, optResult.get())
 
     Mockito.verify(actorDefinitionService).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
@@ -112,7 +111,7 @@ internal class ActorDefinitionVersionResolverTest {
     Assertions.assertTrue(
       actorDefinitionVersionResolver
         .resolveVersionForTag(ACTOR_DEFINITION_ID, ActorType.SOURCE, DOCKER_REPOSITORY, DOCKER_IMAGE_TAG)
-        .isEmpty(),
+        .isEmpty,
     )
 
     Mockito.verify(actorDefinitionService).getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
@@ -131,9 +130,8 @@ internal class ActorDefinitionVersionResolverTest {
         .withProtocolVersion("0.2.0")
         .withConnectionSpecification(
           jsonNode(
-            Map.of(
-              "key",
-              "value",
+            mapOf(
+              "key" to "value",
             ),
           ),
         )
@@ -146,7 +144,7 @@ internal class ActorDefinitionVersionResolverTest {
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSpec(SPEC)
-        .withProtocolVersion(SPEC.getProtocolVersion())
+        .withProtocolVersion(SPEC.protocolVersion)
         .withDocumentationUrl(DOCS_URL)
         .withReleaseStage(ReleaseStage.BETA)
         .withSuggestedStreams(SUGGESTED_STREAMS)
@@ -155,13 +153,13 @@ internal class ActorDefinitionVersionResolverTest {
     private val REGISTRY_DEF: ConnectorRegistrySourceDefinition =
       ConnectorRegistrySourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
-        .withDockerRepository(ACTOR_DEFINITION_VERSION.getDockerRepository())
-        .withDockerImageTag(ACTOR_DEFINITION_VERSION.getDockerImageTag())
-        .withSpec(ACTOR_DEFINITION_VERSION.getSpec())
-        .withProtocolVersion(ACTOR_DEFINITION_VERSION.getProtocolVersion())
-        .withDocumentationUrl(ACTOR_DEFINITION_VERSION.getDocumentationUrl())
-        .withReleaseStage(ACTOR_DEFINITION_VERSION.getReleaseStage())
-        .withSuggestedStreams(ACTOR_DEFINITION_VERSION.getSuggestedStreams())
-        .withAllowedHosts(ACTOR_DEFINITION_VERSION.getAllowedHosts())
+        .withDockerRepository(ACTOR_DEFINITION_VERSION.dockerRepository)
+        .withDockerImageTag(ACTOR_DEFINITION_VERSION.dockerImageTag)
+        .withSpec(ACTOR_DEFINITION_VERSION.spec)
+        .withProtocolVersion(ACTOR_DEFINITION_VERSION.protocolVersion)
+        .withDocumentationUrl(ACTOR_DEFINITION_VERSION.documentationUrl)
+        .withReleaseStage(ACTOR_DEFINITION_VERSION.releaseStage)
+        .withSuggestedStreams(ACTOR_DEFINITION_VERSION.suggestedStreams)
+        .withAllowedHosts(ACTOR_DEFINITION_VERSION.allowedHosts)
   }
 }

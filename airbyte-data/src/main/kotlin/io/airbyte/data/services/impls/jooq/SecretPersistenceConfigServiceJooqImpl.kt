@@ -22,7 +22,6 @@ import jakarta.inject.Singleton
 import org.jooq.DSLContext
 import org.jooq.Record
 import org.jooq.impl.DSL
-import java.util.List
 import java.util.Optional
 import java.util.UUID
 
@@ -77,7 +76,7 @@ class SecretPersistenceConfigServiceJooqImpl(
         .withScopeType(secretPersistenceCoordinate.get().scopeType)
         .withConfiguration(Jsons.deserializeToStringMap(configuration))
     }
-    throw ConfigNotFoundException(ConfigNotFoundType.SECRET_PERSISTENCE_CONFIG, List.of(scope, scopeId).toString())
+    throw ConfigNotFoundException(ConfigNotFoundType.SECRET_PERSISTENCE_CONFIG, listOf(scope, scopeId).toString())
   }
 
   override fun createOrUpdate(

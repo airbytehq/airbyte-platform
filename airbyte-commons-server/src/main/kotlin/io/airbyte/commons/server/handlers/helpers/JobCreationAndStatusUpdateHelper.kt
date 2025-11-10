@@ -41,7 +41,6 @@ import java.util.Locale
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
-import kotlin.jvm.optionals.getOrNull
 
 /**
  * Helper class to handle and track job creation and status updates.
@@ -209,7 +208,7 @@ class JobCreationAndStatusUpdateHelper(
       additionalAttributes.add(
         MetricAttribute(
           MetricTags.FAILURE_ORIGIN,
-          o!!,
+          o,
         ),
       )
     }
@@ -217,7 +216,7 @@ class JobCreationAndStatusUpdateHelper(
       additionalAttributes.add(
         MetricAttribute(
           MetricTags.FAILURE_TYPE,
-          t!!,
+          t,
         ),
       )
     }
@@ -228,7 +227,7 @@ class JobCreationAndStatusUpdateHelper(
       additionalAttributes.add(
         MetricAttribute(
           MetricTags.EXTERNAL_MESSAGE,
-          e!!,
+          e,
         ),
       )
     }
@@ -236,7 +235,7 @@ class JobCreationAndStatusUpdateHelper(
       additionalAttributes.add(
         MetricAttribute(
           MetricTags.INTERNAL_MESSAGE,
-          i!!,
+          i,
         ),
       )
     }
@@ -255,7 +254,7 @@ class JobCreationAndStatusUpdateHelper(
       return s
     }
 
-    return s.substring(0, length - 3) + "..."
+    return s.take(length - 3) + "..."
   }
 
   /**
@@ -461,21 +460,17 @@ class JobCreationAndStatusUpdateHelper(
     if (failureSummary != null) {
       if (CollectionUtils.isNotEmpty(failureSummary.failures)) {
         addTagsToTrace(
-          java.util.Map.of<String?, String>(
-            FAILURE_TYPES_KEY,
-            failureSummary.failures.joinToString(",") { getFailureType(it.failureType) },
-            FAILURE_ORIGINS_KEY,
-            failureSummary.failures.joinToString(",") { it.failureOrigin.name },
+          mapOf(
+            FAILURE_TYPES_KEY to failureSummary.failures.joinToString(",") { getFailureType(it.failureType) },
+            FAILURE_ORIGINS_KEY to failureSummary.failures.joinToString(",") { it.failureOrigin.name },
           ),
         )
       }
     } else {
       addTagsToTrace(
-        java.util.Map.of<String?, String?>(
-          FAILURE_TYPES_KEY,
-          getFailureType(null),
-          FAILURE_ORIGINS_KEY,
-          FailureReason.FailureOrigin.UNKNOWN.value(),
+        mapOf(
+          FAILURE_TYPES_KEY to getFailureType(null),
+          FAILURE_ORIGINS_KEY to FailureReason.FailureOrigin.UNKNOWN.value(),
         ),
       )
     }
@@ -545,29 +540,23 @@ class JobCreationAndStatusUpdateHelper(
 
     private const val MAX_ATTEMPTS = 3
     private val RELEASE_STAGE_ORDER: Map<ReleaseStage, Int> =
-      java.util.Map.of(
-        ReleaseStage.CUSTOM,
-        1,
-        ReleaseStage.ALPHA,
-        2,
-        ReleaseStage.BETA,
-        3,
-        ReleaseStage.GENERALLY_AVAILABLE,
-        4,
+      mapOf(
+        ReleaseStage.CUSTOM to 1,
+        ReleaseStage.ALPHA to 2,
+        ReleaseStage.BETA to 3,
+        ReleaseStage.GENERALLY_AVAILABLE to 4,
       )
     private val RELEASE_STAGE_COMPARATOR: Comparator<ReleaseStage> = Comparator.comparingInt { key: ReleaseStage -> RELEASE_STAGE_ORDER[key]!! }
 
     @JvmField
-    val SYNC_CONFIG_SET: Set<ConfigType> = java.util.Set.of(ConfigType.SYNC, ConfigType.REFRESH)
+    val SYNC_CONFIG_SET: Set<ConfigType> = setOf(ConfigType.SYNC, ConfigType.REFRESH)
 
     @JvmStatic
     @InternalForTesting
     fun orderByReleaseStageAsc(releaseStages: List<ReleaseStage>): List<ReleaseStage> =
       releaseStages
-        .stream()
         .filter { stage: ReleaseStage? -> stage != null }
-        .sorted(RELEASE_STAGE_COMPARATOR)
-        .toList()
+        .sortedWith(RELEASE_STAGE_COMPARATOR)
 
     /**
      * Extract the attempt number from an attempt. If the number is anonymous (not 0,1,2,3) for some
@@ -594,14 +583,12 @@ class JobCreationAndStatusUpdateHelper(
     private fun <T> getOrNull(
       list: List<T>,
       index: Int,
-    ): T? {
-      requireNotNull(list)
-      return if (list.size > index) {
+    ): T? =
+      if (list.size > index) {
         list[index]
       } else {
         null
       }
-    }
 
     private fun jobAndAttemptMetadata(
       jobId: Long,

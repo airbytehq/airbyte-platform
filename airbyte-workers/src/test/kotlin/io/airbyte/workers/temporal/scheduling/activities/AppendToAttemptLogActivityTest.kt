@@ -16,7 +16,6 @@ import org.mockito.Mock
 import org.mockito.Mockito
 import org.slf4j.Logger
 import java.nio.file.Path
-import java.util.stream.Stream
 
 internal class AppendToAttemptLogActivityTest {
   @Mock
@@ -109,8 +108,8 @@ internal class AppendToAttemptLogActivityTest {
 
   companion object {
     @JvmStatic
-    fun pathEnvJobAttemptMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    fun pathEnvJobAttemptMatrix() =
+      listOf<Arguments?>(
         Arguments.of(Fixtures.path1, 91L, 2),
         Arguments.of(Fixtures.path1, 90L, 1),
         Arguments.of(Fixtures.path2, 91L, 2),
@@ -122,8 +121,8 @@ internal class AppendToAttemptLogActivityTest {
       )
 
     @JvmStatic
-    fun nullPathEnvJobAttemptMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    fun nullPathEnvJobAttemptMatrix() =
+      listOf<Arguments?>(
         Arguments.of(Fixtures.path1, null, 2),
         Arguments.of(Fixtures.path1, 90L, null),
         Arguments.of(Fixtures.path2, 91L, null),
@@ -135,8 +134,8 @@ internal class AppendToAttemptLogActivityTest {
       )
 
     @JvmStatic
-    fun msgMatrix(): Stream<Arguments?> =
-      Stream.of<Arguments?>(
+    fun msgMatrix() =
+      listOf<Arguments?>(
         Arguments.of("Something is borked."),
         Arguments.of("You messed up the thing."),
         Arguments.of("Total chaos!"),

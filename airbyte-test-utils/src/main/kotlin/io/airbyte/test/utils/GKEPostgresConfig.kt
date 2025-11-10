@@ -58,7 +58,7 @@ internal object GKEPostgresConfig {
       password,
       DatabaseDriver.POSTGRESQL.driverClassName,
       "jdbc:postgresql://$cloudSqlInstanceIp:5432/$databaseName",
-      java.util.Map.of(PGProperty.CONNECT_TIMEOUT.getName(), "60"),
+      mapOf(PGProperty.CONNECT_TIMEOUT.getName() to "60"),
     )
 
   @JvmStatic

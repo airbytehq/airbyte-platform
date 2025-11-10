@@ -38,8 +38,6 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.temporal.ChronoUnit
-import java.util.Map
-import java.util.UUID
 
 /**
  * Webhook operation activity temporal impl.
@@ -57,10 +55,10 @@ class WebhookOperationActivityImpl(
     metricClient.count(OssMetricsRegistry.ACTIVITY_WEBHOOK_OPERATION)
 
     LOGGER.debug("Webhook operation input: {}", input)
-    LOGGER.debug("Found webhook config: {}", input.getWorkspaceWebhookConfigs())
+    LOGGER.debug("Found webhook config: {}", input.workspaceWebhookConfigs)
 
     val fullWebhookConfigJson: JsonNode?
-    val organizationId = input.getConnectionContext().getOrganizationId()
+    val organizationId = input.connectionContext.organizationId
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))) {
       try {
         val secretPersistenceConfig =
@@ -70,9 +68,9 @@ class WebhookOperationActivityImpl(
         val runtimeSecretPersistence =
           RuntimeSecretPersistence(secretPersistenceConfig.toModel(), metricClient)
         fullWebhookConfigJson =
-          secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getWorkspaceWebhookConfigs(), runtimeSecretPersistence)
+          secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.workspaceWebhookConfigs, runtimeSecretPersistence)
       } catch (e: IOException) {
-        LOGGER.error("Unable to retrieve hydrated webhook configuration for webhook {}.", input.getWebhookConfigId(), e)
+        LOGGER.error("Unable to retrieve hydrated webhook configuration for webhook {}.", input.webhookConfigId, e)
         return false
       }
     } else {
@@ -83,18 +81,18 @@ class WebhookOperationActivityImpl(
       webhookConfigs
         .getWebhookConfigs()
         .stream()
-        .filter { config: WebhookConfig? -> config!!.getId() == input.getWebhookConfigId() }
+        .filter { config: WebhookConfig? -> config!!.id == input.webhookConfigId }
         .findFirst()
 
     if (webhookConfig.isPresent()) {
-      ApmTraceUtils.addTagsToTrace(Map.of<String?, UUID?>(WEBHOOK_CONFIG_ID_KEY, input.getWebhookConfigId()))
-      LOGGER.info("Invoking webhook operation \"{}\" using URL \"{}\"...", webhookConfig.get().getName(), input.getExecutionUrl())
+      ApmTraceUtils.addTagsToTrace(mapOf(WEBHOOK_CONFIG_ID_KEY to input.webhookConfigId))
+      LOGGER.info("Invoking webhook operation \"{}\" using URL \"{}\"...", webhookConfig.get().name, input.executionUrl)
       val requestBuilder = buildRequest(input, webhookConfig.get())
       return Failsafe
         .with<Any?, RetryPolicy<Any?>?>(WEBHOOK_RETRY_POLICY)
-        .get<Boolean>(CheckedSupplier { sendWebhook(requestBuilder, webhookConfig.get()) })
+        .get(CheckedSupplier { sendWebhook(requestBuilder, webhookConfig.get()) })
     } else {
-      LOGGER.error("Webhook configuration for webhook {} not found.", input.getWebhookConfigId())
+      LOGGER.error("Webhook configuration for webhook {} not found.", input.webhookConfigId)
       return false
     }
   }
@@ -126,9 +124,9 @@ class WebhookOperationActivityImpl(
   ): Boolean {
     val response = this.httpClient.send<String?>(requestBuilder.build(), HttpResponse.BodyHandlers.ofString())
     if (response != null) {
-      val result = response.statusCode() >= HttpStatus.OK.getCode() && response.statusCode() <= HttpStatus.MULTIPLE_CHOICES.getCode()
+      val result = response.statusCode() >= HttpStatus.OK.getCode() && response.statusCode() <= HttpStatus.MULTIPLE_CHOICES.code
       if (result) {
-        LOGGER.info("Webhook operation \"{}\" ({}) successful.", webhookConfig.getName(), webhookConfig.getId())
+        LOGGER.info("Webhook operation \"{}\" ({}) successful.", webhookConfig.name, webhookConfig.id)
       } else {
         LOGGER.info(
           "Webhook operation \"{}\" ({}) response: {} {}",

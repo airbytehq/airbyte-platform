@@ -34,7 +34,6 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.AllowedHosts
 import io.airbyte.config.ConnectorRegistryEntryMetrics
 import io.airbyte.config.ConnectorRegistrySourceDefinition
-import io.airbyte.config.MapperConfig
 import io.airbyte.config.ReleaseStage
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.ScopeType
@@ -59,7 +58,6 @@ import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
-import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import jakarta.validation.Valid
 import org.jooq.JSONB
@@ -78,7 +76,6 @@ import org.mockito.kotlin.whenever
 import java.net.URI
 import java.time.LocalDate
 import java.util.Date
-import java.util.Map
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -104,7 +101,7 @@ internal class SourceDefinitionsHandlerTest {
   private lateinit var sourceService: SourceService
   private lateinit var workspaceService: WorkspaceService
 
-  private val apiPojoConverters = ApiPojoConverters(CatalogConverter(FieldGenerator(), mutableListOf<Mapper<out MapperConfig>>()))
+  private val apiPojoConverters = ApiPojoConverters(CatalogConverter(FieldGenerator(), mutableListOf()))
 
   @BeforeEach
   fun setUp() {
@@ -345,9 +342,9 @@ internal class SourceDefinitionsHandlerTest {
       ),
     ).thenReturn(false)
     whenever(sourceService.listPublicSourceDefinitions(false))
-      .thenReturn(listOf<StandardSourceDefinition>(sourceDefinition))
+      .thenReturn(listOf(sourceDefinition))
     whenever(sourceService.listGrantedSourceDefinitions(workspaceId, false))
-      .thenReturn(listOf<StandardSourceDefinition>(sourceDefinition2))
+      .thenReturn(listOf(sourceDefinition2))
     whenever(
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
@@ -357,11 +354,9 @@ internal class SourceDefinitionsHandlerTest {
         workspaceId,
       ),
     ).thenReturn(
-      Map.of<UUID, ActorDefinitionVersion?>(
-        sourceDefinitionVersion.actorDefinitionId,
-        sourceDefinitionVersion,
-        sourceDefinitionVersion2.actorDefinitionId,
-        sourceDefinitionVersion2,
+      mapOf(
+        sourceDefinitionVersion.actorDefinitionId to sourceDefinitionVersion,
+        sourceDefinitionVersion2.actorDefinitionId to sourceDefinitionVersion2,
       ),
     )
     whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(
@@ -457,9 +452,9 @@ internal class SourceDefinitionsHandlerTest {
     ).thenReturn(true)
 
     whenever(sourceService.listPublicSourceDefinitions(false))
-      .thenReturn(listOf<StandardSourceDefinition>(hiddenSourceDefinition, sourceDefinition))
+      .thenReturn(listOf(hiddenSourceDefinition, sourceDefinition))
     whenever(sourceService.listGrantedSourceDefinitions(workspaceId, false))
-      .thenReturn(listOf<StandardSourceDefinition>(sourceDefinition2))
+      .thenReturn(listOf(sourceDefinition2))
     whenever(
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
@@ -469,11 +464,9 @@ internal class SourceDefinitionsHandlerTest {
         workspaceId,
       ),
     ).thenReturn(
-      Map.of<UUID, ActorDefinitionVersion?>(
-        sourceDefinitionVersion.actorDefinitionId,
-        sourceDefinitionVersion,
-        sourceDefinitionVersion2.actorDefinitionId,
-        sourceDefinitionVersion2,
+      mapOf(
+        sourceDefinitionVersion.actorDefinitionId to sourceDefinitionVersion,
+        sourceDefinitionVersion2.actorDefinitionId to sourceDefinitionVersion2,
       ),
     )
     whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(
@@ -508,9 +501,7 @@ internal class SourceDefinitionsHandlerTest {
     Assertions.assertTrue(
       expectedIds.containsAll(
         actualSourceDefinitionReadList.sourceDefinitions
-          .stream()
-          .map<UUID?> { obj: SourceDefinitionRead? -> obj!!.sourceDefinitionId }
-          .toList(),
+          .map { obj: SourceDefinitionRead? -> obj!!.sourceDefinitionId },
       ),
     )
   }
@@ -529,9 +520,9 @@ internal class SourceDefinitionsHandlerTest {
       ),
     ).thenReturn(false)
     whenever(sourceService.listPublicSourceDefinitions(false))
-      .thenReturn(listOf<StandardSourceDefinition>(unentitledSourceDefinition, sourceDefinition))
+      .thenReturn(listOf(unentitledSourceDefinition, sourceDefinition))
     whenever(sourceService.listGrantedSourceDefinitions(workspaceId, false))
-      .thenReturn(listOf<StandardSourceDefinition>(sourceDefinition2))
+      .thenReturn(listOf(sourceDefinition2))
     whenever(
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
@@ -541,11 +532,9 @@ internal class SourceDefinitionsHandlerTest {
         workspaceId,
       ),
     ).thenReturn(
-      Map.of<UUID, ActorDefinitionVersion?>(
-        sourceDefinitionVersion.actorDefinitionId,
-        sourceDefinitionVersion,
-        sourceDefinitionVersion2.actorDefinitionId,
-        sourceDefinitionVersion2,
+      mapOf(
+        sourceDefinitionVersion.actorDefinitionId to sourceDefinitionVersion,
+        sourceDefinitionVersion2.actorDefinitionId to sourceDefinitionVersion2,
       ),
     )
     whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(
@@ -581,9 +570,7 @@ internal class SourceDefinitionsHandlerTest {
     Assertions.assertTrue(
       expectedIds.containsAll(
         actualSourceDefinitionReadList.sourceDefinitions
-          .stream()
-          .map<UUID?> { obj: SourceDefinitionRead? -> obj!!.sourceDefinitionId }
-          .toList(),
+          .map { obj: SourceDefinitionRead? -> obj!!.sourceDefinitionId },
       ),
     )
   }
@@ -600,10 +587,10 @@ internal class SourceDefinitionsHandlerTest {
         false,
       ),
     ).thenReturn(
-      listOf<MutableMap.MutableEntry<StandardSourceDefinition, Boolean>>(
-        Map.entry<StandardSourceDefinition, Boolean>(sourceDefinition, false),
-        Map.entry<StandardSourceDefinition, Boolean>(sourceDefinition2, true),
-      ),
+      mapOf(
+        sourceDefinition to false,
+        sourceDefinition2 to true,
+      ).entries.toList(),
     )
     whenever(
       actorDefinitionService.getActorDefinitionVersions(
@@ -1136,7 +1123,7 @@ internal class SourceDefinitionsHandlerTest {
     ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
 
     whenever<UUID?>(uuidSupplier.get()).thenReturn(UUID.randomUUID())
-    Assertions.assertThrows<UnsupportedProtocolVersionException?>(
+    Assertions.assertThrows(
       UnsupportedProtocolVersionException::class.java,
     ) { sourceDefinitionsHandler.createCustomSourceDefinition(customCreate) }
 
@@ -1319,7 +1306,7 @@ internal class SourceDefinitionsHandlerTest {
       ),
     ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
 
-    Assertions.assertThrows<UnsupportedProtocolVersionException?>(
+    Assertions.assertThrows(
       UnsupportedProtocolVersionException::class.java,
     ) {
       sourceDefinitionsHandler.updateSourceDefinition(
@@ -1375,7 +1362,7 @@ internal class SourceDefinitionsHandlerTest {
     val newDockerImageTag = "12.4.0"
     Assertions.assertNotEquals(newDockerImageTag, currentTag)
 
-    Assertions.assertThrows<BadRequestProblem?>(BadRequestProblem::class.java) {
+    Assertions.assertThrows(BadRequestProblem::class.java) {
       sourceDefinitionsHandler.updateSourceDefinition(
         SourceDefinitionUpdate()
           .sourceDefinitionId(this.sourceDefinition.sourceDefinitionId)
@@ -1560,7 +1547,7 @@ internal class SourceDefinitionsHandlerTest {
         .withResourceRequirements(ScopedResourceRequirements().withDefault(ResourceRequirements().withCpuRequest("2")))
         .withLanguage("python")
     whenever(remoteDefinitionsProvider.getSourceDefinitions()).thenReturn(
-      mutableListOf<ConnectorRegistrySourceDefinition>(
+      mutableListOf(
         registrySourceDefinition!!,
       ),
     )
@@ -1600,13 +1587,13 @@ internal class SourceDefinitionsHandlerTest {
           .withResourceRequirements(ScopedResourceRequirements().withDefault(ResourceRequirements().withCpuRequest("2")))
           .withLanguage("python")
       whenever(remoteDefinitionsProvider.getSourceDefinitions()).thenReturn(
-        mutableListOf<ConnectorRegistrySourceDefinition>(registrySourceDefinition!!),
+        mutableListOf(registrySourceDefinition!!),
       )
 
       val sourceDefinitionReadList = sourceDefinitionsHandler.listLatestSourceDefinitions().sourceDefinitions
       Assertions.assertEquals(1, sourceDefinitionReadList.size)
 
-      val sourceDefinitionRead = sourceDefinitionReadList.get(0)
+      val sourceDefinitionRead = sourceDefinitionReadList[0]
       val expectedRead =
         sourceDefinitionsHandler.buildSourceDefinitionRead(
           ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDefinition),
@@ -1640,9 +1627,9 @@ internal class SourceDefinitionsHandlerTest {
       ),
     ).thenReturn(false)
     whenever(sourceService.listPublicSourceDefinitions(false))
-      .thenReturn(listOf<StandardSourceDefinition>(sourceDefinition))
+      .thenReturn(listOf(sourceDefinition))
     whenever(sourceService.listGrantedSourceDefinitions(workspaceId, false))
-      .thenReturn(listOf<StandardSourceDefinition>(sourceDefinition2))
+      .thenReturn(listOf(sourceDefinition2))
     whenever(
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
@@ -1652,11 +1639,9 @@ internal class SourceDefinitionsHandlerTest {
         workspaceId,
       ),
     ).thenReturn(
-      Map.of<UUID, ActorDefinitionVersion?>(
-        sourceDefinitionVersion.actorDefinitionId,
-        sourceDefinitionVersion,
-        sourceDefinitionVersion2.actorDefinitionId,
-        sourceDefinitionVersion2,
+      mapOf(
+        sourceDefinitionVersion.actorDefinitionId to sourceDefinitionVersion,
+        sourceDefinitionVersion2.actorDefinitionId to sourceDefinitionVersion2,
       ),
     )
     whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(
@@ -1748,7 +1733,7 @@ internal class SourceDefinitionsHandlerTest {
         ),
         workspaceId,
       ),
-    ).thenReturn(Map.of<UUID, ActorDefinitionVersion?>(usedSourceDefinitionVersion.actorDefinitionId, usedSourceDefinitionVersion))
+    ).thenReturn(mapOf(usedSourceDefinitionVersion.actorDefinitionId to usedSourceDefinitionVersion))
 
     val actualSourceDefinitionReadList =
       sourceDefinitionsHandler
@@ -1759,9 +1744,7 @@ internal class SourceDefinitionsHandlerTest {
     Assertions.assertTrue(
       expectedIds.containsAll(
         actualSourceDefinitionReadList.sourceDefinitions
-          .stream()
-          .map<UUID?> { obj: SourceDefinitionRead? -> obj!!.sourceDefinitionId }
-          .toList(),
+          .map { obj: SourceDefinitionRead? -> obj!!.sourceDefinitionId },
       ),
     )
   }
@@ -1779,9 +1762,9 @@ internal class SourceDefinitionsHandlerTest {
       ),
     ).thenReturn(false)
     whenever(sourceService.listPublicSourceDefinitions(false))
-      .thenReturn(listOf<StandardSourceDefinition>(sourceDefinition))
+      .thenReturn(listOf(sourceDefinition))
     whenever(sourceService.listGrantedSourceDefinitions(workspaceId, false))
-      .thenReturn(listOf<StandardSourceDefinition>(sourceDefinition2))
+      .thenReturn(listOf(sourceDefinition2))
     whenever(
       actorDefinitionVersionHelper.getSourceVersions(
         listOf(
@@ -1791,11 +1774,9 @@ internal class SourceDefinitionsHandlerTest {
         workspaceId,
       ),
     ).thenReturn(
-      Map.of<UUID, ActorDefinitionVersion?>(
-        sourceDefinitionVersion.actorDefinitionId,
-        sourceDefinitionVersion,
-        sourceDefinitionVersion2.actorDefinitionId,
-        sourceDefinitionVersion2,
+      mapOf(
+        sourceDefinitionVersion.actorDefinitionId to sourceDefinitionVersion,
+        sourceDefinitionVersion2.actorDefinitionId to sourceDefinitionVersion2,
       ),
     )
     whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(
@@ -1821,9 +1802,7 @@ internal class SourceDefinitionsHandlerTest {
     Assertions.assertTrue(
       expectedIds.containsAll(
         actualSourceDefinitionReadList.sourceDefinitions
-          .stream()
-          .map<UUID?> { obj: SourceDefinitionRead? -> obj!!.sourceDefinitionId }
-          .toList(),
+          .map { obj: SourceDefinitionRead? -> obj!!.sourceDefinitionId },
       ),
     )
   }

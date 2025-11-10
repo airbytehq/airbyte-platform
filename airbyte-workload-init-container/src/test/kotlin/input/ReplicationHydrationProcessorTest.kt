@@ -38,7 +38,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
-import java.util.stream.Stream
 
 @ExtendWith(MockKExtension::class)
 internal class ReplicationHydrationProcessorTest {
@@ -165,8 +164,8 @@ internal class ReplicationHydrationProcessorTest {
   companion object {
     // Validates empty or null states serialize as "{}"
     @JvmStatic
-    private fun stateMatrix(): Stream<Arguments> =
-      Stream.of(
+    private fun stateMatrix() =
+      listOf(
         Arguments.of(State().withState(null), 0),
         Arguments.of(null, 0),
         Arguments.of(State().withState(Jsons.jsonNode("this is" to "nested for some reason")), 1),

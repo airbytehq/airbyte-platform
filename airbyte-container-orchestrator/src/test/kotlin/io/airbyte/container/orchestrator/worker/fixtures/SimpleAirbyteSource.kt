@@ -8,7 +8,6 @@ import io.airbyte.config.WorkerSourceConfig
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import java.nio.file.Path
-import java.util.Arrays
 import java.util.LinkedList
 import java.util.Optional
 import java.util.Queue
@@ -27,7 +26,7 @@ internal class SimpleAirbyteSource : AirbyteSource {
   fun setInfiniteSourceWithMessages(vararg messages: AirbyteMessage) {
     this.infiniteMessages.clear()
     this.messages.clear()
-    this.infiniteMessages.addAll(Arrays.stream(messages).toList())
+    this.infiniteMessages.addAll(messages)
   }
 
   /**
@@ -36,7 +35,7 @@ internal class SimpleAirbyteSource : AirbyteSource {
   fun setMessages(vararg messages: AirbyteMessage) {
     this.infiniteMessages.clear()
     this.messages.clear()
-    this.messages.addAll(Arrays.stream(messages).toList())
+    this.messages.addAll(messages)
   }
 
   override fun start(
