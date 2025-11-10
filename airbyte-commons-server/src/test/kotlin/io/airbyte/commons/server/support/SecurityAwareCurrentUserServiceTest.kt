@@ -18,7 +18,6 @@ import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito
 import java.io.IOException
 import java.util.Optional
@@ -52,31 +51,30 @@ internal class SecurityAwareCurrentUserServiceTest {
     // @RequestScope work on the SecurityAwareCurrentUserService
     ServerRequestContext.with(
       HttpRequest.GET<Any>("/"),
-      Runnable {
-        try {
-          val authUserId = "testUser"
-          val expectedUser = AuthenticatedUser().withAuthUserId(authUserId)
+    ) {
+      try {
+        val authUserId = "testUser"
+        val expectedUser = AuthenticatedUser().withAuthUserId(authUserId)
 
-          Mockito.`when`(securityService.username()).thenReturn(Optional.of(authUserId))
-          Mockito
-            .`when`(userPersistence.getUserByAuthId(authUserId))
-            .thenReturn(Optional.of(expectedUser))
+        Mockito.`when`(securityService.username()).thenReturn(Optional.of(authUserId))
+        Mockito
+          .`when`(userPersistence.getUserByAuthId(authUserId))
+          .thenReturn(Optional.of(expectedUser))
 
-          // First call - should fetch from userPersistence
-          val user1 = currentUserService.getCurrentUser()
-          Assertions.assertEquals(expectedUser, user1)
+        // First call - should fetch from userPersistence
+        val user1 = currentUserService.getCurrentUser()
+        Assertions.assertEquals(expectedUser, user1)
 
-          // Second call - should use cached user
-          val user2 = currentUserService.getCurrentUser()
-          Assertions.assertEquals(expectedUser, user2)
+        // Second call - should use cached user
+        val user2 = currentUserService.getCurrentUser()
+        Assertions.assertEquals(expectedUser, user2)
 
-          // Verify that getUserByAuthId is called only once
-          Mockito.verify(userPersistence, Mockito.times(1)).getUserByAuthId(authUserId)
-        } catch (e: IOException) {
-          Assertions.fail<Any>(e)
-        }
-      },
-    )
+        // Verify that getUserByAuthId is called only once
+        Mockito.verify(userPersistence, Mockito.times(1)).getUserByAuthId(authUserId)
+      } catch (e: IOException) {
+        Assertions.fail<Any>(e)
+      }
+    }
   }
 
   // todo (cgardens) fix in commons-server PR
@@ -85,40 +83,36 @@ internal class SecurityAwareCurrentUserServiceTest {
   fun testGetCurrentUserIdIfExistsReturnsCorrectId() {
     ServerRequestContext.with(
       HttpRequest.GET<Any>("/"),
-      Runnable {
-        try {
-          val userId = UUID.randomUUID()
-          val authUserId = "123e4567-e89b-12d3-a456-426614174000"
-          val expectedUser = AuthenticatedUser().withAuthUserId(authUserId).withUserId(userId)
+    ) {
+      try {
+        val userId = UUID.randomUUID()
+        val authUserId = "123e4567-e89b-12d3-a456-426614174000"
+        val expectedUser = AuthenticatedUser().withAuthUserId(authUserId).withUserId(userId)
 
-          Mockito.`when`(securityService.username()).thenReturn(Optional.of(authUserId))
-          Mockito
-            .`when`(userPersistence.getUserByAuthId(authUserId))
-            .thenReturn(Optional.of(expectedUser))
+        Mockito.`when`(securityService.username()).thenReturn(Optional.of(authUserId))
+        Mockito
+          .`when`(userPersistence.getUserByAuthId(authUserId))
+          .thenReturn(Optional.of(expectedUser))
 
-          val retrievedUserId: Optional<UUID> = currentUserService.getCurrentUserIdIfExists()
-          Assertions.assertTrue(retrievedUserId.isPresent())
-          Assertions.assertEquals(userId, retrievedUserId.get())
-        } catch (e: IOException) {
-          Assertions.fail<Any>(e)
-        }
-      },
-    )
+        val retrievedUserId: Optional<UUID> = currentUserService.getCurrentUserIdIfExists()
+        Assertions.assertTrue(retrievedUserId.isPresent)
+        Assertions.assertEquals(userId, retrievedUserId.get())
+      } catch (e: IOException) {
+        Assertions.fail<Any>(e)
+      }
+    }
   }
 
   @Test
   fun testGetCurrentUserIdIfExistsDoesNotThrowWhenNoUser() {
     ServerRequestContext.with(
       HttpRequest.GET<Any>("/"),
-      Runnable {
-        Assertions.assertDoesNotThrow(
-          Executable {
-            Mockito.`when`(securityService.username()).thenReturn(Optional.empty())
-            val userId: Optional<UUID> = currentUserService.getCurrentUserIdIfExists()
-            Assertions.assertTrue(userId.isEmpty())
-          },
-        )
-      },
-    )
+    ) {
+      Assertions.assertDoesNotThrow {
+        Mockito.`when`(securityService.username()).thenReturn(Optional.empty())
+        val userId: Optional<UUID> = currentUserService.getCurrentUserIdIfExists()
+        Assertions.assertTrue(userId.isEmpty)
+      }
+    }
   }
 }

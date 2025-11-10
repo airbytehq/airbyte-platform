@@ -36,28 +36,26 @@ class LimitedFatRecordSourceProcess : Process() {
       throw RuntimeException(e)
     }
 
-    Executors.newSingleThreadExecutor().submit(
-      Runnable {
-        try {
-          while (currRecs != TOTAL_RECORDS) {
-            val msg =
-              AirbyteMessageUtils.createRecordMessage(
-                "s1",
-                "data",
-                "This is a fairly long sentence to provide some bytes here. More bytes is better as it helps us measure performance." +
-                  "Random append to prevent dead code generation :",
-              )
-            os.write(MAPPER.writeValueAsString(msg).toByteArray(Charset.defaultCharset()))
-            os.write(System.lineSeparator().toByteArray(Charset.defaultCharset()))
-            currRecs++
-          }
-          os.flush()
-          os.close()
-        } catch (e: IOException) {
-          throw RuntimeException(e)
+    Executors.newSingleThreadExecutor().submit {
+      try {
+        while (currRecs != TOTAL_RECORDS) {
+          val msg =
+            AirbyteMessageUtils.createRecordMessage(
+              "s1",
+              "data",
+              "This is a fairly long sentence to provide some bytes here. More bytes is better as it helps us measure performance." +
+                "Random append to prevent dead code generation :",
+            )
+          os.write(MAPPER.writeValueAsString(msg).toByteArray(Charset.defaultCharset()))
+          os.write(System.lineSeparator().toByteArray(Charset.defaultCharset()))
+          currRecs++
         }
-      },
-    )
+        os.flush()
+        os.close()
+      } catch (e: IOException) {
+        throw RuntimeException(e)
+      }
+    }
 
     return `is`
   }

@@ -23,7 +23,6 @@ import io.temporal.workflow.WorkflowInterface
 import io.temporal.workflow.WorkflowMethod
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.slf4j.Logger
@@ -36,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier
 
 internal class TemporalUtilsTest {
+  @Suppress("UNCHECKED_CAST")
   @Test
   fun testWaitForTemporalServerAndLogThrowsException() {
     val airbyteTemporalConfig = AirbyteTemporalConfig(retention = 10)
@@ -46,9 +46,9 @@ internal class TemporalUtilsTest {
     val serviceSupplier = Mockito.mock(Supplier::class.java) as Supplier<WorkflowServiceStubs>
     val namespace = "default"
 
-    Mockito.`when`(namespaceInfo.isInitialized()).thenReturn(true)
-    Mockito.`when`(namespaceInfo.getName()).thenReturn(namespace)
-    Mockito.`when`(describeNamespaceResponse.getNamespaceInfo()).thenReturn(namespaceInfo)
+    Mockito.`when`(namespaceInfo.isInitialized).thenReturn(true)
+    Mockito.`when`(namespaceInfo.name).thenReturn(namespace)
+    Mockito.`when`(describeNamespaceResponse.namespaceInfo).thenReturn(namespaceInfo)
     Mockito
       .`when`(serviceSupplier.get())
       .thenAnswer { throw java.lang.RuntimeException() }
@@ -63,6 +63,7 @@ internal class TemporalUtilsTest {
     temporalUtils.getTemporalClientWhenConnected(Duration.ofMillis(10), Duration.ofSeconds(1), Duration.ofSeconds(0), serviceSupplier, namespace)
   }
 
+  @Suppress("UNCHECKED_CAST")
   @Test
   fun testWaitThatTimesOut() {
     val airbyteTemporalConfig = AirbyteTemporalConfig(retention = 10)
@@ -73,8 +74,8 @@ internal class TemporalUtilsTest {
     val serviceSupplier = Mockito.mock(Supplier::class.java) as Supplier<WorkflowServiceStubs>
     val namespace = "default"
 
-    Mockito.`when`(namespaceInfo.getName()).thenReturn(namespace)
-    Mockito.`when`(describeNamespaceResponse.getNamespaceInfo()).thenReturn(namespaceInfo)
+    Mockito.`when`(namespaceInfo.name).thenReturn(namespace)
+    Mockito.`when`(describeNamespaceResponse.namespaceInfo).thenReturn(namespaceInfo)
     Mockito
       .`when`(serviceSupplier.get())
       .thenAnswer { throw java.lang.RuntimeException() }
@@ -85,21 +86,20 @@ internal class TemporalUtilsTest {
           .blockingStub()
           .listNamespaces(
             any(),
-          ).getNamespacesList(),
+          ).namespacesList,
       ).thenAnswer { throw java.lang.RuntimeException() }
       .thenReturn(listOf(describeNamespaceResponse))
-    Assertions.assertThrows<java.lang.RuntimeException>(
+    Assertions.assertThrows(
       java.lang.RuntimeException::class.java,
-      Executable {
-        temporalUtils.getTemporalClientWhenConnected(
-          Duration.ofMillis(100),
-          Duration.ofMillis(10),
-          Duration.ofSeconds(0),
-          serviceSupplier,
-          namespace,
-        )
-      },
-    )
+    ) {
+      temporalUtils.getTemporalClientWhenConnected(
+        Duration.ofMillis(100),
+        Duration.ofMillis(10),
+        Duration.ofSeconds(0),
+        serviceSupplier,
+        namespace,
+      )
+    }
   }
 
   @Test
@@ -107,24 +107,23 @@ internal class TemporalUtilsTest {
     val testEnv = TestWorkflowEnvironment.newInstance()
     val worker = testEnv.newWorker(TASK_QUEUE)
     worker.registerWorkflowImplementationTypes(TestFailingWorkflow.WorkflowImpl::class.java)
-    val client = testEnv.getWorkflowClient()
+    val client = testEnv.workflowClient
     val timesReachedEnd = AtomicInteger(0)
     worker.registerActivitiesImplementations(TestFailingWorkflow.Activity1Impl(timesReachedEnd))
     testEnv.start()
 
     val workflowStub: TestFailingWorkflow =
-      client.newWorkflowStub<TestFailingWorkflow>(
+      client.newWorkflowStub(
         TestFailingWorkflow::class.java,
         WorkflowOptions.newBuilder().setTaskQueue(TASK_QUEUE).build(),
       )
 
     // test runtime first
-    Assertions.assertThrows<java.lang.RuntimeException>(
+    Assertions.assertThrows(
       java.lang.RuntimeException::class.java,
-      Executable {
-        workflowStub.run("runtime")
-      },
-    )
+    ) {
+      workflowStub.run("runtime")
+    }
 
     // we should never retry enough to reach the end
     Assertions.assertEquals(0, timesReachedEnd.get())
@@ -135,19 +134,19 @@ internal class TemporalUtilsTest {
     val testEnv = TestWorkflowEnvironment.newInstance()
     val worker = testEnv.newWorker(TASK_QUEUE)
     worker.registerWorkflowImplementationTypes(TestFailingWorkflow.WorkflowImpl::class.java)
-    val client = testEnv.getWorkflowClient()
+    val client = testEnv.workflowClient
     val timesReachedEnd = AtomicInteger(0)
     worker.registerActivitiesImplementations(TestFailingWorkflow.Activity1Impl(timesReachedEnd))
     testEnv.start()
 
     val workflowStub: TestFailingWorkflow =
-      client.newWorkflowStub<TestFailingWorkflow>(
+      client.newWorkflowStub(
         TestFailingWorkflow::class.java,
         WorkflowOptions.newBuilder().setTaskQueue(TASK_QUEUE).build(),
       )
 
     // throws workerexception wrapped in a WorkflowFailedException
-    Assertions.assertThrows<WorkflowFailedException>(WorkflowFailedException::class.java, Executable { workflowStub.run("worker") })
+    Assertions.assertThrows(WorkflowFailedException::class.java) { workflowStub.run("worker") }
 
     // we should never retry enough to reach the end
     Assertions.assertEquals(0, timesReachedEnd.get())
@@ -167,8 +166,8 @@ internal class TemporalUtilsTest {
           .setRetryOptions(TemporalConstants.NO_RETRY)
           .build()
 
-      private val activity1: Activity1 = Workflow.newActivityStub<Activity1>(Activity1::class.java, options)
-      private val activity2: Activity1 = Workflow.newActivityStub<Activity1>(Activity1::class.java, options)
+      private val activity1: Activity1 = Workflow.newActivityStub(Activity1::class.java, options)
+      private val activity2: Activity1 = Workflow.newActivityStub(Activity1::class.java, options)
 
       override fun run(arg: String?): String {
         LOGGER.info("workflow before activity 1")
@@ -228,7 +227,7 @@ internal class TemporalUtilsTest {
           .setHeartbeatTimeout(Duration.ofSeconds(1))
           .build()
 
-      private val activity1: Activity1 = Workflow.newActivityStub<Activity1>(Activity1::class.java, options)
+      private val activity1: Activity1 = Workflow.newActivityStub(Activity1::class.java, options)
 
       override fun run(arg: String?): String {
         LOGGER.info("workflow before activity 1")
@@ -259,13 +258,17 @@ internal class TemporalUtilsTest {
           AtomicReference<Runnable>(null),
           Callable {
             if (timesReachedEnd.get() == 0) {
-              if ("runtime" == arg) {
-                throw java.lang.RuntimeException("failed")
-              } else if ("timeout" == arg) {
-                Thread.sleep(10000)
-                return@Callable null
-              } else {
-                throw Exception("failed")
+              when (arg) {
+                "runtime" -> {
+                  throw java.lang.RuntimeException("failed")
+                }
+                "timeout" -> {
+                  Thread.sleep(10000)
+                  return@Callable null
+                }
+                else -> {
+                  throw Exception("failed")
+                }
               }
             } else {
               return@Callable null

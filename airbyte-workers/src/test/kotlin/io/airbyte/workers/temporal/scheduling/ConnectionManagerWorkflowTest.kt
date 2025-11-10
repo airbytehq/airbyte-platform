@@ -17,7 +17,6 @@ import io.airbyte.commons.temporal.scheduling.state.listener.TestStateListener.C
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.ChangedStateEvent
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.StateField
 import io.airbyte.config.ConnectionContext
-import io.airbyte.config.FailureReason
 import io.airbyte.micronaut.temporal.TemporalProxyHelper
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.temporal.activities.GetConnectionContextOutput
@@ -37,7 +36,6 @@ import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivit
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput
-import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationOutput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber
@@ -88,7 +86,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.ArgumentMatcher
 import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
@@ -267,15 +264,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -331,15 +328,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          true,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = true,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -389,15 +386,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -469,9 +466,9 @@ internal class ConnectionManagerWorkflowTest {
           false,
           1,
           workflowState,
-          false,
-          false,
-          false,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -557,15 +554,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -623,9 +620,9 @@ internal class ConnectionManagerWorkflowTest {
           false,
           1,
           workflowState,
-          false,
-          false,
-          false,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -682,15 +679,15 @@ internal class ConnectionManagerWorkflowTest {
       returnTrueForLastJobOrAttemptFailure()
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          null,
-          null,
-          false,
-          1,
-          null,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = null,
+          attemptId = null,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = null,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -728,15 +725,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -773,15 +770,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -805,7 +802,7 @@ internal class ConnectionManagerWorkflowTest {
 
       for (event in events) {
         if (event.isValue) {
-          log.info(EVENT + event)
+          log.info("${EVENT}event")
         }
       }
 
@@ -814,71 +811,6 @@ internal class ConnectionManagerWorkflowTest {
         .filteredOn(
           Predicate { changedStateEvent: ChangedStateEvent? ->
             changedStateEvent!!.field == StateField.CANCELLED &&
-              changedStateEvent.isValue
-          },
-        ).hasSizeGreaterThanOrEqualTo(1)
-    }
-
-    @Timeout(value = 40, unit = TimeUnit.SECONDS)
-    @DisplayName("Test that deleting a running workflow cancels the sync")
-    fun deleteRunning() {
-      returnTrueForLastJobOrAttemptFailure()
-      val testId = UUID.randomUUID()
-      val testStateListener = TestStateListener()
-      val workflowState = WorkflowState(testId, testStateListener)
-
-      val input =
-        ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
-        )
-
-      startWorkflowAndWaitUntilReady(workflow, input)
-
-      // wait for workflow to initialize
-      testEnv.sleep(Duration.ofMinutes(1))
-
-      workflow.submitManualSync()
-
-      // wait for the manual sync to start working
-      testEnv.sleep(Duration.ofMinutes(1))
-
-      workflow.deleteConnection()
-
-      val eventQueue: Queue<ChangedStateEvent> = testStateListener.events(testId)
-      val events: MutableList<ChangedStateEvent> = ArrayList(eventQueue)
-
-      Mockito
-        .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
-        .jobCancelledWithAttemptNumber(any())
-
-      for (event in events) {
-        if (event.isValue) {
-          log.info(EVENT + event)
-        }
-      }
-
-      Assertions
-        .assertThat(events)
-        .filteredOn(
-          Predicate { changedStateEvent: ChangedStateEvent? ->
-            changedStateEvent!!.field == StateField.CANCELLED &&
-              changedStateEvent.isValue
-          },
-        ).hasSizeGreaterThanOrEqualTo(1)
-
-      Assertions
-        .assertThat(events)
-        .filteredOn(
-          Predicate { changedStateEvent: ChangedStateEvent? ->
-            changedStateEvent!!.field == StateField.DELETED &&
               changedStateEvent.isValue
           },
         ).hasSizeGreaterThanOrEqualTo(1)
@@ -895,15 +827,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -936,15 +868,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -986,15 +918,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -1013,7 +945,7 @@ internal class ConnectionManagerWorkflowTest {
 
       for (event in events) {
         if (event.isValue) {
-          log.info(EVENT + event)
+          log.info("${EVENT}event")
         }
       }
 
@@ -1037,15 +969,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -1143,15 +1075,15 @@ internal class ConnectionManagerWorkflowTest {
       val workflowState = WorkflowState(testId, testStateListener)
       val input =
         ConnectionUpdaterInput(
-          connectionId,
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          0,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = connectionId,
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 0,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -1196,15 +1128,15 @@ internal class ConnectionManagerWorkflowTest {
       val workflowState = WorkflowState(testId, testStateListener)
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -1242,15 +1174,15 @@ internal class ConnectionManagerWorkflowTest {
       val workflowState = WorkflowState(testId, testStateListener)
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -1288,15 +1220,15 @@ internal class ConnectionManagerWorkflowTest {
       val workflowState = WorkflowState(testId, testStateListener)
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -1335,15 +1267,15 @@ internal class ConnectionManagerWorkflowTest {
       val workflowState = WorkflowState(testId, testStateListener)
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -1382,15 +1314,15 @@ internal class ConnectionManagerWorkflowTest {
       val workflowState = WorkflowState(testId, testStateListener)
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -1440,15 +1372,15 @@ internal class ConnectionManagerWorkflowTest {
       val workflowState = WorkflowState(testId, testStateListener)
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -1496,7 +1428,7 @@ internal class ConnectionManagerWorkflowTest {
       expectedEventsCount: Int,
     ) {
       returnTrueForLastJobOrAttemptFailure()
-      mockSetup.run()
+      mockSetup.start()
       Mockito.`when`(mConfigFetchActivity.getTimeToWait(any())).thenReturn(
         ScheduleRetrieverOutput(
           Duration.ZERO,
@@ -1510,15 +1442,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          null,
-          null,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = null,
+          attemptId = null,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       startWorkflowAndWaitUntilReady(workflow, input)
@@ -1652,10 +1584,10 @@ internal class ConnectionManagerWorkflowTest {
 
       // run 1: hydrate pre scheduling
       Assertions.assertThat<UUID?>(hydrateCaptor.allValues[0].connectionId).isEqualTo(connectionId)
-      Assertions.assertThat(hydrateCaptor.allValues[0].jobId).isEqualTo(null)
+      Assertions.assertThat(hydrateCaptor.allValues[0].jobId).isNull()
       // run 1: hydrate pre run
       Assertions.assertThat<UUID?>(hydrateCaptor.allValues[1].connectionId).isEqualTo(connectionId)
-      Assertions.assertThat(hydrateCaptor.allValues[1].jobId).isEqualTo(null)
+      Assertions.assertThat(hydrateCaptor.allValues[1].jobId).isNull()
       // run 1: persist
       Assertions.assertThat<UUID?>(persistCaptor.allValues[0].connectionId).isEqualTo(connectionId)
       Assertions.assertThat(persistCaptor.allValues[0].jobId).isEqualTo(jobId)
@@ -1699,7 +1631,7 @@ internal class ConnectionManagerWorkflowTest {
         ).isEqualTo(2)
       // run 3: hydrate pre scheduling
       Assertions.assertThat<UUID?>(hydrateCaptor.allValues[4].connectionId).isEqualTo(connectionId)
-      Assertions.assertThat(hydrateCaptor.allValues[4].jobId).isEqualTo(null)
+      Assertions.assertThat(hydrateCaptor.allValues[4].jobId).isNull()
     }
 
     @ParameterizedTest
@@ -2073,15 +2005,15 @@ internal class ConnectionManagerWorkflowTest {
 
       val input =
         ConnectionUpdaterInput(
-          UUID.randomUUID(),
-          JOB_ID,
-          ATTEMPT_ID,
-          false,
-          1,
-          workflowState,
-          false,
-          false,
-          false,
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
         )
 
       setupSuccessfulWorkflow(input)
@@ -2099,43 +2031,6 @@ internal class ConnectionManagerWorkflowTest {
         .verify(mConfigFetchActivity, Mockito.times(1))
         .getTimeToWait(any<ScheduleRetrieverInput>())
     }
-  }
-
-  private class HasFailureFromOrigin(
-    private val expectedFailureOrigin: FailureReason.FailureOrigin?,
-  ) : ArgumentMatcher<AttemptNumberFailureInput?> {
-    override fun matches(arg: AttemptNumberFailureInput?): Boolean =
-      arg!!
-        .attemptFailureSummary!!
-        .failures
-        .stream()
-        .anyMatch { f: FailureReason? -> f!!.failureOrigin == expectedFailureOrigin }
-  }
-
-  private class HasFailureFromOriginWithType(
-    private val expectedFailureOrigin: FailureReason.FailureOrigin?,
-    private val expectedFailureType: FailureReason.FailureType?,
-  ) : ArgumentMatcher<AttemptNumberFailureInput?> {
-    override fun matches(arg: AttemptNumberFailureInput?): Boolean {
-      val stream = arg!!.attemptFailureSummary!!.failures.stream()
-      return stream.anyMatch { f: FailureReason? ->
-        f!!.failureOrigin == expectedFailureOrigin && f.failureType == expectedFailureType
-      }
-    }
-  }
-
-  private class HasCancellationFailure(
-    private val expectedJobId: Long,
-    private val expectedAttemptNumber: Int,
-  ) : ArgumentMatcher<JobCancelledInputWithAttemptNumber?> {
-    override fun matches(arg: JobCancelledInputWithAttemptNumber?): Boolean =
-      arg!!
-        .attemptFailureSummary!!
-        .failures
-        .stream()
-        .anyMatch { f: FailureReason? -> f!!.failureType == FailureReason.FailureType.MANUAL_CANCELLATION } &&
-        arg.jobId == expectedJobId &&
-        arg.attemptNumber == expectedAttemptNumber
   }
 
   private fun <T1 : SyncWorkflowV2, T2 : ConnectorCommandWorkflow> setupSpecificChildWorkflow(
@@ -2211,15 +2106,15 @@ internal class ConnectionManagerWorkflowTest {
     val workflowState = WorkflowState(testId, testStateListener)
 
     return ConnectionUpdaterInput(
-      UUID.randomUUID(),
-      JOB_ID,
-      ATTEMPT_ID,
-      false,
-      ATTEMPT_NO,
-      workflowState,
-      false,
-      false,
-      false,
+      connectionId = UUID.randomUUID(),
+      jobId = JOB_ID,
+      attemptId = ATTEMPT_ID,
+      fromFailure = false,
+      attemptNumber = 1,
+      workflowState = workflowState,
+      resetConnection = false,
+      fromJobResetFailure = false,
+      skipScheduling = false,
     )
   }
 
@@ -2331,7 +2226,6 @@ internal class ConnectionManagerWorkflowTest {
     private const val WORKFLOW_ID = "workflow-id"
 
     private val WORKFLOW_FAILURE_RESTART_DELAY: Duration = Duration.ofSeconds(600)
-    private const val SOURCE_DOCKER_IMAGE = "some_source"
 
     private const val TEN_SECONDS = 10 * 1000
     private val VERIFY_TIMEOUT: VerificationMode? = Mockito.timeout(TEN_SECONDS.toLong()).times(1)
@@ -2358,16 +2252,6 @@ internal class ConnectionManagerWorkflowTest {
     private val mAppendToAttemptLogActivity: AppendToAttemptLogActivity =
       Mockito.mock<AppendToAttemptLogActivity>(AppendToAttemptLogActivity::class.java, Mockito.withSettings().withoutAnnotations())
     private const val EVENT = "event = "
-    private const val FAILED_CHECK_MESSAGE = "nope"
-
-    val maxAttemptForResetRetry
-      get() =
-        listOf<Arguments?>( // "The max attempt is 3, it will test that after a failed reset attempt the next attempt will also
-          // be a reset")
-          Arguments.of(3), // "The max attempt is 3, it will test that after a failed reset job the next attempt will also be a
-          // job")
-          Arguments.of(1),
-        )
 
     private fun startWorkflowAndWaitUntilReady(
       workflow: ConnectionManagerWorkflow,
@@ -2387,7 +2271,7 @@ internal class ConnectionManagerWorkflowTest {
       while (!isReady) {
         try {
           isReady = workflow.getState() != null
-        } catch (e: Exception) {
+        } catch (_: Exception) {
           log.info("retrying...")
           Thread.sleep(100)
         }
@@ -2400,7 +2284,7 @@ internal class ConnectionManagerWorkflowTest {
       while (!isDeleted) {
         try {
           isDeleted = workflow.getState() != null && workflow.getState().isDeleted
-        } catch (e: Exception) {
+        } catch (_: Exception) {
           log.info("retrying...")
           Thread.sleep(100)
         }

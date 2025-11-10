@@ -7,13 +7,12 @@ package io.airbyte.config
 import io.airbyte.protocol.models.JsonSchemaPrimitiveUtil.JsonSchemaPrimitive
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import java.util.Locale
 
 internal class DataTypeEnumTest {
-  // We use JsonSchemaPrimitive in tests to construct schemas. We want to verify that their are valid
-  // conversions between JsonSchemaPrimitive to DataType so that if anything changes we won't have
-  // hard-to-decipher errors in our tests. Once we get rid of Schema, we can can drop this test.
+  // We use JsonSchemaPrimitive in tests to construct schemas. We want to verify that there are valid
+  // conversions between JsonSchemaPrimitive to DataType so that if anything changes, we won't have
+  // hard-to-decipher errors in our tests. Once we get rid of Schema, we can drop this test.
   @Test
   fun testConversionFromJsonSchemaPrimitiveToDataType() {
     Assertions.assertEquals(5, DataType::class.java.getEnumConstants().size)
@@ -24,15 +23,14 @@ internal class DataTypeEnumTest {
     Assertions.assertEquals(DataType.BOOLEAN, DataType.fromValue(JsonSchemaPrimitive.BOOLEAN.toString().lowercase(Locale.getDefault())))
     Assertions.assertEquals(DataType.ARRAY, DataType.fromValue(JsonSchemaPrimitive.ARRAY.toString().lowercase(Locale.getDefault())))
     Assertions.assertEquals(DataType.OBJECT, DataType.fromValue(JsonSchemaPrimitive.OBJECT.toString().lowercase(Locale.getDefault())))
-    Assertions.assertThrows<IllegalArgumentException?>(
+    Assertions.assertThrows(
       IllegalArgumentException::class.java,
-      Executable {
-        DataType.fromValue(
-          JsonSchemaPrimitive.NULL.toString().lowercase(
-            Locale.getDefault(),
-          ),
-        )
-      },
-    )
+    ) {
+      DataType.fromValue(
+        JsonSchemaPrimitive.NULL.toString().lowercase(
+          Locale.getDefault(),
+        ),
+      )
+    }
   }
 }

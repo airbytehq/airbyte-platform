@@ -16,21 +16,17 @@ import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.jsonNode
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
-import java.util.function.BiFunction
-import java.util.function.Function
 
 internal class JsonPathsTest {
   @Test
   fun testGetSingleValue() {
-    Assertions.assertThrows<IllegalArgumentException?>(
+    Assertions.assertThrows(
       IllegalArgumentException::class.java,
-      Executable { getSingleValue(JSON_NODE, LIST_ALL_QUERY) },
-    )
-    Assertions.assertEquals(1, getSingleValue(JSON_NODE, LIST_ONE_QUERY).map<Int?>(Function { obj: JsonNode? -> obj!!.asInt() }).orElse(null))
+    ) { getSingleValue(JSON_NODE, LIST_ALL_QUERY) }
+    Assertions.assertEquals(1, getSingleValue(JSON_NODE, LIST_ONE_QUERY).map { obj: JsonNode? -> obj!!.asInt() }.orElse(null))
     Assertions.assertEquals(
       10,
-      getSingleValue(JSON_NODE, NESTED_FIELD_QUERY).map<Int?>(Function { obj: JsonNode? -> obj!!.asInt() }).orElse(null),
+      getSingleValue(JSON_NODE, NESTED_FIELD_QUERY).map { obj: JsonNode? -> obj!!.asInt() }.orElse(null),
     )
     Assertions.assertEquals(JSON_NODE.get("two"), getSingleValue(JSON_NODE, JSON_OBJECT_QUERY).orElse(null))
     Assertions.assertNull(getSingleValue(JSON_NODE, EMPTY_RETURN_QUERY).orElse(null))
@@ -40,69 +36,63 @@ internal class JsonPathsTest {
   fun testReplaceAtString() {
     assertOriginalObjectNotModified(
       JSON_NODE,
-      Runnable {
-        val expected = clone<JsonNode>(JSON_NODE)
-        (expected.get(ONE) as ArrayNode).set(1, REPLACEMENT_STRING)
+    ) {
+      val expected = clone(JSON_NODE)
+      (expected.get(ONE) as ArrayNode).set(1, REPLACEMENT_STRING)
 
-        val actual = replaceAtString(JSON_NODE, LIST_ONE_QUERY, REPLACEMENT_STRING)
-        Assertions.assertEquals(expected, actual)
-      },
-    )
+      val actual = replaceAtString(JSON_NODE, LIST_ONE_QUERY, REPLACEMENT_STRING)
+      Assertions.assertEquals(expected, actual)
+    }
   }
 
   @Test
   fun testReplaceAtStringEmptyReturnNoOp() {
     assertOriginalObjectNotModified(
       JSON_NODE,
-      Runnable {
-        val expected = clone<JsonNode>(JSON_NODE)
-        val actual = replaceAtString(JSON_NODE, EMPTY_RETURN_QUERY, REPLACEMENT_STRING)
-        Assertions.assertEquals(expected, actual)
-      },
-    )
+    ) {
+      val expected = clone(JSON_NODE)
+      val actual = replaceAtString(JSON_NODE, EMPTY_RETURN_QUERY, REPLACEMENT_STRING)
+      Assertions.assertEquals(expected, actual)
+    }
   }
 
   @Test
   fun testReplaceAtJsonNodeLoud() {
     assertOriginalObjectNotModified(
       JSON_NODE,
-      Runnable {
-        val expected = clone<JsonNode>(JSON_NODE)
-        (expected.get(ONE) as ArrayNode).set(1, REPLACEMENT_JSON)
+    ) {
+      val expected = clone(JSON_NODE)
+      (expected.get(ONE) as ArrayNode).set(1, REPLACEMENT_JSON)
 
-        val actual = replaceAtJsonNodeLoud(JSON_NODE, LIST_ONE_QUERY, REPLACEMENT_JSON)
-        Assertions.assertEquals(expected, actual)
-      },
-    )
+      val actual = replaceAtJsonNodeLoud(JSON_NODE, LIST_ONE_QUERY, REPLACEMENT_JSON)
+      Assertions.assertEquals(expected, actual)
+    }
   }
 
   @Test
   fun testReplaceAtJsonNodeLoudEmptyPathThrows() {
     assertOriginalObjectNotModified(
       JSON_NODE,
-      Runnable {
-        Assertions.assertThrows<PathNotFoundException?>(
-          PathNotFoundException::class.java,
-          Executable { replaceAtJsonNodeLoud(JSON_NODE, EMPTY_RETURN_QUERY, REPLACEMENT_JSON) },
-        )
-      },
-    )
+    ) {
+      Assertions.assertThrows(
+        PathNotFoundException::class.java,
+      ) { replaceAtJsonNodeLoud(JSON_NODE, EMPTY_RETURN_QUERY, REPLACEMENT_JSON) }
+    }
   }
 
   @Test
   fun testReplaceAtJsonNodeLoudMultipleReplace() {
     assertOriginalObjectNotModified(
       JSON_NODE,
-      Runnable {
-        val expected = clone<JsonNode>(JSON_NODE)
-        (expected.get(ONE) as ArrayNode).set(0, REPLACEMENT_JSON)
-        (expected.get(ONE) as ArrayNode).set(1, REPLACEMENT_JSON)
-        (expected.get(ONE) as ArrayNode).set(2, REPLACEMENT_JSON)
+    ) {
+      val expected = clone(JSON_NODE)
+      (expected.get(ONE) as ArrayNode).set(0, REPLACEMENT_JSON)
+      (expected.get(ONE) as ArrayNode).set(1, REPLACEMENT_JSON)
+      (expected.get(ONE) as ArrayNode).set(2, REPLACEMENT_JSON)
 
-        val actual = replaceAtJsonNodeLoud(JSON_NODE, LIST_ALL_QUERY, REPLACEMENT_JSON)
-        Assertions.assertEquals(expected, actual)
-      },
-    )
+      val actual = replaceAtJsonNodeLoud(JSON_NODE, LIST_ALL_QUERY, REPLACEMENT_JSON)
+      Assertions.assertEquals(expected, actual)
+    }
   }
 
   // todo (cgardens) - this behavior is a little unintuitive, but based on the docs, there's not an
@@ -110,67 +100,61 @@ internal class JsonPathsTest {
   // for now just documenting it with a test. to avoid this, use the non-loud version of this method.
   @Test
   fun testReplaceAtJsonNodeLoudMultipleReplaceSplatInEmptyArrayThrows() {
-    val expected = clone<JsonNode>(JSON_NODE)
+    val expected = clone(JSON_NODE)
     (expected.get(ONE) as ArrayNode).removeAll()
 
     assertOriginalObjectNotModified(
       expected,
-      Runnable {
-        Assertions.assertThrows<PathNotFoundException?>(
-          PathNotFoundException::class.java,
-          Executable { replaceAtJsonNodeLoud(expected, "$.one[*]", REPLACEMENT_JSON) },
-        )
-      },
-    )
+    ) {
+      Assertions.assertThrows(
+        PathNotFoundException::class.java,
+      ) { replaceAtJsonNodeLoud(expected, "$.one[*]", REPLACEMENT_JSON) }
+    }
   }
 
   @Test
   fun testReplaceAt() {
     assertOriginalObjectNotModified(
       JSON_NODE,
-      Runnable {
-        val expected = clone<JsonNode>(JSON_NODE)
-        (expected.get(ONE) as ArrayNode).set(1, "1-$['one'][1]")
+    ) {
+      val expected = clone(JSON_NODE)
+      (expected.get(ONE) as ArrayNode).set(1, "1-$['one'][1]")
 
-        val actual =
-          replaceAt(JSON_NODE, LIST_ONE_QUERY, BiFunction { node: JsonNode?, path: String? -> jsonNode<String?>(node.toString() + "-" + path) })
-        Assertions.assertEquals(expected, actual)
-      },
-    )
+      val actual =
+        replaceAt(JSON_NODE, LIST_ONE_QUERY) { node: JsonNode?, path: String? -> jsonNode("$node-$path") }
+      Assertions.assertEquals(expected, actual)
+    }
   }
 
   @Test
   fun testReplaceAtMultiple() {
     assertOriginalObjectNotModified(
       JSON_NODE,
-      Runnable {
-        val expected = clone<JsonNode>(JSON_NODE)
-        (expected.get(ONE) as ArrayNode).set(0, "0-$['one'][0]")
-        (expected.get(ONE) as ArrayNode).set(1, "1-$['one'][1]")
-        (expected.get(ONE) as ArrayNode).set(2, "2-$['one'][2]")
+    ) {
+      val expected = clone(JSON_NODE)
+      (expected.get(ONE) as ArrayNode).set(0, "0-$['one'][0]")
+      (expected.get(ONE) as ArrayNode).set(1, "1-$['one'][1]")
+      (expected.get(ONE) as ArrayNode).set(2, "2-$['one'][2]")
 
-        val actual =
-          replaceAt(JSON_NODE, LIST_ALL_QUERY, BiFunction { node: JsonNode?, path: String? -> jsonNode<String?>(node.toString() + "-" + path) })
-        Assertions.assertEquals(expected, actual)
-      },
-    )
+      val actual =
+        replaceAt(JSON_NODE, LIST_ALL_QUERY) { node: JsonNode?, path: String? -> jsonNode("$node-$path") }
+      Assertions.assertEquals(expected, actual)
+    }
   }
 
   @Test
   fun testReplaceAtEmptyReturnNoOp() {
     assertOriginalObjectNotModified(
       JSON_NODE,
-      Runnable {
-        val expected = clone<JsonNode>(JSON_NODE)
-        val actual =
-          replaceAt(
-            JSON_NODE,
-            EMPTY_RETURN_QUERY,
-            BiFunction { node: JsonNode?, path: String? -> jsonNode<String?>(node.toString() + "-" + path) },
-          )
-        Assertions.assertEquals(expected, actual)
-      },
-    )
+    ) {
+      val expected = clone(JSON_NODE)
+      val actual =
+        replaceAt(
+          JSON_NODE,
+          EMPTY_RETURN_QUERY,
+        ) { node: JsonNode?, path: String? -> jsonNode<String?>("$node-$path") }
+      Assertions.assertEquals(expected, actual)
+    }
   }
 
   @Test
@@ -191,12 +175,12 @@ internal class JsonPathsTest {
     // Test using a dot-notation template that should yield a result for key1.
     val resultKey1: MutableList<String?> = getExpandedPaths(testNode, "$.rotating_keys[*].key1").toMutableList()
     Assertions.assertEquals(1, resultKey1.size, "Expected one matching path for key1")
-    Assertions.assertEquals("$.rotating_keys[0].key1", resultKey1.get(0))
+    Assertions.assertEquals("$.rotating_keys[0].key1", resultKey1[0])
 
     // Test using a bracket-notation template that should be normalized and yield a result for key2.
     val resultKey2: MutableList<String?> = getExpandedPaths(testNode, "$['rotating_keys'][*].key2").toMutableList()
     Assertions.assertEquals(1, resultKey2.size, "Expected one matching path for key2")
-    Assertions.assertEquals("$.rotating_keys[1].key2", resultKey2.get(0))
+    Assertions.assertEquals("$.rotating_keys[1].key2", resultKey2[0])
   }
 
   @Test
@@ -245,8 +229,8 @@ internal class JsonPathsTest {
     // The expected paths, when sorted, should be:
     // "$.outer.another[0].rotating_keys[1].key2" and "$.outer.another[1].rotating_keys[1].key2"
     Assertions.assertEquals(2, resultAnotherKey2.size, "Expected two matching paths for another key2")
-    Assertions.assertEquals("$.outer.another[0].rotating_keys[1].key2", resultAnotherKey2.get(0))
-    Assertions.assertEquals("$.outer.another[1].rotating_keys[1].key2", resultAnotherKey2.get(1))
+    Assertions.assertEquals("$.outer.another[0].rotating_keys[1].key2", resultAnotherKey2[0])
+    Assertions.assertEquals("$.outer.another[1].rotating_keys[1].key2", resultAnotherKey2[1])
   }
 
   companion object {
@@ -271,14 +255,14 @@ internal class JsonPathsTest {
      * For all replacement functions, they should NOT mutate in place. Helper assertion to verify that
      * invariant.
      *
-     * @param json - json object used for testing
+     * @param json - JSON object used for testing
      * @param runnable - the rest of the test code that does the replacement
      */
     private fun assertOriginalObjectNotModified(
       json: JsonNode,
       runnable: Runnable,
     ) {
-      val originalJsonNode = clone<JsonNode>(json)
+      val originalJsonNode = clone(json)
       runnable.run()
       // verify the original object was not mutated.
       Assertions.assertEquals(originalJsonNode, json)

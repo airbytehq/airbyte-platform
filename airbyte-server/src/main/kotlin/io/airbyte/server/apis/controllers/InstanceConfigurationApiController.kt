@@ -15,7 +15,6 @@ import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import java.util.concurrent.Callable
 
 // this controller is only usable in self-managed versions of Airbyte. Not Cloud!
 @Controller("/api/v1/instance_configuration")
@@ -24,13 +23,13 @@ class InstanceConfigurationApiController(
   private val instanceConfigurationHandler: InstanceConfigurationHandler,
 ) : InstanceConfigurationApi {
   @Get
-  override fun getInstanceConfiguration(): InstanceConfigurationResponse? = execute(Callable { instanceConfigurationHandler.instanceConfiguration })
+  override fun getInstanceConfiguration(): InstanceConfigurationResponse? = execute { instanceConfigurationHandler.instanceConfiguration }
 
-  override fun licenseInfo(): LicenseInfoResponse? = execute(Callable { instanceConfigurationHandler.licenseInfo() })
+  override fun licenseInfo(): LicenseInfoResponse? = execute { instanceConfigurationHandler.licenseInfo() }
 
   override fun setupInstanceConfiguration(
     @Body instanceConfigurationSetupRequestBody: InstanceConfigurationSetupRequestBody,
-  ): io.airbyte.api.model.generated.InstanceConfigurationResponse? =
+  ): InstanceConfigurationResponse? =
     execute {
       instanceConfigurationHandler.setupInstanceConfiguration(
         instanceConfigurationSetupRequestBody,

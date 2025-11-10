@@ -44,7 +44,6 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import java.util.concurrent.Callable
 
 @Controller("/api/v1/web_backend")
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -71,7 +70,7 @@ open class WebBackendApiController(
   @Post("/check_updates")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun webBackendCheckUpdates(): WebBackendCheckUpdatesRead? = execute(Callable { webBackendCheckUpdatesHandler.checkUpdates() })
+  override fun webBackendCheckUpdates(): WebBackendCheckUpdatesRead? = execute { webBackendCheckUpdatesHandler.checkUpdates() }
 
   @Post("/connections/create")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)

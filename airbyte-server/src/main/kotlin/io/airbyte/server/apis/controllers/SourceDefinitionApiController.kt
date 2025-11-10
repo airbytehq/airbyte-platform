@@ -36,7 +36,6 @@ import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import java.util.concurrent.Callable
 
 @Controller("/api/v1/source_definitions")
 @Context
@@ -54,7 +53,7 @@ open class SourceDefinitionApiController(
   ): SourceDefinitionRead? {
     // legacy calls contain workspace id instead of scope id and scope type
     if (customSourceDefinitionCreate.workspaceId != null) {
-      customSourceDefinitionCreate.setScopeType(ScopeType.WORKSPACE)
+      customSourceDefinitionCreate.scopeType = ScopeType.WORKSPACE
       customSourceDefinitionCreate.scopeId = customSourceDefinitionCreate.workspaceId
     }
     return execute {
@@ -64,7 +63,7 @@ open class SourceDefinitionApiController(
     }
   }
 
-  @Post("/delete") // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
+  @Post("/delete") // the accessValidator will provide additional authorization checks, depending on the Airbyte edition.
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(HttpStatus.NO_CONTENT)
@@ -132,18 +131,16 @@ open class SourceDefinitionApiController(
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listEnterpriseSourceStubs(): EnterpriseConnectorStubsReadList? =
-    execute(
-      Callable {
-        enterpriseConnectorStubsHandler.listEnterpriseSourceStubs()
-      },
-    )
+    execute {
+      enterpriseConnectorStubsHandler.listEnterpriseSourceStubs()
+    }
 
   @Post("/list_enterprise_stubs_for_workspace")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listEnterpriseSourceStubsForWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
-  ): io.airbyte.api.model.generated.EnterpriseConnectorStubsReadList? =
+  ): EnterpriseConnectorStubsReadList? =
     execute {
       enterpriseConnectorStubsHandler.listEnterpriseSourceStubsForWorkspace(
         workspaceIdRequestBody.workspaceId,
@@ -153,7 +150,7 @@ open class SourceDefinitionApiController(
   @Post("/list_latest")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun listLatestSourceDefinitions(): SourceDefinitionReadList? = execute(Callable { sourceDefinitionsHandler.listLatestSourceDefinitions() })
+  override fun listLatestSourceDefinitions(): SourceDefinitionReadList? = execute { sourceDefinitionsHandler.listLatestSourceDefinitions() }
 
   @Post("/list_private")
   @Secured(AuthRoleConstants.ADMIN)
@@ -170,14 +167,14 @@ open class SourceDefinitionApiController(
   @Post("/list")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun listSourceDefinitions(): SourceDefinitionReadList? = execute(Callable { sourceDefinitionsHandler.listSourceDefinitions() })
+  override fun listSourceDefinitions(): SourceDefinitionReadList? = execute { sourceDefinitionsHandler.listSourceDefinitions() }
 
   @Post("/list_for_workspace")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listSourceDefinitionsForWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdActorDefinitionRequestBody,
-  ): io.airbyte.api.model.generated.SourceDefinitionReadList? =
+  ): SourceDefinitionReadList? =
     execute {
       sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(
         workspaceIdRequestBody,
@@ -197,7 +194,7 @@ open class SourceDefinitionApiController(
     }
   }
 
-  @Post("/update") // the accessValidator will provide additional authorization checks, depending on Airbyte edition.
+  @Post("/update") // the accessValidator will provide additional authorization checks, depending on the Airbyte edition.
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateSourceDefinition(

@@ -15,7 +15,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.api.function.Executable
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
@@ -44,7 +43,7 @@ internal class EnterpriseActorDefinitionAccessValidatorTest {
       Mockito.`when`(mSecurityService.hasRole(ADMIN)).thenReturn(true)
 
       // any actor definition ID passes this check for an instance admin.
-      Assertions.assertDoesNotThrow(Executable { enterpriseActorDefinitionAccessValidator.validateWriteAccess(UUID.randomUUID()) })
+      Assertions.assertDoesNotThrow { enterpriseActorDefinitionAccessValidator.validateWriteAccess(UUID.randomUUID()) }
     }
 
     @Test
@@ -59,13 +58,13 @@ internal class EnterpriseActorDefinitionAccessValidatorTest {
         ).thenReturn(Permission.PermissionType.ORGANIZATION_ADMIN)
 
       // an org admin of the instance's default org should have write access to any actor definition.
-      Assertions.assertDoesNotThrow(Executable { enterpriseActorDefinitionAccessValidator.validateWriteAccess(UUID.randomUUID()) })
+      Assertions.assertDoesNotThrow { enterpriseActorDefinitionAccessValidator.validateWriteAccess(UUID.randomUUID()) }
     }
   }
 
   @Test
   fun otherwiseThrows() {
-    Mockito.`when`(mSecurityService!!.username()).thenReturn(Optional.of(USERNAME))
+    Mockito.`when`(mSecurityService.username()).thenReturn(Optional.of(USERNAME))
     Mockito.`when`(mSecurityService.hasRole(ADMIN)).thenReturn(false)
     Mockito
       .`when`(permissionHandler.findPermissionTypeForUserAndOrganization(DEFAULT_ORGANIZATION_ID, USERNAME))

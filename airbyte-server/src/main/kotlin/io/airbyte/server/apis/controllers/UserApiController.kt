@@ -28,7 +28,6 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import java.util.concurrent.Callable
 
 /**
  * User related APIs. TODO: migrate all User endpoints (including some endpoints in WebBackend API)
@@ -98,7 +97,7 @@ open class UserApiController(
   @Post("/list_instance_admins")
   @Secured(AuthRoleConstants.ADMIN) // instance admin only
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun listInstanceAdminUsers(): UserWithPermissionInfoReadList? = execute(Callable { userHandler.listInstanceAdminUsers() })
+  override fun listInstanceAdminUsers(): UserWithPermissionInfoReadList? = execute { userHandler.listInstanceAdminUsers() }
 
   @Post("/get_or_create_by_auth_id")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)

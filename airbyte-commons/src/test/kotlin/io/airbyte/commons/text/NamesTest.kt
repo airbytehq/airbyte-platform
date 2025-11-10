@@ -8,7 +8,6 @@ import io.airbyte.commons.text.Names.singleQuote
 import io.airbyte.commons.text.Names.toAlphanumericAndUnderscore
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 
 internal class NamesTest {
   @Test
@@ -23,7 +22,7 @@ internal class NamesTest {
   fun testSimpleQuote() {
     Assertions.assertEquals("'abc'", singleQuote("abc"))
     Assertions.assertEquals("'abc'", singleQuote("'abc'"))
-    Assertions.assertThrows<IllegalStateException?>(IllegalStateException::class.java, Executable { singleQuote("'abc") })
-    Assertions.assertThrows<IllegalStateException?>(IllegalStateException::class.java, Executable { singleQuote("abc'") })
+    Assertions.assertThrows(IllegalStateException::class.java) { singleQuote("'abc") }
+    Assertions.assertThrows(IllegalStateException::class.java) { singleQuote("abc'") }
   }
 }

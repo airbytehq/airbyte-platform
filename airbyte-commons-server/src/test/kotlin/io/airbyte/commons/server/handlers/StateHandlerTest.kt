@@ -26,7 +26,6 @@ import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -78,7 +77,7 @@ internal class StateHandlerTest {
   @Test
   fun testGetGlobalState() {
     whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(
-      Optional.of<StateWrapper>(
+      Optional.of(
         StateWrapper()
           .withStateType(StateType.GLOBAL)
           .withGlobal(
@@ -116,7 +115,7 @@ internal class StateHandlerTest {
   @Test
   fun testGetStreamState() {
     whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(
-      Optional.of<StateWrapper>(
+      Optional.of(
         StateWrapper()
           .withStateType(StateType.STREAM)
           .withStateMessages(
@@ -218,8 +217,7 @@ internal class StateHandlerTest {
     whenever<Optional<JobRead>?>(jobHistoryHandler.getLatestRunningSyncJob(CONNECTION_ID)).thenReturn(Optional.of<JobRead>(JobRead()))
     Assertions.assertThrows(
       SyncIsRunningException::class.java,
-      Executable { stateHandler.createOrUpdateStateSafe(input) },
-    )
+    ) { stateHandler.createOrUpdateStateSafe(input) }
   }
 
   companion object {
@@ -231,7 +229,7 @@ internal class StateHandlerTest {
     private fun toApi(protocolStreamDescriptor: StreamDescriptor): io.airbyte.api.model.generated.StreamDescriptor? =
       io.airbyte.api.model.generated
         .StreamDescriptor()
-        .name(protocolStreamDescriptor.getName())
-        .namespace(protocolStreamDescriptor.getNamespace())
+        .name(protocolStreamDescriptor.name)
+        .namespace(protocolStreamDescriptor.namespace)
   }
 }

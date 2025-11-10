@@ -40,45 +40,43 @@ internal class CommunityCurrentUserServiceTest {
     // @RequestScope work on the CommunityCurrentUserService
     ServerRequestContext.with(
       HttpRequest.GET<Any>("/"),
-      Runnable {
-        try {
-          val expectedUser = AuthenticatedUser().withUserId(DEFAULT_USER_ID)
-          every { userPersistence.getDefaultUser() } returns (Optional.ofNullable(expectedUser))
+    ) {
+      try {
+        val expectedUser = AuthenticatedUser().withUserId(DEFAULT_USER_ID)
+        every { userPersistence.getDefaultUser() } returns (Optional.ofNullable(expectedUser))
 
-          // First call - should fetch default user from userPersistence
-          val user1 = currentUserService.getCurrentUser()
-          Assertions.assertEquals(expectedUser, user1)
+        // First call - should fetch default user from userPersistence
+        val user1 = currentUserService.getCurrentUser()
+        Assertions.assertEquals(expectedUser, user1)
 
-          // Second call - should use cached user
-          val user2 = currentUserService.getCurrentUser()
-          Assertions.assertEquals(expectedUser, user2)
+        // Second call - should use cached user
+        val user2 = currentUserService.getCurrentUser()
+        Assertions.assertEquals(expectedUser, user2)
 
-          // Verify that getDefaultUser is called only once
-          verify { userPersistence.getDefaultUser() }
-        } catch (e: IOException) {
-          Assertions.fail<Any>(e)
-        }
-      },
-    )
+        // Verify that getDefaultUser is called only once
+        verify { userPersistence.getDefaultUser() }
+      } catch (e: IOException) {
+        Assertions.fail<Any>(e)
+      }
+    }
   }
 
   @Test
   fun testCommunityGetCurrentUserIdIfExists() {
     ServerRequestContext.with(
       HttpRequest.GET<Any>("/"),
-      Runnable {
-        try {
-          val expectedUser = AuthenticatedUser().withUserId(DEFAULT_USER_ID)
-          every { userPersistence.getDefaultUser() } returns (Optional.of(expectedUser))
+    ) {
+      try {
+        val expectedUser = AuthenticatedUser().withUserId(DEFAULT_USER_ID)
+        every { userPersistence.getDefaultUser() } returns (Optional.of(expectedUser))
 
-          val userId: Optional<UUID> = currentUserService.getCurrentUserIdIfExists()
-          Assertions.assertTrue(userId.isPresent())
-          Assertions.assertEquals(DEFAULT_USER_ID, userId.get())
-        } catch (e: IOException) {
-          Assertions.fail<Any>(e)
-        }
-      },
-    )
+        val userId: Optional<UUID> = currentUserService.getCurrentUserIdIfExists()
+        Assertions.assertTrue(userId.isPresent)
+        Assertions.assertEquals(DEFAULT_USER_ID, userId.get())
+      } catch (e: IOException) {
+        Assertions.fail<Any>(e)
+      }
+    }
   }
 
   @Test
@@ -90,7 +88,7 @@ internal class CommunityCurrentUserServiceTest {
         every { userPersistence.getDefaultUser() } returns Optional.empty()
 
         val userId: Optional<UUID> = currentUserService.getCurrentUserIdIfExists()
-        Assertions.assertTrue(userId.isEmpty())
+        Assertions.assertTrue(userId.isEmpty)
       } catch (e: IOException) {
         Assertions.fail<Any>(e)
       }

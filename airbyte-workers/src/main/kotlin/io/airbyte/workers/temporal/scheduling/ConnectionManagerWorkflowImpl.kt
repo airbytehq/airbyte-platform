@@ -177,7 +177,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       // Copy over data from the input to workflowState early to minimize gaps with signals
       initializeWorkflowStateFromInput(connectionUpdaterInput)
 
-      // Fetch workflow delay first so that it is set if any subsequent activities fail and need to be
+      // Fetch workflow delay first so that it is set if any following activities fail and need to be
       // re-attempted.
       workflowDelay = this.workflowRestartDelaySeconds
 
@@ -194,7 +194,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         cancellableSyncWorkflow = generateSyncWorkflowRunnable(connectionUpdaterInput)
         cancellableSyncWorkflow!!.run()
       } catch (cf: CanceledFailure) {
-        // When a scope is cancelled temporal will throw a CanceledFailure as you can see here:
+        // When a scope is canceled, temporal will throw a CanceledFailure as you can see here:
         // https://github.com/temporalio/sdk-java/blob/master/temporal-sdk/src/main/java/io/temporal/workflow/CancellationScope.java#L72
         // The naming is very misleading, it is not a failure but the expected behavior...
         recordMetric(
@@ -221,7 +221,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         return
       }
 
-      // this means that the current workflow is being cancelled so that a reset can be run instead.
+      // this means that the current workflow is being canceled so that a reset can be run instead.
       if (workflowState.isCancelledForReset) {
         reportCancelledAndContinueWith(true, connectionUpdaterInput)
       }
@@ -279,18 +279,18 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         // setup retry manager before scheduling to resolve schedule with backoff
         retryManager = hydrateRetryManager()
         if (retryManager != null) {
-          runAppendToAttemptLogActivity(String.format("Retry State: %s", retryManager), AppendToAttemptLogActivity.LogLevel.INFO)
+          runAppendToAttemptLogActivity("Retry State: $retryManager", AppendToAttemptLogActivity.LogLevel.INFO)
         }
 
         val timeTilScheduledRun = getTimeTilScheduledRun(connectionUpdaterInput.connectionId)
 
-        val timeToWait: Duration?
-        if (connectionUpdaterInput.fromFailure) {
-          // note this can fail the job if the backoff is longer than scheduled time to wait
-          timeToWait = resolveBackoff()
-        } else {
-          timeToWait = timeTilScheduledRun
-        }
+        val timeToWait =
+          if (connectionUpdaterInput.fromFailure) {
+            // note this can fail the job if the backoff is longer than the scheduled time to wait
+            resolveBackoff()
+          } else {
+            timeTilScheduledRun
+          }
 
         if (!timeToWait!!.isZero) {
           Workflow.await(timeToWait) { this.shouldInterruptWaiting() }
@@ -315,7 +315,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         // re-hydrate retry manager on run-start because FFs may have changed
         retryManager = hydrateRetryManager()
 
-        // This var is unused since not feature flags are currently required in this workflow
+        // This var is unused since no feature flags are currently required in this workflow.
         // We keep the activity around to get any feature flags that might be needed in the future
         val featureFlags = getFeatureFlags(connectionUpdaterInput.connectionId)
 
@@ -363,34 +363,40 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
           // when we cancel a method, we call the cancel method of the cancellation scope. This will throw an
           // exception since we expect it, we just
           // silently ignore it.
-          if (childWorkflowFailure.cause is CanceledFailure) {
-            log.debug("Ignoring canceled failure as it is handled by the cancellation scope.")
-            // do nothing, cancellation handled by cancellationScope
-          } else if (childWorkflowFailure.cause is ActivityFailure) {
-            val af: ActivityFailure = childWorkflowFailure.cause as ActivityFailure
-            // Allows us to classify unhandled failures from the sync workflow.
-            workflowInternalState.failures.add(
-              failureReasonFromWorkflowAndActivity(
-                childWorkflowFailure.workflowType,
-                af.cause!!,
-                workflowInternalState.jobId,
-                workflowInternalState.attemptNumber,
-              ),
-            )
-            addExceptionToTrace(af.cause!!)
-            reportFailure(connectionUpdaterInput, standardSyncOutput, FailureCause.ACTIVITY)
-            prepareForNextRunAndContinueAsNew(connectionUpdaterInput)
-          } else {
-            workflowInternalState.failures.add(
-              FailureHelper.unknownOriginFailure(
-                childWorkflowFailure.cause!!,
-                workflowInternalState.jobId,
-                workflowInternalState.attemptNumber,
-              ),
-            )
-            addExceptionToTrace(childWorkflowFailure.cause!!)
-            reportFailure(connectionUpdaterInput, standardSyncOutput, FailureCause.WORKFLOW)
-            prepareForNextRunAndContinueAsNew(connectionUpdaterInput)
+          when (childWorkflowFailure.cause) {
+            is CanceledFailure -> {
+              log.debug("Ignoring canceled failure as it is handled by the cancellation scope.")
+              // do nothing, cancellation handled by cancellationScope
+            }
+
+            is ActivityFailure -> {
+              val af: ActivityFailure = childWorkflowFailure.cause as ActivityFailure
+              // Allows us to classify unhandled failures from the sync workflow.
+              workflowInternalState.failures.add(
+                failureReasonFromWorkflowAndActivity(
+                  childWorkflowFailure.workflowType,
+                  af.cause!!,
+                  workflowInternalState.jobId,
+                  workflowInternalState.attemptNumber,
+                ),
+              )
+              addExceptionToTrace(af.cause!!)
+              reportFailure(connectionUpdaterInput, standardSyncOutput, FailureCause.ACTIVITY)
+              prepareForNextRunAndContinueAsNew(connectionUpdaterInput)
+            }
+
+            else -> {
+              workflowInternalState.failures.add(
+                FailureHelper.unknownOriginFailure(
+                  childWorkflowFailure.cause!!,
+                  workflowInternalState.jobId,
+                  workflowInternalState.attemptNumber,
+                ),
+              )
+              addExceptionToTrace(childWorkflowFailure.cause!!)
+              reportFailure(connectionUpdaterInput, standardSyncOutput, FailureCause.WORKFLOW)
+              prepareForNextRunAndContinueAsNew(connectionUpdaterInput)
+            }
           }
         }
       },
@@ -427,7 +433,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     connectionUpdaterInput: ConnectionUpdaterInput,
     standardSyncOutput: StandardSyncOutput?,
     failureCause: FailureCause,
-    failureReasonsOverride: MutableSet<FailureReason> = HashSet<FailureReason>(),
+    failureReasonsOverride: MutableSet<FailureReason> = HashSet(),
   ) {
     val failureReasons: MutableSet<FailureReason> =
       if (failureReasonsOverride.isEmpty()) workflowInternalState.failures else failureReasonsOverride
@@ -568,7 +574,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   }
 
   /**
-   * Intended to host all activities that need to run as an end of sync (not attempt) hook.
+   * Intended to host all activities that need to run as an end-of-sync (not attempt) hook.
    */
   private fun runEndOfSyncHooks(status: JobStatus) {
     // TODO we should account for stats delays in case of cancel/failures
@@ -585,7 +591,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
             .build(),
         )
 
-      // Starting the post process workflow asynchronously to avoid blocking the ConnectionManager on post-processing.
+      // Starting the post-process workflow asynchronously to avoid blocking the ConnectionManager on post-processing.
       Async.procedure(postProcessingWorkflow::run, JobPostProcessingInput(jobId = jobId, connectionId = connectionId!!, jobStatus = status))
       // This ensures the child workflow starts, if the parent exits too early, the child workflow may never start
       Workflow.getWorkflowExecution(postProcessingWorkflow).get()
@@ -767,19 +773,19 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
   override fun getJobInformation(): JobInformation {
     val jobId: Long =
-      (if (workflowInternalState.jobId != null) workflowInternalState.jobId else ConnectionManagerWorkflow.Companion.NON_RUNNING_JOB_ID)!!
+      (if (workflowInternalState.jobId != null) workflowInternalState.jobId else ConnectionManagerWorkflow.NON_RUNNING_JOB_ID)!!
     val attemptNumber = workflowInternalState.attemptNumber
     return JobInformation(
       jobId,
-      if (attemptNumber == null) ConnectionManagerWorkflow.Companion.NON_RUNNING_ATTEMPT_ID else attemptNumber,
+      attemptNumber ?: ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID,
     )
   }
 
   /**
-   * return true if the workflow is in a state that require it to continue. If the state is to process
+   * Return true if the workflow is in a state that requires it to continue. If the state is to process
    * an update or delete the workflow, it won't continue with a run of the [SyncWorkflow] but it
    * will: - restart for an update - Update the connection status and terminate the workflow for a
-   * delete
+   * deleted
    */
   private fun shouldInterruptWaiting(): Boolean =
     workflowState.isSkipScheduling || workflowState.isDeleted || workflowState.isUpdated || workflowState.isCancelled
@@ -800,7 +806,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
   /**
    * This is running a lambda function that takes {@param input} as an input. If the run of the lambda
-   * throws an exception, the workflow will retried after a short delay.
+   * throws an exception, the workflow will retry after a short delay.
    *
    *
    * Note that if the lambda activity is configured to have retries, the exception will only be caught
@@ -827,7 +833,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
       // TODO (https://github.com/airbytehq/airbyte/issues/13773) add tracking/notification
 
-      // Wait a short delay before restarting workflow. This is important if, for example, the failing
+      // Wait a short delay before restarting the workflow. This is important if, for example, the failing
       // activity was configured to not have retries.
       // Without this delay, that activity could cause the workflow to loop extremely quickly,
       // overwhelming temporal.
@@ -841,7 +847,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       // Add the exception to the span, as it represents a platform failure
       addExceptionToTrace(e)
 
-      // If a jobId exist set the failure reason
+      // If a jobId exists, set the failure reason
       if (workflowInternalState.jobId != null && workflowInternalState.attemptNumber != null) {
         val connectionUpdaterInput = connectionUpdaterInputFromState()
         val failureReason =
@@ -869,15 +875,15 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
   private fun connectionUpdaterInputFromState(): ConnectionUpdaterInput =
     ConnectionUpdaterInput(
-      connectionId,
-      workflowInternalState.jobId,
-      null,
-      false,
-      workflowInternalState.attemptNumber,
-      null,
-      false,
-      false,
-      false,
+      connectionId = connectionId,
+      jobId = workflowInternalState.jobId,
+      attemptId = null,
+      fromFailure = false,
+      attemptNumber = workflowInternalState.attemptNumber,
+      workflowState = null,
+      resetConnection = false,
+      fromJobResetFailure = false,
+      skipScheduling = false,
     )
 
   /**
@@ -952,7 +958,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
   /**
    * Creates a new job if it is not present in the input. If the jobId is specified in the input of
-   * the connectionManagerWorkflow, we will return it. Otherwise we will create a job and return its
+   * the connectionManagerWorkflow, we will return it. Otherwise, we will create a job and return its
    * id.
    */
   private fun getOrCreateJobId(connectionUpdaterInput: ConnectionUpdaterInput): Long? {
@@ -1080,7 +1086,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   }
 
   /**
-   * Set the internal status as failed and save the failures reasons.
+   * Set the internal status as failed and save the failure reasons.
    *
    * @return true if the job failed, false otherwise
    */
@@ -1099,9 +1105,9 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   }
 
   /**
-   * Extracts whether the job was cancelled from the output.
+   * Extracts whether the job was canceled from the output.
    *
-   * @return true if the job was cancelled, false otherwise
+   * @return true if the job was canceled, false otherwise
    */
   private fun getCancelledStatus(standardSyncOutput: StandardSyncOutput): Boolean {
     val summary = standardSyncOutput.standardSyncSummary
@@ -1169,7 +1175,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
   private fun useAttemptCountRetries(): Boolean {
     // the manager can be null if
-    // - the activity failed unexpectedly
+    //  the activity failed unexpectedly,
     // in which case we fall back to simple attempt count retries (attempt count < 3)
     return retryManager == null
   }
@@ -1276,7 +1282,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     if (input.fromFailure) {
       workflowState.isRunning = true
     }
-    // workflow state is only ever set in test cases. for production cases, it will always be null.
+    // a workflow state is only ever set in test cases. for production cases, it will always be null.
     if (input.workflowState != null) {
       // only copy over state change listener and ID to avoid trampling functionality
       workflowState.id = input.workflowState!!.id
@@ -1330,13 +1336,12 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     }
   }
 
-  private fun getWorkflowDelay(): Duration? {
+  private fun getWorkflowDelay(): Duration? =
     if (workflowDelay != null) {
-      return workflowDelay
+      workflowDelay
     } else {
-      return Duration.ofSeconds(600L)
+      Duration.ofSeconds(600L)
     }
-  }
 
   companion object {
     private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())

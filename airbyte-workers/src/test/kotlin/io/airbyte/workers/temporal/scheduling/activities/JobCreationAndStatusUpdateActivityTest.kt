@@ -8,7 +8,6 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.AttemptApi
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.generated.JobsApi
-import io.airbyte.api.client.model.generated.AttemptInfoRead
 import io.airbyte.api.client.model.generated.BooleanRead
 import io.airbyte.api.client.model.generated.ConnectionContextRead
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
@@ -46,14 +45,12 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobFailureInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber
-import org.assertj.core.api.ThrowableAssert
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mock
@@ -121,7 +118,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
               null,
               null,
             ),
-            mutableListOf<AttemptInfoRead>(),
+            mutableListOf(),
           ),
         )
       val newJob = jobCreationAndStatusUpdateActivity.createNewJob(JobCreationInput(CONNECTION_ID, true))
@@ -134,17 +131,16 @@ internal class JobCreationAndStatusUpdateActivityTest {
     fun createJobThrows() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
       whenever(jobsApi.createJob(any<JobCreate>())).thenAnswer { throw IOException() }
-      Assertions.assertThrows<RetryableException?>(
+      Assertions.assertThrows(
         RetryableException::class.java,
-        Executable {
-          jobCreationAndStatusUpdateActivity.createNewJob(
-            JobCreationInput(
-              CONNECTION_ID,
-              true,
-            ),
-          )
-        },
-      )
+      ) {
+        jobCreationAndStatusUpdateActivity.createNewJob(
+          JobCreationInput(
+            CONNECTION_ID,
+            true,
+          ),
+        )
+      }
     }
 
     // shouldRunSourceCheck tests
@@ -281,8 +277,8 @@ internal class JobCreationAndStatusUpdateActivityTest {
       whenever(jobsApi.getJobInfoLight(any<JobIdRequestBody>()))
         .thenAnswer { throw IOException(TEST_EXCEPTION_MESSAGE) }
 
-      // When API fails to get job info, it should fall back to checking previous job status
-      // For first attempt, it should check previous job status
+      // When the API fails to get job info, it should fall back to checking previous job status
+      // For the first attempt, it should check previous job status
       whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
         .thenReturn(BooleanRead(false))
 
@@ -513,7 +509,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun isLastJobOrAttemptFailureReturnsChecksPreviousJobIfFirstAttempt(didSucceed: Boolean) {
-      // Test that first attempts check previous job status (testing isLastJobOrAttemptFailure logic)
+      // Test that first attempts to check previous job status (testing isLastJobOrAttemptFailure logic)
       val input =
         JobCheckFailureInput(
           JOB_ID,
@@ -548,19 +544,17 @@ internal class JobCreationAndStatusUpdateActivityTest {
         .thenAnswer { throw IOException(EXCEPTION_MESSAGE) }
 
       // Both methods should throw RetryableException when the underlying API call fails
-      Assertions.assertThrows<RetryableException?>(
+      Assertions.assertThrows(
         RetryableException::class.java,
-        Executable { jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input) },
-      )
+      ) { jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input) }
 
       // Reset mock for second call
       whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
         .thenAnswer { throw IOException(EXCEPTION_MESSAGE) }
 
-      Assertions.assertThrows<RetryableException?>(
+      Assertions.assertThrows(
         RetryableException::class.java,
-        Executable { jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input) },
-      )
+      ) { jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input) }
     }
 
     @Test
@@ -584,15 +578,13 @@ internal class JobCreationAndStatusUpdateActivityTest {
         .thenAnswer { throw IOException() }
 
       org.assertj.core.api.Assertions
-        .assertThatThrownBy(
-          ThrowableAssert.ThrowingCallable {
-            jobCreationAndStatusUpdateActivity.createNewAttemptNumber(
-              AttemptCreationInput(
-                JOB_ID,
-              ),
-            )
-          },
-        ).isInstanceOf(RetryableException::class.java)
+        .assertThatThrownBy {
+          jobCreationAndStatusUpdateActivity.createNewAttemptNumber(
+            AttemptCreationInput(
+              JOB_ID,
+            ),
+          )
+        }.isInstanceOf(RetryableException::class.java)
         .hasCauseInstanceOf(IOException::class.java)
     }
   }
@@ -619,25 +611,23 @@ internal class JobCreationAndStatusUpdateActivityTest {
     fun setJobSuccessNullJobId() {
       val request =
         JobSuccessInputWithAttemptNumber(null, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput)
-      Assertions.assertDoesNotThrow(Executable { jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(request) })
+      Assertions.assertDoesNotThrow { jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(request) }
     }
 
     @Test
     fun setJobSuccessWrapException() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      val exception: IOException = IOException(TEST_EXCEPTION_MESSAGE)
+      val exception = IOException(TEST_EXCEPTION_MESSAGE)
       doThrow(exception)
         .`when`(jobsApi)
         .jobSuccessWithAttemptNumber(any<JobSuccessWithAttemptNumberRequest>())
 
       org.assertj.core.api.Assertions
-        .assertThatThrownBy(
-          ThrowableAssert.ThrowingCallable {
-            jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(
-              JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput),
-            )
-          },
-        ).isInstanceOf(RetryableException::class.java)
+        .assertThatThrownBy {
+          jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(
+            JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput),
+          )
+        }.isInstanceOf(RetryableException::class.java)
         .hasCauseInstanceOf(IOException::class.java)
     }
 
@@ -650,11 +640,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     fun setJobFailureNullJobId() {
-      Assertions.assertDoesNotThrow(
-        Executable {
-          jobCreationAndStatusUpdateActivity.jobFailure(JobFailureInput(null, 1, CONNECTION_ID, REASON))
-        },
-      )
+      Assertions.assertDoesNotThrow {
+        jobCreationAndStatusUpdateActivity.jobFailure(JobFailureInput(null, 1, CONNECTION_ID, REASON))
+      }
     }
 
     @Test
@@ -663,18 +651,16 @@ internal class JobCreationAndStatusUpdateActivityTest {
       whenever(jobsApi.jobFailure(any<JobFailureRequest>())).thenAnswer { throw IOException() }
 
       org.assertj.core.api.Assertions
-        .assertThatThrownBy(
-          ThrowableAssert.ThrowingCallable {
-            jobCreationAndStatusUpdateActivity.jobFailure(
-              JobFailureInput(
-                JOB_ID,
-                1,
-                CONNECTION_ID,
-                REASON,
-              ),
-            )
-          },
-        ).isInstanceOf(RetryableException::class.java)
+        .assertThatThrownBy {
+          jobCreationAndStatusUpdateActivity.jobFailure(
+            JobFailureInput(
+              JOB_ID,
+              1,
+              CONNECTION_ID,
+              REASON,
+            ),
+          )
+        }.isInstanceOf(RetryableException::class.java)
         .hasCauseInstanceOf(IOException::class.java)
       verify(jobsApi).jobFailure(JobFailureRequest(JOB_ID, 1, CONNECTION_ID, REASON))
     }
@@ -691,9 +677,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
           failureSummary,
         )
 
-      Assertions.assertDoesNotThrow(
-        Executable { jobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(input) },
-      )
+      Assertions.assertDoesNotThrow { jobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(input) }
     }
 
     @Test
@@ -707,9 +691,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
           failureSummary,
         )
 
-      Assertions.assertDoesNotThrow(
-        Executable { jobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(input) },
-      )
+      Assertions.assertDoesNotThrow { jobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(input) }
     }
 
     @Test
@@ -728,10 +710,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
         any<FailAttemptRequest>(),
       )
 
-      Assertions.assertThrows<RetryableException>(
+      Assertions.assertThrows(
         RetryableException::class.java,
-        Executable { jobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(input) },
-      )
+      ) { jobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(input) }
     }
 
     @Test
@@ -771,18 +752,15 @@ internal class JobCreationAndStatusUpdateActivityTest {
         .`when`(jobsApi)
         .persistJobCancellation(any<PersistCancelJobRequestBody>())
 
-      Assertions.assertThrows<RetryableException?>(
+      Assertions.assertThrows(
         RetryableException::class.java,
-        Executable { jobCreationAndStatusUpdateActivity.jobCancelledWithAttemptNumber(input) },
-      )
+      ) { jobCreationAndStatusUpdateActivity.jobCancelledWithAttemptNumber(input) }
     }
 
     @Test
     fun ensureCleanJobStateHappyPath() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      Assertions.assertDoesNotThrow(
-        Executable { jobCreationAndStatusUpdateActivity.ensureCleanJobState(EnsureCleanJobStateInput(CONNECTION_ID)) },
-      )
+      Assertions.assertDoesNotThrow { jobCreationAndStatusUpdateActivity.ensureCleanJobState(EnsureCleanJobStateInput(CONNECTION_ID)) }
     }
 
     @Test
@@ -792,10 +770,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
         any<ConnectionIdRequestBody>(),
       )
 
-      Assertions.assertThrows<RetryableException>(
+      Assertions.assertThrows(
         RetryableException::class.java,
-        Executable { jobCreationAndStatusUpdateActivity.ensureCleanJobState(EnsureCleanJobStateInput(CONNECTION_ID)) },
-      )
+      ) { jobCreationAndStatusUpdateActivity.ensureCleanJobState(EnsureCleanJobStateInput(CONNECTION_ID)) }
     }
   }
 

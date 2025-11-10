@@ -7,7 +7,6 @@ package io.airbyte.config.persistence
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.version.AirbyteProtocolVersion
-import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.AllowedHosts
 import io.airbyte.config.ReleaseStage
@@ -34,7 +33,6 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.Mockito.mock
@@ -100,100 +98,99 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
 
   @Test
   fun testWriteActorDefinitionVersion() {
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
     val adv: ActorDefinitionVersion = baseActorDefinitionVersion(defId)
     val writtenADV = actorDefinitionService.writeActorDefinitionVersion(adv)
 
     // All non-ID fields should match (the ID is randomly assigned)
-    val expectedADV = adv.withVersionId(writtenADV.getVersionId())
+    val expectedADV = adv.withVersionId(writtenADV.versionId)
 
     Assertions.assertEquals(expectedADV, writtenADV)
   }
 
   @Test
   fun testGetActorDefinitionVersionByTag() {
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
     val adv: ActorDefinitionVersion = baseActorDefinitionVersion(defId)
     val actorDefinitionVersion = actorDefinitionService.writeActorDefinitionVersion(adv)
-    val id = actorDefinitionVersion.getVersionId()
+    val id = actorDefinitionVersion.versionId
 
     val optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG)
-    Assertions.assertTrue(optRetrievedADV.isPresent())
+    Assertions.assertTrue(optRetrievedADV.isPresent)
     Assertions.assertEquals(adv.withVersionId(id), optRetrievedADV.get())
   }
 
   @Test
   fun testUpdateActorDefinitionVersion() {
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
     val initialADV: ActorDefinitionVersion = baseActorDefinitionVersion(defId)
 
     // initial insert
-    val insertedADV = actorDefinitionService.writeActorDefinitionVersion(clone<ActorDefinitionVersion>(initialADV))
-    val id = insertedADV.getVersionId()
+    val insertedADV = actorDefinitionService.writeActorDefinitionVersion(clone(initialADV))
+    val id = insertedADV.versionId
 
     var optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG)
-    Assertions.assertTrue(optRetrievedADV.isPresent())
+    Assertions.assertTrue(optRetrievedADV.isPresent)
     Assertions.assertEquals(insertedADV, optRetrievedADV.get())
-    Assertions.assertEquals(clone<ActorDefinitionVersion>(initialADV).withVersionId(id), optRetrievedADV.get())
+    Assertions.assertEquals(clone(initialADV).withVersionId(id), optRetrievedADV.get())
 
     // update w/o ID
-    val advWithNewSpec = clone<ActorDefinitionVersion>(initialADV).withSpec(SPEC_2)
+    val advWithNewSpec = clone(initialADV).withSpec(SPEC_2)
     val updatedADV = actorDefinitionService.writeActorDefinitionVersion(advWithNewSpec)
 
     optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG)
-    Assertions.assertTrue(optRetrievedADV.isPresent())
+    Assertions.assertTrue(optRetrievedADV.isPresent)
     Assertions.assertEquals(updatedADV, optRetrievedADV.get())
     Assertions.assertEquals(clone<ActorDefinitionVersion>(advWithNewSpec).withVersionId(id), optRetrievedADV.get())
 
     // update w/ ID
-    val advWithAnotherNewSpecAndId = clone<ActorDefinitionVersion>(updatedADV).withSpec(SPEC_3)
+    val advWithAnotherNewSpecAndId = clone(updatedADV).withSpec(SPEC_3)
     val updatedADV2 = actorDefinitionService.writeActorDefinitionVersion(advWithAnotherNewSpecAndId)
 
     optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG)
-    Assertions.assertTrue(optRetrievedADV.isPresent())
+    Assertions.assertTrue(optRetrievedADV.isPresent)
     Assertions.assertEquals(updatedADV2, optRetrievedADV.get())
     Assertions.assertEquals(advWithAnotherNewSpecAndId, optRetrievedADV.get())
   }
 
   @Test
   fun testUpdateActorDefinitionVersionWithMismatchedIdFails() {
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
     val initialADV: ActorDefinitionVersion = baseActorDefinitionVersion(defId)
 
     // initial insert
-    val insertedADV = actorDefinitionService.writeActorDefinitionVersion(clone<ActorDefinitionVersion>(initialADV))
-    val id = insertedADV.getVersionId()
+    val insertedADV = actorDefinitionService.writeActorDefinitionVersion(clone(initialADV))
+    val id = insertedADV.versionId
 
     var optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG)
-    Assertions.assertTrue(optRetrievedADV.isPresent())
+    Assertions.assertTrue(optRetrievedADV.isPresent)
     Assertions.assertEquals(insertedADV, optRetrievedADV.get())
-    Assertions.assertEquals(clone<ActorDefinitionVersion>(initialADV).withVersionId(id), optRetrievedADV.get())
+    Assertions.assertEquals(clone(initialADV).withVersionId(id), optRetrievedADV.get())
 
-    // update same tag w/ different ID throws
-    val advWithNewId = clone<ActorDefinitionVersion>(initialADV).withSpec(SPEC_2).withVersionId(UUID.randomUUID())
-    Assertions.assertThrows<RuntimeException?>(
+    // update the same tag w/ different ID throws
+    val advWithNewId = clone(initialADV).withSpec(SPEC_2).withVersionId(UUID.randomUUID())
+    Assertions.assertThrows(
       RuntimeException::class.java,
-      Executable { actorDefinitionService.writeActorDefinitionVersion(advWithNewId) },
-    )
+    ) { actorDefinitionService.writeActorDefinitionVersion(advWithNewId) }
 
     // no change in DB
     optRetrievedADV = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG)
-    Assertions.assertTrue(optRetrievedADV.isPresent())
-    Assertions.assertEquals(clone<ActorDefinitionVersion>(initialADV).withVersionId(id), optRetrievedADV.get())
+    Assertions.assertTrue(optRetrievedADV.isPresent)
+    Assertions.assertEquals(clone(initialADV).withVersionId(id), optRetrievedADV.get())
   }
 
   @Test
   fun testGetForNonExistentTagReturnsEmptyOptional() {
-    val defId = sourceDefinition.getSourceDefinitionId()
-    Assertions.assertTrue(actorDefinitionService.getActorDefinitionVersion(defId, UNPERSISTED_DOCKER_IMAGE_TAG).isEmpty())
+    val defId = sourceDefinition.sourceDefinitionId
+    Assertions.assertTrue(actorDefinitionService.getActorDefinitionVersion(defId, UNPERSISTED_DOCKER_IMAGE_TAG).isEmpty)
   }
 
   @Test
   fun testGetActorDefinitionVersionById() {
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
     val adv: ActorDefinitionVersion = baseActorDefinitionVersion(defId)
     val actorDefinitionVersion = actorDefinitionService.writeActorDefinitionVersion(adv)
-    val id = actorDefinitionVersion.getVersionId()
+    val id = actorDefinitionVersion.versionId
 
     val retrievedADV = actorDefinitionService.getActorDefinitionVersion(id)
     Assertions.assertNotNull(retrievedADV)
@@ -203,42 +200,40 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   @Test
   fun testGetActorDefinitionVersionByIdNotExistentThrowsConfigNotFound() {
     // Test using the definition id to catch any accidental assignment
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
 
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable { actorDefinitionService.getActorDefinitionVersion(defId) },
-    )
+    ) { actorDefinitionService.getActorDefinitionVersion(defId) }
   }
 
   @Test
   fun testWriteSourceDefinitionSupportLevelNone() {
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
     val adv: ActorDefinitionVersion = baseActorDefinitionVersion(defId).withActorDefinitionId(defId).withSupportLevel(SupportLevel.NONE)
 
-    sourceService.writeConnectorMetadata(sourceDefinition, adv, mutableListOf<ActorDefinitionBreakingChange>())
+    sourceService.writeConnectorMetadata(sourceDefinition, adv, mutableListOf())
 
     val optADVForTag = actorDefinitionService.getActorDefinitionVersion(defId, DOCKER_IMAGE_TAG)
-    Assertions.assertTrue(optADVForTag.isPresent())
+    Assertions.assertTrue(optADVForTag.isPresent)
     val advForTag = optADVForTag.get()
-    Assertions.assertEquals(advForTag.getSupportLevel(), SupportLevel.NONE)
+    Assertions.assertEquals(advForTag.supportLevel, SupportLevel.NONE)
   }
 
   @Test
   fun testWriteSourceDefinitionSupportLevelNonNullable() {
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
 
     val adv: ActorDefinitionVersion = baseActorDefinitionVersion(defId).withActorDefinitionId(defId).withSupportLevel(null)
 
-    Assertions.assertThrows<RuntimeException?>(
+    Assertions.assertThrows(
       RuntimeException::class.java,
-      Executable { sourceService.writeConnectorMetadata(sourceDefinition, adv, mutableListOf<ActorDefinitionBreakingChange>()) },
-    )
+    ) { sourceService.writeConnectorMetadata(sourceDefinition, adv, mutableListOf()) }
   }
 
   @Test
   fun testAlwaysGetWithProtocolVersion() {
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
 
     val allActorDefVersions =
       listOf(
@@ -259,11 +254,11 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
 
     val versionIds: MutableList<UUID> = ArrayList()
     for (actorDefVersion in allActorDefVersions) {
-      versionIds.add(actorDefinitionService.writeActorDefinitionVersion(actorDefVersion).getVersionId())
+      versionIds.add(actorDefinitionService.writeActorDefinitionVersion(actorDefVersion).versionId)
     }
 
     val actorDefinitionVersions: List<ActorDefinitionVersion> = actorDefinitionService.getActorDefinitionVersions(versionIds)
-    val protocolVersions = actorDefinitionVersions.map { it.getProtocolVersion() }
+    val protocolVersions = actorDefinitionVersions.map { it.protocolVersion }
     Assertions.assertEquals(
       listOf(
         AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize(),
@@ -277,16 +272,16 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
 
   @Test
   fun testListActorDefinitionVersionsForDefinition() {
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
     val otherSourceDef =
       StandardSourceDefinition()
         .withName("Some other source")
         .withSourceDefinitionId(UUID.randomUUID())
     val otherActorDefVersion: ActorDefinitionVersion =
-      baseActorDefinitionVersion(defId).withActorDefinitionId(otherSourceDef.getSourceDefinitionId())
-    sourceService.writeConnectorMetadata(otherSourceDef, otherActorDefVersion, mutableListOf<ActorDefinitionBreakingChange>())
+      baseActorDefinitionVersion(defId).withActorDefinitionId(otherSourceDef.sourceDefinitionId)
+    sourceService.writeConnectorMetadata(otherSourceDef, otherActorDefVersion, mutableListOf())
 
-    val otherActorDefVersionId = sourceService.getStandardSourceDefinition(otherSourceDef.getSourceDefinitionId()).getDefaultVersionId()
+    val otherActorDefVersionId = sourceService.getStandardSourceDefinition(otherSourceDef.sourceDefinitionId).defaultVersionId
 
     val actorDefinitionVersions =
       listOf(
@@ -297,22 +292,22 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
 
     val expectedVersionIds: MutableList<UUID> = ArrayList()
     for (actorDefVersion in actorDefinitionVersions) {
-      expectedVersionIds.add(actorDefinitionService.writeActorDefinitionVersion(actorDefVersion).getVersionId())
+      expectedVersionIds.add(actorDefinitionService.writeActorDefinitionVersion(actorDefVersion).versionId)
     }
 
-    val defaultVersionId = sourceService.getStandardSourceDefinition(defId).getDefaultVersionId()
+    val defaultVersionId = sourceService.getStandardSourceDefinition(defId).defaultVersionId
     expectedVersionIds.add(defaultVersionId)
 
     val actorDefinitionVersionsForDefinition: List<ActorDefinitionVersion> =
       actorDefinitionService.listActorDefinitionVersionsForDefinition(defId)
     org.assertj.core.api.Assertions
-      .assertThat<UUID?>(expectedVersionIds)
+      .assertThat(expectedVersionIds)
       .containsExactlyInAnyOrderElementsOf(
-        actorDefinitionVersionsForDefinition.map { it.getVersionId() },
+        actorDefinitionVersionsForDefinition.map { it.versionId },
       )
     Assertions.assertFalse(
       actorDefinitionVersionsForDefinition
-        .any { actorDefVersion: ActorDefinitionVersion -> actorDefVersion.getVersionId() == otherActorDefVersionId },
+        .any { actorDefVersion: ActorDefinitionVersion -> actorDefVersion.versionId == otherActorDefVersionId },
     )
   }
 
@@ -329,7 +324,7 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
     initialSupportStateStr: String,
     targetSupportStateStr: String,
   ) {
-    val defId = sourceDefinition.getSourceDefinitionId()
+    val defId = sourceDefinition.sourceDefinitionId
     val initialSupportState = ActorDefinitionVersion.SupportState.valueOf(initialSupportStateStr)
     val targetSupportState = ActorDefinitionVersion.SupportState.valueOf(targetSupportStateStr)
 
@@ -341,14 +336,14 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
 
     val versionIds: MutableList<UUID> = ArrayList()
     for (actorDefVersion in actorDefinitionVersions) {
-      versionIds.add(actorDefinitionService.writeActorDefinitionVersion(actorDefVersion).getVersionId())
+      versionIds.add(actorDefinitionService.writeActorDefinitionVersion(actorDefVersion).versionId)
     }
 
     actorDefinitionService.setActorDefinitionVersionSupportStates(versionIds, targetSupportState)
 
     val updatedActorDefinitionVersions: List<ActorDefinitionVersion> = actorDefinitionService.getActorDefinitionVersions(versionIds)
     for (updatedActorDefinitionVersion in updatedActorDefinitionVersions) {
-      Assertions.assertEquals(targetSupportState, updatedActorDefinitionVersion.getSupportState())
+      Assertions.assertEquals(targetSupportState, updatedActorDefinitionVersion.supportState)
     }
   }
 

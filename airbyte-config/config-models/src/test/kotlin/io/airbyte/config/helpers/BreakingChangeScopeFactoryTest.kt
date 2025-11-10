@@ -9,7 +9,6 @@ import io.airbyte.config.helpers.BreakingChangeScopeFactory.createStreamBreaking
 import io.airbyte.config.helpers.BreakingChangeScopeFactory.validateBreakingChangeScope
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 
 internal class BreakingChangeScopeFactoryTest {
   @Test
@@ -27,7 +26,7 @@ internal class BreakingChangeScopeFactoryTest {
   fun testValidateBreakingChangeScopeWithValidScope() {
     val impactedScopes = mutableListOf<Any?>("scope1", "scope2")
     val breakingChangeScope = BreakingChangeScope().withScopeType(BreakingChangeScope.ScopeType.STREAM).withImpactedScopes(impactedScopes)
-    Assertions.assertDoesNotThrow(Executable { validateBreakingChangeScope(breakingChangeScope) })
+    Assertions.assertDoesNotThrow { validateBreakingChangeScope(breakingChangeScope) }
   }
 
   @Test
@@ -36,26 +35,23 @@ internal class BreakingChangeScopeFactoryTest {
     val breakingChangeScope = BreakingChangeScope().withScopeType(BreakingChangeScope.ScopeType.STREAM).withImpactedScopes(impactedScopes)
 
     val exception =
-      Assertions.assertThrows<IllegalArgumentException>(
+      Assertions.assertThrows(
         IllegalArgumentException::class.java,
-        Executable { validateBreakingChangeScope(breakingChangeScope) },
-      )
+      ) { validateBreakingChangeScope(breakingChangeScope) }
     Assertions.assertEquals("All elements in the impactedScopes array must be strings.", exception.message)
   }
 
   @Test
   fun testValidateBreakingChangeScopeWithNullScopeType() {
-    Assertions.assertThrows<IllegalArgumentException?>(
+    Assertions.assertThrows(
       IllegalArgumentException::class.java,
-      Executable { BreakingChangeScopeFactory.validateBreakingChangeScope(BreakingChangeScope()) },
-    )
+    ) { validateBreakingChangeScope(BreakingChangeScope()) }
   }
 
   @Test
   fun testValidateBreakingChangeScopeWithEmptyScope() {
-    Assertions.assertThrows<IllegalArgumentException?>(
+    Assertions.assertThrows(
       IllegalArgumentException::class.java,
-      Executable { validateBreakingChangeScope(BreakingChangeScope()) },
-    )
+    ) { validateBreakingChangeScope(BreakingChangeScope()) }
   }
 }

@@ -44,7 +44,6 @@ import io.airbyte.test.utils.BaseConfigDatabaseTest
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
@@ -181,30 +180,30 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   @Test
   fun testSourceDefinitionMaxSecondsLessThenDefaultShouldReturnDefault() {
     val def: StandardSourceDefinition = createBaseSourceDefWithoutMaxSecondsBetweenMessages().withMaxSecondsBetweenMessages(1L)
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(def.getSourceDefinitionId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(def.sourceDefinitionId)
     sourceService.writeConnectorMetadata(def, actorDefinitionVersion, mutableListOf())
     val exp =
-      def.withDefaultVersionId(actorDefinitionVersion.getVersionId()).withMaxSecondsBetweenMessages(TEST_DEFAULT_MAX_SECONDS.toLong())
-    Assertions.assertEquals(exp, sourceService.getStandardSourceDefinition(def.getSourceDefinitionId()))
+      def.withDefaultVersionId(actorDefinitionVersion.versionId).withMaxSecondsBetweenMessages(TEST_DEFAULT_MAX_SECONDS.toLong())
+    Assertions.assertEquals(exp, sourceService.getStandardSourceDefinition(def.sourceDefinitionId))
   }
 
   private fun assertReturnsSrcDef(srcDef: StandardSourceDefinition) {
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(srcDef.sourceDefinitionId)
     sourceService.writeConnectorMetadata(srcDef, actorDefinitionVersion, mutableListOf())
     Assertions.assertEquals(
-      srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
-      sourceService.getStandardSourceDefinition(srcDef.getSourceDefinitionId()),
+      srcDef.withDefaultVersionId(actorDefinitionVersion.versionId),
+      sourceService.getStandardSourceDefinition(srcDef.sourceDefinitionId),
     )
   }
 
   private fun assertReturnsSrcDefDefaultMaxSecondsBetweenMessages(srcDef: StandardSourceDefinition) {
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(srcDef.sourceDefinitionId)
     sourceService.writeConnectorMetadata(srcDef, actorDefinitionVersion, mutableListOf())
     Assertions.assertEquals(
       srcDef
-        .withDefaultVersionId(actorDefinitionVersion.getVersionId())
+        .withDefaultVersionId(actorDefinitionVersion.versionId)
         .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES),
-      sourceService.getStandardSourceDefinition(srcDef.getSourceDefinitionId()),
+      sourceService.getStandardSourceDefinition(srcDef.sourceDefinitionId),
     )
   }
 
@@ -212,15 +211,15 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   fun testGetSourceDefinitionFromSource() {
     val workspace: StandardWorkspace = createBaseStandardWorkspace()
     val srcDef: StandardSourceDefinition = createBaseSourceDef().withTombstone(false)
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId())
-    val source: SourceConnection = createSource(srcDef.getSourceDefinitionId(), workspace.getWorkspaceId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(srcDef.sourceDefinitionId)
+    val source: SourceConnection = createSource(srcDef.sourceDefinitionId, workspace.workspaceId)
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
     sourceService.writeConnectorMetadata(srcDef, actorDefinitionVersion, mutableListOf())
     sourceService.writeSourceConnectionNoSecrets(source)
 
     Assertions.assertEquals(
-      srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
-      sourceService.getSourceDefinitionFromSource(source.getSourceId()),
+      srcDef.withDefaultVersionId(actorDefinitionVersion.versionId),
+      sourceService.getSourceDefinitionFromSource(source.sourceId),
     )
   }
 
@@ -228,11 +227,11 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   fun testGetSourceDefinitionsFromConnection() {
     val workspace: StandardWorkspace = createBaseStandardWorkspace()
     val destDef: StandardDestinationDefinition = createBaseDestDef().withTombstone(false)
-    val destActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId())
-    val dest: DestinationConnection = createDest(destDef.getDestinationDefinitionId(), workspace.getWorkspaceId())
+    val destActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDef.destinationDefinitionId)
+    val dest: DestinationConnection = createDest(destDef.destinationDefinitionId, workspace.workspaceId)
     val srcDef: StandardSourceDefinition = createBaseSourceDef().withTombstone(false)
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId())
-    val source: SourceConnection = createSource(srcDef.getSourceDefinitionId(), workspace.getWorkspaceId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(srcDef.sourceDefinitionId)
+    val source: SourceConnection = createSource(srcDef.sourceDefinitionId, workspace.workspaceId)
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
     sourceService.writeConnectorMetadata(srcDef, actorDefinitionVersion, mutableListOf())
     sourceService.writeSourceConnectionNoSecrets(source)
@@ -243,16 +242,16 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     val connection =
       StandardSync()
         .withName("Test Sync")
-        .withDestinationId(dest.getDestinationId())
+        .withDestinationId(dest.destinationId)
         .withConnectionId(connectionId)
-        .withSourceId(source.getSourceId())
+        .withSourceId(source.sourceId)
         .withCatalog(ConfiguredAirbyteCatalog())
         .withBreakingChange(false)
 
     connectionService.writeStandardSync(connection)
 
     Assertions.assertEquals(
-      srcDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
+      srcDef.withDefaultVersionId(actorDefinitionVersion.versionId),
       sourceService.getSourceDefinitionFromConnection(connectionId),
     )
   }
@@ -260,18 +259,18 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   @ParameterizedTest
   @ValueSource(ints = [0, 1, 2, 10])
   fun testListStandardSourceDefsHandlesTombstoneSourceDefs(numSrcDefs: Int) {
-    val allSourceDefinitions: MutableList<StandardSourceDefinition?> = ArrayList<StandardSourceDefinition?>()
-    val notTombstoneSourceDefinitions: MutableList<StandardSourceDefinition?> = ArrayList<StandardSourceDefinition?>()
+    val allSourceDefinitions: MutableList<StandardSourceDefinition?> = ArrayList()
+    val notTombstoneSourceDefinitions: MutableList<StandardSourceDefinition?> = ArrayList()
     for (i in 0..<numSrcDefs) {
       val isTombstone = i % 2 == 0 // every other is tombstone
       val sourceDefinition: StandardSourceDefinition = createBaseSourceDef().withTombstone(isTombstone)
-      val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId())
+      val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.sourceDefinitionId)
       allSourceDefinitions.add(sourceDefinition)
       if (!isTombstone) {
         notTombstoneSourceDefinitions.add(sourceDefinition)
       }
       sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf())
-      sourceDefinition.setDefaultVersionId(actorDefinitionVersion.getVersionId())
+      sourceDefinition.defaultVersionId = actorDefinitionVersion.versionId
     }
 
     val returnedSrcDefsWithoutTombstone: MutableList<StandardSourceDefinition> = sourceService.listStandardSourceDefinitions(false)
@@ -297,11 +296,11 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   fun assertReturnsDestDef(destDef: StandardDestinationDefinition) {
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDef.destinationDefinitionId)
     destinationService.writeConnectorMetadata(destDef, actorDefinitionVersion, mutableListOf())
     Assertions.assertEquals(
-      destDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
-      destinationService.getStandardDestinationDefinition(destDef.getDestinationDefinitionId()),
+      destDef.withDefaultVersionId(actorDefinitionVersion.versionId),
+      destinationService.getStandardDestinationDefinition(destDef.destinationDefinitionId),
     )
   }
 
@@ -309,15 +308,15 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   fun testGetDestinationDefinitionFromDestination() {
     val workspace: StandardWorkspace = createBaseStandardWorkspace()
     val destDef: StandardDestinationDefinition = createBaseDestDef().withTombstone(false)
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId())
-    val dest: DestinationConnection = createDest(destDef.getDestinationDefinitionId(), workspace.getWorkspaceId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDef.destinationDefinitionId)
+    val dest: DestinationConnection = createDest(destDef.destinationDefinitionId, workspace.workspaceId)
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
     destinationService.writeConnectorMetadata(destDef, actorDefinitionVersion, mutableListOf())
     destinationService.writeDestinationConnectionNoSecrets(dest)
 
     Assertions.assertEquals(
-      destDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
-      destinationService.getDestinationDefinitionFromDestination(dest.getDestinationId()),
+      destDef.withDefaultVersionId(actorDefinitionVersion.versionId),
+      destinationService.getDestinationDefinitionFromDestination(dest.destinationId),
     )
   }
 
@@ -326,10 +325,10 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     val workspace: StandardWorkspace = createBaseStandardWorkspace()
     val destDef: StandardDestinationDefinition = createBaseDestDef().withTombstone(false)
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef().withTombstone(false)
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId())
-    val sourceActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId())
-    val dest: DestinationConnection = createDest(destDef.getDestinationDefinitionId(), workspace.getWorkspaceId())
-    val source: SourceConnection = createSource(sourceDefinition.getSourceDefinitionId(), workspace.getWorkspaceId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDef.destinationDefinitionId)
+    val sourceActorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.sourceDefinitionId)
+    val dest: DestinationConnection = createDest(destDef.destinationDefinitionId, workspace.workspaceId)
+    val source: SourceConnection = createSource(sourceDefinition.sourceDefinitionId, workspace.workspaceId)
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
     destinationService.writeConnectorMetadata(destDef, actorDefinitionVersion, mutableListOf())
     sourceService.writeConnectorMetadata(sourceDefinition, sourceActorDefinitionVersion, mutableListOf())
@@ -340,16 +339,16 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     val connection =
       StandardSync()
         .withName("Test Sync")
-        .withDestinationId(dest.getDestinationId())
+        .withDestinationId(dest.destinationId)
         .withConnectionId(connectionId)
-        .withSourceId(source.getSourceId())
+        .withSourceId(source.sourceId)
         .withCatalog(ConfiguredAirbyteCatalog())
         .withBreakingChange(false)
 
     connectionService.writeStandardSync(connection)
 
     Assertions.assertEquals(
-      destDef.withDefaultVersionId(actorDefinitionVersion.getVersionId()),
+      destDef.withDefaultVersionId(actorDefinitionVersion.versionId),
       destinationService.getDestinationDefinitionFromConnection(connectionId),
     )
   }
@@ -357,18 +356,18 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   @ParameterizedTest
   @ValueSource(ints = [0, 1, 2, 10])
   fun testListStandardDestDefsHandlesTombstoneDestDefs(numDestinationDefinitions: Int) {
-    val allDestinationDefinitions: MutableList<StandardDestinationDefinition?> = ArrayList<StandardDestinationDefinition?>()
-    val notTombstoneDestinationDefinitions: MutableList<StandardDestinationDefinition?> = ArrayList<StandardDestinationDefinition?>()
+    val allDestinationDefinitions: MutableList<StandardDestinationDefinition?> = ArrayList()
+    val notTombstoneDestinationDefinitions: MutableList<StandardDestinationDefinition?> = ArrayList()
     for (i in 0..<numDestinationDefinitions) {
       val isTombstone = i % 2 == 0 // every other is tombstone
       val destinationDefinition: StandardDestinationDefinition = createBaseDestDef().withTombstone(isTombstone)
-      val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId())
+      val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.destinationDefinitionId)
       allDestinationDefinitions.add(destinationDefinition)
       if (!isTombstone) {
         notTombstoneDestinationDefinitions.add(destinationDefinition)
       }
       destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, mutableListOf())
-      destinationDefinition.setDefaultVersionId(actorDefinitionVersion.getVersionId())
+      destinationDefinition.defaultVersionId = actorDefinitionVersion.versionId
     }
 
     val returnedDestDefsWithoutTombstone: MutableList<StandardDestinationDefinition> =
@@ -389,21 +388,21 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     // Write multiple definitions to be updated and one to not be updated
     val sourceDef: StandardSourceDefinition = createBaseSourceDef()
     val adv: ActorDefinitionVersion =
-      createBaseActorDefVersion(sourceDef.getSourceDefinitionId())
+      createBaseActorDefVersion(sourceDef.sourceDefinitionId)
         .withDockerRepository(declarativeDockerRepository)
         .withDockerImageTag(previousTag)
     sourceService.writeConnectorMetadata(sourceDef, adv, mutableListOf())
 
     val sourceDef2: StandardSourceDefinition = createBaseSourceDef()
     val adv2: ActorDefinitionVersion =
-      createBaseActorDefVersion(sourceDef2.getSourceDefinitionId())
+      createBaseActorDefVersion(sourceDef2.sourceDefinitionId)
         .withDockerRepository(declarativeDockerRepository)
         .withDockerImageTag(previousTag)
     sourceService.writeConnectorMetadata(sourceDef2, adv2, mutableListOf())
 
     val sourceDef3: StandardSourceDefinition = createBaseSourceDef()
     val adv3: ActorDefinitionVersion =
-      createBaseActorDefVersion(sourceDef3.getSourceDefinitionId())
+      createBaseActorDefVersion(sourceDef3.sourceDefinitionId)
         .withDockerRepository(declarativeDockerRepository)
         .withDockerImageTag(differentMajorTag)
     sourceService.writeConnectorMetadata(sourceDef3, adv3, mutableListOf())
@@ -411,23 +410,23 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     val numUpdated = actorDefinitionService.updateDeclarativeActorDefinitionVersions(previousTag, newTag)
     Assertions.assertEquals(2, numUpdated)
 
-    val updatedSourceDef = sourceService.getStandardSourceDefinition(sourceDef.getSourceDefinitionId())
-    val updatedSourceDef2 = sourceService.getStandardSourceDefinition(sourceDef2.getSourceDefinitionId())
-    val persistedSourceDef3 = sourceService.getStandardSourceDefinition(sourceDef3.getSourceDefinitionId())
+    val updatedSourceDef = sourceService.getStandardSourceDefinition(sourceDef.sourceDefinitionId)
+    val updatedSourceDef2 = sourceService.getStandardSourceDefinition(sourceDef2.sourceDefinitionId)
+    val persistedSourceDef3 = sourceService.getStandardSourceDefinition(sourceDef3.sourceDefinitionId)
 
-    // Definitions that were on the previous tag should be updated to the new tag
+    // Definitions on the previous tag should be updated to the new tag
     Assertions.assertEquals(
       newTag,
-      actorDefinitionService.getActorDefinitionVersion(updatedSourceDef.getDefaultVersionId()).getDockerImageTag(),
+      actorDefinitionService.getActorDefinitionVersion(updatedSourceDef.defaultVersionId).dockerImageTag,
     )
     Assertions.assertEquals(
       newTag,
-      actorDefinitionService.getActorDefinitionVersion(updatedSourceDef2.getDefaultVersionId()).getDockerImageTag(),
+      actorDefinitionService.getActorDefinitionVersion(updatedSourceDef2.defaultVersionId).dockerImageTag,
     )
     // Definitions on a different version don't get updated
     Assertions.assertEquals(
       differentMajorTag,
-      actorDefinitionService.getActorDefinitionVersion(persistedSourceDef3.getDefaultVersionId()).getDockerImageTag(),
+      actorDefinitionService.getActorDefinitionVersion(persistedSourceDef3.defaultVersionId).dockerImageTag,
     )
   }
 
@@ -437,58 +436,58 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
     val sourceDefInUse: StandardSourceDefinition = createBaseSourceDef()
-    val actorDefinitionVersion3: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefInUse.getSourceDefinitionId())
+    val actorDefinitionVersion3: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefInUse.sourceDefinitionId)
     sourceService.writeConnectorMetadata(sourceDefInUse, actorDefinitionVersion3, mutableListOf())
-    val sourceConnection: SourceConnection = createSource(sourceDefInUse.getSourceDefinitionId(), workspace.getWorkspaceId())
+    val sourceConnection: SourceConnection = createSource(sourceDefInUse.sourceDefinitionId, workspace.workspaceId)
     sourceService.writeSourceConnectionNoSecrets(sourceConnection)
 
     val sourceDefNotInUse: StandardSourceDefinition = createBaseSourceDef()
-    val actorDefinitionVersion4: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefNotInUse.getSourceDefinitionId())
+    val actorDefinitionVersion4: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefNotInUse.sourceDefinitionId)
     sourceService.writeConnectorMetadata(sourceDefNotInUse, actorDefinitionVersion4, mutableListOf())
 
     val destDefInUse: StandardDestinationDefinition = createBaseDestDef()
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDefInUse.getDestinationDefinitionId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDefInUse.destinationDefinitionId)
     destinationService.writeConnectorMetadata(destDefInUse, actorDefinitionVersion, mutableListOf())
-    val destinationConnection: DestinationConnection = createDest(destDefInUse.getDestinationDefinitionId(), workspace.getWorkspaceId())
+    val destinationConnection: DestinationConnection = createDest(destDefInUse.destinationDefinitionId, workspace.workspaceId)
     destinationService.writeDestinationConnectionNoSecrets(destinationConnection)
 
     val destDefNotInUse: StandardDestinationDefinition = createBaseDestDef()
-    val actorDefinitionVersion2: ActorDefinitionVersion = createBaseActorDefVersion(destDefNotInUse.getDestinationDefinitionId())
+    val actorDefinitionVersion2: ActorDefinitionVersion = createBaseActorDefVersion(destDefNotInUse.destinationDefinitionId)
     destinationService.writeConnectorMetadata(destDefNotInUse, actorDefinitionVersion2, mutableListOf())
 
-    Assertions.assertTrue(actorDefinitionService.getActorDefinitionIdsInUse().contains(sourceDefInUse.getSourceDefinitionId()))
-    Assertions.assertTrue(actorDefinitionService.getActorDefinitionIdsInUse().contains(destDefInUse.getDestinationDefinitionId()))
-    Assertions.assertFalse(actorDefinitionService.getActorDefinitionIdsInUse().contains(sourceDefNotInUse.getSourceDefinitionId()))
-    Assertions.assertFalse(actorDefinitionService.getActorDefinitionIdsInUse().contains(destDefNotInUse.getDestinationDefinitionId()))
+    Assertions.assertTrue(actorDefinitionService.getActorDefinitionIdsInUse().contains(sourceDefInUse.sourceDefinitionId))
+    Assertions.assertTrue(actorDefinitionService.getActorDefinitionIdsInUse().contains(destDefInUse.destinationDefinitionId))
+    Assertions.assertFalse(actorDefinitionService.getActorDefinitionIdsInUse().contains(sourceDefNotInUse.sourceDefinitionId))
+    Assertions.assertFalse(actorDefinitionService.getActorDefinitionIdsInUse().contains(destDefNotInUse.destinationDefinitionId))
   }
 
   @Test
   fun testGetActorDefinitionIdsToDefaultVersionsMap() {
     val sourceDef: StandardSourceDefinition = createBaseSourceDef()
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDef.getSourceDefinitionId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDef.sourceDefinitionId)
     sourceService.writeConnectorMetadata(sourceDef, actorDefinitionVersion, mutableListOf())
 
     val destDef: StandardDestinationDefinition = createBaseDestDef()
-    val actorDefinitionVersion2: ActorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId())
+    val actorDefinitionVersion2: ActorDefinitionVersion = createBaseActorDefVersion(destDef.destinationDefinitionId)
     destinationService.writeConnectorMetadata(destDef, actorDefinitionVersion2, mutableListOf())
 
     val actorDefIdToDefaultVersionId: Map<UUID, ActorDefinitionVersion> =
       actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap()
     Assertions.assertEquals(actorDefIdToDefaultVersionId.size, 2)
-    Assertions.assertEquals(actorDefIdToDefaultVersionId.get(sourceDef.getSourceDefinitionId()), actorDefinitionVersion)
-    Assertions.assertEquals(actorDefIdToDefaultVersionId.get(destDef.getDestinationDefinitionId()), actorDefinitionVersion2)
+    Assertions.assertEquals(actorDefIdToDefaultVersionId[sourceDef.sourceDefinitionId], actorDefinitionVersion)
+    Assertions.assertEquals(actorDefIdToDefaultVersionId[destDef.destinationDefinitionId], actorDefinitionVersion2)
   }
 
   @Test
   fun testUpdateStandardSourceDefinition() {
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.sourceDefinitionId)
 
     sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf())
 
     val sourceDefinitionFromDB =
-      sourceService.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())
-    Assertions.assertEquals(sourceDefinition.withDefaultVersionId(actorDefinitionVersion.getVersionId()), sourceDefinitionFromDB)
+      sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId)
+    Assertions.assertEquals(sourceDefinition.withDefaultVersionId(actorDefinitionVersion.versionId), sourceDefinitionFromDB)
 
     val sourceDefinition2 =
       sourceDefinition
@@ -498,34 +497,33 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     sourceService.updateStandardSourceDefinition(sourceDefinition2)
 
     val sourceDefinition2FromDB =
-      sourceService.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())
+      sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId)
 
-    // Default version has not changed
-    Assertions.assertEquals(sourceDefinition2FromDB.getDefaultVersionId(), sourceDefinitionFromDB.getDefaultVersionId())
+    // The default version has not changed
+    Assertions.assertEquals(sourceDefinition2FromDB.defaultVersionId, sourceDefinitionFromDB.defaultVersionId)
 
     // Source definition has been updated
-    Assertions.assertEquals(sourceDefinition2.withDefaultVersionId(actorDefinitionVersion.getVersionId()), sourceDefinition2FromDB)
+    Assertions.assertEquals(sourceDefinition2.withDefaultVersionId(actorDefinitionVersion.versionId), sourceDefinition2FromDB)
   }
 
   @Test
   fun testUpdateNonexistentStandardSourceDefinitionThrows() {
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable { sourceService.updateStandardSourceDefinition(sourceDefinition) },
-    )
+    ) { sourceService.updateStandardSourceDefinition(sourceDefinition) }
   }
 
   @Test
   fun testUpdateStandardDestinationDefinition() {
     val destinationDefinition: StandardDestinationDefinition = createBaseDestDef()
-    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId())
+    val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.destinationDefinitionId)
 
     destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, mutableListOf())
 
     val destinationDefinitionFromDB =
-      destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())
-    Assertions.assertEquals(destinationDefinition.withDefaultVersionId(actorDefinitionVersion.getVersionId()), destinationDefinitionFromDB)
+      destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId)
+    Assertions.assertEquals(destinationDefinition.withDefaultVersionId(actorDefinitionVersion.versionId), destinationDefinitionFromDB)
 
     val destinationDefinition2 =
       destinationDefinition
@@ -535,22 +533,21 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     destinationService.updateStandardDestinationDefinition(destinationDefinition2)
 
     val destinationDefinition2FromDB =
-      destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(destinationDefinition.destinationDefinitionId)
 
-    // Default version has not changed
-    Assertions.assertEquals(destinationDefinition2FromDB.getDefaultVersionId(), destinationDefinitionFromDB.getDefaultVersionId())
+    // The default version has not changed
+    Assertions.assertEquals(destinationDefinition2FromDB.defaultVersionId, destinationDefinitionFromDB.defaultVersionId)
 
     // Destination definition has been updated
-    Assertions.assertEquals(destinationDefinition2.withDefaultVersionId(actorDefinitionVersion.getVersionId()), destinationDefinition2FromDB)
+    Assertions.assertEquals(destinationDefinition2.withDefaultVersionId(actorDefinitionVersion.versionId), destinationDefinition2FromDB)
   }
 
   @Test
   fun testUpdateNonexistentStandardDestinationDefinitionThrows() {
     val destinationDefinition: StandardDestinationDefinition = createBaseDestDef()
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable { destinationService.updateStandardDestinationDefinition(destinationDefinition) },
-    )
+    ) { destinationService.updateStandardDestinationDefinition(destinationDefinition) }
   }
 
   companion object {
@@ -584,7 +581,7 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
       val id = UUID.randomUUID()
 
       return StandardSourceDefinition()
-        .withName("source-def-" + id)
+        .withName("source-def-$id")
         .withSourceDefinitionId(id)
         .withTombstone(false)
         .withMaxSecondsBetweenMessages(MockData.DEFAULT_MAX_SECONDS_BETWEEN_MESSAGES)
@@ -594,7 +591,7 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
       ActorDefinitionVersion()
         .withVersionId(UUID.randomUUID())
         .withActorDefinitionId(actorDefId)
-        .withDockerRepository("source-image-" + actorDefId)
+        .withDockerRepository("source-image-$actorDefId")
         .withDockerImageTag(DOCKER_IMAGE_TAG)
         .withSupportLevel(SupportLevel.COMMUNITY)
         .withInternalSupportLevel(100L)
@@ -604,7 +601,7 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
       val id = UUID.randomUUID()
 
       return StandardSourceDefinition()
-        .withName("source-def-" + id)
+        .withName("source-def-$id")
         .withSourceDefinitionId(id)
         .withTombstone(false)
     }
@@ -613,7 +610,7 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
       val id = UUID.randomUUID()
 
       return StandardDestinationDefinition()
-        .withName("source-def-" + id)
+        .withName("source-def-$id")
         .withDestinationDefinitionId(id)
         .withTombstone(false)
     }

@@ -6,7 +6,6 @@ package io.airbyte.commons.version
 
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 
 internal class AirbyteVersionTest {
   @Test
@@ -38,7 +37,7 @@ internal class AirbyteVersionTest {
   }
 
   @Test
-  fun testversionCompareTo() {
+  fun testVersionCompareTo() {
     Assertions.assertEquals(0, AirbyteVersion(VERSION_678_OMEGA).versionCompareTo(AirbyteVersion(VERSION_678_GAMMA)))
     Assertions.assertTrue(0 > AirbyteVersion(VERSION_678_ALPHA).versionCompareTo(AirbyteVersion(VERSION_679_ALPHA)))
     Assertions.assertTrue(0 > AirbyteVersion(VERSION_678_ALPHA).versionCompareTo(AirbyteVersion("6.7.11-alpha")))
@@ -78,8 +77,8 @@ internal class AirbyteVersionTest {
 
   @Test
   fun testInvalidVersions() {
-    Assertions.assertThrows<IllegalArgumentException?>(IllegalArgumentException::class.java, Executable { AirbyteVersion("") })
-    Assertions.assertThrows<IllegalArgumentException?>(IllegalArgumentException::class.java, Executable { AirbyteVersion("0.6") })
+    Assertions.assertThrows(IllegalArgumentException::class.java) { AirbyteVersion("") }
+    Assertions.assertThrows(IllegalArgumentException::class.java) { AirbyteVersion("0.6") }
   }
 
   @Test

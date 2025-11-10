@@ -72,9 +72,9 @@ interface SecretsTestCase {
     get() {
       return Resources
         .read("$name/expectedPaths")
-        .trim { it <= ' ' }
+        .trim()
         .split(";")
-        .dropLastWhile { it.isEmpty() }
+        .filter { it.isNotEmpty() }
         .sorted()
     }
 

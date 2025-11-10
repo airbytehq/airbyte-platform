@@ -34,7 +34,6 @@ import io.airbyte.data.services.SourceService
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.Mockito
@@ -364,7 +363,7 @@ internal class ActorDefinitionVersionHandlerTest {
     val exception =
       Assertions.assertThrows(
         NotFoundException::class.java,
-        Executable { actorDefinitionVersionHandler!!.resolveActorDefinitionVersionByTag(resolveVersionRequestBody) },
+        { actorDefinitionVersionHandler!!.resolveActorDefinitionVersionByTag(resolveVersionRequestBody) },
       )
     Assertions.assertEquals(
       String.format(

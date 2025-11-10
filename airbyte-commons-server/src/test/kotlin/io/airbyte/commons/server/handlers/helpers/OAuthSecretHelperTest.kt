@@ -16,7 +16,6 @@ import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 
 internal class OAuthSecretHelperTest {
   @Test
@@ -93,15 +92,14 @@ internal class OAuthSecretHelperTest {
   @Test
   fun testValidateOauthParamConfigAndReturnAdvancedAuthSecretSpec() {
     val emptyConnectorSpecification = ConnectorSpecification()
-    Assertions.assertThrows<BadObjectSchemaKnownException?>(
+    Assertions.assertThrows(
       BadObjectSchemaKnownException::class.java,
-      Executable {
-        validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(
-          emptyConnectorSpecification,
-          jsonNode(mutableMapOf<Any?, Any?>()),
-        )
-      },
-    )
+    ) {
+      validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(
+        emptyConnectorSpecification,
+        jsonNode(mutableMapOf<Any?, Any?>()),
+      )
+    }
 
     val connectorSpecification = ConnectorSpecificationHelpers.generateNestedAdvancedAuthConnectorSpecification()!!
     val invalidOAuthParamConfig =
@@ -112,10 +110,9 @@ internal class OAuthSecretHelperTest {
         ),
       )
 
-    Assertions.assertThrows<BadObjectSchemaKnownException?>(
+    Assertions.assertThrows(
       BadObjectSchemaKnownException::class.java,
-      Executable { validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(emptyConnectorSpecification, invalidOAuthParamConfig) },
-    )
+    ) { validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(emptyConnectorSpecification, invalidOAuthParamConfig) }
 
     val oneInvalidKeyOAuthParams =
       jsonNode(
@@ -127,10 +124,9 @@ internal class OAuthSecretHelperTest {
         ),
       )
 
-    Assertions.assertThrows<BadObjectSchemaKnownException?>(
+    Assertions.assertThrows(
       BadObjectSchemaKnownException::class.java,
-      Executable { validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(emptyConnectorSpecification, oneInvalidKeyOAuthParams) },
-    )
+    ) { validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(emptyConnectorSpecification, oneInvalidKeyOAuthParams) }
 
     val oauthParamConfig =
       jsonNode(
@@ -163,7 +159,7 @@ internal class OAuthSecretHelperTest {
         ),
       )
 
-    Assertions.assertEquals(newConnectorSpecification.getConnectionSpecification(), expected)
+    Assertions.assertEquals(newConnectorSpecification.connectionSpecification, expected)
   }
 
   companion object {
