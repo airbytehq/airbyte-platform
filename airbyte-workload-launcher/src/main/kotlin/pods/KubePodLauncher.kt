@@ -107,13 +107,7 @@ class KubePodLauncher(
         "wait",
       )
 
-    // If we found image pull errors, throw now (only populated if feature flag is enabled)
-    if (imagePullErrors.isNotEmpty()) {
-      throw ImagePullException(
-        message = "Failed to pull container images for pod ${pod.fullResourceName}: ${PodStatusChecker.formatImagePullErrors(imagePullErrors)}",
-        commandType = KubeCommandType.WAIT_INIT,
-      )
-    }
+    handleImagePullErrors(imagePullErrors, pod)
 
     val containerState =
       initializedPod
@@ -184,13 +178,7 @@ class KubePodLauncher(
         "wait",
       )
 
-    // If we found image pull errors, throw now (only populated if feature flag is enabled)
-    if (imagePullErrors.isNotEmpty()) {
-      throw ImagePullException(
-        message = "Failed to pull container images for pod ${pod.fullResourceName}: ${PodStatusChecker.formatImagePullErrors(imagePullErrors)}",
-        commandType = KubeCommandType.WAIT_INIT,
-      )
-    }
+    handleImagePullErrors(imagePullErrors, pod)
 
     val containerState: ContainerState =
       initializedPod
@@ -264,13 +252,7 @@ class KubePodLauncher(
       "wait",
     )
 
-    // If we found image pull errors, throw now (only populated if feature flag is enabled)
-    if (imagePullErrors.isNotEmpty()) {
-      throw ImagePullException(
-        message = "Failed to pull container images for pod ${pod.fullResourceName}: ${PodStatusChecker.formatImagePullErrors(imagePullErrors)}",
-        commandType = KubeCommandType.WAIT_MAIN,
-      )
-    }
+    handleImagePullErrors(imagePullErrors, pod)
   }
 
   fun podsRunning(labels: Map<String, String>): Boolean {
@@ -365,7 +347,7 @@ class KubePodLauncher(
         .toList()
 
     // There should be at least 1 container with a status.
-    if (mainContainerStatuses.size < 1) {
+    if (mainContainerStatuses.isEmpty()) {
       logger.warn { "Unexpectedly no non-init container statuses found for pod: ${pod.fullResourceName}" }
       return false
     }
@@ -389,9 +371,7 @@ class KubePodLauncher(
   ): T {
     try {
       return Failsafe.with(kubernetesClientRetryPolicy).get(
-        object : CheckedSupplier<T> {
-          override fun get(): T = kubeCommand()
-        },
+        CheckedSupplier<T> { kubeCommand() },
       )
     } catch (e: Exception) {
       val attributes: List<MetricAttribute> = listOf(MetricAttribute("operation", commandName))
@@ -399,6 +379,28 @@ class KubePodLauncher(
       metricClient.count(metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_ERROR, attributes = attributesArray)
 
       throw e
+    }
+  }
+
+  private fun handleImagePullErrors(
+    imagePullErrors: List<PodStatusChecker.ImagePullError>,
+    pod: Pod,
+  ) {
+    // If we found image pull errors, throw now (only populated if the feature flag is enabled)
+    if (imagePullErrors.isNotEmpty()) {
+      metricClient.count(
+        metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_IMAGE_PULL_FAILURE,
+        value = imagePullErrors.size.toLong(),
+        attributes =
+          arrayOf(
+            MetricAttribute("pod_name", pod.metadata.name),
+            MetricAttribute("namespace", pod.metadata.namespace),
+          ),
+      )
+      throw ImagePullException(
+        message = "Failed to pull container images for pod ${pod.fullResourceName}: ${PodStatusChecker.formatImagePullErrors(imagePullErrors)}",
+        commandType = KubeCommandType.WAIT_INIT,
+      )
     }
   }
 

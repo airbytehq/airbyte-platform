@@ -532,6 +532,10 @@ enum class OssMetricsRegistry(
     metricName = "workload_message_published",
     metricDescription = "Count of workloads published to the queue",
   ),
+  WORKLOAD_LAUNCHER_IMAGE_PULL_FAILURE(
+    metricName = "workload_launcher_image_pull_failure",
+    metricDescription = "Count of image pull failures encountered during pod launching",
+  ),
   WORKLOAD_LAUNCHER_KUBE_API_CLIENT_ABORT(
     metricName = "kube_api_client.abort",
     metricDescription = "Count of Kubernetes API client request aborts.",
