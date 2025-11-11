@@ -25,7 +25,7 @@ function check_chart_image_exist() {
   printf "\nCalling check_chart_image_exists with tag $1...\n"
   local tag=$1
 
-  images=($(grep "repository: airbyte/" "$this_file_directory/../../charts/airbyte/values.yaml" | tr -d ' ' | cut -d ':' -f2))
+  images=($(grep "repository: airbyte/" "$this_file_directory/../../charts/airbyte/v2/values.yaml" | tr -d ' ' | cut -d ':' -f2))
   for img in "${images[@]}";
   do
       printf "\t${img}:${tag}\n"
