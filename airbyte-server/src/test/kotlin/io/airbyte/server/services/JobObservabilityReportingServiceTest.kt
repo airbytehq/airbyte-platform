@@ -86,6 +86,97 @@ class JobObservabilityReportingServiceTest {
   }
 
   @Test
+  fun `buildStreamSummary includes derived metrics in additionalStats and evaluations`() {
+    // Create evaluation for derived metric with full scores
+    val derivedMetricEvaluation =
+      OutlierEvaluation(
+        name = "sourceFieldsPopulatedPerRecord",
+        value = 3.5, // z-score
+        threshold = 3.0,
+        isOutlier = true,
+        scores =
+          Scores(
+            current = 50.0,
+            mean = 9.09,
+            std = 11.69,
+            zScore = 3.5,
+          ),
+      )
+
+    val streamInfo =
+      StreamInfo(
+        namespace = "public",
+        name = "users",
+        wasBackfilled = false,
+        wasResumed = false,
+        metrics =
+          StreamMetrics(
+            bytesLoaded = 1000L,
+            recordsLoaded = 100L,
+            recordsRejected = 0L,
+            additionalStats =
+              mapOf(
+                "sourceFieldsPopulated" to BigDecimal("5000.0"), // raw metric
+                "sourceFieldsPopulatedPerRecord" to BigDecimal("50.0"), // derived metric
+              ),
+          ),
+        evaluations = listOf(derivedMetricEvaluation),
+        isOutlier = true,
+      )
+
+    // Call method directly
+    val result = service.buildStreamSummary(streamInfo)
+
+    // ========== Verify standard fields ==========
+    assertEquals(1000L, result["bytes_loaded"])
+    assertEquals(100L, result["records_loaded"])
+    assertEquals(0L, result["records_rejected"])
+    assertEquals(false, result["was_backfilled"])
+    assertEquals(false, result["was_resumed"])
+
+    // ========== Verify additionalStats includes derived metrics ==========
+    assertTrue(result.containsKey("additional_stats"), "Should include additional_stats")
+    @Suppress("UNCHECKED_CAST")
+    val additionalStats = result["additional_stats"] as Map<String, BigDecimal>
+
+    // Verify raw metric is included
+    assertTrue(additionalStats.containsKey("sourceFieldsPopulated"), "Should include raw metric")
+    assertEquals(BigDecimal("5000.0"), additionalStats["sourceFieldsPopulated"])
+
+    // Verify derived metric is included
+    assertTrue(additionalStats.containsKey("sourceFieldsPopulatedPerRecord"), "Should include derived metric")
+    assertEquals(BigDecimal("50.0"), additionalStats["sourceFieldsPopulatedPerRecord"])
+
+    // ========== Verify evaluation for derived metric is included ==========
+    val evaluationKey = "_score_sourceFieldsPopulatedPerRecord"
+    assertTrue(result.containsKey(evaluationKey), "Should include evaluation for derived metric with key $evaluationKey")
+
+    // Parse the evaluation JSON to verify all fields are present
+    val evaluationJson = result[evaluationKey] as String
+    val evaluationNode: JsonNode = Jsons.deserialize(evaluationJson)
+
+    // Verify top-level evaluation fields
+    assertEquals(3.5, evaluationNode.get("value").asDouble(), 0.001, "Evaluation should contain value (z-score)")
+    assertEquals(3.0, evaluationNode.get("threshold").asDouble(), 0.001, "Evaluation should contain threshold")
+    assertTrue(evaluationNode.get("is_outlier").asBoolean(), "Evaluation should contain is_outlier=true")
+
+    // Verify scores is a proper JSON object (not string) and contains all fields
+    val scoresNode = evaluationNode.get("scores")
+    assertNotNull(scoresNode, "Scores should be present")
+    assertTrue(scoresNode.isObject, "Scores should be a JSON object, not a string")
+
+    // Verify scores object contains the expected fields with proper values
+    assertEquals(50.0, scoresNode.get("current").asDouble(), 0.001, "Scores should include current value")
+    assertEquals(9.09, scoresNode.get("mean").asDouble(), 0.1, "Scores should include mean")
+    assertEquals(11.69, scoresNode.get("std").asDouble(), 0.1, "Scores should include standard deviation")
+
+    // zScore could be serialized as either "zScore" or "zscore" depending on Jackson config
+    val zScoreValue = scoresNode.get("zScore")?.asDouble() ?: scoresNode.get("zscore")?.asDouble() ?: 0.0
+    assertNotNull(scoresNode.get("zScore") ?: scoresNode.get("zscore"), "zScore field should exist in JSON")
+    assertEquals(3.5, zScoreValue, 0.1, "Scores should include z-score")
+  }
+
+  @Test
   fun `buildStreamSummary serializes scores as JSON objects not strings`() {
     val scores =
       Scores(

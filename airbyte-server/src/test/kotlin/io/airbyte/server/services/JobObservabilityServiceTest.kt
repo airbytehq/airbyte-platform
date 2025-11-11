@@ -1105,4 +1105,140 @@ class JobObservabilityServiceTest {
     // Verify derived stat was computed and included in metrics
     assertEquals(BigDecimal.valueOf(100.0), result.metrics.additionalStats["averageRecordSize"])
   }
+
+  @Test
+  fun `test outlier detection for sourceFieldsPopulatedPerRecord derived metric`() {
+    // Use the real JobObservabilityRulesService to get the actual derived stat and outlier rules
+    val rulesService = JobObservabilityRulesService()
+
+    val testService =
+      JobObservabilityService(
+        actorDefinitionService = actorDefinitionService,
+        connectionService = connectionService,
+        jobPersistence = jobPersistence,
+        obsStatsService = obsStatsService,
+        workspaceService = workspaceService,
+        metricClient = metricClient,
+        jobObservabilityReportingService = null,
+        jobObservabilityRulesService = rulesService,
+        streamStatsService = streamStatsService,
+      )
+
+    // Create current stream with outlier sourceFieldsPopulated (much higher than historical)
+    // Historical: ~5 fields per record (consistent), Current: ~50 fields per record (10x higher)
+    // With 10 historical data points at 5, and 1 current at 50, z-score will be ~3.16 (above threshold of 3.0)
+    val currentStream =
+      ObsStreamStats(
+        id = ObsStreamStatsId(jobId = 1L, streamNamespace = "public", streamName = "users"),
+        bytesLoaded = 1000L,
+        recordsLoaded = 100L,
+        recordsRejected = 0L,
+        wasBackfilled = false,
+        wasResumed = false,
+        additionalStats = mapOf("sourceFieldsPopulated" to BigDecimal("5000.0")), // 5000 / 100 = 50 per record
+      )
+
+    // Create 10 historical streams with consistent sourceFieldsPopulated (5 per record)
+    val historicalStreams =
+      (2L..11L).map { jobId ->
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = jobId, streamNamespace = "public", streamName = "users"),
+          bytesLoaded = 1000L,
+          recordsLoaded = 100L,
+          recordsRejected = 0L,
+          wasBackfilled = false,
+          wasResumed = false,
+          additionalStats = mapOf("sourceFieldsPopulated" to BigDecimal("500.0")), // 500 / 100 = 5 per record
+        )
+      }
+
+    // Call evaluateStream
+    val result = testService.evaluateStream("public", "users", currentStream, historicalStreams)
+
+    // ========== Verify StreamInfo fields ==========
+
+    // Basic stream identification
+    assertEquals("public", result.namespace, "Namespace should match")
+    assertEquals("users", result.name, "Stream name should match")
+
+    // Stream flags
+    assertFalse(result.wasBackfilled, "wasBackfilled should be false")
+    assertFalse(result.wasResumed, "wasResumed should be false")
+
+    // Outlier status
+    assertTrue(result.isOutlier, "Stream should be marked as outlier")
+
+    // ========== Verify StreamMetrics fields ==========
+
+    assertEquals(1000L, result.metrics.bytesLoaded, "bytesLoaded should match")
+    assertEquals(100L, result.metrics.recordsLoaded, "recordsLoaded should match")
+    assertEquals(0L, result.metrics.recordsRejected, "recordsRejected should match")
+
+    // Verify additionalStats includes both source and derived stats
+    assert(result.metrics.additionalStats.containsKey("sourceFieldsPopulated")) {
+      "additionalStats should contain sourceFieldsPopulated"
+    }
+    assertEquals(
+      BigDecimal("5000.0"),
+      result.metrics.additionalStats["sourceFieldsPopulated"],
+      "sourceFieldsPopulated should be 5000.0",
+    )
+
+    assert(result.metrics.additionalStats.containsKey("sourceFieldsPopulatedPerRecord")) {
+      "additionalStats should contain derived stat sourceFieldsPopulatedPerRecord"
+    }
+    assertEquals(
+      BigDecimal("50.0"),
+      result.metrics.additionalStats["sourceFieldsPopulatedPerRecord"],
+      "sourceFieldsPopulatedPerRecord should be 5000 / 100 = 50",
+    )
+
+    // ========== Verify Evaluations list ==========
+
+    assert(result.evaluations.isNotEmpty()) { "Evaluations list should not be empty" }
+
+    // Find the sourceFieldsPopulatedPerRecord evaluation
+    val sourceFieldsEval = result.evaluations.find { it.name == "sourceFieldsPopulatedPerRecord" }
+    assert(sourceFieldsEval != null) { "Should have evaluation for sourceFieldsPopulatedPerRecord" }
+
+    // ========== Verify OutlierEvaluation fields ==========
+
+    // Basic evaluation fields
+    assertEquals("sourceFieldsPopulatedPerRecord", sourceFieldsEval!!.name, "Evaluation name should match")
+    assertTrue(sourceFieldsEval.isOutlier, "sourceFieldsPopulatedPerRecord should be flagged as outlier")
+    assertEquals(3.0, sourceFieldsEval.threshold, 0.001, "Threshold should be 3.0 (from rule)")
+    assert(sourceFieldsEval.value > 3.0) {
+      "Value (absolute z-score) should be > 3.0, got ${sourceFieldsEval.value}"
+    }
+
+    // ========== Verify Scores object fields ==========
+
+    assert(sourceFieldsEval.scores != null) { "Scores should be populated (not null)" }
+
+    // Current value
+    assertEquals(50.0, sourceFieldsEval.scores!!.current, 0.001, "Current value should be 50.0")
+
+    // Mean calculation: (5*10 + 50) / 11 = 100 / 11 = 9.09
+    assertEquals(9.09, sourceFieldsEval.scores!!.mean, 0.1, "Mean should be approximately 9.09")
+
+    // Standard deviation should be positive (variation exists)
+    assert(sourceFieldsEval.scores!!.std > 0) {
+      "Standard deviation should be positive, got ${sourceFieldsEval.scores!!.std}"
+    }
+
+    // Z-score calculation: (current - mean) / std = (50 - 9.09) / std
+    // Should be > 3.0 to trigger the outlier rule
+    assert(sourceFieldsEval.scores!!.zScore > 3.0) {
+      "Z-score should be > 3.0 to trigger outlier, got ${sourceFieldsEval.scores!!.zScore}"
+    }
+
+    // Additional validation: verify z-score is calculated correctly
+    val expectedZScore = (sourceFieldsEval.scores!!.current - sourceFieldsEval.scores!!.mean) / sourceFieldsEval.scores!!.std
+    assertEquals(
+      expectedZScore,
+      sourceFieldsEval.scores!!.zScore,
+      0.001,
+      "Z-score should match calculation: (current - mean) / std",
+    )
+  }
 }

@@ -67,6 +67,8 @@ class JobObservabilityRulesService {
       val recordsLoaded = Dimension("recordsLoaded")
       val recordsRejected = Dimension("recordsRejected")
       val averageRecordSize = Dimension("averageRecordSize")
+      val sourceFieldsPopulated = Dimension("sourceFieldsPopulated")
+      val sourceFieldsPopulatedPerRecord = Dimension("sourceFieldsPopulatedPerRecord")
       val nulledValuePerRecord = Dimension("nulledValuePerRecord")
       val truncatedValuePerRecord = Dimension("truncatedValuePerRecord")
     }
@@ -136,6 +138,12 @@ class JobObservabilityRulesService {
         operator = GreaterThan,
         threshold = Const(3.0),
       ),
+      OutlierRule(
+        name = Dim.Stream.sourceFieldsPopulatedPerRecord.name,
+        value = Abs(Dim.Stream.sourceFieldsPopulatedPerRecord.zScore),
+        operator = GreaterThan,
+        threshold = Const(3.0),
+      ),
     )
 
   /**
@@ -161,6 +169,10 @@ class JobObservabilityRulesService {
       DerivedStatRule(
         name = Dim.Stream.truncatedValuePerRecord.name,
         value = Dimension("truncatedValueCount") / Dim.Stream.recordsLoaded,
+      ),
+      DerivedStatRule(
+        name = Dim.Stream.sourceFieldsPopulatedPerRecord.name,
+        value = Dim.Stream.sourceFieldsPopulated / Dim.Stream.recordsLoaded,
       ),
     )
 }
