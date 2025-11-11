@@ -1696,6 +1696,176 @@ internal class ConnectorBuilderProjectsHandlerTest {
     Assertions.assertEquals(expectedResponse, response)
   }
 
+  @Test
+  fun testGetConnectorBuilderProjectOAuthConsentWithNullManifestDraft() {
+    val projectId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val actorDefinitionId = UUID.randomUUID()
+    val redirectUrl = "https://airbyte.com/auth_flow"
+    val consentUrl = "https://consent.url"
+
+    val oAuthConfigSpecification: OAuthConfigSpecification = Mockito.mock(OAuthConfigSpecification::class.java)
+    val spec =
+      ConnectorSpecification().withAdvancedAuth(AdvancedAuth().withOauthConfigSpecification(oAuthConfigSpecification))
+
+    // Mock project with null manifestDraft but with actorDefinitionId
+    val project =
+      ConnectorBuilderProject()
+        .withWorkspaceId(workspaceId)
+        .withActorDefinitionId(actorDefinitionId)
+        .withManifestDraft(null)
+        .withTestingValues(testingValuesWithSecretCoordinates)
+
+    // Mock the published manifest
+    val publishedManifest = jsonNode(mapOf("spec" to spec))
+    val declarativeManifest =
+      DeclarativeManifest()
+        .withManifest(publishedManifest)
+        .withActorDefinitionId(actorDefinitionId)
+
+    Mockito
+      .`when`(connectorBuilderService.getConnectorBuilderProject(projectId, true))
+      .thenReturn(project)
+    Mockito
+      .`when`(connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(actorDefinitionId))
+      .thenReturn(declarativeManifest)
+    Mockito
+      .`when`(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates))
+      .thenReturn(testingValues)
+
+    val oAuthFlowImplementation: DeclarativeOAuthFlow = Mockito.mock(DeclarativeOAuthFlow::class.java)
+    Mockito
+      .`when`(
+        oAuthFlowImplementation.getSourceConsentUrl(
+          eq(workspaceId),
+          eq(null),
+          eq(redirectUrl),
+          eq(testingValues),
+          anyOrNull(),
+          eq(testingValues),
+        ),
+      ).thenReturn(consentUrl)
+
+    Mockito
+      .`when`(
+        oauthImplementationFactory.createDeclarativeOAuthImplementation(
+          anyOrNull(),
+        ),
+      ).thenReturn(oAuthFlowImplementation)
+
+    val request =
+      BuilderProjectOauthConsentRequest()
+        .builderProjectId(projectId)
+        .workspaceId(workspaceId)
+        .redirectUrl(redirectUrl)
+
+    val response = connectorBuilderProjectsHandler.getConnectorBuilderProjectOAuthConsent(request)
+
+    // Verify that the published manifest was fetched
+    Mockito
+      .verify(connectorBuilderService, Mockito.times(1))
+      .getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(actorDefinitionId)
+
+    Mockito
+      .verify(oAuthFlowImplementation, Mockito.times(1))
+      .getSourceConsentUrl(
+        eq(workspaceId),
+        eq(null),
+        eq(redirectUrl),
+        eq(testingValues),
+        anyOrNull(),
+        eq(testingValues),
+      )
+
+    Assertions.assertEquals(consentUrl, response.getConsentUrl())
+  }
+
+  @Test
+  fun testCompleteConnectorBuilderProjectOAuthWithNullManifestDraft() {
+    val projectId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val actorDefinitionId = UUID.randomUUID()
+    val redirectUrl = "https://airbyte.com/auth_flow"
+    val queryParams = mapOf("code" to "12345")
+    val oAuthResponse = mapOf("accessToken" to "token")
+
+    val oAuthConfigSpecification: OAuthConfigSpecification = Mockito.mock(OAuthConfigSpecification::class.java)
+    val spec =
+      ConnectorSpecification().withAdvancedAuth(AdvancedAuth().withOauthConfigSpecification(oAuthConfigSpecification))
+
+    // Mock project with null manifestDraft but with actorDefinitionId
+    val project =
+      ConnectorBuilderProject()
+        .withWorkspaceId(workspaceId)
+        .withActorDefinitionId(actorDefinitionId)
+        .withManifestDraft(null)
+        .withTestingValues(testingValuesWithSecretCoordinates)
+
+    // Mock the published manifest
+    val publishedManifest = jsonNode(mapOf("spec" to spec))
+    val declarativeManifest =
+      DeclarativeManifest()
+        .withManifest(publishedManifest)
+        .withActorDefinitionId(actorDefinitionId)
+
+    Mockito
+      .`when`(connectorBuilderService.getConnectorBuilderProject(projectId, true))
+      .thenReturn(project)
+    Mockito
+      .`when`(connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(actorDefinitionId))
+      .thenReturn(declarativeManifest)
+    Mockito
+      .`when`(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates))
+      .thenReturn(testingValues)
+
+    val oAuthFlowMock: DeclarativeOAuthFlow = Mockito.mock(DeclarativeOAuthFlow::class.java)
+    Mockito
+      .`when`(
+        oAuthFlowMock.completeSourceOAuth(
+          eq(workspaceId),
+          eq(null),
+          eq(queryParams),
+          eq(redirectUrl),
+          eq(testingValues),
+          anyOrNull(),
+          eq(testingValues),
+        ),
+      ).thenReturn(oAuthResponse)
+
+    Mockito
+      .`when`(oauthImplementationFactory.createDeclarativeOAuthImplementation(anyOrNull()))
+      .thenReturn(oAuthFlowMock)
+
+    val request =
+      CompleteConnectorBuilderProjectOauthRequest()
+        .builderProjectId(projectId)
+        .workspaceId(workspaceId)
+        .queryParams(queryParams)
+        .redirectUrl(redirectUrl)
+
+    val response = connectorBuilderProjectsHandler.completeConnectorBuilderProjectOAuth(request)
+    val expectedResponse = CompleteOAuthResponse().requestSucceeded(true).authPayload(oAuthResponse)
+
+    // Verify that the published manifest was fetched
+    Mockito
+      .verify(connectorBuilderService, Mockito.times(1))
+      .getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(actorDefinitionId)
+
+    Mockito
+      .verify(oAuthFlowMock, Mockito.times(1))
+      .completeSourceOAuth(
+        eq(workspaceId),
+        eq(null),
+        eq(queryParams),
+        eq(redirectUrl),
+        eq(testingValues),
+        anyOrNull(),
+        eq(testingValues),
+      )
+
+    Assertions.assertEquals(expectedResponse, response)
+  }
+
   companion object {
     private val A_SOURCE_DEFINITION_ID: UUID = UUID.randomUUID()
     private val A_BUILDER_PROJECT_ID: UUID = UUID.randomUUID()

@@ -700,9 +700,11 @@ open class ConnectorBuilderProjectsHandler
 
     fun getConnectorBuilderProjectOAuthConsent(requestBody: BuilderProjectOauthConsentRequest): OAuthConsentRead {
       val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, true)
+      val manifest = getManifestForProject(project)
+
       val spec =
         Jsons.`object`(
-          project.manifestDraft["spec"],
+          manifest["spec"],
           ConnectorSpecification::class.java,
         )
 
@@ -754,9 +756,11 @@ open class ConnectorBuilderProjectsHandler
 
     fun completeConnectorBuilderProjectOAuth(requestBody: CompleteConnectorBuilderProjectOauthRequest): CompleteOAuthResponse {
       val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, true)
+      val manifest = getManifestForProject(project)
+
       val spec =
         Jsons.`object`(
-          project.manifestDraft["spec"],
+          manifest["spec"],
           ConnectorSpecification::class.java,
         )
 
@@ -789,6 +793,18 @@ open class ConnectorBuilderProjectsHandler
 
       return mapToCompleteOAuthResponse(result)
     }
+
+    private fun getManifestForProject(project: ConnectorBuilderProject): JsonNode =
+      if (project.manifestDraft != null) {
+        project.manifestDraft
+      } else if (project.actorDefinitionId != null) {
+        connectorBuilderService
+          .getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(
+            project.actorDefinitionId,
+          ).manifest
+      } else {
+        throw NotFoundException("No manifest found for connector builder project ${project.builderProjectId}")
+      }
 
     companion object {
       private val log = KotlinLogging.logger {}
