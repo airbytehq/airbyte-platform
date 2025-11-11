@@ -102,7 +102,7 @@ class JobObservabilityReportingService(
           "value" to value,
           "threshold" to threshold,
           "is_outlier" to isOutlier,
-          "scores" to scores.toString(),
+          "scores" to scores,
         ),
       )
   }
