@@ -25,6 +25,8 @@ import okio.Buffer
 import org.openapitools.client.infrastructure.ClientException
 import org.openapitools.client.infrastructure.ServerException
 import java.io.IOException
+import java.time.Instant
+import java.util.Date
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -37,6 +39,11 @@ internal object AirbyteApiClients {
       JWTClaimsSet
         .Builder()
         .subject(DEFAULT_USER_ID.toString())
+        .claim(
+          "roles",
+          io.airbyte.commons.auth.roles.AuthRole
+            .getInstanceAdminRoles(),
+        ).expirationTime(Date.from(Instant.now().plusSeconds(3600)))
         .build()
         .toAuthHeader()
 
@@ -68,11 +75,24 @@ internal object AirbyteApiClients {
     )
   }
 
-  fun publicApiClient(host: String): PublicApiClient =
-    PublicApiClient(
+  fun publicApiClient(host: String): PublicApiClient {
+    val headers =
+      JWTClaimsSet
+        .Builder()
+        .subject(DEFAULT_USER_ID.toString())
+        .claim(
+          "roles",
+          io.airbyte.commons.auth.roles.AuthRole
+            .getInstanceAdminRoles(),
+        ).expirationTime(Date.from(Instant.now().plusSeconds(3600)))
+        .build()
+        .toAuthHeader()
+
+    return PublicApiClient(
       basePath = "$host/api",
-      httpClient = okHttpClient(),
+      httpClient = okHttpClient(headers),
     )
+  }
 }
 
 class PublicApiClient(
@@ -173,6 +193,7 @@ private fun okHttpClient(headers: Map<String, String> = emptyMap()): OkHttpClien
 private fun JWTClaimsSet.toAuthHeader(): Map<String, String> {
   val jwtSignatureKey = System.getenv("AB_JWT_SIGNATURE_SECRET")
   if (jwtSignatureKey.isNullOrBlank()) {
+    log.warn { "AB_JWT_SIGNATURE_SECRET not set, using unsigned JWT" }
     val token = PlainJWT(this).serialize()
     return mapOf("Authorization" to "Bearer $token")
   }
