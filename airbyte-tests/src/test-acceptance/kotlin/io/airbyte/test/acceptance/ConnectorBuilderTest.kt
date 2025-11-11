@@ -19,38 +19,29 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Tags
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
-import org.testcontainers.containers.GenericContainer
-import org.testcontainers.utility.DockerImageName
-import java.net.Inet4Address
 import kotlin.time.Duration.Companion.minutes
 
 private val log = KotlinLogging.logger { }
 
 /**
  * Connector Builder-only acceptance tests.
+ * Uses httpbin.org (Postman's public HTTP testing service) as the test data source.
+ * This allows the test to work with both local and remote Airbyte deployments.
  * todo(cgardens) - I would hope consolidating builder endpoints into the server would remove the need for this to be tested at the acceptance test level.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DisabledIfEnvironmentVariable(named = "IS_GKE", matches = "TRUE", disabledReason = "Cloud GKE environment is preventing unsecured http requests")
 @Tags(Tag("builder"), Tag("enterprise"))
 class ConnectorBuilderTest {
-  companion object {
-    private lateinit var echoServer: GenericContainer<*>
-  }
-
   private val atClient = AcceptanceTestClient()
 
   @BeforeAll
   fun setup() {
-    echoServer = GenericContainer(DockerImageName.parse(ECHO_SERVER_IMAGE)).withExposedPorts(8080).also { it.start() }
     atClient.setup()
   }
 
   @AfterAll
   fun tearDownAll() {
     atClient.tearDownAll()
-    echoServer.stop()
   }
 
   @AfterEach
@@ -114,19 +105,20 @@ class ConnectorBuilderTest {
     assertEquals(JobStatus.SUCCEEDED, status)
   }
 
-  private fun getEchoServerUrl(): String {
-    val host =
-      when {
-        System.getenv("KUBE_PROCESS_RUNNER_HOST") != null -> System.getenv("KUBE_PROCESS_RUNNER_HOST")
-        System.getProperty("os.name")?.startsWith("Mac") == true -> "host.docker.internal"
-        else -> Inet4Address.getLocalHost().hostAddress
-      }
-
-    return "http://$host:${echoServer.firstMappedPort}"
-  }
+  /**
+   * Returns the base URL for the HTTP test endpoint.
+   *
+   * Uses httpbin.org (Postman's public HTTP testing service) to enable testing
+   * against both local and remote Airbyte deployments.
+   *
+   * SECURITY NOTE: This sends data to an external service. Only harmless test data
+   * is sent (see manifest() function for payload details). DO NOT modify this test
+   * to send any sensitive information, credentials, or real data.
+   *
+   * Data sent: {"records":[{"id":1},{"id":2},{"id":3}]}
+   */
+  private fun getEchoServerUrl(): String = "https://httpbin.org"
 }
-
-private const val ECHO_SERVER_IMAGE = "mendhak/http-https-echo:37"
 
 private val spec =
   $$"""
@@ -176,8 +168,8 @@ private fun manifest(urlBase: String): String =
             "requester": {
               "type": "HttpRequester",
               "url_base": "$$urlBase",
-              "path": "/",
-              "http_method": "GET",
+              "path": "/post",
+              "http_method": "POST",
               "request_parameters": {},
               "request_headers": {},
               "request_body_json": "{\"records\":[{\"id\":1},{\"id\":2},{\"id\":3}]}",
