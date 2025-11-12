@@ -10,6 +10,7 @@ import io.airbyte.api.problems.throwable.generated.SSODeletionProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
 import io.airbyte.config.Organization
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.data.services.OrganizationDomainVerificationService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
@@ -17,8 +18,13 @@ import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
 import io.airbyte.data.services.impls.keycloak.IdpNotFoundException
 import io.airbyte.data.services.impls.keycloak.InvalidOidcDiscoveryDocumentException
 import io.airbyte.data.services.impls.keycloak.RealmDeletionException
+import io.airbyte.domain.models.DomainVerificationMethod
+import io.airbyte.domain.models.DomainVerificationStatus
+import io.airbyte.domain.models.OrganizationDomainVerification
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigStatus
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseVerifiedDomainsForSsoActivate
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -29,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
 import io.airbyte.config.SsoConfig as ConfigSsoConfig
@@ -40,6 +47,8 @@ class SsoConfigDomainServiceTest {
   private lateinit var airbyteKeycloakClient: AirbyteKeycloakClient
   private lateinit var organizationService: OrganizationService
   private lateinit var userPersistence: UserPersistence
+  private lateinit var organizationDomainVerificationService: OrganizationDomainVerificationService
+  private lateinit var featureFlagClient: FeatureFlagClient
 
   private lateinit var ssoConfigDomainService: SsoConfigDomainService
 
@@ -50,6 +59,8 @@ class SsoConfigDomainServiceTest {
     airbyteKeycloakClient = mockk()
     organizationService = mockk()
     userPersistence = mockk()
+    organizationDomainVerificationService = mockk()
+    featureFlagClient = mockk()
     ssoConfigDomainService =
       SsoConfigDomainService(
         ssoConfigService,
@@ -57,6 +68,8 @@ class SsoConfigDomainServiceTest {
         airbyteKeycloakClient,
         organizationService,
         userPersistence,
+        organizationDomainVerificationService,
+        featureFlagClient,
       )
   }
 
@@ -533,33 +546,79 @@ class SsoConfigDomainServiceTest {
   }
 
   @Test
-  fun `activateSsoConfig should activate draft and create email domain successfully`() {
+  fun `activateSsoConfig should activate draft and create email domain successfully for all verified domains -- FeatureFlag on`() {
     val orgId = UUID.randomUUID()
-    val emailDomain = "airbyte.com"
-    val orgEmail = "test@airbyte.com"
+    val domain1 = "test1.com"
+    val domain2 = "test1.io"
 
-    val org = buildTestOrganization(orgId, orgEmail)
     val existingConfig =
       ConfigSsoConfig()
         .withOrganizationId(orgId)
-        .withKeycloakRealm("airbyte")
+        .withKeycloakRealm("test1")
         .withStatus(ConfigSsoConfigStatus.DRAFT)
 
+    val verifiedDomain1 =
+      OrganizationDomainVerification(
+        id = UUID.randomUUID(),
+        organizationId = orgId,
+        domain = domain1,
+        verificationMethod = DomainVerificationMethod.DNS_TXT,
+        status = DomainVerificationStatus.VERIFIED,
+        verificationToken = "token1",
+        dnsRecordName = "_airbyte-verification.airbyte.com",
+        dnsRecordPrefix = "_airbyte-verification",
+        attempts = 1,
+        lastCheckedAt = OffsetDateTime.now(),
+        expiresAt = OffsetDateTime.now().plusDays(14),
+        createdBy = null,
+        verifiedAt = OffsetDateTime.now(),
+        createdAt = OffsetDateTime.now(),
+        updatedAt = OffsetDateTime.now(),
+      )
+
+    val verifiedDomain2 =
+      OrganizationDomainVerification(
+        id = UUID.randomUUID(),
+        organizationId = orgId,
+        domain = domain2,
+        verificationMethod = DomainVerificationMethod.DNS_TXT,
+        status = DomainVerificationStatus.VERIFIED,
+        verificationToken = "token2",
+        dnsRecordName = "_airbyte-verification.airbyte.io",
+        dnsRecordPrefix = "_airbyte-verification",
+        attempts = 1,
+        lastCheckedAt = OffsetDateTime.now(),
+        expiresAt = OffsetDateTime.now().plusDays(14),
+        createdBy = null,
+        verifiedAt = OffsetDateTime.now(),
+        createdAt = OffsetDateTime.now(),
+        updatedAt = OffsetDateTime.now(),
+      )
+
+    every { featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, any()) } returns true
     every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
-    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
-    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
-    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(emailDomain, orgId) } returns emptyList()
+    every { organizationDomainVerificationService.findByOrganizationId(orgId) } returns listOf(verifiedDomain1, verifiedDomain2)
+
     every { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) } just Runs
     every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
 
-    ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+    ssoConfigDomainService.activateSsoConfig(orgId)
 
     verify(exactly = 1) { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) }
-    verify(exactly = 1) {
+    verify(exactly = 2) { organizationEmailDomainService.createEmailDomain(any()) }
+    verify {
       organizationEmailDomainService.createEmailDomain(
         withArg {
           assertEquals(orgId, it.organizationId)
-          assertEquals(emailDomain, it.emailDomain)
+          assertEquals(domain1, it.emailDomain)
+        },
+      )
+    }
+    verify {
+      organizationEmailDomainService.createEmailDomain(
+        withArg {
+          assertEquals(orgId, it.organizationId)
+          assertEquals(domain2, it.emailDomain)
         },
       )
     }
@@ -568,19 +627,17 @@ class SsoConfigDomainServiceTest {
   @Test
   fun `activateSsoConfig throws when SSO config does not exist`() {
     val orgId = UUID.randomUUID()
-    val emailDomain = "airbyte.com"
 
     every { ssoConfigService.getSsoConfig(orgId) } returns null
 
     assertThrows<SSOActivationProblem> {
-      ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+      ssoConfigDomainService.activateSsoConfig(orgId)
     }
   }
 
   @Test
   fun `activateSsoConfig throws when SSO config is already active`() {
     val orgId = UUID.randomUUID()
-    val emailDomain = "airbyte.com"
 
     val existingConfig =
       ConfigSsoConfig()
@@ -591,51 +648,81 @@ class SsoConfigDomainServiceTest {
     every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
 
     assertThrows<SSOActivationProblem> {
-      ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+      ssoConfigDomainService.activateSsoConfig(orgId)
     }
   }
 
   @Test
-  fun `activateSsoConfig throws when email domain does not match organization`() {
+  fun `activateSsoConfig throws when no verified domains exist -- FeatureFlag on`() {
     val orgId = UUID.randomUUID()
-    val emailDomain = "airbyte.com"
-    val orgEmail = "test@differentdomain.com"
 
-    val org = buildTestOrganization(orgId, orgEmail)
     val existingConfig =
       ConfigSsoConfig()
         .withOrganizationId(orgId)
         .withKeycloakRealm("airbyte")
         .withStatus(ConfigSsoConfigStatus.DRAFT)
 
+    every { featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, any()) } returns true
     every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
-    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { organizationDomainVerificationService.findByOrganizationId(orgId) } returns emptyList()
 
-    assertThrows<SSOActivationProblem> {
-      ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
-    }
+    val exception =
+      assertThrows<SSOActivationProblem> {
+        ssoConfigDomainService.activateSsoConfig(orgId)
+      }
+
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("No verified domains found"),
+    )
   }
 
   @Test
-  fun `activateSsoConfig throws when email domain already exists`() {
+  fun `activateSsoConfig throws when only pending (non-verified) domains exist -- FeatureFlag on`() {
     val orgId = UUID.randomUUID()
-    val emailDomain = "airbyte.com"
-    val orgEmail = "test@airbyte.com"
 
-    val org = buildTestOrganization(orgId, orgEmail)
     val existingConfig =
       ConfigSsoConfig()
         .withOrganizationId(orgId)
         .withKeycloakRealm("airbyte")
         .withStatus(ConfigSsoConfigStatus.DRAFT)
 
-    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
-    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
-    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns listOf(mockk())
+    val pendingDomain =
+      OrganizationDomainVerification(
+        id = UUID.randomUUID(),
+        organizationId = orgId,
+        domain = "airbyte.com",
+        verificationMethod = DomainVerificationMethod.DNS_TXT,
+        status = DomainVerificationStatus.PENDING,
+        verificationToken = "token1",
+        dnsRecordName = "_airbyte-verification.airbyte.com",
+        dnsRecordPrefix = "_airbyte-verification",
+        attempts = 0,
+        lastCheckedAt = null,
+        expiresAt = OffsetDateTime.now().plusDays(14),
+        createdBy = null,
+        verifiedAt = null,
+        createdAt = OffsetDateTime.now(),
+        updatedAt = OffsetDateTime.now(),
+      )
 
-    assertThrows<SSOActivationProblem> {
-      ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
-    }
+    every { featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, any()) } returns true
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
+    every { organizationDomainVerificationService.findByOrganizationId(orgId) } returns listOf(pendingDomain)
+
+    val exception =
+      assertThrows<SSOActivationProblem> {
+        ssoConfigDomainService.activateSsoConfig(orgId)
+      }
+
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("No verified domains found"),
+    )
   }
 
   @Test
@@ -726,36 +813,43 @@ class SsoConfigDomainServiceTest {
   }
 
   @Test
-  fun `activateSsoConfig throws when users from other organizations already use the domain`() {
+  fun `activateSsoConfig with flag OFF - requires emailDomain parameter`() {
     val orgId = UUID.randomUUID()
     val emailDomain = "airbyte.com"
     val orgEmail = "test@airbyte.com"
 
-    val org = buildTestOrganization(orgId, orgEmail)
     val existingConfig =
       ConfigSsoConfig()
         .withOrganizationId(orgId)
-        .withKeycloakRealm("airbyte")
+        .withKeycloakRealm("test-realm")
         .withStatus(ConfigSsoConfigStatus.DRAFT)
 
-    val otherUserId = UUID.randomUUID()
+    val org = buildTestOrganization(orgId, orgEmail)
 
+    // Feature flag OFF - use old behavior
+    every { featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, any()) } returns false
     every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
     every { organizationService.getOrganization(orgId) } returns Optional.of(org)
     every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
-    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(emailDomain, orgId) } returns listOf(otherUserId)
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(emailDomain, orgId) } returns emptyList()
+    every { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) } just Runs
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
 
-    val exception =
-      assertThrows<SSOActivationProblem> {
-        ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
-      }
+    ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
 
-    assert(
-      exception.problem
-        .getData()
-        .toString()
-        .contains("1 user(s) from other organizations"),
-    )
+    verify(exactly = 1) { organizationService.getOrganization(orgId) }
+    verify(exactly = 1) { organizationEmailDomainService.findByEmailDomain(emailDomain) }
+    verify(exactly = 1) { userPersistence.findUsersWithEmailDomainOutsideOrganization(emailDomain, orgId) }
+    verify(exactly = 1) { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) }
+    verify(exactly = 1) {
+      organizationEmailDomainService.createEmailDomain(
+        withArg {
+          assertEquals(orgId, it.organizationId)
+          assertEquals(emailDomain, it.emailDomain)
+        },
+      )
+    }
+    verify(exactly = 0) { organizationDomainVerificationService.findByOrganizationId(any()) }
   }
 
   @Test

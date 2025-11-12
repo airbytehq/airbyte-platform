@@ -22767,7 +22767,6 @@ components:
       type: object
       required:
         - organizationId
-        - emailDomain
       properties:
         organizationId:
           type: string

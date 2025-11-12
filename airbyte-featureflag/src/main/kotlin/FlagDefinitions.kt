@@ -252,3 +252,5 @@ object SkipStiggPlanLookup : Temporary<Boolean>(key = "platform.skip-stigg-plan-
 object BypassStiggEntitlementChecks : Permanent<Boolean>(key = "platform.bypass-stigg-entitlement-checks", default = false)
 
 object EnableDataWorkerUsage : Temporary<Boolean>(key = "platform.enable-data-worker-usage", default = false)
+
+object UseVerifiedDomainsForSsoActivate : Temporary<Boolean>(key = "platform.use-verified-domains-for-sso-activate", default = false)

@@ -21,6 +21,7 @@ import io.airbyte.api.problems.throwable.generated.SSOTokenValidationProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.OrganizationEmailDomain
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.data.services.OrganizationDomainVerificationService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
@@ -38,10 +39,14 @@ import io.airbyte.data.services.impls.keycloak.RealmCreationException
 import io.airbyte.data.services.impls.keycloak.RealmDeletionException
 import io.airbyte.data.services.impls.keycloak.RealmValuesExistException
 import io.airbyte.data.services.impls.keycloak.TokenExpiredException
+import io.airbyte.domain.models.DomainVerificationStatus
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigRetrieval
 import io.airbyte.domain.models.SsoConfigStatus
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.UseVerifiedDomainsForSsoActivate
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
@@ -57,6 +62,8 @@ open class SsoConfigDomainService internal constructor(
   private val airbyteKeycloakClient: AirbyteKeycloakClient,
   private val organizationService: OrganizationService,
   private val userPersistence: UserPersistence,
+  private val organizationDomainVerificationService: OrganizationDomainVerificationService,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   fun retrieveSsoConfig(organizationId: UUID): SsoConfigRetrieval {
     val currentConfig =
@@ -603,7 +610,7 @@ open class SsoConfigDomainService internal constructor(
   @Transactional("config")
   open fun activateSsoConfig(
     organizationId: UUID,
-    emailDomain: String,
+    emailDomain: String? = null,
   ) {
     val currentSsoConfig =
       ssoConfigService.getSsoConfig(organizationId) ?: throw SSOActivationProblem(
@@ -619,25 +626,82 @@ open class SsoConfigDomainService internal constructor(
           .errorMessage("This SSO configuration is already active."),
       )
     }
-    validateEmailDomainForActivation(organizationId, emailDomain, currentSsoConfig.keycloakRealm)
 
-    try {
-      ssoConfigService.updateSsoConfigStatus(organizationId, SsoConfigStatus.ACTIVE)
-      organizationEmailDomainService.createEmailDomain(
-        OrganizationEmailDomain().apply {
-          id = UUID.randomUUID()
-          this.organizationId = organizationId
-          this.emailDomain = emailDomain
-        },
-      )
-    } catch (e: Exception) {
-      logger.error(e) { "Failed to activate SSO config for organization $organizationId with email domain $emailDomain" }
-      throw SSOActivationProblem(
-        ProblemSSOActivationData()
-          .organizationId(organizationId)
-          .companyIdentifier(currentSsoConfig.keycloakRealm)
-          .errorMessage("Failed to activate your SSO configuration. Please try again or contact support if the problem persists."),
-      )
+    // FeatureFlag check
+    val useVerifiedDomains = featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, Organization(organizationId))
+
+    if (useVerifiedDomains) {
+      // fetching all the verified domains from the organizationDomainVerification table
+      val verifiedDomains =
+        organizationDomainVerificationService.findByOrganizationId(organizationId).filter {
+          it.status ==
+            DomainVerificationStatus.VERIFIED
+        }
+
+      if (verifiedDomains.isEmpty()) {
+        throw SSOActivationProblem(
+          ProblemSSOActivationData()
+            .organizationId(organizationId)
+            .companyIdentifier(currentSsoConfig.keycloakRealm)
+            .errorMessage(
+              "Cannot activate SSO: No verified domains found. Please verify at least one domain using DNS verification\n" +
+                "   before activating SSO.",
+            ),
+        )
+      }
+
+      try {
+        ssoConfigService.updateSsoConfigStatus(organizationId, SsoConfigStatus.ACTIVE)
+        // create enforcement records for all verified domains
+        verifiedDomains.forEach { verifiedDomain ->
+          organizationEmailDomainService.createEmailDomain(
+            OrganizationEmailDomain().apply {
+              id = UUID.randomUUID()
+              this.organizationId = organizationId
+              this.emailDomain = verifiedDomain.domain
+            },
+          )
+        }
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to activate SSO config for organization $organizationId" }
+        throw SSOActivationProblem(
+          ProblemSSOActivationData()
+            .organizationId(organizationId)
+            .companyIdentifier(currentSsoConfig.keycloakRealm)
+            .errorMessage("Failed to activate your SSO configuration. Please try again or contact support if the problem persists."),
+        )
+      }
+    } else {
+      // since now the email domain is not in required so need add check
+      if (emailDomain.isNullOrEmpty()) {
+        throw SSOActivationProblem(
+          ProblemSSOActivationData()
+            .organizationId(organizationId)
+            .companyIdentifier(currentSsoConfig.keycloakRealm)
+            .errorMessage("Email domain is required for SSO activation."),
+        )
+      }
+
+      validateEmailDomainForActivation(organizationId, emailDomain, currentSsoConfig.keycloakRealm)
+
+      try {
+        ssoConfigService.updateSsoConfigStatus(organizationId, SsoConfigStatus.ACTIVE)
+        organizationEmailDomainService.createEmailDomain(
+          OrganizationEmailDomain().apply {
+            id = UUID.randomUUID()
+            this.organizationId = organizationId
+            this.emailDomain = emailDomain
+          },
+        )
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to activate SSO config for organization $organizationId with email domain $emailDomain" }
+        throw SSOActivationProblem(
+          ProblemSSOActivationData()
+            .organizationId(organizationId)
+            .companyIdentifier(currentSsoConfig.keycloakRealm)
+            .errorMessage("Failed to activate your SSO configuration. Please try again or contact support if the problem persists."),
+        )
+      }
     }
   }
 }

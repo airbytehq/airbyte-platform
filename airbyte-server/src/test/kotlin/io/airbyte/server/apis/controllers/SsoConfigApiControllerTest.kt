@@ -124,7 +124,7 @@ class SsoConfigApiControllerTest {
   }
 
   @Test
-  fun `activateSsoConfig activates a draft config`() {
+  fun `activateSsoConfig activates a draft config with emailDomain`() {
     val orgId = OrganizationId(UUID.randomUUID())
     val emailDomain = "airbyte.com"
     every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
@@ -139,6 +139,23 @@ class SsoConfigApiControllerTest {
 
     verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
     verify(exactly = 1) { ssoConfigDomainService.activateSsoConfig(orgId.value, emailDomain) }
+  }
+
+  @Test
+  fun `activateSsoConfig activates a draft config without emailDomain`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
+    every { ssoConfigDomainService.activateSsoConfig(orgId.value, null) } just Runs
+
+    ssoConfigController.activateSsoConfig(
+      ActivateSSOConfigRequestBody(
+        organizationId = orgId.value,
+        emailDomain = null,
+      ),
+    )
+
+    verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
+    verify(exactly = 1) { ssoConfigDomainService.activateSsoConfig(orgId.value, null) }
   }
 
   @Test
