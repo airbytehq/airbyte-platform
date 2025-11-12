@@ -1,0 +1,31 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.section {
+  border: variables.$border-thin solid colors.$border-color;
+  border-radius: variables.$border-radius-sm;
+  padding: variables.$spacing-xl;
+  background: colors.$foreground;
+}
+
+.domainItem {
+  padding: variables.$spacing-lg;
+  border: variables.$border-thin solid colors.$border-color;
+  border-radius: variables.$border-radius-sm;
+  background: colors.$foreground;
+
+  &:hover {
+    border-color: colors.$grey-100;
+  }
+}
+
+.monospaceText {
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.dnsInstructionsBox {
+  background: colors.$grey-50;
+  border-radius: variables.$border-radius-sm;
+  padding: variables.$spacing-lg;
+}

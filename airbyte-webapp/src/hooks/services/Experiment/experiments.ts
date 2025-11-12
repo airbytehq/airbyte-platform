@@ -40,6 +40,7 @@ export interface Experiments {
   "platform.use-runtime-secret-persistence": boolean;
   productLimitsUI: boolean;
   "settings.breakingChangeNotifications": boolean;
+  "settings.domainVerification": boolean;
   "settings.downloadDiagnostics": boolean;
   "settings.showAdvancedSettings": boolean;
   "settings.ssoConfigValidation": boolean;
@@ -95,6 +96,7 @@ export const defaultExperimentValues: Experiments = {
   "platform.use-runtime-secret-persistence": false,
   productLimitsUI: false,
   "settings.breakingChangeNotifications": false,
+  "settings.domainVerification": false,
   "settings.downloadDiagnostics": false,
   "settings.showAdvancedSettings": false,
   "settings.ssoConfigValidation": false,

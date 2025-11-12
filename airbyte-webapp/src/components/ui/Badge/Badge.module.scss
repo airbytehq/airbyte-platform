@@ -34,4 +34,14 @@
     color: colors.$green-800;
     background-color: colors.$green-50;
   }
+
+  &--yellow {
+    color: colors.$yellow-800;
+    background-color: colors.$yellow-50;
+  }
+
+  &--red {
+    color: colors.$red-800;
+    background-color: colors.$red-50;
+  }
 }

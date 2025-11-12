@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 
-import { createDomainVerification, listDomainVerifications } from "../generated/AirbyteClient";
+import { checkDomainVerification, createDomainVerification, listDomainVerifications } from "../generated/AirbyteClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 
@@ -33,7 +33,14 @@ export const useListDomainVerifications = () => {
 
   return useQuery({
     queryKey: domainVerificationKeys.list(organizationId),
-    queryFn: () => listDomainVerifications({ organizationId }, requestOptions),
+    queryFn: async () => {
+      const response = await listDomainVerifications({ organizationId }, requestOptions);
+      // Sort by createdAt to maintain consistent order regardless of status updates
+      return {
+        ...response,
+        domainVerifications: response.domainVerifications.sort((a, b) => a.createdAt - b.createdAt),
+      };
+    },
     enabled: !!organizationId,
     staleTime: 30_000, // 30 seconds - domains don't change frequently
   });
@@ -78,6 +85,35 @@ export const useCreateDomainVerification = () => {
     mutationFn: (domain: string) => createDomainVerification({ organizationId, domain }, requestOptions),
     onSuccess: () => {
       // Invalidate the list query to refresh the domain list
+      queryClient.invalidateQueries({ queryKey: domainVerificationKeys.list(organizationId) });
+    },
+  });
+};
+
+/**
+ * Hook to manually check a domain verification.
+ *
+ * Triggers an immediate DNS verification check instead of waiting for the cron job.
+ * Useful for users who want instant feedback after adding their DNS record.
+ *
+ * @returns React Query mutation result
+ *
+ * @example
+ * const { mutate: checkNow, isLoading } = useCheckDomainVerification();
+ *
+ * <Button onClick={() => checkNow(domainId)} isLoading={isLoading}>
+ *   Check Now
+ * </Button>
+ */
+export const useCheckDomainVerification = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const organizationId = useCurrentOrganizationId();
+
+  return useMutation({
+    mutationFn: (domainVerificationId: string) => checkDomainVerification({ domainVerificationId }, requestOptions),
+    onSuccess: () => {
+      // Invalidate the list query to refresh the domain list with updated status
       queryClient.invalidateQueries({ queryKey: domainVerificationKeys.list(organizationId) });
     },
   });
