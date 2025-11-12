@@ -27,6 +27,7 @@ import io.airbyte.workers.workload.WorkspaceNotFoundException
 import io.micronaut.context.BeanRegistration
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import io.temporal.activity.ActivityCancellationType
 import io.temporal.activity.ActivityOptions
 import io.temporal.client.WorkflowClient
@@ -252,5 +253,39 @@ class ConnectorCommandWorkflowTest {
 
     // Verify it's an ActivityFailure wrapped in WorkflowFailedException
     assertTrue(exception.cause is ActivityFailure)
+  }
+
+  @Test
+  fun `workflow calls cancel on command when cancelled during wait`() {
+    val workloadId = "test workload"
+
+    every { checkCommand.start(any(), any()) } returns workloadId
+    every { checkCommand.isTerminal(workloadId) } returns false // Keep workflow waiting
+    every { checkCommand.getAwaitDuration() } returns 10.seconds
+    every { checkCommand.cancel(workloadId) } returns Unit
+
+    val input =
+      CheckCommandInput(
+        input =
+          CheckCommandInput.CheckConnectionInput(
+            jobRunConfig = JobRunConfig(),
+            integrationLauncherConfig = IntegrationLauncherConfig(),
+            checkConnectionInput = StandardCheckConnectionInput(),
+          ),
+      )
+
+    val workflowStub = client.newWorkflowStub(ConnectorCommandWorkflow::class.java, WorkflowOptions.newBuilder().setTaskQueue(QUEUE_NAME).build())
+
+    // Start workflow asynchronously
+    val execution = WorkflowClient.start(workflowStub::run, input)
+
+    // Give the workflow time to start and begin waiting
+    Thread.sleep(1000)
+
+    // Cancel the workflow
+    client.newUntypedWorkflowStub(execution.workflowId).cancel()
+
+    // Verify that cancel was called on the command
+    verify(timeout = 5000) { checkCommand.cancel(workloadId) }
   }
 }

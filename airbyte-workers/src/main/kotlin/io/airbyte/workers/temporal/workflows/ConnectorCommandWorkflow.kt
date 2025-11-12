@@ -295,6 +295,11 @@ open class ConnectorCommandWorkflowImpl : ConnectorCommandWorkflow {
       }
 
       return connectorCommandActivity.getCommandOutput(activityInput)
+    } catch (e: CanceledFailure) {
+      // Workflow was cancelled (either by parent or directly)
+      // This happens when cancelled while waiting in Workflow.await()
+      cancelWorkload(activityInput)
+      throw e
     } catch (e: ActivityFailure) {
       // Check if the underlying cause is WorkspaceNotFoundException
       if (isWorkspaceNotFoundException(e)) {
@@ -302,19 +307,27 @@ open class ConnectorCommandWorkflowImpl : ConnectorCommandWorkflow {
         return createWorkspaceNotFoundOutput(input, e)
       }
 
-      // Handle other activity failures (cancellation, etc.)
+      // Handle activity cancellation (when an activity is executing during cancellation)
       when (e.cause) {
         is CanceledFailure -> {
-          val detachedCancellationScope =
-            Workflow.newDetachedCancellationScope {
-              connectorCommandActivity.cancelCommand(activityInput)
-              shouldBlock = false
-            }
-          detachedCancellationScope.run()
+          cancelWorkload(activityInput)
         }
       }
       throw e
     }
+  }
+
+  /**
+   * Cancels the running workload in a detached cancellation scope.
+   * Uses a detached scope to ensure cleanup runs even when the workflow is being cancelled.
+   */
+  private fun cancelWorkload(activityInput: ConnectorCommandActivityInput) {
+    val detachedCancellationScope =
+      Workflow.newDetachedCancellationScope {
+        connectorCommandActivity.cancelCommand(activityInput)
+        shouldBlock = false
+      }
+    detachedCancellationScope.run()
   }
 
   /**
