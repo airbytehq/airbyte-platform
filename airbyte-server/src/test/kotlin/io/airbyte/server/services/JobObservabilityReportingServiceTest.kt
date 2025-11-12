@@ -4,8 +4,6 @@
 
 package io.airbyte.server.services
 
-import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.commons.json.Jsons
 import io.airbyte.statistics.OutlierEvaluation
 import io.airbyte.statistics.Scores
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -151,33 +149,29 @@ class JobObservabilityReportingServiceTest {
     val evaluationKey = "_score_sourceFieldsPopulatedPerRecord"
     assertTrue(result.containsKey(evaluationKey), "Should include evaluation for derived metric with key $evaluationKey")
 
-    // Parse the evaluation JSON to verify all fields are present
-    val evaluationJson = result[evaluationKey] as String
-    val evaluationNode: JsonNode = Jsons.deserialize(evaluationJson)
+    // Get the evaluation map directly (no longer a JSON string)
+    @Suppress("UNCHECKED_CAST")
+    val evaluationMap = result[evaluationKey] as Map<String, Any?>
 
     // Verify top-level evaluation fields
-    assertEquals(3.5, evaluationNode.get("value").asDouble(), 0.001, "Evaluation should contain value (z-score)")
-    assertEquals(3.0, evaluationNode.get("threshold").asDouble(), 0.001, "Evaluation should contain threshold")
-    assertTrue(evaluationNode.get("is_outlier").asBoolean(), "Evaluation should contain is_outlier=true")
+    assertEquals(3.5, (evaluationMap["value"] as Number).toDouble(), 0.001, "Evaluation should contain value (z-score)")
+    assertEquals(3.0, (evaluationMap["threshold"] as Number).toDouble(), 0.001, "Evaluation should contain threshold")
+    assertTrue(evaluationMap["is_outlier"] as Boolean, "Evaluation should contain is_outlier=true")
 
-    // Verify scores is a proper JSON object (not string) and contains all fields
-    val scoresNode = evaluationNode.get("scores")
-    assertNotNull(scoresNode, "Scores should be present")
-    assertTrue(scoresNode.isObject, "Scores should be a JSON object, not a string")
+    // Verify scores is present and is a map (not a string)
+    assertNotNull(evaluationMap["scores"], "Scores should be present")
+    @Suppress("UNCHECKED_CAST")
+    val scoresMap = evaluationMap["scores"] as Map<String, Any?>
 
     // Verify scores object contains the expected fields with proper values
-    assertEquals(50.0, scoresNode.get("current").asDouble(), 0.001, "Scores should include current value")
-    assertEquals(9.09, scoresNode.get("mean").asDouble(), 0.1, "Scores should include mean")
-    assertEquals(11.69, scoresNode.get("std").asDouble(), 0.1, "Scores should include standard deviation")
-
-    // zScore could be serialized as either "zScore" or "zscore" depending on Jackson config
-    val zScoreValue = scoresNode.get("zScore")?.asDouble() ?: scoresNode.get("zscore")?.asDouble() ?: 0.0
-    assertNotNull(scoresNode.get("zScore") ?: scoresNode.get("zscore"), "zScore field should exist in JSON")
-    assertEquals(3.5, zScoreValue, 0.1, "Scores should include z-score")
+    assertEquals(50.0, (scoresMap["current"] as Number).toDouble(), 0.001, "Scores should include current value")
+    assertEquals(9.09, (scoresMap["mean"] as Number).toDouble(), 0.1, "Scores should include mean")
+    assertEquals(11.69, (scoresMap["std"] as Number).toDouble(), 0.1, "Scores should include standard deviation")
+    assertEquals(3.5, (scoresMap["zScore"] as Number).toDouble(), 0.1, "Scores should include z-score")
   }
 
   @Test
-  fun `buildStreamSummary serializes scores as JSON objects not strings`() {
+  fun `buildStreamSummary includes scores as map objects not strings`() {
     val scores =
       Scores(
         current = 88696.0,
@@ -217,30 +211,25 @@ class JobObservabilityReportingServiceTest {
     // Verify the _score_ field exists
     assertTrue(result.containsKey("_score_bytesLoaded"))
 
-    // Parse the serialized JSON
-    val scoreJson = result["_score_bytesLoaded"] as String
-    val scoreNode: JsonNode = Jsons.deserialize(scoreJson)
+    // Get the score map directly (no longer a JSON string)
+    @Suppress("UNCHECKED_CAST")
+    val scoreMap = result["_score_bytesLoaded"] as Map<String, Any?>
 
     // Verify top-level fields
-    assertEquals(5.007937940360045, scoreNode.get("value").asDouble(), 0.0001)
-    assertEquals(4.0, scoreNode.get("threshold").asDouble(), 0.0001)
-    assertTrue(scoreNode.get("is_outlier").asBoolean())
+    assertEquals(5.007937940360045, (scoreMap["value"] as Number).toDouble(), 0.0001)
+    assertEquals(4.0, (scoreMap["threshold"] as Number).toDouble(), 0.0001)
+    assertTrue(scoreMap["is_outlier"] as Boolean)
 
-    // Verify scores is a proper JSON object, not a string
-    val scoresNode = scoreNode.get("scores")
-    assertNotNull(scoresNode)
-    assertTrue(scoresNode.isObject, "scores should be a JSON object, not a string")
+    // Verify scores is a proper map object, not a string
+    assertNotNull(scoreMap["scores"])
+    @Suppress("UNCHECKED_CAST")
+    val scoresMap = scoreMap["scores"] as Map<String, Any?>
 
     // Verify scores object contains the expected fields with proper types
-    // Note: Field names in JSON match the Kotlin property names exactly
-    assertEquals(88696.0, scoresNode.get("current").asDouble(), 0.0001)
-    assertEquals(26632.321167883212, scoresNode.get("mean").asDouble(), 0.0001)
-    assertEquals(12393.069691094492, scoresNode.get("std").asDouble(), 0.0001)
-
-    // zScore could be serialized as either "zScore" or "zscore" depending on Jackson config
-    val zScoreValue = scoresNode.get("zScore")?.asDouble() ?: scoresNode.get("zscore")?.asDouble() ?: 0.0
-    assertNotNull(scoresNode.get("zScore") ?: scoresNode.get("zscore"), "zScore field should exist in JSON")
-    assertEquals(5.007937940360045, zScoreValue, 0.0001)
+    assertEquals(88696.0, (scoresMap["current"] as Number).toDouble(), 0.0001)
+    assertEquals(26632.321167883212, (scoresMap["mean"] as Number).toDouble(), 0.0001)
+    assertEquals(12393.069691094492, (scoresMap["std"] as Number).toDouble(), 0.0001)
+    assertEquals(5.007937940360045, (scoresMap["zScore"] as Number).toDouble(), 0.0001)
   }
 
   @Test
@@ -276,12 +265,11 @@ class JobObservabilityReportingServiceTest {
     // Verify the _score_ field exists
     assertTrue(result.containsKey("_score_nulledValuePerRecord"))
 
-    // Parse the serialized JSON
-    val scoreJson = result["_score_nulledValuePerRecord"] as String
-    val scoreNode: JsonNode = Jsons.deserialize(scoreJson)
+    // Get the score map directly (no longer a JSON string)
+    @Suppress("UNCHECKED_CAST")
+    val scoreMap = result["_score_nulledValuePerRecord"] as Map<String, Any?>
 
     // Verify scores is null
-    val scoresNode = scoreNode.get("scores")
-    assertTrue(scoresNode.isNull, "scores should be null when OutlierEvaluation.scores is null")
+    assertEquals(null, scoreMap["scores"], "scores should be null when OutlierEvaluation.scores is null")
   }
 }
