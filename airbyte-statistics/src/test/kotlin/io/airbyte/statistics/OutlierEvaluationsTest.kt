@@ -227,6 +227,58 @@ class OutlierEvaluationsTest {
     assertEquals(10.0, result!!.toDouble(), 0.001)
   }
 
+  @Test
+  fun `OutlierRule uses debugScores when provided`() {
+    // Create a rule with a complex expression that wouldn't naturally return scores
+    // but provide debugScores explicitly
+    val rule =
+      OutlierRule(
+        name = "complexRule",
+        value = (DURATION_DIM.identity - DURATION_DIM.mean) / (DURATION_DIM.mean * Const(0.02)),
+        operator = GreaterThan,
+        threshold = Const(3.0),
+        debugScores = DURATION_DIM,
+      )
+    val outlierEval = rule.evaluate(defaultScoringContext)
+
+    // Should use the debugScores dimension for scores
+    assertEquals(DURATION_SCORES, outlierEval?.scores)
+  }
+
+  @Test
+  fun `OutlierRule falls back to value getScores when debugScores is null`() {
+    // Create a rule without debugScores - should infer from value expression
+    val rule =
+      OutlierRule(
+        name = "simpleRule",
+        value = DURATION_DIM.zScore,
+        operator = GreaterThan,
+        threshold = Const(3.0),
+        // debugScores is null (default)
+      )
+    val outlierEval = rule.evaluate(defaultScoringContext)
+
+    // Should infer scores from the value expression
+    assertEquals(DURATION_SCORES, outlierEval?.scores)
+  }
+
+  @Test
+  fun `OutlierRule returns null scores when debugScores is null and value has no scores`() {
+    // Create a rule with a complex expression and no debugScores
+    val rule =
+      OutlierRule(
+        name = "noScoresRule",
+        value = Const(10.0) + Const(20.0),
+        operator = GreaterThan,
+        threshold = Const(3.0),
+        // debugScores is null, and value expression has no scores
+      )
+    val outlierEval = rule.evaluate(defaultScoringContext)
+
+    // Should have null scores
+    assertNull(outlierEval?.scores)
+  }
+
   companion object {
     val DURATION_DIM = Dimension("duration")
     val DURATION_SCORES = Scores(DEFAULT_CURRENT, DEFAULT_MEAN, DEFAULT_STD, DEFAULT_ZSCORE)

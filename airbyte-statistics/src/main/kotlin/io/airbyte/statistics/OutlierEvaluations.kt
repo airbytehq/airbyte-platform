@@ -26,17 +26,19 @@ data class OutlierEvaluation(
  * @param value the value to evaluate.
  * @param operator the operator to use to compare the evaluated value to the threshold.
  * @param threshold the threshold to use to compare the evaluated value to.
+ * @param debugScores optional dimension to use for debugging context. If not provided, will attempt to infer from the value expression.
  */
 data class OutlierRule(
   val name: String,
   val value: Expression,
   val operator: ComparisonOperator,
   val threshold: Expression,
+  val debugScores: Dimension? = null,
 ) {
   fun evaluate(sc: ScoringContext): OutlierEvaluation? {
     val v = value.getValue(sc)
     val t = threshold.getValue(sc)
-    val scores = value.getScores(sc)
+    val scores = debugScores?.getScores(sc) ?: value.getScores(sc)
     return if (v != null && t != null) {
       OutlierEvaluation(
         name = name,

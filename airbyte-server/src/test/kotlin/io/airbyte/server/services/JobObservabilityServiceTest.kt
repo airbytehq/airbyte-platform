@@ -1208,12 +1208,18 @@ class JobObservabilityServiceTest {
     assertTrue(sourceFieldsEval.isOutlier, "sourceFieldsPopulatedPerRecord should be flagged as outlier")
     assertEquals(3.0, sourceFieldsEval.threshold, 0.001, "Threshold should be 3.0 (from rule)")
     assert(sourceFieldsEval.value > 3.0) {
-      "Value (absolute z-score) should be > 3.0, got ${sourceFieldsEval.value}"
+      "Value (percentage z-score) should be > 3.0, got ${sourceFieldsEval.value}"
     }
 
-    // ========== Verify Scores object fields ==========
+    // ========== Verify percentage z-score calculation ==========
+    // The rule uses: |(current - mean) / (mean * 0.02)| > 3.0
+    // With current=50, mean=9.09: |(50 - 9.09) / (9.09 * 0.02)| = |40.91 / 0.1818| ≈ 225
+    // This should be >> 3.0, triggering the outlier
 
-    assert(sourceFieldsEval.scores != null) { "Scores should be populated (not null)" }
+    // ========== Verify Scores object fields ==========
+    // With debugScores parameter, we get the underlying dimension's scores for debugging context
+
+    assert(sourceFieldsEval.scores != null) { "Scores should be populated via debugScores parameter" }
 
     // Current value
     assertEquals(50.0, sourceFieldsEval.scores!!.current, 0.001, "Current value should be 50.0")
@@ -1227,9 +1233,9 @@ class JobObservabilityServiceTest {
     }
 
     // Z-score calculation: (current - mean) / std = (50 - 9.09) / std
-    // Should be > 3.0 to trigger the outlier rule
+    // Note: This is the traditional z-score, different from the percentage z-score (value field)
     assert(sourceFieldsEval.scores!!.zScore > 3.0) {
-      "Z-score should be > 3.0 to trigger outlier, got ${sourceFieldsEval.scores!!.zScore}"
+      "Z-score should be > 3.0, got ${sourceFieldsEval.scores!!.zScore}"
     }
 
     // Additional validation: verify z-score is calculated correctly

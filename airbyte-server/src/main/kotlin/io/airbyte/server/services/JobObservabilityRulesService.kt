@@ -14,6 +14,7 @@ import io.airbyte.statistics.Reciprocal
 import io.airbyte.statistics.ReciprocalSqrt
 import io.airbyte.statistics.div
 import io.airbyte.statistics.mean
+import io.airbyte.statistics.minus
 import io.airbyte.statistics.plus
 import io.airbyte.statistics.times
 import io.airbyte.statistics.zScore
@@ -140,9 +141,14 @@ class JobObservabilityRulesService {
       ),
       OutlierRule(
         name = Dim.Stream.sourceFieldsPopulatedPerRecord.name,
-        value = Abs(Dim.Stream.sourceFieldsPopulatedPerRecord.zScore),
+        value =
+          Abs(
+            (Dim.Stream.sourceFieldsPopulatedPerRecord - Dim.Stream.sourceFieldsPopulatedPerRecord.mean) /
+              (Dim.Stream.sourceFieldsPopulatedPerRecord.mean * Const(0.02)),
+          ),
         operator = GreaterThan,
         threshold = Const(3.0),
+        debugScores = Dim.Stream.sourceFieldsPopulatedPerRecord,
       ),
     )
 
