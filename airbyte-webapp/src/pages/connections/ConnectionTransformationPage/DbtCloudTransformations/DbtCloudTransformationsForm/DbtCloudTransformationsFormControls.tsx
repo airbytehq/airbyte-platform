@@ -58,7 +58,13 @@ export const DbtCloudTransformationsFormControls: React.FC<DbtCloudTransformatio
               }}
             >
               {() => (
-                <Button variant="secondary" icon="plus" iconSize="sm" disabled={!dropdownMenuOptions.length}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  icon="plus"
+                  iconSize="sm"
+                  disabled={!dropdownMenuOptions.length}
+                >
                   <FormattedMessage id="connection.dbtCloudJobs.addJob" />
                 </Button>
               )}
