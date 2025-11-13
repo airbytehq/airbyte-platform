@@ -31,6 +31,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.jsonNode
@@ -93,6 +94,7 @@ internal class WorkspacesHandlerTest {
   lateinit var workspacePersistence: WorkspacePersistence
   lateinit var workspaceService: WorkspaceService
   lateinit var dataplaneGroupService: DataplaneGroupService
+  lateinit var entitlementService: EntitlementService
   lateinit var organizationService: OrganizationService
   lateinit var trackingClient: TrackingClient
   lateinit var limitsProvider: ProductLimitsProvider
@@ -113,6 +115,7 @@ internal class WorkspacesHandlerTest {
     uuidSupplier = Mockito.mock(Supplier::class.java) as Supplier<UUID>
     workspaceService = Mockito.mock(WorkspaceService::class.java)
     dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
+    entitlementService = Mockito.mock(EntitlementService::class.java)
     trackingClient = Mockito.mock(TrackingClient::class.java)
     limitsProvider = Mockito.mock(ProductLimitsProvider::class.java)
     consumptionService = Mockito.mock(ConsumptionService::class.java)
@@ -140,6 +143,7 @@ internal class WorkspacesHandlerTest {
       uuidSupplier,
       workspaceService,
       dataplaneGroupService,
+      entitlementService,
       trackingClient,
       limitsProvider,
       consumptionService,
@@ -1306,6 +1310,7 @@ internal class WorkspacesHandlerTest {
         uuidSupplier,
         workspaceService,
         dataplaneGroupService,
+        entitlementService,
         trackingClient,
         limitsProvider,
         consumptionService,

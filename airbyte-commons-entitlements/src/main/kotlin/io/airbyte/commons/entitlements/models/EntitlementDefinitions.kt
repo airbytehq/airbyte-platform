@@ -26,6 +26,10 @@ object SelfManagedRegionsEntitlement : FeatureEntitlement(
   featureId = "feature-self-managed-regions",
 )
 
+object PrivateLinkEntitlement : FeatureEntitlement(
+  featureId = "feature-privatelink",
+)
+
 object AiCopilotEntitlement : FeatureEntitlement(
   featureId = "feature-ai-copilot",
 )
@@ -114,6 +118,7 @@ object Entitlements {
       SsoEntitlement,
       OrchestrationEntitlement,
       SelfManagedRegionsEntitlement,
+      PrivateLinkEntitlement,
       AiCopilotEntitlement,
       MultipleWorkspacesEntitlement,
       MappersEntitlement,

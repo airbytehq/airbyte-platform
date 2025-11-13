@@ -5,9 +5,13 @@
 package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.PrivateLinkEntitlement
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.models.RegionCreateRequest
 import io.airbyte.publicApi.server.generated.models.RegionPatchRequest
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
@@ -48,16 +52,36 @@ private val log = KotlinLogging.logger {}
 class RegionServiceImpl(
   private val dataplaneGroupService: DataplaneGroupService,
   private val dataplaneService: DataplaneService,
+  private val entitlementService: EntitlementService,
   private val trackingHelper: TrackingHelper,
   private val currentUserService: CurrentUserService,
 ) : RegionService {
   override fun controllerListRegions(organizationId: UUID): Response {
     val userId = currentUserService.getCurrentUser().userId
+
+    // Build list of organization IDs to query based on entitlements
+    val organizationIds = mutableListOf(DEFAULT_ORGANIZATION_ID)
+
+    // Check if organization has PrivateLink entitlement
+    val hasPrivateLink =
+      entitlementService
+        .checkEntitlement(
+          organizationId = OrganizationId(organizationId),
+          entitlement = PrivateLinkEntitlement,
+        ).isEntitled
+
+    if (hasPrivateLink) {
+      organizationIds.add(PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID)
+    }
+
+    // Always check for organization's own custom regions (if they exist)
+    organizationIds.add(organizationId)
+
     val regions =
       trackingHelper.callWithTracker(
         {
           kotlin
-            .runCatching { dataplaneGroupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID, organizationId), false) }
+            .runCatching { dataplaneGroupService.listDataplaneGroups(organizationIds, false) }
             .onFailure {
               log.error { "Error listing regions" }
               ConfigClientErrorHandler.handleError(it)

@@ -14,10 +14,12 @@ import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.PrivateLinkEntitlement
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.DataplaneGroup
@@ -98,17 +100,46 @@ class DataplaneGroupApiController(
   }
 
   @Post("/list")
-  // TODO: (parker) should this be more restrictive?
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listDataplaneGroups(
     @Body dataplaneGroupListRequestBody: DataplaneGroupListRequestBody,
   ): DataplaneGroupListResponse? {
+    val organizationId = dataplaneGroupListRequestBody.organizationId
+
+    // Build list of organization IDs to query based on entitlements
+    val organizationIds = mutableListOf(DEFAULT_ORGANIZATION_ID)
+
+    // Check if organization has PrivateLink entitlement
+    val hasPrivateLink =
+      entitlementService
+        .checkEntitlement(
+          organizationId = OrganizationId(organizationId),
+          entitlement = PrivateLinkEntitlement,
+        ).isEntitled
+
+    if (hasPrivateLink) {
+      organizationIds.add(PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID)
+    }
+
+    // Check if organization has SelfManagedRegions entitlement
+    val hasSelfManagedRegions =
+      entitlementService
+        .checkEntitlement(
+          organizationId = OrganizationId(organizationId),
+          entitlement = SelfManagedRegionsEntitlement,
+        ).isEntitled
+
+    if (hasSelfManagedRegions) {
+      organizationIds.add(organizationId)
+    }
+
     val dataplaneGroups =
       dataplaneGroupService.listDataplaneGroups(
-        listOf(DEFAULT_ORGANIZATION_ID, dataplaneGroupListRequestBody.organizationId),
+        organizationIds,
         false,
       )
+
     return DataplaneGroupListResponse()
       .dataplaneGroups(
         dataplaneGroups.map { dataplaneGroup ->

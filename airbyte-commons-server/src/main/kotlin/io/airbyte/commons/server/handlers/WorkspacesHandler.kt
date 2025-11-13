@@ -25,8 +25,11 @@ import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.PrivateLinkEntitlement
 import io.airbyte.commons.random.randomAlpha
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.NotificationConverter.toConfigList
@@ -87,6 +90,7 @@ class WorkspacesHandler
     @param:Named("uuidGenerator") private val uuidSupplier: Supplier<UUID>,
     private val workspaceService: WorkspaceService,
     private val dataplaneGroupService: DataplaneGroupService,
+    private val entitlementService: EntitlementService,
     private val trackingClient: TrackingClient,
     private val limitsProvider: ProductLimitsProvider,
     private val consumptionService: ConsumptionService,
@@ -129,13 +133,29 @@ class WorkspacesHandler
         return
       }
 
-      // Finally, since it's not a default, ensure the dataplane group belongs to the target org.
+      // Get the dataplane group to check its organization
       val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplaneGroupId.value)
-      if (dataplaneGroup.organizationId != organizationId.value) {
-        throw ForbiddenProblem(
-          ProblemMessageData().message("Dataplane group ${dataplaneGroupId.value} does not belong to organization ${organizationId.value}."),
+
+      // Check if this is a PrivateLink region
+      if (dataplaneGroup.organizationId == PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID) {
+        // Require PrivateLink entitlement
+        entitlementService.ensureEntitled(
+          organizationId = organizationId,
+          entitlement = PrivateLinkEntitlement,
         )
+        return
       }
+
+      // Finally, check if it's the org's own custom region
+      if (dataplaneGroup.organizationId == organizationId.value) {
+        // This is the organization's own custom region, allow it
+        return
+      }
+
+      // Cannot use another organization's region
+      throw ForbiddenProblem(
+        ProblemMessageData().message("Cannot assign workspace to dataplane group from another organization."),
+      )
     }
 
     fun createWorkspaceIfNotExist(workspaceCreateWithId: WorkspaceCreateWithId): WorkspaceRead {

@@ -18,6 +18,13 @@ const val EU_DATAPLANE_GROUP = "EU"
 val DEFAULT_ORGANIZATION_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
 
 /**
+ * The PrivateLink organization owns all PrivateLink regions (dataplane groups).
+ * Access to these regions is controlled by the PrivateLinkEntitlement.
+ */
+@JvmField
+val PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID: UUID = UUID.fromString("cc9498c5-9cfd-482b-ac5a-ed867e39d52e")
+
+/**
  * Each installation of Airbyte comes with a default user. The ID of this user is hardcoded to the 0
  * UUID so that it can be consistently retrieved.
  */

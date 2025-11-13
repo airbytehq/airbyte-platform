@@ -11,6 +11,8 @@ import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.PrivateLinkEntitlement
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
@@ -194,6 +196,15 @@ class DataplaneGroupApiControllerTest {
   fun `listDataplaneGroups returns dataplane groups`() {
     val dataplaneGroupId1 = UUID.randomUUID()
     val dataplaneGroupId2 = UUID.randomUUID()
+
+    // Mock entitlement checks - no PrivateLink, yes SelfManagedRegions
+    every {
+      entitlementService.checkEntitlement(OrganizationId(MOCK_ORGANIZATION_ID), PrivateLinkEntitlement)
+    } returns EntitlementResult(PrivateLinkEntitlement.featureId, false, "Not entitled", PrivateLinkEntitlement.featureId)
+
+    every {
+      entitlementService.checkEntitlement(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement)
+    } returns EntitlementResult(SelfManagedRegionsEntitlement.featureId, true, "Entitled", SelfManagedRegionsEntitlement.featureId)
 
     every { dataplaneGroupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID, MOCK_ORGANIZATION_ID), any()) } returns
       listOf(
