@@ -22,3 +22,14 @@ val Dimension.identity: Dimension get() = copy(f = Dimension.StatisticalFunction
 val Dimension.mean: Dimension get() = copy(f = Dimension.StatisticalFunction.MEAN)
 val Dimension.std: Dimension get() = copy(f = Dimension.StatisticalFunction.STD)
 val Dimension.zScore: Dimension get() = copy(f = Dimension.StatisticalFunction.ZSCORE)
+
+/**
+ * Comparison operators for conditional rule evaluation.
+ */
+infix fun Expression.gt(other: Expression): Expression = Comparison(this, other, GreaterThan)
+
+infix fun Expression.lt(other: Expression): Expression = Comparison(this, other, LessThan)
+
+infix fun Expression.gte(other: Expression): Expression = Comparison(this, other, GreaterThanOrEqual)
+
+infix fun Expression.lte(other: Expression): Expression = Comparison(this, other, LessThanOrEqual)

@@ -14,6 +14,7 @@ import io.airbyte.statistics.OutlierRule
 import io.airbyte.statistics.Reciprocal
 import io.airbyte.statistics.ReciprocalSqrt
 import io.airbyte.statistics.div
+import io.airbyte.statistics.gte
 import io.airbyte.statistics.mean
 import io.airbyte.statistics.minus
 import io.airbyte.statistics.plus
@@ -152,6 +153,7 @@ class JobObservabilityRulesService {
         operator = GreaterThan,
         threshold = Const(3.0),
         debugScores = Dim.Stream.sourceFieldsPopulatedPerRecord,
+        condition = Dim.Stream.recordsLoaded gte Const(100.0),
       ),
     )
 

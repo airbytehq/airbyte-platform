@@ -96,20 +96,23 @@ class JobObservabilityReportingService(
 
   private fun OutlierEvaluation.addToContextMap(map: MutableMap<String, Any>) {
     map["_score_$name"] =
-      mapOf(
-        "value" to value,
-        "threshold" to threshold,
-        "is_outlier" to isOutlier,
-        "scores" to
-          scores?.let {
+      buildMap {
+        put("value", value)
+        put("threshold", threshold)
+        put("is_outlier", isOutlier)
+        skipped?.let { put("skipped", it) }
+        scores?.let {
+          put(
+            "scores",
             mapOf(
               "current" to it.current,
               "mean" to it.mean,
               "std" to it.std,
               "zScore" to it.zScore,
-            )
-          },
-      )
+            ),
+          )
+        }
+      }
   }
 
   private fun buildJobInfo(job: JobInfo): Map<String, Any> {

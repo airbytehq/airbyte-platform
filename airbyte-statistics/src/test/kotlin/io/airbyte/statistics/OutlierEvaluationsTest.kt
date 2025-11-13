@@ -6,6 +6,7 @@ package io.airbyte.statistics
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNull
@@ -62,6 +63,39 @@ class OutlierEvaluationsTest {
     assertEquals(DEFAULT_CURRENT - DEFAULT_MEAN, (DURATION_DIM.identity - DURATION_DIM.mean).getValue(defaultScoringContext))
     assertEquals(DEFAULT_CURRENT * DEFAULT_MEAN, (DURATION_DIM.identity * DURATION_DIM.mean).getValue(defaultScoringContext))
     assertEquals(DEFAULT_CURRENT / DEFAULT_MEAN, (DURATION_DIM.identity / DURATION_DIM.mean).getValue(defaultScoringContext))
+  }
+
+  @Test
+  fun `Comparison expressions work correctly`() {
+    assertEquals(1.0, (Const(5.0) gt Const(3.0)).getValue(defaultScoringContext))
+    assertEquals(0.0, (Const(3.0) gt Const(5.0)).getValue(defaultScoringContext))
+    assertEquals(0.0, (Const(5.0) gt Const(5.0)).getValue(defaultScoringContext))
+
+    assertEquals(1.0, (Const(3.0) lt Const(5.0)).getValue(defaultScoringContext))
+    assertEquals(0.0, (Const(5.0) lt Const(3.0)).getValue(defaultScoringContext))
+    assertEquals(0.0, (Const(5.0) lt Const(5.0)).getValue(defaultScoringContext))
+
+    assertEquals(1.0, (Const(5.0) gte Const(3.0)).getValue(defaultScoringContext))
+    assertEquals(1.0, (Const(5.0) gte Const(5.0)).getValue(defaultScoringContext))
+    assertEquals(0.0, (Const(3.0) gte Const(5.0)).getValue(defaultScoringContext))
+
+    assertEquals(1.0, (Const(3.0) lte Const(5.0)).getValue(defaultScoringContext))
+    assertEquals(1.0, (Const(5.0) lte Const(5.0)).getValue(defaultScoringContext))
+    assertEquals(0.0, (Const(5.0) lte Const(3.0)).getValue(defaultScoringContext))
+  }
+
+  @Test
+  fun `Comparison expressions work with dimensions`() {
+    // DEFAULT_MEAN = 6.0
+    assertEquals(1.0, (DURATION_DIM.mean gt Const(5.0)).getValue(defaultScoringContext))
+    assertEquals(0.0, (DURATION_DIM.mean gt Const(10.0)).getValue(defaultScoringContext))
+  }
+
+  @Test
+  fun `Comparison expressions return null when operands are null`() {
+    val unknownDim = Dimension("unknown")
+    assertNull((unknownDim gt Const(5.0)).getValue(defaultScoringContext))
+    assertNull((Const(5.0) gt unknownDim).getValue(defaultScoringContext))
   }
 
   @Test
@@ -342,6 +376,116 @@ class OutlierEvaluationsTest {
 
     // Should have null scores
     assertNull(outlierEval?.scores)
+  }
+
+  @Test
+  fun `OutlierRule with condition evaluates when condition is true`() {
+    val rule =
+      OutlierRule(
+        name = "conditionalRule",
+        value = DURATION_DIM.identity,
+        operator = GreaterThan,
+        threshold = Const(3.0),
+        condition = DURATION_DIM.mean gt Const(5.0), // mean is 6.0, so true
+      )
+
+    val result = rule.evaluate(defaultScoringContext)
+    assertNotNull(result)
+    assertEquals(DEFAULT_CURRENT, result!!.value)
+    assertEquals(false, result.skipped)
+  }
+
+  @Test
+  fun `OutlierRule with condition returns null when condition is false`() {
+    val rule =
+      OutlierRule(
+        name = "conditionalRule",
+        value = DURATION_DIM.identity,
+        operator = GreaterThan,
+        threshold = Const(3.0),
+        condition = DURATION_DIM.mean gt Const(10.0), // mean is 6.0, so false
+      )
+
+    val result = rule.evaluate(defaultScoringContext)
+    assertNull(result)
+  }
+
+  @Test
+  fun `OutlierRule with condition returns null when condition evaluates to null`() {
+    val unknownDim = Dimension("unknown")
+    val rule =
+      OutlierRule(
+        name = "conditionalRule",
+        value = DURATION_DIM.identity,
+        operator = GreaterThan,
+        threshold = Const(3.0),
+        condition = unknownDim gt Const(5.0), // unknown dimension, so null
+      )
+
+    val result = rule.evaluate(defaultScoringContext)
+    assertNull(result)
+  }
+
+  @Test
+  fun `OutlierRule with null condition evaluates normally`() {
+    val rule =
+      OutlierRule(
+        name = "unconditionalRule",
+        value = DURATION_DIM.identity,
+        operator = GreaterThan,
+        threshold = Const(3.0),
+        condition = null,
+      )
+
+    val result = rule.evaluate(defaultScoringContext)
+    assertNotNull(result)
+    assertNull(result!!.skipped) // skipped should be null when no condition
+  }
+
+  @Test
+  fun `OutlierRule with complex condition`() {
+    // Only evaluate if recordsLoaded > 100
+    val context =
+      mapOf(
+        "recordsLoaded" to Scores(current = 150.0, mean = 100.0, std = 10.0, zScore = 5.0),
+        "bytesLoaded" to Scores(current = 1000.0, mean = 500.0, std = 50.0, zScore = 10.0),
+      )
+
+    val rule =
+      OutlierRule(
+        name = "bytesLoaded",
+        value = Abs(Dimension("bytesLoaded").zScore),
+        operator = GreaterThan,
+        threshold = Const(3.0),
+        condition = Dimension("recordsLoaded") gt Const(100.0),
+      )
+
+    val result = rule.evaluate(context)
+    assertNotNull(result)
+    assertTrue(result!!.isOutlier) // z-score is 10, which is > 3
+    assertEquals(false, result.skipped)
+  }
+
+  @Test
+  fun `OutlierRule with complex condition that fails`() {
+    // recordsLoaded is only 50, so condition fails
+    val context =
+      mapOf(
+        "recordsLoaded" to Scores(current = 50.0, mean = 100.0, std = 10.0, zScore = -5.0),
+        "bytesLoaded" to Scores(current = 1000.0, mean = 500.0, std = 50.0, zScore = 10.0),
+      )
+
+    val rule =
+      OutlierRule(
+        name = "bytesLoaded",
+        value = Abs(Dimension("bytesLoaded").zScore),
+        operator = GreaterThan,
+        threshold = Const(3.0),
+        condition = Dimension("recordsLoaded") gt Const(100.0),
+      )
+
+    val result = rule.evaluate(context)
+    assertNull(result) // Should not evaluate because condition is false
   }
 
   companion object {

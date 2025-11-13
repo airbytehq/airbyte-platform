@@ -19,6 +19,7 @@ data class OutlierEvaluation(
   val threshold: Double,
   val isOutlier: Boolean,
   val scores: Scores?,
+  val skipped: Boolean? = null,
 )
 
 /**
@@ -29,6 +30,7 @@ data class OutlierEvaluation(
  * @param operator the operator to use to compare the evaluated value to the threshold.
  * @param threshold the threshold to use to compare the evaluated value to.
  * @param debugScores optional dimension to use for debugging context. If not provided, will attempt to infer from the value expression.
+ * @param condition optional condition that must be met for the rule to be evaluated. If null or evaluates to 0.0, the rule is skipped.
  */
 data class OutlierRule(
   val name: String,
@@ -36,8 +38,20 @@ data class OutlierRule(
   val operator: ComparisonOperator,
   val threshold: Expression,
   val debugScores: Dimension? = null,
+  val condition: Expression? = null,
 ) {
   fun evaluate(sc: ScoringContext): OutlierEvaluation? {
+    var skipped: Boolean? = null
+
+    // Check condition first
+    if (condition != null) {
+      val conditionMet = condition.getValue(sc)?.takeIf { it != 0.0 } != null
+      if (!conditionMet) {
+        return null
+      }
+      skipped = false
+    }
+
     val v = value.getValue(sc)
     val t = threshold.getValue(sc)
     val scores = debugScores?.getScores(sc) ?: value.getScores(sc)
@@ -48,6 +62,7 @@ data class OutlierRule(
         threshold = t,
         isOutlier = operator.compare(v, t),
         scores = scores,
+        skipped = skipped,
       )
     } else {
       null
@@ -105,6 +120,36 @@ object LessThan : ComparisonOperator {
     lhs: Double,
     rhs: Double,
   ): Boolean = lhs < rhs
+}
+
+object GreaterThanOrEqual : ComparisonOperator {
+  override fun compare(
+    lhs: Double,
+    rhs: Double,
+  ): Boolean = lhs >= rhs
+}
+
+object LessThanOrEqual : ComparisonOperator {
+  override fun compare(
+    lhs: Double,
+    rhs: Double,
+  ): Boolean = lhs <= rhs
+}
+
+/**
+ * Comparison expression that evaluates to 1.0 if true, 0.0 if false.
+ * Used for conditional rule evaluation.
+ */
+data class Comparison(
+  val lhs: Expression,
+  val rhs: Expression,
+  val operator: ComparisonOperator,
+) : Expression {
+  override fun getValue(sc: ScoringContext): Double? {
+    val lhsValue = lhs.getValue(sc) ?: return null
+    val rhsValue = rhs.getValue(sc) ?: return null
+    return if (operator.compare(lhsValue, rhsValue)) 1.0 else 0.0
+  }
 }
 
 /**
