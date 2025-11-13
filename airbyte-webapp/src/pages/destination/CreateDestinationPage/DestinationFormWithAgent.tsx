@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ConnectorSetupAgent } from "components/agents/ConnectorSetupAgent";
 import { ConnectorSetupAgentTools } from "components/agents/ConnectorSetupAgentTools";
-import { type SecretsMap } from "components/agents/types";
-import { type ClientTools, useChatMessages } from "components/chat/hooks/useChatMessages";
+import { useConnectorSetupAgentState } from "components/agents/hooks/useConnectorSetupAgentState";
 import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
 import { FormPageContent } from "components/ConnectorBlocks";
 import { MountedViewSwapper } from "components/MountedViewSwapper";
@@ -79,49 +78,25 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
     [onSubmit, destinationDefinitionSpecification?.destinationDefinitionId]
   );
 
-  // Lift agent state to persist chat messages across toggle
-  const [secrets, setSecrets] = useState<SecretsMap>(new Map());
-  const secretsRef = useRef<SecretsMap>(secrets);
-  useEffect(() => {
-    secretsRef.current = secrets;
-  }, [secrets]);
-
-  const getSecrets = useCallback(() => secretsRef.current, []);
-
-  // State for client tools (will be set by AgentWithFormContext inside Form)
-  const [clientTools, setClientTools] = useState<ClientTools | null>(null);
-  const [secretInputState, setSecretInputState] = useState({
-    isSecretInputActive: false,
-    secretFieldPath: [] as string[],
-    secretFieldName: undefined as string | undefined,
-    isMultiline: false,
-    submitSecret: (() => {}) as (message: string) => void,
-  });
-
-  const handleClientToolsReady = useCallback((tools: ClientTools) => {
-    setClientTools(tools);
-  }, []);
-
-  const handleSecretInputStateChange = useCallback(
-    (state: {
-      isSecretInputActive: boolean;
-      secretFieldPath: string[];
-      secretFieldName: string | undefined;
-      isMultiline: boolean;
-      submitSecret: (message: string) => void;
-    }) => {
-      setSecretInputState(state);
-    },
-    []
-  );
-
-  const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
-    endpoint: "/agents/connector_setup/chat",
-    agentParams: {
-      actor_definition_id: selectedDestinationDefinitionId,
-      actor_type: "destination",
-    },
-    clientTools: clientTools || {},
+  // Use the shared hook for all agent/form integration state
+  const {
+    setSecrets,
+    getSecrets,
+    handleClientToolsReady,
+    secretInputState,
+    handleSecretInputStateChange,
+    handleFormValuesReady,
+    messages,
+    sendMessage,
+    isLoading,
+    error,
+    stopGenerating,
+    isStreaming,
+  } = useConnectorSetupAgentState({
+    actorType: "destination",
+    actorDefinitionId: selectedDestinationDefinitionId,
+    connectionSpecification: destinationDefinitionSpecification?.connectionSpecification,
+    isAgentView,
   });
 
   if (!selectedDestinationDefinition || !destinationDefinitionSpecification) {
@@ -176,6 +151,7 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
                     getSecrets={getSecrets}
                     onClientToolsReady={handleClientToolsReady}
                     onSecretInputStateChange={handleSecretInputStateChange}
+                    onFormValuesReady={handleFormValuesReady}
                   />
                 </>
               }

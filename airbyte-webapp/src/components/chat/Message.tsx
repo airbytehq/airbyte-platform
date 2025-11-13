@@ -17,6 +17,8 @@ export interface ToolResponse {
   call_id: string;
 }
 
+export const HIDDEN_MESSAGE_PREFIX = "[HIDDEN_INTERNAL_MESSAGE]";
+
 export interface ChatMessage {
   id: string;
   content: string;
@@ -35,6 +37,11 @@ interface MessageProps {
 
 export const Message: React.FC<MessageProps> = ({ message, toolComponents, showAllToolCalls = false }) => {
   const { content, role, isStreaming, toolCall, toolResponse } = message;
+
+  // Hide messages with the hidden prefix
+  if (content.startsWith(HIDDEN_MESSAGE_PREFIX)) {
+    return null;
+  }
 
   // current tool‐message branch: ensure we don't fall back to a missing i18n key
   if (role === "tool") {

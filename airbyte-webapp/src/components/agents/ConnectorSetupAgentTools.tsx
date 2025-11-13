@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { useFormContext } from "react-hook-form";
 
 import { useCheckConfigurationTool } from "components/agents/tools/hooks/useCheckConfigurationTool";
 import { useRequestSecretInputTool } from "components/agents/tools/hooks/useRequestSecretInputTool";
@@ -26,6 +27,7 @@ interface ConnectorSetupAgentToolsProps {
     isMultiline: boolean;
     submitSecret: (message: string) => void;
   }) => void;
+  onFormValuesReady?: (getFormValues: () => Record<string, unknown>) => void;
 }
 
 /**
@@ -40,7 +42,10 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
   getSecrets,
   onClientToolsReady,
   onSecretInputStateChange,
+  onFormValuesReady,
 }) => {
+  const { getValues } = useFormContext();
+
   // Setup client tools - saveDraftTool uses useFormContext()
   const submitTool = useSubmitConfigurationTool({
     actorDefinitionId,
@@ -94,6 +99,13 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
       submitSecret,
     });
   }, [isSecretInputActive, secretFieldPath, secretFieldName, isMultiline, submitSecret, onSecretInputStateChange]);
+
+  // Notify parent when form getValues is ready
+  useEffect(() => {
+    if (onFormValuesReady) {
+      onFormValuesReady(() => getValues());
+    }
+  }, [onFormValuesReady, getValues]);
 
   return null;
 };
