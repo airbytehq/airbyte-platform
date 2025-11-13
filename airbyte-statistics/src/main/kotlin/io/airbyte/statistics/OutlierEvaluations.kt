@@ -6,6 +6,8 @@ package io.airbyte.statistics
 
 import java.math.BigDecimal
 import kotlin.math.absoluteValue
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
@@ -253,4 +255,51 @@ data class ReciprocalSqrt(
   }
 
   override fun apply(value: Double): Double = 1.0 + (1.0 / sqrt(value))
+}
+
+/**
+ * Binary function interface for operations that take two expressions.
+ */
+sealed interface BinaryFunction : Expression {
+  val left: Expression
+  val right: Expression
+
+  fun apply(
+    left: Double,
+    right: Double,
+  ): Double
+
+  override fun getValue(sc: ScoringContext): Double? {
+    val leftValue = left.getValue(sc) ?: return null
+    val rightValue = right.getValue(sc) ?: return null
+    return apply(leftValue, rightValue)
+  }
+
+  override fun getScores(sc: ScoringContext): Scores? = null
+}
+
+/**
+ * Returns the minimum of two expressions.
+ */
+data class Min(
+  override val left: Expression,
+  override val right: Expression,
+) : BinaryFunction {
+  override fun apply(
+    left: Double,
+    right: Double,
+  ): Double = min(left, right)
+}
+
+/**
+ * Returns the maximum of two expressions.
+ */
+data class Max(
+  override val left: Expression,
+  override val right: Expression,
+) : BinaryFunction {
+  override fun apply(
+    left: Double,
+    right: Double,
+  ): Double = max(left, right)
 }

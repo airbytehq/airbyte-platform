@@ -95,6 +95,71 @@ class OutlierEvaluationsTest {
   }
 
   @Test
+  fun `Min returns the minimum of two expressions`() {
+    assertEquals(5.0, Min(Const(5.0), Const(10.0)).getValue(defaultScoringContext))
+    assertEquals(5.0, Min(Const(10.0), Const(5.0)).getValue(defaultScoringContext))
+    assertEquals(3.0, Min(Const(3.0), Const(3.0)).getValue(defaultScoringContext))
+
+    // Test with dimension values
+    assertEquals(DEFAULT_CURRENT, Min(DURATION_DIM.identity, Const(10.0)).getValue(defaultScoringContext))
+    assertEquals(DEFAULT_CURRENT, Min(Const(10.0), DURATION_DIM.identity).getValue(defaultScoringContext))
+  }
+
+  @Test
+  fun `Max returns the maximum of two expressions`() {
+    assertEquals(10.0, Max(Const(5.0), Const(10.0)).getValue(defaultScoringContext))
+    assertEquals(10.0, Max(Const(10.0), Const(5.0)).getValue(defaultScoringContext))
+    assertEquals(3.0, Max(Const(3.0), Const(3.0)).getValue(defaultScoringContext))
+
+    // Test with dimension values
+    assertEquals(10.0, Max(DURATION_DIM.identity, Const(10.0)).getValue(defaultScoringContext))
+    assertEquals(10.0, Max(Const(10.0), DURATION_DIM.identity).getValue(defaultScoringContext))
+  }
+
+  @Test
+  fun `Min returns null when either expression is null`() {
+    val unknownDim = Dimension("unknown")
+    assertNull(Min(unknownDim, Const(5.0)).getValue(defaultScoringContext))
+    assertNull(Min(Const(5.0), unknownDim).getValue(defaultScoringContext))
+  }
+
+  @Test
+  fun `Max returns null when either expression is null`() {
+    val unknownDim = Dimension("unknown")
+    assertNull(Max(unknownDim, Const(5.0)).getValue(defaultScoringContext))
+    assertNull(Max(Const(5.0), unknownDim).getValue(defaultScoringContext))
+  }
+
+  @Test
+  fun `Min and Max return null scores to avoid ambiguity`() {
+    assertNull(Min(DURATION_DIM, Const(5.0)).getScores(defaultScoringContext))
+    assertNull(Max(DURATION_DIM, Const(5.0)).getScores(defaultScoringContext))
+    assertNull(Min(Const(5.0), DURATION_DIM).getScores(defaultScoringContext))
+    assertNull(Max(Const(5.0), DURATION_DIM).getScores(defaultScoringContext))
+  }
+
+  @Test
+  fun `Min and Max work in complex expressions`() {
+    // Test using Max to enforce a minimum std floor
+    val std = DURATION_DIM.std
+    val stdWithFloor = Max(std, Const(1.0))
+
+    // DEFAULT_STD is 7.0, so Max(7.0, 1.0) should be 7.0
+    assertEquals(DEFAULT_STD, stdWithFloor.getValue(defaultScoringContext))
+
+    // Test with a dimension that has lower std
+    val lowStdContext =
+      mapOf(
+        "lowStd" to Scores(current = 10.0, mean = 10.0, std = 0.5, zScore = 0.0),
+      )
+    val lowStdDim = Dimension("lowStd")
+    val lowStdWithFloor = Max(lowStdDim.std, Const(1.0))
+
+    // std is 0.5, so Max(0.5, 1.0) should be 1.0
+    assertEquals(1.0, lowStdWithFloor.getValue(lowStdContext))
+  }
+
+  @Test
   fun `OutlierRule evaluations return the expected summary`() {
     val ruleName = "myRule"
     val rule =

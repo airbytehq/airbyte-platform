@@ -9,6 +9,7 @@ import io.airbyte.statistics.Const
 import io.airbyte.statistics.DerivedStatRule
 import io.airbyte.statistics.Dimension
 import io.airbyte.statistics.GreaterThan
+import io.airbyte.statistics.Max
 import io.airbyte.statistics.OutlierRule
 import io.airbyte.statistics.Reciprocal
 import io.airbyte.statistics.ReciprocalSqrt
@@ -16,6 +17,7 @@ import io.airbyte.statistics.div
 import io.airbyte.statistics.mean
 import io.airbyte.statistics.minus
 import io.airbyte.statistics.plus
+import io.airbyte.statistics.std
 import io.airbyte.statistics.times
 import io.airbyte.statistics.zScore
 import jakarta.inject.Singleton
@@ -144,7 +146,8 @@ class JobObservabilityRulesService {
         value =
           Abs(
             (Dim.Stream.sourceFieldsPopulatedPerRecord - Dim.Stream.sourceFieldsPopulatedPerRecord.mean) /
-              (Dim.Stream.sourceFieldsPopulatedPerRecord.mean * Const(0.02)),
+              // Use a percentage-based std floor (2% of mean) to prevent hypersensitivity when std is very low.
+              Max(Dim.Stream.sourceFieldsPopulatedPerRecord.std, Dim.Stream.sourceFieldsPopulatedPerRecord.mean * Const(0.02)),
           ),
         operator = GreaterThan,
         threshold = Const(3.0),
