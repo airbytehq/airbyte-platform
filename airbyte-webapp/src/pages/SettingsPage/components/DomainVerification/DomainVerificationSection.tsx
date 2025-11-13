@@ -8,11 +8,12 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useListDomainVerifications } from "core/api";
+import { DomainVerificationResponse } from "core/api/types/AirbyteClient";
 import { useIntent } from "core/utils/rbac";
 
-import { AddDomainModal } from "./AddDomainModal";
 import styles from "./DomainVerification.module.scss";
 import { DomainVerificationList } from "./DomainVerificationList";
+import { DomainVerificationModal } from "./DomainVerificationModal";
 
 export const DomainVerificationSection: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
@@ -20,8 +21,24 @@ export const DomainVerificationSection: React.FC = () => {
   const { data, isLoading } = useListDomainVerifications();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDomain, setSelectedDomain] = useState<DomainVerificationResponse | undefined>(undefined);
 
   const domains = data?.domainVerifications || [];
+
+  const handleViewDnsInfo = (domain: DomainVerificationResponse) => {
+    setSelectedDomain(domain);
+    setIsModalOpen(true);
+  };
+
+  const handleAddNewDomain = () => {
+    setSelectedDomain(undefined);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedDomain(undefined);
+  };
 
   return (
     <div className={styles.section}>
@@ -36,7 +53,7 @@ export const DomainVerificationSection: React.FC = () => {
             variant="primary"
             size="sm"
             icon="plus"
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleAddNewDomain}
             disabled={!canUpdateOrganization}
           >
             <FormattedMessage id="settings.organizationSettings.domainVerification.addDomain" />
@@ -47,9 +64,9 @@ export const DomainVerificationSection: React.FC = () => {
           <FormattedMessage id="settings.organizationSettings.domainVerification.description" />
         </Text>
 
-        <DomainVerificationList domains={domains} isLoading={isLoading} />
+        <DomainVerificationList domains={domains} isLoading={isLoading} onViewDnsInfo={handleViewDnsInfo} />
 
-        {isModalOpen && <AddDomainModal onClose={() => setIsModalOpen(false)} />}
+        {isModalOpen && <DomainVerificationModal onClose={handleCloseModal} existingDomain={selectedDomain} />}
       </FlexContainer>
     </div>
   );

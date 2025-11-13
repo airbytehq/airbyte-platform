@@ -18,6 +18,7 @@ import styles from "./DomainVerification.module.scss";
 
 interface AddDomainModalProps {
   onClose: () => void;
+  existingDomain?: DomainVerificationResponse;
 }
 
 interface DomainFormValues {
@@ -26,14 +27,14 @@ interface DomainFormValues {
 
 type ModalStep = "enterDomain" | "showInstructions";
 
-export const AddDomainModal: React.FC<AddDomainModalProps> = ({ onClose }) => {
+export const DomainVerificationModal: React.FC<AddDomainModalProps> = ({ onClose, existingDomain }) => {
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const formatError = useFormatError();
   const { mutateAsync: createDomain, isLoading } = useCreateDomainVerification();
 
-  const [currentStep, setCurrentStep] = useState<ModalStep>("enterDomain");
-  const [domainResponse, setDomainResponse] = useState<DomainVerificationResponse | null>(null);
+  const [currentStep, setCurrentStep] = useState<ModalStep>(existingDomain ? "showInstructions" : "enterDomain");
+  const [domainResponse, setDomainResponse] = useState<DomainVerificationResponse | null>(existingDomain ?? null);
 
   const {
     register,
@@ -106,12 +107,12 @@ export const AddDomainModal: React.FC<AddDomainModalProps> = ({ onClose }) => {
     }
   };
 
+  const modalTitle = existingDomain
+    ? formatMessage({ id: "settings.organizationSettings.domainVerification.viewDnsInfo" })
+    : formatMessage({ id: "settings.organizationSettings.domainVerification.addDomain" });
+
   return (
-    <Modal
-      size="md"
-      title={formatMessage({ id: "settings.organizationSettings.domainVerification.addDomain" })}
-      onCancel={currentStep === "enterDomain" ? onClose : undefined}
-    >
+    <Modal size="md" title={modalTitle} onCancel={currentStep === "enterDomain" ? onClose : undefined}>
       <form onSubmit={handleSubmit(onAddDomain)}>
         <ModalBody>
           {currentStep === "enterDomain" && (

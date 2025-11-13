@@ -1431,6 +1431,7 @@
   "settings.organizationSettings.domainVerification.dnsInstructions": "DNS Verification Instructions",
   "settings.organizationSettings.domainVerification.checkNow": "Check Status",
   "settings.organizationSettings.domainVerification.checkError": "Failed to check domain verification status. Please try again.",
+  "settings.organizationSettings.domainVerification.viewDnsInfo": "View DNS Info",
   "settings.accountSettings": "Account Settings",
   "settings.userId": "User ID: {id}",
   "settings.userId.copy": "Copy user ID",

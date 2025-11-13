@@ -14,6 +14,7 @@ import styles from "./DomainVerification.module.scss";
 
 interface DomainVerificationItemProps {
   domain: DomainVerificationResponse;
+  onViewDnsInfo: (domain: DomainVerificationResponse) => void;
 }
 
 const getStatusBadgeVariant = (status: DomainVerificationResponseStatus): "green" | "yellow" | "red" | "grey" => {
@@ -33,7 +34,7 @@ const getStatusBadgeVariant = (status: DomainVerificationResponseStatus): "green
 
 const MINIMUM_LOADING_DELAY = 800; // milliseconds
 
-export const DomainVerificationItem: React.FC<DomainVerificationItemProps> = ({ domain }) => {
+export const DomainVerificationItem: React.FC<DomainVerificationItemProps> = ({ domain, onViewDnsInfo }) => {
   const { mutateAsync: checkNow } = useCheckDomainVerification();
   const { registerNotification } = useNotificationService();
   const [isChecking, setIsChecking] = useState(false);
@@ -89,11 +90,16 @@ export const DomainVerificationItem: React.FC<DomainVerificationItemProps> = ({ 
           </FlexContainer>
         </FlexContainer>
 
-        {domain.status === "PENDING" && (
-          <Button variant="secondary" size="sm" icon="rotate" onClick={handleCheckNow} isLoading={isChecking}>
-            <FormattedMessage id="settings.organizationSettings.domainVerification.checkNow" />
+        <FlexContainer gap="sm">
+          <Button variant="secondary" size="sm" icon="eye" onClick={() => onViewDnsInfo(domain)}>
+            <FormattedMessage id="settings.organizationSettings.domainVerification.viewDnsInfo" />
           </Button>
-        )}
+          {domain.status === "PENDING" && (
+            <Button variant="secondary" size="sm" icon="rotate" onClick={handleCheckNow} isLoading={isChecking}>
+              <FormattedMessage id="settings.organizationSettings.domainVerification.checkNow" />
+            </Button>
+          )}
+        </FlexContainer>
       </FlexContainer>
     </div>
   );
