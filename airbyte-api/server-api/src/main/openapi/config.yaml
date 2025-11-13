@@ -6698,6 +6698,10 @@ paths:
                   type: string
                   format: uuid
                   description: Optional connection ID for additional workspace validation and breaking change detection based on configured streams
+                persist_changes:
+                  type: boolean
+                  default: false
+                  description: If true, persist the catalog changes to the connection (requires connection_id and WORKSPACE_EDITOR role). Updates sourceCatalogId, breakingChange flag, status, and syncCatalog.
       responses:
         "200":
           description: Successful operation

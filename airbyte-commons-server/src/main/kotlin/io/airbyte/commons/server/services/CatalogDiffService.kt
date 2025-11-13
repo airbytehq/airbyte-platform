@@ -16,6 +16,7 @@ import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.handlers.helpers.CatalogMergeHelper
 import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.StandardSync
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
 import jakarta.inject.Singleton
@@ -87,6 +88,11 @@ class CatalogDiffService(
         null
       }
 
+    // Persist changes to connection if requested
+    if (request.persistChanges == true && connectionId != null) {
+      persistCatalogChanges(connectionId, newCatalogId, schemaChange, mergedCatalog, configuredCatalog)
+    }
+
     return DiffCatalogsResponse()
       .catalogDiff(catalogDiff)
       .schemaChange(schemaChange)
@@ -124,5 +130,48 @@ class CatalogDiffService(
       catalog.catalog,
       ProtocolAirbyteCatalog::class.java,
     )
+  }
+
+  /**
+   * Persists catalog changes to the connection database record.
+   * Updates:
+   * - sourceCatalogId: set to the new catalog ID
+   * - breakingChange: boolean flag indicating if there are breaking changes
+   * - status: set to INACTIVE if breaking change detected
+   * - catalog: updated to the merged catalog (if available)
+   */
+  private fun persistCatalogChanges(
+    connectionId: UUID,
+    newCatalogId: UUID,
+    schemaChange: SchemaChange,
+    mergedCatalog: AirbyteCatalog?,
+    originalConfiguredCatalog: ConfiguredAirbyteCatalog?,
+  ) {
+    // Get the current connection
+    val connection =
+      connectionService.getStandardSync(connectionId)
+        ?: throw IllegalArgumentException("Connection not found: $connectionId")
+
+    // Determine if there's a breaking change
+    val hasBreakingChange = schemaChange == SchemaChange.BREAKING
+
+    // Update connection fields
+    connection.sourceCatalogId = newCatalogId
+    connection.breakingChange = hasBreakingChange
+
+    // Set status to INACTIVE if breaking change detected
+    if (hasBreakingChange) {
+      connection.status = StandardSync.Status.INACTIVE
+    }
+
+    // Update the configured catalog with merged catalog if available
+    if (mergedCatalog != null) {
+      val mergedConfiguredCatalog = catalogConverter.toConfiguredInternal(mergedCatalog)
+      connection.catalog = mergedConfiguredCatalog
+      connection.fieldSelectionData = catalogConverter.getFieldSelectionData(mergedCatalog)
+    }
+
+    // Persist to database
+    connectionService.writeStandardSync(connection)
   }
 }

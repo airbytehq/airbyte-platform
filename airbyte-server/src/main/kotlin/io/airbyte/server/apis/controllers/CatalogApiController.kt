@@ -8,6 +8,7 @@ import io.airbyte.api.generated.CatalogApi
 import io.airbyte.api.model.generated.DiffCatalogsRequest
 import io.airbyte.api.model.generated.DiffCatalogsResponse
 import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -42,16 +43,32 @@ class CatalogApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun diffCatalogs(
     @Body diffCatalogsRequest: DiffCatalogsRequest,
-  ): DiffCatalogsResponse =
-    withRoleValidation(
+  ): DiffCatalogsResponse {
+    // Validate that connection_id is provided when persist_changes is true
+    if (diffCatalogsRequest.persistChanges == true && diffCatalogsRequest.connectionId == null) {
+      throw BadRequestProblem(
+        ProblemMessageData().message("connection_id is required when persist_changes is true"),
+      )
+    }
+
+    // Require WORKSPACE_EDITOR role when persisting changes, WORKSPACE_READER otherwise
+    val requiredRole =
+      if (diffCatalogsRequest.persistChanges == true) {
+        AuthRoleConstants.WORKSPACE_EDITOR
+      } else {
+        AuthRoleConstants.WORKSPACE_READER
+      }
+
+    return withRoleValidation(
       currentCatalogId = diffCatalogsRequest.currentCatalogId,
       newCatalogId = diffCatalogsRequest.newCatalogId,
       connectionId = diffCatalogsRequest.connectionId,
-      role = AuthRoleConstants.WORKSPACE_READER,
+      role = requiredRole,
     ) {
       diffCatalogsRequest.connectionId?.let { TracingHelper.addConnection(it) }
       catalogDiffService.diffCatalogs(diffCatalogsRequest)
     }
+  }
 
   @InternalForTesting
   internal fun <T> withRoleValidation(
