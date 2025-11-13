@@ -38,6 +38,7 @@ export interface Experiments {
   "platform.allow-config-template-endpoints": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
+  "platform.use-verified-domains-for-sso-activate": boolean;
   productLimitsUI: boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.domainVerification": boolean;
@@ -94,6 +95,7 @@ export const defaultExperimentValues: Experiments = {
   "platform.allow-config-template-endpoints": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,
+  "platform.use-verified-domains-for-sso-activate": false,
   productLimitsUI: false,
   "settings.breakingChangeNotifications": false,
   "settings.domainVerification": false,

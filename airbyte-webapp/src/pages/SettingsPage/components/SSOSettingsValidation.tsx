@@ -19,12 +19,13 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
-import { useActivateSsoConfig, useSSOConfigManagement } from "core/api";
+import { useActivateSsoConfig, useListDomainVerifications, useSSOConfigManagement } from "core/api";
 import { useFormatError } from "core/errors";
 import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./SSOSettings.module.scss";
@@ -49,6 +50,8 @@ export const SSOSettingsValidation = () => {
   const [activationResult, setActivationResult] = useState<{ success: boolean; message: ReactNode } | null>(null);
   const [, setLastSsoCompanyIdentifier] = useLocalStorage("airbyte_last-sso-company-identifier", "");
   const [, setRedirectToSsoAfterLogout] = useLocalStorage("airbyte_redirect-to-sso-after-logout", "");
+  const useVerifiedDomainsForActivate = useExperiment("platform.use-verified-domains-for-sso-activate");
+  const { data: domainVerifications } = useListDomainVerifications();
 
   // Watch the companyIdentifier field to dynamically generate URIs
   const companyIdentifier = useWatch<SSOFormValuesValidation>({ name: "companyIdentifier" });
@@ -80,6 +83,13 @@ export const SSOSettingsValidation = () => {
     [ssoConfig?.emailDomains]
   );
 
+  // Get verified domains for the new feature flag flow
+  const verifiedDomains = useMemo(
+    () =>
+      domainVerifications?.domainVerifications?.filter((dv) => dv.status === "VERIFIED").map((dv) => dv.domain) || [],
+    [domainVerifications]
+  );
+
   // Populate email domain field when config is active
   useEffect(() => {
     if (isActive && emailDomainsString) {
@@ -106,19 +116,38 @@ export const SSOSettingsValidation = () => {
   };
 
   const handleActivate = () => {
-    if (!emailDomainInput) {
+    if (!useVerifiedDomainsForActivate && !emailDomainInput) {
       return;
     }
 
+    if (useVerifiedDomainsForActivate && verifiedDomains.length === 0) {
+      registerNotification({
+        id: "sso-activation-no-verified-domains",
+        text: formatMessage({ id: "settings.organizationSettings.sso.activate.error.noVerifiedDomains" }),
+        type: "error",
+      });
+      return;
+    }
+
+    const modalText = useVerifiedDomainsForActivate
+      ? formatMessage(
+          { id: "settings.organizationSettings.sso.activate.confirm.text.verifiedDomains" },
+          { domains: verifiedDomains.join(", ") }
+        )
+      : formatMessage({ id: "settings.organizationSettings.sso.activate.confirm.text" });
+
     openConfirmationModal({
       title: formatMessage({ id: "settings.organizationSettings.sso.activate.confirm.title" }),
-      text: formatMessage({ id: "settings.organizationSettings.sso.activate.confirm.text" }),
+      text: modalText,
       submitButtonText: formatMessage({ id: "settings.organizationSettings.sso.activate.confirm.button" }),
       submitButtonVariant: "primary",
       onSubmit: async () => {
         setIsActivating(true);
         try {
-          await activateSsoConfigMutation({ organizationId, emailDomain: emailDomainInput });
+          await activateSsoConfigMutation({
+            organizationId,
+            emailDomain: useVerifiedDomainsForActivate ? "" : emailDomainInput,
+          });
           const successMessage = formatMessage({ id: "settings.organizationSettings.sso.activate.success" });
 
           registerNotification({
@@ -365,19 +394,21 @@ export const SSOSettingsValidation = () => {
                               {/* Note: Step 2 uses manual Input instead of FormControl because activation is a
                     separate action from form submission - it calls a different API endpoint after
                     the draft config has already been created and tested */}
-                              <FlexContainer direction="column" gap="xs">
-                                <Text color={!isStep1Complete && !isActive ? "grey300" : undefined}>
-                                  {formatMessage({ id: "settings.organizationSettings.sso.emailDomain" })}
-                                </Text>
-                                <Input
-                                  value={emailDomainInput}
-                                  onChange={(e) => setEmailDomainInput(e.currentTarget.value)}
-                                  disabled={!isStep1Complete || isActive}
-                                  placeholder={formatMessage({
-                                    id: "settings.organizationSettings.sso.emailDomain.placeholder",
-                                  })}
-                                />
-                              </FlexContainer>
+                              {!useVerifiedDomainsForActivate && (
+                                <FlexContainer direction="column" gap="xs">
+                                  <Text color={!isStep1Complete && !isActive ? "grey300" : undefined}>
+                                    {formatMessage({ id: "settings.organizationSettings.sso.emailDomain" })}
+                                  </Text>
+                                  <Input
+                                    value={emailDomainInput}
+                                    onChange={(e) => setEmailDomainInput(e.currentTarget.value)}
+                                    disabled={!isStep1Complete || isActive}
+                                    placeholder={formatMessage({
+                                      id: "settings.organizationSettings.sso.emailDomain.placeholder",
+                                    })}
+                                  />
+                                </FlexContainer>
+                              )}
 
                               <FlexContainer alignItems="flex-start">
                                 <Button
@@ -385,7 +416,11 @@ export const SSOSettingsValidation = () => {
                                   variant="primary"
                                   onClick={handleActivate}
                                   isLoading={isActivating}
-                                  disabled={!isStep1Complete || !emailDomainInput || isActive}
+                                  disabled={
+                                    !isStep1Complete ||
+                                    (!useVerifiedDomainsForActivate && !emailDomainInput) ||
+                                    isActive
+                                  }
                                 >
                                   {formatMessage({ id: "settings.organizationSettings.sso.activate.button" })}
                                 </Button>
