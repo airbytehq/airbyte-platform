@@ -38,4 +38,5 @@ data class OrganizationDomainVerification(
   var createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated
   var updatedAt: java.time.OffsetDateTime? = null,
+  var tombstone: Boolean = false,
 )

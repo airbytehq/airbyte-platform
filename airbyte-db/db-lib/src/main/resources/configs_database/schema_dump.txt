@@ -517,6 +517,7 @@ create table "public"."organization_domain_verification" (
   "verified_at" timestamp(6) with time zone,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "tombstone" boolean not null default false,
   constraint "organization_domain_verification_pkey" primary key ("id"),
   constraint "organization_domain_verification_organization_id_domain_key" unique ("organization_id", "domain")
 );

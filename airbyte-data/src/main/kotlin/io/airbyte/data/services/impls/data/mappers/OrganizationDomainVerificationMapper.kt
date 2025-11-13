@@ -29,6 +29,7 @@ fun EntityOrganizationDomainVerification.toDomainModel(): DomainOrganizationDoma
     verifiedAt = this.verifiedAt,
     createdAt = this.createdAt,
     updatedAt = this.updatedAt,
+    tombstone = this.tombstone,
   )
 
 // Domain Model → Entity
@@ -49,6 +50,7 @@ fun DomainOrganizationDomainVerification.toEntity(): EntityOrganizationDomainVer
     verifiedAt = this.verifiedAt,
     createdAt = this.createdAt,
     updatedAt = this.updatedAt,
+    tombstone = this.tombstone,
   )
 
 // Entity Enum → Domain Enum

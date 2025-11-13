@@ -56,7 +56,7 @@ class OrganizationDomainVerificationServiceTest {
         createdAt = OffsetDateTime.now(),
       )
 
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain) } returns null
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns null
     every { organizationDomainVerificationRepository.save(any()) } returns savedEntity
 
     val result =
@@ -70,7 +70,7 @@ class OrganizationDomainVerificationServiceTest {
     assert(result.organizationId == testOrgId)
     assert(result.domain == testDomain)
     assert(result.status == DomainVerificationStatus.PENDING)
-    verify { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain) }
+    verify { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) }
     verify { organizationDomainVerificationRepository.save(any()) }
   }
 
@@ -83,7 +83,7 @@ class OrganizationDomainVerificationServiceTest {
         status = EntityDomainVerificationStatus.verified,
       )
 
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain) } returns existingEntity
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns existingEntity
 
     val exception =
       assertThrows<IllegalArgumentException> {
@@ -94,7 +94,7 @@ class OrganizationDomainVerificationServiceTest {
         )
       }
     assert(exception.message == "Domain 'example.com' is already verified for this organization.")
-    verify { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain) }
+    verify { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) }
   }
 
   @Test
@@ -106,7 +106,7 @@ class OrganizationDomainVerificationServiceTest {
         status = EntityDomainVerificationStatus.expired,
       )
 
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain) } returns existingEntity
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns existingEntity
 
     val exception =
       assertThrows<IllegalArgumentException> {
@@ -118,7 +118,7 @@ class OrganizationDomainVerificationServiceTest {
       }
 
     assert(exception.message?.contains("expired") == true)
-    verify { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain) }
+    verify { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) }
   }
 
   @Test
@@ -126,12 +126,12 @@ class OrganizationDomainVerificationServiceTest {
     val entity1 = createEntityFromDomain(createValidDomainModel()).copy(id = UUID.randomUUID())
     val entity2 = createEntityFromDomain(createValidDomainModel()).copy(id = UUID.randomUUID())
 
-    every { organizationDomainVerificationRepository.findByOrganizationId(testOrgId) } returns listOf(entity1, entity2)
+    every { organizationDomainVerificationRepository.findByOrganizationId(testOrgId, false) } returns listOf(entity1, entity2)
 
     val result = organizationDomainVerificationService.findByOrganizationId(testOrgId)
 
     assert(result.size == 2)
-    verify { organizationDomainVerificationRepository.findByOrganizationId(testOrgId) }
+    verify { organizationDomainVerificationRepository.findByOrganizationId(testOrgId, false) }
   }
 
   @Test
@@ -164,13 +164,13 @@ class OrganizationDomainVerificationServiceTest {
         status = EntityDomainVerificationStatus.pending,
       )
 
-    every { organizationDomainVerificationRepository.findByStatus(EntityDomainVerificationStatus.pending) } returns listOf(entity)
+    every { organizationDomainVerificationRepository.findByStatus(EntityDomainVerificationStatus.pending, false) } returns listOf(entity)
 
     val result = organizationDomainVerificationService.findByStatus(DomainVerificationStatus.PENDING)
 
     assert(result.size == 1)
     assert(result[0].status == DomainVerificationStatus.PENDING)
-    verify(exactly = 1) { organizationDomainVerificationRepository.findByStatus(EntityDomainVerificationStatus.pending) }
+    verify(exactly = 1) { organizationDomainVerificationRepository.findByStatus(EntityDomainVerificationStatus.pending, false) }
   }
 
   @Test
@@ -330,6 +330,75 @@ class OrganizationDomainVerificationServiceTest {
     }
   }
 
+  @Test
+  fun `findByOrganizationId - excludes tombstoned by default`() {
+    val activeEntity = createEntityFromDomain(createValidDomainModel()).copy(id = UUID.randomUUID(), tombstone = false)
+
+    every { organizationDomainVerificationRepository.findByOrganizationId(testOrgId, false) } returns listOf(activeEntity)
+
+    val result = organizationDomainVerificationService.findByOrganizationId(testOrgId)
+
+    assert(result.size == 1)
+    assert(!result[0].tombstone)
+    verify { organizationDomainVerificationRepository.findByOrganizationId(testOrgId, false) }
+  }
+
+  @Test
+  fun `findByOrganizationId - includes tombstoned when requested`() {
+    val activeEntity = createEntityFromDomain(createValidDomainModel()).copy(id = UUID.randomUUID(), tombstone = false)
+    val deletedEntity = createEntityFromDomain(createValidDomainModel()).copy(id = UUID.randomUUID(), tombstone = true)
+
+    every { organizationDomainVerificationRepository.findByOrganizationId(testOrgId, true) } returns
+      listOf(activeEntity, deletedEntity)
+
+    val result = organizationDomainVerificationService.findByOrganizationId(testOrgId, includeDeleted = true)
+
+    assert(result.size == 2)
+    verify { organizationDomainVerificationRepository.findByOrganizationId(testOrgId, true) }
+  }
+
+  @Test
+  fun `deleteDomainVerification - successfully soft deletes`() {
+    val entity = createEntityFromDomain(createValidDomainModel()).copy(id = testId, tombstone = false)
+    val updatedEntity = entity.copy(tombstone = true)
+
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, true) } returns entity
+    every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
+
+    organizationDomainVerificationService.deleteDomainVerification(testOrgId, testDomain)
+
+    verify { organizationDomainVerificationRepository.update(match { it.tombstone == true }) }
+  }
+
+  @Test
+  fun `deleteDomainVerification - throws when not found`() {
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, true) } returns
+      null
+
+    val exception =
+      assertThrows<IllegalArgumentException> {
+        organizationDomainVerificationService.deleteDomainVerification(testOrgId, testDomain)
+      }
+    assert(exception.message == "Domain verification not found for organization $testOrgId and domain $testDomain")
+  }
+
+  @Test
+  fun `deleteDomainVerification - idempotent when already deleted`() {
+    val alreadyDeletedEntity =
+      createEntityFromDomain(createValidDomainModel()).copy(
+        id = testId,
+        tombstone = true,
+      )
+
+    every {
+      organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, true)
+    } returns alreadyDeletedEntity
+
+    organizationDomainVerificationService.deleteDomainVerification(testOrgId, testDomain)
+
+    verify(exactly = 0) { organizationDomainVerificationRepository.update(any()) }
+  }
+
   private fun createValidDomainModel(): OrganizationDomainVerification =
     OrganizationDomainVerification(
       id = null,
@@ -347,6 +416,7 @@ class OrganizationDomainVerificationServiceTest {
       verifiedAt = null,
       createdAt = null,
       updatedAt = null,
+      tombstone = false,
     )
 
   private fun createEntityFromDomain(domain: OrganizationDomainVerification): EntityOrganizationDomainVerification =
@@ -366,5 +436,6 @@ class OrganizationDomainVerificationServiceTest {
       verifiedAt = domain.verifiedAt,
       createdAt = domain.createdAt,
       updatedAt = domain.updatedAt,
+      tombstone = domain.tombstone,
     )
 }

@@ -66,6 +66,7 @@ open class OrganizationDomainVerificationService(
         verifiedAt = null,
         createdAt = null,
         updatedAt = null,
+        tombstone = false,
       )
 
     // Check if domain already exists
@@ -116,8 +117,10 @@ open class OrganizationDomainVerificationService(
   /**
    * Finds all domain verifications for an organization.
    */
-  fun findByOrganizationId(organizationId: UUID): List<OrganizationDomainVerification> =
-    repository.findByOrganizationId(organizationId).map { it.toDomainModel() }
+  fun findByOrganizationId(
+    organizationId: UUID,
+    includeDeleted: Boolean = false,
+  ): List<OrganizationDomainVerification> = repository.findByOrganizationId(organizationId, includeDeleted).map { it.toDomainModel() }
 
   /**
    * Gets a specific domain verification by ID.
@@ -126,6 +129,10 @@ open class OrganizationDomainVerificationService(
     val entity =
       repository.findById(id).orElse(null)
         ?: throw IllegalArgumentException("Domain verification not found with id: $id")
+
+    if (entity.tombstone) {
+      throw IllegalArgumentException("Domain verification with id $id was deleted")
+    }
     return entity.toDomainModel()
   }
 
@@ -135,13 +142,16 @@ open class OrganizationDomainVerificationService(
   fun findByOrganizationIdAndDomain(
     organizationId: UUID,
     domain: String,
-  ): OrganizationDomainVerification? = repository.findByOrganizationIdAndDomain(organizationId, domain)?.toDomainModel()
+    includeDeleted: Boolean = false,
+  ): OrganizationDomainVerification? = repository.findByOrganizationIdAndDomain(organizationId, domain, includeDeleted)?.toDomainModel()
 
   /**
    * Finds verifications by status (for background verification job).
    */
-  fun findByStatus(status: DomainVerificationStatus): List<OrganizationDomainVerification> =
-    repository.findByStatus(status.toEntityEnum()).map { it.toDomainModel() }
+  fun findByStatus(
+    status: DomainVerificationStatus,
+    includeDeleted: Boolean = false,
+  ): List<OrganizationDomainVerification> = repository.findByStatus(status.toEntityEnum(), includeDeleted).map { it.toDomainModel() }
 
   /**
    * Updates domain verification status (called by cron job).
@@ -156,6 +166,10 @@ open class OrganizationDomainVerificationService(
     val entity =
       repository.findById(id).orElse(null)
         ?: throw IllegalArgumentException("Domain verification not found with id: $id")
+
+    if (entity.tombstone) {
+      throw IllegalArgumentException("Domain verification with id $id is no longer active")
+    }
 
     val domainModel = entity.toDomainModel()
 
@@ -237,6 +251,31 @@ open class OrganizationDomainVerificationService(
       is DnsVerificationResult.Misconfigured -> handleMisconfiguredVerification(verificationId, verification, dnsResult)
       is DnsVerificationResult.NotFound -> handleNotFoundVerification(verificationId, verification)
     }
+
+  /**
+   * Soft-deletes a domain verification by marking it as tombstoned.
+   * The record remains in the database for audit purposes but is excluded from normal queries.
+   * This operation is idempotent - calling it on an already deleted record is safe.
+   */
+  @Transactional("config")
+  open fun deleteDomainVerification(
+    organizationId: UUID,
+    domain: String,
+  ) {
+    val entity =
+      repository.findByOrganizationIdAndDomain(organizationId, domain, includeDeleted = true)
+        ?: throw IllegalArgumentException("Domain verification not found for organization $organizationId and domain $domain")
+
+    if (entity.tombstone) {
+      logger.warn { "Domain verification for domain $domain in organization $organizationId is already deleted" }
+      return
+    }
+
+    entity.tombstone = true
+    repository.update(entity)
+
+    logger.info { "Soft-deleted domain verification for domain $domain in organization $organizationId" }
+  }
 
   private fun handleSuccessfulVerification(
     verificationId: UUID,

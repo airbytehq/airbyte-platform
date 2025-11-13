@@ -35,4 +35,5 @@ data class OrganizationDomainVerification(
   val verifiedAt: OffsetDateTime?,
   val createdAt: OffsetDateTime?,
   val updatedAt: OffsetDateTime?,
+  val tombstone: Boolean = false,
 )

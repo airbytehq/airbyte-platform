@@ -205,5 +205,6 @@ class DomainVerificationApiControllerTest {
       verifiedAt = if (status == DomainVerificationStatus.VERIFIED) OffsetDateTime.now() else null,
       createdAt = OffsetDateTime.now(),
       updatedAt = OffsetDateTime.now(),
+      tombstone = false,
     )
 }
