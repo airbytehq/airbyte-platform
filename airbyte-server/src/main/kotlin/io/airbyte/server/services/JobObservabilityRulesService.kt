@@ -107,12 +107,13 @@ class JobObservabilityRulesService {
   private val streamOutlierRules =
     listOf(
       OutlierRule(
-        name = Dim.Stream.bytesLoaded.name,
-        value = Abs(Dim.Stream.bytesLoaded.zScore),
+        name = Dim.Stream.averageRecordSize.name,
+        value = Abs(Dim.Stream.averageRecordSize.zScore),
         operator = GreaterThan,
-        // We are adjusting the threshold for loaded data based on the average record count as a proxy for volume. Rationale being that a stream
-        // moving a little amount of data will be more susceptible to variations.
-        threshold = dataStdDevThreshold * ReciprocalSqrt(Dim.Stream.recordsLoaded.mean),
+        // Average record size is a better indicator of regressions (schema changes, encoding issues) than absolute bytes.
+        // It's normalized by record count, so works consistently across streams of different sizes.
+        threshold = dataStdDevThreshold,
+        condition = Dim.Stream.recordsLoaded gte Const(100.0),
       ),
       OutlierRule(
         name = Dim.Stream.recordsLoaded.name,
