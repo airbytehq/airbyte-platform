@@ -754,7 +754,7 @@ class UserHandlerTest {
     private val permission1Id: UUID = UUID.randomUUID()
 
     class NewUserArgumentsProvider : ArgumentsProvider {
-      override fun provideArguments(context: ExtensionContext?): Stream<Arguments> {
+      override fun provideArguments(context: ExtensionContext): Stream<Arguments> {
         val authProviders = listOf(*AuthProvider.entries.toTypedArray())
         val authRealms = mutableListOf("airbyte-realm", null)
         val initialUserEmails = listOf(null, "", "other@gmail.com", "new@gmail.com")

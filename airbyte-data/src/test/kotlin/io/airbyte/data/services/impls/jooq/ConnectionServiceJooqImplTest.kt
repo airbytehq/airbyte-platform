@@ -53,9 +53,15 @@ import org.jooq.JSONB
 import org.jooq.SQLDialect
 import org.jooq.SortField
 import org.jooq.impl.DSL
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertNull
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -107,7 +113,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     // Assert both source and destination are flagged as syncing
     for (actorId in mutableListOf(destination!!.destinationId, source!!.sourceId)) {
       val actorSyncsAnyListedStream = connectionServiceJooqImpl.actorSyncsAnyListedStream(actorId, streamsToCheck.filterNotNull())
-      Assertions.assertEquals(actorShouldSyncAnyListedStream, actorSyncsAnyListedStream)
+      assertEquals(actorShouldSyncAnyListedStream, actorSyncsAnyListedStream)
     }
   }
 
@@ -155,7 +161,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.connectionId)
 
-    Assertions.assertEquals(tags, standardSyncPersisted.tags)
+    assertEquals(tags, standardSyncPersisted.tags)
   }
 
   @Test
@@ -188,7 +194,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.connectionId)
 
-    Assertions.assertEquals(updatedTags, standardSyncPersisted.tags)
+    assertEquals(updatedTags, standardSyncPersisted.tags)
   }
 
   @Test
@@ -217,8 +223,8 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     connectionServiceJooqImpl.writeStandardSync(standardSyncToCreate)
     val standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.connectionId)
 
-    Assertions.assertNotEquals(tagsFromMultipleWorkspaces, standardSyncPersisted.tags)
-    Assertions.assertEquals(tags, standardSyncPersisted.tags)
+    assertNotEquals(tagsFromMultipleWorkspaces, standardSyncPersisted.tags)
+    assertEquals(tags, standardSyncPersisted.tags)
   }
 
   @Test
@@ -247,12 +253,12 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.connectionId)
 
-    Assertions.assertEquals(StandardSync.Status.LOCKED, standardSyncPersisted.status)
-    Assertions.assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value, standardSyncPersisted.statusReason)
+    assertEquals(StandardSync.Status.LOCKED, standardSyncPersisted.status)
+    assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value, standardSyncPersisted.statusReason)
 
     // Verify we can convert the stored value back to enum
     val retrievedEnum = StatusReason.fromValueOrNull(standardSyncPersisted.statusReason)
-    Assertions.assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED, retrievedEnum)
+    assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED, retrievedEnum)
 
     // Update the connection to remove status reason
     standardSyncPersisted.statusReason = null
@@ -262,12 +268,12 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val updatedStandardSync = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.connectionId)
 
-    Assertions.assertEquals(StandardSync.Status.ACTIVE, updatedStandardSync.status)
-    Assertions.assertNull(updatedStandardSync.statusReason)
+    assertEquals(StandardSync.Status.ACTIVE, updatedStandardSync.status)
+    assertNull(updatedStandardSync.statusReason)
 
     // Verify null converts to null enum
     val nullEnum = StatusReason.fromValueOrNull(updatedStandardSync.statusReason)
-    Assertions.assertNull(nullEnum)
+    assertNull(nullEnum)
   }
 
   @Test
@@ -314,7 +320,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       connectionServiceJooqImpl.listStreamsForDestination(destination.destinationId, null)
 
     // Should only return selected streams from active connections
-    Assertions.assertEquals(2, streamConfigs.size)
+    assertEquals(2, streamConfigs.size)
 
     // Verify first stream
     val streamConfigA =
@@ -323,10 +329,10 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         .filter { s: StreamDescriptorForDestination? -> "stream_a" == s!!.streamName }
         .findFirst()
         .orElseThrow()
-    Assertions.assertEquals("namespace_1", streamConfigA.streamNamespace)
-    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.SOURCE, streamConfigA.namespaceDefinition)
-    Assertions.assertEquals("\${SOURCE_NAMESPACE}", streamConfigA.namespaceFormat)
-    Assertions.assertEquals("prefix_", streamConfigA.prefix)
+    assertEquals("namespace_1", streamConfigA.streamNamespace)
+    assertEquals(JobSyncConfig.NamespaceDefinitionType.SOURCE, streamConfigA.namespaceDefinition)
+    assertEquals("\${SOURCE_NAMESPACE}", streamConfigA.namespaceFormat)
+    assertEquals("prefix_", streamConfigA.prefix)
 
     // Verify second stream
     val streamConfigC =
@@ -335,10 +341,10 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         .filter { s: StreamDescriptorForDestination? -> "stream_b" == s!!.streamName }
         .findFirst()
         .orElseThrow()
-    Assertions.assertEquals("namespace_2", streamConfigC.streamNamespace)
-    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.SOURCE, streamConfigC.namespaceDefinition)
-    Assertions.assertEquals("\${SOURCE_NAMESPACE}", streamConfigC.namespaceFormat)
-    Assertions.assertEquals("prefix_", streamConfigC.prefix)
+    assertEquals("namespace_2", streamConfigC.streamNamespace)
+    assertEquals(JobSyncConfig.NamespaceDefinitionType.SOURCE, streamConfigC.namespaceDefinition)
+    assertEquals("\${SOURCE_NAMESPACE}", streamConfigC.namespaceFormat)
+    assertEquals("prefix_", streamConfigC.prefix)
   }
 
   @Test
@@ -380,7 +386,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val streamConfigs =
       connectionServiceJooqImpl.listStreamsForDestination(destination.destinationId, null)
 
-    Assertions.assertEquals(2, streamConfigs.size)
+    assertEquals(2, streamConfigs.size)
 
     // Verify first stream
     val streamConfigA =
@@ -389,10 +395,10 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         .filter { s: StreamDescriptorForDestination? -> "stream_a" == s!!.streamName }
         .findFirst()
         .orElseThrow()
-    Assertions.assertEquals("namespace_1", streamConfigA.streamNamespace)
-    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT, streamConfigA.namespaceDefinition)
-    Assertions.assertEquals("custom_\${SOURCE_NAMESPACE}", streamConfigA.namespaceFormat)
-    Assertions.assertEquals("prefix1_", streamConfigA.prefix)
+    assertEquals("namespace_1", streamConfigA.streamNamespace)
+    assertEquals(JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT, streamConfigA.namespaceDefinition)
+    assertEquals("custom_\${SOURCE_NAMESPACE}", streamConfigA.namespaceFormat)
+    assertEquals("prefix1_", streamConfigA.prefix)
 
     // Verify second stream
     val streamConfigB =
@@ -401,10 +407,10 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         .filter { s: StreamDescriptorForDestination? -> "stream_b" == s!!.streamName }
         .findFirst()
         .orElseThrow()
-    Assertions.assertEquals("namespace_2", streamConfigB.streamNamespace)
-    Assertions.assertEquals(JobSyncConfig.NamespaceDefinitionType.DESTINATION, streamConfigB.namespaceDefinition)
-    Assertions.assertNull(streamConfigB.namespaceFormat)
-    Assertions.assertEquals("prefix2_", streamConfigB.prefix)
+    assertEquals("namespace_2", streamConfigB.streamNamespace)
+    assertEquals(JobSyncConfig.NamespaceDefinitionType.DESTINATION, streamConfigB.namespaceDefinition)
+    assertNull(streamConfigB.namespaceFormat)
+    assertEquals("prefix2_", streamConfigB.prefix)
   }
 
   @Test
@@ -595,13 +601,13 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val result = connectionServiceJooqImpl.getConnectionStatusCounts(workspaceId)
 
-    Assertions.assertEquals(1, result.running)
-    Assertions.assertEquals(1, result.healthy)
+    assertEquals(1, result.running)
+    assertEquals(1, result.healthy)
     // failedConnection + cancelledConnection + incompleteConnection
-    Assertions.assertEquals(3, result.failed)
-    Assertions.assertEquals(2, result.paused)
+    assertEquals(3, result.failed)
+    assertEquals(2, result.paused)
     // notSyncedConnection (active connection with no jobs)
-    Assertions.assertEquals(1, result.notSynced)
+    assertEquals(1, result.notSynced)
   }
 
   @Test
@@ -630,12 +636,12 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val result = connectionServiceJooqImpl.getConnectionStatusCounts(workspaceId)
 
-    Assertions.assertEquals(0, result.running)
-    Assertions.assertEquals(0, result.healthy)
-    Assertions.assertEquals(0, result.failed)
-    Assertions.assertEquals(1, result.paused)
+    assertEquals(0, result.running)
+    assertEquals(0, result.healthy)
+    assertEquals(0, result.failed)
+    assertEquals(1, result.paused)
     // activeConnection (active connection with no jobs)
-    Assertions.assertEquals(1, result.notSynced)
+    assertEquals(1, result.notSynced)
   }
 
   @Test
@@ -644,11 +650,11 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val result = connectionServiceJooqImpl.getConnectionStatusCounts(nonExistentWorkspaceId)
 
-    Assertions.assertEquals(0, result.running)
-    Assertions.assertEquals(0, result.healthy)
-    Assertions.assertEquals(0, result.failed)
-    Assertions.assertEquals(0, result.paused)
-    Assertions.assertEquals(0, result.notSynced)
+    assertEquals(0, result.running)
+    assertEquals(0, result.healthy)
+    assertEquals(0, result.failed)
+    assertEquals(0, result.paused)
+    assertEquals(0, result.notSynced)
   }
 
   @ParameterizedTest
@@ -662,8 +668,8 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val cursor = Cursor(sortKey, null, null, null, null, null, null, null, ascending, null)
     val fields = connectionServiceJooqImpl.buildOrderByClause(cursor)
 
-    Assertions.assertEquals(expectedFirstField, fields[0])
-    Assertions.assertEquals(expectedLastField, fields[fields.size - 1])
+    assertEquals(expectedFirstField, fields[0])
+    assertEquals(expectedLastField, fields[fields.size - 1])
   }
 
   @ParameterizedTest
@@ -691,7 +697,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       )
 
     val condition = connectionServiceJooqImpl.buildCursorCondition(cursor)
-    Assertions.assertTrue(condition.toString().contains(" > "))
+    assertTrue(condition.toString().contains(" > "))
   }
 
   @ParameterizedTest
@@ -704,7 +710,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val conditionStr = condition.toString()
 
     for (expectedString in expectedStrings) {
-      Assertions.assertTrue(
+      assertTrue(
         conditionStr.contains(expectedString),
         "Expected condition to contain '$expectedString' but was: $conditionStr",
       )
@@ -721,7 +727,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val conditionStr = condition.toString()
 
     for (expectedString in expectedStrings) {
-      Assertions.assertTrue(
+      assertTrue(
         conditionStr.contains(expectedString),
         "Expected condition to contain '$expectedString' but was: $conditionStr",
       )
@@ -741,7 +747,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val conditionStr = condition.toString()
 
     for (expectedString in expectedStrings) {
-      Assertions.assertTrue(
+      assertTrue(
         conditionStr.contains(expectedString),
         "$description - Expected condition to contain '$expectedString' but was: $conditionStr",
       )
@@ -760,23 +766,23 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     // Then
     if (shouldReturnNoCondition) {
-      Assertions.assertEquals(DSL.noCondition().toString(), condition.toString(), description)
+      assertEquals(DSL.noCondition().toString(), condition.toString(), description)
     } else {
-      Assertions.assertNotEquals(DSL.noCondition().toString(), condition.toString(), description)
+      assertNotEquals(DSL.noCondition().toString(), condition.toString(), description)
 
       // Verify the condition contains the expected structure
       val conditionString = condition.toString()
 
       if (cursor != null && cursor.cursorId != null) {
         // Should contain connection ID comparison
-        Assertions.assertTrue(
+        assertTrue(
           conditionString.contains(cursor.cursorId.toString()),
           "$description: Expected connection ID in condition",
         )
 
         if (cursor.lastSync != null) {
           // Should contain time comparison logic
-          Assertions.assertTrue(
+          assertTrue(
             conditionString.contains("latest_jobs.created_at") ||
               conditionString.contains("is not null") ||
               conditionString.contains("is null"),
@@ -784,7 +790,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
           )
         } else {
           // Should contain null check logic
-          Assertions.assertTrue(
+          assertTrue(
             conditionString.contains("is null"),
             "$description: Expected null check logic in condition",
           )
@@ -828,8 +834,8 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         pagination,
       )
 
-    Assertions.assertEquals(1, result.size)
-    Assertions.assertEquals(sync.connectionId, result.first().connection().connectionId)
+    assertEquals(1, result.size)
+    assertEquals(sync.connectionId, result.first().connection().connectionId)
   }
 
   @Test
@@ -850,7 +856,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         null,
       )
 
-    Assertions.assertEquals(1, count)
+    assertEquals(1, count)
   }
 
   @Test
@@ -872,17 +878,17 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         pageSize,
       )
 
-    Assertions.assertNotNull(result)
-    Assertions.assertEquals(pageSize, result.pageSize)
-    Assertions.assertNotNull(result.cursor)
-    Assertions.assertEquals(SortKey.CONNECTION_NAME, result.cursor!!.sortKey)
-    Assertions.assertTrue(result.cursor!!.ascending)
-    Assertions.assertNull(result.cursor!!.connectionName)
-    Assertions.assertNull(result.cursor!!.sourceName)
-    Assertions.assertNull(result.cursor!!.destinationName)
-    Assertions.assertNull(result.cursor!!.lastSync)
-    Assertions.assertNull(result.cursor!!.cursorId)
-    Assertions.assertNull(result.cursor!!.filters)
+    assertNotNull(result)
+    assertEquals(pageSize, result.pageSize)
+    assertNotNull(result.cursor)
+    assertEquals(SortKey.CONNECTION_NAME, result.cursor!!.sortKey)
+    assertTrue(result.cursor!!.ascending)
+    assertNull(result.cursor!!.connectionName)
+    assertNull(result.cursor!!.sourceName)
+    assertNull(result.cursor!!.destinationName)
+    assertNull(result.cursor!!.lastSync)
+    assertNull(result.cursor!!.cursorId)
+    assertNull(result.cursor!!.filters)
   }
 
   @Test
@@ -909,12 +915,12 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         pageSize,
       )
 
-    Assertions.assertNotNull(result)
-    Assertions.assertEquals(pageSize, result.pageSize)
-    Assertions.assertNotNull(result.cursor)
-    Assertions.assertEquals(SortKey.CONNECTION_NAME, result.cursor!!.sortKey)
-    Assertions.assertTrue(result.cursor!!.ascending)
-    Assertions.assertNull(result.cursor!!.filters)
+    assertNotNull(result)
+    assertEquals(pageSize, result.pageSize)
+    assertNotNull(result.cursor)
+    assertEquals(SortKey.CONNECTION_NAME, result.cursor!!.sortKey)
+    assertTrue(result.cursor!!.ascending)
+    assertNull(result.cursor!!.filters)
   }
 
   @ParameterizedTest
@@ -969,7 +975,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       // Verify no overlap with previous results
       for (result in pageResults) {
         val connectionId = result.connection().connectionId
-        Assertions.assertFalse(
+        assertFalse(
           seenConnectionIds.contains(connectionId),
           "$testDescription - $seenPageSizes - Found duplicate connection ID: $connectionId in iteration $iterations",
         )
@@ -993,7 +999,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       iterations++
     }
 
-    Assertions.assertTrue(iterations < maxIterations, "$testDescription - Too many iterations, possible infinite loop")
+    assertTrue(iterations < maxIterations, "$testDescription - Too many iterations, possible infinite loop")
 
     // Get count with same filters for comparison
     val totalCount =
@@ -1002,7 +1008,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         filters,
       )
 
-    Assertions.assertEquals(
+    assertEquals(
       totalCount,
       allResults.size,
       "$testDescription - Pagination result count $seenPageSizes should match total count",
@@ -1029,7 +1035,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       )
 
     // Verify count is reasonable based on test data
-    Assertions.assertTrue(
+    assertTrue(
       count >= 0 && count <= testData.expectedTotalConnections,
       testDescription + " - Count should be between 0 and " + testData.expectedTotalConnections + " but was: " + count,
     )
@@ -1044,7 +1050,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         ),
       )
 
-    Assertions.assertEquals(
+    assertEquals(
       allResults.size,
       count,
       "$testDescription - Count should match actual result size",
@@ -1417,13 +1423,13 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       val comparison = compareResults(current, next, sortKey)
 
       if (ascending) {
-        Assertions.assertTrue(
+        assertTrue(
           comparison <= 0,
           testDescription + " - Results should be sorted ascending but found: " +
             getSortValue(current, sortKey) + " > " + getSortValue(next, sortKey),
         )
       } else {
-        Assertions.assertTrue(
+        assertTrue(
           comparison >= 0,
           testDescription + " - Results should be sorted descending but found: " +
             getSortValue(current, sortKey) + " < " + getSortValue(next, sortKey),
@@ -1487,7 +1493,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
             .contains(searchTerm) ||
             result.sourceName().lowercase(Locale.getDefault()).contains(searchTerm) ||
             result.destinationName().lowercase(Locale.getDefault()).contains(searchTerm)
-        Assertions.assertTrue(
+        assertTrue(
           matches,
           testDescription + " - Result should match search term '" +
             filters.searchTerm + "' but got connection: " + result.connection().name +
@@ -1499,7 +1505,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       if (filters.sourceDefinitionIds != null && !filters.sourceDefinitionIds.isEmpty()) {
         val sourceDefinitionId = getSourceDefinitionId(result.connection().sourceId)
         val matchesSourceDef = filters.sourceDefinitionIds.contains(sourceDefinitionId)
-        Assertions.assertTrue(
+        assertTrue(
           matchesSourceDef,
           testDescription + " - Result should match source definition filter. Expected one of: " +
             filters.sourceDefinitionIds + " but got: " + sourceDefinitionId + " for connection: " + result.connection().name,
@@ -1510,7 +1516,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       if (filters.destinationDefinitionIds != null && !filters.destinationDefinitionIds.isEmpty()) {
         val destinationDefinitionId = getDestinationDefinitionId(result.connection().destinationId)
         val matchesDestDef = filters.destinationDefinitionIds.contains(destinationDefinitionId)
-        Assertions.assertTrue(
+        assertTrue(
           matchesDestDef,
           testDescription + " - Result should match destination definition filter. Expected one of: " +
             filters.destinationDefinitionIds + " but got: " + destinationDefinitionId + " for connection: " +
@@ -1532,7 +1538,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
               // For other filters (FAILED, RUNNING), require exact match
               filters.statuses.contains(resultStatus)
             }
-          Assertions.assertTrue(
+          assertTrue(
             matchesStatusFilter,
             testDescription + " - Status filter mismatch. " +
               "Filter: " + filters.statuses + ", Got: " + resultStatus + " for connection: " + result.connection().name +
@@ -1542,7 +1548,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
           // Connections without jobs are included in HEALTHY filter but should be excluded from FAILED and
           // RUNNING filters
           if (!filters.statuses.contains(ConnectionJobStatus.HEALTHY)) {
-            Assertions.fail<Any?>(
+            fail<String>(
               testDescription + " - Connection without job status should not appear in " +
                 filters.statuses + " filter results: " + result.connection().name,
             )
@@ -1554,7 +1560,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       if (filters.states != null && !filters.states.isEmpty()) {
         val resultState = if (result.connection().status == StandardSync.Status.ACTIVE) ActorStatus.ACTIVE else ActorStatus.INACTIVE
         val matchesState = filters.states.contains(resultState)
-        Assertions.assertTrue(
+        assertTrue(
           matchesState,
           testDescription + " - Result should match state filter. Expected one of: " +
             filters.states + " but got: " + resultState + " for connection: " + result.connection().name,
@@ -1576,7 +1582,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         } else {
           matchesTag = false // Connection has no tags, so can't match tag filter
         }
-        Assertions.assertTrue(
+        assertTrue(
           matchesTag,
           testDescription + " - Result should match tag filter. Expected one of: " +
             filters.tagIds + " but connection has tags: " +
@@ -2286,12 +2292,12 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     )
 
     val updatedConnection = connectionServiceJooqImpl.getStandardSync(connectionId)
-    Assertions.assertEquals(StandardSync.Status.LOCKED, updatedConnection.status)
-    Assertions.assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value, updatedConnection.statusReason)
+    assertEquals(StandardSync.Status.LOCKED, updatedConnection.status)
+    assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value, updatedConnection.statusReason)
 
     // Verify enum conversion
     val statusReasonEnum = StatusReason.fromValue(updatedConnection.statusReason!!)
-    Assertions.assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED, statusReasonEnum)
+    assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED, statusReasonEnum)
 
     connectionServiceJooqImpl.updateConnectionStatus(
       connectionId,
@@ -2300,8 +2306,8 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     )
 
     val reactivatedConnection = connectionServiceJooqImpl.getStandardSync(connectionId)
-    Assertions.assertEquals(StandardSync.Status.ACTIVE, reactivatedConnection.status)
-    Assertions.assertNull(reactivatedConnection.statusReason)
+    assertEquals(StandardSync.Status.ACTIVE, reactivatedConnection.status)
+    assertNull(reactivatedConnection.statusReason)
   }
 
   @Test
@@ -2369,7 +2375,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         listOf(source.sourceDefinitionId),
         io.airbyte.config.ActorType.SOURCE,
       )
-    Assertions.assertEquals(listOf(standardSync.connectionId), successfulLookupBySources)
+    assertEquals(listOf(standardSync.connectionId), successfulLookupBySources)
 
     val successfulLookupByDestinations =
       connectionServiceJooqImpl.listConnectionIdsForOrganizationAndActorDefinitions(
@@ -2377,7 +2383,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         listOf(destination.destinationDefinitionId),
         io.airbyte.config.ActorType.DESTINATION,
       )
-    Assertions.assertEquals(listOf(standardSync.connectionId), successfulLookupByDestinations)
+    assertEquals(listOf(standardSync.connectionId), successfulLookupByDestinations)
 
     val otherOrgLookup =
       connectionServiceJooqImpl.listConnectionIdsForOrganizationAndActorDefinitions(
@@ -2385,7 +2391,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         listOf(source.sourceDefinitionId),
         io.airbyte.config.ActorType.SOURCE,
       )
-    Assertions.assertEquals(listOf(sync2.connectionId), otherOrgLookup)
+    assertEquals(listOf(sync2.connectionId), otherOrgLookup)
   }
 
   @Test
@@ -2452,7 +2458,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     connectionServiceJooqImpl.writeStandardSync(standardSyncWithMappers)
 
     val result = connectionServiceJooqImpl.listConnectionIdsForOrganizationWithMappers(organization!!.organizationId)
-    Assertions.assertEquals(listOf(standardSyncWithMappers.connectionId), result)
+    assertEquals(listOf(standardSyncWithMappers.connectionId), result)
   }
 
   @Test
@@ -2518,7 +2524,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     connectionServiceJooqImpl.writeStandardSync(standardSyncWithFastSchedule)
 
     val result = connectionServiceJooqImpl.listSubHourConnectionIdsForOrganization(organization!!.organizationId)
-    Assertions.assertEquals(listOf(standardSyncWithFastSchedule.connectionId), result)
+    assertEquals(listOf(standardSyncWithFastSchedule.connectionId), result)
   }
 
   @Test
@@ -2612,7 +2618,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     connectionServiceJooqImpl.writeStandardSync(standardSyncWithFastCronSchedule)
 
     val result = connectionServiceJooqImpl.listConnectionCronSchedulesForOrganization(organization!!.organizationId)
-    Assertions.assertTrue(
+    assertTrue(
       result.containsAll(
         listOf(
           ConnectionCronSchedule(standardSyncWithCronSchedule.connectionId, standardSyncWithCronSchedule.scheduleData),
@@ -2716,12 +2722,12 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     )
 
     val result1 = connectionServiceJooqImpl.getStandardSync(standardSyncWithCronSchedule.connectionId)
-    Assertions.assertEquals(result1.status, StandardSync.Status.LOCKED)
-    Assertions.assertEquals(result1.statusReason, StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
+    assertEquals(result1.status, StandardSync.Status.LOCKED)
+    assertEquals(result1.statusReason, StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
 
     val result2 = connectionServiceJooqImpl.getStandardSync(standardSyncWithFastCronSchedule.connectionId)
-    Assertions.assertEquals(result2.status, StandardSync.Status.LOCKED)
-    Assertions.assertEquals(result2.statusReason, StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
+    assertEquals(result2.status, StandardSync.Status.LOCKED)
+    assertEquals(result2.statusReason, StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
   }
 
   @Test
@@ -2803,7 +2809,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val count = connectionServiceJooqImpl.countConnectionsForOrganization(organization!!.organizationId)
 
     // Should count 3 non-deprecated connections
-    Assertions.assertEquals(3, count)
+    assertEquals(3, count)
   }
 
   @Test
@@ -2816,7 +2822,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     // Count connections for organization with no connections
     val count = connectionServiceJooqImpl.countConnectionsForOrganization(organization!!.organizationId)
 
-    Assertions.assertEquals(0, count)
+    assertEquals(0, count)
   }
 
   @Test
@@ -2824,6 +2830,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     // Count connections for a non-existent organization
     val count = connectionServiceJooqImpl.countConnectionsForOrganization(UUID.randomUUID())
 
-    Assertions.assertEquals(0, count)
+    assertEquals(0, count)
   }
 }

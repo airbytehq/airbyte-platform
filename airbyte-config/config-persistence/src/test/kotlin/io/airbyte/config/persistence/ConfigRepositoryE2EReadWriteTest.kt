@@ -1093,7 +1093,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
       val maybeActual =
         actualSyncs.stream().filter { s: StandardSync -> s.connectionId == expected.connectionId }.findFirst()
       if (maybeActual.isEmpty) {
-        fail<Any?>(
+        fail<String>(
           "Expected to find connectionId ${expected.connectionId} in result, but actual connectionIds are ${actualSyncs.map { obj: StandardSync ->
             obj.connectionId
           }}",

@@ -6,12 +6,14 @@ package io.airbyte.config
 
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.version.AirbyteVersion
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.nio.file.Paths
 
 internal class EnvConfigsTest {
@@ -32,7 +34,7 @@ internal class EnvConfigsTest {
   @Test
   fun testAirbyteVersion() {
     envMap[EnvVar.AIRBYTE_VERSION.name] = null
-    assertThrows<IllegalArgumentException?>(IllegalArgumentException::class.java, { config.getAirbyteVersion() })
+    assertDoesNotThrow { config.getAirbyteVersionOrWarning() }
 
     envMap[EnvVar.AIRBYTE_VERSION.name] = DEV
     assertEquals(AirbyteVersion(DEV), config.getAirbyteVersion())
@@ -41,7 +43,7 @@ internal class EnvConfigsTest {
   @Test
   fun testWorkspaceRoot() {
     envMap[EnvVar.WORKSPACE_ROOT.name] = null
-    assertThrows<IllegalArgumentException?>(IllegalArgumentException::class.java, { config.getWorkspaceRoot() })
+    assertThrows<IllegalArgumentException> { config.getWorkspaceRoot() }
 
     envMap[EnvVar.WORKSPACE_ROOT.name] = ABCDEF
     assertEquals(Paths.get(ABCDEF), config.getWorkspaceRoot())
@@ -50,7 +52,7 @@ internal class EnvConfigsTest {
   @Test
   fun testGetDatabaseUser() {
     envMap[EnvVar.DATABASE_USER.name] = null
-    assertThrows<IllegalArgumentException?>(IllegalArgumentException::class.java, { config.getDatabaseUser() })
+    assertThrows<IllegalArgumentException> { config.getDatabaseUser() }
 
     envMap[EnvVar.DATABASE_USER.name] = "user"
     assertEquals("user", config.getDatabaseUser())
@@ -59,7 +61,7 @@ internal class EnvConfigsTest {
   @Test
   fun testGetDatabasePassword() {
     envMap[EnvVar.DATABASE_PASSWORD.name] = null
-    assertThrows<IllegalArgumentException?>(IllegalArgumentException::class.java, { config.getDatabasePassword() })
+    assertThrows<IllegalArgumentException> { config.getDatabasePassword() }
 
     envMap[EnvVar.DATABASE_PASSWORD.name] = "password"
     assertEquals("password", config.getDatabasePassword())
@@ -68,7 +70,7 @@ internal class EnvConfigsTest {
   @Test
   fun testGetDatabaseUrl() {
     envMap[EnvVar.DATABASE_URL.name] = null
-    assertThrows<IllegalArgumentException?>(IllegalArgumentException::class.java, { config.getDatabaseUrl() })
+    assertThrows<IllegalArgumentException> { config.getDatabaseUrl() }
 
     envMap[EnvVar.DATABASE_URL.name] = "url"
     assertEquals("url", config.getDatabaseUrl())

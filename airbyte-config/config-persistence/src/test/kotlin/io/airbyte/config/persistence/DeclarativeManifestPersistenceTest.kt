@@ -34,20 +34,19 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import org.jooq.exception.DataAccessException
-import org.junit.Assert
-import org.junit.function.ThrowingRunnable
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.mock
 import java.util.UUID
 import org.mockito.Mockito.`when` as whenever
 
 internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
-  private var connectorBuilderService: ConnectorBuilderService? = null
-  private var sourceService: SourceService? = null
-  private var actorDefinitionService: ActorDefinitionService? = null
-  private var workspaceService: WorkspaceService? = null
+  private lateinit var connectorBuilderService: ConnectorBuilderService
+  private lateinit var sourceService: SourceService
+  private lateinit var actorDefinitionService: ActorDefinitionService
+  private lateinit var workspaceService: WorkspaceService
 
   @BeforeEach
   fun beforeEach() {
@@ -73,7 +72,7 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
       ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
-        actorDefinitionService!!,
+        actorDefinitionService,
         scopedConfigurationService,
         connectionTimelineEventService,
       )
@@ -114,39 +113,36 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   @Test
   fun whenInsertDeclarativeManifestThenEntryIsInDb() {
     val manifest = MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION)
-    connectorBuilderService!!.insertDeclarativeManifest(manifest)
-    Assertions.assertEquals(
+    connectorBuilderService.insertDeclarativeManifest(manifest)
+    assertEquals(
       manifest,
-      connectorBuilderService!!.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION),
+      connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION),
     )
   }
 
   @Test
   fun givenActorDefinitionIdAndVersionAlreadyInDbWhenInsertDeclarativeManifestThenThrowException() {
     val manifest = MockData.declarativeManifest()!!
-    connectorBuilderService!!.insertDeclarativeManifest(manifest)
-    Assert.assertThrows<DataAccessException?>(
-      DataAccessException::class.java,
-      ThrowingRunnable { connectorBuilderService!!.insertDeclarativeManifest(manifest) },
-    )
+    connectorBuilderService.insertDeclarativeManifest(manifest)
+    assertThrows<DataAccessException> {
+      connectorBuilderService.insertDeclarativeManifest(manifest)
+    }
   }
 
   @Test
   fun givenManifestIsNullWhenInsertDeclarativeManifestThenThrowException() {
     val declarativeManifestWithoutManifest = MockData.declarativeManifest()!!.withManifest(null)
-    Assert.assertThrows<DataAccessException?>(
-      DataAccessException::class.java,
-      ThrowingRunnable { connectorBuilderService!!.insertDeclarativeManifest(declarativeManifestWithoutManifest) },
-    )
+    assertThrows<DataAccessException> {
+      connectorBuilderService.insertDeclarativeManifest(declarativeManifestWithoutManifest)
+    }
   }
 
   @Test
   fun givenSpecIsNullWhenInsertDeclarativeManifestThenThrowException() {
     val declarativeManifestWithoutManifest = MockData.declarativeManifest()!!.withSpec(null)
-    Assert.assertThrows<DataAccessException?>(
-      DataAccessException::class.java,
-      ThrowingRunnable { connectorBuilderService!!.insertDeclarativeManifest(declarativeManifestWithoutManifest) },
-    )
+    assertThrows<DataAccessException> {
+      connectorBuilderService.insertDeclarativeManifest(declarativeManifestWithoutManifest)
+    }
   }
 
   @Test
@@ -157,68 +153,66 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
         .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
         .withManifest(A_MANIFEST)
         .withSpec(A_SPEC)
-    connectorBuilderService!!.insertDeclarativeManifest(declarativeManifest)
+    connectorBuilderService.insertDeclarativeManifest(declarativeManifest)
 
     val result =
-      connectorBuilderService!!.getDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).findFirst().orElse(null)
+      connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).findFirst().orElse(null)
 
-    Assertions.assertEquals(declarativeManifest.withManifest(null).withSpec(null), result)
+    assertEquals(declarativeManifest.withManifest(null).withSpec(null), result)
   }
 
   @Test
   fun givenManyEntriesMatchingWhenGetDeclarativeManifestsByActorDefinitionIdThenReturnAllEntries() {
-    connectorBuilderService!!.insertDeclarativeManifest(
+    connectorBuilderService.insertDeclarativeManifest(
       MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(1L),
     )
-    connectorBuilderService!!.insertDeclarativeManifest(
+    connectorBuilderService.insertDeclarativeManifest(
       MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(2L),
     )
 
-    val manifests = connectorBuilderService!!.getDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).toList()
+    val manifests = connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).toList()
 
-    Assertions.assertEquals(2, manifests.size)
+    assertEquals(2, manifests.size)
   }
 
   @Test
   fun whenGetDeclarativeManifestByActorDefinitionIdAndVersionThenReturnDeclarativeManifest() {
     val declarativeManifest =
       MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION)
-    connectorBuilderService!!.insertDeclarativeManifest(declarativeManifest)
+    connectorBuilderService.insertDeclarativeManifest(declarativeManifest)
 
-    val result = connectorBuilderService!!.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION)
+    val result = connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION)
 
-    Assertions.assertEquals(declarativeManifest, result)
+    assertEquals(declarativeManifest, result)
   }
 
   @Test
   fun givenNoDeclarativeManifestMatchingWhenGetDeclarativeManifestByActorDefinitionIdAndVersionThenThrowException() {
-    Assert.assertThrows<ConfigNotFoundException?>(
-      ConfigNotFoundException::class.java,
-      ThrowingRunnable { connectorBuilderService!!.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION) },
-    )
+    assertThrows<ConfigNotFoundException> {
+      connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(AN_ACTOR_DEFINITION_ID, A_VERSION)
+    }
   }
 
   @Test
   fun whenGetCurrentlyActiveDeclarativeManifestsByActorDefinitionIdThenReturnDeclarativeManifest() {
     val activeDeclarativeManifest =
       MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION)
-    connectorBuilderService!!
+    connectorBuilderService
       .insertDeclarativeManifest(MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(ANOTHER_VERSION))
-    connectorBuilderService!!.insertActiveDeclarativeManifest(activeDeclarativeManifest)
+    connectorBuilderService.insertActiveDeclarativeManifest(activeDeclarativeManifest)
 
-    val result = connectorBuilderService!!.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID)
+    val result = connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID)
 
-    Assertions.assertEquals(activeDeclarativeManifest, result)
+    assertEquals(activeDeclarativeManifest, result)
   }
 
   @Test
   fun givenNoActiveManifestWhenGetCurrentlyActiveDeclarativeManifestsByActorDefinitionIdThenReturnDeclarativeManifest() {
-    connectorBuilderService!!
+    connectorBuilderService
       .insertDeclarativeManifest(MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION))
-    Assert.assertThrows<ConfigNotFoundException?>(
-      ConfigNotFoundException::class.java,
-      ThrowingRunnable { connectorBuilderService!!.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID) },
-    )
+    assertThrows<ConfigNotFoundException> {
+      connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID)
+    }
   }
 
   @Test
@@ -238,32 +232,32 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
         .withJsonToInject(A_MANIFEST)
     val connectorSpecification = MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC!!)
 
-    connectorBuilderService!!.createDeclarativeManifestAsActiveVersion(
+    connectorBuilderService.createDeclarativeManifestAsActiveVersion(
       declarativeManifest,
       listOf(configInjection),
       connectorSpecification,
       A_CDK_VERSION,
     )
 
-    val sourceDefinition = sourceService!!.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID)
-    Assertions.assertEquals(
+    val sourceDefinition = sourceService.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID)
+    assertEquals(
       connectorSpecification,
-      actorDefinitionService!!.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getSpec(),
+      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getSpec(),
     )
-    Assertions.assertEquals(
+    assertEquals(
       A_CDK_VERSION,
-      actorDefinitionService!!.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getDockerImageTag(),
+      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getDockerImageTag(),
     )
-    Assertions.assertEquals(
+    assertEquals(
       listOf(configInjection),
-      connectorBuilderService!!
+      connectorBuilderService
         .getActorDefinitionConfigInjections(
           AN_ACTOR_DEFINITION_ID,
         ).toList(),
     )
-    Assertions.assertEquals(
+    assertEquals(
       declarativeManifest,
-      connectorBuilderService!!.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(
+      connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(
         AN_ACTOR_DEFINITION_ID,
       ),
     )
@@ -277,96 +271,84 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
         .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
         .withInjectionPath(A_MANIFEST_KEY)
         .withJsonToInject(A_MANIFEST)
-    Assert.assertThrows<DataAccessException?>(
-      DataAccessException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.createDeclarativeManifestAsActiveVersion(
-          MockData
-            .declarativeManifest()!!
-            .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
-            .withManifest(A_MANIFEST)
-            .withSpec(createSpec(A_SPEC)),
-          listOf(configInjection),
-          MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
-          A_CDK_VERSION,
-        )
-      },
-    )
+    assertThrows<DataAccessException> {
+      connectorBuilderService.createDeclarativeManifestAsActiveVersion(
+        MockData
+          .declarativeManifest()!!
+          .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
+          .withManifest(A_MANIFEST)
+          .withSpec(createSpec(A_SPEC)),
+        listOf(configInjection),
+        MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
+        A_CDK_VERSION,
+      )
+    }
   }
 
   @Test
   fun givenActorDefinitionIdMismatchWhenCreateDeclarativeManifestAsActiveVersionThenThrowException() {
-    Assert.assertThrows<IllegalArgumentException?>(
-      IllegalArgumentException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.createDeclarativeManifestAsActiveVersion(
-          MockData
-            .declarativeManifest()!!
-            .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
-            .withManifest(A_MANIFEST)
-            .withSpec(createSpec(A_SPEC)),
-          listOf(
-            MockData.actorDefinitionConfigInjection()!!.withActorDefinitionId(ANOTHER_ACTOR_DEFINITION_ID).withJsonToInject(
-              A_MANIFEST,
-            ),
+    assertThrows<IllegalArgumentException> {
+      connectorBuilderService.createDeclarativeManifestAsActiveVersion(
+        MockData
+          .declarativeManifest()!!
+          .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
+          .withManifest(A_MANIFEST)
+          .withSpec(createSpec(A_SPEC)),
+        listOf(
+          MockData.actorDefinitionConfigInjection()!!.withActorDefinitionId(ANOTHER_ACTOR_DEFINITION_ID).withJsonToInject(
+            A_MANIFEST,
           ),
-          MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
-          A_CDK_VERSION,
-        )
-      },
-    )
+        ),
+        MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
+        A_CDK_VERSION,
+      )
+    }
   }
 
   @Test
   fun givenManifestMismatchWhenCreateDeclarativeManifestAsActiveVersionThenThrowException() {
-    Assert.assertThrows<IllegalArgumentException?>(
-      IllegalArgumentException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.createDeclarativeManifestAsActiveVersion(
-          MockData
-            .declarativeManifest()!!
-            .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
-            .withManifest(A_MANIFEST)
-            .withSpec(createSpec(A_SPEC)),
-          listOf(
-            MockData.actorDefinitionConfigInjection()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withJsonToInject(
-              ANOTHER_MANIFEST,
-            ),
+    assertThrows<IllegalArgumentException> {
+      connectorBuilderService.createDeclarativeManifestAsActiveVersion(
+        MockData
+          .declarativeManifest()!!
+          .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
+          .withManifest(A_MANIFEST)
+          .withSpec(createSpec(A_SPEC)),
+        listOf(
+          MockData.actorDefinitionConfigInjection()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withJsonToInject(
+            ANOTHER_MANIFEST,
           ),
-          MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
-          A_CDK_VERSION,
-        )
-      },
-    )
+        ),
+        MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
+        A_CDK_VERSION,
+      )
+    }
   }
 
   @Test
   fun givenSpecMismatchWhenCreateDeclarativeManifestAsActiveVersionThenThrowException() {
-    Assert.assertThrows<IllegalArgumentException?>(
-      IllegalArgumentException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.createDeclarativeManifestAsActiveVersion(
-          MockData
-            .declarativeManifest()!!
-            .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
-            .withManifest(A_MANIFEST)
-            .withSpec(createSpec(A_SPEC)),
-          listOf(
-            MockData.actorDefinitionConfigInjection()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withJsonToInject(
-              A_MANIFEST,
-            ),
+    assertThrows<IllegalArgumentException> {
+      connectorBuilderService.createDeclarativeManifestAsActiveVersion(
+        MockData
+          .declarativeManifest()!!
+          .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
+          .withManifest(A_MANIFEST)
+          .withSpec(createSpec(A_SPEC)),
+        listOf(
+          MockData.actorDefinitionConfigInjection()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withJsonToInject(
+            A_MANIFEST,
           ),
-          MockData.connectorSpecification()!!.withConnectionSpecification(ANOTHER_SPEC!!),
-          A_CDK_VERSION,
-        )
-      },
-    )
+        ),
+        MockData.connectorSpecification()!!.withConnectionSpecification(ANOTHER_SPEC!!),
+        A_CDK_VERSION,
+      )
+    }
   }
 
   @Test
   fun whenSetDeclarativeSourceActiveVersionThenUpdateSourceDefinitionAndConfigInjectionAndActiveDeclarativeManifest() {
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID)
-    connectorBuilderService!!.insertDeclarativeManifest(
+    connectorBuilderService.insertDeclarativeManifest(
       MockData
         .declarativeManifest()!!
         .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
@@ -381,7 +363,7 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
         .withJsonToInject(A_MANIFEST)
     val connectorSpecification = MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC!!)
 
-    connectorBuilderService!!.setDeclarativeSourceActiveVersion(
+    connectorBuilderService.setDeclarativeSourceActiveVersion(
       AN_ACTOR_DEFINITION_ID,
       A_VERSION,
       listOf(configInjection),
@@ -389,25 +371,25 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
       A_CDK_VERSION,
     )
 
-    val sourceDefinition = sourceService!!.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID)
-    Assertions.assertEquals(
+    val sourceDefinition = sourceService.getStandardSourceDefinition(AN_ACTOR_DEFINITION_ID)
+    assertEquals(
       connectorSpecification,
-      actorDefinitionService!!.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getSpec(),
+      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getSpec(),
     )
-    Assertions.assertEquals(
+    assertEquals(
       A_CDK_VERSION,
-      actorDefinitionService!!.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getDockerImageTag(),
+      actorDefinitionService.getActorDefinitionVersion(sourceDefinition.getDefaultVersionId())!!.getDockerImageTag(),
     )
-    Assertions.assertEquals(
+    assertEquals(
       listOf(configInjection),
-      connectorBuilderService!!
+      connectorBuilderService
         .getActorDefinitionConfigInjections(
           AN_ACTOR_DEFINITION_ID,
         ).toList(),
     )
-    Assertions.assertEquals(
+    assertEquals(
       A_VERSION,
-      connectorBuilderService!!.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).getVersion(),
+      connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(AN_ACTOR_DEFINITION_ID).getVersion(),
     )
   }
 
@@ -419,18 +401,15 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
         .withInjectionPath(A_MANIFEST_KEY)
         .withJsonToInject(A_MANIFEST)
 
-    Assert.assertThrows<DataAccessException?>(
-      DataAccessException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.setDeclarativeSourceActiveVersion(
-          AN_ACTOR_DEFINITION_ID,
-          A_VERSION,
-          listOf(configInjection),
-          MockData.connectorSpecification()!!,
-          A_CDK_VERSION,
-        )
-      },
-    )
+    assertThrows<DataAccessException> {
+      connectorBuilderService.setDeclarativeSourceActiveVersion(
+        AN_ACTOR_DEFINITION_ID,
+        A_VERSION,
+        listOf(configInjection),
+        MockData.connectorSpecification()!!,
+        A_CDK_VERSION,
+      )
+    }
   }
 
   @Test
@@ -442,18 +421,15 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
         .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
         .withInjectionPath(A_MANIFEST_KEY)
         .withJsonToInject(A_MANIFEST)
-    Assert.assertThrows<DataAccessException?>(
-      DataAccessException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.setDeclarativeSourceActiveVersion(
-          AN_ACTOR_DEFINITION_ID,
-          A_VERSION,
-          listOf(configInjection),
-          MockData.connectorSpecification()!!,
-          A_CDK_VERSION,
-        )
-      },
-    )
+    assertThrows<DataAccessException> {
+      connectorBuilderService.setDeclarativeSourceActiveVersion(
+        AN_ACTOR_DEFINITION_ID,
+        A_VERSION,
+        listOf(configInjection),
+        MockData.connectorSpecification()!!,
+        A_CDK_VERSION,
+      )
+    }
   }
 
   @Test
@@ -462,7 +438,7 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID)
 
     // Insert initial manifest
-    connectorBuilderService!!.insertDeclarativeManifest(
+    connectorBuilderService.insertDeclarativeManifest(
       MockData
         .declarativeManifest()!!
         .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
@@ -491,7 +467,7 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
       )
 
     // First call to setDeclarativeSourceActiveVersion with 3 injections
-    connectorBuilderService!!.setDeclarativeSourceActiveVersion(
+    connectorBuilderService.setDeclarativeSourceActiveVersion(
       AN_ACTOR_DEFINITION_ID,
       A_VERSION,
       initialConfigInjections,
@@ -500,7 +476,7 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
     )
 
     // Verify all 3 initial injections were added
-    Assertions.assertEquals(3, connectorBuilderService!!.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).count())
+    assertEquals(3, connectorBuilderService.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).count())
 
     // Create new single config injection
     val replacementConfigInjection =
@@ -513,7 +489,7 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
       )
 
     // Second call to setDeclarativeSourceActiveVersion with 1 injection
-    connectorBuilderService!!.setDeclarativeSourceActiveVersion(
+    connectorBuilderService.setDeclarativeSourceActiveVersion(
       AN_ACTOR_DEFINITION_ID,
       A_VERSION,
       replacementConfigInjection,
@@ -523,9 +499,9 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
 
     // Verify only 1 injection remains
     val remainingInjections =
-      connectorBuilderService!!.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList()
-    Assertions.assertEquals(1, remainingInjections.size)
-    Assertions.assertEquals(A_MANIFEST_KEY, remainingInjections[0]!!.getInjectionPath())
+      connectorBuilderService.getActorDefinitionConfigInjections(AN_ACTOR_DEFINITION_ID).toList()
+    assertEquals(1, remainingInjections.size)
+    assertEquals(A_MANIFEST_KEY, remainingInjections[0]!!.getInjectionPath())
   }
 
   @Test
@@ -534,7 +510,7 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID)
 
     // Insert initial manifest
-    connectorBuilderService!!.insertDeclarativeManifest(
+    connectorBuilderService.insertDeclarativeManifest(
       MockData
         .declarativeManifest()!!
         .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
@@ -559,18 +535,15 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
 
     // Verify that calling setDeclarativeSourceActiveVersion with mixed actor definition IDs throws
     // exception
-    Assert.assertThrows<IllegalArgumentException?>(
-      IllegalArgumentException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.setDeclarativeSourceActiveVersion(
-          AN_ACTOR_DEFINITION_ID,
-          A_VERSION,
-          mixedConfigInjections,
-          MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
-          A_CDK_VERSION,
-        )
-      },
-    )
+    assertThrows<IllegalArgumentException> {
+      connectorBuilderService.setDeclarativeSourceActiveVersion(
+        AN_ACTOR_DEFINITION_ID,
+        A_VERSION,
+        mixedConfigInjections,
+        MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
+        A_CDK_VERSION,
+      )
+    }
   }
 
   @Test
@@ -579,7 +552,7 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID)
 
     // Insert initial manifest
-    connectorBuilderService!!.insertDeclarativeManifest(
+    connectorBuilderService.insertDeclarativeManifest(
       MockData
         .declarativeManifest()!!
         .withActorDefinitionId(AN_ACTOR_DEFINITION_ID)
@@ -603,30 +576,27 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
       )
 
     // Verify that calling setDeclarativeSourceActiveVersion without manifest injection throws exception
-    Assert.assertThrows<IllegalArgumentException?>(
-      IllegalArgumentException::class.java,
-      ThrowingRunnable {
-        connectorBuilderService!!.setDeclarativeSourceActiveVersion(
-          AN_ACTOR_DEFINITION_ID,
-          A_VERSION,
-          configInjectionsWithoutManifest,
-          MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
-          A_CDK_VERSION,
-        )
-      },
-    )
+    assertThrows<IllegalArgumentException> {
+      connectorBuilderService.setDeclarativeSourceActiveVersion(
+        AN_ACTOR_DEFINITION_ID,
+        A_VERSION,
+        configInjectionsWithoutManifest,
+        MockData.connectorSpecification()!!.withConnectionSpecification(A_SPEC),
+        A_CDK_VERSION,
+      )
+    }
   }
 
   fun givenActiveDeclarativeManifestWithActorDefinitionId(actorDefinitionId: UUID?) {
     val version = 4L
-    connectorBuilderService!!
+    connectorBuilderService
       .insertActiveDeclarativeManifest(MockData.declarativeManifest()!!.withActorDefinitionId(actorDefinitionId).withVersion(version))
   }
 
   fun givenSourceDefinition(sourceDefinitionId: UUID?) {
     val workspaceId = UUID.randomUUID()
-    workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0)!!.withWorkspaceId(workspaceId))
-    sourceService!!.writeCustomConnectorMetadata(
+    workspaceService.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0)!!.withWorkspaceId(workspaceId))
+    sourceService.writeCustomConnectorMetadata(
       MockData.customSourceDefinition()!!.withSourceDefinitionId(sourceDefinitionId),
       MockData.actorDefinitionVersion()!!.withActorDefinitionId(sourceDefinitionId),
       workspaceId,

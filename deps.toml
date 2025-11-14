@@ -16,7 +16,7 @@ jax-rs = "3.1.0"
 jna = "5.18.1"
 jmh = "1.37"
 jooq = "3.19.18"
-junit-jupiter = "5.12.2"
+junit-jupiter = "6.0.1"
 keycloak-client = "26.2.2" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 keycloak-admin-client = "26.0.5" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 kotest = "5.9.1"
@@ -131,8 +131,8 @@ jul-to-slf4j = { module = "org.slf4j:jul-to-slf4j", version.ref = "slf4j" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit-jupiter" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter" }
 junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit-jupiter" }
-junit-jupiter-system-stubs = { module = "uk.org.webcompere:system-stubs-jupiter", version = "2.1.6" }
-junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version = "1.7.1" }
+junit-jupiter-system-stubs = { module = "uk.org.webcompere:system-stubs-jupiter", version = "2.1.8" }
+junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version = "2.3.0" }
 keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak-admin-client" }
 keycloak-client-registration-api = { module = "org.keycloak:keycloak-client-registration-api", version.ref = "keycloak-client" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
