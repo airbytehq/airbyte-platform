@@ -258,23 +258,98 @@ open class OrganizationDomainVerificationService(
    * This operation is idempotent - calling it on an already deleted record is safe.
    */
   @Transactional("config")
-  open fun deleteDomainVerification(
-    organizationId: UUID,
-    domain: String,
-  ) {
+  open fun deleteDomainVerification(domainVerificationId: UUID) {
     val entity =
-      repository.findByOrganizationIdAndDomain(organizationId, domain, includeDeleted = true)
-        ?: throw IllegalArgumentException("Domain verification not found for organization $organizationId and domain $domain")
+      repository
+        .findById(domainVerificationId)
+        .orElseThrow {
+          IllegalArgumentException("Domain verification not found with id $domainVerificationId")
+        }
 
     if (entity.tombstone) {
-      logger.warn { "Domain verification for domain $domain in organization $organizationId is already deleted" }
+      logger.warn { "Domain verification $domainVerificationId is already deleted" }
       return
     }
 
+    val domainModel = entity.toDomainModel()
+
     entity.tombstone = true
     repository.update(entity)
+    logger.info {
+      "Soft-deleted domain verification $domainVerificationId for domain ${domainModel.domain} " +
+        "in organization ${domainModel.organizationId}"
+    }
 
-    logger.info { "Soft-deleted domain verification for domain $domain in organization $organizationId" }
+    // Remove SSO enforcement if it exists
+    organizationEmailDomainService.deleteByOrganizationIdAndDomain(
+      domainModel.organizationId,
+      domainModel.domain,
+    )
+    logger.info {
+      "Cascaded deletion: removed SSO enforcement for domain ${domainModel.domain} " +
+        "in organization ${domainModel.organizationId}"
+    }
+  }
+
+  /**
+   * Resets a failed or expired domain verification back to pending status.
+   * This allows users to retry verification after fixing DNS configuration.
+   *
+   * Only FAILED and EXPIRED verifications can be reset.
+   */
+  @Transactional("config")
+  open fun resetDomainVerification(domainVerificationId: UUID): OrganizationDomainVerification {
+    val entity =
+      repository
+        .findById(domainVerificationId)
+        .orElseThrow {
+          IllegalArgumentException("Domain verification not found with id $domainVerificationId")
+        }
+
+    if (entity.tombstone) {
+      throw IllegalArgumentException(
+        "Cannot reset a deleted domain verification. Please create a new verification instead.",
+      )
+    }
+
+    val domainModel = entity.toDomainModel()
+
+    // Validate that domain is in a resettable state
+    when (domainModel.status) {
+      DomainVerificationStatus.FAILED, DomainVerificationStatus.EXPIRED -> {
+        logger.info {
+          "Resetting domain verification $domainVerificationId for ${domainModel.domain} " +
+            "from status ${domainModel.status} to PENDING"
+        }
+      }
+      DomainVerificationStatus.PENDING -> {
+        throw IllegalArgumentException(
+          "Domain verification for '${domainModel.domain}' is already pending. " +
+            "The verification check is running automatically.",
+        )
+      }
+      DomainVerificationStatus.VERIFIED -> {
+        throw IllegalArgumentException(
+          "Domain verification for '${domainModel.domain}' is already verified. " +
+            "To reverify, please delete the verification and create a new one.",
+        )
+      }
+    }
+
+    // Reset to pending state
+    entity.status = DomainVerificationStatus.PENDING.toEntityEnum()
+    entity.attempts = 0
+    entity.lastCheckedAt = null
+    entity.expiresAt = OffsetDateTime.now().plusDays(EXPIRY_DAYS)
+
+    val updatedEntity = repository.update(entity)
+
+    logger.info {
+      "Reset domain verification $domainVerificationId for ${domainModel.domain} " +
+        "in organization ${domainModel.organizationId}. Cron will resume DNS checks."
+    }
+
+    return updatedEntity.toDomainModel()
   }
 
   private fun handleSuccessfulVerification(

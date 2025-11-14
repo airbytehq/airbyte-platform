@@ -11087,6 +11087,50 @@ paths:
       summary: List all domain verifications for an organization
       operationId: listDomainVerifications
 
+  /v1/domain_verifications/delete:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DomainVerificationIdRequestBody"
+      responses:
+        "204":
+          description: "Domain verification successfully deleted"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      summary: Delete a domain verification
+      tags:
+        - domain_verifications
+      operationId: deleteDomainVerification
+
+  /v1/domain_verifications/reset:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DomainVerificationIdRequestBody"
+      responses:
+        "200":
+          description: "Domain verification reset successfully"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainVerificationResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+      summary: Reset a failed or expired domain verification
+      tags:
+        - domain_verifications
+      operationId: resetDomainVerification
+
 components:
   securitySchemes:
     bearerAuth:

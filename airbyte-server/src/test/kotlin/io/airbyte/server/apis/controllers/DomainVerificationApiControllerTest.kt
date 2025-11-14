@@ -6,6 +6,7 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.server.generated.models.DomainVerificationCreateRequestBody
+import io.airbyte.api.server.generated.models.DomainVerificationIdRequestBody
 import io.airbyte.api.server.generated.models.DomainVerificationResponse
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.server.authorization.RoleResolver
@@ -182,6 +183,111 @@ class DomainVerificationApiControllerTest {
     assertEquals(0, verifications.size)
 
     verify { organizationDomainVerificationService.findByOrganizationId(testOrgId) }
+  }
+
+  @Test
+  fun `deleteDomainVerification - successfully deletes`() {
+    val requestBody = DomainVerificationIdRequestBody(domainVerificationId = testId)
+
+    val domainModel =
+      createDomainModel(
+        id = testId,
+        domain = testDomain,
+        status = DomainVerificationStatus.VERIFIED,
+      )
+
+    every {
+      organizationDomainVerificationService.getDomainVerification(testId)
+    } returns domainModel
+
+    every {
+      organizationDomainVerificationService.deleteDomainVerification(testId)
+    } returns Unit
+
+    domainVerificationApiController.deleteDomainVerification(requestBody)
+
+    verify { organizationDomainVerificationService.getDomainVerification(testId) }
+    verify { organizationDomainVerificationService.deleteDomainVerification(testId) }
+  }
+
+  @Test
+  fun `deleteDomainVerification - converts service exception to BadRequestProblem`() {
+    val requestBody = DomainVerificationIdRequestBody(domainVerificationId = testId)
+
+    val domainModel =
+      createDomainModel(
+        id = testId,
+        domain = testDomain,
+        status = DomainVerificationStatus.VERIFIED,
+      )
+
+    every {
+      organizationDomainVerificationService.getDomainVerification(testId)
+    } returns domainModel
+
+    every {
+      organizationDomainVerificationService.deleteDomainVerification(testId)
+    } throws IllegalArgumentException("Domain verification not found")
+
+    assertThrows<BadRequestProblem> {
+      domainVerificationApiController.deleteDomainVerification(requestBody)
+    }
+  }
+
+  @Test
+  fun `resetDomainVerification - successfully resets`() {
+    val requestBody = DomainVerificationIdRequestBody(domainVerificationId = testId)
+
+    val domainModel =
+      createDomainModel(
+        id = testId,
+        domain = testDomain,
+        status = DomainVerificationStatus.FAILED,
+      )
+
+    val resetDomainModel =
+      createDomainModel(
+        id = testId,
+        status = DomainVerificationStatus.PENDING,
+      )
+
+    every {
+      organizationDomainVerificationService.getDomainVerification(testId)
+    } returns domainModel
+
+    every {
+      organizationDomainVerificationService.resetDomainVerification(testId)
+    } returns resetDomainModel
+
+    val result = domainVerificationApiController.resetDomainVerification(requestBody)
+
+    assertEquals(DomainVerificationResponse.Status.PENDING, result.status)
+    verify { organizationDomainVerificationService.getDomainVerification(testId) }
+    verify { organizationDomainVerificationService.resetDomainVerification(testId) }
+  }
+
+  @Test
+  fun `resetDomainVerification - converts service exception to BadRequestProblem`() {
+    val requestBody = DomainVerificationIdRequestBody(domainVerificationId = testId)
+
+    val domainModel =
+      createDomainModel(
+        id = testId,
+        domain = testDomain,
+        status = DomainVerificationStatus.PENDING,
+      )
+
+    every {
+      organizationDomainVerificationService.getDomainVerification(testId)
+    } returns domainModel
+
+    every {
+      organizationDomainVerificationService.resetDomainVerification(testId)
+    } throws IllegalArgumentException("Already pending")
+
+    assertThrows<BadRequestProblem> {
+      domainVerificationApiController.resetDomainVerification(requestBody)
+    }
   }
 
   private fun createDomainModel(

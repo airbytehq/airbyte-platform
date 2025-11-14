@@ -9,6 +9,7 @@ import io.airbyte.data.repositories.entities.OrganizationEmailDomain
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -69,5 +70,40 @@ internal class OrganizationEmailDomainServiceDataImplTest {
     val result = organizationEmailDomainServiceDataImpl.findByEmailDomain("airbyte.io")
     assert(result.size == 1)
     assert(result[0].emailDomain == "Airbyte.IO")
+  }
+
+  @Test
+  fun `test deleteByOrganizationIdAndDomain when record exists`() {
+    val orgId = UUID.randomUUID()
+    val id = UUID.randomUUID()
+    val domain = "airbyte.io"
+
+    val orgEmailDomain =
+      OrganizationEmailDomain(
+        id = id,
+        organizationId = orgId,
+        emailDomain = domain,
+      )
+
+    every { organizationEmailDomainRepository.findByOrganizationIdAndEmailDomain(orgId, domain) } returns orgEmailDomain
+    every { organizationEmailDomainRepository.deleteById(id) } returns Unit
+
+    organizationEmailDomainServiceDataImpl.deleteByOrganizationIdAndDomain(orgId, domain)
+
+    verify { organizationEmailDomainRepository.findByOrganizationIdAndEmailDomain(orgId, domain) }
+    verify { organizationEmailDomainRepository.deleteById(id) }
+  }
+
+  @Test
+  fun `test deleteByOrganizationIdAndDomain when record does not exist`() {
+    val orgId = UUID.randomUUID()
+    val domain = "airbyte.io"
+
+    every { organizationEmailDomainRepository.findByOrganizationIdAndEmailDomain(orgId, domain) } returns null
+
+    organizationEmailDomainServiceDataImpl.deleteByOrganizationIdAndDomain(orgId, domain)
+
+    verify { organizationEmailDomainRepository.findByOrganizationIdAndEmailDomain(orgId, domain) }
+    verify(exactly = 0) { organizationEmailDomainRepository.deleteById(any()) }
   }
 }

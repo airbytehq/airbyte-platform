@@ -22,4 +22,9 @@ interface OrganizationEmailDomainRepository : PageableRepository<OrganizationEma
     organizationId: UUID,
     emailDomain: String,
   ): Boolean
+
+  fun findByOrganizationIdAndEmailDomain(
+    organizationId: UUID,
+    emailDomain: String,
+  ): OrganizationEmailDomain?
 }

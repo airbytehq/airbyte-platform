@@ -16,6 +16,7 @@ import io.airbyte.domain.models.OrganizationDomainVerification
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -357,46 +358,165 @@ class OrganizationDomainVerificationServiceTest {
     verify { organizationDomainVerificationRepository.findByOrganizationId(testOrgId, true) }
   }
 
-  @Test
-  fun `deleteDomainVerification - successfully soft deletes`() {
-    val entity = createEntityFromDomain(createValidDomainModel()).copy(id = testId, tombstone = false)
-    val updatedEntity = entity.copy(tombstone = true)
+  @Nested
+  inner class DeleteDomainVerification {
+    @Test
+    fun `successfully soft deletes and cascades to email domain`() {
+      val entity = createEntityFromDomain(createValidDomainModel()).copy(id = testId, tombstone = false)
+      val updatedEntity = entity.copy(tombstone = true)
 
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, true) } returns entity
-    every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+      every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
+      every { organizationEmailDomainService.deleteByOrganizationIdAndDomain(testOrgId, testDomain) } returns Unit
 
-    organizationDomainVerificationService.deleteDomainVerification(testOrgId, testDomain)
+      organizationDomainVerificationService.deleteDomainVerification(testId)
 
-    verify { organizationDomainVerificationRepository.update(match { it.tombstone == true }) }
+      verify { organizationDomainVerificationRepository.update(match { it.tombstone == true }) }
+      verify { organizationEmailDomainService.deleteByOrganizationIdAndDomain(testOrgId, testDomain) }
+    }
+
+    @Test
+    fun `throws when not found`() {
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.empty()
+
+      val exception =
+        assertThrows<IllegalArgumentException> {
+          organizationDomainVerificationService.deleteDomainVerification(testId)
+        }
+      assert(exception.message == "Domain verification not found with id $testId")
+    }
+
+    @Test
+    fun `idempotent when already deleted`() {
+      val alreadyDeletedEntity =
+        createEntityFromDomain(createValidDomainModel()).copy(
+          id = testId,
+          tombstone = true,
+        )
+
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(alreadyDeletedEntity)
+
+      organizationDomainVerificationService.deleteDomainVerification(testId)
+
+      verify(exactly = 0) { organizationDomainVerificationRepository.update(any()) }
+      verify(exactly = 0) { organizationEmailDomainService.deleteByOrganizationIdAndDomain(any(), any()) }
+    }
+
+    @Test
+    fun `throws exception and rolls back transaction if cascade fails`() {
+      val entity = createEntityFromDomain(createValidDomainModel()).copy(id = testId, tombstone = false)
+      val updatedEntity = entity.copy(tombstone = true)
+
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+      every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
+      every { organizationEmailDomainService.deleteByOrganizationIdAndDomain(testOrgId, testDomain) } throws
+        RuntimeException("Database connection failed")
+
+      val exception =
+        assertThrows<RuntimeException> {
+          organizationDomainVerificationService.deleteDomainVerification(testId)
+        }
+
+      assertEquals("Database connection failed", exception.message)
+      verify { organizationDomainVerificationRepository.update(match { it.tombstone == true }) }
+      verify { organizationEmailDomainService.deleteByOrganizationIdAndDomain(testOrgId, testDomain) }
+    }
   }
 
-  @Test
-  fun `deleteDomainVerification - throws when not found`() {
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, true) } returns
-      null
+  @Nested
+  inner class ResetDomainVerification {
+    @Test
+    fun `successfully resets FAILED verification`() {
+      val entity =
+        createEntityFromDomain(createValidDomainModel()).copy(
+          id = testId,
+          status = EntityDomainVerificationStatus.failed,
+          attempts = 10,
+          lastCheckedAt = OffsetDateTime.now(),
+          expiresAt = OffsetDateTime.now().plusDays(2),
+        )
+      val resetEntity =
+        entity.copy(
+          status = EntityDomainVerificationStatus.pending,
+          attempts = 0,
+          lastCheckedAt = null,
+          expiresAt = OffsetDateTime.now().plusDays(14),
+        )
 
-    val exception =
-      assertThrows<IllegalArgumentException> {
-        organizationDomainVerificationService.deleteDomainVerification(testOrgId, testDomain)
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+      every { organizationDomainVerificationRepository.update(any()) } returns resetEntity
+
+      val result = organizationDomainVerificationService.resetDomainVerification(testId)
+
+      assert(result.status == DomainVerificationStatus.PENDING)
+      assert(result.attempts == 0)
+      assert(result.expiresAt!!.isAfter(OffsetDateTime.now().plusDays(13)))
+      verify {
+        organizationDomainVerificationRepository.update(
+          match {
+            it.expiresAt!!.isAfter(OffsetDateTime.now().plusDays(13))
+          },
+        )
       }
-    assert(exception.message == "Domain verification not found for organization $testOrgId and domain $testDomain")
-  }
+    }
 
-  @Test
-  fun `deleteDomainVerification - idempotent when already deleted`() {
-    val alreadyDeletedEntity =
-      createEntityFromDomain(createValidDomainModel()).copy(
-        id = testId,
-        tombstone = true,
-      )
+    @Test
+    fun `successfully resets EXPIRED verification and extends expiration`() {
+      val oldExpiration = OffsetDateTime.now().minusDays(5)
+      val entity =
+        createEntityFromDomain(createValidDomainModel()).copy(
+          id = testId,
+          status = EntityDomainVerificationStatus.expired,
+          attempts = 50,
+          expiresAt = oldExpiration,
+        )
+      val newExpiration = OffsetDateTime.now().plusDays(14)
+      val resetEntity =
+        entity.copy(
+          status = EntityDomainVerificationStatus.pending,
+          attempts = 0,
+          lastCheckedAt = null,
+          expiresAt = newExpiration,
+        )
 
-    every {
-      organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, true)
-    } returns alreadyDeletedEntity
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+      every { organizationDomainVerificationRepository.update(any()) } returns resetEntity
 
-    organizationDomainVerificationService.deleteDomainVerification(testOrgId, testDomain)
+      val result = organizationDomainVerificationService.resetDomainVerification(testId)
 
-    verify(exactly = 0) { organizationDomainVerificationRepository.update(any()) }
+      assert(result.status == DomainVerificationStatus.PENDING)
+      assert(result.attempts == 0)
+      assert(result.expiresAt!!.isAfter(OffsetDateTime.now()))
+      verify { organizationDomainVerificationRepository.update(any()) }
+    }
+
+    @Test
+    fun `throws when verification not found`() {
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.empty()
+
+      val exception =
+        assertThrows<IllegalArgumentException> {
+          organizationDomainVerificationService.resetDomainVerification(testId)
+        }
+      assert(exception.message == "Domain verification not found with id $testId")
+    }
+
+    @Test
+    fun `throws when trying to reset verification in invalid state`() {
+      val entity =
+        createEntityFromDomain(createValidDomainModel()).copy(
+          id = testId,
+          status = EntityDomainVerificationStatus.pending,
+        )
+
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+
+      val exception =
+        assertThrows<IllegalArgumentException> {
+          organizationDomainVerificationService.resetDomainVerification(testId)
+        }
+      assert(exception.message?.contains("already pending") == true)
+    }
   }
 
   private fun createValidDomainModel(): OrganizationDomainVerification =

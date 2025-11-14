@@ -113,6 +113,80 @@ open class DomainVerificationApiController(
     return updatedVerification.toApiResponse()
   }
 
+  /**
+   * Delete a domain verification and cascade delete to organization_email_domain.
+   * Removes SSO enforcement for the domain if it exists.
+   */
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  override fun deleteDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody) {
+    val verification =
+      try {
+        organizationDomainVerificationService.getDomainVerification(domainVerificationIdRequestBody.domainVerificationId)
+      } catch (_: IllegalArgumentException) {
+        throw ResourceNotFoundProblem(
+          ProblemResourceData()
+            .resourceType("domain_verification")
+            .resourceId(domainVerificationIdRequestBody.domainVerificationId.toString()),
+        )
+      }
+
+    roleResolver
+      .newRequest()
+      .withCurrentAuthentication()
+      .withRef(AuthenticationId.ORGANIZATION_ID, verification.organizationId)
+      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
+
+    try {
+      organizationDomainVerificationService.deleteDomainVerification(
+        domainVerificationId = domainVerificationIdRequestBody.domainVerificationId,
+      )
+    } catch (e: IllegalArgumentException) {
+      throw BadRequestProblem(
+        detail = e.message,
+        data = ProblemMessageData().message(e.message),
+      )
+    }
+  }
+
+  /**
+   * Reset a failed or expired domain verification back to pending.
+   * Allows users to retry verification after fixing DNS configuration.
+   */
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  override fun resetDomainVerification(domainVerificationIdRequestBody: DomainVerificationIdRequestBody): DomainVerificationResponse {
+    val verification =
+      try {
+        organizationDomainVerificationService.getDomainVerification(domainVerificationIdRequestBody.domainVerificationId)
+      } catch (_: IllegalArgumentException) {
+        throw ResourceNotFoundProblem(
+          ProblemResourceData()
+            .resourceType("domain_verification")
+            .resourceId(domainVerificationIdRequestBody.domainVerificationId.toString()),
+        )
+      }
+
+    roleResolver
+      .newRequest()
+      .withCurrentAuthentication()
+      .withRef(AuthenticationId.ORGANIZATION_ID, verification.organizationId)
+      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
+
+    try {
+      val resetVerification =
+        organizationDomainVerificationService.resetDomainVerification(
+          domainVerificationId = domainVerificationIdRequestBody.domainVerificationId,
+        )
+      return resetVerification.toApiResponse()
+    } catch (e: IllegalArgumentException) {
+      throw BadRequestProblem(
+        detail = e.message,
+        data = ProblemMessageData().message(e.message),
+      )
+    }
+  }
+
   private fun OrganizationDomainVerification.toApiResponse(): DomainVerificationResponse =
     DomainVerificationResponse(
       id = this.id!!,

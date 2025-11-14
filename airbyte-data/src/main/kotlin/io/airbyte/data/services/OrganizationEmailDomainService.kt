@@ -20,4 +20,9 @@ interface OrganizationEmailDomainService {
     organizationId: UUID,
     domain: String,
   ): Boolean
+
+  fun deleteByOrganizationIdAndDomain(
+    organizationId: UUID,
+    domain: String,
+  )
 }

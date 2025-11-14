@@ -137,4 +137,29 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
     val otherEmailDomains = organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.com")
     assert(otherEmailDomains.isEmpty())
   }
+
+  @Test
+  fun `test find by organization id and email domain`() {
+    val organizationId = UUID.randomUUID()
+    val orgEmailDomain =
+      OrganizationEmailDomain(
+        organizationId = organizationId,
+        emailDomain = "airbyte.io",
+      )
+    organizationEmailDomainRepository.save(orgEmailDomain)
+
+    // Should find the domain
+    val found = organizationEmailDomainRepository.findByOrganizationIdAndEmailDomain(organizationId, "airbyte.io")
+    assert(found != null)
+    assert(found!!.organizationId == organizationId)
+    assert(found.emailDomain == "airbyte.io")
+
+    // Should not find with wrong organization
+    val notFound = organizationEmailDomainRepository.findByOrganizationIdAndEmailDomain(UUID.randomUUID(), "airbyte.io")
+    assert(notFound == null)
+
+    // Should not find with wrong domain
+    val notFoundDomain = organizationEmailDomainRepository.findByOrganizationIdAndEmailDomain(organizationId, "other.io")
+    assert(notFoundDomain == null)
+  }
 }
