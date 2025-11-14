@@ -15,6 +15,8 @@ import styles from "./DomainVerification.module.scss";
 interface DomainVerificationItemProps {
   domain: DomainVerificationResponse;
   onViewDnsInfo: (domain: DomainVerificationResponse) => void;
+  onDelete: (domain: DomainVerificationResponse) => void;
+  onReset: (domain: DomainVerificationResponse) => void;
 }
 
 const getStatusBadgeVariant = (status: DomainVerificationResponseStatus): "green" | "yellow" | "red" | "grey" => {
@@ -34,7 +36,12 @@ const getStatusBadgeVariant = (status: DomainVerificationResponseStatus): "green
 
 const MINIMUM_LOADING_DELAY = 800; // milliseconds
 
-export const DomainVerificationItem: React.FC<DomainVerificationItemProps> = ({ domain, onViewDnsInfo }) => {
+export const DomainVerificationItem: React.FC<DomainVerificationItemProps> = ({
+  domain,
+  onViewDnsInfo,
+  onDelete,
+  onReset,
+}) => {
   const { mutateAsync: checkNow } = useCheckDomainVerification();
   const { registerNotification } = useNotificationService();
   const [isChecking, setIsChecking] = useState(false);
@@ -50,7 +57,6 @@ export const DomainVerificationItem: React.FC<DomainVerificationItemProps> = ({ 
   const handleCheckNow = async () => {
     setIsChecking(true);
     try {
-      // Ensure a minimum loading time to prevent jarring UI flicker
       await Promise.all([checkNow(domain.id), new Promise((resolve) => setTimeout(resolve, MINIMUM_LOADING_DELAY))]);
     } catch (error) {
       registerNotification({
@@ -62,6 +68,8 @@ export const DomainVerificationItem: React.FC<DomainVerificationItemProps> = ({ 
       setIsChecking(false);
     }
   };
+
+  const canReset = domain.status === "FAILED" || domain.status === "EXPIRED";
 
   return (
     <div className={styles.domainItem}>
@@ -99,6 +107,14 @@ export const DomainVerificationItem: React.FC<DomainVerificationItemProps> = ({ 
               <FormattedMessage id="settings.organizationSettings.domainVerification.checkNow" />
             </Button>
           )}
+          {canReset && (
+            <Button variant="secondary" size="sm" icon="reset" onClick={() => onReset(domain)}>
+              <FormattedMessage id="settings.organizationSettings.domainVerification.reset" />
+            </Button>
+          )}
+          <Button variant="danger" size="sm" icon="trash" onClick={() => onDelete(domain)}>
+            <FormattedMessage id="settings.organizationSettings.domainVerification.delete" />
+          </Button>
         </FlexContainer>
       </FlexContainer>
     </div>

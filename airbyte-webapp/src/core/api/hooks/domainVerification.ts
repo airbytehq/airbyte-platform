@@ -2,7 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 
-import { checkDomainVerification, createDomainVerification, listDomainVerifications } from "../generated/AirbyteClient";
+import {
+  checkDomainVerification,
+  createDomainVerification,
+  deleteDomainVerification,
+  listDomainVerifications,
+  resetDomainVerification,
+} from "../generated/AirbyteClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 
@@ -113,7 +119,68 @@ export const useCheckDomainVerification = () => {
   return useMutation({
     mutationFn: (domainVerificationId: string) => checkDomainVerification({ domainVerificationId }, requestOptions),
     onSuccess: () => {
-      // Invalidate the list query to refresh the domain list with updated status
+      queryClient.invalidateQueries({ queryKey: domainVerificationKeys.list(organizationId) });
+    },
+  });
+};
+
+/**
+ * Hook to delete a domain verification.
+ *
+ * Permanently removes a domain verification from the organization.
+ * If the domain is verified and being used for SSO login enforcement,
+ * those enforcements will be removed.
+ *
+ * @returns React Query mutation result
+ *
+ * @example
+ * const { mutate: deleteDomain, isLoading } = useDeleteDomainVerification();
+ *
+ * deleteDomain(domainId, {
+ *   onSuccess: () => {
+ *     console.log("Domain deleted successfully");
+ *   }
+ * });
+ */
+export const useDeleteDomainVerification = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const organizationId = useCurrentOrganizationId();
+
+  return useMutation({
+    mutationFn: (domainVerificationId: string) => deleteDomainVerification({ domainVerificationId }, requestOptions),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: domainVerificationKeys.list(organizationId) });
+    },
+  });
+};
+
+/**
+ * Hook to reset a failed or expired domain verification.
+ *
+ * Resets the verification status back to PENDING and resumes checking for
+ * the DNS TXT record. This is useful when a user wants to retry verification
+ * after a failure or expiration.
+ *
+ * @returns React Query mutation result
+ *
+ * @example
+ * const { mutate: resetDomain, isLoading } = useResetDomainVerification();
+ *
+ * resetDomain(domainId, {
+ *   onSuccess: () => {
+ *     console.log("Domain verification reset successfully");
+ *   }
+ * });
+ */
+export const useResetDomainVerification = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const organizationId = useCurrentOrganizationId();
+
+  return useMutation({
+    mutationFn: (domainVerificationId: string) => resetDomainVerification({ domainVerificationId }, requestOptions),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: domainVerificationKeys.list(organizationId) });
     },
   });

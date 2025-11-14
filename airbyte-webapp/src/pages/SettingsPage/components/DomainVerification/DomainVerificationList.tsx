@@ -11,12 +11,16 @@ interface DomainVerificationListProps {
   domains: DomainVerificationResponse[];
   isLoading: boolean;
   onViewDnsInfo: (domain: DomainVerificationResponse) => void;
+  onDelete: (domain: DomainVerificationResponse) => void;
+  onReset: (domain: DomainVerificationResponse) => void;
 }
 
 export const DomainVerificationList: React.FC<DomainVerificationListProps> = ({
   domains,
   isLoading,
   onViewDnsInfo,
+  onDelete,
+  onReset,
 }) => {
   if (isLoading) {
     return (
@@ -41,7 +45,13 @@ export const DomainVerificationList: React.FC<DomainVerificationListProps> = ({
   return (
     <FlexContainer direction="column" gap="md">
       {domains.map((domain) => (
-        <DomainVerificationItem key={domain.id} domain={domain} onViewDnsInfo={onViewDnsInfo} />
+        <DomainVerificationItem
+          key={domain.id}
+          domain={domain}
+          onViewDnsInfo={onViewDnsInfo}
+          onDelete={onDelete}
+          onReset={onReset}
+        />
       ))}
     </FlexContainer>
   );
