@@ -27,12 +27,18 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.StreamResetPersistence
 import io.airbyte.config.persistence.domain.StreamRefresh
-import io.airbyte.config.secrets.buildConfigWithSecretRefsJava
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
+import io.airbyte.config.secrets.toConfigWithRefs
 import io.airbyte.data.services.ScopedConfigurationService
-import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.spyk
+import io.mockk.verify
 import io.temporal.api.common.v1.WorkflowExecution
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
 import io.temporal.api.workflow.v1.WorkflowExecutionInfo
@@ -51,22 +57,15 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.capture
-import org.mockito.kotlin.eq
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
 import java.util.function.Supplier
 
 /**
- * Setup for Temporal Client test suite.
+ * Setup for the Temporal Client test suite.
  */
-class TemporalClientTest {
+internal class TemporalClientTest {
   private lateinit var workflowClient: WorkflowClient
   private lateinit var temporalClient: TemporalClient
   private lateinit var logPath: Path
@@ -82,28 +81,24 @@ class TemporalClientTest {
   fun setup() {
     workspaceRoot = Files.createTempDirectory(Path.of("/tmp"), "temporal_client_test")
     logPath = workspaceRoot.resolve(JOB_ID.toString()).resolve(ATTEMPT_ID.toString()).resolve(DEFAULT_LOG_FILENAME)
-    workflowClient = Mockito.mock(WorkflowClient::class.java)
-    Mockito
-      .`when`(workflowClient.getOptions())
-      .thenReturn(WorkflowClientOptions.newBuilder().setNamespace(NAMESPACE).build())
-    workflowServiceStubs = Mockito.mock(WorkflowServiceStubs::class.java)
-    Mockito.`when`(workflowClient.getWorkflowServiceStubs()).thenReturn(workflowServiceStubs)
-    Mockito
-      .`when`(workflowClient.signalWithStart(any<BatchRequest>()))
-      .thenReturn(WorkflowExecution.newBuilder().build())
-    workflowServiceBlockingStub = Mockito.mock(WorkflowServiceBlockingStub::class.java)
-    Mockito.`when`(workflowServiceStubs.blockingStub()).thenReturn(workflowServiceBlockingStub)
-    streamResetPersistence = Mockito.mock(StreamResetPersistence::class.java)
-    streamRefreshesRepository = Mockito.mock(StreamRefreshesRepository::class.java)
+    workflowClient = mockk(relaxed = true)
+    every { workflowClient.options } returns WorkflowClientOptions.newBuilder().setNamespace(NAMESPACE).build()
+    workflowServiceStubs = mockk(relaxed = true)
+    every { workflowClient.workflowServiceStubs } returns workflowServiceStubs
+    every { workflowClient.signalWithStart(any<BatchRequest>()) } returns WorkflowExecution.newBuilder().build()
+    workflowServiceBlockingStub = mockk(relaxed = true)
+    every { workflowServiceStubs.blockingStub() } returns workflowServiceBlockingStub
+    streamResetPersistence = mockk(relaxed = true)
+    streamRefreshesRepository = mockk(relaxed = true)
     mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING)
-    val metricClient = Mockito.mock(MetricClient::class.java)
+    val metricClient = mockk<MetricClient>(relaxed = true)
     val workflowClientWrapped = WorkflowClientWrapped(workflowClient, metricClient)
     val workflowServiceStubsWrapped = WorkflowServiceStubsWrapped(workflowServiceStubs, metricClient)
-    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
-    connectionManagerUtils = Mockito.spy(ConnectionManagerUtils(workflowClientWrapped, metricClient))
-    streamResetRecordsHelper = Mockito.mock(StreamResetRecordsHelper::class.java)
+    val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
+    connectionManagerUtils = spyk(ConnectionManagerUtils(workflowClientWrapped, metricClient))
+    streamResetRecordsHelper = mockk(relaxed = true)
     temporalClient =
-      Mockito.spy(
+      spyk(
         TemporalClient(
           workspaceRoot,
           TemporalQueueConfiguration(),
@@ -113,8 +108,7 @@ class TemporalClientTest {
           streamRefreshesRepository,
           connectionManagerUtils,
           streamResetRecordsHelper,
-          Mockito.mock(MetricClient::class.java),
-          TestClient(),
+          metricClient,
           scopedConfigurationService,
         ),
       )
@@ -126,12 +120,12 @@ class TemporalClientTest {
 
     @BeforeEach
     fun init() {
-      mConnectionManagerUtils = Mockito.mock(ConnectionManagerUtils::class.java)
+      mConnectionManagerUtils = mockk()
 
-      val metricClient = Mockito.mock(MetricClient::class.java)
-      val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
+      val metricClient = mockk<MetricClient>(relaxed = true)
+      val scopedConfigurationService = mockk<ScopedConfigurationService>(relaxed = true)
       temporalClient =
-        Mockito.spy(
+        spyk(
           TemporalClient(
             workspaceRoot,
             TemporalQueueConfiguration(),
@@ -142,7 +136,6 @@ class TemporalClientTest {
             mConnectionManagerUtils,
             streamResetRecordsHelper,
             metricClient,
-            TestClient(),
             scopedConfigurationService,
           ),
         )
@@ -150,28 +143,20 @@ class TemporalClientTest {
 
     @Test
     fun testRestartFailed() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
 
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(mConnectionManagerWorkflow)
+      every { workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>()) } returns mConnectionManagerWorkflow
       val connectionId = UUID.fromString("ebbfdc4c-295b-48a0-844f-88551dfad3db")
       val workflowIds = mutableSetOf<UUID>(connectionId)
 
-      Mockito
-        .doReturn(workflowIds)
-        .`when`(temporalClient)
-        .fetchClosedWorkflowsByStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED)
-      Mockito
-        .doReturn(workflowIds)
-        .`when`(temporalClient)
-        .filterOutRunningWorkspaceId(workflowIds)
+      every { temporalClient.fetchClosedWorkflowsByStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED) } returns workflowIds
+      every { temporalClient.filterOutRunningWorkspaceId(workflowIds) } returns workflowIds
+      every { mConnectionManagerUtils.safeTerminateWorkflow(eq(connectionId), any()) } returns mockk()
+      every { mConnectionManagerUtils.startConnectionManagerNoSignal(eq(connectionId)) } returns mockk()
       mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED)
       temporalClient.restartClosedWorkflowByStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED)
-      Mockito
-        .verify(mConnectionManagerUtils)
-        .safeTerminateWorkflow(eq(connectionId), any())
-      Mockito.verify(mConnectionManagerUtils).startConnectionManagerNoSignal(eq(connectionId))
+      verify { mConnectionManagerUtils.safeTerminateWorkflow(eq(connectionId), any()) }
+      verify { mConnectionManagerUtils.startConnectionManagerNoSignal(eq(connectionId)) }
     }
   }
 
@@ -180,13 +165,13 @@ class TemporalClientTest {
   internal inner class ExecuteJob {
     @Test
     fun testExecute() {
-      val supplier = Mockito.mock(Supplier::class.java) as Supplier<String>
-      Mockito.`when`(supplier.get()).thenReturn("hello")
+      val supplier = mockk<Supplier<String>>()
+      every { supplier.get() } returns "hello"
 
-      val response = temporalClient.execute<String>(JOB_RUN_CONFIG, supplier)
+      val response = temporalClient.execute(JOB_RUN_CONFIG, supplier)
 
       Assertions.assertNotNull(response)
-      Assertions.assertTrue(response.getOutput().isPresent())
+      Assertions.assertTrue(response.getOutput().isPresent)
       Assertions.assertEquals("hello", response.getOutput().get())
       Assertions.assertTrue(response.metadata.succeeded)
       Assertions.assertEquals(logPath, response.metadata.logPath)
@@ -194,30 +179,30 @@ class TemporalClientTest {
 
     @Test
     fun testExecuteWithException() {
-      val supplier = Mockito.mock(Supplier::class.java) as Supplier<String>
-      Mockito.`when`(supplier.get()).thenAnswer { throw IllegalStateException() }
+      val supplier = mockk<Supplier<String>>()
+      every { supplier.get() } throws IllegalStateException()
 
-      val response = temporalClient.execute<String>(JOB_RUN_CONFIG, supplier)
+      val response = temporalClient.execute(JOB_RUN_CONFIG, supplier)
 
       Assertions.assertNotNull(response)
-      Assertions.assertFalse(response.getOutput().isPresent())
+      Assertions.assertFalse(response.getOutput().isPresent)
       Assertions.assertFalse(response.metadata.succeeded)
       Assertions.assertEquals(logPath, response.metadata.logPath)
     }
 
     @Test
     fun testExecuteWithConnectorJobFailure() {
-      val supplier = Mockito.mock(Supplier::class.java) as Supplier<ConnectorJobOutput>
-      val mockFailureReason = Mockito.mock(FailureReason::class.java)
+      val supplier = mockk<Supplier<ConnectorJobOutput>>()
+      val mockFailureReason = mockk<FailureReason>()
       val connectorJobOutput =
         ConnectorJobOutput()
           .withFailureReason(mockFailureReason)
-      Mockito.`when`(supplier.get()).thenReturn(connectorJobOutput)
+      every { supplier.get() } returns connectorJobOutput
 
-      val response = temporalClient.execute<ConnectorJobOutput>(JOB_RUN_CONFIG, supplier)
+      val response = temporalClient.execute(JOB_RUN_CONFIG, supplier)
 
       Assertions.assertNotNull(response)
-      Assertions.assertTrue(response.getOutput().isPresent())
+      Assertions.assertTrue(response.getOutput().isPresent)
       Assertions.assertEquals(connectorJobOutput, response.getOutput().get())
       Assertions.assertFalse(response.metadata.succeeded)
       Assertions.assertEquals(logPath, response.metadata.logPath)
@@ -229,100 +214,93 @@ class TemporalClientTest {
   internal inner class TestJobSubmission {
     @Test
     fun testSubmitGetSpec() {
-      val specWorkflow = Mockito.mock(ConnectorCommandWorkflow::class.java)
-      Mockito
-        .`when`(
-          workflowClient.newWorkflowStub(
-            eq(ConnectorCommandWorkflow::class.java),
-            any<WorkflowOptions>(),
-          ),
-        ).thenReturn(specWorkflow)
+      val specWorkflow = mockk<ConnectorCommandWorkflow>(relaxed = true)
+      val workflowClassSlot = slot<Class<ConnectorCommandWorkflow>>()
+      val workflowOptionsSlot = slot<WorkflowOptions>()
+      val connectorCommandInputSlot = slot<ConnectorCommandInput>()
+
+      every {
+        workflowClient.newWorkflowStub(
+          capture(workflowClassSlot),
+          capture(workflowOptionsSlot),
+        )
+      } returns specWorkflow
+
       val getSpecConfig = JobGetSpecConfig().withDockerImage(IMAGE_NAME1)
 
       temporalClient.submitGetSpec(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, getSpecConfig)
 
-      val workflowClassCaptor = ArgumentCaptor.forClass(Class::class.java)
-      val workflowOptionsCaptor = ArgumentCaptor.forClass(WorkflowOptions::class.java)
-      Mockito.verify(workflowClient).newWorkflowStub(
-        capture(workflowClassCaptor),
-        capture(workflowOptionsCaptor),
-      )
-      Assertions.assertEquals(ConnectorCommandWorkflow::class.java, workflowClassCaptor.getValue())
-      Assertions.assertEquals(UI_COMMANDS_TASK_QUEUE, workflowOptionsCaptor.getValue()!!.getTaskQueue())
+      verify { workflowClient.newWorkflowStub(any<Class<ConnectorCommandWorkflow>>(), any<WorkflowOptions>()) }
+      verify { specWorkflow.run(capture(connectorCommandInputSlot)) }
 
-      val connectorCommandInputCaptor = argumentCaptor<ConnectorCommandInput>()
-      Mockito.verify(specWorkflow).run(connectorCommandInputCaptor.capture())
-      Assertions.assertInstanceOf(SpecCommandInput::class.java, connectorCommandInputCaptor.firstValue)
+      Assertions.assertEquals(ConnectorCommandWorkflow::class.java, workflowClassSlot.captured)
+      Assertions.assertEquals(UI_COMMANDS_TASK_QUEUE, workflowOptionsSlot.captured.taskQueue)
+      Assertions.assertInstanceOf(SpecCommandInput::class.java, connectorCommandInputSlot.captured)
     }
 
     @Test
     fun testSubmitCheckConnection() {
-      val checkConnectionWorkflow = Mockito.mock(ConnectorCommandWorkflow::class.java)
-      Mockito
-        .`when`(
-          workflowClient.newWorkflowStub(
-            eq(ConnectorCommandWorkflow::class.java),
-            any<WorkflowOptions>(),
-          ),
-        ).thenReturn(checkConnectionWorkflow)
+      val checkConnectionWorkflow = mockk<ConnectorCommandWorkflow>(relaxed = true)
+      val workflowClassSlot = slot<Class<ConnectorCommandWorkflow>>()
+      val workflowOptionsSlot = slot<WorkflowOptions>()
+      val connectorCommandInputSlot = slot<ConnectorCommandInput>()
+
+      every {
+        workflowClient.newWorkflowStub(
+          capture(workflowClassSlot),
+          capture(workflowOptionsSlot),
+        )
+      } returns checkConnectionWorkflow
+
       val checkConnectionConfig =
         JobCheckConnectionConfig()
           .withDockerImage(IMAGE_NAME1)
-          .withConnectionConfiguration(buildConfigWithSecretRefsJava(emptyObject()))
+          .withConnectionConfiguration(InlinedConfigWithSecretRefs(emptyObject()).toConfigWithRefs())
 
-      temporalClient.submitCheckConnection(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, CHECK_TASK_QUEUE, checkConnectionConfig, ActorContext())
+      temporalClient.submitCheckConnection(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, checkConnectionConfig, ActorContext())
 
-      val workflowClassCaptor = ArgumentCaptor.forClass(Class::class.java)
-      val workflowOptionsCaptor = ArgumentCaptor.forClass(WorkflowOptions::class.java)
-      Mockito.verify(workflowClient).newWorkflowStub(
-        capture(workflowClassCaptor),
-        capture(workflowOptionsCaptor),
-      )
-      Assertions.assertEquals(ConnectorCommandWorkflow::class.java, workflowClassCaptor.getValue())
-      Assertions.assertEquals(UI_COMMANDS_TASK_QUEUE, workflowOptionsCaptor.getValue()!!.getTaskQueue())
+      verify { workflowClient.newWorkflowStub(any<Class<ConnectorCommandWorkflow>>(), any<WorkflowOptions>()) }
+      verify { checkConnectionWorkflow.run(capture(connectorCommandInputSlot)) }
 
-      val connectorCommandInputCaptor = argumentCaptor<ConnectorCommandInput>()
-      Mockito.verify(checkConnectionWorkflow).run(connectorCommandInputCaptor.capture())
-      Assertions.assertInstanceOf(CheckCommandInput::class.java, connectorCommandInputCaptor.firstValue)
+      Assertions.assertEquals(ConnectorCommandWorkflow::class.java, workflowClassSlot.captured)
+      Assertions.assertEquals(UI_COMMANDS_TASK_QUEUE, workflowOptionsSlot.captured.taskQueue)
+      Assertions.assertInstanceOf(CheckCommandInput::class.java, connectorCommandInputSlot.captured)
     }
 
     @Test
     fun testSubmitDiscoverSchema() {
-      val discoverCatalogWorkflow = Mockito.mock(ConnectorCommandWorkflow::class.java)
-      Mockito
-        .`when`(
-          workflowClient.newWorkflowStub(
-            eq(ConnectorCommandWorkflow::class.java),
-            any<WorkflowOptions>(),
-          ),
-        ).thenReturn(discoverCatalogWorkflow)
+      val discoverCatalogWorkflow = mockk<ConnectorCommandWorkflow>(relaxed = true)
+      val workflowClassSlot = slot<Class<ConnectorCommandWorkflow>>()
+      val workflowOptionsSlot = slot<WorkflowOptions>()
+      val connectorCommandInputSlot = slot<ConnectorCommandInput>()
+
+      every {
+        workflowClient.newWorkflowStub(
+          capture(workflowClassSlot),
+          capture(workflowOptionsSlot),
+        )
+      } returns discoverCatalogWorkflow
+
       val checkConnectionConfig =
         JobDiscoverCatalogConfig()
           .withDockerImage(IMAGE_NAME1)
-          .withConnectionConfiguration(buildConfigWithSecretRefsJava(emptyObject()))
+          .withConnectionConfiguration(InlinedConfigWithSecretRefs(emptyObject()).toConfigWithRefs())
 
       temporalClient.submitDiscoverSchema(
         JOB_UUID,
         ATTEMPT_ID,
         WORKSPACE_ID,
-        DISCOVER_TASK_QUEUE,
         checkConnectionConfig,
         ActorContext(),
         WorkloadPriority.DEFAULT,
       )
 
-      val workflowClassCaptor = ArgumentCaptor.forClass(Class::class.java)
-      val workflowOptionsCaptor = ArgumentCaptor.forClass(WorkflowOptions::class.java)
-      Mockito.verify(workflowClient).newWorkflowStub(
-        capture(workflowClassCaptor),
-        capture(workflowOptionsCaptor),
-      )
-      Assertions.assertEquals(ConnectorCommandWorkflow::class.java, workflowClassCaptor.getValue())
-      Assertions.assertEquals(UI_COMMANDS_TASK_QUEUE, workflowOptionsCaptor.getValue()!!.getTaskQueue())
+      verify { workflowClient.newWorkflowStub(any<Class<ConnectorCommandWorkflow>>(), any<WorkflowOptions>()) }
+      verify { discoverCatalogWorkflow.run(capture(connectorCommandInputSlot)) }
 
-      val connectorCommandInputCaptor = argumentCaptor<ConnectorCommandInput>()
-      Mockito.verify(discoverCatalogWorkflow).run(connectorCommandInputCaptor.capture())
-      Assertions.assertInstanceOf(DiscoverCommandInput::class.java, connectorCommandInputCaptor.firstValue)
+      Assertions.assertEquals(ConnectorCommandWorkflow::class.java, workflowClassSlot.captured)
+      Assertions.assertEquals(UI_COMMANDS_TASK_QUEUE, workflowOptionsSlot.captured.taskQueue)
+      Assertions.assertInstanceOf(DiscoverCommandInput::class.java, connectorCommandInputSlot.captured)
     }
   }
 
@@ -335,27 +313,28 @@ class TemporalClientTest {
       val nonMigratedId = UUID.randomUUID()
       val migratedId = UUID.randomUUID()
 
-      Mockito
-        .`when`(temporalClient.isInRunningWorkflowCache(connectionManagerUtils.getConnectionManagerName(nonMigratedId)))
-        .thenReturn(false)
-      Mockito
-        .`when`(temporalClient.isInRunningWorkflowCache(connectionManagerUtils.getConnectionManagerName(migratedId)))
-        .thenReturn(true)
+      every { temporalClient.isInRunningWorkflowCache(connectionManagerUtils.getConnectionManagerName(nonMigratedId)) } returns false
+      every { temporalClient.isInRunningWorkflowCache(connectionManagerUtils.getConnectionManagerName(migratedId)) } returns true
 
-      Mockito
-        .doNothing()
-        .`when`(temporalClient)
-        .refreshRunningWorkflow()
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      Mockito
-        .doReturn(mConnectionManagerWorkflow)
-        .`when`(temporalClient)
-        .submitConnectionUpdaterAsync(nonMigratedId)
+      every { temporalClient.refreshRunningWorkflow() } just Runs
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>(relaxed = true)
+      every { temporalClient.submitConnectionUpdaterAsync(nonMigratedId) } returns mConnectionManagerWorkflow
+      every { connectionManagerUtils.getConnectionManagerWorkflow(nonMigratedId) } returns mConnectionManagerWorkflow
+      every { connectionManagerUtils.getConnectionManagerName(any<UUID>()) } answers { "connection_manager_${firstArg<UUID>()}" }
+      every {
+        workflowClient.newWorkflowStub(
+          any<Class<ConnectionManagerWorkflow>>(),
+          any<WorkflowOptions>(),
+        )
+      } returns mConnectionManagerWorkflow
+
+      every { temporalClient.isInRunningWorkflowCache("connection_manager_$nonMigratedId") } returns false
+      every { temporalClient.isInRunningWorkflowCache("connection_manager_$migratedId") } returns true
 
       temporalClient.migrateSyncIfNeeded(setOf(nonMigratedId, migratedId))
 
-      Mockito.verify(temporalClient, Mockito.times(1)).submitConnectionUpdaterAsync(nonMigratedId)
-      Mockito.verify(temporalClient, Mockito.times(0)).submitConnectionUpdaterAsync(migratedId)
+      verify(exactly = 1) { temporalClient.submitConnectionUpdaterAsync(nonMigratedId) }
+      verify(exactly = 0) { temporalClient.submitConnectionUpdaterAsync(migratedId) }
     }
   }
 
@@ -367,7 +346,7 @@ class TemporalClientTest {
     fun testForceCancelConnection() {
       temporalClient.forceDeleteWorkflow(CONNECTION_ID)
 
-      Mockito.verify(connectionManagerUtils).deleteWorkflowIfItExist(CONNECTION_ID)
+      verify { connectionManagerUtils.deleteWorkflowIfItExist(CONNECTION_ID) }
     }
   }
 
@@ -377,70 +356,69 @@ class TemporalClientTest {
     @Test
     @DisplayName("Test update connection when workflow is running")
     fun testUpdateConnection() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
 
-      Mockito.`when`(mWorkflowState.isRunning).thenReturn(true)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(false)
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito
-        .`when`(
-          workflowClient.newWorkflowStub(
-            ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(),
-            ArgumentMatchers.anyString(),
-          ),
-        ).thenReturn(mConnectionManagerWorkflow)
+      every { mWorkflowState.isRunning } returns true
+      every { mWorkflowState.isDeleted } returns false
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mConnectionManagerWorkflow.connectionUpdated() } just Runs
+      every {
+        workflowClient.newWorkflowStub(
+          any<Class<ConnectionManagerWorkflow>>(),
+          any<String>(),
+        )
+      } returns mConnectionManagerWorkflow
 
       temporalClient.update(CONNECTION_ID)
 
-      Mockito.verify(mConnectionManagerWorkflow, Mockito.times(1)).connectionUpdated()
+      verify(exactly = 1) { mConnectionManagerWorkflow.connectionUpdated() }
     }
 
     @Test
     @DisplayName("Test update connection method starts a new workflow when workflow is in an unexpected state")
     fun testUpdateConnectionInUnexpectedState() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
 
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenAnswer { throw IllegalStateException(EXCEPTION_MESSAGE) }
-      Mockito
-        .`when`(
-          workflowClient.newWorkflowStub(
-            ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(),
-            ArgumentMatchers.anyString(),
-          ),
-        ).thenReturn(mConnectionManagerWorkflow)
-      Mockito.doReturn(mConnectionManagerWorkflow).`when`(temporalClient).submitConnectionUpdaterAsync(CONNECTION_ID)
+      every { mConnectionManagerWorkflow.getState() } throws IllegalStateException(EXCEPTION_MESSAGE)
+      every {
+        workflowClient.newWorkflowStub(
+          any<Class<ConnectionManagerWorkflow>>(),
+          any<String>(),
+        )
+      } returns mConnectionManagerWorkflow
+      every { temporalClient.submitConnectionUpdaterAsync(CONNECTION_ID) } returns mConnectionManagerWorkflow
 
-      val untypedWorkflowStub = Mockito.mock(WorkflowStub::class.java)
-      Mockito.`when`(workflowClient.newUntypedWorkflowStub(ArgumentMatchers.anyString())).thenReturn(untypedWorkflowStub)
+      val untypedWorkflowStub = mockk<WorkflowStub>()
+      every { workflowClient.newUntypedWorkflowStub(any<String>()) } returns untypedWorkflowStub
+      every { untypedWorkflowStub.terminate(any<String>()) } just Runs
 
       temporalClient.update(CONNECTION_ID)
 
       // this is only called when updating an existing workflow
-      Mockito.verify(mConnectionManagerWorkflow, Mockito.never()).connectionUpdated()
+      verify(exactly = 0) { mConnectionManagerWorkflow.connectionUpdated() }
 
-      Mockito.verify(untypedWorkflowStub, Mockito.times(1)).terminate(ArgumentMatchers.anyString())
-      Mockito.verify(temporalClient, Mockito.times(1)).submitConnectionUpdaterAsync(CONNECTION_ID)
+      verify(exactly = 1) { untypedWorkflowStub.terminate(any<String>()) }
+      verify(exactly = 1) { temporalClient.submitConnectionUpdaterAsync(CONNECTION_ID) }
     }
 
     @Test
     @DisplayName("Test update connection method does nothing when connection is deleted")
     fun testUpdateConnectionDeletedWorkflow() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(true)
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(mConnectionManagerWorkflow)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns true
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
       mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED)
 
       temporalClient.update(CONNECTION_ID)
 
       // this is only called when updating an existing workflow
-      Mockito.verify(mConnectionManagerWorkflow, Mockito.never()).connectionUpdated()
-      Mockito.verify(temporalClient).update(CONNECTION_ID)
-      Mockito.verifyNoMoreInteractions(temporalClient)
+      verify(exactly = 0) { mConnectionManagerWorkflow.connectionUpdated() }
+      verify { temporalClient.update(CONNECTION_ID) }
     }
   }
 
@@ -450,104 +428,109 @@ class TemporalClientTest {
     @Test
     @DisplayName("Test startNewManualSync successful")
     fun testStartNewManualSyncSuccess() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(false)
-      Mockito.`when`(mWorkflowState.isRunning).thenReturn(false).thenReturn(true)
-      Mockito.`when`(mConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(mConnectionManagerWorkflow)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns false andThen true
+      every { mConnectionManagerWorkflow.getJobInformation() } returns JobInformation(JOB_ID, ATTEMPT_ID)
+      every { mConnectionManagerWorkflow.submitManualSync() } just Runs
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
 
       val result = temporalClient.startNewManualSync(CONNECTION_ID)
 
       Assertions.assertNotNull(result.jobId)
       Assertions.assertEquals(JOB_ID, result.jobId)
       Assertions.assertNull(result.failingReason)
-      Mockito.verify(mConnectionManagerWorkflow).submitManualSync()
+      verify { mConnectionManagerWorkflow.submitManualSync() }
     }
 
     @Test
     @DisplayName("Test startNewManualSync fails if job is already running")
     fun testStartNewManualSyncAlreadyRunning() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(false)
-      Mockito.`when`(mWorkflowState.isRunning).thenReturn(true)
-      Mockito.`when`(mConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(mConnectionManagerWorkflow)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns true
+      every { mConnectionManagerWorkflow.getJobInformation() } returns JobInformation(JOB_ID, ATTEMPT_ID)
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
 
       val result = temporalClient.startNewManualSync(CONNECTION_ID)
 
       Assertions.assertNull(result.jobId)
       Assertions.assertNotNull(result.failingReason)
-      Mockito.verify(mConnectionManagerWorkflow, Mockito.times(0)).submitManualSync()
+      verify(exactly = 0) { mConnectionManagerWorkflow.submitManualSync() }
     }
 
     @Test
     @DisplayName("Test startNewManualSync repairs the workflow if it is in a bad state")
     fun testStartNewManualSyncRepairsBadWorkflowState() {
-      val mTerminatedConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
+      val mTerminatedConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
 
-      // This simulates a workflow that is in a bad state.
-      Mockito.`when`(mTerminatedConnectionManagerWorkflow.getState()).thenAnswer { throw IllegalStateException(EXCEPTION_MESSAGE) }
-      Mockito.`when`(mTerminatedConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
+      // This simulates a workflow in a bad state.
+      every { mTerminatedConnectionManagerWorkflow.getState() } throws IllegalStateException(EXCEPTION_MESSAGE)
+      every { mTerminatedConnectionManagerWorkflow.getJobInformation() } returns JobInformation(JOB_ID, ATTEMPT_ID)
 
-      val mNewConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mNewConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(false)
-      Mockito.`when`(mWorkflowState.isRunning).thenReturn(false).thenReturn(true)
-      Mockito.`when`(mNewConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
-      Mockito
-        .`when`(
-          workflowClient.newWorkflowStub(
-            ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(),
-            any<WorkflowOptions>(),
-          ),
-        ).thenReturn(mNewConnectionManagerWorkflow)
-      val mBatchRequest = Mockito.mock(BatchRequest::class.java)
-      Mockito.`when`(workflowClient.newSignalWithStartRequest()).thenReturn(mBatchRequest)
+      val mNewConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mNewConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns false andThen true
+      every { mNewConnectionManagerWorkflow.getJobInformation() } returns JobInformation(JOB_ID, ATTEMPT_ID)
+      every { mNewConnectionManagerWorkflow.submitManualSync() } just Runs
 
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(
+      val mBatchRequest = mockk<BatchRequest>(relaxed = true)
+      val batchRequestAddSlot = slot<Functions.Proc>()
+      every { mBatchRequest.add(capture(batchRequestAddSlot)) } just Runs
+      every { workflowClient.newSignalWithStartRequest() } returns mBatchRequest
+      every { workflowClient.signalWithStart(mBatchRequest) } returns WorkflowExecution.newBuilder().build()
+
+      // First two calls return terminated workflow, third returns new workflow
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returnsMany
+        listOf(
           mTerminatedConnectionManagerWorkflow,
           mTerminatedConnectionManagerWorkflow,
           mNewConnectionManagerWorkflow,
         )
+
+      every {
+        workflowClient.newWorkflowStub(
+          any<Class<ConnectionManagerWorkflow>>(),
+          any<WorkflowOptions>(),
+        )
+      } returns mNewConnectionManagerWorkflow
 
       val result = temporalClient.startNewManualSync(CONNECTION_ID)
 
       Assertions.assertNotNull(result.jobId)
       Assertions.assertEquals(JOB_ID, result.jobId)
       Assertions.assertNull(result.failingReason)
-      Mockito.verify(workflowClient).signalWithStart(mBatchRequest)
+      verify { workflowClient.signalWithStart(mBatchRequest) }
 
       // Verify that the submitManualSync signal was passed to the batch request by capturing the
-      // argument,
-      // executing the signal, and verifying that the desired signal was executed
-      val batchRequestAddArgCaptor = ArgumentCaptor.forClass(Functions.Proc::class.java)
-      Mockito.verify(mBatchRequest).add(capture(batchRequestAddArgCaptor))
-      val signal = batchRequestAddArgCaptor.getValue()
+      // argument, executing the signal, and verifying that the desired signal was executed
+      val signal = batchRequestAddSlot.captured
       signal.apply()
-      Mockito.verify(mNewConnectionManagerWorkflow).submitManualSync()
+      verify { mNewConnectionManagerWorkflow.submitManualSync() }
     }
 
     @Test
     @DisplayName("Test startNewManualSync returns a failure reason when connection is deleted")
     fun testStartNewManualSyncDeletedWorkflow() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(true)
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(mConnectionManagerWorkflow)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns true
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
       mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED)
 
       val result = temporalClient.startNewManualSync(CONNECTION_ID)
@@ -555,7 +538,7 @@ class TemporalClientTest {
       // this is only called when updating an existing workflow
       Assertions.assertNull(result.jobId)
       Assertions.assertNotNull(result.failingReason)
-      Mockito.verify(mConnectionManagerWorkflow, Mockito.times(0)).submitManualSync()
+      verify(exactly = 0) { mConnectionManagerWorkflow.submitManualSync() }
     }
   }
 
@@ -565,84 +548,90 @@ class TemporalClientTest {
     @Test
     @DisplayName("Test startNewCancellation successful")
     fun testStartNewCancellationSuccess() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(false)
-      Mockito.`when`(mWorkflowState.isRunning).thenReturn(true).thenReturn(false)
-      Mockito.`when`(mConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(mConnectionManagerWorkflow)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns true andThen false
+      every { mConnectionManagerWorkflow.getJobInformation() } returns JobInformation(JOB_ID, ATTEMPT_ID)
+      every { mConnectionManagerWorkflow.cancelJob() } just Runs
+      every { streamResetRecordsHelper.deleteStreamResetRecordsForJob(JOB_ID, CONNECTION_ID) } just Runs
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
 
       val result = temporalClient.startNewCancellation(CONNECTION_ID)
 
       Assertions.assertNotNull(result.jobId)
       Assertions.assertEquals(JOB_ID, result.jobId)
       Assertions.assertNull(result.failingReason)
-      Mockito.verify(mConnectionManagerWorkflow).cancelJob()
-      Mockito.verify(streamResetRecordsHelper).deleteStreamResetRecordsForJob(JOB_ID, CONNECTION_ID)
+      verify { mConnectionManagerWorkflow.cancelJob() }
+      verify { streamResetRecordsHelper.deleteStreamResetRecordsForJob(JOB_ID, CONNECTION_ID) }
     }
 
     @Test
     @DisplayName("Test startNewCancellation repairs the workflow if it is in a bad state")
     fun testStartNewCancellationRepairsBadWorkflowState() {
-      val mTerminatedConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      Mockito
-        .`when`(mTerminatedConnectionManagerWorkflow.getState())
-        .thenAnswer { throw IllegalStateException(EXCEPTION_MESSAGE) }
-      Mockito.`when`(mTerminatedConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
+      val mTerminatedConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      every {
+        mTerminatedConnectionManagerWorkflow.getState()
+      } throws IllegalStateException(EXCEPTION_MESSAGE)
+      every { mTerminatedConnectionManagerWorkflow.getJobInformation() } returns JobInformation(JOB_ID, ATTEMPT_ID)
 
-      val mNewConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mNewConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(false)
-      Mockito.`when`(mWorkflowState.isRunning).thenReturn(true).thenReturn(false)
-      Mockito.`when`(mNewConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
-      Mockito
-        .`when`(
-          workflowClient.newWorkflowStub(
-            ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(),
-            any<WorkflowOptions>(),
-          ),
-        ).thenReturn(mNewConnectionManagerWorkflow)
-      val mBatchRequest = Mockito.mock(BatchRequest::class.java)
-      Mockito.`when`(workflowClient.newSignalWithStartRequest()).thenReturn(mBatchRequest)
+      val mNewConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mNewConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns true andThen false
+      every { mNewConnectionManagerWorkflow.getJobInformation() } returns JobInformation(JOB_ID, ATTEMPT_ID)
+      every { mNewConnectionManagerWorkflow.cancelJob() } just Runs
 
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(
+      val mBatchRequest = mockk<BatchRequest>(relaxed = true)
+      val batchRequestAddSlot = slot<Functions.Proc>()
+      every { mBatchRequest.add(capture(batchRequestAddSlot)) } just Runs
+      every { workflowClient.newSignalWithStartRequest() } returns mBatchRequest
+      every { workflowClient.signalWithStart(mBatchRequest) } returns WorkflowExecution.newBuilder().build()
+
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returnsMany
+        listOf(
           mTerminatedConnectionManagerWorkflow,
           mTerminatedConnectionManagerWorkflow,
           mNewConnectionManagerWorkflow,
         )
 
+      every {
+        workflowClient.newWorkflowStub(
+          any<Class<ConnectionManagerWorkflow>>(),
+          any<WorkflowOptions>(),
+        )
+      } returns mNewConnectionManagerWorkflow
+
       val result = temporalClient.startNewCancellation(CONNECTION_ID)
 
       Assertions.assertNotNull(result.jobId)
-      Assertions.assertEquals(ConnectionManagerWorkflow.Companion.NON_RUNNING_JOB_ID, result.jobId)
+      Assertions.assertEquals(ConnectionManagerWorkflow.NON_RUNNING_JOB_ID, result.jobId)
       Assertions.assertNull(result.failingReason)
-      Mockito.verify(workflowClient).signalWithStart(mBatchRequest)
+      verify { workflowClient.signalWithStart(mBatchRequest) }
 
       // Verify that the cancelJob signal was passed to the batch request by capturing the argument,
       // executing the signal, and verifying that the desired signal was executed
-      val batchRequestAddArgCaptor = ArgumentCaptor.forClass(Functions.Proc::class.java)
-      Mockito.verify(mBatchRequest).add(capture(batchRequestAddArgCaptor))
-      val signal = batchRequestAddArgCaptor.getValue()
+      val signal = batchRequestAddSlot.captured
       signal.apply()
-      Mockito.verify(mNewConnectionManagerWorkflow).cancelJob()
+      verify { mNewConnectionManagerWorkflow.cancelJob() }
     }
 
     @Test
     @DisplayName("Test startNewCancellation returns a failure reason when connection is deleted")
     fun testStartNewCancellationDeletedWorkflow() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(true)
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(mConnectionManagerWorkflow)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns true
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
       mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED)
 
       val result = temporalClient.startNewCancellation(CONNECTION_ID)
@@ -650,7 +639,7 @@ class TemporalClientTest {
       // this is only called when updating an existing workflow
       Assertions.assertNull(result.jobId)
       Assertions.assertNotNull(result.failingReason)
-      Mockito.verify(mConnectionManagerWorkflow, Mockito.times(0)).cancelJob()
+      verify(exactly = 0) { mConnectionManagerWorkflow.cancelJob() }
     }
   }
 
@@ -660,41 +649,37 @@ class TemporalClientTest {
     @Test
     @DisplayName("Test refreshConnectionAsync saves the stream to refresh and signals workflow")
     fun testRefreshConnectionAsyncHappyPath() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(false)
-      Mockito.`when`(mWorkflowState.isRunning).thenReturn(false)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns false
       val jobId1: Long = 1
       val jobId2: Long = 2
-      Mockito.`when`(mConnectionManagerWorkflow.getJobInformation()).thenReturn(
-        JobInformation(jobId1, 0),
-        JobInformation(jobId1, 0),
-        JobInformation(ConnectionManagerWorkflow.Companion.NON_RUNNING_JOB_ID, 0),
-        JobInformation(ConnectionManagerWorkflow.Companion.NON_RUNNING_JOB_ID, 0),
-        JobInformation(jobId2, 0),
-        JobInformation(jobId2, 0),
-      )
-      Mockito
-        .`when`(
-          workflowClient.newWorkflowStub(
-            ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(),
-            ArgumentMatchers.anyString(),
-          ),
-        ).thenReturn(mConnectionManagerWorkflow)
+      every { mConnectionManagerWorkflow.getJobInformation() } returnsMany
+        listOf(
+          JobInformation(jobId1, 0),
+          JobInformation(jobId1, 0),
+          JobInformation(ConnectionManagerWorkflow.NON_RUNNING_JOB_ID, 0),
+          JobInformation(ConnectionManagerWorkflow.NON_RUNNING_JOB_ID, 0),
+          JobInformation(jobId2, 0),
+          JobInformation(jobId2, 0),
+        )
+      every {
+        workflowClient.newWorkflowStub(
+          any<Class<ConnectionManagerWorkflow>>(),
+          any<String>(),
+        )
+      } returns mConnectionManagerWorkflow
+      every { streamRefreshesRepository.saveAll(any<Iterable<StreamRefresh>>()) } returns listOf()
+      every { connectionManagerUtils.signalWorkflowAndRepairIfNecessary(eq(CONNECTION_ID), any()) } returns mockk()
 
       val streamsToReset = listOf(STREAM_DESCRIPTOR)
       val refreshType = RefreshStream.RefreshType.TRUNCATE
       temporalClient.refreshConnectionAsync(CONNECTION_ID, streamsToReset, refreshType)
 
-      Mockito.verify(streamRefreshesRepository).saveAll(
-        ArgumentMatchers.any<Iterable<StreamRefresh>>(),
-      )
-
-      Mockito.verify(connectionManagerUtils).signalWorkflowAndRepairIfNecessary(
-        eq(CONNECTION_ID),
-        any(),
-      )
+      verify { streamRefreshesRepository.saveAll(any<Iterable<StreamRefresh>>()) }
+      verify { connectionManagerUtils.signalWorkflowAndRepairIfNecessary(eq(CONNECTION_ID), any()) }
     }
   }
 
@@ -704,136 +689,145 @@ class TemporalClientTest {
     @Test
     @DisplayName("Test resetConnection successful")
     fun testResetConnectionSuccess() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(false)
-      Mockito.`when`(mWorkflowState.isRunning).thenReturn(false)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns false
       val jobId1: Long = 1
       val jobId2: Long = 2
-      Mockito.`when`(mConnectionManagerWorkflow.getJobInformation()).thenReturn(
-        JobInformation(jobId1, 0),
-        JobInformation(jobId1, 0),
-        JobInformation(ConnectionManagerWorkflow.Companion.NON_RUNNING_JOB_ID, 0),
-        JobInformation(ConnectionManagerWorkflow.Companion.NON_RUNNING_JOB_ID, 0),
-        JobInformation(jobId2, 0),
-        JobInformation(jobId2, 0),
-      )
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(mConnectionManagerWorkflow)
+      every { mConnectionManagerWorkflow.getJobInformation() } returnsMany
+        listOf(
+          JobInformation(jobId1, 0),
+          JobInformation(jobId1, 0),
+          JobInformation(ConnectionManagerWorkflow.NON_RUNNING_JOB_ID, 0),
+          JobInformation(ConnectionManagerWorkflow.NON_RUNNING_JOB_ID, 0),
+          JobInformation(jobId2, 0),
+          JobInformation(jobId2, 0),
+        )
+      every { mConnectionManagerWorkflow.resetConnection() } just Runs
+      every { streamResetPersistence.createStreamResets(CONNECTION_ID, any()) } just Runs
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
 
       val streamsToReset = listOf(STREAM_DESCRIPTOR)
       val result = temporalClient.resetConnection(CONNECTION_ID, streamsToReset)
 
-      Mockito.verify(streamResetPersistence).createStreamResets(CONNECTION_ID, streamsToReset)
+      verify { streamResetPersistence.createStreamResets(CONNECTION_ID, streamsToReset) }
 
       Assertions.assertNotNull(result.jobId)
       Assertions.assertEquals(jobId2, result.jobId)
       Assertions.assertNull(result.failingReason)
-      Mockito.verify(mConnectionManagerWorkflow).resetConnection()
+      verify { mConnectionManagerWorkflow.resetConnection() }
     }
 
     @Test
     @DisplayName("Test resetConnection repairs the workflow if it is in a bad state")
     fun testResetConnectionRepairsBadWorkflowState() {
-      val mTerminatedConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
+      val mTerminatedConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
 
-      // This simulates a workflow that is in a bad state.
-      Mockito.`when`(mTerminatedConnectionManagerWorkflow.getState()).thenAnswer { throw IllegalStateException(EXCEPTION_MESSAGE) }
-      Mockito.`when`(mTerminatedConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
+      // This simulates a workflow in a bad state.
+      every { mTerminatedConnectionManagerWorkflow.getState() } throws IllegalStateException(EXCEPTION_MESSAGE)
+      every { mTerminatedConnectionManagerWorkflow.getJobInformation() } returns JobInformation(JOB_ID, ATTEMPT_ID)
 
-      val mNewConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mNewConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(false)
-      Mockito.`when`(mWorkflowState.isRunning).thenReturn(false)
-      Mockito.`when`(mNewConnectionManagerWorkflow.getJobInformation()).thenReturn(
-        JobInformation(ConnectionManagerWorkflow.Companion.NON_RUNNING_JOB_ID, 0),
-        JobInformation(ConnectionManagerWorkflow.Companion.NON_RUNNING_JOB_ID, 0),
-        JobInformation(JOB_ID, 0),
-        JobInformation(JOB_ID, 0),
-      )
-      Mockito
-        .`when`(
-          workflowClient.newWorkflowStub(
-            ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(),
-            any<WorkflowOptions>(),
-          ),
-        ).thenReturn(mNewConnectionManagerWorkflow)
-      val mBatchRequest = Mockito.mock(BatchRequest::class.java)
-      Mockito.`when`(workflowClient.newSignalWithStartRequest()).thenReturn(mBatchRequest)
+      val mNewConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mNewConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns false
+      every { mNewConnectionManagerWorkflow.getJobInformation() } returnsMany
+        listOf(
+          JobInformation(ConnectionManagerWorkflow.NON_RUNNING_JOB_ID, 0),
+          JobInformation(ConnectionManagerWorkflow.NON_RUNNING_JOB_ID, 0),
+          JobInformation(JOB_ID, 0),
+          JobInformation(JOB_ID, 0),
+        )
+      every { mNewConnectionManagerWorkflow.resetConnection() } just Runs
+      every { streamResetPersistence.createStreamResets(CONNECTION_ID, any()) } just Runs
 
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(
+      val mBatchRequest = mockk<BatchRequest>(relaxed = true)
+      val batchRequestAddSlot = slot<Functions.Proc>()
+      every { mBatchRequest.add(capture(batchRequestAddSlot)) } just Runs
+      every { workflowClient.newSignalWithStartRequest() } returns mBatchRequest
+      every { workflowClient.signalWithStart(mBatchRequest) } returns WorkflowExecution.newBuilder().build()
+
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returnsMany
+        listOf(
           mTerminatedConnectionManagerWorkflow,
           mTerminatedConnectionManagerWorkflow,
           mNewConnectionManagerWorkflow,
         )
 
+      every {
+        workflowClient.newWorkflowStub(
+          any<Class<ConnectionManagerWorkflow>>(),
+          any<WorkflowOptions>(),
+        )
+      } returns mNewConnectionManagerWorkflow
+
       val streamsToReset = listOf(STREAM_DESCRIPTOR)
       val result = temporalClient.resetConnection(CONNECTION_ID, streamsToReset)
 
-      Mockito.verify(streamResetPersistence).createStreamResets(CONNECTION_ID, streamsToReset)
+      verify { streamResetPersistence.createStreamResets(CONNECTION_ID, streamsToReset) }
 
       Assertions.assertNotNull(result.jobId)
       Assertions.assertEquals(JOB_ID, result.jobId)
       Assertions.assertNull(result.failingReason)
-      Mockito.verify(workflowClient).signalWithStart(mBatchRequest)
+      verify { workflowClient.signalWithStart(mBatchRequest) }
 
       // Verify that the resetConnection signal was passed to the batch request by capturing the argument,
       // executing the signal, and verifying that the desired signal was executed
-      val batchRequestAddArgCaptor = ArgumentCaptor.forClass(Functions.Proc::class.java)
-      Mockito.verify(mBatchRequest).add(capture(batchRequestAddArgCaptor))
-      val signal = batchRequestAddArgCaptor.getValue()
+      val signal = batchRequestAddSlot.captured
       signal.apply()
-      Mockito.verify(mNewConnectionManagerWorkflow).resetConnection()
+      verify { mNewConnectionManagerWorkflow.resetConnection() }
     }
 
     @Test
     @DisplayName("Test resetConnection returns a failure reason when connection is deleted")
     fun testResetConnectionDeletedWorkflow() {
-      val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-      val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-      Mockito.`when`(mWorkflowState.isDeleted).thenReturn(true)
-      Mockito
-        .`when`(workflowClient.newWorkflowStub(ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(), ArgumentMatchers.anyString()))
-        .thenReturn(mConnectionManagerWorkflow)
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns true
+      every { streamResetPersistence.createStreamResets(CONNECTION_ID, any()) } just Runs
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
       mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED)
 
       val streamsToReset = listOf(STREAM_DESCRIPTOR)
       val result = temporalClient.resetConnection(CONNECTION_ID, streamsToReset)
 
-      Mockito.verify(streamResetPersistence).createStreamResets(CONNECTION_ID, streamsToReset)
+      verify { streamResetPersistence.createStreamResets(CONNECTION_ID, streamsToReset) }
 
       // this is only called when updating an existing workflow
       Assertions.assertNull(result.jobId)
       Assertions.assertNotNull(result.failingReason)
-      Mockito.verify(mConnectionManagerWorkflow, Mockito.times(0)).resetConnection()
+      verify(exactly = 0) { mConnectionManagerWorkflow.resetConnection() }
     }
   }
 
   @Test
   @DisplayName("Test manual operation on completed workflow causes a restart")
   fun testManualOperationOnCompletedWorkflow() {
-    val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-    val mWorkflowState = Mockito.mock(WorkflowState::class.java)
-    Mockito.`when`(mConnectionManagerWorkflow.getState()).thenReturn(mWorkflowState)
-    Mockito.`when`(mWorkflowState.isDeleted).thenReturn(false)
-    Mockito
-      .`when`(
-        workflowServiceBlockingStub.describeWorkflowExecution(
-          ArgumentMatchers.any<DescribeWorkflowExecutionRequest>(),
-        ),
-      ).thenReturn(
+    val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+    val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+    every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+    every { mWorkflowState.isDeleted } returns false
+    every {
+      workflowServiceBlockingStub.describeWorkflowExecution(
+        any<DescribeWorkflowExecutionRequest>(),
+      )
+    } returnsMany
+      listOf(
         DescribeWorkflowExecutionResponse
           .newBuilder()
           .setWorkflowExecutionInfo(
             WorkflowExecutionInfo.newBuilder().setStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED).buildPartial(),
           ).build(),
-      ).thenReturn(
         DescribeWorkflowExecutionResponse
           .newBuilder()
           .setWorkflowExecutionInfo(
@@ -841,66 +835,67 @@ class TemporalClientTest {
           ).build(),
       )
 
-    val mNewConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
-    val mNewWorkflowState = Mockito.mock(WorkflowState::class.java)
-    Mockito.`when`(mNewConnectionManagerWorkflow.getState()).thenReturn(mNewWorkflowState)
-    Mockito.`when`(mNewWorkflowState.isRunning).thenReturn(false).thenReturn(true)
-    Mockito
-      .`when`(mNewConnectionManagerWorkflow.getJobInformation())
-      .thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
-    Mockito
-      .`when`(
-        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<WorkflowOptions>()),
-      ).thenReturn(mNewConnectionManagerWorkflow)
-    val mBatchRequest = Mockito.mock(BatchRequest::class.java)
-    Mockito.`when`(workflowClient.newSignalWithStartRequest()).thenReturn(mBatchRequest)
+    val mNewConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+    val mNewWorkflowState = mockk<WorkflowState>(relaxed = true)
+    every { mNewConnectionManagerWorkflow.getState() } returns mNewWorkflowState
+    every { mNewWorkflowState.isRunning } returns false andThen true
+    every {
+      mNewConnectionManagerWorkflow.getJobInformation()
+    } returns JobInformation(JOB_ID, ATTEMPT_ID)
+    every { mNewConnectionManagerWorkflow.submitManualSync() } just Runs
 
-    Mockito
-      .`when`(
-        workflowClient.newWorkflowStub(
-          ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(),
-          ArgumentMatchers.anyString(),
-        ),
-      ).thenReturn(
+    val mBatchRequest = mockk<BatchRequest>(relaxed = true)
+    val batchRequestAddSlot = slot<Functions.Proc>()
+    every { mBatchRequest.add(capture(batchRequestAddSlot)) } just Runs
+    every { workflowClient.newSignalWithStartRequest() } returns mBatchRequest
+    every { workflowClient.signalWithStart(mBatchRequest) } returns WorkflowExecution.newBuilder().build()
+
+    every {
+      workflowClient.newWorkflowStub(
+        any<Class<ConnectionManagerWorkflow>>(),
+        any<String>(),
+      )
+    } returnsMany
+      listOf(
         mConnectionManagerWorkflow,
         mConnectionManagerWorkflow,
         mNewConnectionManagerWorkflow,
       )
 
-    val mWorkflowStub = Mockito.mock(WorkflowStub::class.java)
-    Mockito.`when`(workflowClient.newUntypedWorkflowStub(ArgumentMatchers.anyString())).thenReturn(mWorkflowStub)
+    every {
+      workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<WorkflowOptions>())
+    } returns mNewConnectionManagerWorkflow
+
+    val mWorkflowStub = mockk<WorkflowStub>()
+    every { workflowClient.newUntypedWorkflowStub(any<String>()) } returns mWorkflowStub
+    every { mWorkflowStub.terminate(any<String>()) } just Runs
 
     val result = temporalClient.startNewManualSync(CONNECTION_ID)
 
     Assertions.assertNotNull(result.jobId)
     Assertions.assertEquals(JOB_ID, result.jobId)
     Assertions.assertNull(result.failingReason)
-    Mockito.verify(workflowClient).signalWithStart(mBatchRequest)
-    Mockito.verify(mWorkflowStub).terminate(ArgumentMatchers.anyString())
+    verify { workflowClient.signalWithStart(mBatchRequest) }
+    verify { mWorkflowStub.terminate(any<String>()) }
 
     // Verify that the submitManualSync signal was passed to the batch request by capturing the
-    // argument,
-    // executing the signal, and verifying that the desired signal was executed
-    val batchRequestAddArgCaptor = ArgumentCaptor.forClass(Functions.Proc::class.java)
-    Mockito.verify(mBatchRequest).add(batchRequestAddArgCaptor.capture())
-    val signal = batchRequestAddArgCaptor.getValue()
+    // argument, executing the signal, and verifying that the desired signal was executed
+    val signal = batchRequestAddSlot.captured
     signal.apply()
-    Mockito.verify(mNewConnectionManagerWorkflow).submitManualSync()
+    verify { mNewConnectionManagerWorkflow.submitManualSync() }
   }
 
   private fun mockWorkflowStatus(status: WorkflowExecutionStatus) {
-    Mockito
-      .`when`(
-        workflowServiceBlockingStub.describeWorkflowExecution(
-          ArgumentMatchers.any<DescribeWorkflowExecutionRequest>(),
-        ),
-      ).thenReturn(
-        DescribeWorkflowExecutionResponse
-          .newBuilder()
-          .setWorkflowExecutionInfo(
-            WorkflowExecutionInfo.newBuilder().setStatus(status).buildPartial(),
-          ).build(),
+    every {
+      workflowServiceBlockingStub.describeWorkflowExecution(
+        any<DescribeWorkflowExecutionRequest>(),
       )
+    } returns
+      DescribeWorkflowExecutionResponse
+        .newBuilder()
+        .setWorkflowExecutionInfo(
+          WorkflowExecutionInfo.newBuilder().setStatus(status).buildPartial(),
+        ).build()
   }
 
   companion object {
@@ -909,24 +904,14 @@ class TemporalClientTest {
     private val JOB_UUID: UUID = UUID.randomUUID()
     private const val JOB_ID = 11L
     private const val ATTEMPT_ID = 21
-
-    private const val CHECK_TASK_QUEUE = "CHECK_CONNECTION"
-    private const val DISCOVER_TASK_QUEUE = "DISCOVER_SCHEMA"
     private const val UI_COMMANDS_TASK_QUEUE = "ui_commands"
     private val JOB_RUN_CONFIG: JobRunConfig =
       JobRunConfig()
         .withJobId(JOB_ID.toString())
         .withAttemptId(ATTEMPT_ID.toLong())
     private const val IMAGE_NAME1 = "hms invincible"
-    private val UUID_LAUNCHER_CONFIG: IntegrationLauncherConfig? =
-      IntegrationLauncherConfig()
-        .withJobId(JOB_UUID.toString())
-        .withAttemptId(ATTEMPT_ID.toLong())
-        .withDockerImage(IMAGE_NAME1)
-        .withPriority(WorkloadPriority.DEFAULT)
     private const val NAMESPACE = "namespace"
     private val STREAM_DESCRIPTOR: StreamDescriptor = StreamDescriptor().withName("name")
-    private const val UNCHECKED = "unchecked"
     private const val EXCEPTION_MESSAGE = "Force state exception to simulate workflow not running"
   }
 }

@@ -15,6 +15,8 @@ import io.airbyte.db.instance.configs.migrations.V0_30_22_001__Store_last_sync_s
 import io.airbyte.db.instance.configs.migrations.V0_30_22_001__Store_last_sync_state.Companion.getStandardSyncState
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.legacy.ConfigSchema
+import io.mockk.every
+import io.mockk.mockk
 import org.jooq.DSLContext
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -23,7 +25,6 @@ import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.api.Timeout
-import org.mockito.Mockito
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -45,10 +46,10 @@ internal class V0_30_22_001__Store_last_sync_state_test : AbstractConfigsDatabas
     Assertions.assertNull(getJobsDatabase("", "", ""))
 
     // when there is database environment variable, return the database
-    val configs = Mockito.mock(Configs::class.java)
-    Mockito.`when`(configs.getDatabaseUser()).thenReturn(container!!.username)
-    Mockito.`when`(configs.getDatabasePassword()).thenReturn(container!!.password)
-    Mockito.`when`(configs.getDatabaseUrl()).thenReturn(container!!.jdbcUrl)
+    val configs = mockk<Configs>()
+    every { configs.getDatabaseUser() } returns container!!.username
+    every { configs.getDatabasePassword() } returns container!!.password
+    every { configs.getDatabaseUrl() } returns container!!.jdbcUrl
 
     Assertions.assertNotNull(
       getJobsDatabase(configs.getDatabaseUser(), configs.getDatabasePassword(), configs.getDatabaseUrl()),

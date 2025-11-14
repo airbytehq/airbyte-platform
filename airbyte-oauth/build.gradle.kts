@@ -23,6 +23,6 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
-  testImplementation(libs.mockito.kotlin)
+  testImplementation(libs.mockk)
   testImplementation(project(":oss:airbyte-config:config-persistence"))
 }

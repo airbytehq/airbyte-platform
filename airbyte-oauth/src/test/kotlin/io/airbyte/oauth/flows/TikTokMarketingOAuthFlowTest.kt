@@ -33,7 +33,7 @@ internal class TikTokMarketingOAuthFlowTest : BaseOAuthFlowTest() {
 
   override val oAuthConfigSpecification: OAuthConfigSpecification
     get() =
-      getoAuthConfigSpecification() // change property types to induce json validation errors.
+      getOauthConfigSpecification() // change property types to induce json validation errors.
         .withCompleteOauthServerOutputSpecification(
           getJsonSchema(
             mapOf(

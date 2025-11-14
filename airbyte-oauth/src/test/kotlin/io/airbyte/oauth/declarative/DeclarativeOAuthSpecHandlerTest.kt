@@ -5,14 +5,14 @@
 package io.airbyte.oauth.declarative
 
 import io.airbyte.commons.json.Jsons
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import java.security.SecureRandom
 
 internal class DeclarativeOAuthSpecHandlerTest {
-  private val secureRandom: SecureRandom = Mockito.mock(SecureRandom::class.java)
+  private val secureRandom: SecureRandom = mockk()
   private val handler = DeclarativeOAuthSpecHandler()
 
   @Test
@@ -25,7 +25,7 @@ internal class DeclarativeOAuthSpecHandlerTest {
   @Test
   fun testGetConfigurableState() {
     val stateConfig = Jsons.jsonNode(mapOf("min" to 7, "max" to 10))
-    Mockito.`when`(secureRandom.nextInt(ArgumentMatchers.anyInt())).thenReturn(5)
+    every { secureRandom.nextInt(any()) } returns 5
     Assertions.assertNotNull(handler.getConfigurableState(stateConfig))
   }
 

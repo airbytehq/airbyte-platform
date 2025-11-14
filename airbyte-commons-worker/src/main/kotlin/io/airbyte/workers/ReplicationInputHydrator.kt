@@ -31,7 +31,8 @@ import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.helpers.CatalogTransforms.updateCatalogForReset
 import io.airbyte.config.helpers.StateMessageHelper.getState
 import io.airbyte.config.helpers.StateMessageHelper.getTypedState
-import io.airbyte.config.secrets.buildConfigWithSecretRefsJava
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
+import io.airbyte.config.secrets.toConfigWithRefs
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -89,7 +90,7 @@ class ReplicationInputHydrator(
 
     if (jobInput != null) {
       val apiResult = Jsons.convertValue(jobInput, JobInput::class.java)
-      if (apiResult?.syncInput != null) {
+      if (apiResult.syncInput != null) {
         val syncInput = apiResult.syncInput
 
         if (syncInput!!.sourceConfiguration != null) {
@@ -164,7 +165,7 @@ class ReplicationInputHydrator(
 
     try {
       val destConfig =
-        buildConfigWithSecretRefsJava(replicationActivityInput.destinationConfiguration!!)
+        InlinedConfigWithSecretRefs(replicationActivityInput.destinationConfiguration!!).toConfigWithRefs()
       fullDestinationConfig = connectorSecretsHydrator.hydrateConfig(destConfig, hydrationContext)
     } catch (e: SecretCoordinateException) {
       metricClient.count(
@@ -179,7 +180,7 @@ class ReplicationInputHydrator(
 
     try {
       val sourceConfig =
-        buildConfigWithSecretRefsJava(replicationActivityInput.sourceConfiguration!!)
+        InlinedConfigWithSecretRefs(replicationActivityInput.sourceConfiguration!!).toConfigWithRefs()
       fullSourceConfig = connectorSecretsHydrator.hydrateConfig(sourceConfig, hydrationContext)
     } catch (e: SecretCoordinateException) {
       metricClient.count(
@@ -313,7 +314,7 @@ class ReplicationInputHydrator(
       airbyteApiClient.jobsApi.getLastReplicationJob(
         ConnectionIdRequestBody(replicationActivityInput.connectionId!!),
       )
-    val hasStreamsToReset = jobInfo?.job != null && jobInfo.job!!.resetConfig != null && jobInfo.job!!.resetConfig!!.streamsToReset != null
+    val hasStreamsToReset = jobInfo.job != null && jobInfo.job!!.resetConfig != null && jobInfo.job!!.resetConfig!!.streamsToReset != null
     if (hasStreamsToReset) {
       val streamsToReset =
         jobInfo.job!!

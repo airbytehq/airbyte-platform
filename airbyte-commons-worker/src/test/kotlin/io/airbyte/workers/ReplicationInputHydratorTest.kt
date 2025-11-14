@@ -24,7 +24,6 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.api.client.model.generated.ConnectionState
 import io.airbyte.api.client.model.generated.ConnectionStatus
-import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.DestinationRead
 import io.airbyte.api.client.model.generated.DestinationSyncMode
 import io.airbyte.api.client.model.generated.FieldTransform
@@ -43,13 +42,16 @@ import io.airbyte.api.client.model.generated.StreamTransformUpdateStream
 import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.emptyObject
+import io.airbyte.commons.version.Version
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConnectionContext
 import io.airbyte.config.JobSyncConfig
+import io.airbyte.config.StandardSyncInput
 import io.airbyte.config.State
 import io.airbyte.config.StateWrapper
 import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncResourceRequirements
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.helpers.StateMessageHelper.getTypedState
 import io.airbyte.metrics.MetricClient
@@ -61,19 +63,19 @@ import io.airbyte.workers.helper.MapperSecretHydrationHelper
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.hydration.ConnectorSecretsHydrator
 import io.airbyte.workers.input.ReplicationInputMapper
+import io.airbyte.workers.models.JobInput
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.assertj.core.api.CollectionAssert
-import org.junit.Assert
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.ArgumentCaptor
-import org.mockito.Mockito
-import org.mockito.invocation.InvocationOnMock
-import org.mockito.kotlin.any
-import org.mockito.stubbing.Answer
 import java.util.Optional
 import java.util.UUID
 
@@ -81,66 +83,61 @@ import java.util.UUID
  * Tests for the replication activity specifically.
  */
 internal class ReplicationInputHydratorTest {
-  private var secretsPersistenceConfigApi: SecretsPersistenceConfigApi? = null
-  private var actorDefinitionVersionApi: ActorDefinitionVersionApi? = null
-  private var attemptApi: AttemptApi? = null
-  private var destinationApi: DestinationApi? = null
-  private var resumableFullRefreshStatsHelper: ResumableFullRefreshStatsHelper? = null
-  private var backfillHelper: BackfillHelper? = null
-  private var catalogClientConverters: CatalogClientConverters? = null
-  private var metricClient: MetricClient? = null
+  private lateinit var secretsPersistenceConfigApi: SecretsPersistenceConfigApi
+  private lateinit var actorDefinitionVersionApi: ActorDefinitionVersionApi
+  private lateinit var attemptApi: AttemptApi
+  private lateinit var destinationApi: DestinationApi
+  private lateinit var resumableFullRefreshStatsHelper: ResumableFullRefreshStatsHelper
+  private lateinit var backfillHelper: BackfillHelper
+  private lateinit var catalogClientConverters: CatalogClientConverters
+  private lateinit var metricClient: MetricClient
 
   @BeforeEach
   fun setup() {
-    mapperSecretHydrationHelper = Mockito.mock(MapperSecretHydrationHelper::class.java)
-    connectorSecretsHydrator = Mockito.mock(ConnectorSecretsHydrator::class.java)
-    airbyteApiClient = Mockito.mock(AirbyteApiClient::class.java)
-    attemptApi = Mockito.mock(AttemptApi::class.java)
-    connectionApi = Mockito.mock(ConnectionApi::class.java)
-    stateApi = Mockito.mock(StateApi::class.java)
-    jobsApi = Mockito.mock(JobsApi::class.java)
-    secretsPersistenceConfigApi = Mockito.mock(SecretsPersistenceConfigApi::class.java)
-    actorDefinitionVersionApi = Mockito.mock(ActorDefinitionVersionApi::class.java)
-    destinationApi = Mockito.mock(DestinationApi::class.java)
-    resumableFullRefreshStatsHelper = Mockito.mock(ResumableFullRefreshStatsHelper::class.java)
+    mapperSecretHydrationHelper = mockk(relaxed = true)
+    connectorSecretsHydrator = mockk(relaxed = true)
+    airbyteApiClient = mockk(relaxed = true)
+    attemptApi = mockk(relaxed = true)
+    connectionApi = mockk(relaxed = true)
+    stateApi = mockk(relaxed = true)
+    jobsApi = mockk(relaxed = true)
+    secretsPersistenceConfigApi = mockk(relaxed = true)
+    actorDefinitionVersionApi = mockk(relaxed = true)
+    destinationApi = mockk(relaxed = true)
+    resumableFullRefreshStatsHelper = mockk(relaxed = true)
     catalogClientConverters = CatalogClientConverters(FieldGenerator())
-    backfillHelper = BackfillHelper(catalogClientConverters!!)
-    metricClient = Mockito.mock(MetricClient::class.java)
-    Mockito.`when`(destinationApi!!.baseUrl).thenReturn("http://localhost:8001/api")
-    Mockito.`when`(destinationApi!!.getDestination(any<DestinationIdRequestBody>())).thenReturn(
-      DESTINATION_READ,
-    )
-    Mockito.`when`(airbyteApiClient.attemptApi).thenReturn(attemptApi)
-    Mockito.`when`(airbyteApiClient.connectionApi).thenReturn(connectionApi)
-    Mockito.`when`(airbyteApiClient.destinationApi).thenReturn(destinationApi)
-    Mockito.`when`(airbyteApiClient.stateApi).thenReturn(stateApi)
-    Mockito.`when`(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-    Mockito.`when`(airbyteApiClient.secretPersistenceConfigApi).thenReturn(secretsPersistenceConfigApi)
-    Mockito.`when`(airbyteApiClient.actorDefinitionVersionApi).thenReturn(actorDefinitionVersionApi)
-    Mockito.`when`(airbyteApiClient.destinationApi).thenReturn(destinationApi)
-    Mockito.`when`(stateApi.getState(ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(CONNECTION_STATE_RESPONSE)
-    Mockito
-      .`when`(
-        mapperSecretHydrationHelper.hydrateMapperSecrets(
-          any<ConfiguredAirbyteCatalog>(),
-          any<Boolean>(),
-          any<UUID>(),
-        ),
-      ).thenAnswer(
-        Answer { invocation: InvocationOnMock? -> invocation!!.getArgument<Any?>(0) },
+    backfillHelper = BackfillHelper(catalogClientConverters)
+    metricClient = mockk(relaxed = true)
+    every { destinationApi.baseUrl } returns "http://localhost:8001/api"
+    every { destinationApi.getDestination(any()) } returns DESTINATION_READ
+    every { airbyteApiClient.attemptApi } returns attemptApi
+    every { airbyteApiClient.connectionApi } returns connectionApi
+    every { airbyteApiClient.destinationApi } returns destinationApi
+    every { airbyteApiClient.stateApi } returns stateApi
+    every { airbyteApiClient.jobsApi } returns jobsApi
+    every { airbyteApiClient.secretPersistenceConfigApi } returns secretsPersistenceConfigApi
+    every { airbyteApiClient.actorDefinitionVersionApi } returns actorDefinitionVersionApi
+    every { airbyteApiClient.destinationApi } returns destinationApi
+    every { stateApi.getState(ConnectionIdRequestBody(CONNECTION_ID)) } returns CONNECTION_STATE_RESPONSE
+    every {
+      mapperSecretHydrationHelper.hydrateMapperSecrets(
+        any<ConfiguredAirbyteCatalog>(),
+        any<Boolean>(),
+        any<UUID>(),
       )
+    } answers { firstArg() }
   }
 
   private val replicationInputHydrator: ReplicationInputHydrator
     get() =
       ReplicationInputHydrator(
         airbyteApiClient,
-        resumableFullRefreshStatsHelper!!,
+        resumableFullRefreshStatsHelper,
         mapperSecretHydrationHelper,
-        backfillHelper!!,
-        catalogClientConverters!!,
+        backfillHelper,
+        catalogClientConverters,
         ReplicationInputMapper(),
-        metricClient!!,
+        metricClient,
         connectorSecretsHydrator,
         USE_RUNTIME_PERSISTENCE,
       )
@@ -166,18 +163,39 @@ internal class ReplicationInputHydratorTest {
       ConnectionContext().withWorkspaceId(UUID.randomUUID()).withOrganizationId(UUID.randomUUID()),
       null,
       listOf(),
-      false,
-      false,
-      emptyMap(),
-      null,
-      supportsRefresh,
-      null,
-      null,
+      includesFiles = false,
+      omitFileTransferEnvVar = false,
+      featureFlags = emptyMap(),
+      heartbeatMaxSecondsBetweenMessages = null,
+      supportsRefreshes = supportsRefresh,
+      sourceIPCOptions = null,
+      destinationIPCOptions = null,
     )
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testGenerateReplicationInputRetrievesInputs(withRefresh: Boolean) {
+    every { jobsApi.getJobInput(any()) } returns
+      mockk<JobInput> {
+        every { destinationLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { sourceLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { syncInput } returns
+          mockk<StandardSyncInput>(relaxed = true) {
+            every { namespaceDefinition } returns JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT
+            every { sourceConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+            every { destinationConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+          }
+        every { jobRunConfig } returns mockk<JobRunConfig>(relaxed = true)
+      }
+
     if (withRefresh) {
       mockRefresh()
     } else {
@@ -188,15 +206,15 @@ internal class ReplicationInputHydratorTest {
 
     val replicationActivityInput = getDefaultReplicationActivityInputForTest(withRefresh)
     val replicationInput = replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput)
-    Assert.assertEquals(EXPECTED_STATE, replicationInput.state)
-    Assert.assertEquals(
+    assertEquals(EXPECTED_STATE, replicationInput.state)
+    assertEquals(
       1,
       replicationInput
         .catalog
         .streams.size
         .toLong(),
     )
-    Assert.assertEquals(
+    assertEquals(
       TEST_STREAM_NAME,
       replicationInput
         .catalog
@@ -208,6 +226,27 @@ internal class ReplicationInputHydratorTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testGenerateReplicationInputHandlesResets(withRefresh: Boolean) {
+    every { jobsApi.getJobInput(any()) } returns
+      mockk<JobInput> {
+        every { destinationLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { sourceLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { syncInput } returns
+          mockk<StandardSyncInput>(relaxed = true) {
+            every { namespaceDefinition } returns JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT
+            every { sourceConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+            every { destinationConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+          }
+        every { jobRunConfig } returns mockk<JobRunConfig>(relaxed = true)
+      }
+
     if (withRefresh) {
       mockRefresh()
     } else {
@@ -217,7 +256,7 @@ internal class ReplicationInputHydratorTest {
     val replicationInputHydrator = this.replicationInputHydrator
     val input = getDefaultReplicationActivityInputForTest(withRefresh)
     input.isReset = true
-    Mockito.`when`(jobsApi.getLastReplicationJob(ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(
+    every { jobsApi.getLastReplicationJob(ConnectionIdRequestBody(CONNECTION_ID)) } returns
       JobOptionalRead(
         JobRead(
           JOB_ID,
@@ -233,22 +272,42 @@ internal class ReplicationInputHydratorTest {
           null,
           null,
         ),
-      ),
-    )
+      )
     val replicationInput = replicationInputHydrator.getHydratedReplicationInput(input)
-    Assert.assertEquals(
+    assertEquals(
       1,
       replicationInput
         .catalog
         .streams.size
         .toLong(),
     )
-    Assert.assertEquals(SyncMode.FULL_REFRESH, replicationInput.catalog.streams[0].syncMode)
+    assertEquals(SyncMode.FULL_REFRESH, replicationInput.catalog.streams[0].syncMode)
   }
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testGenerateReplicationInputHandlesBackfills(withRefresh: Boolean) {
+    every { jobsApi.getJobInput(any()) } returns
+      mockk<JobInput> {
+        every { destinationLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { sourceLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { syncInput } returns
+          mockk<StandardSyncInput>(relaxed = true) {
+            every { namespaceDefinition } returns JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT
+            every { sourceConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+            every { destinationConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+          }
+        every { jobRunConfig } returns mockk<JobRunConfig>(relaxed = true)
+      }
+
     if (withRefresh) {
       mockRefresh()
     } else {
@@ -263,7 +322,7 @@ internal class ReplicationInputHydratorTest {
     input.schemaRefreshOutput = RefreshSchemaActivityOutput(toDomain(CATALOG_DIFF))
     val replicationInput = replicationInputHydrator.getHydratedReplicationInput(input)
     val typedState: Optional<StateWrapper> = getTypedState(replicationInput.state.state)
-    Assert.assertEquals(
+    assertEquals(
       JsonNodeFactory.instance.nullNode(),
       typedState
         .get()
@@ -306,22 +365,19 @@ internal class ReplicationInputHydratorTest {
         1,
         2,
         listOf(
-          StreamAttemptMetadata("s1", true, true, "ns1"),
-          StreamAttemptMetadata("s1", false, true, null),
-          StreamAttemptMetadata("s1", true, false, "ns2"),
-          StreamAttemptMetadata("s2", true, true, null),
+          StreamAttemptMetadata("s1", wasBackfilled = true, wasResumed = true, streamNamespace = "ns1"),
+          StreamAttemptMetadata("s1", wasBackfilled = false, wasResumed = true, streamNamespace = null),
+          StreamAttemptMetadata("s1", wasBackfilled = true, wasResumed = false, streamNamespace = "ns2"),
+          StreamAttemptMetadata("s2", true, wasResumed = true, streamNamespace = null),
         ),
       )
 
-    val captor =
-      ArgumentCaptor.forClass(
-        SaveStreamAttemptMetadataRequestBody::class.java,
-      )
-    Mockito.verify<AttemptApi?>(attemptApi).saveStreamMetadata(captor.capture())
-    Assert.assertEquals(expectedRequest.jobId, captor.getValue()!!.jobId)
-    Assert.assertEquals(expectedRequest.attemptNumber.toLong(), captor.getValue()!!.attemptNumber.toLong())
+    val captor = slot<SaveStreamAttemptMetadataRequestBody>()
+    verify { attemptApi.saveStreamMetadata(capture(captor)) }
+    assertEquals(expectedRequest.jobId, captor.captured.jobId)
+    assertEquals(expectedRequest.attemptNumber.toLong(), captor.captured.attemptNumber.toLong())
     CollectionAssert
-      .assertThatCollection(captor.getValue()!!.streamMetadata)
+      .assertThatCollection(captor.captured.streamMetadata)
       .containsExactlyInAnyOrderElementsOf(expectedRequest.streamMetadata)
   }
 
@@ -353,21 +409,18 @@ internal class ReplicationInputHydratorTest {
         1,
         2,
         listOf(
-          StreamAttemptMetadata("s1", false, true, "ns1"),
-          StreamAttemptMetadata("s1", false, true, null),
-          StreamAttemptMetadata("s2", false, true, null),
+          StreamAttemptMetadata("s1", wasBackfilled = false, wasResumed = true, streamNamespace = "ns1"),
+          StreamAttemptMetadata("s1", wasBackfilled = false, wasResumed = true, streamNamespace = null),
+          StreamAttemptMetadata("s2", wasBackfilled = false, wasResumed = true, streamNamespace = null),
         ),
       )
 
-    val captor =
-      ArgumentCaptor.forClass(
-        SaveStreamAttemptMetadataRequestBody::class.java,
-      )
-    Mockito.verify<AttemptApi?>(attemptApi).saveStreamMetadata(captor.capture())
-    Assert.assertEquals(expectedRequest.jobId, captor.getValue()!!.jobId)
-    Assert.assertEquals(expectedRequest.attemptNumber.toLong(), captor.getValue()!!.attemptNumber.toLong())
+    val captor = slot<SaveStreamAttemptMetadataRequestBody>()
+    verify { attemptApi.saveStreamMetadata(capture(captor)) }
+    assertEquals(expectedRequest.jobId, captor.captured.jobId)
+    assertEquals(expectedRequest.attemptNumber.toLong(), captor.captured.attemptNumber.toLong())
     CollectionAssert
-      .assertThatCollection(captor.getValue()!!.streamMetadata)
+      .assertThatCollection(captor.captured.streamMetadata)
       .containsExactlyInAnyOrderElementsOf(expectedRequest.streamMetadata)
   }
 
@@ -400,159 +453,152 @@ internal class ReplicationInputHydratorTest {
         1,
         2,
         listOf(
-          StreamAttemptMetadata("s1", true, false, "ns1"),
-          StreamAttemptMetadata("s1", true, false, "ns2"),
-          StreamAttemptMetadata("s2", true, false, null),
+          StreamAttemptMetadata("s1", wasBackfilled = true, wasResumed = false, streamNamespace = "ns1"),
+          StreamAttemptMetadata("s1", wasBackfilled = true, wasResumed = false, streamNamespace = "ns2"),
+          StreamAttemptMetadata("s2", wasBackfilled = true, wasResumed = false, streamNamespace = null),
         ),
       )
 
-    val captor =
-      ArgumentCaptor.forClass(
-        SaveStreamAttemptMetadataRequestBody::class.java,
-      )
-    Mockito.verify<AttemptApi?>(attemptApi).saveStreamMetadata(captor.capture())
-    Assert.assertEquals(expectedRequest.jobId, captor.getValue()!!.jobId)
-    Assert.assertEquals(expectedRequest.attemptNumber.toLong(), captor.getValue()!!.attemptNumber.toLong())
+    val captor = slot<SaveStreamAttemptMetadataRequestBody>()
+    verify { attemptApi.saveStreamMetadata(capture(captor)) }
+    assertEquals(expectedRequest.jobId, captor.captured.jobId)
+    assertEquals(expectedRequest.attemptNumber.toLong(), captor.captured.attemptNumber.toLong())
     CollectionAssert
-      .assertThatCollection(captor.getValue()!!.streamMetadata)
+      .assertThatCollection(captor.captured.streamMetadata)
       .containsExactlyInAnyOrderElementsOf(expectedRequest.streamMetadata)
   }
 
   private fun mockEnableBackfillForConnection(withRefresh: Boolean) {
     if (withRefresh) {
-      Mockito
-        .`when`(connectionApi.getConnectionForJob(ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
-        .thenReturn(
-          ConnectionRead(
-            CONNECTION_ID,
-            CONNECTION_NAME,
-            SOURCE_ID,
-            DESTINATION_ID,
-            SYNC_CATALOG,
-            ConnectionStatus.ACTIVE,
-            false,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            SchemaChangeBackfillPreference.ENABLED,
-            null,
-            null,
-            null,
-          ),
+      every {
+        connectionApi.getConnectionForJob(ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID))
+      } returns
+        ConnectionRead(
+          CONNECTION_ID,
+          CONNECTION_NAME,
+          SOURCE_ID,
+          DESTINATION_ID,
+          SYNC_CATALOG,
+          ConnectionStatus.ACTIVE,
+          false,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          SchemaChangeBackfillPreference.ENABLED,
+          null,
+          null,
+          null,
         )
     } else {
-      Mockito
-        .`when`(connectionApi.getConnection(ConnectionIdRequestBody(CONNECTION_ID)))
-        .thenReturn(
-          ConnectionRead(
-            CONNECTION_ID,
-            CONNECTION_NAME,
-            SOURCE_ID,
-            DESTINATION_ID,
-            SYNC_CATALOG,
-            ConnectionStatus.ACTIVE,
-            false,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            SchemaChangeBackfillPreference.ENABLED,
-            null,
-            null,
-            null,
-          ),
+      every {
+        connectionApi.getConnection(ConnectionIdRequestBody(CONNECTION_ID))
+      } returns
+        ConnectionRead(
+          CONNECTION_ID,
+          CONNECTION_NAME,
+          SOURCE_ID,
+          DESTINATION_ID,
+          SYNC_CATALOG,
+          ConnectionStatus.ACTIVE,
+          false,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          SchemaChangeBackfillPreference.ENABLED,
+          null,
+          null,
+          null,
         )
     }
   }
 
   private fun mockRefresh() {
-    Mockito
-      .`when`(connectionApi.getConnectionForJob(ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
-      .thenReturn(
-        ConnectionRead(
-          CONNECTION_ID,
-          CONNECTION_NAME,
-          SOURCE_ID,
-          DESTINATION_ID,
-          SYNC_CATALOG,
-          ConnectionStatus.ACTIVE,
-          false,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-        ),
+    every {
+      connectionApi.getConnectionForJob(ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID))
+    } returns
+      ConnectionRead(
+        CONNECTION_ID,
+        CONNECTION_NAME,
+        SOURCE_ID,
+        DESTINATION_ID,
+        SYNC_CATALOG,
+        ConnectionStatus.ACTIVE,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
       )
   }
 
   private fun mockNonRefresh() {
-    Mockito
-      .`when`(connectionApi.getConnection(ConnectionIdRequestBody(CONNECTION_ID)))
-      .thenReturn(
-        ConnectionRead(
-          CONNECTION_ID,
-          CONNECTION_NAME,
-          SOURCE_ID,
-          DESTINATION_ID,
-          SYNC_CATALOG,
-          ConnectionStatus.ACTIVE,
-          false,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-        ),
+    every {
+      connectionApi.getConnection(ConnectionIdRequestBody(CONNECTION_ID))
+    } returns
+      ConnectionRead(
+        CONNECTION_ID,
+        CONNECTION_NAME,
+        SOURCE_ID,
+        DESTINATION_ID,
+        SYNC_CATALOG,
+        ConnectionStatus.ACTIVE,
+        false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
       )
   }
 
@@ -692,15 +738,15 @@ internal class ReplicationInputHydratorTest {
         "destinationName",
         1L,
         "icon",
-        false,
-        true,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
+        isVersionOverrideApplied = false,
+        isEntitled = true,
+        breakingChanges = null,
+        supportState = null,
+        status = null,
+        resourceAllocation = null,
+        numConnections = null,
+        lastSync = null,
+        connectionJobStatuses = null,
       )
 
     private lateinit var mapperSecretHydrationHelper: MapperSecretHydrationHelper

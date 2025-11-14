@@ -28,6 +28,7 @@ dependencies {
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
+  testImplementation(libs.mockk)
   testImplementation(libs.mockwebserver)
   testImplementation(libs.junit.pioneer)
 }

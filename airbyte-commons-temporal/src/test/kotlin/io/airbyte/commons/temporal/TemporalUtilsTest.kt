@@ -7,6 +7,8 @@ package io.airbyte.commons.temporal
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.micronaut.runtime.AirbyteTemporalConfig
 import io.micrometer.core.instrument.MeterRegistry
+import io.mockk.every
+import io.mockk.mockk
 import io.temporal.activity.Activity
 import io.temporal.activity.ActivityCancellationType
 import io.temporal.activity.ActivityInterface
@@ -23,8 +25,6 @@ import io.temporal.workflow.WorkflowInterface
 import io.temporal.workflow.WorkflowMethod
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
-import org.mockito.kotlin.any
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Duration
@@ -40,26 +40,19 @@ internal class TemporalUtilsTest {
   fun testWaitForTemporalServerAndLogThrowsException() {
     val airbyteTemporalConfig = AirbyteTemporalConfig(retention = 10)
     val temporalUtils = TemporalUtils(airbyteTemporalConfig = airbyteTemporalConfig, meterRegistry = Optional.empty<MeterRegistry>())
-    val workflowServiceStubs = Mockito.mock(WorkflowServiceStubs::class.java, Mockito.RETURNS_DEEP_STUBS)
-    val describeNamespaceResponse = Mockito.mock(DescribeNamespaceResponse::class.java)
-    val namespaceInfo = Mockito.mock(NamespaceInfo::class.java)
-    val serviceSupplier = Mockito.mock(Supplier::class.java) as Supplier<WorkflowServiceStubs>
+    val workflowServiceStubs = mockk<WorkflowServiceStubs>(relaxed = true)
+    val describeNamespaceResponse = mockk<DescribeNamespaceResponse>()
+    val namespaceInfo = mockk<NamespaceInfo>()
+    val serviceSupplier = mockk<Supplier<WorkflowServiceStubs>>()
     val namespace = "default"
 
-    Mockito.`when`(namespaceInfo.isInitialized).thenReturn(true)
-    Mockito.`when`(namespaceInfo.name).thenReturn(namespace)
-    Mockito.`when`(describeNamespaceResponse.namespaceInfo).thenReturn(namespaceInfo)
-    Mockito
-      .`when`(serviceSupplier.get())
-      .thenAnswer { throw java.lang.RuntimeException() }
-      .thenReturn(workflowServiceStubs)
-    Mockito
-      .`when`(
-        workflowServiceStubs.blockingStub().describeNamespace(
-          any(),
-        ),
-      ).thenAnswer { throw java.lang.RuntimeException() }
-      .thenReturn(describeNamespaceResponse)
+    every { namespaceInfo.isInitialized } returns true
+    every { namespaceInfo.name } returns namespace
+    every { describeNamespaceResponse.namespaceInfo } returns namespaceInfo
+    every { serviceSupplier.get() } throws java.lang.RuntimeException() andThen workflowServiceStubs
+    every {
+      workflowServiceStubs.blockingStub().describeNamespace(any())
+    } throws java.lang.RuntimeException() andThen describeNamespaceResponse
     temporalUtils.getTemporalClientWhenConnected(Duration.ofMillis(10), Duration.ofSeconds(1), Duration.ofSeconds(0), serviceSupplier, namespace)
   }
 
@@ -68,27 +61,21 @@ internal class TemporalUtilsTest {
   fun testWaitThatTimesOut() {
     val airbyteTemporalConfig = AirbyteTemporalConfig(retention = 10)
     val temporalUtils = TemporalUtils(airbyteTemporalConfig = airbyteTemporalConfig, meterRegistry = Optional.empty<MeterRegistry>())
-    val workflowServiceStubs = Mockito.mock(WorkflowServiceStubs::class.java, Mockito.RETURNS_DEEP_STUBS)
-    val describeNamespaceResponse = Mockito.mock(DescribeNamespaceResponse::class.java)
-    val namespaceInfo = Mockito.mock(NamespaceInfo::class.java)
-    val serviceSupplier = Mockito.mock(Supplier::class.java) as Supplier<WorkflowServiceStubs>
+    val workflowServiceStubs = mockk<WorkflowServiceStubs>(relaxed = true)
+    val describeNamespaceResponse = mockk<DescribeNamespaceResponse>()
+    val namespaceInfo = mockk<NamespaceInfo>()
+    val serviceSupplier = mockk<Supplier<WorkflowServiceStubs>>()
     val namespace = "default"
 
-    Mockito.`when`(namespaceInfo.name).thenReturn(namespace)
-    Mockito.`when`(describeNamespaceResponse.namespaceInfo).thenReturn(namespaceInfo)
-    Mockito
-      .`when`(serviceSupplier.get())
-      .thenAnswer { throw java.lang.RuntimeException() }
-      .thenReturn(workflowServiceStubs)
-    Mockito
-      .`when`(
-        workflowServiceStubs
-          .blockingStub()
-          .listNamespaces(
-            any(),
-          ).namespacesList,
-      ).thenAnswer { throw java.lang.RuntimeException() }
-      .thenReturn(listOf(describeNamespaceResponse))
+    every { namespaceInfo.name } returns namespace
+    every { describeNamespaceResponse.namespaceInfo } returns namespaceInfo
+    every { serviceSupplier.get() } throws java.lang.RuntimeException() andThen workflowServiceStubs
+    every {
+      workflowServiceStubs
+        .blockingStub()
+        .listNamespaces(any())
+        .namespacesList
+    } throws java.lang.RuntimeException() andThen listOf(describeNamespaceResponse)
     Assertions.assertThrows(
       java.lang.RuntimeException::class.java,
     ) {
@@ -145,7 +132,7 @@ internal class TemporalUtilsTest {
         WorkflowOptions.newBuilder().setTaskQueue(TASK_QUEUE).build(),
       )
 
-    // throws workerexception wrapped in a WorkflowFailedException
+    // throws WorkerException wrapped in a WorkflowFailedException
     Assertions.assertThrows(WorkflowFailedException::class.java) { workflowStub.run("worker") }
 
     // we should never retry enough to reach the end

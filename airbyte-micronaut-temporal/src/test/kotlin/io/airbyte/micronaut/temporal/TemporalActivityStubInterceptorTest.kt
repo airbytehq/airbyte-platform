@@ -11,10 +11,11 @@ import io.airbyte.micronaut.temporal.stubs.TestActivity
 import io.airbyte.micronaut.temporal.stubs.ValidTestWorkflowImpl
 import io.micronaut.context.BeanRegistration
 import io.micronaut.inject.BeanIdentifier
+import io.mockk.every
+import io.mockk.mockk
 import io.temporal.activity.ActivityOptions
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -25,14 +26,14 @@ internal class TemporalActivityStubInterceptorTest {
   @Suppress("UNCHECKED_CAST")
   @Test
   fun testExecutionOfValidWorkflowWithActivities() {
-    val activityOptions = Mockito.mock(ActivityOptions::class.java)
-    val testActivity = Mockito.mock(TestActivity::class.java)
+    val activityOptions = mockk<ActivityOptions>()
+    val testActivity = mockk<TestActivity>(relaxed = true)
 
-    val activityOptionsBeanIdentifier = Mockito.mock(BeanIdentifier::class.java)
-    val activityOptionsBeanRegistration = Mockito.mock(BeanRegistration::class.java) as BeanRegistration<ActivityOptions>
-    Mockito.`when`(activityOptionsBeanIdentifier.name).thenReturn(ACTIVITY_OPTIONS)
-    Mockito.`when`(activityOptionsBeanRegistration.identifier).thenReturn(activityOptionsBeanIdentifier)
-    Mockito.`when`<Any?>(activityOptionsBeanRegistration.bean).thenReturn(activityOptions)
+    val activityOptionsBeanIdentifier = mockk<BeanIdentifier>()
+    val activityOptionsBeanRegistration = mockk<BeanRegistration<ActivityOptions>>()
+    every { activityOptionsBeanIdentifier.name } returns ACTIVITY_OPTIONS
+    every { activityOptionsBeanRegistration.identifier } returns activityOptionsBeanIdentifier
+    every { activityOptionsBeanRegistration.bean } returns activityOptions
 
     val interceptor: TemporalActivityStubInterceptor<ValidTestWorkflowImpl> =
       TemporalActivityStubInterceptor(ValidTestWorkflowImpl::class.java, listOf(activityOptionsBeanRegistration))
@@ -49,17 +50,16 @@ internal class TemporalActivityStubInterceptorTest {
     Assertions.assertTrue(validTestWorkflowImpl.isHasRun)
   }
 
-  @Suppress("UNCHECKED_CAST")
   @Test
   fun testExecutionOfValidWorkflowWithActivitiesThatThrows() {
-    val activityOptions = Mockito.mock(ActivityOptions::class.java)
-    val testActivity = Mockito.mock(TestActivity::class.java)
+    val activityOptions = mockk<ActivityOptions>()
+    val testActivity = mockk<TestActivity>(relaxed = true)
 
-    val activityOptionsBeanIdentifier = Mockito.mock(BeanIdentifier::class.java)
-    val activityOptionsBeanRegistration = Mockito.mock(BeanRegistration::class.java) as BeanRegistration<ActivityOptions>
-    Mockito.`when`(activityOptionsBeanIdentifier.name).thenReturn(ACTIVITY_OPTIONS)
-    Mockito.`when`(activityOptionsBeanRegistration.identifier).thenReturn(activityOptionsBeanIdentifier)
-    Mockito.`when`<Any?>(activityOptionsBeanRegistration.bean).thenReturn(activityOptions)
+    val activityOptionsBeanIdentifier = mockk<BeanIdentifier>()
+    val activityOptionsBeanRegistration = mockk<BeanRegistration<ActivityOptions>>()
+    every { activityOptionsBeanIdentifier.name } returns ACTIVITY_OPTIONS
+    every { activityOptionsBeanRegistration.identifier } returns activityOptionsBeanIdentifier
+    every { activityOptionsBeanRegistration.bean } returns activityOptions
 
     val interceptor: TemporalActivityStubInterceptor<ErrorTestWorkflowImpl> =
       TemporalActivityStubInterceptor(ErrorTestWorkflowImpl::class.java, listOf(activityOptionsBeanRegistration))
@@ -79,23 +79,22 @@ internal class TemporalActivityStubInterceptorTest {
     }
   }
 
-  @Suppress("UNCHECKED_CAST")
   @Test
   fun testActivityStubsAreOnlyInitializedOnce() {
     val activityStubInitializationCounter = AtomicInteger(0)
-    val activityOptions = Mockito.mock(ActivityOptions::class.java)
-    val testActivity = Mockito.mock(TestActivity::class.java)
+    val activityOptions = mockk<ActivityOptions>()
+    val testActivity = mockk<TestActivity>(relaxed = true)
     val activityStubFunction: TemporalActivityStubGeneratorFunction<Class<*>, ActivityOptions, Any> =
       TemporalActivityStubGeneratorFunction { _: Class<*>, _: ActivityOptions ->
         activityStubInitializationCounter.incrementAndGet()
         testActivity
       }
 
-    val activityOptionsBeanIdentifier = Mockito.mock(BeanIdentifier::class.java)
-    val activityOptionsBeanRegistration = Mockito.mock(BeanRegistration::class.java) as BeanRegistration<ActivityOptions>
-    Mockito.`when`(activityOptionsBeanIdentifier.name).thenReturn(ACTIVITY_OPTIONS)
-    Mockito.`when`(activityOptionsBeanRegistration.identifier).thenReturn(activityOptionsBeanIdentifier)
-    Mockito.`when`<Any?>(activityOptionsBeanRegistration.bean).thenReturn(activityOptions)
+    val activityOptionsBeanIdentifier = mockk<BeanIdentifier>()
+    val activityOptionsBeanRegistration = mockk<BeanRegistration<ActivityOptions>>()
+    every { activityOptionsBeanIdentifier.name } returns ACTIVITY_OPTIONS
+    every { activityOptionsBeanRegistration.identifier } returns activityOptionsBeanIdentifier
+    every { activityOptionsBeanRegistration.bean } returns activityOptions
 
     val interceptor: TemporalActivityStubInterceptor<ValidTestWorkflowImpl> =
       TemporalActivityStubInterceptor(ValidTestWorkflowImpl::class.java, listOf(activityOptionsBeanRegistration))
@@ -115,17 +114,16 @@ internal class TemporalActivityStubInterceptorTest {
     Assertions.assertEquals(1, activityStubInitializationCounter.get())
   }
 
-  @Suppress("UNCHECKED_CAST")
   @Test
   fun testExecutionOfInvalidWorkflowWithActivityWithMissingActivityOptions() {
-    val activityOptions = Mockito.mock(ActivityOptions::class.java)
-    val testActivity = Mockito.mock(TestActivity::class.java)
+    val activityOptions = mockk<ActivityOptions>()
+    val testActivity = mockk<TestActivity>(relaxed = true)
 
-    val activityOptionsBeanIdentifier = Mockito.mock(BeanIdentifier::class.java)
-    val activityOptionsBeanRegistration = Mockito.mock(BeanRegistration::class.java) as BeanRegistration<ActivityOptions>
-    Mockito.`when`(activityOptionsBeanIdentifier.name).thenReturn(ACTIVITY_OPTIONS)
-    Mockito.`when`(activityOptionsBeanRegistration.identifier).thenReturn(activityOptionsBeanIdentifier)
-    Mockito.`when`<Any?>(activityOptionsBeanRegistration.bean).thenReturn(activityOptions)
+    val activityOptionsBeanIdentifier = mockk<BeanIdentifier>()
+    val activityOptionsBeanRegistration = mockk<BeanRegistration<ActivityOptions>>()
+    every { activityOptionsBeanIdentifier.name } returns ACTIVITY_OPTIONS
+    every { activityOptionsBeanRegistration.identifier } returns activityOptionsBeanIdentifier
+    every { activityOptionsBeanRegistration.bean } returns activityOptions
 
     val interceptor: TemporalActivityStubInterceptor<InvalidTestWorkflowImpl> =
       TemporalActivityStubInterceptor(InvalidTestWorkflowImpl::class.java, listOf(activityOptionsBeanRegistration))

@@ -18,13 +18,13 @@ import io.airbyte.oauth.MoreOAuthParameters
 import io.airbyte.oauth.REFRESH_TOKEN_KEY
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import java.io.IOException
 import java.net.http.HttpClient
 import java.net.http.HttpResponse
@@ -43,8 +43,8 @@ abstract class BaseOAuthFlowTest {
 
   @BeforeEach
   fun setup() {
-    httpClient = Mockito.mock(HttpClient::class.java)
-    oAuthService = Mockito.mock(OAuthService::class.java)
+    httpClient = mockk()
+    oAuthService = mockk()
     oauthFlow = oAuthFlow
 
     workspaceId = UUID.randomUUID()
@@ -54,17 +54,17 @@ abstract class BaseOAuthFlowTest {
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withConfiguration(oAuthParamConfig)
-    Mockito
-      .`when`(oAuthService.getSourceOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
-      .thenReturn(Optional.of(sourceOAuthParameter))
+    every {
+      oAuthService.getSourceOAuthParameterOptional(any(), any())
+    } returns Optional.of(sourceOAuthParameter)
     destinationOAuthParameter =
       DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
         .withConfiguration(oAuthParamConfig)
-    Mockito
-      .`when`(oAuthService.getDestinationOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
-      .thenReturn(Optional.of(destinationOAuthParameter))
+    every {
+      oAuthService.getDestinationOAuthParameterOptional(any(), any())
+    } returns Optional.of(destinationOAuthParameter)
   }
 
   /**
@@ -83,10 +83,10 @@ abstract class BaseOAuthFlowTest {
 
   protected open val expectedOutput: Map<String, String>
     /**
-     * Redefine if the oauth flow implementation does not return `refresh_token`. (maybe for example
+     * Redefine if the oauth flow implementation does not return `refresh_token`. (maybe, for example,
      * using `access_token` like in the `GithubOAuthFlowTest` instead?).
      *
-     * @return the full output expected to be returned by this oauth flow + all its instance wide
+     * @return the full output expected to be returned by this oauth flow and all its instance wide
      * variables
      */
     get() =
@@ -98,7 +98,7 @@ abstract class BaseOAuthFlowTest {
 
   protected open val completeOAuthOutputSpecification: JsonNode
     /**
-     * Redefine if the oauth flow implementation does not return `refresh_token`. (maybe for example
+     * Redefine if the oauth flow implementation does not return `refresh_token`. (maybe, for example,
      * using `access_token` like in the `GithubOAuthFlowTest` instead?)
      *
      * @return the output specification used to identify what the oauth flow should be returning
@@ -112,7 +112,7 @@ abstract class BaseOAuthFlowTest {
 
   protected open val expectedFilteredOutput: Map<String, String>
     /**
-     * Redefine if the oauth flow implementation does not return `refresh_token`. (maybe for example
+     * Redefine if the oauth flow implementation does not return `refresh_token`. (maybe, for example,
      * using `access_token` like in the `GithubOAuthFlowTest` instead?)
      *
      * @return the filtered outputs once it is filtered by the output specifications
@@ -177,7 +177,7 @@ abstract class BaseOAuthFlowTest {
         ),
       )
 
-  protected fun getoAuthConfigSpecification(): OAuthConfigSpecification =
+  protected fun getOauthConfigSpecification(): OAuthConfigSpecification =
     OAuthConfigSpecification()
       .withOauthUserInputFromConnectorConfigSpecification(userInputFromConnectorConfigSpecification)
       .withCompleteOauthOutputSpecification(completeOAuthOutputSpecification)
@@ -207,7 +207,7 @@ abstract class BaseOAuthFlowTest {
 
   protected open val oAuthConfigSpecification: OAuthConfigSpecification
     get() =
-      getoAuthConfigSpecification() // change property types to induce json validation errors.
+      getOauthConfigSpecification() // change property types to induce JSON validation errors.
         .withCompleteOauthServerOutputSpecification(
           getJsonSchema(
             mapOf(
@@ -238,7 +238,7 @@ abstract class BaseOAuthFlowTest {
         definitionId,
         REDIRECT_URL,
         invalidInputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         Jsons.emptyObject(),
       )
     }
@@ -250,7 +250,7 @@ abstract class BaseOAuthFlowTest {
         definitionId,
         REDIRECT_URL,
         invalidInputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         Jsons.emptyObject(),
       )
     }
@@ -263,7 +263,7 @@ abstract class BaseOAuthFlowTest {
         emptyMap(),
         REDIRECT_URL,
         invalidInputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         sourceOAuthParameter.configuration,
       )
     }
@@ -276,7 +276,7 @@ abstract class BaseOAuthFlowTest {
         emptyMap(),
         REDIRECT_URL,
         invalidInputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         destinationOAuthParameter.configuration,
       )
     }
@@ -284,13 +284,12 @@ abstract class BaseOAuthFlowTest {
 
   @Test
   fun testGetConsentUrlEmptyOAuthParameters() {
-    Mockito
-      .`when`(
-        oAuthService.getSourceOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()),
-      ).thenReturn(Optional.empty())
-    Mockito
-      .`when`(oAuthService.getDestinationOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
-      .thenReturn(Optional.empty())
+    every {
+      oAuthService.getSourceOAuthParameterOptional(any(), any())
+    } returns Optional.empty()
+    every {
+      oAuthService.getDestinationOAuthParameterOptional(any(), any())
+    } returns Optional.empty()
     assertThrows(
       ResourceNotFoundProblem::class.java,
     ) {
@@ -299,7 +298,7 @@ abstract class BaseOAuthFlowTest {
         definitionId,
         REDIRECT_URL,
         inputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         null,
       )
     }
@@ -311,7 +310,7 @@ abstract class BaseOAuthFlowTest {
         definitionId,
         REDIRECT_URL,
         inputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         null,
       )
     }
@@ -324,17 +323,17 @@ abstract class BaseOAuthFlowTest {
         .withOauthParameterId(UUID.randomUUID())
         .withSourceDefinitionId(definitionId)
         .withConfiguration(Jsons.emptyObject())
-    Mockito
-      .`when`(oAuthService.getSourceOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
-      .thenReturn(Optional.of(sourceOAuthParameter))
+    every {
+      oAuthService.getSourceOAuthParameterOptional(any(), any())
+    } returns Optional.of(sourceOAuthParameter)
     val destinationOAuthParameter =
       DestinationOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
         .withDestinationDefinitionId(definitionId)
         .withConfiguration(Jsons.emptyObject())
-    Mockito
-      .`when`(oAuthService.getDestinationOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
-      .thenReturn(Optional.of(destinationOAuthParameter))
+    every {
+      oAuthService.getDestinationOAuthParameterOptional(any(), any())
+    } returns Optional.of(destinationOAuthParameter)
     assertThrows(
       IllegalArgumentException::class.java,
     ) {
@@ -343,7 +342,7 @@ abstract class BaseOAuthFlowTest {
         definitionId,
         REDIRECT_URL,
         inputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         sourceOAuthParameter.configuration,
       )
     }
@@ -355,7 +354,7 @@ abstract class BaseOAuthFlowTest {
         definitionId,
         REDIRECT_URL,
         inputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         destinationOAuthParameter.configuration,
       )
     }
@@ -431,7 +430,7 @@ abstract class BaseOAuthFlowTest {
         definitionId,
         REDIRECT_URL,
         inputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         sourceOAuthParameter.configuration,
       )
     assertEquals(expectedConsentUrl, consentUrl)
@@ -445,7 +444,7 @@ abstract class BaseOAuthFlowTest {
         definitionId,
         REDIRECT_URL,
         inputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         destinationOAuthParameter.configuration,
       )
     assertEquals(expectedConsentUrl, consentUrl)
@@ -467,12 +466,13 @@ abstract class BaseOAuthFlowTest {
     }
   }
 
+  @Suppress("UNCHECKED_CAST")
   @Test
   open fun testDeprecatedCompleteSourceOAuth() {
     val returnedCredentials = expectedOutput
-    val response = Mockito.mock(HttpResponse::class.java)
-    Mockito.`when`(response.body()).thenReturn(Jsons.serialize(returnedCredentials))
-    Mockito.`when`(httpClient.send(ArgumentMatchers.any(), ArgumentMatchers.any<HttpResponse.BodyHandler<*>>())).thenReturn(response)
+    val response = mockk<HttpResponse<String>>()
+    every { response.body() } returns Jsons.serialize(returnedCredentials)
+    every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
 
     if (hasDependencyOnConnectorConfigValues()) {
@@ -488,14 +488,13 @@ abstract class BaseOAuthFlowTest {
         assertNotNull(actualRawQueryParams[node])
         actualRawQueryParams = actualRawQueryParams[node] as Map<String, Any>
       }
-      val expectedOutput = returnedCredentials
       val actualQueryParams = actualRawQueryParams
       assertEquals(
-        expectedOutput.size,
+        returnedCredentials.size,
         actualQueryParams.size,
-        String.format(EXPECTED_BUT_GOT, expectedOutput.size, actualQueryParams, expectedOutput),
+        String.format(EXPECTED_BUT_GOT, returnedCredentials.size, actualQueryParams, returnedCredentials),
       )
-      expectedOutput.forEach { (key: String?, value: String?) ->
+      returnedCredentials.forEach { (key: String?, value: String?) ->
         assertEquals(
           value,
           actualQueryParams[key],
@@ -504,12 +503,13 @@ abstract class BaseOAuthFlowTest {
     }
   }
 
+  @Suppress("UNCHECKED_CAST")
   @Test
   open fun testDeprecatedCompleteDestinationOAuth() {
     val returnedCredentials = expectedOutput
-    val response = Mockito.mock(HttpResponse::class.java)
-    Mockito.`when`(response.body()).thenReturn(Jsons.serialize(returnedCredentials))
-    Mockito.`when`(httpClient.send(ArgumentMatchers.any(), ArgumentMatchers.any<HttpResponse.BodyHandler<*>>())).thenReturn(response)
+    val response = mockk<HttpResponse<String>>()
+    every { response.body() } returns Jsons.serialize(returnedCredentials)
+    every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
 
     if (hasDependencyOnConnectorConfigValues()) {
@@ -539,14 +539,13 @@ abstract class BaseOAuthFlowTest {
         assertNotNull(actualRawQueryParams[node])
         actualRawQueryParams = actualRawQueryParams[node] as Map<String, Any>
       }
-      val expectedOutput = returnedCredentials
       val actualQueryParams = actualRawQueryParams
       assertEquals(
-        expectedOutput.size,
+        returnedCredentials.size,
         actualQueryParams.size,
-        String.format(EXPECTED_BUT_GOT, expectedOutput.size, actualQueryParams, expectedOutput),
+        String.format(EXPECTED_BUT_GOT, returnedCredentials.size, actualQueryParams, returnedCredentials),
       )
-      expectedOutput.forEach { (key: String?, value: String?) ->
+      returnedCredentials.forEach { (key: String?, value: String?) ->
         assertEquals(
           value,
           actualQueryParams[key],
@@ -557,9 +556,9 @@ abstract class BaseOAuthFlowTest {
 
   @Test
   open fun testEmptyOutputCompleteSourceOAuth() {
-    val response = Mockito.mock(HttpResponse::class.java)
-    Mockito.`when`(response.body()).thenReturn(mockedResponse)
-    Mockito.`when`(httpClient.send(ArgumentMatchers.any(), ArgumentMatchers.any<HttpResponse.BodyHandler<*>>())).thenReturn(response)
+    val response = mockk<HttpResponse<String>>()
+    every { response.body() } returns mockedResponse
+    every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
     val actualQueryParams =
       oauthFlow.completeSourceOAuth(
@@ -580,9 +579,9 @@ abstract class BaseOAuthFlowTest {
 
   @Test
   open fun testEmptyOutputCompleteDestinationOAuth() {
-    val response = Mockito.mock(HttpResponse::class.java)
-    Mockito.`when`(response.body()).thenReturn(mockedResponse)
-    Mockito.`when`(httpClient.send(ArgumentMatchers.any(), ArgumentMatchers.any<HttpResponse.BodyHandler<*>>())).thenReturn(response)
+    val response = mockk<HttpResponse<String>>()
+    every { response.body() } returns mockedResponse
+    every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
     val actualQueryParams =
       oauthFlow.completeDestinationOAuth(
@@ -603,9 +602,9 @@ abstract class BaseOAuthFlowTest {
 
   @Test
   open fun testEmptyInputCompleteSourceOAuth() {
-    val response = Mockito.mock(HttpResponse::class.java)
-    Mockito.`when`(response.body()).thenReturn(mockedResponse)
-    Mockito.`when`(httpClient.send(ArgumentMatchers.any(), ArgumentMatchers.any<HttpResponse.BodyHandler<*>>())).thenReturn(response)
+    val response = mockk<HttpResponse<String>>()
+    every { response.body() } returns mockedResponse
+    every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
     val actualQueryParams =
       oauthFlow.completeSourceOAuth(
@@ -614,7 +613,7 @@ abstract class BaseOAuthFlowTest {
         queryParams,
         REDIRECT_URL,
         Jsons.emptyObject(),
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         sourceOAuthParameter.configuration,
       )
     val expectedOutput = expectedFilteredOutput
@@ -633,9 +632,9 @@ abstract class BaseOAuthFlowTest {
 
   @Test
   open fun testEmptyInputCompleteDestinationOAuth() {
-    val response = Mockito.mock(HttpResponse::class.java)
-    Mockito.`when`(response.body()).thenReturn(mockedResponse)
-    Mockito.`when`(httpClient.send(ArgumentMatchers.any(), ArgumentMatchers.any<HttpResponse.BodyHandler<*>>())).thenReturn(response)
+    val response = mockk<HttpResponse<String>>()
+    every { response.body() } returns mockedResponse
+    every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
     val actualQueryParams =
       oauthFlow.completeDestinationOAuth(
@@ -644,7 +643,7 @@ abstract class BaseOAuthFlowTest {
         queryParams,
         REDIRECT_URL,
         Jsons.emptyObject(),
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         destinationOAuthParameter.configuration,
       )
     val expectedOutput = expectedFilteredOutput
@@ -663,9 +662,9 @@ abstract class BaseOAuthFlowTest {
 
   @Test
   open fun testCompleteSourceOAuth() {
-    val response = Mockito.mock(HttpResponse::class.java)
-    Mockito.`when`(response.body()).thenReturn(mockedResponse)
-    Mockito.`when`(httpClient.send(ArgumentMatchers.any(), ArgumentMatchers.any<HttpResponse.BodyHandler<*>>())).thenReturn(response)
+    val response = mockk<HttpResponse<String>>()
+    every { response.body() } returns mockedResponse
+    every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
     val actualQueryParams =
       oauthFlow.completeSourceOAuth(
@@ -674,7 +673,7 @@ abstract class BaseOAuthFlowTest {
         queryParams,
         REDIRECT_URL,
         inputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         sourceOAuthParameter.configuration,
       )
     val expectedOutput = expectedFilteredOutput
@@ -693,9 +692,9 @@ abstract class BaseOAuthFlowTest {
 
   @Test
   open fun testCompleteDestinationOAuth() {
-    val response = Mockito.mock(HttpResponse::class.java)
-    Mockito.`when`(response.body()).thenReturn(mockedResponse)
-    Mockito.`when`(httpClient.send(ArgumentMatchers.any(), ArgumentMatchers.any<HttpResponse.BodyHandler<*>>())).thenReturn(response)
+    val response = mockk<HttpResponse<String>>()
+    every { response.body() } returns mockedResponse
+    every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
     val actualQueryParams =
       oauthFlow.completeDestinationOAuth(
@@ -704,7 +703,7 @@ abstract class BaseOAuthFlowTest {
         queryParams,
         REDIRECT_URL,
         inputOAuthConfiguration,
-        getoAuthConfigSpecification(),
+        getOauthConfigSpecification(),
         destinationOAuthParameter.configuration,
       )
     val expectedOutput = expectedFilteredOutput
@@ -723,9 +722,9 @@ abstract class BaseOAuthFlowTest {
 
   @Test
   open fun testValidateOAuthOutputFailure() {
-    val response = Mockito.mock(HttpResponse::class.java)
-    Mockito.`when`(response.body()).thenReturn(mockedResponse)
-    Mockito.`when`(httpClient.send(ArgumentMatchers.any(), ArgumentMatchers.any<HttpResponse.BodyHandler<*>>())).thenReturn(response)
+    val response = mockk<HttpResponse<String>>()
+    every { response.body() } returns mockedResponse
+    every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
     val queryParams = queryParams
     val oAuthConfigSpecification = oAuthConfigSpecification
     assertThrows(

@@ -37,7 +37,6 @@ import io.airbyte.config.persistence.saveStreamsToRefresh
 import io.airbyte.config.secrets.toInlined
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.NetworkSecurityTokenKey
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -104,7 +103,6 @@ class TemporalClient(
   private val connectionManagerUtils: ConnectionManagerUtils,
   private val streamResetRecordsHelper: StreamResetRecordsHelper,
   private val metricClient: MetricClient,
-  private val featureFlagClient: FeatureFlagClient,
   private val scopedConfigurationService: ScopedConfigurationService,
 ) {
   private val workflowNames = mutableSetOf<String>()
@@ -166,9 +164,8 @@ class TemporalClient(
     return workflowExecutionInfos
   }
 
-  // once tests have been migrated to kotlin, mark internal
   @InternalForTesting
-  fun filterOutRunningWorkspaceId(workflowIds: MutableSet<UUID>): Set<UUID> {
+  internal fun filterOutRunningWorkspaceId(workflowIds: MutableSet<UUID>): Set<UUID> {
     refreshRunningWorkflow()
 
     val runningWorkflowByUUID =
@@ -179,9 +176,8 @@ class TemporalClient(
     return workflowIds - runningWorkflowByUUID
   }
 
-  // once tests have been migrated to kotlin, mark internal
   @InternalForTesting
-  fun refreshRunningWorkflow() {
+  internal fun refreshRunningWorkflow() {
     workflowNames.clear()
 
     var openWorkflowExecutionsRequest =
@@ -251,7 +247,7 @@ class TemporalClient(
     do {
       try {
         Thread.sleep(DELAY_BETWEEN_QUERY_MS.toLong())
-      } catch (e: InterruptedException) {
+      } catch (_: InterruptedException) {
         return ManualOperationResult(
           failingReason = "Didn't managed to start a sync for: $connectionId",
           errorCode = ErrorCode.UNKNOWN,
@@ -289,7 +285,7 @@ class TemporalClient(
     do {
       try {
         Thread.sleep(DELAY_BETWEEN_QUERY_MS.toLong())
-      } catch (e: InterruptedException) {
+      } catch (_: InterruptedException) {
         return ManualOperationResult(
           failingReason = "Didn't manage to cancel a sync for: $connectionId",
           errorCode = ErrorCode.UNKNOWN,
@@ -435,7 +431,6 @@ class TemporalClient(
    *
    * @param jobId job id
    * @param attempt attempt
-   * @param taskQueue task queue to submit the job to
    * @param config check config
    * @return check output
    */
@@ -443,7 +438,6 @@ class TemporalClient(
     jobId: UUID,
     attempt: Int,
     workspaceId: UUID,
-    taskQueue: String?,
     config: JobCheckConnectionConfig,
     context: ActorContext?,
   ): TemporalResponse<ConnectorJobOutput> {
@@ -453,9 +447,9 @@ class TemporalClient(
         .withJobId(jobId.toString())
         .withAttemptId(attempt.toLong())
         .withWorkspaceId(workspaceId)
-        .withDockerImage(config.getDockerImage())
-        .withProtocolVersion(config.getProtocolVersion())
-        .withIsCustomConnector(config.getIsCustomConnector())
+        .withDockerImage(config.dockerImage)
+        .withProtocolVersion(config.protocolVersion)
+        .withIsCustomConnector(config.isCustomConnector)
         .withPriority(WorkloadPriority.HIGH)
 
     val input =
@@ -478,7 +472,6 @@ class TemporalClient(
    *
    * @param jobId job id
    * @param attempt attempt
-   * @param taskQueue task queue to submit the job to
    * @param config discover config
    * @param context actor context
    * @return discover output
@@ -487,7 +480,6 @@ class TemporalClient(
     jobId: UUID,
     attempt: Int,
     workspaceId: UUID,
-    taskQueue: String?,
     config: JobDiscoverCatalogConfig,
     context: ActorContext?,
     priority: WorkloadPriority?,
@@ -544,11 +536,11 @@ class TemporalClient(
               }
             }
 
-          logger.info { "Sync migration took: " + singleMigrationTime.formatTime() }
+          logger.info { "Sync migration took: ${singleMigrationTime.formatTime()}" }
         }
       }
 
-    logger.info { "The migration to the new scheduler took: " + globalMigrationTime.formatTime() }
+    logger.info { "The migration to the new scheduler took: ${globalMigrationTime.formatTime()}" }
   }
 
   // formatTime exists to mimic the previous apache StopWatch.formatTime method
@@ -592,27 +584,15 @@ class TemporalClient(
         .newBuilder()
         .setTaskQueue(queueConfiguration.uiCommandsQueue)
         .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
-        .setWorkflowId(String.format("%s_%s", input.type, jobRunConfig.jobId))
+        .setWorkflowId("${input.type}_${jobRunConfig.jobId}")
         .build()
 
-    return execute<ConnectorJobOutput>(jobRunConfig) {
+    return execute(jobRunConfig) {
       workflowClientWrapped
-        .newWorkflowStub<ConnectorCommandWorkflow>(ConnectorCommandWorkflow::class.java, workflowOptions)
+        .newWorkflowStub(ConnectorCommandWorkflow::class.java, workflowOptions)
         .run(input)
     }
   }
-
-  private fun <T> getWorkflowStub(
-    workflowClass: Class<T>,
-    jobType: TemporalJobType,
-    jobId: UUID,
-  ): T = workflowClientWrapped.newWorkflowStub<T>(workflowClass, TemporalWorkflowUtils.buildWorkflowOptions(jobType, jobId))
-
-  private fun <T> getWorkflowStubWithTaskQueue(
-    workflowClass: Class<T>,
-    taskQueue: String,
-    jobId: UUID,
-  ): T = workflowClientWrapped.newWorkflowStub<T>(workflowClass, TemporalWorkflowUtils.buildWorkflowOptionsWithTaskQueue(taskQueue, jobId))
 
   /**
    * Signal to the connection manager workflow asynchronously that there has been a change to the
@@ -742,11 +722,13 @@ class TemporalClient(
   }
 
   /**
-   * Get the result of a completed workflow.
+   * Attempts to retrieve the result of an actor definition update workflow based on the provided request ID.
+   * If the workflow is still running, it will return null. If an error occurs, it will return an
+   * `ActorDefinitionUpdateOutput` containing relevant failure details.
    *
-   * @param workflowId the workflow ID
-   * @param workflowClass the workflow interface class
-   * @return the workflow result
+   * @param requestId the unique identifier of the workflow to retrieve the result for
+   * @return an `ActorDefinitionUpdateOutput` if the workflow is complete and successful,
+   *         null if the workflow is still running, or an `ActorDefinitionUpdateOutput` with failure details if an error occurred
    */
   fun tryGetActorDefinitionWorkflowResult(requestId: String): ActorDefinitionUpdateOutput? {
     val workflow = workflowClientWrapped.newWorkflowStub(ActorDefinitionUpdateWorkflow::class.java, requestId)

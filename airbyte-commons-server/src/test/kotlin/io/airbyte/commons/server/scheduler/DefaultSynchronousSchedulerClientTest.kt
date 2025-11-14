@@ -10,8 +10,6 @@ import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.temporal.JobMetadata
 import io.airbyte.commons.temporal.TemporalClient
 import io.airbyte.commons.temporal.TemporalResponse
-import io.airbyte.commons.temporal.TemporalTaskQueueUtils.DEFAULT_CHECK_TASK_QUEUE
-import io.airbyte.commons.temporal.TemporalTaskQueueUtils.DEFAULT_DISCOVER_TASK_QUEUE
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorDefinitionVersion
@@ -56,8 +54,8 @@ import java.util.UUID
 import java.util.function.Function
 import java.util.function.Supplier
 
-// the goal here is to test the "execute" part of this class and all of the various exceptional
-// cases. then separately test submission of each job type without having to re-test all of the
+// the goal here is to test the "execute" part of this class and all the various exceptional
+// cases. then separately test submission of each job type without having to re-test all the
 // execution exception cases again.
 internal class DefaultSynchronousSchedulerClientTest {
   private lateinit var temporalClient: TemporalClient
@@ -133,7 +131,7 @@ internal class DefaultSynchronousSchedulerClientTest {
         ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL)
       val response =
         schedulerClient
-          .execute<UUID?>(
+          .execute(
             ConfigType.DISCOVER_SCHEMA,
             jobContext,
             sourceDefinitionId,
@@ -190,7 +188,7 @@ internal class DefaultSynchronousSchedulerClientTest {
         ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL)
       val response =
         schedulerClient
-          .execute<UUID?>(
+          .execute(
             ConfigType.DISCOVER_SCHEMA,
             jobContext,
             sourceDefinitionId,
@@ -302,7 +300,6 @@ internal class DefaultSynchronousSchedulerClientTest {
           any(),
           0,
           WORKSPACE_ID,
-          CHECK_TASK_QUEUE,
           jobCheckConnectionConfig,
           any(),
         )
@@ -321,7 +318,7 @@ internal class DefaultSynchronousSchedulerClientTest {
     @Test
     fun testCreateSourceCheckConnectionJobWithConfigInjection() {
       val configAfterInjection = ObjectMapper().readTree("{\"injected\": true }")
-      val configWithRefsAfterInjection = ConfigWithSecretReferences(configAfterInjection, mapOf<String, SecretReferenceConfig>())
+      val configWithRefsAfterInjection = ConfigWithSecretReferences(configAfterInjection, mapOf())
       val jobCheckConnectionConfig =
         JobCheckConnectionConfig()
           .withActorType(ActorType.SOURCE)
@@ -349,7 +346,6 @@ internal class DefaultSynchronousSchedulerClientTest {
           any(),
           0,
           WORKSPACE_ID,
-          CHECK_TASK_QUEUE,
           jobCheckConnectionConfig,
           any(),
         )
@@ -377,7 +373,6 @@ internal class DefaultSynchronousSchedulerClientTest {
           any(),
           0,
           WORKSPACE_ID,
-          CHECK_TASK_QUEUE,
           jobCheckConnectionConfig,
           any(),
         )
@@ -402,7 +397,6 @@ internal class DefaultSynchronousSchedulerClientTest {
           any(),
           0,
           WORKSPACE_ID,
-          DISCOVER_TASK_QUEUE,
           any(),
           any(),
           any(),
@@ -428,7 +422,6 @@ internal class DefaultSynchronousSchedulerClientTest {
           any(),
           0,
           WORKSPACE_ID,
-          DISCOVER_TASK_QUEUE,
           any(),
           any(),
           any(),
@@ -468,15 +461,12 @@ internal class DefaultSynchronousSchedulerClientTest {
     private val LOG_PATH: Path = Path.of("/tmp")
     private const val DOCKER_REPOSITORY = "airbyte/source-foo"
     private const val DOCKER_IMAGE_TAG = "1.2.3"
-    private val DOCKER_IMAGE: String = DOCKER_REPOSITORY + ":" + DOCKER_IMAGE_TAG
+    private const val DOCKER_IMAGE: String = "$DOCKER_REPOSITORY:$DOCKER_IMAGE_TAG"
     private val PROTOCOL_VERSION = Version("0.2.3")
     private val WORKSPACE_ID: UUID = UUID.randomUUID()
     private val ACTOR_ID: UUID = UUID.randomUUID()
     private val UUID1: UUID = UUID.randomUUID()
     private val UUID2: UUID = UUID.randomUUID()
-    private const val UNCHECKED = "unchecked"
-    private val CHECK_TASK_QUEUE = DEFAULT_CHECK_TASK_QUEUE
-    private val DISCOVER_TASK_QUEUE = DEFAULT_DISCOVER_TASK_QUEUE
     private val CONFIGURATION =
       jsonNode(
         mapOf(

@@ -6,15 +6,16 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.HealthCheckRead
 import io.airbyte.data.services.HealthCheckService
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 
 internal class HealthCheckHandlerTest {
   @Test
   fun testDbHealthSucceed() {
-    val healthCheckService = Mockito.mock(HealthCheckService::class.java)
-    Mockito.`when`(healthCheckService.healthCheck()).thenReturn(true)
+    val healthCheckService = mockk<HealthCheckService>()
+    every { healthCheckService.healthCheck() } returns true
 
     val healthCheckHandler = HealthCheckHandler(healthCheckService)
     Assertions.assertEquals(HealthCheckRead().available(true), healthCheckHandler.health())
@@ -22,8 +23,8 @@ internal class HealthCheckHandlerTest {
 
   @Test
   fun testDbHealthFail() {
-    val healthCheckService = Mockito.mock(HealthCheckService::class.java)
-    Mockito.`when`(healthCheckService.healthCheck()).thenReturn(false)
+    val healthCheckService = mockk<HealthCheckService>()
+    every { healthCheckService.healthCheck() } returns false
 
     val healthCheckHandler = HealthCheckHandler(healthCheckService)
     Assertions.assertEquals(HealthCheckRead().available(false), healthCheckHandler.health())

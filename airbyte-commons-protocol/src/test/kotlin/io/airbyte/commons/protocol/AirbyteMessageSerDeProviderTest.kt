@@ -7,10 +7,11 @@ package io.airbyte.commons.protocol
 import io.airbyte.commons.protocol.serde.AirbyteMessageDeserializer
 import io.airbyte.commons.protocol.serde.AirbyteMessageSerializer
 import io.airbyte.commons.version.Version
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 
 internal class AirbyteMessageSerDeProviderTest {
   var serDeProvider: AirbyteMessageSerDeProvider? = null
@@ -67,14 +68,14 @@ internal class AirbyteMessageSerDeProviderTest {
   }
 
   private fun <T : Any> buildDeserializer(version: Version): AirbyteMessageDeserializer<T> {
-    val deser: AirbyteMessageDeserializer<T> = Mockito.mock()
-    Mockito.`when`(deser.getTargetVersion()).thenReturn(version)
+    val deser: AirbyteMessageDeserializer<T> = mockk()
+    every { deser.getTargetVersion() } returns version
     return deser
   }
 
   private fun <T : Any> buildSerializer(version: Version): AirbyteMessageSerializer<T> {
-    val ser: AirbyteMessageSerializer<T> = Mockito.mock()
-    Mockito.`when`(ser.getTargetVersion()).thenReturn(version)
+    val ser: AirbyteMessageSerializer<T> = mockk()
+    every { ser.getTargetVersion() } returns version
     return ser
   }
 }

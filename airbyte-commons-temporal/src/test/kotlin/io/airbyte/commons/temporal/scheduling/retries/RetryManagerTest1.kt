@@ -4,13 +4,14 @@
 
 package io.airbyte.commons.temporal.scheduling.retries
 
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import java.time.Duration
 
 internal class RetryManagerTest1 {
@@ -83,8 +84,8 @@ internal class RetryManagerTest1 {
     manager.incrementFailure(failureIsPartial)
     manager.backoff
 
-    Mockito.verify(fb, Mockito.times(expectedFBCalls)).getBackoff(ArgumentMatchers.anyLong())
-    Mockito.verify(sfb, Mockito.times(expectedSFBCalls)).getBackoff(ArgumentMatchers.anyLong())
+    verify(exactly = expectedFBCalls) { fb.getBackoff(any()) }
+    verify(exactly = expectedSFBCalls) { sfb.getBackoff(any()) }
   }
 
   companion object {
@@ -102,22 +103,29 @@ internal class RetryManagerTest1 {
       )
 
     @JvmStatic
-    private fun backoffPolicyMatrix() =
-      listOf<Arguments?>(
+    private fun backoffPolicyMatrix(): List<Arguments> {
+      fun createBackoffPolicyMock(): BackoffPolicy {
+        val mock = mockk<BackoffPolicy>()
+        every { mock.getBackoff(any()) } returns Duration.ZERO
+        return mock
+      }
+
+      return listOf(
         Arguments.of(
-          Mockito.mock(BackoffPolicy::class.java),
-          Mockito.mock(BackoffPolicy::class.java),
+          createBackoffPolicyMock(),
+          createBackoffPolicyMock(),
           true,
           0,
           1,
         ),
         Arguments.of(
-          Mockito.mock(BackoffPolicy::class.java),
-          Mockito.mock(BackoffPolicy::class.java),
+          createBackoffPolicyMock(),
+          createBackoffPolicyMock(),
           false,
           1,
           0,
         ),
       )
+    }
   }
 }

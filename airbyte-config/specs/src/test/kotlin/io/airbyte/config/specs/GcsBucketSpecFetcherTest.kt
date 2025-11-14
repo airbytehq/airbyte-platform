@@ -9,10 +9,11 @@ import com.google.cloud.storage.Storage
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Configs
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.Optional
@@ -30,17 +31,17 @@ internal class GcsBucketSpecFetcherTest {
 
   @BeforeEach
   fun setup() {
-    storage = Mockito.mock(Storage::class.java)
+    storage = mockk()
 
-    defaultSpecBlob = Mockito.mock(Blob::class.java)
-    Mockito.`when`(defaultSpecBlob.getContent()).thenReturn(Jsons.toBytes(Jsons.jsonNode(defaultSpec)))
-    cloudSpecBlob = Mockito.mock(Blob::class.java)
-    Mockito.`when`(cloudSpecBlob.getContent()).thenReturn(Jsons.toBytes(Jsons.jsonNode(cloudSpec)))
+    defaultSpecBlob = mockk()
+    every { defaultSpecBlob.getContent() } returns Jsons.toBytes(Jsons.jsonNode(defaultSpec))
+    cloudSpecBlob = mockk()
+    every { cloudSpecBlob.getContent() } returns Jsons.toBytes(Jsons.jsonNode(cloudSpec))
   }
 
   @Test
   fun testGetsSpecIfPresent() {
-    Mockito.`when`(storage[BUCKET_NAME, DEFAULT_SPEC_PATH]).thenReturn(defaultSpecBlob)
+    every { storage[BUCKET_NAME, DEFAULT_SPEC_PATH] } returns defaultSpecBlob
 
     val bucketSpecFetcher = GcsBucketSpecFetcher(storage, BUCKET_NAME)
     val returnedSpec = bucketSpecFetcher.attemptFetch(DOCKER_IMAGE)
@@ -51,7 +52,7 @@ internal class GcsBucketSpecFetcherTest {
 
   @Test
   fun testReturnsEmptyIfNotPresent() {
-    Mockito.`when`(storage[BUCKET_NAME, DEFAULT_SPEC_PATH]).thenReturn(null)
+    every { storage[BUCKET_NAME, DEFAULT_SPEC_PATH] } returns null
 
     val bucketSpecFetcher = GcsBucketSpecFetcher(storage, BUCKET_NAME)
     val returnedSpec = bucketSpecFetcher.attemptFetch(DOCKER_IMAGE)
@@ -61,9 +62,9 @@ internal class GcsBucketSpecFetcherTest {
 
   @Test
   fun testReturnsEmptyIfInvalidSpec() {
-    val invalidSpecBlob = Mockito.mock(Blob::class.java)
-    Mockito.`when`(invalidSpecBlob.getContent()).thenReturn("{\"notASpec\": true}".toByteArray(StandardCharsets.UTF_8))
-    Mockito.`when`(storage[BUCKET_NAME, DEFAULT_SPEC_PATH]).thenReturn(invalidSpecBlob)
+    val invalidSpecBlob = mockk<Blob>()
+    every { invalidSpecBlob.getContent() } returns "{\"notASpec\": true}".toByteArray(StandardCharsets.UTF_8)
+    every { storage[BUCKET_NAME, DEFAULT_SPEC_PATH] } returns invalidSpecBlob
 
     val bucketSpecFetcher = GcsBucketSpecFetcher(storage, BUCKET_NAME)
     val returnedSpec = bucketSpecFetcher.attemptFetch(DOCKER_IMAGE)
@@ -76,8 +77,8 @@ internal class GcsBucketSpecFetcherTest {
    */
   @Test
   fun testDynamicGetSpecAsBlob() {
-    Mockito.`when`(storage[BUCKET_NAME, DEFAULT_SPEC_PATH]).thenReturn(defaultSpecBlob)
-    Mockito.`when`(storage[BUCKET_NAME, CLOUD_SPEC_PATH]).thenReturn(cloudSpecBlob)
+    every { storage[BUCKET_NAME, DEFAULT_SPEC_PATH] } returns defaultSpecBlob
+    every { storage[BUCKET_NAME, CLOUD_SPEC_PATH] } returns cloudSpecBlob
 
     // under deploy deployment mode, cloud spec file will be ignored even when it exists
     val defaultBucketSpecFetcher = GcsBucketSpecFetcher(storage, BUCKET_NAME)
@@ -112,8 +113,8 @@ internal class GcsBucketSpecFetcherTest {
    */
   @Test
   fun testBasicGetSpecAsBlob() {
-    Mockito.`when`(storage[BUCKET_NAME, DEFAULT_SPEC_PATH]).thenReturn(defaultSpecBlob)
-    Mockito.`when`(storage[BUCKET_NAME, CLOUD_SPEC_PATH]).thenReturn(cloudSpecBlob)
+    every { storage[BUCKET_NAME, DEFAULT_SPEC_PATH] } returns defaultSpecBlob
+    every { storage[BUCKET_NAME, CLOUD_SPEC_PATH] } returns cloudSpecBlob
 
     val bucketSpecFetcher = GcsBucketSpecFetcher(storage, BUCKET_NAME)
     Assertions.assertEquals(
@@ -144,7 +145,7 @@ internal class GcsBucketSpecFetcherTest {
     private const val BUCKET_NAME = "bucket"
     private const val DOCKER_REPOSITORY = "image"
     private const val DOCKER_IMAGE_TAG = "0.1.0"
-    private const val DOCKER_IMAGE = DOCKER_REPOSITORY + ":" + DOCKER_IMAGE_TAG
+    private const val DOCKER_IMAGE = "$DOCKER_REPOSITORY:$DOCKER_IMAGE_TAG"
     private val DEFAULT_SPEC_PATH =
       Path
         .of("specs")

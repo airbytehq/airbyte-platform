@@ -10,9 +10,7 @@ import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.security.md5
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.temporal.TemporalClient
-import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.TemporalResponse
-import io.airbyte.commons.temporal.TemporalTaskQueueUtils.getTaskQueue
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
@@ -31,7 +29,8 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.Companion.getDockerImageName
 import io.airbyte.config.persistence.ConfigInjector
-import io.airbyte.config.secrets.buildConfigWithSecretRefsJava
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
+import io.airbyte.config.secrets.toConfigWithRefs
 import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.domain.services.secrets.SecretReferenceService
@@ -79,7 +78,7 @@ class DefaultSynchronousSchedulerClient(
 
     val sourceConfig =
       if (source.sourceId == null) {
-        buildConfigWithSecretRefsJava(injectedConfig)
+        InlinedConfigWithSecretRefs(injectedConfig).toConfigWithRefs()
       } else {
         secretReferenceService.getConfigWithSecretReferences(
           ActorId(source.sourceId),
@@ -101,15 +100,13 @@ class DefaultSynchronousSchedulerClient(
     val jobId = UUID.randomUUID()
     val jobReportingContext =
       ConnectorJobReportingContext(jobId, dockerImage, sourceVersion.releaseStage, sourceVersion.internalSupportLevel)
-    val taskQueue = getTaskQueue(TemporalJobType.CHECK_CONNECTION)
-
     val context = contextBuilder.fromSource(source)
 
     return execute(
       ConfigType.CHECK_CONNECTION_SOURCE,
       jobReportingContext,
       source.sourceDefinitionId,
-      { temporalClient.submitCheckConnection(UUID.randomUUID(), 0, source.workspaceId, taskQueue, jobCheckConnectionConfig, context) },
+      { temporalClient.submitCheckConnection(UUID.randomUUID(), 0, source.workspaceId, jobCheckConnectionConfig, context) },
       { obj: ConnectorJobOutput -> obj.checkConnection },
       source.workspaceId,
       source.sourceId,
@@ -135,7 +132,7 @@ class DefaultSynchronousSchedulerClient(
 
     val destinationConfig =
       if (destination.destinationId == null) {
-        buildConfigWithSecretRefsJava(injectedConfig)
+        InlinedConfigWithSecretRefs(injectedConfig).toConfigWithRefs()
       } else {
         secretReferenceService.getConfigWithSecretReferences(
           ActorId(destination.destinationId),
@@ -157,15 +154,13 @@ class DefaultSynchronousSchedulerClient(
     val jobId = UUID.randomUUID()
     val jobReportingContext =
       ConnectorJobReportingContext(jobId, dockerImage, destinationVersion.releaseStage, destinationVersion.internalSupportLevel)
-    val taskQueue = getTaskQueue(TemporalJobType.CHECK_CONNECTION)
-
     val context = contextBuilder.fromDestination(destination)
 
     return execute(
       ConfigType.CHECK_CONNECTION_DESTINATION,
       jobReportingContext,
       destination.destinationDefinitionId,
-      { temporalClient.submitCheckConnection(jobId, 0, destination.workspaceId, taskQueue, jobCheckConnectionConfig, context) },
+      { temporalClient.submitCheckConnection(jobId, 0, destination.workspaceId, jobCheckConnectionConfig, context) },
       { obj: ConnectorJobOutput -> obj.checkConnection },
       destination.workspaceId,
       destination.destinationId,
@@ -211,16 +206,13 @@ class DefaultSynchronousSchedulerClient(
     val jobId = UUID.randomUUID()
     val jobReportingContext =
       ConnectorJobReportingContext(jobId, dockerImage, sourceVersion.releaseStage, sourceVersion.internalSupportLevel)
-
-    val taskQueue = getTaskQueue(TemporalJobType.DISCOVER_SCHEMA)
-
     val context = contextBuilder.fromSource(source)
 
     return execute(
       ConfigType.DISCOVER_SCHEMA,
       jobReportingContext,
       source.sourceDefinitionId,
-      { temporalClient.submitDiscoverSchema(jobId, 0, source.workspaceId, taskQueue, jobDiscoverCatalogConfig, context, priority) },
+      { temporalClient.submitDiscoverSchema(jobId, 0, source.workspaceId, jobDiscoverCatalogConfig, context, priority) },
       { obj: ConnectorJobOutput -> obj.discoverCatalogId },
       source.workspaceId,
       source.sourceId,
@@ -267,9 +259,6 @@ class DefaultSynchronousSchedulerClient(
     val jobId = UUID.randomUUID()
     val jobReportingContext =
       ConnectorJobReportingContext(jobId, dockerImage, destinationVersion.releaseStage, destinationVersion.internalSupportLevel)
-
-    val taskQueue = getTaskQueue(TemporalJobType.DISCOVER_SCHEMA)
-
     val context = contextBuilder.fromDestination(destination)
 
     return execute(
@@ -281,7 +270,6 @@ class DefaultSynchronousSchedulerClient(
           jobId,
           0,
           destination.workspaceId,
-          taskQueue,
           jobDiscoverCatalogConfig,
           context,
           WorkloadPriority.HIGH,

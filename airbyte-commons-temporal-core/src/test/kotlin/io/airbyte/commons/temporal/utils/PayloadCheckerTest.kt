@@ -6,12 +6,12 @@ package io.airbyte.commons.temporal.utils
 
 import io.airbyte.commons.temporal.exception.SizeLimitException
 import io.airbyte.metrics.MetricClient
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 
 internal class PayloadCheckerTest {
-  var mMetricClient: MetricClient = Mockito.mock(MetricClient::class.java)
+  var mMetricClient: MetricClient = mockk(relaxed = true)
 
   var payloadChecker: PayloadChecker = PayloadChecker(mMetricClient)
 

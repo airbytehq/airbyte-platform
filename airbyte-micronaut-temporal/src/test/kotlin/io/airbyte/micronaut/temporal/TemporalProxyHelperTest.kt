@@ -4,14 +4,16 @@
 
 package io.airbyte.micronaut.temporal
 
+import io.airbyte.micronaut.temporal.stubs.TestActivity
 import io.airbyte.micronaut.temporal.stubs.ValidTestWorkflowImpl
 import io.micronaut.context.BeanRegistration
 import io.micronaut.inject.BeanIdentifier
+import io.mockk.every
+import io.mockk.mockk
 import io.temporal.activity.ActivityOptions
 import io.temporal.common.RetryOptions
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.time.Duration
 
 /**
@@ -34,16 +36,17 @@ internal class TemporalProxyHelperTest {
             .build(),
         ).build()
 
-    val activityOptionsBeanIdentifier = Mockito.mock<BeanIdentifier>(BeanIdentifier::class.java)
-    val activityOptionsBeanRegistration = Mockito.mock(BeanRegistration::class.java) as BeanRegistration<ActivityOptions>
-    Mockito.`when`<String?>(activityOptionsBeanIdentifier.getName()).thenReturn("activityOptions")
-    Mockito.`when`<BeanIdentifier?>(activityOptionsBeanRegistration.identifier).thenReturn(activityOptionsBeanIdentifier)
-    Mockito.`when`<ActivityOptions?>(activityOptionsBeanRegistration.bean).thenReturn(activityOptions)
+    val activityOptionsBeanIdentifier = mockk<BeanIdentifier>()
+    val activityOptionsBeanRegistration = mockk<BeanRegistration<ActivityOptions>>()
+    every { activityOptionsBeanIdentifier.name } returns "activityOptions"
+    every { activityOptionsBeanRegistration.identifier } returns activityOptionsBeanIdentifier
+    every { activityOptionsBeanRegistration.bean } returns activityOptions
 
     val temporalProxyHelper = TemporalProxyHelper(listOf(activityOptionsBeanRegistration))
-    temporalProxyHelper.setActivityStubGenerator(TemporalActivityStubGeneratorFunction { c: Class<*>?, a: ActivityOptions? -> Mockito.mock(c) })
+    val testActivity = mockk<TestActivity>(relaxed = true)
+    temporalProxyHelper.setActivityStubGenerator { _: Class<*>?, _: ActivityOptions? -> testActivity }
 
-    val proxy = temporalProxyHelper.proxyWorkflowClass<ValidTestWorkflowImpl>(ValidTestWorkflowImpl::class.java)
+    val proxy = temporalProxyHelper.proxyWorkflowClass(ValidTestWorkflowImpl::class.java)
 
     Assertions.assertNotNull(proxy)
 

@@ -6,37 +6,37 @@ package io.airbyte.commons.temporal
 
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.metrics.MetricClient
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import io.temporal.api.common.v1.WorkflowExecution
 import io.temporal.client.BatchRequest
 import io.temporal.client.WorkflowOptions
 import io.temporal.workflow.Functions
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
-import org.mockito.kotlin.any
 import java.util.UUID
-import java.util.function.Function
 
 internal class ConnectionManageUtilsTest {
   @Test
-  fun signalAndRepairIfNeceesaryWhenNoWorkflowWillCreate() {
-    val mWorkflow = Mockito.mock(WorkflowClientWrapped::class.java)
-    val mMetric = Mockito.mock(MetricClient::class.java)
+  fun signalAndRepairIfNecessaryWhenNoWorkflowWillCreate() {
+    val mWorkflow = mockk<WorkflowClientWrapped>()
+    val mMetric = mockk<MetricClient>(relaxed = true)
     val cid = UUID.randomUUID()
 
-    Mockito
-      .`when`(
-        mWorkflow.newWorkflowStub(
-          ArgumentMatchers.any<Class<ConnectionManagerWorkflow>>(),
-          ArgumentMatchers.any<WorkflowOptions>(),
-        ),
-      ).thenReturn(Mockito.mock(ConnectionManagerWorkflow::class.java))
-    Mockito.`when`(mWorkflow.newSignalWithStartRequest()).thenReturn(Mockito.mock(BatchRequest::class.java))
+    every {
+      mWorkflow.newWorkflowStub(
+        any<Class<ConnectionManagerWorkflow>>(),
+        any<WorkflowOptions>(),
+      )
+    } returns mockk<ConnectionManagerWorkflow>(relaxed = true)
+    every { mWorkflow.newSignalWithStartRequest() } returns mockk<BatchRequest>(relaxed = true)
+    every { mWorkflow.signalWithStart(any<BatchRequest>()) } returns mockk<WorkflowExecution>(relaxed = true)
 
     val utils = ConnectionManagerUtils(mWorkflow, mMetric)
-    utils.signalWorkflowAndRepairIfNecessary(cid, Function { workflow: ConnectionManagerWorkflow? -> Functions.Proc {} })
+    utils.signalWorkflowAndRepairIfNecessary(cid) { _: ConnectionManagerWorkflow? -> Functions.Proc {} }
     // Because we do not mock the getConnectionManagerWorkflow call, the underlying call throws an
     // exception
     // and the logic recreates it.
-    Mockito.verify(mWorkflow).signalWithStart(any<BatchRequest>())
+    verify { mWorkflow.signalWithStart(any<BatchRequest>()) }
   }
 }

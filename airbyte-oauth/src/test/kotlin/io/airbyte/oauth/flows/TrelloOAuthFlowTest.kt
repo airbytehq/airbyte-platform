@@ -16,10 +16,11 @@ import io.airbyte.data.services.OAuthService
 import io.airbyte.oauth.CLIENT_ID_KEY
 import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.MoreOAuthParameters
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.Optional
 import java.util.UUID
 
@@ -53,7 +54,7 @@ internal class TrelloOAuthFlowTest {
           }
         }
       }
-    oauthService = Mockito.mock(OAuthService::class.java)
+    oauthService = mockk()
     sourceOAuthParameter =
       SourceOAuthParameter()
         .withSourceDefinitionId(definitionId)
@@ -65,9 +66,9 @@ internal class TrelloOAuthFlowTest {
             ),
           ),
         )
-    Mockito
-      .`when`(oauthService!!.getSourceOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
-      .thenReturn(Optional.of(sourceOAuthParameter!!))
+    every {
+      oauthService!!.getSourceOAuthParameterOptional(any(), any())
+    } returns Optional.of(sourceOAuthParameter!!)
     trelloOAuthFlow = TrelloOAuthFlow(transport!!)
   }
 
@@ -101,7 +102,7 @@ internal class TrelloOAuthFlowTest {
     assertEquals(
       expectedParams.size,
       actualParams.size,
-      String.format("Expected %s values but got %s", expectedParams.size, actualParams),
+      "Expected ${expectedParams.size} values but got $actualParams",
     )
     expectedParams.forEach { (key: String?, value: String?) ->
       assertEquals(

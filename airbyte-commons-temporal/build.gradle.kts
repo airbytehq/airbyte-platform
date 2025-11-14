@@ -38,9 +38,7 @@ dependencies {
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.temporal.testing)
-  // Needed to be able to mock final class
-  testImplementation(libs.mockito.inline)
-  testImplementation(libs.mockito.kotlin)
+  testImplementation(libs.mockk)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
