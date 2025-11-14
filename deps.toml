@@ -25,10 +25,10 @@ kotlinx-coroutine = "1.10.2"
 kubernetes-client = "7.3.1"
 logback = "1.5.19"
 micrometer = "1.15.1"
-micronaut = "4.10.1"
+micronaut = "4.10.2"
 micronaut-cache = "5.3.0"
 micronaut-core = "4.10.8"
-micronaut-data = "4.14.0"
+micronaut-data = "4.14.1"
 micronaut-email = "2.10.0"
 micronaut-jaxrs = "4.10.0"
 micronaut-jdbc = "6.3.1"
@@ -223,7 +223,7 @@ micronaut-data-model = { module = "io.micronaut.data:micronaut-data-model", vers
 micronaut-data-tx = { module = "io.micronaut.data:micronaut-data-tx", version.ref = "micronaut-data" }
 micronaut-email = { module = "io.micronaut.email:micronaut-email", version.ref = "micronaut-email" }
 micronaut-email-sendgrid = { module = "io.micronaut.email:micronaut-email-sendgrid", version.ref = "micronaut-email" }
-micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.9.1" }
+micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.9.2" }
 micronaut-inject = { module = "io.micronaut:micronaut-inject", version.ref = "micronaut-core" }
 micronaut-http = { module = "io.micronaut:micronaut-http", version.ref = "micronaut-core" }
 micronaut-http-client = { module = "io.micronaut:micronaut-http-client", version.ref = "micronaut-core" }
