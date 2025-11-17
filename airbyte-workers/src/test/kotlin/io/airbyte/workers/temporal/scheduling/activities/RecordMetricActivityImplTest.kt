@@ -16,16 +16,11 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.FailureCause
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.RecordMetricInput
 import io.micronaut.http.HttpStatus
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.Mock
-import org.mockito.junit.jupiter.MockitoExtension
-import org.mockito.junit.jupiter.MockitoSettings
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
-import org.mockito.quality.Strictness
 import org.openapitools.client.infrastructure.ClientException
 import java.util.Optional
 import java.util.UUID
@@ -33,52 +28,46 @@ import java.util.UUID
 /**
  * Test suite for the [RecordMetricActivityImpl] class.
  */
-@ExtendWith(MockitoExtension::class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 internal class RecordMetricActivityImplTest {
-  @Mock
   private lateinit var airbyteApiClient: AirbyteApiClient
-
-  @Mock
   private lateinit var metricClient: MetricClient
-
-  @Mock
   private lateinit var connectionUpdaterInput: ConnectionUpdaterInput
-
   private lateinit var activity: RecordMetricActivityImpl
 
   @BeforeEach
   fun setup() {
-    val workspaceApi = org.mockito.Mockito.mock(WorkspaceApi::class.java)
+    airbyteApiClient = mockk()
+    metricClient = mockk(relaxed = true)
+    connectionUpdaterInput = mockk(relaxed = true)
 
-    whenever(connectionUpdaterInput.connectionId).thenReturn(CONNECTION_ID)
-    whenever(workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(CONNECTION_ID)))
-      .thenReturn(
-        WorkspaceRead(
-          WORKSPACE_ID,
-          UUID.randomUUID(),
-          "name",
-          "slug",
-          false,
-          UUID.randomUUID(),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-        ),
+    val workspaceApi = mockk<WorkspaceApi>()
+
+    every { connectionUpdaterInput.connectionId } returns CONNECTION_ID
+    every { workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+      WorkspaceRead(
+        WORKSPACE_ID,
+        UUID.randomUUID(),
+        "name",
+        "slug",
+        false,
+        UUID.randomUUID(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
       )
-    whenever(workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(CONNECTION_ID_WITHOUT_WORKSPACE)))
-      .thenAnswer { throw ClientException("Not Found", HttpStatus.NOT_FOUND.code, null) }
-    whenever(airbyteApiClient.workspaceApi).thenReturn(workspaceApi)
+    every { workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(CONNECTION_ID_WITHOUT_WORKSPACE)) } throws
+      ClientException("Not Found", HttpStatus.NOT_FOUND.code, null)
+    every { airbyteApiClient.workspaceApi } returns workspaceApi
 
     activity = RecordMetricActivityImpl(airbyteApiClient, metricClient)
   }
@@ -89,29 +78,33 @@ internal class RecordMetricActivityImplTest {
 
     activity.recordWorkflowCountMetric(metricInput)
 
-    verify(metricClient).count(
-      eq(METRIC_NAME),
-      eq(1L),
-      eq(MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString())),
-      eq(MetricAttribute(MetricTags.WORKSPACE_ID, WORKSPACE_ID.toString())),
-    )
+    verify {
+      metricClient.count(
+        METRIC_NAME,
+        1L,
+        MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString()),
+        MetricAttribute(MetricTags.WORKSPACE_ID, WORKSPACE_ID.toString()),
+      )
+    }
   }
 
   @Test
   fun testRecordingMetricCounterWithAdditionalAttributes() {
     val additionalAttribute = MetricAttribute(MetricTags.JOB_STATUS, "test")
     val metricInput =
-      RecordMetricInput(connectionUpdaterInput, Optional.empty<FailureCause>(), METRIC_NAME, arrayOf<MetricAttribute>(additionalAttribute))
+      RecordMetricInput(connectionUpdaterInput, Optional.empty<FailureCause>(), METRIC_NAME, arrayOf(additionalAttribute))
 
     activity.recordWorkflowCountMetric(metricInput)
 
-    verify(metricClient).count(
-      eq(METRIC_NAME),
-      eq(1L),
-      eq(MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString())),
-      eq(MetricAttribute(MetricTags.WORKSPACE_ID, WORKSPACE_ID.toString())),
-      eq(additionalAttribute),
-    )
+    verify {
+      metricClient.count(
+        METRIC_NAME,
+        1L,
+        MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString()),
+        MetricAttribute(MetricTags.WORKSPACE_ID, WORKSPACE_ID.toString()),
+        additionalAttribute,
+      )
+    }
   }
 
   @Test
@@ -121,38 +114,42 @@ internal class RecordMetricActivityImplTest {
 
     activity.recordWorkflowCountMetric(metricInput)
 
-    verify(metricClient).count(
-      eq(METRIC_NAME),
-      eq(1L),
-      eq(MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString())),
-      eq(MetricAttribute(MetricTags.WORKSPACE_ID, WORKSPACE_ID.toString())),
-      eq(MetricAttribute(MetricTags.FAILURE_CAUSE, failureCause.name)),
-    )
+    verify {
+      metricClient.count(
+        METRIC_NAME,
+        1L,
+        MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString()),
+        MetricAttribute(MetricTags.WORKSPACE_ID, WORKSPACE_ID.toString()),
+        MetricAttribute(MetricTags.FAILURE_CAUSE, failureCause.name),
+      )
+    }
   }
 
   @Test
   fun testRecordingMetricCounterDoesntCrashOnApiNotFoundErrors() {
-    val inputForUnkwnownWorkspaceId =
+    val inputForUnknownWorkspaceId =
       ConnectionUpdaterInput(
-        CONNECTION_ID_WITHOUT_WORKSPACE,
-        null,
-        null,
-        false,
-        null,
-        null,
-        false,
-        false,
-        false,
+        connectionId = CONNECTION_ID_WITHOUT_WORKSPACE,
+        jobId = null,
+        attemptId = null,
+        fromFailure = false,
+        attemptNumber = null,
+        workflowState = null,
+        resetConnection = false,
+        fromJobResetFailure = false,
+        skipScheduling = false,
       )
-    val metricInput = RecordMetricInput(inputForUnkwnownWorkspaceId, Optional.empty<FailureCause>(), METRIC_NAME, null)
+    val metricInput = RecordMetricInput(inputForUnknownWorkspaceId, Optional.empty<FailureCause>(), METRIC_NAME, null)
 
     activity.recordWorkflowCountMetric(metricInput)
 
-    verify(metricClient).count(
-      eq(METRIC_NAME),
-      eq(1L),
-      eq(MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID_WITHOUT_WORKSPACE.toString())),
-    )
+    verify {
+      metricClient.count(
+        METRIC_NAME,
+        1L,
+        MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID_WITHOUT_WORKSPACE.toString()),
+      )
+    }
   }
 
   companion object {

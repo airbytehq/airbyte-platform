@@ -6,6 +6,10 @@ package io.airbyte.keycloak.setup
 
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
+import io.mockk.every
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
+import io.mockk.verify
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -14,49 +18,45 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.keycloak.admin.client.resource.ClientsResource
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.ClientRepresentation
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.junit.jupiter.MockitoExtension
 
-@ExtendWith(MockitoExtension::class)
+@ExtendWith(MockKExtension::class)
 internal class WebClientConfiguratorTest {
-  @Mock
+  @MockK
   private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
 
-  @Mock
+  @MockK
   private lateinit var realmResource: RealmResource
 
-  @Mock
+  @MockK
   private lateinit var clientsResource: ClientsResource
 
-  @Mock
+  @MockK
   private lateinit var response: Response
 
   private lateinit var webClientConfigurator: WebClientConfigurator
 
   @BeforeEach
   fun setUp() {
-    Mockito.`when`(keycloakConfiguration.webClientId).thenReturn(WEB_CLIENT_ID)
+    every { keycloakConfiguration.webClientId } returns WEB_CLIENT_ID
     webClientConfigurator = WebClientConfigurator(AirbyteConfig(airbyteUrl = WEBAPP_URL), keycloakConfiguration)
   }
 
   @Test
   fun testCreateWebClient() {
-    Mockito.`when`(realmResource.clients()).thenReturn(clientsResource)
-    Mockito
-      .`when`(clientsResource.create(ArgumentMatchers.any(ClientRepresentation::class.java)))
-      .thenReturn(response)
-    Mockito.`when`(response.status).thenReturn(201)
+    every { realmResource.clients() } returns clientsResource
+    every { clientsResource.findByClientId(WEB_CLIENT_ID) } returns emptyList()
+    every { clientsResource.create(any()) } returns response
+    every { response.status } returns 201
+    every { response.close() } returns Unit
 
     webClientConfigurator.configureWebClient(realmResource)
 
-    Mockito.verify(clientsResource).create(ArgumentMatchers.any(ClientRepresentation::class.java))
+    verify(exactly = 1) { clientsResource.create(any<ClientRepresentation>()) }
   }
 
   @Test
   fun testCreateClientRepresentation() {
-    Mockito.`when`(keycloakConfiguration.webClientId).thenReturn(WEB_CLIENT_ID)
+    every { keycloakConfiguration.webClientId } returns WEB_CLIENT_ID
 
     val clientRepresentation = webClientConfigurator.clientRepresentationFromConfig
 

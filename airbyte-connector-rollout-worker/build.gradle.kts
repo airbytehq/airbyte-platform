@@ -32,7 +32,6 @@ dependencies {
 
   testImplementation(libs.temporal.testing)
   testImplementation(libs.mockk)
-  testImplementation(libs.mockito.inline)
   testImplementation(libs.bundles.micronaut.test)
 }
 

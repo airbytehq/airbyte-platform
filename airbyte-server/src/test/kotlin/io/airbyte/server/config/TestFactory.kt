@@ -13,12 +13,13 @@ import io.airbyte.persistence.job.DefaultJobPersistence
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Replaces
+import io.mockk.every
+import io.mockk.mockk
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.Configuration
 import org.jooq.DSLContext
 import org.jooq.impl.DataSourceConnectionProvider
-import org.mockito.Mockito
 import javax.sql.DataSource
 
 /**
@@ -28,33 +29,33 @@ import javax.sql.DataSource
 class TestFactory {
   @Singleton
   @Replaces(TemporalClient::class)
-  fun temporalClient(): TemporalClient = Mockito.mock(TemporalClient::class.java)
+  fun temporalClient(): TemporalClient = mockk()
 
   @Singleton
   @Replaces(named = "configsDatabaseMigrationCheck")
   @Named("configsDatabaseMigrationCheck")
-  fun configsDatabaseMigrationCheck(): DatabaseMigrationCheck = Mockito.mock(DatabaseMigrationCheck::class.java)
+  fun configsDatabaseMigrationCheck(): DatabaseMigrationCheck = mockk(relaxed = true)
 
   @Singleton
   @Replaces(named = "jobsDatabaseMigrationCheck")
   @Named("jobsDatabaseMigrationCheck")
-  fun jobsDatabaseMigrationCheck(): DatabaseMigrationCheck = Mockito.mock(DatabaseMigrationCheck::class.java)
+  fun jobsDatabaseMigrationCheck(): DatabaseMigrationCheck = mockk(relaxed = true)
 
   @Singleton
   @Replaces(DefaultJobPersistence::class)
-  fun defaultJobPersistence(): DefaultJobPersistence = Mockito.mock(DefaultJobPersistence::class.java)
+  fun defaultJobPersistence(): DefaultJobPersistence = mockk()
 
   @Singleton
   @Replaces(EventRunner::class)
-  fun eventRunner(): EventRunner = Mockito.mock(EventRunner::class.java)
+  fun eventRunner(): EventRunner = mockk()
 
   @Singleton
   @Replaces(OAuthConfigSupplier::class)
-  fun oauthConfigSupplier(): OAuthConfigSupplier = Mockito.mock(OAuthConfigSupplier::class.java)
+  fun oauthConfigSupplier(): OAuthConfigSupplier = mockk()
 
   @Singleton
   @Replaces(TrackingClient::class)
-  fun trackingClient(): TrackingClient = Mockito.mock(TrackingClient::class.java)
+  fun trackingClient(): TrackingClient = mockk()
 
   @Singleton
   @Replaces(value = DSLContext::class, named = "config")
@@ -80,15 +81,15 @@ class TestFactory {
   @Singleton
   @Replaces(Database::class)
   @Named("configDatabase")
-  fun mmDatabase(): Database = Mockito.mock(Database::class.java)
+  fun mmDatabase(): Database = mockk()
 
   private fun createMockDslContext(dataSource: DataSource): DSLContext {
-    val configuration = Mockito.mock<Configuration>()
-    val connectionProvider = Mockito.mock<DataSourceConnectionProvider>()
-    val dslContext = Mockito.mock(DSLContext::class.java)
-    Mockito.`when`(connectionProvider.dataSource()).thenReturn(dataSource)
-    Mockito.`when`(configuration.connectionProvider()).thenReturn(connectionProvider)
-    Mockito.`when`(dslContext.configuration()).thenReturn(configuration)
+    val configuration = mockk<Configuration>()
+    val connectionProvider = mockk<DataSourceConnectionProvider>()
+    val dslContext = mockk<DSLContext>()
+    every { connectionProvider.dataSource() } returns dataSource
+    every { configuration.connectionProvider() } returns connectionProvider
+    every { dslContext.configuration() } returns configuration
     return dslContext
   }
 }

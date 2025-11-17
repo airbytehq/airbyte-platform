@@ -26,7 +26,5 @@ dependencies {
   testImplementation(libs.assertj.core)
 
   testImplementation(libs.junit.pioneer)
-  testImplementation(libs.mockito.inline)
-  testImplementation(libs.mockito.kotlin)
   testImplementation(libs.mockwebserver)
 }

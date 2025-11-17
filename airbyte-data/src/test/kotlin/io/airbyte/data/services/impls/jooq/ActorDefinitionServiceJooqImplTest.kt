@@ -16,10 +16,11 @@ import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class ActorDefinitionServiceJooqImplTest : BaseConfigDatabaseTest() {
@@ -31,21 +32,20 @@ internal class ActorDefinitionServiceJooqImplTest : BaseConfigDatabaseTest() {
   fun setUp() {
     this.actorDefinitionService = ActorDefinitionServiceJooqImpl(database)
 
-    val featureFlagClient = Mockito.mock(TestClient::class.java)
-    Mockito
-      .`when`(
-        featureFlagClient.stringVariation(
-          org.mockito.kotlin.eq(HeartbeatMaxSecondsBetweenMessages),
-          org.mockito.kotlin.anyOrNull(),
-        ),
-      ).thenReturn("3600")
+    val featureFlagClient = mockk<TestClient>()
+    every {
+      featureFlagClient.stringVariation(
+        HeartbeatMaxSecondsBetweenMessages,
+        any(),
+      )
+    } returns "3600"
 
-    val metricClient = Mockito.mock(MetricClient::class.java)
-    val secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
-    val connectionService = Mockito.mock(ConnectionService::class.java)
-    val scopedConfigurationService = Mockito.mock(ScopedConfigurationService::class.java)
-    val connectionTimelineEventService = Mockito.mock(ConnectionTimelineEventService::class.java)
-    val actorPaginationServiceHelper = Mockito.mock(ActorServicePaginationHelper::class.java)
+    val metricClient = mockk<MetricClient>()
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>()
+    val connectionService = mockk<ConnectionService>()
+    val scopedConfigurationService = mockk<ScopedConfigurationService>()
+    val connectionTimelineEventService = mockk<ConnectionTimelineEventService>()
+    val actorPaginationServiceHelper = mockk<ActorServicePaginationHelper>()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
         featureFlagClient,

@@ -25,16 +25,12 @@ import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.persistence.job.DefaultJobCreator
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.mockito.invocation.InvocationOnMock
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
-import org.mockito.stubbing.Answer
 import java.util.Optional
 import java.util.UUID
 
@@ -61,14 +57,14 @@ internal class DefaultSyncJobFactoryTest {
     val sourceConfig = ObjectMapper().readTree("{\"source\": true }")
     val destinationConfig = ObjectMapper().readTree("{\"destination\": true }")
     val configAfterInjection = ObjectMapper().readTree("{\"injected\": true }")
-    val jobCreator = mock<DefaultJobCreator>()
-    val workspaceHelper = mock<WorkspaceHelper>()
-    val actorDefinitionVersionHelper = mock<ActorDefinitionVersionHelper>()
-    val sourceService = mock<SourceService>()
-    val destinationService = mock<DestinationService>()
-    val connectionService = mock<ConnectionService>()
-    val operationService = mock<OperationService>()
-    val workspaceService = mock<WorkspaceService>()
+    val jobCreator = mockk<DefaultJobCreator>()
+    val workspaceHelper = mockk<WorkspaceHelper>()
+    val actorDefinitionVersionHelper = mockk<ActorDefinitionVersionHelper>()
+    val sourceService = mockk<SourceService>()
+    val destinationService = mockk<DestinationService>()
+    val connectionService = mockk<ConnectionService>()
+    val operationService = mockk<OperationService>()
+    val workspaceService = mockk<WorkspaceService>()
 
     val jobId = 11L
 
@@ -95,13 +91,13 @@ internal class DefaultSyncJobFactoryTest {
 
     val srcDockerRepo = "srcrepo"
     val srcDockerTag = "tag"
-    val srcDockerImage = srcDockerRepo + ":" + srcDockerTag
+    val srcDockerImage = "$srcDockerRepo:$srcDockerTag"
     val srcDockerImageIsDefault = true
     val srcProtocolVersion = Version("0.3.1")
 
     val dstDockerRepo = "dstrepo"
     val dstDockerTag = "tag"
-    val dstDockerImage = dstDockerRepo + ":" + dstDockerTag
+    val dstDockerImage = "$dstDockerRepo:$dstDockerTag"
     val dstDockerImageIsDefault = true
     val dstProtocolVersion = Version("0.3.2")
     val standardSourceDefinition =
@@ -114,85 +110,76 @@ internal class DefaultSyncJobFactoryTest {
         .withDockerRepository(srcDockerRepo)
         .withDockerImageTag(srcDockerTag)
         .withProtocolVersion(srcProtocolVersion.serialize())
-    whenever(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId, sourceId))
-      .thenReturn(sourceVersion)
-    whenever(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId))
-      .thenReturn(sourceVersion)
+    every { actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId, sourceId) } returns sourceVersion
+    every { actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId) } returns sourceVersion
     val destinationVersion =
       ActorDefinitionVersion()
         .withDockerRepository(dstDockerRepo)
         .withDockerImageTag(dstDockerTag)
         .withProtocolVersion(dstProtocolVersion.serialize())
-    whenever(
+    every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
         workspaceId,
         destinationId,
-      ),
-    ).thenReturn(destinationVersion)
-    whenever(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, workspaceId))
-      .thenReturn(destinationVersion)
+      )
+    } returns destinationVersion
+    every { actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, workspaceId) } returns destinationVersion
 
-    whenever(workspaceHelper.getWorkspaceForSourceId(sourceId)).thenReturn(workspaceId)
-    whenever(connectionService.getStandardSync(connectionId)).thenReturn(standardSync)
-    whenever(sourceService.getSourceConnection(sourceId)).thenReturn(sourceConnection)
-    whenever(destinationService.getDestinationConnection(destinationId)).thenReturn(destinationConnection)
-    whenever(operationService.getStandardSyncOperation(operationId)).thenReturn(operation)
-    whenever(
+    every { workspaceHelper.getWorkspaceForSourceId(sourceId) } returns workspaceId
+    every { connectionService.getStandardSync(connectionId) } returns standardSync
+    every { sourceService.getSourceConnection(sourceId) } returns sourceConnection
+    every { destinationService.getDestinationConnection(destinationId) } returns destinationConnection
+    every { operationService.getStandardSyncOperation(operationId) } returns operation
+    every {
       jobCreator.createSyncJob(
         any<SourceConnection>(),
         any<DestinationConnection>(),
-        eq(standardSync),
-        eq(srcDockerImage),
-        eq(srcDockerImageIsDefault),
-        eq(srcProtocolVersion),
-        eq(dstDockerImage),
-        eq(dstDockerImageIsDefault),
-        eq(dstProtocolVersion),
-        eq(operations),
-        eq(persistedWebhookConfigs),
-        eq(standardSourceDefinition),
-        eq(standardDestinationDefinition),
-        eq(sourceVersion),
-        eq(destinationVersion),
-        eq(workspaceId),
-        eq(true),
-      ),
-    ).thenReturn(Optional.of(jobId))
-    whenever(sourceService.getStandardSourceDefinition(sourceDefinitionId))
-      .thenReturn(standardSourceDefinition)
-
-    whenever(destinationService.getStandardDestinationDefinition(destinationDefinitionId))
-      .thenReturn(standardDestinationDefinition)
-
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(any<UUID>(), eq(true)))
-      .thenReturn(
-        StandardWorkspace().withWorkspaceId(workspaceId).withWebhookOperationConfigs(persistedWebhookConfigs),
+        standardSync,
+        srcDockerImage,
+        srcDockerImageIsDefault,
+        srcProtocolVersion,
+        dstDockerImage,
+        dstDockerImageIsDefault,
+        dstProtocolVersion,
+        operations,
+        persistedWebhookConfigs,
+        standardSourceDefinition,
+        standardDestinationDefinition,
+        sourceVersion,
+        destinationVersion,
+        workspaceId,
+        true,
       )
+    } returns Optional.of(jobId)
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns standardSourceDefinition
 
-    val configInjector = mock<ConfigInjector>()
-    whenever(configInjector.injectConfig(eq(sourceConfig), eq(sourceDefinitionId)))
-      .thenReturn(configAfterInjection)
-    whenever(configInjector.injectConfig(eq(destinationConfig), eq(destinationDefinitionId)))
-      .thenReturn(destinationConfig)
+    every { destinationService.getStandardDestinationDefinition(destinationDefinitionId) } returns standardDestinationDefinition
 
-    val oAuthConfigSupplier = mock<OAuthConfigSupplier>()
-    whenever(
+    every { workspaceService.getStandardWorkspaceNoSecrets(any<UUID>(), true) } returns
+      StandardWorkspace().withWorkspaceId(workspaceId).withWebhookOperationConfigs(persistedWebhookConfigs)
+
+    val configInjector = mockk<ConfigInjector>()
+    every { configInjector.injectConfig(sourceConfig, sourceDefinitionId) } returns configAfterInjection
+    every { configInjector.injectConfig(destinationConfig, destinationDefinitionId) } returns destinationConfig
+
+    val oAuthConfigSupplier = mockk<OAuthConfigSupplier>()
+    every {
       oAuthConfigSupplier.injectSourceOAuthParameters(
         any<UUID>(),
         any<UUID>(),
         any<UUID>(),
         any<JsonNode>(),
-      ),
-    ).thenAnswer(Answer { i: InvocationOnMock? -> i!!.getArguments()[3] })
-    whenever(
+      )
+    } answers { arg(3) }
+    every {
       oAuthConfigSupplier.injectDestinationOAuthParameters(
         any<UUID>(),
         any<UUID>(),
         any<UUID>(),
         any<JsonNode>(),
-      ),
-    ).thenAnswer(Answer { i: InvocationOnMock? -> i!!.getArguments()[3] })
+      )
+    } answers { arg(3) }
 
     val factory: SyncJobFactory =
       DefaultSyncJobFactory(
@@ -211,50 +198,50 @@ internal class DefaultSyncJobFactoryTest {
     val actualJobId = factory.createSync(connectionId, true)
     Assertions.assertEquals(jobId, actualJobId)
 
-    val sourceConnectionCaptor = argumentCaptor<SourceConnection>()
-    val destinationConnectionCaptor = argumentCaptor<DestinationConnection>()
-    verify(jobCreator)
-      .createSyncJob(
-        sourceConnectionCaptor.capture(),
-        destinationConnectionCaptor.capture(),
-        eq(standardSync),
-        eq(srcDockerImage),
-        eq(srcDockerImageIsDefault),
-        eq(srcProtocolVersion),
-        eq(dstDockerImage),
-        eq(dstDockerImageIsDefault),
-        eq(dstProtocolVersion),
-        eq(operations),
-        eq(persistedWebhookConfigs),
-        eq(standardSourceDefinition),
-        eq(standardDestinationDefinition),
-        eq(sourceVersion),
-        eq(destinationVersion),
-        eq(workspaceId),
-        eq(true),
+    val sourceConnectionCaptor = slot<SourceConnection>()
+    val destinationConnectionCaptor = slot<DestinationConnection>()
+    verify {
+      jobCreator.createSyncJob(
+        capture(sourceConnectionCaptor),
+        capture(destinationConnectionCaptor),
+        standardSync,
+        srcDockerImage,
+        srcDockerImageIsDefault,
+        srcProtocolVersion,
+        dstDockerImage,
+        dstDockerImageIsDefault,
+        dstProtocolVersion,
+        operations,
+        persistedWebhookConfigs,
+        standardSourceDefinition,
+        standardDestinationDefinition,
+        sourceVersion,
+        destinationVersion,
+        workspaceId,
+        true,
       )
+    }
 
-    Assertions.assertEquals(configAfterInjection, sourceConnectionCaptor.firstValue.configuration)
-    Assertions.assertEquals(destinationConfig, destinationConnectionCaptor.firstValue.configuration)
-    verify(configInjector).injectConfig(sourceConfig, sourceDefinitionId)
-    verify(configInjector).injectConfig(destinationConfig, destinationDefinitionId)
-    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, workspaceId, sourceId)
-    verify(actorDefinitionVersionHelper)
-      .getDestinationVersion(standardDestinationDefinition, workspaceId, destinationId)
+    Assertions.assertEquals(configAfterInjection, sourceConnectionCaptor.captured.configuration)
+    Assertions.assertEquals(destinationConfig, destinationConnectionCaptor.captured.configuration)
+    verify { configInjector.injectConfig(sourceConfig, sourceDefinitionId) }
+    verify { configInjector.injectConfig(destinationConfig, destinationDefinitionId) }
+    verify { actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, workspaceId, sourceId) }
+    verify { actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, workspaceId, destinationId) }
   }
 
   @Test
   fun testImageIsDefault() {
-    val jobCreator = mock<DefaultJobCreator>()
-    val oAuthConfigSupplier = mock<OAuthConfigSupplier>()
-    val configInjector = mock<ConfigInjector>()
-    val workspaceHelper = mock<WorkspaceHelper>()
-    val actorDefinitionVersionHelper = mock<ActorDefinitionVersionHelper>()
-    val sourceService = mock<SourceService>()
-    val destinationService = mock<DestinationService>()
-    val connectionService = mock<ConnectionService>()
-    val operationService = mock<OperationService>()
-    val workspaceService = mock<WorkspaceService>()
+    val jobCreator = mockk<DefaultJobCreator>()
+    val oAuthConfigSupplier = mockk<OAuthConfigSupplier>()
+    val configInjector = mockk<ConfigInjector>()
+    val workspaceHelper = mockk<WorkspaceHelper>()
+    val actorDefinitionVersionHelper = mockk<ActorDefinitionVersionHelper>()
+    val sourceService = mockk<SourceService>()
+    val destinationService = mockk<DestinationService>()
+    val connectionService = mockk<ConnectionService>()
+    val operationService = mockk<OperationService>()
+    val workspaceService = mockk<WorkspaceService>()
     val jobFactory =
       DefaultSyncJobFactory(
         true,
@@ -270,8 +257,8 @@ internal class DefaultSyncJobFactoryTest {
         workspaceService,
       )
     var version = ActorDefinitionVersion()
-    version.setDockerRepository("repo")
-    version.setDockerImageTag("tag")
+    version.dockerRepository = "repo"
+    version.dockerImageTag = "tag"
     // null input image
     Assertions.assertTrue(jobFactory.imageIsDefault(null, version))
     // Same versions

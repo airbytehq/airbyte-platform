@@ -8,10 +8,11 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 
 /**
@@ -24,9 +25,9 @@ internal class CustomerIoEmailConfigFetcherTest {
 
   @BeforeEach
   fun setup() {
-    airbyteApiClient = Mockito.mock(AirbyteApiClient::class.java)
-    workspaceApi = Mockito.mock(WorkspaceApi::class.java)
-    Mockito.`when`(airbyteApiClient.workspaceApi).thenReturn(workspaceApi)
+    airbyteApiClient = mockk()
+    workspaceApi = mockk()
+    every { airbyteApiClient.workspaceApi } returns workspaceApi
     cloudCustomerIoEmailConfigFetcher = CustomerIoEmailConfigFetcherImpl(airbyteApiClient)
   }
 
@@ -34,30 +35,27 @@ internal class CustomerIoEmailConfigFetcherTest {
   fun testReturnTheRightConfig() {
     val connectionId = UUID.randomUUID()
     val email = "em@il.com"
-    Mockito
-      .`when`(workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(connectionId)))
-      .thenReturn(
-        WorkspaceRead(
-          UUID.randomUUID(),
-          UUID.randomUUID(),
-          "name",
-          "slug",
-          true,
-          UUID.randomUUID(),
-          email,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-        ),
+    every { workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(connectionId)) } returns
+      WorkspaceRead(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        "name",
+        "slug",
+        true,
+        UUID.randomUUID(),
+        email,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
       )
 
     val customerIoEmailConfig = cloudCustomerIoEmailConfigFetcher.fetchConfig(connectionId)

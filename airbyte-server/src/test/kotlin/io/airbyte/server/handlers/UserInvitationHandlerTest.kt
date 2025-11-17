@@ -32,65 +32,53 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.notification.CustomerIoEmailConfig
 import io.airbyte.notification.CustomerIoEmailNotificationSender
 import io.airbyte.server.handlers.apidomainmapping.UserInvitationMapper
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.junit.jupiter.MockitoExtension
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.verify
 import java.util.Optional
 import java.util.UUID
 
-@ExtendWith(MockitoExtension::class)
 internal class UserInvitationHandlerTest {
-  @Mock
-  var service: UserInvitationService? = null
-
-  @Mock
-  var mapper: UserInvitationMapper? = null
-
-  @Mock
-  var customerIoEmailNotificationSender: CustomerIoEmailNotificationSender? = null
-
-  @Mock
-  var webUrlHelper: WebUrlHelper? = null
-
-  @Mock
-  var workspaceService: WorkspaceService? = null
-
-  @Mock
-  var organizationService: OrganizationService? = null
-
-  @Mock
-  var userPersistence: UserPersistence? = null
-
-  @Mock
-  var permissionHandler: PermissionHandler? = null
-
-  @Mock
-  var trackingClient: TrackingClient? = null
-
-  var handler: UserInvitationHandler? = null
+  private lateinit var service: UserInvitationService
+  private lateinit var mapper: UserInvitationMapper
+  private lateinit var customerIoEmailNotificationSender: CustomerIoEmailNotificationSender
+  private lateinit var webUrlHelper: WebUrlHelper
+  private lateinit var workspaceService: WorkspaceService
+  private lateinit var organizationService: OrganizationService
+  private lateinit var userPersistence: UserPersistence
+  private lateinit var permissionHandler: PermissionHandler
+  private lateinit var trackingClient: TrackingClient
+  private lateinit var handler: UserInvitationHandler
 
   @BeforeEach
   fun setup() {
+    service = mockk()
+    mapper = mockk()
+    customerIoEmailNotificationSender = mockk()
+    webUrlHelper = mockk()
+    workspaceService = mockk()
+    organizationService = mockk()
+    userPersistence = mockk()
+    permissionHandler = mockk()
+    trackingClient = mockk()
     handler =
       UserInvitationHandler(
-        service!!,
-        mapper!!,
-        customerIoEmailNotificationSender!!,
-        webUrlHelper!!,
-        workspaceService!!,
-        organizationService!!,
-        userPersistence!!,
-        permissionHandler!!,
-        trackingClient!!,
+        service,
+        mapper,
+        customerIoEmailNotificationSender,
+        webUrlHelper,
+        workspaceService,
+        organizationService,
+        userPersistence,
+        permissionHandler,
+        trackingClient,
       )
   }
 
@@ -119,20 +107,15 @@ internal class UserInvitationHandlerTest {
     @Nested
     internal inner class CreateAndSendInvitation {
       private fun setupSendInvitationMocks() {
-        Mockito.`when`(webUrlHelper!!.baseUrl).thenReturn(webappBaseUrl)
-        Mockito.`when`(service!!.createUserInvitation(userInvitation)).thenReturn(userInvitation)
-        Mockito.`when`(workspaceService!!.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(
-          StandardWorkspace().withName(
-            workspaceName,
-          ),
-        )
+        every { webUrlHelper.baseUrl } returns webappBaseUrl
+        every { service.createUserInvitation(userInvitation) } returns userInvitation
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns StandardWorkspace().withName(workspaceName)
+        every { customerIoEmailNotificationSender.sendInviteToUser(any(), any(), any()) } returns Unit
       }
 
       @BeforeEach
       fun setup() {
-        Mockito.`when`(mapper!!.toDomain(userInvitationCreateRequestBody)).thenReturn(
-          userInvitation,
-        )
+        every { mapper.toDomain(userInvitationCreateRequestBody) } returns userInvitation
       }
 
       @Test
@@ -140,18 +123,15 @@ internal class UserInvitationHandlerTest {
         setupSendInvitationMocks()
 
         // the workspace is in an org.
-        Mockito.`when`(workspaceService!!.getOrganizationIdFromWorkspaceId(workspaceId)).thenReturn(
-          Optional.of<UUID>(
-            orgId,
-          ),
-        )
+        every { workspaceService.getOrganizationIdFromWorkspaceId(workspaceId) } returns Optional.of(orgId)
 
         // no existing user has the invited email.
-        Mockito.`when`(userPersistence!!.getUserByEmail(invitedEmail)).thenReturn(Optional.empty<User>())
+        every { userPersistence.getUserByEmail(invitedEmail) } returns Optional.empty()
+        every { permissionHandler.listUsersInOrganization(orgId) } returns emptyList()
 
         // call the handler method under test.
         val result: UserInvitationCreateResponse =
-          handler!!.createInvitationOrPermission(
+          handler.createInvitationOrPermission(
             userInvitationCreateRequestBody,
             currentUser,
           )
@@ -165,11 +145,11 @@ internal class UserInvitationHandlerTest {
         setupSendInvitationMocks()
 
         // the workspace is not in any org.
-        Mockito.`when`(workspaceService!!.getOrganizationIdFromWorkspaceId(workspaceId)).thenReturn(Optional.empty<UUID>())
+        every { workspaceService.getOrganizationIdFromWorkspaceId(workspaceId) } returns Optional.empty()
 
         // call the handler method under test.
         val result: UserInvitationCreateResponse =
-          handler!!.createInvitationOrPermission(
+          handler.createInvitationOrPermission(
             userInvitationCreateRequestBody,
             currentUser,
           )
@@ -183,25 +163,19 @@ internal class UserInvitationHandlerTest {
         setupSendInvitationMocks()
 
         // the workspace is in an org.
-        Mockito.`when`(workspaceService!!.getOrganizationIdFromWorkspaceId(workspaceId)).thenReturn(
-          Optional.of<UUID>(
-            orgId,
-          ),
-        )
+        every { workspaceService.getOrganizationIdFromWorkspaceId(workspaceId) } returns Optional.of(orgId)
 
         // a user with the email exists, but is not in the workspace's org.
         val userWithEmail = User().withUserId(UUID.randomUUID()).withEmail(invitedEmail)
-        Mockito.`when`(userPersistence!!.getUserByEmail(invitedEmail)).thenReturn(Optional.of(userWithEmail))
+        every { userPersistence.getUserByEmail(invitedEmail) } returns Optional.of(userWithEmail)
 
         // the org has a user with a different email, but not the one we're inviting.
         val otherUserInOrg = User().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io")
-        Mockito
-          .`when`(permissionHandler!!.listUsersInOrganization(orgId))
-          .thenReturn(listOf(UserPermission().withUser(otherUserInOrg)))
+        every { permissionHandler.listUsersInOrganization(orgId) } returns listOf(UserPermission().withUser(otherUserInOrg))
 
         // call the handler method under test.
         val result: UserInvitationCreateResponse =
-          handler!!.createInvitationOrPermission(
+          handler.createInvitationOrPermission(
             userInvitationCreateRequestBody,
             currentUser,
           )
@@ -212,12 +186,13 @@ internal class UserInvitationHandlerTest {
 
       @Test
       fun testThrowsConflictExceptionOnDuplicateInvitation() {
-        Mockito.`when`(service!!.createUserInvitation(userInvitation)).thenAnswer { throw InvitationDuplicateException("duplicate") }
+        every { workspaceService.getOrganizationIdFromWorkspaceId(workspaceId) } returns Optional.empty()
+        every { service.createUserInvitation(userInvitation) } answers { throw InvitationDuplicateException("duplicate") }
 
         Assertions.assertThrows(
           ConflictException::class.java,
         ) {
-          handler!!.createInvitationOrPermission(
+          handler.createInvitationOrPermission(
             userInvitationCreateRequestBody,
             currentUser,
           )
@@ -225,12 +200,12 @@ internal class UserInvitationHandlerTest {
       }
 
       private fun verifyInvitationCreatedAndEmailSentResult(result: UserInvitationCreateResponse) {
-        verify(mapper!!, Mockito.times(1)).toDomain(userInvitationCreateRequestBody)
+        verify(exactly = 1) { mapper.toDomain(userInvitationCreateRequestBody) }
 
         // capture and verify the invitation that is saved by the service.
-        val savedUserInvitationCaptor = org.mockito.kotlin.argumentCaptor<UserInvitation>()
-        verify(service!!, Mockito.times(1)).createUserInvitation(savedUserInvitationCaptor.capture())
-        val capturedUserInvitation = savedUserInvitationCaptor.firstValue
+        val savedUserInvitationSlot = slot<UserInvitation>()
+        verify(exactly = 1) { service.createUserInvitation(capture(savedUserInvitationSlot)) }
+        val capturedUserInvitation = savedUserInvitationSlot.captured
 
         // make sure an invite code and pending status were set on the saved invitation
         Assertions.assertNotNull(capturedUserInvitation.inviteCode)
@@ -240,41 +215,42 @@ internal class UserInvitationHandlerTest {
         Assertions.assertNotNull(capturedUserInvitation.expiresAt)
 
         // make sure the email sender was called with the correct inputs.
-        val emailConfigCaptor = org.mockito.kotlin.argumentCaptor<CustomerIoEmailConfig>()
-        val inviteLinkCaptor = org.mockito.kotlin.argumentCaptor<String>()
+        val emailConfigSlot = slot<CustomerIoEmailConfig>()
+        val inviteLinkSlot = slot<String>()
 
-        verify(customerIoEmailNotificationSender!!, Mockito.times(1)).sendInviteToUser(
-          emailConfigCaptor.capture(),
-          eq(currentUser.name),
-          inviteLinkCaptor.capture(),
-        )
+        verify(exactly = 1) {
+          customerIoEmailNotificationSender.sendInviteToUser(
+            capture(emailConfigSlot),
+            currentUser.name,
+            capture(inviteLinkSlot),
+          )
+        }
 
-        val capturedEmailConfig = emailConfigCaptor.firstValue
+        val capturedEmailConfig = emailConfigSlot.captured
         Assertions.assertEquals(invitedEmail, capturedEmailConfig.to)
 
-        val capturedInviteLink = inviteLinkCaptor.firstValue
+        val capturedInviteLink = inviteLinkSlot.captured
         Assertions.assertEquals(
           webappBaseUrl + UserInvitationHandler.ACCEPT_INVITE_PATH + capturedUserInvitation.inviteCode,
           capturedInviteLink,
         )
 
-        // make sure no other emails are sent.
-        Mockito.verifyNoMoreInteractions(customerIoEmailNotificationSender)
-
         // make sure we never created a permission, because the invitation path was taken instead.
-        verify(permissionHandler!!, Mockito.times(0)).createPermission(org.mockito.kotlin.any<Permission>())
+        verify(exactly = 0) { permissionHandler.createPermission(any<Permission>()) }
 
         // make sure the final result is correct
         Assertions.assertFalse(result.directlyAdded)
         Assertions.assertEquals(capturedUserInvitation.inviteCode, result.inviteCode)
 
         // verify we sent an invitation tracking event
-        verify(trackingClient!!, Mockito.times(1)).track(
-          eq(workspaceId),
-          eq(ScopeType.WORKSPACE),
-          eq(UserInvitationHandler.USER_INVITED),
-          org.mockito.kotlin.any<Map<String, Any?>>(),
-        )
+        verify(exactly = 1) {
+          trackingClient.track(
+            workspaceId,
+            ScopeType.WORKSPACE,
+            UserInvitationHandler.USER_INVITED,
+            any<Map<String, Any?>>(),
+          )
+        }
       }
     }
 
@@ -282,37 +258,30 @@ internal class UserInvitationHandlerTest {
     internal inner class DirectlyAddPermission {
       @BeforeEach
       fun setup() {
-        Mockito.`when`(workspaceService!!.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(
-          StandardWorkspace().withName(
-            workspaceName,
-          ),
-        )
+        every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns StandardWorkspace().withName(workspaceName)
       }
 
       @Test
       fun testExistingEmailInsideWorkspaceOrg() {
-        Mockito
-          .`when`(workspaceService!!.getOrganizationIdFromWorkspaceId(workspaceId))
-          .thenReturn(Optional.of(orgId))
+        every { workspaceService.getOrganizationIdFromWorkspaceId(workspaceId) } returns Optional.of(orgId)
 
         // set up user with the same email
         val matchingUserInOrg1 = User().withUserId(UUID.randomUUID()).withEmail(invitedEmail)
-        Mockito
-          .`when`(userPersistence!!.getUserByEmail(invitedEmail))
-          .thenReturn(Optional.of(matchingUserInOrg1))
+        every { userPersistence.getUserByEmail(invitedEmail) } returns Optional.of(matchingUserInOrg1)
 
         // set up two users inside the workspace's org, one with the same email and one with a different email.
         val otherUserInOrg = User().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io")
-        Mockito.`when`(permissionHandler!!.listUsersInOrganization(orgId)).thenReturn(
+        every { permissionHandler.listUsersInOrganization(orgId) } returns
           listOf(
             UserPermission().withUser(matchingUserInOrg1),
             UserPermission().withUser(otherUserInOrg),
-          ),
-        )
+          )
+        every { permissionHandler.createPermission(any()) } returns mockk()
+        every { customerIoEmailNotificationSender.sendNotificationOnInvitingExistingUser(any(), any(), any()) } returns Unit
 
         // call the handler method under test.
         val result: UserInvitationCreateResponse =
-          handler!!.createInvitationOrPermission(
+          handler.createInvitationOrPermission(
             userInvitationCreateRequestBody,
             currentUser,
           )
@@ -325,47 +294,44 @@ internal class UserInvitationHandlerTest {
         expectedUserIds: Set<UUID>,
         result: UserInvitationCreateResponse,
       ) {
-        // capture and verify the permissions that are created by the permission handler!!.
-        val permissionCreateCaptor =
-          org.mockito.kotlin.argumentCaptor<Permission>()
-        verify(permissionHandler!!, Mockito.times(expectedUserIds.size))
-          .createPermission(permissionCreateCaptor.capture())
-        Mockito.verifyNoMoreInteractions(permissionHandler)
+        // capture and verify the permissions that are created by the permission handler.
+        val permissionCreateSlot = mutableListOf<Permission>()
+        verify(exactly = expectedUserIds.size) {
+          permissionHandler.createPermission(capture(permissionCreateSlot))
+        }
 
         // verify one captured permissionCreate per expected userId.
-        val capturedPermissionCreateValues = permissionCreateCaptor.allValues
-        Assertions.assertEquals(expectedUserIds.size, capturedPermissionCreateValues.size)
+        Assertions.assertEquals(expectedUserIds.size, permissionCreateSlot.size)
 
-        for (capturedPermissionCreate in capturedPermissionCreateValues) {
+        for (capturedPermissionCreate in permissionCreateSlot) {
           Assertions.assertEquals(workspaceId, capturedPermissionCreate.workspaceId)
           Assertions.assertEquals(Permission.PermissionType.WORKSPACE_ADMIN, capturedPermissionCreate.permissionType)
           Assertions.assertTrue(expectedUserIds.contains(capturedPermissionCreate.userId))
         }
 
         // make sure the email sender was called with the correct inputs.
-        val emailConfigCaptor = org.mockito.kotlin.argumentCaptor<CustomerIoEmailConfig>()
-        verify(customerIoEmailNotificationSender!!, Mockito.times(1))
-          .sendNotificationOnInvitingExistingUser(
-            emailConfigCaptor.capture(),
-            eq<String>(currentUser.name),
-            eq(workspaceName),
+        val emailConfigSlot = slot<CustomerIoEmailConfig>()
+        verify(exactly = 1) {
+          customerIoEmailNotificationSender.sendNotificationOnInvitingExistingUser(
+            capture(emailConfigSlot),
+            currentUser.name,
+            workspaceName,
           )
+        }
 
-        Assertions.assertEquals(invitedEmail, emailConfigCaptor.firstValue.to)
-
-        // make sure no other emails are sent.
-        Mockito.verifyNoMoreInteractions(customerIoEmailNotificationSender)
+        Assertions.assertEquals(invitedEmail, emailConfigSlot.captured.to)
 
         // make sure we never created a user invitation, because the add-permission path was taken instead.
-        verify(service!!, Mockito.times(0)).createUserInvitation(org.mockito.kotlin.any<UserInvitation>())
+        verify(exactly = 0) { service.createUserInvitation(any<UserInvitation>()) }
 
         // make sure the final result is correct
         Assertions.assertTrue(result.directlyAdded)
         Assertions.assertNull(result.inviteCode)
 
         // we don't send a "user invited" event when a user is directly added to a workspace.
-        verify(trackingClient!!, Mockito.never())
-          .track(org.mockito.kotlin.any<UUID>(), org.mockito.kotlin.any<ScopeType>(), org.mockito.kotlin.any<String>())
+        verify(exactly = 0) {
+          trackingClient.track(any<UUID>(), any<ScopeType>(), any<String>())
+        }
       }
     }
   }
@@ -384,22 +350,15 @@ internal class UserInvitationHandlerTest {
           .withInviteCode(inviteCode)
           .withInvitedEmail(invitedEmail)
 
-      val invitationRead =
-        Mockito.mock(
-          UserInvitationRead::class.java,
-        )
+      val invitationRead = mockk<UserInvitationRead>()
 
-      Mockito.`when`(service!!.getUserInvitationByInviteCode(inviteCode)).thenReturn(invitation)
-      Mockito
-        .`when`(service!!.acceptUserInvitation(inviteCode, currentUser.userId))
-        .thenReturn(invitation)
+      every { service.getUserInvitationByInviteCode(inviteCode) } returns invitation
+      every { service.acceptUserInvitation(inviteCode, currentUser.userId) } returns invitation
+      every { mapper.toApi(invitation) } returns invitationRead
 
-      Mockito.`when`(mapper!!.toApi(invitation)).thenReturn(invitationRead)
+      val result = handler.accept(inviteCodeRequestBody, currentUser)
 
-      val result = handler!!.accept(inviteCodeRequestBody, currentUser)
-
-      verify(service!!, Mockito.times(1)).acceptUserInvitation(inviteCode, currentUser.userId)
-      Mockito.verifyNoMoreInteractions(service)
+      verify(exactly = 1) { service.acceptUserInvitation(inviteCode, currentUser.userId) }
 
       // make sure the result is whatever the mapper outputs.
       Assertions.assertEquals(invitationRead, result)
@@ -412,14 +371,14 @@ internal class UserInvitationHandlerTest {
           .withInviteCode(inviteCode)
           .withInvitedEmail("different@airbyte.io")
 
-      Mockito.`when`(service!!.getUserInvitationByInviteCode(inviteCode)).thenReturn(invitation)
+      every { service.getUserInvitationByInviteCode(inviteCode) } returns invitation
 
       Assertions.assertThrows(
         OperationNotAllowedException::class.java,
-      ) { handler!!.accept(inviteCodeRequestBody, currentUser) }
+      ) { handler.accept(inviteCodeRequestBody, currentUser) }
 
       // make sure the service method to accept the invitation was never called.
-      verify(service!!, Mockito.times(0)).acceptUserInvitation(org.mockito.kotlin.any(), org.mockito.kotlin.any())
+      verify(exactly = 0) { service.acceptUserInvitation(any(), any()) }
     }
 
     @Test
@@ -429,16 +388,12 @@ internal class UserInvitationHandlerTest {
           .withInviteCode(inviteCode)
           .withInvitedEmail(CURRENT_USER_EMAIL)
 
-      Mockito.`when`(service!!.getUserInvitationByInviteCode(inviteCode)).thenReturn(invitation)
-
-      Mockito
-        .doAnswer { throw InvitationStatusUnexpectedException("not pending") }
-        .`when`(service!!)
-        .acceptUserInvitation(inviteCode, currentUser.userId)
+      every { service.getUserInvitationByInviteCode(inviteCode) } returns invitation
+      every { service.acceptUserInvitation(inviteCode, currentUser.userId) } answers { throw InvitationStatusUnexpectedException("not pending") }
 
       Assertions.assertThrows(
         ConflictException::class.java,
-      ) { handler!!.accept(inviteCodeRequestBody, currentUser) }
+      ) { handler.accept(inviteCodeRequestBody, currentUser) }
     }
 
     @Test
@@ -448,15 +403,12 @@ internal class UserInvitationHandlerTest {
           .withInviteCode(inviteCode)
           .withInvitedEmail(CURRENT_USER_EMAIL)
 
-      Mockito.`when`(service!!.getUserInvitationByInviteCode(inviteCode)).thenReturn(invitation)
-      Mockito
-        .doAnswer { throw InvitationStatusUnexpectedException("expired") }
-        .`when`(service!!)
-        .acceptUserInvitation(inviteCode, currentUser.userId)
+      every { service.getUserInvitationByInviteCode(inviteCode) } returns invitation
+      every { service.acceptUserInvitation(inviteCode, currentUser.userId) } answers { throw InvitationStatusUnexpectedException("expired") }
 
       Assertions.assertThrows(
         ConflictException::class.java,
-      ) { handler!!.accept(inviteCodeRequestBody, currentUser) }
+      ) { handler.accept(inviteCodeRequestBody, currentUser) }
     }
   }
 
@@ -473,17 +425,12 @@ internal class UserInvitationHandlerTest {
           .withInvitedEmail("invited@airbyte.io")
           .withStatus(InvitationStatus.CANCELLED)
 
-      Mockito.`when`(service!!.cancelUserInvitation(inviteCode)).thenReturn(cancelledInvitation)
-      Mockito.`when`(mapper!!.toApi(cancelledInvitation)).thenReturn(
-        Mockito.mock(
-          UserInvitationRead::class.java,
-        ),
-      )
+      every { service.cancelUserInvitation(inviteCode) } returns cancelledInvitation
+      every { mapper.toApi(cancelledInvitation) } returns mockk<UserInvitationRead>()
 
-      handler!!.cancel(req)
+      handler.cancel(req)
 
-      verify(service!!, Mockito.times(1)).cancelUserInvitation(inviteCode)
-      Mockito.verifyNoMoreInteractions(service)
+      verify(exactly = 1) { service.cancelUserInvitation(inviteCode) }
     }
 
     @Test
@@ -491,11 +438,11 @@ internal class UserInvitationHandlerTest {
       val inviteCode = "invite-code"
       val req = InviteCodeRequestBody().inviteCode(inviteCode)
 
-      Mockito.`when`(service!!.cancelUserInvitation(inviteCode)).thenAnswer { throw InvitationStatusUnexpectedException("unexpected status") }
+      every { service.cancelUserInvitation(inviteCode) } answers { throw InvitationStatusUnexpectedException("unexpected status") }
 
       Assertions.assertThrows(
         ConflictException::class.java,
-      ) { handler!!.cancel(req) }
+      ) { handler.cancel(req) }
     }
   }
 
@@ -505,40 +452,31 @@ internal class UserInvitationHandlerTest {
     val organizationId = UUID.randomUUID()
     val workspaceInvitations =
       listOf(
-        Mockito.mock(
-          UserInvitation::class.java,
-        ),
-        Mockito.mock(UserInvitation::class.java),
+        mockk<UserInvitation>(),
+        mockk<UserInvitation>(),
       )
     val organizationInvitations =
       listOf(
-        Mockito.mock(
-          UserInvitation::class.java,
-        ),
-        Mockito.mock(UserInvitation::class.java),
-        Mockito.mock(
-          UserInvitation::class.java,
-        ),
+        mockk<UserInvitation>(),
+        mockk<UserInvitation>(),
+        mockk<UserInvitation>(),
       )
 
-    Mockito.`when`(service!!.getPendingInvitations(ScopeType.WORKSPACE, workspaceId)).thenReturn(workspaceInvitations)
-    Mockito.`when`(service!!.getPendingInvitations(ScopeType.ORGANIZATION, organizationId)).thenReturn(organizationInvitations)
+    every { service.getPendingInvitations(ScopeType.WORKSPACE, workspaceId) } returns workspaceInvitations
+    every { service.getPendingInvitations(ScopeType.ORGANIZATION, organizationId) } returns organizationInvitations
 
-    Mockito.`when`(mapper!!.toDomain(io.airbyte.api.model.generated.ScopeType.WORKSPACE)).thenReturn(ScopeType.WORKSPACE)
-    Mockito.`when`(mapper!!.toDomain(io.airbyte.api.model.generated.ScopeType.ORGANIZATION)).thenReturn(ScopeType.ORGANIZATION)
-    Mockito
-      .`when`(
-        mapper!!.toApi(org.mockito.kotlin.any<UserInvitation>()),
-      ).thenReturn(Mockito.mock(UserInvitationRead::class.java))
+    every { mapper.toDomain(io.airbyte.api.model.generated.ScopeType.WORKSPACE) } returns ScopeType.WORKSPACE
+    every { mapper.toDomain(io.airbyte.api.model.generated.ScopeType.ORGANIZATION) } returns ScopeType.ORGANIZATION
+    every { mapper.toApi(any<UserInvitation>()) } returns mockk<UserInvitationRead>()
 
     val workspaceResult =
-      handler!!.getPendingInvitations(
+      handler.getPendingInvitations(
         UserInvitationListRequestBody()
           .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
           .scopeId(workspaceId),
       )
     val organizationResult =
-      handler!!.getPendingInvitations(
+      handler.getPendingInvitations(
         UserInvitationListRequestBody()
           .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION)
           .scopeId(organizationId),
@@ -547,10 +485,10 @@ internal class UserInvitationHandlerTest {
     Assertions.assertEquals(workspaceInvitations.size, workspaceResult.size)
     Assertions.assertEquals(organizationInvitations.size, organizationResult.size)
 
-    verify(service!!, Mockito.times(1)).getPendingInvitations(ScopeType.WORKSPACE, workspaceId)
-    verify(service!!, Mockito.times(1)).getPendingInvitations(ScopeType.ORGANIZATION, organizationId)
+    verify(exactly = 1) { service.getPendingInvitations(ScopeType.WORKSPACE, workspaceId) }
+    verify(exactly = 1) { service.getPendingInvitations(ScopeType.ORGANIZATION, organizationId) }
 
-    verify(mapper, Mockito.times(workspaceInvitations.size + organizationInvitations.size))?.toApi(org.mockito.kotlin.any<UserInvitation>())
+    verify(exactly = workspaceInvitations.size + organizationInvitations.size) { mapper.toApi(any<UserInvitation>()) }
   }
 
   companion object {

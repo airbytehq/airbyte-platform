@@ -5,23 +5,23 @@
 package io.airbyte.workers.temporal.scheduling.activities
 
 import io.airbyte.workers.helpers.ProgressChecker
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mock
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class CheckRunProgressActivityTest {
-  @Mock
   private var mProgressChecker: ProgressChecker? = null
 
   @BeforeEach
   fun setup() {
-    mProgressChecker = Mockito.mock<ProgressChecker>(ProgressChecker::class.java)
+    mProgressChecker = mockk<ProgressChecker>()
   }
 
   @ParameterizedTest
@@ -32,12 +32,12 @@ internal class CheckRunProgressActivityTest {
     madeProgress: Boolean,
   ) {
     val activity: CheckRunProgressActivity = CheckRunProgressActivityImpl(mProgressChecker!!)
-    Mockito.`when`<Boolean?>(mProgressChecker!!.check(jobId, attemptNo)).thenReturn(madeProgress)
+    every { mProgressChecker!!.check(jobId, attemptNo) } returns madeProgress
 
     val input = CheckRunProgressActivity.Input(jobId, attemptNo, UUID.randomUUID())
     val result = activity.checkProgress(input)
 
-    Mockito.verify<ProgressChecker?>(mProgressChecker, Mockito.times(1)).check(jobId, attemptNo)
+    verify(exactly = 1) { mProgressChecker!!.check(jobId, attemptNo) }
 
     assertEquals(madeProgress, result.madeProgress())
   }

@@ -9,7 +9,7 @@ import io.airbyte.config.ConnectorEnumRolloutStrategy
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class ActivityHelperTest {
+internal class ActivityHelperTest {
   @Test
   fun `test getRolloutStrategyFromInput`() {
     assertEquals(

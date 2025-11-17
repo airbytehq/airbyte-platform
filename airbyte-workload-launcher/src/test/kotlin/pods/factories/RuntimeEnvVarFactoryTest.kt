@@ -31,7 +31,7 @@ import io.airbyte.workload.launcher.helper.ConnectorApmSupportHelper
 import io.airbyte.workload.launcher.model.toEnvVarList
 import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory.Companion.MYSQL_SOURCE_NAME
-import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.CONTAINER_ORCH_JAVA_OPTS
+import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.CONTAINER_ORCHESTRATOR_JAVA_OPTS
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.WORKLOAD_ID
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.connectorAwsAssumedRoleSecretEnvList
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.organizationId
@@ -51,26 +51,19 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.ArgumentMatchers.anyList
 import java.util.UUID
 import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
-class RuntimeEnvVarFactoryTest {
+private const val STAGING_MOUNT_PATH = "/staging-dir"
+
+internal class RuntimeEnvVarFactoryTest {
   private lateinit var connectorApmSupportHelper: ConnectorApmSupportHelper
-
   private lateinit var ffClient: TestClient
-
   private lateinit var factory: RuntimeEnvVarFactory
-
-  private val stagingMountPath = "/staging-dir"
-
   private lateinit var airbyteEdition: AirbyteEdition
-
   private lateinit var airbyteWorkerConfig: AirbyteWorkerConfig
-
   private lateinit var airbyteLoggingConfig: AirbyteLoggingConfig
-
   private lateinit var airbyteContainerOrchestratorConfig: AirbyteContainerOrchestratorConfig
 
   @BeforeEach
@@ -97,7 +90,7 @@ class RuntimeEnvVarFactoryTest {
                         AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig
                           .AirbyteWorkerJobKubernetesVolumeConfig
                           .AirbyteWorkerJobKubernetesVolumeStagingConfig(
-                            mountPath = stagingMountPath,
+                            mountPath = STAGING_MOUNT_PATH,
                           ),
                     ),
               ),
@@ -107,7 +100,7 @@ class RuntimeEnvVarFactoryTest {
     airbyteContainerOrchestratorConfig =
       AirbyteContainerOrchestratorConfig(
         enableUnsafeCode = false,
-        javaOpts = CONTAINER_ORCH_JAVA_OPTS,
+        javaOpts = CONTAINER_ORCHESTRATOR_JAVA_OPTS,
       )
 
     factory =
@@ -172,14 +165,14 @@ class RuntimeEnvVarFactoryTest {
     val context = Connection(UUID.randomUUID())
     every { ffClient.boolVariation(ConnectorApmEnabled, context) } returns true
 
-    every { connectorApmSupportHelper.addApmEnvVars(anyList()) } returns Unit
-    every { connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, anyList()) } returns Unit
+    every { connectorApmSupportHelper.addApmEnvVars(any()) } returns Unit
+    every { connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, any()) } returns Unit
 
     factory.getConnectorApmEnvVars(image, context)
 
-    // the API is mutative for some reason which means this is the best we can do
-    verify { connectorApmSupportHelper.addApmEnvVars(anyList()) }
-    verify { connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, anyList()) }
+    // the API is mutative for some reason that means this is the best we can do
+    verify { connectorApmSupportHelper.addApmEnvVars(any()) }
+    verify { connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, any()) }
   }
 
   @Test
@@ -188,14 +181,14 @@ class RuntimeEnvVarFactoryTest {
     val context = Connection(UUID.randomUUID())
     every { ffClient.boolVariation(ConnectorApmEnabled, context) } returns false
 
-    every { connectorApmSupportHelper.addApmEnvVars(anyList()) } returns Unit
-    every { connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, anyList()) } returns Unit
+    every { connectorApmSupportHelper.addApmEnvVars(any()) } returns Unit
+    every { connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, any()) } returns Unit
 
     factory.getConnectorApmEnvVars(image, context)
 
-    // the API is mutative for some reason which means this is the best we can do
-    verify(exactly = 0) { connectorApmSupportHelper.addApmEnvVars(anyList()) }
-    verify(exactly = 0) { connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, anyList()) }
+    // the API is mutative for some reason that means this is the best we can do
+    verify(exactly = 0) { connectorApmSupportHelper.addApmEnvVars(any()) }
+    verify(exactly = 0) { connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, any()) }
   }
 
   @Test
@@ -278,7 +271,7 @@ class RuntimeEnvVarFactoryTest {
       listOf(
         EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, "true", null),
         EnvVar(EnvVarConstants.USE_FILE_TRANSFER, "true", null),
-        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
+        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, STAGING_MOUNT_PATH, null),
         EnvVar(EnvVarConstants.CONCURRENT_SOURCE_STREAM_READ_ENV_VAR, "false", null),
       )
 
@@ -455,7 +448,7 @@ class RuntimeEnvVarFactoryTest {
     val airbyteContainerOrchestratorConfig =
       AirbyteContainerOrchestratorConfig(
         enableUnsafeCode = globalOverride,
-        javaOpts = CONTAINER_ORCH_JAVA_OPTS,
+        javaOpts = CONTAINER_ORCHESTRATOR_JAVA_OPTS,
       )
     val envFactory =
       spyk(
@@ -513,7 +506,7 @@ class RuntimeEnvVarFactoryTest {
         EnvVar(AirbyteEnvVar.WORKSPACE_ID.toString(), input.workspaceId.toString(), null),
         EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransfer.toString(), null),
         EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, expectedOpts, null),
-        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
+        EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, STAGING_MOUNT_PATH, null),
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null),
         EnvVar(EnvVarConstants.LOG_LEVEL, LogLevel.INFO.name, null),
       ),
@@ -549,10 +542,10 @@ class RuntimeEnvVarFactoryTest {
 
   object Fixtures {
     const val WORKLOAD_ID = "test-workload-id"
-    const val CONTAINER_ORCH_JAVA_OPTS = "OPTS"
+    const val CONTAINER_ORCHESTRATOR_JAVA_OPTS = "OPTS"
     val organizationId = UUID.randomUUID()!!
     val workspaceId = UUID.randomUUID()!!
-    val connectorAwsAssumedRoleSecretEnvList = listOf(EnvVar("test", "creds", null))
+    val connectorAwsAssumedRoleSecretEnvList = listOf(EnvVar("test", "credentials", null))
   }
 
   companion object {
@@ -584,8 +577,8 @@ class RuntimeEnvVarFactoryTest {
     @JvmStatic
     private fun orchestratorEnvVarMatrix() =
       listOf(
-        Arguments.of(" ", CONTAINER_ORCH_JAVA_OPTS, true, false),
-        Arguments.of("", CONTAINER_ORCH_JAVA_OPTS, false, true),
+        Arguments.of(" ", CONTAINER_ORCHESTRATOR_JAVA_OPTS, true, false),
+        Arguments.of("", CONTAINER_ORCHESTRATOR_JAVA_OPTS, false, true),
         Arguments.of("opts 1", "opts 1", true, true),
         Arguments.of("opts 2", "opts 2", false, false),
         Arguments.of("opts 3 ", "opts 3", true, false),

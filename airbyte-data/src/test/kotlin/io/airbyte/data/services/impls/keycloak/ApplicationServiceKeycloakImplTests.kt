@@ -9,6 +9,9 @@ import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
 import jakarta.ws.rs.BadRequestException
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions
@@ -19,42 +22,42 @@ import org.keycloak.admin.client.resource.ClientsResource
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.admin.client.resource.UsersResource
 import org.keycloak.representations.idm.ClientRepresentation
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import java.net.URI
 import java.util.UUID
 
 internal class ApplicationServiceKeycloakImplTests {
   private var keycloakConfiguration: AirbyteKeycloakConfig? = null
 
-  private val keycloakClient: Keycloak = Mockito.mock(Keycloak::class.java)
-  private val realmResource: RealmResource = Mockito.mock(RealmResource::class.java)
-  private val clientsResource: ClientsResource = Mockito.mock(ClientsResource::class.java)
-  private val usersResource: UsersResource = Mockito.mock(UsersResource::class.java)
-  private val clientScopeConfigurator: ClientScopeConfigurator = Mockito.mock(ClientScopeConfigurator::class.java)
+  private val keycloakClient: Keycloak = mockk<Keycloak>()
+  private val realmResource: RealmResource = mockk<RealmResource>()
+  private val clientsResource: ClientsResource = mockk<ClientsResource>()
+  private val usersResource: UsersResource = mockk<UsersResource>()
+  private val clientScopeConfigurator: ClientScopeConfigurator = mockk<ClientScopeConfigurator>()
 
   private var apiKeyServiceKeycloakImpl: ApplicationServiceKeycloakImpl? = null
 
   @BeforeEach
   fun setUp() {
-    keycloakConfiguration = AirbyteKeycloakConfig(protocol = "http", host = "localhost:8080")
+    keycloakConfiguration = AirbyteKeycloakConfig(protocol = "http", host = "localhost:8080", clientRealm = REALM_NAME)
 
-    Mockito.`when`(keycloakClient.realm(REALM_NAME)).thenReturn(realmResource)
-    Mockito.`when`(realmResource.clients()).thenReturn(clientsResource)
-    Mockito.`when`(realmResource.users()).thenReturn(usersResource)
+    every { keycloakClient.realm(REALM_NAME) } returns realmResource
+    every { realmResource.clients() } returns clientsResource
+    every { realmResource.users() } returns usersResource
+    every { clientScopeConfigurator.configureClientScope(any()) } returns Unit
 
-    Mockito
-      .`when`(clientsResource.create(ArgumentMatchers.any(ClientRepresentation::class.java)))
-      .thenReturn(Response.created(URI.create("https://company.example")).build())
+    every {
+      clientsResource.create(any(ClientRepresentation::class))
+    } returns Response.created(URI.create("https://company.example")).build()
 
     apiKeyServiceKeycloakImpl =
-      Mockito.spy(
+      spyk(
         ApplicationServiceKeycloakImpl(
           keycloakClient,
           keycloakConfiguration!!,
           clientScopeConfigurator,
           AirbyteAuthConfig(),
         ),
+        recordPrivateCalls = true,
       )
   }
 
@@ -62,14 +65,13 @@ internal class ApplicationServiceKeycloakImplTests {
   fun testNoMoreThanTwoApiKeys() {
     val user = AuthenticatedUser().withUserId(UUID.fromString("6287ecb9-f9fb-4062-a12b-20479b6d2dde"))
 
-    Mockito
-      .doReturn(
-        listOf(
-          buildClientRepresentation(user, TEST_1, 0),
-          buildClientRepresentation(user, TEST_2, 1),
-        ),
-      ).`when`<ApplicationServiceKeycloakImpl>(apiKeyServiceKeycloakImpl)
-      .listApplicationsByUser(user)
+    every {
+      apiKeyServiceKeycloakImpl!!.listApplicationsByUser(user)
+    } returns
+      listOf(
+        buildApplication(user, TEST_1, 0),
+        buildApplication(user, TEST_2, 1),
+      )
 
     Assertions.assertThrows(
       BadRequestException::class.java,
@@ -80,19 +82,17 @@ internal class ApplicationServiceKeycloakImplTests {
   fun testApiKeyNameAlreadyExists() {
     val user = AuthenticatedUser().withUserId(UUID.fromString("4bb2a760-a0b6-4936-aea0-a13fada349f4"))
 
-    Mockito
-      .doReturn(listOf(buildClientRepresentation(user, TEST_1, 0)))
-      .`when`<ApplicationServiceKeycloakImpl>(apiKeyServiceKeycloakImpl)
-      .listApplicationsByUser(user)
+    every {
+      apiKeyServiceKeycloakImpl!!.listApplicationsByUser(user)
+    } returns listOf(buildApplication(user, TEST_1, 0))
 
-    Mockito
-      .`when`(
-        clientsResource.findByClientId(
-          buildClientId(
-            "4bb2a760-a0b6-4936-aea0-a13fada349f4",
-          ),
+    every {
+      clientsResource.findByClientId(
+        buildClientId(
+          "4bb2a760-a0b6-4936-aea0-a13fada349f4",
         ),
-      ).thenReturn(mutableListOf(buildClientRepresentation(user, TEST_1, 0)))
+      )
+    } returns mutableListOf(buildClientRepresentation(user, TEST_1, 0))
 
     Assertions.assertThrows(
       BadRequestException::class.java,
@@ -102,23 +102,21 @@ internal class ApplicationServiceKeycloakImplTests {
   @Test
   fun testBadKeycloakCreateResponse() {
     val user = AuthenticatedUser().withUserId(UUID.fromString("b3600891-e7c7-4278-8a94-8b838985de2a"))
-    Mockito
-      .`when`(clientsResource.create(ArgumentMatchers.any(ClientRepresentation::class.java)))
-      .thenReturn(Response.status(500).build())
+    every {
+      clientsResource.create(any(ClientRepresentation::class))
+    } returns Response.status(500).build()
 
-    Mockito
-      .doReturn(mutableListOf<Application>())
-      .`when`<ApplicationServiceKeycloakImpl>(apiKeyServiceKeycloakImpl)
-      .listApplicationsByUser(user)
+    every {
+      apiKeyServiceKeycloakImpl!!.listApplicationsByUser(user)
+    } returns mutableListOf()
 
-    Mockito
-      .`when`(
-        clientsResource.findByClientId(
-          buildClientId(
-            "b3600891-e7c7-4278-8a94-8b838985de2a",
-          ),
+    every {
+      clientsResource.findByClientId(
+        buildClientId(
+          "b3600891-e7c7-4278-8a94-8b838985de2a",
         ),
-      ).thenReturn(listOf(buildClientRepresentation(user, TEST_1, 0)))
+      )
+    } returns listOf(buildClientRepresentation(user, TEST_1, 0))
 
     Assertions.assertThrows(
       BadRequestException::class.java,
@@ -136,18 +134,16 @@ internal class ApplicationServiceKeycloakImplTests {
     val user = AuthenticatedUser().withUserId(UUID.fromString("58b32b0c-acef-47b9-8e3d-1c83adc7ce59"))
 
     // Note: This can be quickly refactored into an integration test, but for now we mock creating.
-    Mockito
-      .doReturn(
-        listOf(
-          buildClientRepresentation(user, TEST_1, 0),
-        ),
-      ).`when`<ApplicationServiceKeycloakImpl>(apiKeyServiceKeycloakImpl)
-      .listApplicationsByUser(user)
+    every {
+      apiKeyServiceKeycloakImpl!!.listApplicationsByUser(user)
+    } returns
+      listOf(
+        buildApplication(user, TEST_1, 0),
+      )
 
-    Mockito.doReturn(Application()).`when`<ApplicationServiceKeycloakImpl>(apiKeyServiceKeycloakImpl).createApplication(
-      user,
-      TEST_1,
-    )
+    every {
+      apiKeyServiceKeycloakImpl!!.createApplication(user, TEST_1)
+    } returns Application()
 
     var apiKeys =
       apiKeyServiceKeycloakImpl!!.listApplicationsByUser(
@@ -155,19 +151,17 @@ internal class ApplicationServiceKeycloakImplTests {
       )
     assert(apiKeys.size == 1)
 
-    Mockito.doReturn(Application()).`when`<ApplicationServiceKeycloakImpl>(apiKeyServiceKeycloakImpl).createApplication(
-      user,
-      TEST_2,
-    )
+    every {
+      apiKeyServiceKeycloakImpl!!.createApplication(user, TEST_2)
+    } returns Application()
 
-    Mockito
-      .doReturn(
-        listOf(
-          buildClientRepresentation(user, TEST_1, 0),
-          buildClientRepresentation(user, TEST_2, 1),
-        ),
-      ).`when`<ApplicationServiceKeycloakImpl>(apiKeyServiceKeycloakImpl)
-      .listApplicationsByUser(user)
+    every {
+      apiKeyServiceKeycloakImpl!!.listApplicationsByUser(user)
+    } returns
+      listOf(
+        buildApplication(user, TEST_1, 0),
+        buildApplication(user, TEST_2, 1),
+      )
     apiKeys =
       apiKeyServiceKeycloakImpl!!.listApplicationsByUser(
         user,
@@ -192,6 +186,17 @@ internal class ApplicationServiceKeycloakImplTests {
     clientRepresentation.setAttributes(attributes)
     return clientRepresentation
   }
+
+  private fun buildApplication(
+    user: AuthenticatedUser,
+    name: String?,
+    index: Int,
+  ): Application =
+    Application()
+      .withClientId("${user.userId}-$index")
+      .withName(name)
+      .withClientSecret("test")
+      .withId(UUID.randomUUID().toString())
 
   companion object {
     private const val TEST_1 = "test1"

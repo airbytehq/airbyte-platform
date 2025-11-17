@@ -22,58 +22,53 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.metrics.MetricClient
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import io.mockk.verifyAll
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doThrow
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.verifyNoInteractions
-import org.mockito.kotlin.verifyNoMoreInteractions
-import org.mockito.kotlin.whenever
 import java.util.Optional
 import java.util.UUID
 
 internal class JobErrorReporterTest {
-  private var actorDefinitionService: ActorDefinitionService? = null
-  private var sourceService: SourceService? = null
-  private var destinationService: DestinationService? = null
-  private var workspaceService: WorkspaceService? = null
+  private lateinit var actorDefinitionService: ActorDefinitionService
+  private lateinit var sourceService: SourceService
+  private lateinit var destinationService: DestinationService
+  private lateinit var workspaceService: WorkspaceService
   private lateinit var jobErrorReportingClient: JobErrorReportingClient
-  private var webUrlHelper: WebUrlHelper? = null
-  private var jobErrorReporter: JobErrorReporter? = null
+  private lateinit var webUrlHelper: WebUrlHelper
+  private lateinit var jobErrorReporter: JobErrorReporter
 
   @BeforeEach
   fun setup() {
-    actorDefinitionService = mock<ActorDefinitionService>()
-    sourceService = mock<SourceService>()
-    destinationService = mock<DestinationService>()
-    workspaceService = mock<WorkspaceService>()
-    jobErrorReportingClient = mock<JobErrorReportingClient>()
-    webUrlHelper = mock<WebUrlHelper>()
+    actorDefinitionService = mockk<ActorDefinitionService>()
+    sourceService = mockk<SourceService>()
+    destinationService = mockk<DestinationService>()
+    workspaceService = mockk<WorkspaceService>()
+    jobErrorReportingClient = mockk<JobErrorReportingClient>(relaxed = true)
+    webUrlHelper = mockk<WebUrlHelper>()
     jobErrorReporter =
       JobErrorReporter(
-        actorDefinitionService!!,
-        sourceService!!,
-        destinationService!!,
-        workspaceService!!,
+        actorDefinitionService,
+        sourceService,
+        destinationService,
+        workspaceService,
         AIRBYTE_EDITION,
         AIRBYTE_VERSION,
-        webUrlHelper!!,
+        webUrlHelper,
         jobErrorReportingClient,
-        mock<MetricClient>(),
+        mockk<MetricClient>(relaxed = true),
       )
 
-    whenever(webUrlHelper!!.getConnectionUrl(WORKSPACE_ID, CONNECTION_ID)).thenReturn(CONNECTION_URL)
-    whenever(webUrlHelper!!.getWorkspaceUrl(WORKSPACE_ID)).thenReturn(WORKSPACE_URL)
+    every { webUrlHelper.getConnectionUrl(WORKSPACE_ID, CONNECTION_ID) } returns CONNECTION_URL
+    every { webUrlHelper.getWorkspaceUrl(WORKSPACE_ID) } returns WORKSPACE_URL
   }
 
   @Test
   fun testReportSyncJobFailure() {
-    val mFailureSummary = mock<AttemptFailureSummary>()
+    val mFailureSummary = mockk<AttemptFailureSummary>()
 
     val sourceFailureReason =
       FailureReason()
@@ -96,14 +91,13 @@ internal class JobErrorReporterTest {
     val nonTraceMessageFailureReason = FailureReason().withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
     val replicationFailureReason = FailureReason().withFailureOrigin(FailureReason.FailureOrigin.REPLICATION)
 
-    whenever(mFailureSummary.failures).thenReturn(
+    every { mFailureSummary.failures } returns
       listOf<FailureReason?>(
         sourceFailureReason,
         destinationFailureReason,
         nonTraceMessageFailureReason,
         replicationFailureReason,
-      ),
-    )
+      )
 
     val syncJobId = 1L
     val jobReportingContext =
@@ -117,44 +111,36 @@ internal class JobErrorReporterTest {
     val attemptConfig =
       AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), State())
 
-    whenever(sourceService!!.getSourceDefinitionFromConnection(CONNECTION_ID))
-      .thenReturn(
-        StandardSourceDefinition()
-          .withSourceDefinitionId(SOURCE_DEFINITION_ID)
-          .withName(SOURCE_DEFINITION_NAME),
-      )
+    every { sourceService.getSourceDefinitionFromConnection(CONNECTION_ID) } returns
+      StandardSourceDefinition()
+        .withSourceDefinitionId(SOURCE_DEFINITION_ID)
+        .withName(SOURCE_DEFINITION_NAME)
 
-    whenever(destinationService!!.getDestinationDefinitionFromConnection(CONNECTION_ID))
-      .thenReturn(
-        StandardDestinationDefinition()
-          .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
-          .withName(DESTINATION_DEFINITION_NAME),
-      )
+    every { destinationService.getDestinationDefinitionFromConnection(CONNECTION_ID) } returns
+      StandardDestinationDefinition()
+        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
+        .withName(DESTINATION_DEFINITION_NAME)
 
-    whenever(actorDefinitionService!!.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
-      .thenReturn(
-        ActorDefinitionVersion()
-          .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
-          .withDockerImageTag(DOCKER_IMAGE_TAG)
-          .withReleaseStage(SOURCE_RELEASE_STAGE)
-          .withInternalSupportLevel(SOURCE_INTERNAL_SUPPORT_LEVEL),
-      )
+    every { actorDefinitionService.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID) } returns
+      ActorDefinitionVersion()
+        .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_IMAGE_TAG)
+        .withReleaseStage(SOURCE_RELEASE_STAGE)
+        .withInternalSupportLevel(SOURCE_INTERNAL_SUPPORT_LEVEL)
 
-    whenever(actorDefinitionService!!.getActorDefinitionVersion(DESTINATION_DEFINITION_VERSION_ID))
-      .thenReturn(
-        ActorDefinitionVersion()
-          .withDockerRepository(DESTINATION_DOCKER_REPOSITORY)
-          .withDockerImageTag(DOCKER_IMAGE_TAG)
-          .withReleaseStage(DESTINATION_RELEASE_STAGE)
-          .withInternalSupportLevel(DESTINATION_INTERNAL_SUPPORT_LEVEL),
-      )
+    every { actorDefinitionService.getActorDefinitionVersion(DESTINATION_DEFINITION_VERSION_ID) } returns
+      ActorDefinitionVersion()
+        .withDockerRepository(DESTINATION_DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_IMAGE_TAG)
+        .withReleaseStage(DESTINATION_RELEASE_STAGE)
+        .withInternalSupportLevel(DESTINATION_INTERNAL_SUPPORT_LEVEL)
 
-    val mWorkspace = mock<StandardWorkspace>()
-    whenever(mWorkspace.workspaceId).thenReturn(WORKSPACE_ID)
-    whenever(workspaceService!!.getStandardWorkspaceFromConnection(CONNECTION_ID, true)).thenReturn(mWorkspace)
-    whenever(workspaceService!!.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORGANIZATION_ID))
+    val mWorkspace = mockk<StandardWorkspace>()
+    every { mWorkspace.workspaceId } returns WORKSPACE_ID
+    every { workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, true) } returns mWorkspace
+    every { workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID) } returns Optional.of(ORGANIZATION_ID)
 
-    jobErrorReporter!!.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobReportingContext, attemptConfig)
+    jobErrorReporter.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobReportingContext, attemptConfig)
 
     val expectedSourceMetadata =
       mapOf<String?, String?>(
@@ -196,26 +182,27 @@ internal class JobErrorReporterTest {
         ORGANIZATION_ID_META_KEY to ORGANIZATION_ID.toString(),
       )
 
-    verify(jobErrorReportingClient).reportJobFailureReason(
-      mWorkspace,
-      sourceFailureReason,
-      SOURCE_DOCKER_IMAGE,
-      expectedSourceMetadata,
-      attemptConfig,
-    )
-    verify(jobErrorReportingClient).reportJobFailureReason(
-      mWorkspace,
-      destinationFailureReason,
-      DESTINATION_DOCKER_IMAGE,
-      expectedDestinationMetadata,
-      attemptConfig,
-    )
-    verifyNoMoreInteractions(jobErrorReportingClient)
+    verifyAll {
+      jobErrorReportingClient.reportJobFailureReason(
+        mWorkspace,
+        sourceFailureReason,
+        SOURCE_DOCKER_IMAGE,
+        expectedSourceMetadata,
+        attemptConfig,
+      )
+      jobErrorReportingClient.reportJobFailureReason(
+        mWorkspace,
+        destinationFailureReason,
+        DESTINATION_DOCKER_IMAGE,
+        expectedDestinationMetadata,
+        attemptConfig,
+      )
+    }
   }
 
   @Test
   fun testReportSyncJobFailureDoesNotThrow() {
-    val mFailureSummary = mock<AttemptFailureSummary>()
+    val mFailureSummary = mockk<AttemptFailureSummary>()
     val jobContext = SyncJobReportingContext(1L, SOURCE_DEFINITION_VERSION_ID, DESTINATION_DEFINITION_VERSION_ID)
 
     val sourceFailureReason =
@@ -228,54 +215,52 @@ internal class JobErrorReporterTest {
     val attemptConfig =
       AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), State())
 
-    whenever(mFailureSummary.failures).thenReturn(listOf<FailureReason?>(sourceFailureReason))
+    every { mFailureSummary.failures } returns listOf<FailureReason?>(sourceFailureReason)
 
-    whenever(sourceService!!.getSourceDefinitionFromConnection(CONNECTION_ID))
-      .thenReturn(
-        StandardSourceDefinition()
-          .withSourceDefinitionId(SOURCE_DEFINITION_ID)
-          .withName(SOURCE_DEFINITION_NAME),
-      )
+    every { sourceService.getSourceDefinitionFromConnection(CONNECTION_ID) } returns
+      StandardSourceDefinition()
+        .withSourceDefinitionId(SOURCE_DEFINITION_ID)
+        .withName(SOURCE_DEFINITION_NAME)
 
-    whenever(actorDefinitionService!!.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID))
-      .thenReturn(
-        ActorDefinitionVersion()
-          .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
-          .withDockerImageTag(DOCKER_IMAGE_TAG)
-          .withReleaseStage(SOURCE_RELEASE_STAGE),
-      )
+    every { actorDefinitionService.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID) } returns
+      ActorDefinitionVersion()
+        .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_IMAGE_TAG)
+        .withReleaseStage(SOURCE_RELEASE_STAGE)
 
-    val mWorkspace = mock<StandardWorkspace>()
-    whenever(mWorkspace.workspaceId).thenReturn(WORKSPACE_ID)
-    whenever(workspaceService!!.getStandardWorkspaceFromConnection(CONNECTION_ID, true)).thenReturn(mWorkspace)
-    whenever(webUrlHelper!!.getConnectionUrl(WORKSPACE_ID, CONNECTION_ID)).thenReturn(CONNECTION_URL)
+    val mWorkspace = mockk<StandardWorkspace>()
+    every { mWorkspace.workspaceId } returns WORKSPACE_ID
+    every { workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, true) } returns mWorkspace
+    every { webUrlHelper.getConnectionUrl(WORKSPACE_ID, CONNECTION_ID) } returns CONNECTION_URL
+    every { workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID) } returns Optional.empty()
 
-    doThrow(RuntimeException("some exception"))
-      .whenever(jobErrorReportingClient)
-      .reportJobFailureReason(
+    every {
+      jobErrorReportingClient.reportJobFailureReason(
         any<StandardWorkspace>(),
-        eq(sourceFailureReason),
+        sourceFailureReason,
         any<String>(),
         any<Map<String?, String?>>(),
         any<AttemptConfigReportingContext>(),
       )
+    } throws RuntimeException("some exception")
 
     Assertions.assertDoesNotThrow {
-      jobErrorReporter!!.reportSyncJobFailure(
+      jobErrorReporter.reportSyncJobFailure(
         CONNECTION_ID,
         mFailureSummary,
         jobContext,
         attemptConfig,
       )
     }
-    verify(jobErrorReportingClient, times(1))
-      .reportJobFailureReason(
+    verify(exactly = 1) {
+      jobErrorReportingClient.reportJobFailureReason(
         any<StandardWorkspace>(),
         any<FailureReason>(),
         any<String>(),
         any<Map<String?, String?>>(),
         any<AttemptConfigReportingContext>(),
       )
+    }
   }
 
   @Test
@@ -292,14 +277,12 @@ internal class JobErrorReporterTest {
     val jobContext =
       ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL)
 
-    whenever(sourceService!!.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
-      .thenReturn(
-        StandardSourceDefinition()
-          .withSourceDefinitionId(SOURCE_DEFINITION_ID)
-          .withName(SOURCE_DEFINITION_NAME),
-      )
+    every { sourceService.getStandardSourceDefinition(SOURCE_DEFINITION_ID) } returns
+      StandardSourceDefinition()
+        .withSourceDefinitionId(SOURCE_DEFINITION_ID)
+        .withName(SOURCE_DEFINITION_NAME)
 
-    jobErrorReporter!!.reportSourceCheckJobFailure(SOURCE_DEFINITION_ID, null, failureReason, jobContext)
+    jobErrorReporter.reportSourceCheckJobFailure(SOURCE_DEFINITION_ID, null, failureReason, jobContext)
 
     val expectedMetadata =
       mapOf<String?, String?>(
@@ -316,9 +299,9 @@ internal class JobErrorReporterTest {
         CONNECTOR_COMMAND_KEY to CHECK_COMMAND,
       )
 
-    verify(jobErrorReportingClient)
-      .reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null)
-    verifyNoMoreInteractions(jobErrorReportingClient)
+    verify(exactly = 1) {
+      jobErrorReportingClient.reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null)
+    }
   }
 
   @Test
@@ -335,9 +318,9 @@ internal class JobErrorReporterTest {
     val jobContext =
       ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL)
 
-    jobErrorReporter!!.reportSourceCheckJobFailure(SOURCE_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext)
+    jobErrorReporter.reportSourceCheckJobFailure(SOURCE_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext)
 
-    verifyNoInteractions(jobErrorReportingClient)
+    verify(exactly = 0) { jobErrorReportingClient.reportJobFailureReason(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -354,19 +337,17 @@ internal class JobErrorReporterTest {
     val jobContext =
       ConnectorJobReportingContext(JOB_ID, DESTINATION_DOCKER_IMAGE, DESTINATION_RELEASE_STAGE, DESTINATION_INTERNAL_SUPPORT_LEVEL)
 
-    whenever(destinationService!!.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID))
-      .thenReturn(
-        StandardDestinationDefinition()
-          .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
-          .withName(DESTINATION_DEFINITION_NAME),
-      )
+    every { destinationService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID) } returns
+      StandardDestinationDefinition()
+        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
+        .withName(DESTINATION_DEFINITION_NAME)
 
-    val mWorkspace = mock<StandardWorkspace>()
-    whenever(mWorkspace.workspaceId).thenReturn(WORKSPACE_ID)
-    whenever(workspaceService!!.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace)
-    whenever(workspaceService!!.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORGANIZATION_ID))
+    val mWorkspace = mockk<StandardWorkspace>()
+    every { mWorkspace.workspaceId } returns WORKSPACE_ID
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns mWorkspace
+    every { workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID) } returns Optional.of(ORGANIZATION_ID)
 
-    jobErrorReporter!!.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext)
+    jobErrorReporter.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext)
 
     val expectedMetadata =
       mapOf<String?, String?>(
@@ -386,9 +367,9 @@ internal class JobErrorReporterTest {
         ORGANIZATION_ID_META_KEY to ORGANIZATION_ID.toString(),
       )
 
-    verify(jobErrorReportingClient)
-      .reportJobFailureReason(mWorkspace, failureReason, DESTINATION_DOCKER_IMAGE, expectedMetadata, null)
-    verifyNoMoreInteractions(jobErrorReportingClient)
+    verify(exactly = 1) {
+      jobErrorReportingClient.reportJobFailureReason(mWorkspace, failureReason, DESTINATION_DOCKER_IMAGE, expectedMetadata, null)
+    }
   }
 
   @Test
@@ -405,9 +386,9 @@ internal class JobErrorReporterTest {
     val jobContext =
       ConnectorJobReportingContext(JOB_ID, DESTINATION_DOCKER_IMAGE, DESTINATION_RELEASE_STAGE, DESTINATION_INTERNAL_SUPPORT_LEVEL)
 
-    jobErrorReporter!!.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext)
+    jobErrorReporter.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext)
 
-    verifyNoInteractions(jobErrorReportingClient)
+    verify(exactly = 0) { jobErrorReportingClient.reportJobFailureReason(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -424,14 +405,12 @@ internal class JobErrorReporterTest {
     val jobContext =
       ConnectorJobReportingContext(JOB_ID, DESTINATION_DOCKER_IMAGE, DESTINATION_RELEASE_STAGE, DESTINATION_INTERNAL_SUPPORT_LEVEL)
 
-    whenever(destinationService!!.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID))
-      .thenReturn(
-        StandardDestinationDefinition()
-          .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
-          .withName(DESTINATION_DEFINITION_NAME),
-      )
+    every { destinationService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID) } returns
+      StandardDestinationDefinition()
+        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
+        .withName(DESTINATION_DEFINITION_NAME)
 
-    jobErrorReporter!!.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, null, failureReason, jobContext)
+    jobErrorReporter.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, null, failureReason, jobContext)
 
     val expectedMetadata =
       mapOf<String?, String?>(
@@ -448,9 +427,9 @@ internal class JobErrorReporterTest {
         CONNECTOR_COMMAND_KEY to CHECK_COMMAND,
       )
 
-    verify(jobErrorReportingClient)
-      .reportJobFailureReason(null, failureReason, DESTINATION_DOCKER_IMAGE, expectedMetadata, null)
-    verifyNoMoreInteractions(jobErrorReportingClient)
+    verify(exactly = 1) {
+      jobErrorReportingClient.reportJobFailureReason(null, failureReason, DESTINATION_DOCKER_IMAGE, expectedMetadata, null)
+    }
   }
 
   @Test
@@ -467,19 +446,17 @@ internal class JobErrorReporterTest {
     val jobContext =
       ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL)
 
-    whenever(sourceService!!.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
-      .thenReturn(
-        StandardSourceDefinition()
-          .withSourceDefinitionId(SOURCE_DEFINITION_ID)
-          .withName(SOURCE_DEFINITION_NAME),
-      )
+    every { sourceService.getStandardSourceDefinition(SOURCE_DEFINITION_ID) } returns
+      StandardSourceDefinition()
+        .withSourceDefinitionId(SOURCE_DEFINITION_ID)
+        .withName(SOURCE_DEFINITION_NAME)
 
-    val mWorkspace = mock<StandardWorkspace>()
-    whenever(mWorkspace.workspaceId).thenReturn(WORKSPACE_ID)
-    whenever(workspaceService!!.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace)
-    whenever(workspaceService!!.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORGANIZATION_ID))
+    val mWorkspace = mockk<StandardWorkspace>()
+    every { mWorkspace.workspaceId } returns WORKSPACE_ID
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns mWorkspace
+    every { workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID) } returns Optional.of(ORGANIZATION_ID)
 
-    jobErrorReporter!!.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext)
+    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext)
 
     val expectedMetadata =
       mapOf<String?, String?>(
@@ -499,9 +476,9 @@ internal class JobErrorReporterTest {
         ORGANIZATION_ID_META_KEY to ORGANIZATION_ID.toString(),
       )
 
-    verify(jobErrorReportingClient)
-      .reportJobFailureReason(mWorkspace, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null)
-    verifyNoMoreInteractions(jobErrorReportingClient)
+    verify(exactly = 1) {
+      jobErrorReportingClient.reportJobFailureReason(mWorkspace, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null)
+    }
   }
 
   @Test
@@ -518,14 +495,12 @@ internal class JobErrorReporterTest {
     val jobContext =
       ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL)
 
-    whenever(sourceService!!.getStandardSourceDefinition(SOURCE_DEFINITION_ID))
-      .thenReturn(
-        StandardSourceDefinition()
-          .withSourceDefinitionId(SOURCE_DEFINITION_ID)
-          .withName(SOURCE_DEFINITION_NAME),
-      )
+    every { sourceService.getStandardSourceDefinition(SOURCE_DEFINITION_ID) } returns
+      StandardSourceDefinition()
+        .withSourceDefinitionId(SOURCE_DEFINITION_ID)
+        .withName(SOURCE_DEFINITION_NAME)
 
-    jobErrorReporter!!.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, null, failureReason, jobContext)
+    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, null, failureReason, jobContext)
 
     val expectedMetadata =
       mapOf<String?, String?>(
@@ -542,9 +517,9 @@ internal class JobErrorReporterTest {
         CONNECTOR_COMMAND_KEY to DISCOVER_COMMAND,
       )
 
-    verify(jobErrorReportingClient)
-      .reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null)
-    verifyNoMoreInteractions(jobErrorReportingClient)
+    verify(exactly = 1) {
+      jobErrorReportingClient.reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null)
+    }
   }
 
   @Test
@@ -561,9 +536,9 @@ internal class JobErrorReporterTest {
     val jobContext =
       ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL)
 
-    jobErrorReporter!!.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext)
+    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext)
 
-    verifyNoInteractions(jobErrorReportingClient)
+    verify(exactly = 0) { jobErrorReportingClient.reportJobFailureReason(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -579,7 +554,7 @@ internal class JobErrorReporterTest {
 
     val jobContext = ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, null, null)
 
-    jobErrorReporter!!.reportSpecJobFailure(failureReason, jobContext)
+    jobErrorReporter.reportSpecJobFailure(failureReason, jobContext)
 
     val expectedMetadata =
       mapOf<String?, String?>(
@@ -592,9 +567,9 @@ internal class JobErrorReporterTest {
         CONNECTOR_COMMAND_KEY to SPEC_COMMAND,
       )
 
-    verify(jobErrorReportingClient)
-      .reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null)
-    verifyNoMoreInteractions(jobErrorReportingClient)
+    verify(exactly = 1) {
+      jobErrorReportingClient.reportJobFailureReason(null, failureReason, SOURCE_DOCKER_IMAGE, expectedMetadata, null)
+    }
   }
 
   @Test
@@ -611,9 +586,9 @@ internal class JobErrorReporterTest {
     val jobContext =
       ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL)
 
-    jobErrorReporter!!.reportSpecJobFailure(failureReason, jobContext)
+    jobErrorReporter.reportSpecJobFailure(failureReason, jobContext)
 
-    verifyNoInteractions(jobErrorReportingClient)
+    verify(exactly = 0) { jobErrorReportingClient.reportJobFailureReason(any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -648,11 +623,11 @@ internal class JobErrorReporterTest {
     val jobContext =
       ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL)
 
-    jobErrorReporter!!.reportSpecJobFailure(readFailureReason, jobContext)
-    jobErrorReporter!!.reportSpecJobFailure(discoverFailureReason, jobContext)
-    jobErrorReporter!!.reportSpecJobFailure(checkFailureReason, jobContext)
+    jobErrorReporter.reportSpecJobFailure(readFailureReason, jobContext)
+    jobErrorReporter.reportSpecJobFailure(discoverFailureReason, jobContext)
+    jobErrorReporter.reportSpecJobFailure(checkFailureReason, jobContext)
 
-    verifyNoInteractions(jobErrorReportingClient)
+    verify(exactly = 0) { jobErrorReportingClient.reportJobFailureReason(any(), any(), any(), any(), any()) }
   }
 
   companion object {

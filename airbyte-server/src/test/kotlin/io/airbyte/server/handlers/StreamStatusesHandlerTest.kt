@@ -36,30 +36,29 @@ import io.airbyte.server.repositories.StreamStatusesRepository.FilterParams
 import io.airbyte.server.repositories.domain.StreamStatus
 import io.airbyte.server.repositories.domain.StreamStatus.StreamStatusBuilder
 import io.micronaut.data.model.Page
+import io.mockk.every
+import io.mockk.mockk
 import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.time.OffsetDateTime
 import java.util.UUID
 
 internal class StreamStatusesHandlerTest {
-  var repo: StreamStatusesRepository? = null
-
-  var mapper: StreamStatusesMapper? = null
-
-  var handler: StreamStatusesHandler? = null
-  var jobPersistence: JobPersistence? = null
-  var jobHistoryHandler: JobHistoryHandler? = null
+  private lateinit var repo: StreamStatusesRepository
+  private lateinit var mapper: StreamStatusesMapper
+  private lateinit var handler: StreamStatusesHandler
+  private lateinit var jobPersistence: JobPersistence
+  private lateinit var jobHistoryHandler: JobHistoryHandler
 
   @BeforeEach
   fun setup() {
-    repo = Mockito.mock(StreamStatusesRepository::class.java)
-    mapper = Mockito.mock(StreamStatusesMapper::class.java)
-    jobHistoryHandler = Mockito.mock(JobHistoryHandler::class.java)
-    jobPersistence = Mockito.mock(JobPersistence::class.java)
-    handler = StreamStatusesHandler(repo!!, mapper!!, jobHistoryHandler!!, jobPersistence!!)
+    repo = mockk()
+    mapper = mockk()
+    jobHistoryHandler = mockk()
+    jobPersistence = mockk()
+    handler = StreamStatusesHandler(repo, mapper, jobHistoryHandler, jobPersistence)
   }
 
   @Test
@@ -68,17 +67,11 @@ internal class StreamStatusesHandlerTest {
     val domain = StreamStatusBuilder().build()
     val apiResp = StreamStatusRead()
 
-    Mockito
-      .`when`(mapper!!.map(apiReq))
-      .thenReturn(domain)
-    Mockito
-      .`when`(repo!!.save(domain))
-      .thenReturn(domain)
-    Mockito
-      .`when`(mapper!!.map(domain))
-      .thenReturn(apiResp)
+    every { mapper.map(apiReq) } returns domain
+    every { repo.save(domain) } returns domain
+    every { mapper.map(domain) } returns apiResp
 
-    Assertions.assertSame(apiResp, handler!!.createStreamStatus(apiReq))
+    Assertions.assertSame(apiResp, handler.createStreamStatus(apiReq))
   }
 
   @Test
@@ -87,17 +80,11 @@ internal class StreamStatusesHandlerTest {
     val domain = StreamStatusBuilder().build()
     val apiResp = StreamStatusRead()
 
-    Mockito
-      .`when`(mapper!!.map(apiReq))
-      .thenReturn(domain)
-    Mockito
-      .`when`(repo!!.update(domain))
-      .thenReturn(domain)
-    Mockito
-      .`when`(mapper!!.map(domain))
-      .thenReturn(apiResp)
+    every { mapper.map(apiReq) } returns domain
+    every { repo.update(domain) } returns domain
+    every { mapper.map(domain) } returns apiResp
 
-    Assertions.assertSame(apiResp, handler!!.updateStreamStatus(apiReq))
+    Assertions.assertSame(apiResp, handler.updateStreamStatus(apiReq))
   }
 
   @Test
@@ -108,21 +95,15 @@ internal class StreamStatusesHandlerTest {
     val apiItem = StreamStatusRead()
     val apiResp = StreamStatusReadList().streamStatuses(listOf<@Valid StreamStatusRead?>(apiItem))
 
-    Mockito
-      .`when`(mapper!!.map(org.mockito.kotlin.any<StreamStatusListRequestBody>()))
-      .thenReturn(domainFilters)
+    every { mapper.map(any<StreamStatusListRequestBody>()) } returns domainFilters
 
     @Suppress("UNCHECKED_CAST")
-    val page: Page<StreamStatus> = Mockito.mock(Page::class.java) as Page<StreamStatus>
-    Mockito.`when`(page.content).thenReturn(listOf(domainItem))
-    Mockito
-      .`when`(repo!!.findAllFiltered(domainFilters))
-      .thenReturn(page)
-    Mockito
-      .`when`(mapper!!.map(domainItem))
-      .thenReturn(apiItem)
+    val page: Page<StreamStatus> = mockk()
+    every { page.content } returns listOf(domainItem)
+    every { repo.findAllFiltered(domainFilters) } returns page
+    every { mapper.map(domainItem) } returns apiItem
 
-    Assertions.assertEquals(apiResp, handler!!.listStreamStatus(apiReq))
+    Assertions.assertEquals(apiResp, handler.listStreamStatus(apiReq))
   }
 
   @Test
@@ -133,14 +114,10 @@ internal class StreamStatusesHandlerTest {
     val apiItem = StreamStatusRead()
     val apiResp = StreamStatusReadList().streamStatuses(listOf<@Valid StreamStatusRead?>(apiItem))
 
-    Mockito
-      .`when`(repo!!.findAllPerRunStateByConnectionId(connectionId))
-      .thenReturn(listOf(domainItem))
-    Mockito
-      .`when`(mapper!!.map(domainItem))
-      .thenReturn(apiItem)
+    every { repo.findAllPerRunStateByConnectionId(connectionId) } returns listOf(domainItem)
+    every { mapper.map(domainItem) } returns apiItem
 
-    Assertions.assertEquals(apiResp, handler!!.listStreamStatusPerRunState(apiReq))
+    Assertions.assertEquals(apiResp, handler.listStreamStatusPerRunState(apiReq))
   }
 
   @Test
@@ -190,13 +167,13 @@ internal class StreamStatusesHandlerTest {
     val jobOneBytesCommitted = 12345L
     val jobOneBytesEmitted = 23456L
     val jobOneRecordsCommitted = 19L
-    val jobOneRecordsEmmitted = 20L
+    val jobOneRecordsEmitted = 20L
     val jobOneCreatedAt = 1000L
     val jobOneUpdatedAt = 2000L
     val jobTwoCreatedAt = 3000L
     val jobTwoUpdatedAt = 4000L
     val jobTwoBytesCommitted = 98765L
-    val jobTwoBytesEmmitted = 87654L
+    val jobTwoBytesEmitted = 87654L
     val jobTwoRecordsCommitted = 50L
     val jobTwoRecordsEmittted = 60L
     val jobTwoRecordsRejected = 10L
@@ -314,7 +291,7 @@ internal class StreamStatusesHandlerTest {
           .bytesCommitted(jobOneBytesCommitted)
           .bytesEmitted(jobOneBytesEmitted)
           .recordsCommitted(jobOneRecordsCommitted)
-          .recordsEmitted(jobOneRecordsEmmitted)
+          .recordsEmitted(jobOneRecordsEmitted)
           .recordsRejected(0)
           .jobCreatedAt(jobOneCreatedAt)
           .jobUpdatedAt(jobOneUpdatedAt)
@@ -334,7 +311,7 @@ internal class StreamStatusesHandlerTest {
           .configType(JobConfigType.SYNC)
           .jobId(jobTwoId)
           .bytesCommitted(jobTwoBytesCommitted)
-          .bytesEmitted(jobTwoBytesEmmitted)
+          .bytesEmitted(jobTwoBytesEmitted)
           .recordsCommitted(jobTwoRecordsCommitted)
           .recordsEmitted(jobTwoRecordsEmittted)
           .recordsRejected(jobTwoRecordsRejected)
@@ -350,9 +327,9 @@ internal class StreamStatusesHandlerTest {
           ),
       )
 
-    Mockito.`when`(repo!!.findLastAttemptsOfLastXJobsForConnection(connectionId, numJobs)).thenReturn(listOf(ssOne, ssTwo, ssThree))
-    Mockito.`when`(jobPersistence!!.listJobsLight(setOf(jobOneId, jobTwoId))).thenReturn(listOf(jobOne, jobTwo))
-    Mockito.`when`(jobPersistence!!.getAttemptStats(Mockito.any())).thenReturn(
+    every { repo.findLastAttemptsOfLastXJobsForConnection(connectionId, numJobs) } returns listOf(ssOne, ssTwo, ssThree)
+    every { jobPersistence.listJobsLight(setOf(jobOneId, jobTwoId)) } returns listOf(jobOne, jobTwo)
+    every { jobPersistence.getAttemptStats(any()) } returns
       mapOf(
         JobPersistence.JobAttemptPair(jobOneId, 0) to
           JobPersistence.AttemptStats(
@@ -360,7 +337,7 @@ internal class StreamStatusesHandlerTest {
               .withBytesCommitted(jobOneBytesCommitted)
               .withBytesEmitted(jobOneBytesEmitted)
               .withRecordsCommitted(jobOneRecordsCommitted)
-              .withRecordsEmitted(jobOneRecordsEmmitted),
+              .withRecordsEmitted(jobOneRecordsEmitted),
             listOf(
               StreamSyncStats()
                 .withStreamName("")
@@ -369,7 +346,7 @@ internal class StreamStatusesHandlerTest {
                     .withBytesCommitted(jobOneBytesCommitted)
                     .withBytesEmitted(jobOneBytesEmitted)
                     .withRecordsCommitted(jobOneRecordsCommitted)
-                    .withRecordsEmitted(jobOneRecordsEmmitted),
+                    .withRecordsEmitted(jobOneRecordsEmitted),
                 ),
             ),
           ),
@@ -377,7 +354,7 @@ internal class StreamStatusesHandlerTest {
           JobPersistence.AttemptStats(
             SyncStats()
               .withBytesCommitted(jobTwoBytesCommitted)
-              .withBytesEmitted(jobTwoBytesEmmitted)
+              .withBytesEmitted(jobTwoBytesEmitted)
               .withRecordsCommitted(jobTwoRecordsCommitted)
               .withRecordsEmitted(jobTwoRecordsEmittted)
               .withRecordsRejected(jobTwoRecordsRejected),
@@ -387,24 +364,22 @@ internal class StreamStatusesHandlerTest {
                 .withStats(
                   SyncStats()
                     .withBytesCommitted(jobTwoBytesCommitted)
-                    .withBytesEmitted(jobTwoBytesEmmitted)
+                    .withBytesEmitted(jobTwoBytesEmitted)
                     .withRecordsCommitted(jobTwoRecordsCommitted)
                     .withRecordsEmitted(jobTwoRecordsEmittted)
                     .withRecordsRejected(jobTwoRecordsRejected),
                 ),
             ),
           ),
-      ),
-    )
+      )
 
     val handlerWithRealMapper =
       StreamStatusesHandler(
-        repo!!,
+        repo,
         StreamStatusesMapper(),
-        jobHistoryHandler!!,
-        jobPersistence!!,
+        jobHistoryHandler,
+        jobPersistence,
       )
     Assertions.assertEquals(expected, handlerWithRealMapper.getConnectionUptimeHistory(apiReq))
   }
-//  }
 }

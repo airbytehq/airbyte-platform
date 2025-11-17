@@ -4,7 +4,6 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.config.ActorType
 import io.airbyte.config.DestinationOAuthParameter
@@ -14,11 +13,12 @@ import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.db.ContextQueryFunction
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.every
+import io.mockk.mockk
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.Optional
 import java.util.UUID
 
@@ -38,28 +37,26 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
 
   @BeforeEach
   fun setUp() {
-    val featureFlagClient: FeatureFlagClient = Mockito.mock(TestClient::class.java, Mockito.withSettings().withoutAnnotations())
-    secretsRepositoryReader =
-      Mockito.mock(SecretsRepositoryReader::class.java, Mockito.withSettings().withoutAnnotations())
-    secretPersistenceConfigService =
-      Mockito.mock(SecretPersistenceConfigService::class.java, Mockito.withSettings().withoutAnnotations())
-    val metricClient = Mockito.mock(MetricClient::class.java)
+    val featureFlagClient: FeatureFlagClient = mockk<TestClient>()
+    secretsRepositoryReader = mockk<SecretsRepositoryReader>()
+    secretPersistenceConfigService = mockk<SecretPersistenceConfigService>()
+    val metricClient = mockk<MetricClient>()
 
-    workspaceService = Mockito.mock(WorkspaceService::class.java)
-    Mockito
-      .`when`(workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID))
-      .thenReturn(Optional.of<UUID>(ORGANIZATION_ID))
-    Mockito.`when`(workspaceService.getOrganizationIdFromWorkspaceId(A_DIFFERENT_WORKSPACE_ID)).thenReturn(
-      Optional.of<UUID>(
-        A_DIFFERENT_ORGANIZATION_ID,
-      ),
-    )
+    workspaceService = mockk<WorkspaceService>()
+    every {
+      workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)
+    } returns Optional.of(ORGANIZATION_ID)
+    every {
+      workspaceService.getOrganizationIdFromWorkspaceId(A_DIFFERENT_WORKSPACE_ID)
+    } returns Optional.of(A_DIFFERENT_ORGANIZATION_ID)
 
-    val secretPersistenceConfig = Mockito.mock(SecretPersistenceConfig::class.java)
-    Mockito
-      .`when`(secretPersistenceConfigService.get(ScopeType.ORGANIZATION, ORGANIZATION_ID))
-      .thenReturn(secretPersistenceConfig)
-    Mockito.`when`<JsonNode?>(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(CONFIG)).thenReturn(CONFIG)
+    val secretPersistenceConfig = mockk<SecretPersistenceConfig>()
+    every {
+      secretPersistenceConfigService.get(ScopeType.ORGANIZATION, ORGANIZATION_ID)
+    } returns secretPersistenceConfig
+    every {
+      secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(CONFIG)
+    } returns CONFIG
 
     oAuthService =
       OAuthServiceJooqImpl(
@@ -75,14 +72,12 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   private fun deleteActorOAuthParams() {
-    database!!.query<Int?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!
-          .deleteFrom(ACTOR_OAUTH_PARAMETER_TABLE)
-          .where(ACTOR_DEFINITION_ID_COLUMN.eq(ACTOR_DEFINITION_ID))
-          .execute()
-      },
-    )
+    database!!.query<Int?> { ctx: DSLContext? ->
+      ctx!!
+        .deleteFrom(ACTOR_OAUTH_PARAMETER_TABLE)
+        .where(ACTOR_DEFINITION_ID_COLUMN.eq(ACTOR_DEFINITION_ID))
+        .execute()
+    }
   }
 
   @Nested
@@ -105,7 +100,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     fun testGetNoInstanceWideSourceOAuthParam() {
       val fetchedOAuthParam =
         oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
-      Assertions.assertTrue(fetchedOAuthParam.isEmpty())
+      Assertions.assertTrue(fetchedOAuthParam.isEmpty)
     }
 
     @Test
@@ -129,7 +124,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       val fetchedOAuthParam =
         oAuthService.getSourceOAuthParameterOptional(A_DIFFERENT_WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
-      Assertions.assertTrue(fetchedOAuthParam.isEmpty())
+      Assertions.assertTrue(fetchedOAuthParam.isEmpty)
     }
 
     @Test
@@ -153,7 +148,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       val fetchedOAuthParam =
         oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
-      Assertions.assertTrue(fetchedOAuthParam.isEmpty())
+      Assertions.assertTrue(fetchedOAuthParam.isEmpty)
     }
 
     @Test
@@ -275,7 +270,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     fun testGetNoInstanceWideDestinationOAuthParam() {
       val fetchedOAuthParam =
         oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
-      Assertions.assertTrue(fetchedOAuthParam.isEmpty())
+      Assertions.assertTrue(fetchedOAuthParam.isEmpty)
     }
 
     @Test
@@ -299,7 +294,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       val fetchedOAuthParam =
         oAuthService.getDestinationOAuthParameterOptional(A_DIFFERENT_WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
-      Assertions.assertTrue(fetchedOAuthParam.isEmpty())
+      Assertions.assertTrue(fetchedOAuthParam.isEmpty)
     }
 
     @Test
@@ -323,7 +318,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       val fetchedOAuthParam =
         oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
-      Assertions.assertTrue(fetchedOAuthParam.isEmpty())
+      Assertions.assertTrue(fetchedOAuthParam.isEmpty)
     }
 
     @Test

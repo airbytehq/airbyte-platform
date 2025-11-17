@@ -11,18 +11,22 @@ import io.airbyte.api.client.model.generated.NotificationType
 import io.airbyte.api.client.model.generated.SlackNotificationConfiguration
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.config.CustomerioNotificationConfiguration
-import org.assertj.core.api.Assertions
+import io.mockk.every
+import io.mockk.mockk
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.Optional
 import java.util.UUID
 
 internal class SlackConfigActivityTest {
+  private lateinit var mAirbyteApiClient: AirbyteApiClient
+  private lateinit var slackConfigActivity: SlackConfigActivityImpl
+
   @BeforeEach
   fun setUp() {
-    mAirbyteApiClient = Mockito.mock(AirbyteApiClient::class.java, Mockito.RETURNS_DEEP_STUBS)
-    slackConfigActivity = SlackConfigActivityImpl(mAirbyteApiClient!!)
+    mAirbyteApiClient = mockk(relaxed = true)
+    slackConfigActivity = SlackConfigActivityImpl(mAirbyteApiClient)
   }
 
   @Test
@@ -30,7 +34,16 @@ internal class SlackConfigActivityTest {
     val connectionId = UUID.randomUUID()
     val requestBody = ConnectionIdRequestBody(connectionId)
     val config = SlackNotificationConfiguration("webhook")
-    val notifications = listOf(Notification(NotificationType.SLACK, false, true, config, null))
+    val notifications =
+      listOf(
+        Notification(
+          NotificationType.SLACK,
+          sendOnSuccess = false,
+          sendOnFailure = true,
+          slackConfiguration = config,
+          customerioConfiguration = null,
+        ),
+      )
     val workspaceRead =
       WorkspaceRead(
         UUID.randomUUID(),
@@ -53,8 +66,8 @@ internal class SlackConfigActivityTest {
         null,
         null,
       )
-    Mockito.`when`(mAirbyteApiClient!!.workspaceApi.getWorkspaceByConnectionId(requestBody)).thenReturn(workspaceRead)
-    Assertions.assertThat("webhook").isEqualTo(slackConfigActivity!!.fetchSlackConfiguration(connectionId).get().webhook)
+    every { mAirbyteApiClient.workspaceApi.getWorkspaceByConnectionId(requestBody) } returns workspaceRead
+    Assertions.assertEquals("webhook", slackConfigActivity.fetchSlackConfiguration(connectionId).get().webhook)
   }
 
   @Test
@@ -62,7 +75,16 @@ internal class SlackConfigActivityTest {
     val connectionId = UUID.randomUUID()
     val requestBody = ConnectionIdRequestBody(connectionId)
     val config = CustomerioNotificationConfiguration()
-    val notifications = listOf(Notification(NotificationType.CUSTOMERIO, false, true, null, config))
+    val notifications =
+      listOf(
+        Notification(
+          NotificationType.CUSTOMERIO,
+          sendOnSuccess = false,
+          sendOnFailure = true,
+          slackConfiguration = null,
+          customerioConfiguration = config,
+        ),
+      )
     val workspaceRead =
       WorkspaceRead(
         UUID.randomUUID(),
@@ -85,12 +107,7 @@ internal class SlackConfigActivityTest {
         null,
         null,
       )
-    Mockito.`when`(mAirbyteApiClient!!.workspaceApi.getWorkspaceByConnectionId(requestBody)).thenReturn(workspaceRead)
-    Assertions.assertThat(Optional.ofNullable<Any?>(null)).isEqualTo(slackConfigActivity!!.fetchSlackConfiguration(connectionId))
-  }
-
-  companion object {
-    private var mAirbyteApiClient: AirbyteApiClient? = null
-    private var slackConfigActivity: SlackConfigActivityImpl? = null
+    every { mAirbyteApiClient.workspaceApi.getWorkspaceByConnectionId(requestBody) } returns workspaceRead
+    Assertions.assertEquals(Optional.ofNullable<Any?>(null), slackConfigActivity.fetchSlackConfiguration(connectionId))
   }
 }

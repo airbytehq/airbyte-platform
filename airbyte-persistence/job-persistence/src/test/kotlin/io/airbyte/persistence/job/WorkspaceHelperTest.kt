@@ -24,21 +24,19 @@ import io.airbyte.data.services.JobService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.argThat
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import java.util.UUID
 
 internal class WorkspaceHelperTest {
-  lateinit var jobService: JobService
-  lateinit var workspaceHelper: WorkspaceHelper
+  private lateinit var jobService: JobService
+  private lateinit var workspaceHelper: WorkspaceHelper
   private lateinit var sourceService: SourceService
   private lateinit var destinationService: DestinationService
   private lateinit var connectionService: ConnectionService
@@ -47,31 +45,22 @@ internal class WorkspaceHelperTest {
 
   @BeforeEach
   fun setup() {
-    jobService = mock<JobService>()
-    sourceService = mock<SourceService>()
-    destinationService = mock<DestinationService>()
-    connectionService = mock<ConnectionService>()
-    workspaceService = mock<WorkspaceService>()
-    operationService = mock<OperationService>()
+    jobService = mockk<JobService>(relaxed = true)
+    sourceService = mockk<SourceService>()
+    destinationService = mockk<DestinationService>()
+    connectionService = mockk<ConnectionService>()
+    workspaceService = mockk<WorkspaceService>()
+    operationService = mockk<OperationService>()
 
-    whenever(sourceService.getSourceConnection(SOURCE_ID)).thenReturn(SOURCE)
-    whenever(sourceService.getSourceConnection(argThat<UUID> { this != SOURCE_ID }))
-      .thenAnswer { throw ConfigNotFoundException("test", "test") }
-    whenever(destinationService.getDestinationConnection(DEST_ID)).thenReturn(DEST)
-    whenever(
-      destinationService.getDestinationConnection(
-        argThat<UUID> { this != DEST_ID },
-      ),
-    ).thenAnswer { throw ConfigNotFoundException("test", "test") }
-    whenever(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(CONNECTION)
-    whenever(connectionService.getStandardSync(argThat<UUID> { this != CONNECTION_ID }))
-      .thenAnswer { throw ConfigNotFoundException("test", "test") }
-    whenever(operationService.getStandardSyncOperation(OPERATION_ID)).thenReturn(OPERATION)
-    whenever(
-      operationService.getStandardSyncOperation(
-        argThat<UUID> { this != OPERATION_ID },
-      ),
-    ).thenAnswer { throw ConfigNotFoundException("test", "test") }
+    every { sourceService.getSourceConnection(SOURCE_ID) } returns SOURCE!!
+    every { sourceService.getSourceConnection(match { it != SOURCE_ID }) } throws ConfigNotFoundException("test", "test")
+    every { destinationService.getDestinationConnection(DEST_ID) } returns DEST!!
+    every { destinationService.getDestinationConnection(match { it != DEST_ID }) } throws ConfigNotFoundException("test", "test")
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns CONNECTION!!
+    every { connectionService.getStandardSync(match { it != CONNECTION_ID }) } throws ConfigNotFoundException("test", "test")
+    every { operationService.getStandardSyncOperation(OPERATION_ID) } returns OPERATION!!
+    every { operationService.getStandardSyncOperation(match { it != OPERATION_ID }) } throws ConfigNotFoundException("test", "test")
+    every { jobService.findById(any()) } throws ConfigNotFoundException("test", "test")
 
     workspaceHelper =
       WorkspaceHelper(jobService, connectionService, sourceService, destinationService, operationService, workspaceService)
@@ -168,11 +157,11 @@ internal class WorkspaceHelperTest {
   fun testSource() {
     val retrievedWorkspace = workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)
     assertEquals(WORKSPACE_ID, retrievedWorkspace)
-    verify(sourceService, times(1)).getSourceConnection(SOURCE_ID)
+    verify(exactly = 1) { sourceService.getSourceConnection(SOURCE_ID) }
 
     workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)
     // There should have been no other call to configRepository
-    verify(sourceService, times(1)).getSourceConnection(SOURCE_ID)
+    verify(exactly = 1) { sourceService.getSourceConnection(SOURCE_ID) }
   }
 
   @Test
@@ -180,11 +169,11 @@ internal class WorkspaceHelperTest {
   fun testDestination() {
     val retrievedWorkspace = workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DEST_ID)
     assertEquals(WORKSPACE_ID, retrievedWorkspace)
-    verify(destinationService, times(1)).getDestinationConnection(DEST_ID)
+    verify(exactly = 1) { destinationService.getDestinationConnection(DEST_ID) }
 
     workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DEST_ID)
     // There should have been no other call to configRepository
-    verify(destinationService, times(1)).getDestinationConnection(DEST_ID)
+    verify(exactly = 1) { destinationService.getDestinationConnection(DEST_ID) }
   }
 
   @Test
@@ -196,11 +185,11 @@ internal class WorkspaceHelperTest {
     // test retrieving by source and destination ids
     val retrievedWorkspaceBySourceAndDestination = workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(CONNECTION_ID)
     assertEquals(WORKSPACE_ID, retrievedWorkspaceBySourceAndDestination)
-    verify(connectionService, times(1)).getStandardSync(CONNECTION_ID)
+    verify(exactly = 1) { connectionService.getStandardSync(CONNECTION_ID) }
 
     workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DEST_ID)
     // There should have been no other call to configRepository
-    verify(connectionService, times(1)).getStandardSync(CONNECTION_ID)
+    verify(exactly = 1) { connectionService.getStandardSync(CONNECTION_ID) }
   }
 
   @Test
@@ -208,10 +197,10 @@ internal class WorkspaceHelperTest {
     // test retrieving by connection id
     val retrievedWorkspace = workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(OPERATION_ID)
     assertEquals(WORKSPACE_ID, retrievedWorkspace)
-    verify(operationService, times(1)).getStandardSyncOperation(OPERATION_ID)
+    verify(exactly = 1) { operationService.getStandardSyncOperation(OPERATION_ID) }
 
     workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(OPERATION_ID)
-    verify(operationService, times(1)).getStandardSyncOperation(OPERATION_ID)
+    verify(exactly = 1) { operationService.getStandardSyncOperation(OPERATION_ID) }
   }
 
   @Test
@@ -231,7 +220,7 @@ internal class WorkspaceHelperTest {
         System.currentTimeMillis(),
         true,
       )
-    whenever(jobService.findById(jobId)).thenReturn(job)
+    every { jobService.findById(jobId) } returns job
 
     val jobWorkspace = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)
     assertEquals(WORKSPACE_ID, jobWorkspace)

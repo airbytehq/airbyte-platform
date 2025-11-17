@@ -18,12 +18,11 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.micronaut.http.HttpStatus
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
-import org.mockito.kotlin.any
-import org.mockito.kotlin.whenever
 import java.io.IOException
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -39,29 +38,29 @@ internal class WebhookOperationActivityTest {
 
   @BeforeEach
   fun init() {
-    httpClient = Mockito.mock(HttpClient::class.java)
-    secretsRepositoryReader = Mockito.mock(SecretsRepositoryReader::class.java)
-    airbyteApiClient = Mockito.mock(AirbyteApiClient::class.java)
-    featureFlagClient = Mockito.mock(TestClient::class.java)
+    httpClient = mockk()
+    secretsRepositoryReader = mockk()
+    airbyteApiClient = mockk()
+    featureFlagClient = mockk<TestClient>(relaxed = true)
     webhookActivity =
       WebhookOperationActivityImpl(
         httpClient,
         secretsRepositoryReader,
         airbyteApiClient,
         featureFlagClient,
-        Mockito.mock(MetricClient::class.java),
+        mockk<MetricClient>(relaxed = true),
       )
   }
 
   @Test
   fun webhookActivityInvokesConfiguredWebhook() {
-    val mockHttpResponse = Mockito.mock(HttpResponse::class.java) as HttpResponse<Any>
-    whenever(mockHttpResponse.statusCode()).thenReturn(HttpStatus.OK.code)
-    whenever(
+    val mockHttpResponse = mockk<HttpResponse<Any>>()
+    every { mockHttpResponse.statusCode() } returns HttpStatus.OK.code
+    every {
       secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(
         any<JsonNode>(),
-      ),
-    ).thenReturn(jsonNode(WORKSPACE_WEBHOOK_CONFIGS))
+      )
+    } returns jsonNode(WORKSPACE_WEBHOOK_CONFIGS)
     val input =
       OperatorWebhookInput()
         .withExecutionBody(WEBHOOK_EXECUTION_BODY)
@@ -69,12 +68,12 @@ internal class WebhookOperationActivityTest {
         .withWebhookConfigId(WEBHOOK_ID)
         .withConnectionContext(ConnectionContext().withOrganizationId(ORGANIZATION_ID))
         .withWorkspaceWebhookConfigs(Jsons.emptyObject())
-    whenever(
+    every {
       httpClient.send(
         any<HttpRequest>(),
         any<HttpResponse.BodyHandler<Any>>(),
-      ),
-    ).thenReturn(mockHttpResponse)
+      )
+    } returns mockHttpResponse
     val success = webhookActivity.invokeWebhook(input)
     Assertions.assertTrue(success)
   }
@@ -82,17 +81,17 @@ internal class WebhookOperationActivityTest {
   @Test
   fun webhookActivityFailsWhenRetriesExhausted() {
     val exception = IOException("test")
-    whenever(
+    every {
       httpClient.send(
         any<HttpRequest>(),
         any<HttpResponse.BodyHandler<Any>>(),
-      ),
-    ).thenAnswer { throw exception }
-    whenever(
+      )
+    } throws exception
+    every {
       secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(
         any<JsonNode>(),
-      ),
-    ).thenReturn(jsonNode(WORKSPACE_WEBHOOK_CONFIGS))
+      )
+    } returns jsonNode(WORKSPACE_WEBHOOK_CONFIGS)
     val input =
       OperatorWebhookInput()
         .withExecutionBody(WEBHOOK_EXECUTION_BODY)
@@ -109,7 +108,7 @@ internal class WebhookOperationActivityTest {
 
   companion object {
     private const val WEBHOOK_EXECUTION_BODY = "fake-webhook-execution-body"
-    private const val WEBHOOK_EXECUTION_URL = "http://example.com"
+    private const val WEBHOOK_EXECUTION_URL = "https://example.com"
     private val ORGANIZATION_ID: UUID = UUID.randomUUID()
     private val WEBHOOK_ID: UUID = UUID.randomUUID()
     private const val WEBHOOK_AUTH_TOKEN = "fake-auth-token"

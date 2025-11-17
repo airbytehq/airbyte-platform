@@ -10,26 +10,23 @@ import io.airbyte.api.model.generated.RetryStateRead
 import io.airbyte.server.handlers.apidomainmapping.RetryStatesMapper
 import io.airbyte.server.repositories.RetryStatesRepository
 import io.airbyte.server.repositories.domain.RetryState
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mock
-import org.mockito.Mockito
 
 internal class RetryStatesHandlerTest {
-  @Mock
-  var repo: RetryStatesRepository? = null
-
-  @Mock
-  var mapper: RetryStatesMapper? = null
-
-  var handler: RetryStatesHandler? = null
+  private lateinit var repo: RetryStatesRepository
+  private lateinit var mapper: RetryStatesMapper
+  private lateinit var handler: RetryStatesHandler
 
   @BeforeEach
   fun setup() {
-    repo = Mockito.mock(RetryStatesRepository::class.java)
-    mapper = Mockito.mock(RetryStatesMapper::class.java)
-    handler = RetryStatesHandler(repo!!, mapper!!)
+    repo = mockk()
+    mapper = mockk()
+    handler = RetryStatesHandler(repo, mapper)
   }
 
   @Test
@@ -39,14 +36,10 @@ internal class RetryStatesHandlerTest {
     val domain = RetryState.RetryStateBuilder().build()
     val apiResp = RetryStateRead()
 
-    Mockito
-      .`when`(repo!!.findByJobId(jobId))
-      .thenReturn(domain)
-    Mockito
-      .`when`(mapper!!.map(domain))
-      .thenReturn(apiResp)
+    every { repo.findByJobId(jobId) } returns domain
+    every { mapper.map(domain) } returns apiResp
 
-    val result = handler!!.getByJobId(apiReq)
+    val result = handler.getByJobId(apiReq)
 
     Assertions.assertNotNull(result)
     Assertions.assertSame(apiResp, result)
@@ -65,12 +58,11 @@ internal class RetryStatesHandlerTest {
         .jobId(jobId)
         .build()
 
-    Mockito
-      .`when`(mapper!!.map(apiReq))
-      .thenReturn(update)
+    every { mapper.map(apiReq) } returns update
+    every { repo.createOrUpdateByJobId(jobId, update) } returns Unit
 
-    handler!!.putByJobId(apiReq)
+    handler.putByJobId(apiReq)
 
-    Mockito.verify(repo, Mockito.times(1))?.createOrUpdateByJobId(jobId, update)
+    verify(exactly = 1) { repo.createOrUpdateByJobId(jobId, update) }
   }
 }

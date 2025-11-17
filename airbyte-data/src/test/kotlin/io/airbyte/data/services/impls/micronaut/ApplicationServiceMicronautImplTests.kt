@@ -12,14 +12,13 @@ import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.services.impls.data.ApplicationServiceMicronautImpl
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
+import io.mockk.every
+import io.mockk.mockk
 import jakarta.ws.rs.BadRequestException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
-import org.mockito.Mockito.mock
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.Optional
@@ -45,9 +44,9 @@ internal class ApplicationServiceMicronautImplTests {
         password = "test-password",
         username = "test",
       )
-    tokenGenerator = mock<JwtTokenGenerator>()
+    tokenGenerator = mockk<JwtTokenGenerator>()
     airbyteAuthConfig = AirbyteAuthConfig(instanceAdmin = instanceAdminConfig, tokenIssuer = issuer)
-    Mockito.`when`(tokenGenerator!!.generateToken(ArgumentMatchers.anyMap())).thenReturn(Optional.of(token!!))
+    every { tokenGenerator!!.generateToken(any()) } returns Optional.of(token!!)
   }
 
   @Test
@@ -80,7 +79,7 @@ internal class ApplicationServiceMicronautImplTests {
     val token = applicationServer.getToken("test-client-id", "test-client-secret")
     val claims = getTokenClaims(token)
 
-    assertEquals(expectedRoles, getRolesFromNode((claims.get("roles") as com.fasterxml.jackson.databind.node.ArrayNode?)!!))
+    assertEquals(expectedRoles, getRolesFromNode((claims.get("roles") as ArrayNode?)!!))
     assertEquals("airbyte-server", claims.get("iss").asText())
     assertEquals(ApplicationServiceMicronautImpl.Companion.DEFAULT_AUTH_USER_ID.toString(), claims.get("sub").asText())
   }
@@ -146,7 +145,7 @@ internal class ApplicationServiceMicronautImplTests {
   }
 
   private fun getRolesFromNode(claimsNode: ArrayNode): MutableSet<String?> {
-    val roles: MutableSet<String?> = HashSet<String?>()
+    val roles: MutableSet<String?> = HashSet()
     for (role in claimsNode) {
       roles.add(role.asText())
     }

@@ -2,6 +2,8 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
+package io.airbyte.connector.rollout.worker.activities
+
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.model.generated.ConnectorRolloutRead
@@ -10,7 +12,6 @@ import io.airbyte.api.client.model.generated.ConnectorRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ActionType
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPromoteOrRollback
-import io.airbyte.connector.rollout.worker.activities.PromoteOrRollbackActivityImpl
 import io.airbyte.connector.rollout.worker.runtime.AirbyteConnectorRolloutConfig
 import io.mockk.every
 import io.mockk.mockk
@@ -23,7 +24,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.util.UUID
 
-class PromoteOrRollbackActivityImplTest {
+internal class PromoteOrRollbackActivityImplTest {
   private lateinit var airbyteApiClient: AirbyteApiClient
   private lateinit var connectorRolloutApi: ConnectorRolloutApi
   private lateinit var promoteOrRollbackActivity: PromoteOrRollbackActivityImpl
@@ -60,7 +61,7 @@ class PromoteOrRollbackActivityImplTest {
       AirbyteConnectorRolloutConfig(
         githubRollout =
           AirbyteConnectorRolloutConfig.AirbyteConnectorGithubRolloutConfig(
-            dispatchUrl = "http://fakeUrl.com",
+            dispatchUrl = "https://fakeUrl.com",
             githubToken = "fakeToken",
           ),
       )

@@ -7,67 +7,65 @@ package io.airbyte.keycloak.setup
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
+import io.mockk.every
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.admin.client.resource.RealmsResource
 import org.keycloak.representations.idm.RealmRepresentation
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.MockitoAnnotations
 
+@ExtendWith(MockKExtension::class)
 internal class KeycloakServerTest {
-  @Mock
+  @MockK
   private lateinit var keycloakAdminClientProvider: KeycloakAdminClientProvider
 
-  @Mock
+  @MockK
   private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
 
-  @Mock
+  @MockK
   private lateinit var userConfigurator: UserConfigurator
 
-  @Mock
+  @MockK
   private lateinit var webClientConfigurator: WebClientConfigurator
 
-  @Mock
+  @MockK
   private lateinit var identityProvidersConfigurator: IdentityProvidersConfigurator
 
-  @Mock
+  @MockK
   private lateinit var clientScopeConfigurator: ClientScopeConfigurator
 
-  @Mock
+  @MockK
   private lateinit var keycloakAdminClient: Keycloak
 
-  @Mock
+  @MockK
   private lateinit var realmsResource: RealmsResource
 
-  @Mock
+  @MockK
   private lateinit var airbyteRealm: RealmResource
 
-  @Mock
+  @MockK
   private lateinit var airbyteRealmRep: RealmRepresentation
 
   private lateinit var keycloakServer: KeycloakServer
 
   @BeforeEach
   fun setUp() {
-    MockitoAnnotations.openMocks(this)
-
-    Mockito.`when`(keycloakConfiguration.basePath).thenReturn("/io/airbyte/api/client/auth")
-    Mockito.`when`(keycloakConfiguration.protocol).thenReturn("http")
-    Mockito.`when`(keycloakConfiguration.host).thenReturn("localhost")
-    Mockito.`when`(keycloakConfiguration.airbyteRealm).thenReturn(REALM_NAME)
-    Mockito
-      .`when`(keycloakAdminClientProvider.createKeycloakAdminClient(ArgumentMatchers.anyString()))
-      .thenReturn(keycloakAdminClient)
-    Mockito.`when`(keycloakAdminClient.realms()).thenReturn(realmsResource)
-    Mockito.`when`(realmsResource.findAll()).thenReturn(mutableListOf())
-    Mockito.`when`(keycloakAdminClient.realm(ArgumentMatchers.anyString())).thenReturn(airbyteRealm)
-    Mockito.`when`(airbyteRealm.toRepresentation()).thenReturn(airbyteRealmRep)
+    every { keycloakConfiguration.basePath } returns "/io/airbyte/api/client/auth"
+    every { keycloakConfiguration.protocol } returns "http"
+    every { keycloakConfiguration.host } returns "localhost"
+    every { keycloakConfiguration.airbyteRealm } returns REALM_NAME
+    every { keycloakAdminClientProvider.createKeycloakAdminClient(any()) } returns keycloakAdminClient
+    every { keycloakAdminClient.realms() } returns realmsResource
+    every { realmsResource.findAll() } returns mutableListOf()
+    every { keycloakAdminClient.realm(any()) } returns airbyteRealm
+    every { airbyteRealm.toRepresentation() } returns airbyteRealmRep
 
     keycloakServer =
       KeycloakServer(
@@ -83,24 +81,29 @@ internal class KeycloakServerTest {
 
   @Test
   fun testSetupAirbyteRealmWhenRealmDoesNotExist() {
+    every { realmsResource.create(any()) } returns Unit
+    every { userConfigurator.configureUser(airbyteRealm) } returns Unit
+    every { webClientConfigurator.configureWebClient(airbyteRealm) } returns Unit
+    every { identityProvidersConfigurator.configureIdp(airbyteRealm) } returns Unit
+    every { clientScopeConfigurator.configureClientScope(airbyteRealm) } returns Unit
+    every { airbyteRealmRep.attributesOrEmpty } returns mutableMapOf()
+    every { airbyteRealmRep.setAttributes(any()) } returns Unit
+    every { airbyteRealm.update(airbyteRealmRep) } returns Unit
+
     keycloakServer.setupAirbyteRealm()
 
-    Mockito.verify(realmsResource, Mockito.times(1)).findAll()
-    Mockito
-      .verify(realmsResource, Mockito.times(1))
-      .create(ArgumentMatchers.any(RealmRepresentation::class.java))
+    verify(exactly = 1) { realmsResource.findAll() }
+    verify(exactly = 1) { realmsResource.create(any<RealmRepresentation>()) }
 
-    Mockito.verify(userConfigurator, Mockito.times(1)).configureUser(airbyteRealm)
-    Mockito.verify(webClientConfigurator, Mockito.times(1)).configureWebClient(airbyteRealm)
-    Mockito.verify(identityProvidersConfigurator, Mockito.times(1)).configureIdp(airbyteRealm)
+    verify(exactly = 1) { userConfigurator.configureUser(airbyteRealm) }
+    verify(exactly = 1) { webClientConfigurator.configureWebClient(airbyteRealm) }
+    verify(exactly = 1) { identityProvidersConfigurator.configureIdp(airbyteRealm) }
 
-    Mockito.verify(airbyteRealmRep, Mockito.times(1)).setAttributes(
-      ArgumentMatchers.argThat { map: Map<String, String> ->
-        map[FRONTEND_URL_ATTRIBUTE] == WEBAPP_URL + AUTH_PATH
-      },
-    )
+    val attributesSlot = slot<Map<String, String>>()
+    verify(exactly = 1) { airbyteRealmRep.setAttributes(capture(attributesSlot)) }
+    Assertions.assertEquals(WEBAPP_URL + AUTH_PATH, attributesSlot.captured[FRONTEND_URL_ATTRIBUTE])
 
-    Mockito.verify(airbyteRealm, Mockito.times(1)).update(airbyteRealmRep)
+    verify(exactly = 1) { airbyteRealm.update(airbyteRealmRep) }
   }
 
   @Test
@@ -108,46 +111,49 @@ internal class KeycloakServerTest {
     val existingRealm = RealmRepresentation()
     existingRealm.setRealm(REALM_NAME)
 
-    Mockito.`when`(realmsResource.findAll()).thenReturn(mutableListOf(existingRealm))
-    Mockito.`when`(keycloakConfiguration.airbyteRealm).thenReturn(REALM_NAME)
+    every { realmsResource.findAll() } returns mutableListOf(existingRealm)
+    every { keycloakConfiguration.airbyteRealm } returns REALM_NAME
+    every { userConfigurator.configureUser(airbyteRealm) } returns Unit
+    every { webClientConfigurator.configureWebClient(airbyteRealm) } returns Unit
+    every { identityProvidersConfigurator.configureIdp(airbyteRealm) } returns Unit
+    every { clientScopeConfigurator.configureClientScope(airbyteRealm) } returns Unit
+    every { airbyteRealmRep.attributesOrEmpty } returns mutableMapOf()
+    every { airbyteRealmRep.setAttributes(any()) } returns Unit
+    every { airbyteRealm.update(airbyteRealmRep) } returns Unit
 
     keycloakServer.setupAirbyteRealm()
 
-    Mockito.verify(realmsResource, Mockito.times(1)).findAll()
-    Mockito
-      .verify(realmsResource, Mockito.times(0))
-      .create(ArgumentMatchers.any(RealmRepresentation::class.java))
-    // create not called, but other configuration methods should be called every time
+    verify(exactly = 1) { realmsResource.findAll() }
+    verify(exactly = 0) { realmsResource.create(any<RealmRepresentation>()) }
 
-    Mockito
-      .verify(userConfigurator, Mockito.times(1))
-      .configureUser(airbyteRealm)
+    verify(exactly = 1) { userConfigurator.configureUser(airbyteRealm) }
+    verify(exactly = 1) { webClientConfigurator.configureWebClient(airbyteRealm) }
+    verify(exactly = 1) { identityProvidersConfigurator.configureIdp(airbyteRealm) }
 
-    Mockito
-      .verify(webClientConfigurator, Mockito.times(1))
-      .configureWebClient(airbyteRealm)
+    val attributesSlot = slot<Map<String, String>>()
+    verify(exactly = 1) { airbyteRealmRep.setAttributes(capture(attributesSlot)) }
+    Assertions.assertEquals(WEBAPP_URL + AUTH_PATH, attributesSlot.captured[FRONTEND_URL_ATTRIBUTE])
 
-    Mockito
-      .verify(identityProvidersConfigurator, Mockito.times(1))
-      .configureIdp(airbyteRealm)
-
-    Mockito.verify(airbyteRealmRep, Mockito.times(1)).setAttributes(
-      ArgumentMatchers.argThat { map: Map<String, String> ->
-        map[FRONTEND_URL_ATTRIBUTE] == WEBAPP_URL + AUTH_PATH
-      },
-    )
-
-    Mockito.verify(airbyteRealm, Mockito.times(1)).update(airbyteRealmRep)
+    verify(exactly = 1) { airbyteRealm.update(airbyteRealmRep) }
   }
 
   @Test
   fun testBuildRealmRepresentation() {
+    every { realmsResource.create(any()) } returns Unit
+    every { userConfigurator.configureUser(airbyteRealm) } returns Unit
+    every { webClientConfigurator.configureWebClient(airbyteRealm) } returns Unit
+    every { identityProvidersConfigurator.configureIdp(airbyteRealm) } returns Unit
+    every { clientScopeConfigurator.configureClientScope(airbyteRealm) } returns Unit
+    every { airbyteRealmRep.attributesOrEmpty } returns mutableMapOf()
+    every { airbyteRealmRep.setAttributes(any()) } returns Unit
+    every { airbyteRealm.update(airbyteRealmRep) } returns Unit
+
     keycloakServer.setupAirbyteRealm()
 
-    val realmRepresentationCaptor = ArgumentCaptor.forClass(RealmRepresentation::class.java)
-    Mockito.verify(realmsResource).create(realmRepresentationCaptor.capture())
+    val realmSlot = slot<RealmRepresentation>()
+    verify { realmsResource.create(capture(realmSlot)) }
 
-    val createdRealm = realmRepresentationCaptor.value
+    val createdRealm = realmSlot.captured
     Assertions.assertEquals(REALM_NAME, createdRealm.realm)
     Assertions.assertTrue(createdRealm.isEnabled)
     Assertions.assertEquals("airbyte-keycloak-theme", createdRealm.loginTheme)
@@ -157,50 +163,59 @@ internal class KeycloakServerTest {
   fun testRecreateAirbyteRealm() {
     val existingRealm = RealmRepresentation()
     existingRealm.setRealm(REALM_NAME)
-    Mockito.`when`(realmsResource.findAll()).thenReturn(mutableListOf(existingRealm))
+    every { realmsResource.findAll() } returns mutableListOf(existingRealm)
+    every { airbyteRealm.remove() } returns Unit
+    every { realmsResource.create(any()) } returns Unit
+    every { userConfigurator.configureUser(airbyteRealm) } returns Unit
+    every { webClientConfigurator.configureWebClient(airbyteRealm) } returns Unit
+    every { identityProvidersConfigurator.configureIdp(airbyteRealm) } returns Unit
+    every { clientScopeConfigurator.configureClientScope(airbyteRealm) } returns Unit
+    every { airbyteRealmRep.attributesOrEmpty } returns mutableMapOf()
+    every { airbyteRealmRep.setAttributes(any()) } returns Unit
+    every { airbyteRealm.update(airbyteRealmRep) } returns Unit
 
     keycloakServer.destroyAndRecreateAirbyteRealm()
 
-    Mockito.verify(airbyteRealm, Mockito.times(1)).remove()
-    Mockito
-      .verify(realmsResource, Mockito.times(1))
-      .create(ArgumentMatchers.any(RealmRepresentation::class.java))
+    verify(exactly = 1) { airbyteRealm.remove() }
+    verify(exactly = 1) { realmsResource.create(any<RealmRepresentation>()) }
 
-    Mockito.verify(userConfigurator, Mockito.times(1)).configureUser(airbyteRealm)
-    Mockito.verify(webClientConfigurator, Mockito.times(1)).configureWebClient(airbyteRealm)
-    Mockito.verify(identityProvidersConfigurator, Mockito.times(1)).configureIdp(airbyteRealm)
+    verify(exactly = 1) { userConfigurator.configureUser(airbyteRealm) }
+    verify(exactly = 1) { webClientConfigurator.configureWebClient(airbyteRealm) }
+    verify(exactly = 1) { identityProvidersConfigurator.configureIdp(airbyteRealm) }
 
-    Mockito.verify(airbyteRealmRep, Mockito.times(1)).setAttributes(
-      ArgumentMatchers.argThat { map: Map<String, String> ->
-        map[FRONTEND_URL_ATTRIBUTE] == WEBAPP_URL + AUTH_PATH
-      },
-    )
+    val attributesSlot = slot<Map<String, String>>()
+    verify(exactly = 1) { airbyteRealmRep.setAttributes(capture(attributesSlot)) }
+    Assertions.assertEquals(WEBAPP_URL + AUTH_PATH, attributesSlot.captured[FRONTEND_URL_ATTRIBUTE])
 
-    Mockito.verify(airbyteRealm, Mockito.times(1)).update(airbyteRealmRep)
+    verify(exactly = 1) { airbyteRealm.update(airbyteRealmRep) }
   }
 
   @Test
   fun testRecreateAirbyteRealmWhenRealmDoesNotExist() {
-    Mockito.`when`(realmsResource.findAll()).thenReturn(mutableListOf())
+    every { realmsResource.findAll() } returns mutableListOf()
+    every { realmsResource.create(any()) } returns Unit
+    every { userConfigurator.configureUser(airbyteRealm) } returns Unit
+    every { webClientConfigurator.configureWebClient(airbyteRealm) } returns Unit
+    every { identityProvidersConfigurator.configureIdp(airbyteRealm) } returns Unit
+    every { clientScopeConfigurator.configureClientScope(airbyteRealm) } returns Unit
+    every { airbyteRealmRep.attributesOrEmpty } returns mutableMapOf()
+    every { airbyteRealmRep.setAttributes(any()) } returns Unit
+    every { airbyteRealm.update(airbyteRealmRep) } returns Unit
 
     keycloakServer.destroyAndRecreateAirbyteRealm()
 
-    Mockito.verify(airbyteRealm, Mockito.times(0)).remove()
-    Mockito
-      .verify(realmsResource, Mockito.times(1))
-      .create(ArgumentMatchers.any(RealmRepresentation::class.java))
+    verify(exactly = 0) { airbyteRealm.remove() }
+    verify(exactly = 1) { realmsResource.create(any<RealmRepresentation>()) }
 
-    Mockito.verify(userConfigurator, Mockito.times(1)).configureUser(airbyteRealm)
-    Mockito.verify(webClientConfigurator, Mockito.times(1)).configureWebClient(airbyteRealm)
-    Mockito.verify(identityProvidersConfigurator, Mockito.times(1)).configureIdp(airbyteRealm)
+    verify(exactly = 1) { userConfigurator.configureUser(airbyteRealm) }
+    verify(exactly = 1) { webClientConfigurator.configureWebClient(airbyteRealm) }
+    verify(exactly = 1) { identityProvidersConfigurator.configureIdp(airbyteRealm) }
 
-    Mockito.verify(airbyteRealmRep, Mockito.times(1)).setAttributes(
-      ArgumentMatchers.argThat { map: Map<String, String> ->
-        map[FRONTEND_URL_ATTRIBUTE] == WEBAPP_URL + AUTH_PATH
-      },
-    )
+    val attributesSlot = slot<Map<String, String>>()
+    verify(exactly = 1) { airbyteRealmRep.setAttributes(capture(attributesSlot)) }
+    Assertions.assertEquals(WEBAPP_URL + AUTH_PATH, attributesSlot.captured[FRONTEND_URL_ATTRIBUTE])
 
-    Mockito.verify(airbyteRealm, Mockito.times(1)).update(airbyteRealmRep)
+    verify(exactly = 1) { airbyteRealm.update(airbyteRealmRep) }
   }
 
   companion object {

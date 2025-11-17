@@ -6,20 +6,22 @@ package io.airbyte.notification
 
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteNotificationConfig
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.ResponseBody
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.io.IOException
 import java.util.UUID
 
 internal class CustomerIoNotificationSenderTest {
-  private val okHttpClient: OkHttpClient = Mockito.mock(OkHttpClient::class.java)
+  private val okHttpClient: OkHttpClient = mockk()
   private val apiToken = "apitoken"
-  private val metricClient: MetricClient = Mockito.mock(MetricClient::class.java)
+  private val metricClient: MetricClient = mockk(relaxed = true)
   private val airbyteNotificationConfig =
     AirbyteNotificationConfig(
       customerIo =
@@ -29,37 +31,33 @@ internal class CustomerIoNotificationSenderTest {
 
   @Test
   fun testSuccessfulSend() {
-    val call = Mockito.mock(Call::class.java)
-    val response = Mockito.mock(Response::class.java)
-    val responseBody = Mockito.mock(ResponseBody::class.java)
-    Mockito.`when`(responseBody.string()).thenReturn("")
-    Mockito.`when`(response.body).thenReturn(responseBody)
-    Mockito.`when`(response.code).thenReturn(200)
-    Mockito.`when`(response.isSuccessful).thenReturn(true)
-    Mockito.`when`(call.execute()).thenReturn(response)
+    val call = mockk<Call>()
+    val response = mockk<Response>(relaxed = true)
+    val responseBody = mockk<ResponseBody>()
+    every { responseBody.string() } returns ""
+    every { response.body } returns responseBody
+    every { response.code } returns 200
+    every { response.isSuccessful } returns true
+    every { call.execute() } returns response
 
-    Mockito
-      .`when`(okHttpClient.newCall(org.mockito.kotlin.anyOrNull()))
-      .thenReturn(call)
+    every { okHttpClient.newCall(any()) } returns call
     customerIoEmailNotificationSender.sendNotification(CustomerIoEmailConfig("to"), "subject", "message", UUID.randomUUID())
 
-    Mockito.verify(okHttpClient).newCall(org.mockito.kotlin.anyOrNull())
+    verify { okHttpClient.newCall(any()) }
   }
 
   @Test
   fun testUnsuccessfulSend() {
-    val call = Mockito.mock(Call::class.java)
-    val response = Mockito.mock(Response::class.java)
-    val responseBody = Mockito.mock(ResponseBody::class.java)
-    Mockito.`when`(responseBody.string()).thenReturn("")
-    Mockito.`when`(response.body).thenReturn(responseBody)
-    Mockito.`when`(response.code).thenReturn(500)
-    Mockito.`when`(response.isSuccessful).thenReturn(false)
-    Mockito.`when`(call.execute()).thenReturn(response)
+    val call = mockk<Call>()
+    val response = mockk<Response>(relaxed = true)
+    val responseBody = mockk<ResponseBody>()
+    every { responseBody.string() } returns ""
+    every { response.body } returns responseBody
+    every { response.code } returns 500
+    every { response.isSuccessful } returns false
+    every { call.execute() } returns response
 
-    Mockito
-      .`when`(okHttpClient.newCall(org.mockito.kotlin.anyOrNull()))
-      .thenReturn(call)
+    every { okHttpClient.newCall(any()) } returns call
 
     Assertions
       .assertThatThrownBy {

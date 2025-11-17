@@ -9,60 +9,50 @@ import io.airbyte.api.client.generated.JobsApi
 import io.airbyte.api.client.model.generated.DeleteStreamResetRecordsForJobRequest
 import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity.DeleteStreamResetRecordsForJobInput
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
-import org.mockito.Mock
-import org.mockito.junit.jupiter.MockitoExtension
-import org.mockito.junit.jupiter.MockitoSettings
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.doThrow
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
-import org.mockito.quality.Strictness
 import java.io.IOException
 import java.util.UUID
 
-@ExtendWith(MockitoExtension::class)
-@MockitoSettings(strictness = Strictness.LENIENT)
+private val CONNECTION_ID = UUID.randomUUID()
+private const val JOB_ID = 123L
+
 internal class StreamResetActivityTest {
-  @Mock
   private lateinit var airbyteApiClient: AirbyteApiClient
-
-  @Mock
   private lateinit var jobsApi: JobsApi
-
-  @InjectMocks
   private lateinit var streamResetActivity: StreamResetActivityImpl
 
   @BeforeEach
   fun setup() {
-    whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+    airbyteApiClient = mockk()
+    jobsApi = mockk(relaxed = true)
+    every { airbyteApiClient.jobsApi } returns jobsApi
+    streamResetActivity = StreamResetActivityImpl(airbyteApiClient)
   }
 
   @Test
   fun deleteStreamResetRecordsForJobSuccess() {
-    val input = DeleteStreamResetRecordsForJobInput(UUID.randomUUID(), "123".toLong())
+    val input = DeleteStreamResetRecordsForJobInput(CONNECTION_ID, JOB_ID)
 
-    val req = argumentCaptor<DeleteStreamResetRecordsForJobRequest>()
+    val req = slot<DeleteStreamResetRecordsForJobRequest>()
 
     streamResetActivity.deleteStreamResetRecordsForJob(input)
 
-    verify(jobsApi).deleteStreamResetRecordsForJob(req.capture())
-    Assertions.assertEquals(input.jobId, req.firstValue.jobId)
-    Assertions.assertEquals(input.connectionId, req.firstValue.connectionId)
+    verify { jobsApi.deleteStreamResetRecordsForJob(capture(req)) }
+    Assertions.assertEquals(input.jobId, req.captured.jobId)
+    Assertions.assertEquals(input.connectionId, req.captured.connectionId)
   }
 
   @Test
   fun deleteStreamResetRecordsForJobThrowsRetryableException() {
-    val input = DeleteStreamResetRecordsForJobInput(UUID.randomUUID(), "123".toLong())
+    val input = DeleteStreamResetRecordsForJobInput(CONNECTION_ID, JOB_ID)
 
-    doThrow(IOException("bang."))
-      .whenever(jobsApi)
-      .deleteStreamResetRecordsForJob(any<DeleteStreamResetRecordsForJobRequest>())
+    every { jobsApi.deleteStreamResetRecordsForJob(any<DeleteStreamResetRecordsForJobRequest>()) } throws IOException("bang.")
 
     Assertions.assertThrows(
       RetryableException::class.java,

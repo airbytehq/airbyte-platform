@@ -8,7 +8,6 @@ import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfiguredAirbyteCatalog
-import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.JobStatus
 import io.airbyte.config.JobSyncConfig
@@ -25,35 +24,35 @@ import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.shared.ActorServicePaginationHelper
 import io.airbyte.data.services.shared.SortKey
 import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination.Companion.fromValues
-import io.airbyte.db.ContextQueryFunction
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.Field
 import io.airbyte.test.utils.BaseConfigDatabaseTest
+import io.mockk.mockk
 import org.jooq.DSLContext
-import org.jooq.Record
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.time.OffsetDateTime
 import java.util.Locale
 import java.util.UUID
 import kotlin.math.abs
 
 internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
-  private val destinationServiceJooqImpl: DestinationServiceJooqImpl
-  private val sourceServiceJooqImpl: SourceServiceJooqImpl
-  private val connectionServiceJooqImpl: ConnectionServiceJooqImpl
+  private lateinit var destinationServiceJooqImpl: DestinationServiceJooqImpl
+  private lateinit var sourceServiceJooqImpl: SourceServiceJooqImpl
+  private lateinit var connectionServiceJooqImpl: ConnectionServiceJooqImpl
 
-  init {
-    val featureFlagClient = Mockito.mock<TestClient>(TestClient::class.java)
-    val metricClient = Mockito.mock<MetricClient>(MetricClient::class.java)
-    val connectionService = Mockito.mock<ConnectionService>(ConnectionService::class.java)
-    val actorDefinitionVersionUpdater = Mockito.mock<ActorDefinitionVersionUpdater>(ActorDefinitionVersionUpdater::class.java)
-    val secretPersistenceConfigService = Mockito.mock<SecretPersistenceConfigService>(SecretPersistenceConfigService::class.java)
+  @BeforeEach
+  fun setup() {
+    val featureFlagClient = mockk<TestClient>()
+    val metricClient = mockk<MetricClient>()
+    val connectionService = mockk<ConnectionService>()
+    val actorDefinitionVersionUpdater = mockk<ActorDefinitionVersionUpdater>()
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>()
     val actorPaginationServiceHelper = ActorServicePaginationHelper(database!!)
 
     this.destinationServiceJooqImpl =
@@ -85,7 +84,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     val workspaceId = helper.workspace!!.workspaceId
 
-    // Test with no connections - should return empty list
+    // Test with no connections - should return an empty list
     val result =
       destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(
         workspaceId,
@@ -106,9 +105,9 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     Assertions.assertNotNull(result)
     Assertions.assertEquals(1, result.size) // Should have the destination from setup, but with 0 connections
-    Assertions.assertEquals(0, result.get(0).connectionCount)
-    Assertions.assertEquals(helper.destination!!.destinationId, result.get(0).destination.destinationId)
-    Assertions.assertNull(result.get(0).lastSync, "Should have no last sync when no connections exist")
+    Assertions.assertEquals(0, result[0].connectionCount)
+    Assertions.assertEquals(helper.destination!!.destinationId, result[0].destination.destinationId)
+    Assertions.assertNull(result[0].lastSync, "Should have no last sync when no connections exist")
   }
 
   @Test
@@ -127,11 +126,11 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     val oldestJobTime = OffsetDateTime.now().minusHours(3)
     val middleJobTime = OffsetDateTime.now().minusHours(2)
     val newestJobTime = OffsetDateTime.now().minusHours(1)
-    createJobRecord(connection1.getConnectionId(), newestJobTime, JobStatus.SUCCEEDED)
-    createJobRecord(connection1.getConnectionId(), middleJobTime, JobStatus.RUNNING)
-    createJobRecord(connection1.getConnectionId(), oldestJobTime, JobStatus.CANCELLED)
-    createJobRecord(connection2.getConnectionId(), newestJobTime, JobStatus.SUCCEEDED)
-    createJobRecord(connection3.getConnectionId(), newestJobTime, JobStatus.SUCCEEDED)
+    createJobRecord(connection1.connectionId, newestJobTime, JobStatus.SUCCEEDED)
+    createJobRecord(connection1.connectionId, middleJobTime, JobStatus.RUNNING)
+    createJobRecord(connection1.connectionId, oldestJobTime, JobStatus.CANCELLED)
+    createJobRecord(connection2.connectionId, newestJobTime, JobStatus.SUCCEEDED)
+    createJobRecord(connection3.connectionId, newestJobTime, JobStatus.SUCCEEDED)
 
     val result =
       destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(
@@ -153,20 +152,20 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     Assertions.assertNotNull(result)
     Assertions.assertEquals(1, result.size)
-    Assertions.assertEquals(3, result.get(0).connectionCount)
-    Assertions.assertEquals(destination.destinationId, result.get(0).destination.destinationId)
+    Assertions.assertEquals(3, result[0].connectionCount)
+    Assertions.assertEquals(destination.destinationId, result[0].destination.destinationId)
     Assertions.assertTrue(
-      abs(result.get(0).lastSync!!.toEpochSecond() - newestJobTime.toEpochSecond()) < 2,
+      abs(result[0].lastSync!!.toEpochSecond() - newestJobTime.toEpochSecond()) < 2,
       "Last sync should be the most recent job time",
     )
 
     // All 3 connections have SUCCEEDED as their most recent job status
-    Assertions.assertEquals(3, result.get(0).connectionJobStatuses.get(JobStatus.SUCCEEDED), "Should have 3 SUCCEEDED jobs")
-    Assertions.assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.FAILED), "Should have 0 FAILED jobs")
-    Assertions.assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.PENDING), "Should have 0 PENDING jobs")
-    Assertions.assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.INCOMPLETE), "Should have 0 INCOMPLETE jobs")
-    Assertions.assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.CANCELLED), "Should have 0 CANCELLED jobs")
-    Assertions.assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.RUNNING), "Should have 0 RUNNING jobs")
+    Assertions.assertEquals(3, result[0].connectionJobStatuses[JobStatus.SUCCEEDED], "Should have 3 SUCCEEDED jobs")
+    Assertions.assertEquals(0, result[0].connectionJobStatuses[JobStatus.FAILED], "Should have 0 FAILED jobs")
+    Assertions.assertEquals(0, result[0].connectionJobStatuses[JobStatus.PENDING], "Should have 0 PENDING jobs")
+    Assertions.assertEquals(0, result[0].connectionJobStatuses[JobStatus.INCOMPLETE], "Should have 0 INCOMPLETE jobs")
+    Assertions.assertEquals(0, result[0].connectionJobStatuses[JobStatus.CANCELLED], "Should have 0 CANCELLED jobs")
+    Assertions.assertEquals(0, result[0].connectionJobStatuses[JobStatus.RUNNING], "Should have 0 RUNNING jobs")
   }
 
   @Test
@@ -203,8 +202,8 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     Assertions.assertNotNull(result)
     Assertions.assertEquals(1, result.size)
-    Assertions.assertEquals(2, result.get(0).connectionCount) // Should only count active connections, not deprecated
-    Assertions.assertEquals(destination.destinationId, result.get(0).destination.destinationId)
+    Assertions.assertEquals(2, result[0].connectionCount) // Should only count active connections, not deprecated
+    Assertions.assertEquals(destination.destinationId, result[0].destination.destinationId)
   }
 
   @Test
@@ -317,11 +316,11 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     val jobTimeInactive1 = OffsetDateTime.now().minusHours(1)
     val jobTimeDeprecated1 = OffsetDateTime.now().minusHours(0)
 
-    createJobRecord(activeConnection1.getConnectionId(), jobTimeActive1, JobStatus.SUCCEEDED)
-    createJobRecord(activeConnection1.getConnectionId(), jobTimeActive2, JobStatus.SUCCEEDED)
-    createJobRecord(inactiveConnection.getConnectionId(), jobTimeInactive1, JobStatus.FAILED)
-    createJobRecord(deprecatedConnection.getConnectionId(), jobTimeDeprecated1, JobStatus.SUCCEEDED)
-    createJobRecord(activeConnection2.getConnectionId(), jobTimeActive1, JobStatus.RUNNING)
+    createJobRecord(activeConnection1.connectionId, jobTimeActive1, JobStatus.SUCCEEDED)
+    createJobRecord(activeConnection1.connectionId, jobTimeActive2, JobStatus.SUCCEEDED)
+    createJobRecord(inactiveConnection.connectionId, jobTimeInactive1, JobStatus.FAILED)
+    createJobRecord(deprecatedConnection.connectionId, jobTimeDeprecated1, JobStatus.SUCCEEDED)
+    createJobRecord(activeConnection2.connectionId, jobTimeActive1, JobStatus.RUNNING)
 
     val result =
       destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(
@@ -362,12 +361,12 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
         // connection)
         Assertions.assertEquals(
           1,
-          destinationWithCount.connectionJobStatuses.get(JobStatus.SUCCEEDED),
+          destinationWithCount.connectionJobStatuses[JobStatus.SUCCEEDED],
           "Should have 1 succeeded job (from active connection)",
         )
         Assertions.assertEquals(
           1,
-          destinationWithCount.connectionJobStatuses.get(JobStatus.FAILED),
+          destinationWithCount.connectionJobStatuses[JobStatus.FAILED],
           "Should have 1 failed job (from inactive connection)",
         )
         found1 = true
@@ -378,7 +377,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
         // Should have 1 RUNNING job (most recent for the connection)
         Assertions.assertEquals(
           1,
-          destinationWithCount.connectionJobStatuses.get(JobStatus.RUNNING),
+          destinationWithCount.connectionJobStatuses[JobStatus.RUNNING],
           "Should have 1 running job",
         )
         found2 = true
@@ -421,9 +420,9 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     Assertions.assertNotNull(result)
     Assertions.assertEquals(1, result.size)
-    Assertions.assertEquals(2, result.get(0).connectionCount)
-    Assertions.assertEquals(destination.destinationId, result.get(0).destination.destinationId)
-    Assertions.assertNull(result.get(0).lastSync, "Should have no last sync when no jobs exist")
+    Assertions.assertEquals(2, result[0].connectionCount)
+    Assertions.assertEquals(destination.destinationId, result[0].destination.destinationId)
+    Assertions.assertNull(result[0].lastSync, "Should have no last sync when no jobs exist")
   }
 
   @Test
@@ -461,8 +460,8 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     Assertions.assertNotNull(result)
     Assertions.assertEquals(1, result.size)
     // Should count all non-deprecated connections (2 active + 1 inactive)
-    Assertions.assertEquals(3, result.get(0).connectionCount)
-    Assertions.assertEquals(destination.destinationId, result.get(0).destination.destinationId)
+    Assertions.assertEquals(3, result[0].connectionCount)
+    Assertions.assertEquals(destination.destinationId, result[0].destination.destinationId)
   }
 
   @Test
@@ -482,27 +481,27 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     val incompleteConnection = createConnectionWithName(source, destination, StandardSync.Status.ACTIVE, "incomplete-connection")
     val cancelledConnection = createConnectionWithName(source, destination, StandardSync.Status.ACTIVE, "cancelled-connection")
 
-    // Create jobs with different statuses - most recent job determines the status counted
+    // Create jobs with different statuses - a most recent job determines the status counted
     val baseTime = OffsetDateTime.now().minusHours(1)
 
     // Each connection gets multiple jobs, but only the most recent status matters
-    createJobRecord(succeededConnection.getConnectionId(), baseTime.minusHours(2), JobStatus.PENDING)
-    createJobRecord(succeededConnection.getConnectionId(), baseTime, JobStatus.SUCCEEDED)
+    createJobRecord(succeededConnection.connectionId, baseTime.minusHours(2), JobStatus.PENDING)
+    createJobRecord(succeededConnection.connectionId, baseTime, JobStatus.SUCCEEDED)
 
-    createJobRecord(failedConnection.getConnectionId(), baseTime.minusHours(1), JobStatus.RUNNING)
-    createJobRecord(failedConnection.getConnectionId(), baseTime, JobStatus.FAILED)
+    createJobRecord(failedConnection.connectionId, baseTime.minusHours(1), JobStatus.RUNNING)
+    createJobRecord(failedConnection.connectionId, baseTime, JobStatus.FAILED)
 
-    createJobRecord(runningConnection.getConnectionId(), baseTime.minusHours(1), JobStatus.PENDING)
-    createJobRecord(runningConnection.getConnectionId(), baseTime, JobStatus.RUNNING)
+    createJobRecord(runningConnection.connectionId, baseTime.minusHours(1), JobStatus.PENDING)
+    createJobRecord(runningConnection.connectionId, baseTime, JobStatus.RUNNING)
 
-    createJobRecord(pendingConnection.getConnectionId(), baseTime.minusHours(1), JobStatus.FAILED)
-    createJobRecord(pendingConnection.getConnectionId(), baseTime, JobStatus.PENDING)
+    createJobRecord(pendingConnection.connectionId, baseTime.minusHours(1), JobStatus.FAILED)
+    createJobRecord(pendingConnection.connectionId, baseTime, JobStatus.PENDING)
 
-    createJobRecord(incompleteConnection.getConnectionId(), baseTime.minusHours(1), JobStatus.RUNNING)
-    createJobRecord(incompleteConnection.getConnectionId(), baseTime, JobStatus.INCOMPLETE)
+    createJobRecord(incompleteConnection.connectionId, baseTime.minusHours(1), JobStatus.RUNNING)
+    createJobRecord(incompleteConnection.connectionId, baseTime, JobStatus.INCOMPLETE)
 
-    createJobRecord(cancelledConnection.getConnectionId(), baseTime.minusHours(1), JobStatus.SUCCEEDED)
-    createJobRecord(cancelledConnection.getConnectionId(), baseTime, JobStatus.CANCELLED)
+    createJobRecord(cancelledConnection.connectionId, baseTime.minusHours(1), JobStatus.SUCCEEDED)
+    createJobRecord(cancelledConnection.connectionId, baseTime, JobStatus.CANCELLED)
 
     val result =
       destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(
@@ -524,39 +523,23 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     Assertions.assertNotNull(result)
     Assertions.assertEquals(1, result.size)
-    Assertions.assertEquals(6, result.get(0).connectionCount)
-    Assertions.assertEquals(destination.destinationId, result.get(0).destination.destinationId)
+    Assertions.assertEquals(6, result[0].connectionCount)
+    Assertions.assertEquals(destination.destinationId, result[0].destination.destinationId)
 
     // Verify all job statuses are correctly counted (1 connection per status)
-    Assertions.assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.SUCCEEDED), "Should have 1 SUCCEEDED job")
-    Assertions.assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.FAILED), "Should have 1 FAILED job")
-    Assertions.assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.RUNNING), "Should have 1 RUNNING job")
-    Assertions.assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.PENDING), "Should have 1 PENDING job")
-    Assertions.assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.INCOMPLETE), "Should have 1 INCOMPLETE job")
-    Assertions.assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.CANCELLED), "Should have 1 CANCELLED job")
+    Assertions.assertEquals(1, result[0].connectionJobStatuses[JobStatus.SUCCEEDED], "Should have 1 SUCCEEDED job")
+    Assertions.assertEquals(1, result[0].connectionJobStatuses[JobStatus.FAILED], "Should have 1 FAILED job")
+    Assertions.assertEquals(1, result[0].connectionJobStatuses[JobStatus.RUNNING], "Should have 1 RUNNING job")
+    Assertions.assertEquals(1, result[0].connectionJobStatuses[JobStatus.PENDING], "Should have 1 PENDING job")
+    Assertions.assertEquals(1, result[0].connectionJobStatuses[JobStatus.INCOMPLETE], "Should have 1 INCOMPLETE job")
+    Assertions.assertEquals(1, result[0].connectionJobStatuses[JobStatus.CANCELLED], "Should have 1 CANCELLED job")
 
     // Verify last sync time is the most recent across all connections
-    Assertions.assertNotNull(result.get(0).lastSync, "Should have last sync when connections with jobs exist")
+    Assertions.assertNotNull(result[0].lastSync, "Should have last sync when connections with jobs exist")
     Assertions.assertTrue(
-      abs(result.get(0).lastSync!!.toEpochSecond() - baseTime.toEpochSecond()) < 2,
+      abs(result[0].lastSync!!.toEpochSecond() - baseTime.toEpochSecond()) < 2,
       "Last sync should be the most recent job time across all connections",
     )
-  }
-
-  fun createDestination(
-    workspaceId: UUID?,
-    destinationDefinition: StandardDestinationDefinition,
-    withTombstone: Boolean?,
-  ): DestinationConnection {
-    val destination =
-      DestinationConnection()
-        .withDestinationId(UUID.randomUUID())
-        .withWorkspaceId(workspaceId)
-        .withName("source")
-        .withDestinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .withTombstone(withTombstone)
-    destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(destination)
-    return destination
   }
 
   @Test
@@ -571,9 +554,9 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(1, result.size)
     Assertions.assertEquals(
       helper.destinationDefinition!!.destinationDefinitionId,
-      result.get(0)!!.destinationDefinitionId,
+      result[0].destinationDefinitionId,
     )
-    Assertions.assertEquals("Test destination def", result.get(0)!!.getName())
+    Assertions.assertEquals("Test destination def", result[0].name)
   }
 
   @Test
@@ -588,7 +571,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     val tombstonedDestination = additionalDestination.withTombstone(true)
     destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(tombstonedDestination)
 
-    // Should only return the non-tombstoned destination
+    // Should only return to the non-tombstoned destination
     val result =
       destinationServiceJooqImpl.listDestinationDefinitionsForWorkspace(workspaceId, false)
 
@@ -596,7 +579,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(1, result.size)
     Assertions.assertEquals(
       helper.destinationDefinition!!.destinationDefinitionId,
-      result.get(0)!!.destinationDefinitionId,
+      result[0].destinationDefinitionId,
     )
   }
 
@@ -624,7 +607,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     // Should be the same definition used by both active and tombstoned destinations
     Assertions.assertEquals(
       helper.destinationDefinition!!.destinationDefinitionId,
-      result.get(0)!!.destinationDefinitionId,
+      result[0].destinationDefinitionId,
     )
   }
 
@@ -662,7 +645,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(1, result.size)
     Assertions.assertEquals(
       helper.destinationDefinition!!.destinationDefinitionId,
-      result.get(0)!!.destinationDefinitionId,
+      result[0].destinationDefinitionId,
     )
   }
 
@@ -691,7 +674,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
         .withDestinationId(secondDestinationId)
         .withDestinationDefinitionId(secondDestinationDefinitionId)
         .withWorkspaceId(workspaceId)
-        .withName("test-destination-" + secondDestinationId)
+        .withName("test-destination-$secondDestinationId")
         .withConfiguration(emptyObject())
         .withTombstone(false)
     destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(secondDestination)
@@ -706,7 +689,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     val definitionIds =
       result
         .stream()
-        .map<UUID?> { obj: StandardDestinationDefinition? -> obj!!.getDestinationDefinitionId() }
+        .map { obj: StandardDestinationDefinition? -> obj!!.destinationDefinitionId }
         .toList()
 
     Assertions.assertTrue(definitionIds.contains(helper.destinationDefinition!!.destinationDefinitionId))
@@ -720,7 +703,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   ): StandardSync {
     val connectionId = UUID.randomUUID()
     val streams =
-      listOf<ConfiguredAirbyteStream>(
+      listOf(
         catalogHelpers.createConfiguredAirbyteStream("test_stream", "test_namespace", Field.of("field", JsonSchemaType.STRING)),
       )
 
@@ -729,7 +712,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
         .withConnectionId(connectionId)
         .withSourceId(source.sourceId)
         .withDestinationId(destination.destinationId)
-        .withName("test-connection-" + connectionId)
+        .withName("test-connection-$connectionId")
         .withCatalog(ConfiguredAirbyteCatalog().withStreams(streams))
         .withManual(true)
         .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
@@ -751,7 +734,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
         .withDestinationId(destinationId)
         .withDestinationDefinitionId(helper.destinationDefinition!!.destinationDefinitionId)
         .withWorkspaceId(workspaceId)
-        .withName("test-destination-" + destinationId)
+        .withName("test-destination-$destinationId")
         .withConfiguration(emptyObject())
         .withTombstone(false)
 
@@ -767,7 +750,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   ): StandardSync {
     val connectionId = UUID.randomUUID()
     val streams =
-      listOf<ConfiguredAirbyteStream>(
+      listOf(
         catalogHelpers.createConfiguredAirbyteStream("test_stream", "test_namespace", Field.of("field", JsonSchemaType.STRING)),
       )
 
@@ -795,28 +778,26 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   ) {
     // Insert a job record directly into the database
     // This simulates the job table structure used in the actual query
-    database!!.query<Any?>(
-      ContextQueryFunction { ctx: DSLContext? ->
-        ctx!!
-          .insertInto<Record?>(DSL.table("jobs"))
-          .columns<Any?, Any?, Any?, Any?, Any?, Any?>(
-            DSL.field("config_type"),
-            DSL.field("scope"),
-            DSL.field("created_at"),
-            DSL.field("updated_at"),
-            DSL.field("status"),
-            DSL.field("config"),
-          ).values(
-            DSL.field("cast(? as job_config_type)", "sync"),
-            connectionId.toString(),
-            createdAt,
-            createdAt,
-            DSL.field("cast(? as job_status)", jobStatus.name.lowercase(Locale.getDefault())),
-            DSL.field("cast(? as jsonb)", "{}"),
-          ).execute()
-        null
-      },
-    )
+    database!!.query<Any?> { ctx: DSLContext? ->
+      ctx!!
+        .insertInto(DSL.table("jobs"))
+        .columns(
+          DSL.field("config_type"),
+          DSL.field("scope"),
+          DSL.field("created_at"),
+          DSL.field("updated_at"),
+          DSL.field("status"),
+          DSL.field("config"),
+        ).values(
+          DSL.field("cast(? as job_config_type)", "sync"),
+          connectionId.toString(),
+          createdAt,
+          createdAt,
+          DSL.field("cast(? as job_status)", jobStatus.name.lowercase(Locale.getDefault())),
+          DSL.field("cast(? as jsonb)", "{}"),
+        ).execute()
+      null
+    }
   }
 
   companion object {
@@ -828,7 +809,7 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     ): ActorDefinitionVersion? {
       val spec =
         ConnectorSpecification()
-          .withConnectionSpecification(jsonNode<MutableMap<String?, String?>?>(mutableMapOf<String?, String?>("type" to "object")))
+          .withConnectionSpecification(jsonNode<MutableMap<String?, String?>?>(mutableMapOf("type" to "object")))
 
       return ActorDefinitionVersion()
         .withActorDefinitionId(actorDefId)

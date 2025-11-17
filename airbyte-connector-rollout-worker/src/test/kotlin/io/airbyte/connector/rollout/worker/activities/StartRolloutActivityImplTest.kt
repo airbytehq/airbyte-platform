@@ -2,6 +2,8 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
+package io.airbyte.connector.rollout.worker.activities
+
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.generated.HealthApi
@@ -11,7 +13,6 @@ import io.airbyte.api.client.model.generated.ConnectorRolloutState
 import io.airbyte.api.client.model.generated.HealthCheckRead
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
-import io.airbyte.connector.rollout.worker.activities.StartRolloutActivityImpl
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -19,7 +20,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-class StartRolloutActivityImplTest {
+internal class StartRolloutActivityImplTest {
   private lateinit var airbyteApiClient: AirbyteApiClient
   private lateinit var connectorRolloutApi: ConnectorRolloutApi
   private lateinit var healthApi: HealthApi

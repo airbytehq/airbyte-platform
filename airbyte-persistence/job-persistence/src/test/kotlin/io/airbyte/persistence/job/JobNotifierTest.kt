@@ -31,10 +31,12 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.notification.NotificationClient
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import java.time.Instant
 import java.util.UUID
 
@@ -58,17 +60,17 @@ internal class JobNotifierTest {
 
   @BeforeEach
   fun setup() {
-    trackingClient = Mockito.mock(TrackingClient::class.java)
-    connectionService = Mockito.mock(ConnectionService::class.java)
-    sourceService = Mockito.mock(SourceService::class.java)
-    destinationService = Mockito.mock(DestinationService::class.java)
-    workspaceService = Mockito.mock(WorkspaceService::class.java)
+    trackingClient = mockk<TrackingClient>(relaxed = true)
+    connectionService = mockk<ConnectionService>()
+    sourceService = mockk<SourceService>()
+    destinationService = mockk<DestinationService>()
+    workspaceService = mockk<WorkspaceService>()
 
-    val actorDefinitionVersionHelper = Mockito.mock(ActorDefinitionVersionHelper::class.java)
-    val workspaceHelper = Mockito.mock(WorkspaceHelper::class.java)
-    val metricClient = Mockito.mock(MetricClient::class.java)
+    val actorDefinitionVersionHelper = mockk<ActorDefinitionVersionHelper>()
+    val workspaceHelper = mockk<WorkspaceHelper>()
+    val metricClient = mockk<MetricClient>(relaxed = true)
     jobNotifier =
-      Mockito.spy(
+      spyk(
         JobNotifier(
           webUrlHelper,
           connectionService,
@@ -81,18 +83,14 @@ internal class JobNotifierTest {
           metricClient,
         ),
       )
-    notificationClient = Mockito.mock(NotificationClient::class.java)
-    customerIoNotificationClient = Mockito.mock(NotificationClient::class.java)
-    Mockito
-      .`when`(jobNotifier.getNotificationClientsFromNotificationItem(slackNotificationItem()))
-      .thenReturn(listOf(notificationClient))
-    Mockito
-      .`when`(jobNotifier.getNotificationClientsFromNotificationItem(customerioAndSlackNotificationItem()))
-      .thenReturn(listOf(notificationClient, customerIoNotificationClient))
-    Mockito
-      .`when`(jobNotifier.getNotificationClientsFromNotificationItem(customerioNotificationItem()))
-      .thenReturn(listOf(customerIoNotificationClient))
-    Mockito.`when`(jobNotifier.getNotificationClientsFromNotificationItem(noNotificationItem())).thenReturn(listOf())
+    notificationClient = mockk<NotificationClient>(relaxed = true)
+    customerIoNotificationClient = mockk<NotificationClient>(relaxed = true)
+    every { jobNotifier.getNotificationClientsFromNotificationItem(slackNotificationItem()) } returns listOf(notificationClient)
+    every {
+      jobNotifier.getNotificationClientsFromNotificationItem(customerioAndSlackNotificationItem())
+    } returns listOf(notificationClient, customerIoNotificationClient)
+    every { jobNotifier.getNotificationClientsFromNotificationItem(customerioNotificationItem()) } returns listOf(customerIoNotificationClient)
+    every { jobNotifier.getNotificationClientsFromNotificationItem(noNotificationItem()) } returns listOf()
 
     job = createJob()
     sourceDefinition =
@@ -107,43 +105,36 @@ internal class JobNotifierTest {
       ActorDefinitionVersion()
         .withDockerImageTag(TEST_DOCKER_TAG)
         .withDockerRepository(TEST_DOCKER_REPO)
-    Mockito
-      .`when`(connectionService.getStandardSync(UUID.fromString(job.scope)))
-      .thenReturn(
-        StandardSync()
-          .withName(
-            "connection",
-          ).withConnectionId(UUID.fromString(job.scope))
-          .withSourceId(SOURCE_ID)
-          .withDestinationId(DESTINATION_ID),
-      )
-    Mockito
-      .`when`(sourceService.getSourceConnection(SOURCE_ID))
-      .thenReturn(SourceConnection().withWorkspaceId(WORKSPACE_ID).withSourceId(SOURCE_ID).withName(SOURCE_NAME))
-    Mockito
-      .`when`(destinationService.getDestinationConnection(DESTINATION_ID))
-      .thenReturn(DestinationConnection().withWorkspaceId(WORKSPACE_ID).withDestinationId(DESTINATION_ID).withName(DESTINATION_NAME))
-    Mockito.`when`(sourceService.getSourceDefinitionFromConnection(org.mockito.kotlin.anyOrNull())).thenReturn(sourceDefinition)
-    Mockito.`when`(destinationService.getDestinationDefinitionFromConnection(org.mockito.kotlin.anyOrNull())).thenReturn(destinationDefinition)
-    Mockito.`when`(sourceService.getStandardSourceDefinition(org.mockito.kotlin.anyOrNull())).thenReturn(sourceDefinition)
-    Mockito.`when`(destinationService.getStandardDestinationDefinition(org.mockito.kotlin.anyOrNull())).thenReturn(destinationDefinition)
-    Mockito.`when`(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(
-      workspace,
-    )
-    Mockito.`when`(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.id)).thenReturn(WORKSPACE_ID)
-    Mockito.`when`(notificationClient.notifyJobFailure(org.mockito.kotlin.anyOrNull(), ArgumentMatchers.anyString())).thenReturn(true)
-    Mockito.`when`(notificationClient.getNotificationClientType()).thenReturn("client")
-    Mockito.`when`(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID)).thenReturn(actorDefinitionVersion)
-    Mockito
-      .`when`(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID))
-      .thenReturn(actorDefinitionVersion)
+    every { connectionService.getStandardSync(UUID.fromString(job.scope)) } returns
+      StandardSync()
+        .withName(
+          "connection",
+        ).withConnectionId(UUID.fromString(job.scope))
+        .withSourceId(SOURCE_ID)
+        .withDestinationId(DESTINATION_ID)
+    every { sourceService.getSourceConnection(SOURCE_ID) } returns
+      SourceConnection().withWorkspaceId(WORKSPACE_ID).withSourceId(SOURCE_ID).withName(SOURCE_NAME)
+    every { destinationService.getDestinationConnection(DESTINATION_ID) } returns
+      DestinationConnection().withWorkspaceId(WORKSPACE_ID).withDestinationId(DESTINATION_ID).withName(DESTINATION_NAME)
+    every { sourceService.getSourceDefinitionFromConnection(any()) } returns sourceDefinition
+    every { destinationService.getDestinationDefinitionFromConnection(any()) } returns destinationDefinition
+    every { sourceService.getStandardSourceDefinition(any()) } returns sourceDefinition
+    every { destinationService.getStandardDestinationDefinition(any()) } returns destinationDefinition
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns workspace
+    every { workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.id) } returns WORKSPACE_ID
+    every { notificationClient.notifyJobFailure(any(), any<String>()) } returns true
+    every { notificationClient.getNotificationClientType() } returns "client"
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID) } returns actorDefinitionVersion
+    every {
+      actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)
+    } returns actorDefinitionVersion
   }
 
   @Test
   fun testFailJob() {
     val attemptStats: List<JobPersistence.AttemptStats> = ArrayList()
     jobNotifier.failJob(job, attemptStats)
-    Mockito.verify(notificationClient).notifyJobFailure(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull())
+    verify { notificationClient.notifyJobFailure(any(), any()) }
 
     val metadata =
       mapOf(
@@ -158,7 +149,7 @@ internal class JobNotifierTest {
         "connector_destination_docker_repository" to actorDefinitionVersion.dockerRepository,
         "notification_type" to listOf(Notification.NotificationType.SLACK.toString()),
       )
-    Mockito.verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, JobNotifier.FAILURE_NOTIFICATION, metadata)
+    verify { trackingClient.track(WORKSPACE_ID, ScopeType.WORKSPACE, JobNotifier.FAILURE_NOTIFICATION, metadata) }
   }
 
   @Test
@@ -181,32 +172,28 @@ internal class JobNotifierTest {
       NotificationSettings()
         .withSendOnSuccess(item)
     workspace.notificationSettings = sendNotificationOnSuccessSetting
-    Mockito.`when`(jobNotifier.getNotificationClientsFromNotificationItem(item)).thenReturn(listOf(notificationClient))
+    every { jobNotifier.getNotificationClientsFromNotificationItem(item) } returns listOf(notificationClient)
 
-    Mockito.`when`(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(workspace)
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns workspace
     val attemptStats: List<JobPersistence.AttemptStats> = ArrayList()
     jobNotifier.successJob(job, attemptStats)
-    Mockito.verify(notificationClient).notifyJobSuccess(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull())
+    verify { notificationClient.notifyJobSuccess(any(), any()) }
   }
 
   @Test
   fun testSendOnSyncDisabledWarning() {
     val attemptStats: List<JobPersistence.AttemptStats> = ArrayList()
     jobNotifier.autoDisableConnectionWarning(job, attemptStats)
-    Mockito
-      .verify(
-        notificationClient,
-        Mockito.never(),
-      ).notifyConnectionDisableWarning(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull())
-    Mockito.verify(customerIoNotificationClient).notifyConnectionDisableWarning(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull())
+    verify(exactly = 0) { notificationClient.notifyConnectionDisableWarning(any(), any()) }
+    verify { customerIoNotificationClient.notifyConnectionDisableWarning(any(), any()) }
   }
 
   @Test
   fun testSendOnSyncDisabled() {
     val attemptStats: List<JobPersistence.AttemptStats> = ArrayList()
     jobNotifier.autoDisableConnection(job, attemptStats)
-    Mockito.verify(notificationClient).notifyConnectionDisabled(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull())
-    Mockito.verify(customerIoNotificationClient).notifyConnectionDisabled(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull())
+    verify { notificationClient.notifyConnectionDisabled(any(), any()) }
+    verify { customerIoNotificationClient.notifyConnectionDisabled(any(), any()) }
   }
 
   @Test

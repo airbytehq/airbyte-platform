@@ -10,92 +10,83 @@ import io.micronaut.http.HttpResponse
 import io.micronaut.http.client.BlockingHttpClient
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
+import io.mockk.every
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.MockitoAnnotations
+import org.junit.jupiter.api.extension.ExtendWith
 
+@ExtendWith(MockKExtension::class)
 internal class KeycloakSetupTest {
-  @Mock
+  @MockK
   private lateinit var httpClient: HttpClient
 
-  @Mock
+  @MockK
   private lateinit var blockingHttpClient: BlockingHttpClient
 
-  @Mock
+  @MockK
   private lateinit var keycloakServer: KeycloakServer
 
-  @Mock
+  @MockK
   private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
 
-  @Mock
+  @MockK
   private lateinit var configDbResetHelper: ConfigDbResetHelper
 
   private lateinit var keycloakSetup: KeycloakSetup
 
   @BeforeEach
   fun setup() {
-    MockitoAnnotations.openMocks(this)
-
-    Mockito.`when`(keycloakServer.keycloakServerUrl).thenReturn("http://localhost:8180/auth")
-    Mockito.`when`(httpClient.toBlocking()).thenReturn(blockingHttpClient)
-    Mockito
-      .`when`(
-        blockingHttpClient.exchange(
-          ArgumentMatchers.any(HttpRequest::class.java),
-          ArgumentMatchers.eq(String::class.java),
-        ),
-      ).thenReturn(HttpResponse.ok())
+    every { keycloakServer.keycloakServerUrl } returns "http://localhost:8180/auth"
+    every { httpClient.toBlocking() } returns blockingHttpClient
+    every { blockingHttpClient.exchange(any<HttpRequest<*>>(), eq(String::class.java)) } returns HttpResponse.ok()
 
     keycloakSetup = KeycloakSetup(httpClient, keycloakServer, keycloakConfiguration, configDbResetHelper)
   }
 
   @Test
   fun testRun() {
+    every { keycloakServer.setupAirbyteRealm() } returns Unit
+    every { keycloakServer.closeKeycloakAdminClient() } returns Unit
+    every { keycloakConfiguration.resetRealm } returns false
+
     keycloakSetup.run()
 
-    Mockito.verify(httpClient).toBlocking()
-    Mockito.verify(blockingHttpClient).exchange(
-      ArgumentMatchers.any(HttpRequest::class.java),
-      ArgumentMatchers.eq(String::class.java),
-    )
-    Mockito.verify(keycloakServer).setupAirbyteRealm()
-    Mockito.verify(keycloakServer).closeKeycloakAdminClient()
-    Mockito.verify(configDbResetHelper, Mockito.never()).deleteConfigDbUsers()
+    verify(exactly = 1) { httpClient.toBlocking() }
+    verify(exactly = 1) { blockingHttpClient.exchange(any<HttpRequest<*>>(), eq(String::class.java)) }
+    verify(exactly = 1) { keycloakServer.setupAirbyteRealm() }
+    verify(exactly = 1) { keycloakServer.closeKeycloakAdminClient() }
+    verify(exactly = 0) { configDbResetHelper.deleteConfigDbUsers() }
   }
 
   @Test
   fun testRunThrowsException() {
-    Mockito
-      .`when`(
-        httpClient.toBlocking().exchange(
-          ArgumentMatchers.any(HttpRequest::class.java),
-          ArgumentMatchers.eq(String::class.java),
-        ),
-      ).thenAnswer { throw HttpClientResponseException("Error", HttpResponse.serverError<String>()) }
+    every { httpClient.toBlocking().exchange(any<HttpRequest<*>>(), eq(String::class.java)) } throws
+      HttpClientResponseException("Error", HttpResponse.serverError<String>())
+    every { keycloakServer.closeKeycloakAdminClient() } returns Unit
 
     Assertions.assertThrows(HttpClientResponseException::class.java) { keycloakSetup.run() }
 
-    Mockito.verify(keycloakServer).keycloakServerUrl
-    Mockito.verify(httpClient.toBlocking()).exchange(
-      ArgumentMatchers.any(HttpRequest::class.java),
-      ArgumentMatchers.eq(String::class.java),
-    )
-    Mockito.verify(keycloakServer, Mockito.never()).setupAirbyteRealm() // Should not be called if exception is thrown
-    Mockito.verify(keycloakServer).closeKeycloakAdminClient()
+    verify(exactly = 1) { keycloakServer.keycloakServerUrl }
+    verify(exactly = 1) { httpClient.toBlocking().exchange(any<HttpRequest<*>>(), eq(String::class.java)) }
+    verify(exactly = 0) { keycloakServer.setupAirbyteRealm() }
+    verify(exactly = 1) { keycloakServer.closeKeycloakAdminClient() }
   }
 
   @Test
   fun testResetRealm() {
-    Mockito.`when`(keycloakConfiguration.resetRealm).thenReturn(true)
+    every { keycloakConfiguration.resetRealm } returns true
+    every { keycloakServer.destroyAndRecreateAirbyteRealm() } returns Unit
+    every { configDbResetHelper.deleteConfigDbUsers() } returns Unit
+    every { keycloakServer.closeKeycloakAdminClient() } returns Unit
 
     keycloakSetup.run()
 
-    Mockito.verify(keycloakServer, Mockito.times(0)).setupAirbyteRealm()
-    Mockito.verify(keycloakServer, Mockito.times(1)).destroyAndRecreateAirbyteRealm()
-    Mockito.verify(configDbResetHelper, Mockito.times(1)).deleteConfigDbUsers()
+    verify(exactly = 0) { keycloakServer.setupAirbyteRealm() }
+    verify(exactly = 1) { keycloakServer.destroyAndRecreateAirbyteRealm() }
+    verify(exactly = 1) { configDbResetHelper.deleteConfigDbUsers() }
   }
 }

@@ -10,10 +10,10 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.featureflag.TestClient
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.whenever
 import java.util.UUID
 
 internal class FeatureFlagFetchActivityTest {
@@ -24,10 +24,10 @@ internal class FeatureFlagFetchActivityTest {
 
   @BeforeEach
   fun setUp() {
-    mWorkspaceApi = org.mockito.Mockito.mock<WorkspaceApi>(WorkspaceApi::class.java)
-    mAirbyteApiClient = org.mockito.Mockito.mock<AirbyteApiClient>(AirbyteApiClient::class.java)
-    whenever(mAirbyteApiClient!!.workspaceApi).thenReturn(mWorkspaceApi)
-    whenever(mWorkspaceApi!!.getWorkspaceByConnectionId(any<ConnectionIdRequestBody>())).thenReturn(
+    mWorkspaceApi = mockk<WorkspaceApi>()
+    mAirbyteApiClient = mockk<AirbyteApiClient>()
+    every { mAirbyteApiClient!!.workspaceApi } returns mWorkspaceApi!!
+    every { mWorkspaceApi!!.getWorkspaceByConnectionId(any<ConnectionIdRequestBody>()) } returns
       WorkspaceRead(
         UUID.randomUUID(),
         UUID.randomUUID(),
@@ -48,9 +48,8 @@ internal class FeatureFlagFetchActivityTest {
         null,
         null,
         null,
-      ),
-    )
-    mTestClient = org.mockito.Mockito.mock<TestClient>(TestClient::class.java)
+      )
+    mTestClient = mockk<TestClient>()
     featureFlagFetchActivity = FeatureFlagFetchActivityImpl(mAirbyteApiClient!!, mTestClient!!)
   }
 

@@ -5,10 +5,11 @@
 package io.airbyte.workers.helpers
 
 import io.airbyte.api.client.model.generated.JobRead
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import org.quartz.CronExpression
 import java.text.ParseException
 import java.time.Duration
@@ -20,7 +21,7 @@ internal class CronSchedulingHelperTest {
 
   @BeforeEach
   fun setup() {
-    this.currentSecondsSupplier = Mockito.mock(Supplier::class.java) as Supplier<Long>
+    this.currentSecondsSupplier = mockk<Supplier<Long>>()
   }
 
   @Test
@@ -28,7 +29,7 @@ internal class CronSchedulingHelperTest {
     // set current time to 3 hours before the next run
     val nextRun: Date = EVERY_DAY_AT_MIDNIGHT.getNextValidTimeAfter(NOW)
     val threeHoursBeforeNextRun: Long = nextRun.time / CronSchedulingHelper.MS_PER_SECOND - Duration.ofHours(3).seconds
-    Mockito.`when`(currentSecondsSupplier.get()).thenReturn(threeHoursBeforeNextRun)
+    every { currentSecondsSupplier.get() } returns threeHoursBeforeNextRun
 
     val actualNextRuntimeSeconds =
       CronSchedulingHelper.getNextRuntimeBasedOnPreviousJobAndSchedule(currentSecondsSupplier, null, EVERY_DAY_AT_MIDNIGHT).seconds
@@ -42,14 +43,14 @@ internal class CronSchedulingHelperTest {
     // set current time to 5 minutes after a scheduled run, to simulate waiting for jitter to kick in.
     val nextRun: Date = EVERY_DAY_AT_MIDNIGHT.getNextValidTimeAfter(NOW)
     val fiveMinutesAfterRun: Long = nextRun.time / CronSchedulingHelper.MS_PER_SECOND + Duration.ofMinutes(5).seconds
-    Mockito.`when`(currentSecondsSupplier.get()).thenReturn(fiveMinutesAfterRun)
+    every { currentSecondsSupplier.get() } returns fiveMinutesAfterRun
 
     // set prior job createdAt to 10 minutes after it's previous run schedule, to simulate jitter having
     // delayed the previous run slightly.
     val tenMinutesAfterPreviousRun: Long =
       nextRun.time / CronSchedulingHelper.MS_PER_SECOND - Duration.ofHours(24).seconds + Duration.ofMinutes(10).seconds
-    val priorJobRead = Mockito.mock(JobRead::class.java)
-    Mockito.`when`(priorJobRead.createdAt).thenReturn(tenMinutesAfterPreviousRun)
+    val priorJobRead = mockk<JobRead>()
+    every { priorJobRead.createdAt } returns tenMinutesAfterPreviousRun
 
     val actualNextRuntimeSeconds =
       CronSchedulingHelper.getNextRuntimeBasedOnPreviousJobAndSchedule(currentSecondsSupplier, priorJobRead, EVERY_DAY_AT_MIDNIGHT).seconds
@@ -64,12 +65,12 @@ internal class CronSchedulingHelperTest {
     // recently.
     val nextRun: Date = EVERY_DAY_AT_MIDNIGHT.getNextValidTimeAfter(NOW)
     val twentyMinutesAfterRun: Long = nextRun.time / CronSchedulingHelper.MS_PER_SECOND + Duration.ofMinutes(20).seconds
-    Mockito.`when`(currentSecondsSupplier.get()).thenReturn(twentyMinutesAfterRun)
+    every { currentSecondsSupplier.get() } returns twentyMinutesAfterRun
 
     // set prior job createdAt to 5 minutes ago.
     val fiveMinutesAgo = twentyMinutesAfterRun - Duration.ofMinutes(5).seconds
-    val priorJobRead = Mockito.mock(JobRead::class.java)
-    Mockito.`when`(priorJobRead.createdAt).thenReturn(fiveMinutesAgo)
+    val priorJobRead = mockk<JobRead>()
+    every { priorJobRead.createdAt } returns fiveMinutesAgo
 
     val actualNextRuntimeSeconds =
       CronSchedulingHelper.getNextRuntimeBasedOnPreviousJobAndSchedule(currentSecondsSupplier, priorJobRead, EVERY_DAY_AT_MIDNIGHT).seconds

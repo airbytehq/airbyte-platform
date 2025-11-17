@@ -31,17 +31,18 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import io.airbyte.test.utils.Databases
+import io.mockk.mockk
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.SQLDialect
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito
 import org.testcontainers.containers.PostgreSQLContainer
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -52,21 +53,23 @@ import javax.sql.DataSource
 import kotlin.math.min
 
 internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
-  private val paginationHelper: ActorServicePaginationHelper
-  private val sourceServiceJooqImpl: SourceServiceJooqImpl
-  private val destinationServiceJooqImpl: DestinationServiceJooqImpl
-  private val connectionServiceJooqImpl: ConnectionServiceJooqImpl
-  private val featureFlagClient: TestClient = Mockito.mock(TestClient::class.java)
+  private lateinit var paginationHelper: ActorServicePaginationHelper
+  private lateinit var sourceServiceJooqImpl: SourceServiceJooqImpl
+  private lateinit var destinationServiceJooqImpl: DestinationServiceJooqImpl
+  private lateinit var connectionServiceJooqImpl: ConnectionServiceJooqImpl
+  private lateinit var featureFlagClient: TestClient
   private lateinit var jobDatabase: Database
   private lateinit var dataSource: DataSource
   private lateinit var dslContext: DSLContext
 
-  init {
-    val metricClient = Mockito.mock(MetricClient::class.java)
-    val connectionService = Mockito.mock(ConnectionService::class.java)
-    val actorDefinitionVersionUpdater = Mockito.mock(ActorDefinitionVersionUpdater::class.java)
-    val secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
+  @BeforeEach
+  fun setup() {
+    val metricClient = mockk<MetricClient>()
+    val connectionService = mockk<ConnectionService>()
+    val actorDefinitionVersionUpdater = mockk<ActorDefinitionVersionUpdater>()
+    val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>()
 
+    this.featureFlagClient = mockk<TestClient>(relaxed = true)
     this.paginationHelper = ActorServicePaginationHelper(database!!)
     this.sourceServiceJooqImpl =
       SourceServiceJooqImpl(
@@ -1514,7 +1517,7 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     @JvmStatic
     @BeforeAll
-    fun setup() {
+    fun setupAll() {
       container =
         PostgreSQLContainer(DatabaseConstants.DEFAULT_DATABASE_VERSION)
           .withDatabaseName("airbyte")

@@ -5,125 +5,113 @@
 package io.airbyte.keycloak.setup
 
 import io.airbyte.commons.auth.config.InitialUserConfig
+import io.mockk.every
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
+import io.mockk.slot
+import io.mockk.verify
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.admin.client.resource.UsersResource
 import org.keycloak.representations.idm.CredentialRepresentation
 import org.keycloak.representations.idm.UserRepresentation
-import org.mockito.ArgumentMatcher
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.MockitoAnnotations
 
+@ExtendWith(MockKExtension::class)
 internal class UserConfiguratorTest {
   private lateinit var userConfigurator: UserConfigurator
 
-  @Mock
+  @MockK
   private lateinit var initialUserConfig: InitialUserConfig
 
-  @Mock
+  @MockK
   private lateinit var realmResource: RealmResource
 
-  @Mock
+  @MockK
   private lateinit var usersResource: UsersResource
 
-  @Mock
+  @MockK
   private lateinit var userResource: UserResource
 
-  @Mock
+  @MockK
   private lateinit var response: Response
 
   @BeforeEach
   fun setUp() {
-    MockitoAnnotations.openMocks(this)
+    every { initialUserConfig.email } returns EMAIL
+    every { initialUserConfig.firstName } returns FIRST_NAME
+    every { initialUserConfig.lastName } returns LAST_NAME
+    every { initialUserConfig.password } returns PASSWORD
 
-    Mockito.`when`(initialUserConfig.email).thenReturn(EMAIL)
-    Mockito.`when`(initialUserConfig.firstName).thenReturn(FIRST_NAME)
-    Mockito.`when`(initialUserConfig.lastName).thenReturn(LAST_NAME)
-    Mockito.`when`(initialUserConfig.password).thenReturn(PASSWORD)
+    every { realmResource.users() } returns usersResource
+    every { usersResource.create(any()) } returns response
 
-    Mockito.`when`(realmResource.users()).thenReturn(usersResource)
-    Mockito
-      .`when`(usersResource.create(ArgumentMatchers.any(UserRepresentation::class.java)))
-      .thenReturn(response)
-
-    Mockito.`when`(usersResource.get(KEYCLOAK_USER_ID)).thenReturn(userResource)
-    Mockito.`when`(response.statusInfo).thenReturn(Response.Status.OK)
+    every { usersResource.get(KEYCLOAK_USER_ID) } returns userResource
+    every { response.statusInfo } returns Response.Status.OK
 
     userConfigurator = UserConfigurator(initialUserConfig)
   }
 
   @Test
   fun testConfigureUser() {
-    Mockito.`when`(response.status).thenReturn(201)
+    every { response.status } returns 201
+    every { response.close() } returns Unit
+    every { usersResource.searchByEmail(EMAIL, true) } returns mutableListOf()
 
     userConfigurator.configureUser(realmResource)
 
-    Mockito
-      .verify(usersResource)
-      .create(
-        ArgumentMatchers.argThat(
-          ArgumentMatcher { userRepresentation: UserRepresentation ->
-            userRepresentation.id == null &&
-              userRepresentation.username == EMAIL &&
-              userRepresentation.email == EMAIL &&
-              userRepresentation.firstName == FIRST_NAME &&
-              userRepresentation.lastName == LAST_NAME &&
-              userRepresentation.isEnabled &&
-              userRepresentation.credentials.size == 1 &&
-              userRepresentation.credentials
-                .first()
-                .type == CredentialRepresentation.PASSWORD &&
-              userRepresentation.credentials.first().value == PASSWORD &&
-              !userRepresentation.credentials
-                .first()
-                .isTemporary &&
-              userRepresentation.credentials == USER_REPRESENTATION.credentials
-          },
-        ),
-      )
+    val userSlot = slot<UserRepresentation>()
+    verify { usersResource.create(capture(userSlot)) }
+
+    val userRepresentation = userSlot.captured
+    Assertions.assertNull(userRepresentation.id)
+    Assertions.assertEquals(EMAIL, userRepresentation.username)
+    Assertions.assertEquals(EMAIL, userRepresentation.email)
+    Assertions.assertEquals(FIRST_NAME, userRepresentation.firstName)
+    Assertions.assertEquals(LAST_NAME, userRepresentation.lastName)
+    Assertions.assertTrue(userRepresentation.isEnabled)
+    Assertions.assertEquals(1, userRepresentation.credentials.size)
+    Assertions.assertEquals(CredentialRepresentation.PASSWORD, userRepresentation.credentials.first().type)
+    Assertions.assertEquals(PASSWORD, userRepresentation.credentials.first().value)
+    Assertions.assertFalse(userRepresentation.credentials.first().isTemporary)
+    Assertions.assertEquals(USER_REPRESENTATION.credentials, userRepresentation.credentials)
   }
 
   @Test
   fun testConfigureUserAlreadyExists() {
-    Mockito.`when`(usersResource.searchByEmail(EMAIL, true)).thenReturn(
-      mutableListOf(USER_REPRESENTATION),
-    )
+    every { usersResource.searchByEmail(EMAIL, true) } returns mutableListOf(USER_REPRESENTATION)
+    every { userResource.update(any()) } returns Unit
 
     userConfigurator.configureUser(realmResource)
 
-    Mockito.verify(usersResource, Mockito.never()).create(ArgumentMatchers.any())
-    Mockito
-      .verify(userResource)
-      .update(
-        ArgumentMatchers.argThat(
-          ArgumentMatcher { userRepresentation: UserRepresentation ->
-            userRepresentation.id == USER_REPRESENTATION.id &&
-              userRepresentation.username == USER_REPRESENTATION.username &&
-              userRepresentation.email == USER_REPRESENTATION.email &&
-              userRepresentation.firstName == USER_REPRESENTATION.firstName &&
-              userRepresentation.lastName == USER_REPRESENTATION.lastName &&
-              userRepresentation.isEnabled == USER_REPRESENTATION.isEnabled &&
-              userRepresentation.credentials == USER_REPRESENTATION.credentials
-          },
-        ),
-      )
+    verify(exactly = 0) { usersResource.create(any()) }
+
+    val userSlot = slot<UserRepresentation>()
+    verify { userResource.update(capture(userSlot)) }
+
+    val userRepresentation = userSlot.captured
+    Assertions.assertEquals(USER_REPRESENTATION.id, userRepresentation.id)
+    Assertions.assertEquals(USER_REPRESENTATION.username, userRepresentation.username)
+    Assertions.assertEquals(USER_REPRESENTATION.email, userRepresentation.email)
+    Assertions.assertEquals(USER_REPRESENTATION.firstName, userRepresentation.firstName)
+    Assertions.assertEquals(USER_REPRESENTATION.lastName, userRepresentation.lastName)
+    Assertions.assertEquals(USER_REPRESENTATION.isEnabled, userRepresentation.isEnabled)
+    Assertions.assertEquals(USER_REPRESENTATION.credentials, userRepresentation.credentials)
   }
 
   @Test
   fun testConfigureUserRepresentation() {
-    Mockito.`when`(initialUserConfig.email).thenReturn(EMAIL)
-    Mockito.`when`(initialUserConfig.firstName).thenReturn(FIRST_NAME)
-    Mockito.`when`(initialUserConfig.lastName).thenReturn(LAST_NAME)
+    every { initialUserConfig.email } returns EMAIL
+    every { initialUserConfig.firstName } returns FIRST_NAME
+    every { initialUserConfig.lastName } returns LAST_NAME
 
     val userRepresentation = userConfigurator.userRepresentationFromConfig
 
-    Assertions.assertEquals(EMAIL, userRepresentation.username) // we want to set the username to the configured email
+    Assertions.assertEquals(EMAIL, userRepresentation.username)
     Assertions.assertEquals(EMAIL, userRepresentation.email)
     Assertions.assertEquals(FIRST_NAME, userRepresentation.firstName)
     Assertions.assertEquals(LAST_NAME, userRepresentation.lastName)
@@ -131,7 +119,7 @@ internal class UserConfiguratorTest {
 
   @Test
   fun testCreateCredentialRepresentation() {
-    Mockito.`when`(initialUserConfig.password).thenReturn(PASSWORD)
+    every { initialUserConfig.password } returns PASSWORD
 
     val credentialRepresentation = userConfigurator.createCredentialRepresentation()
 
@@ -147,7 +135,6 @@ internal class UserConfiguratorTest {
     private const val PASSWORD = "airbytePassword"
     private const val KEYCLOAK_USER_ID = "some-id"
 
-    // set up a static Keycloak UserRepresentation based on the constants above
     private val USER_REPRESENTATION = UserRepresentation()
 
     init {

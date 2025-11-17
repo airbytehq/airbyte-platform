@@ -5,29 +5,30 @@
 package io.airbyte.keycloak.setup
 
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
+import io.mockk.every
+import io.mockk.impl.annotations.InjectMockKs
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.junit.jupiter.MockitoExtension
 
-@ExtendWith(MockitoExtension::class)
+@ExtendWith(MockKExtension::class)
 internal class KeycloakAdminClientProviderTest {
-  @Mock
+  @MockK
   private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
 
-  @InjectMocks
+  @InjectMockKs
   private lateinit var keycloakAdminClientProvider: KeycloakAdminClientProvider
 
   @BeforeEach
   fun setUp() {
-    Mockito.`when`(keycloakConfiguration.realm).thenReturn(REALM)
-    Mockito.`when`(keycloakConfiguration.clientId).thenReturn(CLIENT_ID)
-    Mockito.`when`(keycloakConfiguration.username).thenReturn(USERNAME)
-    Mockito.`when`(keycloakConfiguration.password).thenReturn(PASSWORD)
+    every { keycloakConfiguration.realm } returns REALM
+    every { keycloakConfiguration.clientId } returns CLIENT_ID
+    every { keycloakConfiguration.username } returns USERNAME
+    every { keycloakConfiguration.password } returns PASSWORD
   }
 
   @Test
@@ -35,10 +36,10 @@ internal class KeycloakAdminClientProviderTest {
     val keycloak = keycloakAdminClientProvider.createKeycloakAdminClient(KEYCLOAK_URL)
 
     Assertions.assertNotNull(keycloak)
-    Mockito.verify(keycloakConfiguration, Mockito.times(1)).realm
-    Mockito.verify(keycloakConfiguration, Mockito.times(1)).clientId
-    Mockito.verify(keycloakConfiguration, Mockito.times(1)).username
-    Mockito.verify(keycloakConfiguration, Mockito.times(1)).password
+    verify(exactly = 1) { keycloakConfiguration.realm }
+    verify(exactly = 1) { keycloakConfiguration.clientId }
+    verify(exactly = 1) { keycloakConfiguration.username }
+    verify(exactly = 1) { keycloakConfiguration.password }
   }
 
   companion object {

@@ -2,13 +2,14 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
+package io.airbyte.connector.rollout.worker.activities
+
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi
 import io.airbyte.api.client.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.client.model.generated.SupportState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputVerifyDefaultVersion
-import io.airbyte.connector.rollout.worker.activities.VerifyDefaultVersionActivityImpl
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -21,7 +22,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 
-class VerifyDefaultVersionActivityImplTest {
+internal class VerifyDefaultVersionActivityImplTest {
   private lateinit var airbyteApiClient: AirbyteApiClient
   private lateinit var actorDefinitionVersionApi: ActorDefinitionVersionApi
   private lateinit var verifyDefaultVersionActivity: VerifyDefaultVersionActivityImpl

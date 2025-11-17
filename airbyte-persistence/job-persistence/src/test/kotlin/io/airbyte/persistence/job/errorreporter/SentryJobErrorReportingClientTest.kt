@@ -12,6 +12,10 @@ import io.airbyte.config.State
 import io.airbyte.persistence.job.errorreporter.SentryExceptionHelper.SentryExceptionPlatform
 import io.airbyte.persistence.job.errorreporter.SentryExceptionHelper.SentryParsedException
 import io.airbyte.persistence.job.errorreporter.SentryJobErrorReportingClient.Companion.createSentryHubWithDSN
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import io.sentry.IHub
 import io.sentry.NoOpHub
 import io.sentry.Scope
@@ -21,37 +25,29 @@ import io.sentry.protocol.SentryException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentCaptor
-import org.mockito.invocation.InvocationOnMock
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import java.util.Optional
 import java.util.UUID
 
 internal class SentryJobErrorReportingClientTest {
   private val objectMapper = ObjectMapper()
-  private val workspace: StandardWorkspace? = StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME)
+  private val workspace: StandardWorkspace = StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME)
   private lateinit var sentryErrorReportingClient: SentryJobErrorReportingClient
   private lateinit var mockSentryHub: IHub
   private lateinit var mockScope: Scope
-
-  private var mockSentryExceptionHelper: SentryExceptionHelper? = null
+  private lateinit var mockSentryExceptionHelper: SentryExceptionHelper
 
   @BeforeEach
   fun setup() {
-    mockSentryHub = mock<IHub>()
-    mockScope = mock<Scope>()
-    doAnswer { invocation: InvocationOnMock ->
-      val scopeCallback = invocation.getArgument<ScopeCallback>(0)
+    mockSentryHub = mockk<IHub>()
+    mockScope = mockk<Scope>(relaxed = true)
+    every { mockSentryHub.configureScope(any<ScopeCallback>()) } answers {
+      val scopeCallback = arg<ScopeCallback>(0)
       scopeCallback.run(mockScope)
-      null // Return null for void methods
-    }.whenever(mockSentryHub).configureScope(any<ScopeCallback>())
+    }
+    every { mockSentryHub.captureEvent(any<SentryEvent>()) } returns mockk()
 
-    mockSentryExceptionHelper = mock<SentryExceptionHelper>()
-    sentryErrorReportingClient = SentryJobErrorReportingClient(mockSentryHub, mockSentryExceptionHelper!!)
+    mockSentryExceptionHelper = mockk<SentryExceptionHelper>()
+    sentryErrorReportingClient = SentryJobErrorReportingClient(mockSentryHub, mockSentryExceptionHelper)
   }
 
   @Test
@@ -79,7 +75,7 @@ internal class SentryJobErrorReportingClientTest {
 
   @Test
   fun testReportJobFailureReason() {
-    val eventCaptor = ArgumentCaptor.forClass(SentryEvent::class.java)
+    val eventCaptor = slot<SentryEvent>()
 
     val failureReason =
       FailureReason()
@@ -98,8 +94,8 @@ internal class SentryJobErrorReportingClientTest {
 
     sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, metadata, attemptConfig)
 
-    verify(mockSentryHub).captureEvent(eventCaptor.capture())
-    val actualEvent = eventCaptor.getValue()
+    verify { mockSentryHub.captureEvent(capture(eventCaptor)) }
+    val actualEvent = eventCaptor.captured
     Assertions.assertEquals("other", actualEvent.platform)
     Assertions.assertEquals("airbyte-source-stripe@1.2.3", actualEvent.release)
     Assertions.assertEquals(mutableListOf<String?>("{{ default }}", "airbyte-source-stripe"), actualEvent.fingerprints)
@@ -126,7 +122,7 @@ internal class SentryJobErrorReportingClientTest {
 
   @Test
   fun testReportJobNoErrorOnNullAttemptConfig() {
-    val eventCaptor = ArgumentCaptor.forClass(SentryEvent::class.java)
+    val eventCaptor = slot<SentryEvent>()
 
     val failureReason =
       FailureReason()
@@ -138,12 +134,12 @@ internal class SentryJobErrorReportingClientTest {
 
     sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, metadata, null)
 
-    verify(mockSentryHub).captureEvent(eventCaptor.capture())
+    verify { mockSentryHub.captureEvent(capture(eventCaptor)) }
   }
 
   @Test
   fun testReportJobFailureReasonWithNoWorkspace() {
-    val eventCaptor = ArgumentCaptor.forClass(SentryEvent::class.java)
+    val eventCaptor = slot<SentryEvent>()
 
     val failureReason =
       FailureReason()
@@ -157,8 +153,8 @@ internal class SentryJobErrorReportingClientTest {
 
     sentryErrorReportingClient.reportJobFailureReason(null, failureReason, DOCKER_IMAGE, emptyMap(), attemptConfig)
 
-    verify(mockSentryHub).captureEvent(eventCaptor.capture())
-    val actualEvent = eventCaptor.getValue()
+    verify { mockSentryHub.captureEvent(capture(eventCaptor)) }
+    val actualEvent = eventCaptor.captured
     val sentryUser = actualEvent.user
     Assertions.assertNull(sentryUser)
 
@@ -169,7 +165,7 @@ internal class SentryJobErrorReportingClientTest {
 
   @Test
   fun testReportJobFailureReasonWithStacktrace() {
-    val eventCaptor = ArgumentCaptor.forClass(SentryEvent::class.java)
+    val eventCaptor = slot<SentryEvent>()
 
     val exceptions = mutableListOf<SentryException>()
     val exception = SentryException()
@@ -178,9 +174,7 @@ internal class SentryJobErrorReportingClientTest {
     exceptions.add(exception)
 
     val parsedException = SentryParsedException(SentryExceptionPlatform.PYTHON, exceptions)
-    whenever(mockSentryExceptionHelper!!.buildSentryExceptions("Some valid stacktrace")).thenReturn(
-      Optional.of(parsedException),
-    )
+    every { mockSentryExceptionHelper.buildSentryExceptions("Some valid stacktrace") } returns Optional.of(parsedException)
 
     val failureReason =
       FailureReason()
@@ -193,8 +187,8 @@ internal class SentryJobErrorReportingClientTest {
 
     sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, emptyMap(), attemptConfig)
 
-    verify(mockSentryHub).captureEvent(eventCaptor.capture())
-    val actualEvent = eventCaptor.getValue()
+    verify { mockSentryHub.captureEvent(capture(eventCaptor)) }
+    val actualEvent = eventCaptor.captured
     Assertions.assertEquals(exceptions, actualEvent.exceptions)
     Assertions.assertNull(actualEvent.getTag(SentryJobErrorReportingClient.STACKTRACE_PARSE_ERROR_TAG_KEY))
     Assertions.assertEquals("python", actualEvent.platform)
@@ -203,11 +197,10 @@ internal class SentryJobErrorReportingClientTest {
 
   @Test
   fun testReportJobFailureReasonWithInvalidStacktrace() {
-    val eventCaptor = ArgumentCaptor.forClass(SentryEvent::class.java)
+    val eventCaptor = slot<SentryEvent>()
     val invalidStacktrace = "Invalid stacktrace\nRuntimeError: Something went wrong"
 
-    whenever(mockSentryExceptionHelper!!.buildSentryExceptions(invalidStacktrace))
-      .thenReturn(Optional.empty())
+    every { mockSentryExceptionHelper.buildSentryExceptions(invalidStacktrace) } returns Optional.empty()
 
     val failureReason =
       FailureReason()
@@ -220,8 +213,8 @@ internal class SentryJobErrorReportingClientTest {
 
     sentryErrorReportingClient.reportJobFailureReason(workspace, failureReason, DOCKER_IMAGE, emptyMap(), attemptConfig)
 
-    verify(mockSentryHub).captureEvent(eventCaptor.capture())
-    val actualEvent = eventCaptor.getValue()
+    verify { mockSentryHub.captureEvent(capture(eventCaptor)) }
+    val actualEvent = eventCaptor.captured
     Assertions.assertEquals("1", actualEvent.getTag(SentryJobErrorReportingClient.STACKTRACE_PARSE_ERROR_TAG_KEY))
     val exceptions = actualEvent.exceptions
     Assertions.assertNotNull(exceptions)

@@ -7,27 +7,23 @@ package io.airbyte.workers.temporal.scheduling.activities
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.temporal.TemporalUtils.Companion.getJobRoot
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity.LogInput
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
 import org.slf4j.Logger
 import java.nio.file.Path
 
 internal class AppendToAttemptLogActivityTest {
-  @Mock
   private lateinit var mLogger: Logger
-
-  @Mock
   private lateinit var mLogClientManager: LogClientManager
 
   @BeforeEach
   fun setup() {
-    mLogger = Mockito.mock<Logger>(Logger::class.java)
-    mLogClientManager = Mockito.mock<LogClientManager>(LogClientManager::class.java)
+    mLogger = mockk(relaxed = true)
+    mLogClientManager = mockk(relaxed = true)
   }
 
   @ParameterizedTest
@@ -45,7 +41,7 @@ internal class AppendToAttemptLogActivityTest {
 
     val expectedPath = getJobRoot(path, jobId.toString(), attemptNumber.toLong())
 
-    Mockito.verify(mLogClientManager, Mockito.times(1)).setJobMdc(expectedPath)
+    verify(exactly = 1) { mLogClientManager.setJobMdc(expectedPath) }
   }
 
   @ParameterizedTest
@@ -61,8 +57,8 @@ internal class AppendToAttemptLogActivityTest {
 
     activity.log(input)
 
-    Mockito.verify(mLogClientManager, Mockito.never()).setJobMdc(ArgumentMatchers.any<Path>())
-    Mockito.verify(mLogger, Mockito.never()).info(ArgumentMatchers.any<String>())
+    verify(exactly = 0) { mLogClientManager.setJobMdc(any<Path>()) }
+    verify(exactly = 0) { mLogger.info(any<String>()) }
   }
 
   @ParameterizedTest
@@ -74,7 +70,7 @@ internal class AppendToAttemptLogActivityTest {
 
     activity.log(input)
 
-    Mockito.verify(mLogger, Mockito.times(1)).info(msg)
+    verify(exactly = 1) { mLogger.info(msg) }
   }
 
   @ParameterizedTest
@@ -86,7 +82,7 @@ internal class AppendToAttemptLogActivityTest {
 
     activity.log(input)
 
-    Mockito.verify(mLogger, Mockito.times(1)).error(msg)
+    verify(exactly = 1) { mLogger.error(msg) }
   }
 
   @ParameterizedTest
@@ -98,7 +94,7 @@ internal class AppendToAttemptLogActivityTest {
 
     activity.log(input)
 
-    Mockito.verify(mLogger, Mockito.times(1)).warn(msg)
+    verify(exactly = 1) { mLogger.warn(msg) }
   }
 
   private object Fixtures {

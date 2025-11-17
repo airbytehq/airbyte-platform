@@ -11,10 +11,11 @@ import io.airbyte.api.client.model.generated.NotificationItem
 import io.airbyte.api.client.model.generated.NotificationSettings
 import io.airbyte.api.client.model.generated.NotificationType
 import io.airbyte.api.client.model.generated.WorkspaceRead
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.util.UUID
 
 internal class WorkspaceNotificationConfigFetcherTest {
@@ -24,9 +25,9 @@ internal class WorkspaceNotificationConfigFetcherTest {
 
   @BeforeEach
   fun setup() {
-    airbyteApiClient = Mockito.mock(AirbyteApiClient::class.java)
-    workspaceApi = Mockito.mock(WorkspaceApi::class.java)
-    Mockito.`when`(airbyteApiClient.workspaceApi).thenReturn(workspaceApi)
+    airbyteApiClient = mockk()
+    workspaceApi = mockk()
+    every { airbyteApiClient.workspaceApi } returns workspaceApi
     workspaceNotificationConfigFetcher = WorkspaceNotificationConfigFetcher(airbyteApiClient)
   }
 
@@ -35,30 +36,27 @@ internal class WorkspaceNotificationConfigFetcherTest {
     val connectionId = UUID.randomUUID()
     val email = "em@il.com"
     val notificationItem = NotificationItem(listOf(NotificationType.CUSTOMERIO), null, null)
-    Mockito
-      .`when`(workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(connectionId)))
-      .thenReturn(
-        WorkspaceRead(
-          UUID.randomUUID(),
-          UUID.randomUUID(),
-          "name",
-          "slug",
-          true,
-          UUID.randomUUID(),
-          email,
-          null,
-          null,
-          null,
-          null,
-          null,
-          NotificationSettings(null, null, null, null, null, notificationItem, null, null),
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-        ),
+    every { workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(connectionId)) } returns
+      WorkspaceRead(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        "name",
+        "slug",
+        true,
+        UUID.randomUUID(),
+        email,
+        null,
+        null,
+        null,
+        null,
+        null,
+        NotificationSettings(null, null, null, null, null, notificationItem, null, null),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
       )
 
     val result =

@@ -53,6 +53,10 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.Field
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -64,14 +68,6 @@ import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.junit.platform.commons.util.StringUtils
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import java.util.Optional
 import java.util.UUID
 
@@ -89,8 +85,8 @@ internal class DefaultJobCreatorTest {
 
   @BeforeEach
   fun setup() {
-    jobPersistence = mock<JobPersistence>()
-    statePersistence = mock<StatePersistence>()
+    jobPersistence = mockk<JobPersistence>(relaxed = true)
+    statePersistence = mockk<StatePersistence>()
     workerResourceRequirements =
       ResourceRequirements()
         .withCpuLimit("0.2")
@@ -109,29 +105,29 @@ internal class DefaultJobCreatorTest {
         .withCpuRequest("0.3")
         .withMemoryLimit("1200Mi")
         .withMemoryRequest("1000Mi")
-    resourceRequirementsProvider = mock<ResourceRequirementsProvider>()
-    whenever(
+    resourceRequirementsProvider = mockk<ResourceRequirementsProvider>()
+    every {
       resourceRequirementsProvider.getResourceRequirements(
-        eq(ResourceRequirementsType.ORCHESTRATOR),
-        anyOrNull<String>(),
-        any<String>(),
-      ),
-    ).thenReturn(workerResourceRequirements)
-    whenever(
+        ResourceRequirementsType.ORCHESTRATOR,
+        any(),
+        any(),
+      )
+    } returns workerResourceRequirements
+    every {
       resourceRequirementsProvider.getResourceRequirements(
-        eq(ResourceRequirementsType.SOURCE),
-        anyOrNull<String>(),
-        any<String>(),
-      ),
-    ).thenReturn(workerResourceRequirements)
-    whenever(
+        ResourceRequirementsType.SOURCE,
+        any(),
+        any(),
+      )
+    } returns workerResourceRequirements
+    every {
       resourceRequirementsProvider.getResourceRequirements(
-        eq(ResourceRequirementsType.DESTINATION),
-        anyOrNull<String>(),
-        any<String>(),
-      ),
-    ).thenReturn(workerResourceRequirements)
-    streamRefreshesRepository = mock<StreamRefreshesRepository>()
+        ResourceRequirementsType.DESTINATION,
+        any(),
+        any(),
+      )
+    } returns workerResourceRequirements
+    streamRefreshesRepository = mockk<StreamRefreshesRepository>(relaxed = true)
     mFeatureFlagClient = TestClient()
     jobCreator =
       DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null)
@@ -143,21 +139,20 @@ internal class DefaultJobCreatorTest {
     val streamToRefresh = "name"
     val streamNamespace = "namespace"
 
-    whenever(
+    every {
       jobPersistence.enqueueJob(
         any<String>(),
         any<JobConfig>(),
         any<Boolean>(),
-      ),
-    ).thenReturn(Optional.of(1L))
+      )
+    } returns Optional.of(1L)
 
     val stateWrapper =
       StateWrapper()
         .withStateType(StateType.STREAM)
         .withStateMessages(mutableListOf<AirbyteStateMessage?>())
 
-    whenever(statePersistence.getCurrentState(STANDARD_SYNC.connectionId))
-      .thenReturn(Optional.of(stateWrapper))
+    every { statePersistence.getCurrentState(STANDARD_SYNC.connectionId) } returns Optional.of(stateWrapper)
 
     jobCreator =
       DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null)
@@ -175,7 +170,7 @@ internal class DefaultJobCreatorTest {
           RefreshStream()
             .withRefreshType(refreshType)
             .withStreamDescriptor(StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace)),
-        ) as List<RefreshStream>,
+        ),
       )
 
     val jobConfig =
@@ -184,7 +179,7 @@ internal class DefaultJobCreatorTest {
         .withRefresh(refreshConfig)
 
     val expectedScope = STANDARD_SYNC.connectionId.toString()
-    whenever(jobPersistence.enqueueJob(expectedScope, jobConfig, true)).thenReturn(Optional.of(JOB_ID))
+    every { jobPersistence.enqueueJob(expectedScope, jobConfig, true) } returns Optional.of(JOB_ID)
 
     val expectedRefreshType = if (refreshType == RefreshStream.RefreshType.TRUNCATE) RefreshType.TRUNCATE else RefreshType.MERGE
     val refreshes =
@@ -217,7 +212,7 @@ internal class DefaultJobCreatorTest {
       refreshes,
     )
 
-    verify(jobPersistence).enqueueJob(expectedScope, jobConfig, false)
+    verify { jobPersistence.enqueueJob(expectedScope, jobConfig, false) }
   }
 
   @Test
@@ -228,26 +223,25 @@ internal class DefaultJobCreatorTest {
 
     assertThrows(
       IllegalStateException::class.java,
-      {
-        jobCreator.createRefreshConnection(
-          SOURCE_CONNECTION,
-          DESTINATION_CONNECTION,
-          STANDARD_SYNC,
-          SOURCE_IMAGE_NAME,
-          SOURCE_PROTOCOL_VERSION,
-          DESTINATION_IMAGE_NAME,
-          DESTINATION_PROTOCOL_VERSION,
-          listOf(STANDARD_SYNC_OPERATION),
-          PERSISTED_WEBHOOK_CONFIGS,
-          STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
-          STANDARD_DESTINATION_DEFINITION,
-          SOURCE_DEFINITION_VERSION,
-          DESTINATION_DEFINITION_VERSION.withSupportsRefreshes(false),
-          WORKSPACE_ID,
-          emptyList(),
-        )
-      },
-    )
+    ) {
+      jobCreator.createRefreshConnection(
+        SOURCE_CONNECTION,
+        DESTINATION_CONNECTION,
+        STANDARD_SYNC,
+        SOURCE_IMAGE_NAME,
+        SOURCE_PROTOCOL_VERSION,
+        DESTINATION_IMAGE_NAME,
+        DESTINATION_PROTOCOL_VERSION,
+        listOf(STANDARD_SYNC_OPERATION),
+        PERSISTED_WEBHOOK_CONFIGS,
+        STANDARD_SOURCE_DEFINITION_WITH_SOURCE_TYPE,
+        STANDARD_DESTINATION_DEFINITION,
+        SOURCE_DEFINITION_VERSION,
+        DESTINATION_DEFINITION_VERSION.withSupportsRefreshes(false),
+        WORKSPACE_ID,
+        emptyList(),
+      )
+    }
   }
 
   @ParameterizedTest
@@ -286,7 +280,7 @@ internal class DefaultJobCreatorTest {
         .withSync(jobSyncConfig)
 
     val expectedScope = STANDARD_SYNC.connectionId.toString()
-    whenever(jobPersistence.enqueueJob(expectedScope, jobConfig, isScheduled)).thenReturn(Optional.of(JOB_ID))
+    every { jobPersistence.enqueueJob(expectedScope, jobConfig, isScheduled) } returns Optional.of(JOB_ID)
 
     jobCreator.createSyncJob(
       SOURCE_CONNECTION,
@@ -308,31 +302,31 @@ internal class DefaultJobCreatorTest {
       isScheduled,
     )
 
-    verify(jobPersistence).enqueueJob(expectedScope, jobConfig, isScheduled)
+    verify { jobPersistence.enqueueJob(expectedScope, jobConfig, isScheduled) }
   }
 
   private fun mockResourcesRequirement(expectedSourceType: Optional<String>) {
-    whenever(
+    every {
       resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.ORCHESTRATOR,
         expectedSourceType.orElse(null),
         DEFAULT_VARIANT,
-      ),
-    ).thenReturn(workerResourceRequirements)
-    whenever(
+      )
+    } returns workerResourceRequirements
+    every {
       resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.SOURCE,
         expectedSourceType.orElse(null),
         DEFAULT_VARIANT,
-      ),
-    ).thenReturn(sourceResourceRequirements)
-    whenever(
+      )
+    } returns sourceResourceRequirements
+    every {
       resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.DESTINATION,
         expectedSourceType.orElse(null),
         DEFAULT_VARIANT,
-      ),
-    ).thenReturn(destResourceRequirements)
+      )
+    } returns destResourceRequirements
   }
 
   private val expectedResourcesRequirement: SyncResourceRequirements?
@@ -345,29 +339,8 @@ internal class DefaultJobCreatorTest {
 
   @Test
   fun testCreateSyncJobEnsureNoQueuing() {
-    val jobSyncConfig =
-      JobSyncConfig()
-        .withNamespaceDefinition(STANDARD_SYNC.namespaceDefinition)
-        .withNamespaceFormat(STANDARD_SYNC.namespaceFormat)
-        .withPrefix(STANDARD_SYNC.prefix)
-        .withSourceDockerImage(SOURCE_IMAGE_NAME)
-        .withSourceDockerImageIsDefault(SOURCE_IMAGE_IS_DEFAULT)
-        .withDestinationProtocolVersion(SOURCE_PROTOCOL_VERSION)
-        .withDestinationDockerImage(DESTINATION_IMAGE_NAME)
-        .withDestinationDockerImageIsDefault(DESTINATION_IMAGE_IS_DEFAULT)
-        .withDestinationProtocolVersion(DESTINATION_PROTOCOL_VERSION)
-        .withConfiguredAirbyteCatalog(STANDARD_SYNC.catalog)
-        .withOperationSequence(listOf(STANDARD_SYNC_OPERATION))
-        .withSourceDefinitionVersionId(SOURCE_DEFINITION_VERSION.versionId)
-        .withDestinationDefinitionVersionId(DESTINATION_DEFINITION_VERSION.versionId)
-
-    val jobConfig =
-      JobConfig()
-        .withConfigType(ConfigType.SYNC)
-        .withSync(jobSyncConfig)
-
     val expectedScope = STANDARD_SYNC.connectionId.toString()
-    whenever(jobPersistence.enqueueJob(expectedScope, jobConfig, true)).thenReturn(Optional.empty())
+    every { jobPersistence.enqueueJob(expectedScope, any(), true) } returns Optional.empty()
 
     assertTrue(
       jobCreator
@@ -389,7 +362,7 @@ internal class DefaultJobCreatorTest {
           DESTINATION_DEFINITION_VERSION,
           UUID.randomUUID(),
           true,
-        ).isEmpty(),
+        ).isEmpty,
     )
   }
 
@@ -449,7 +422,7 @@ internal class DefaultJobCreatorTest {
 
     val expectedScope = STANDARD_SYNC.connectionId.toString()
 
-    verify(jobPersistence, times(1)).enqueueJob(expectedScope, expectedJobConfig, true)
+    verify(exactly = 1) { jobPersistence.enqueueJob(expectedScope, expectedJobConfig, true) }
   }
 
   @Test
@@ -460,7 +433,7 @@ internal class DefaultJobCreatorTest {
         .withCpuRequest("0.5")
         .withMemoryLimit("500Mi")
         .withMemoryRequest("500Mi")
-    val standardSync = clone<StandardSync>(STANDARD_SYNC).withResourceRequirements(standardSyncResourceRequirements)
+    val standardSync = clone(STANDARD_SYNC).withResourceRequirements(standardSyncResourceRequirements)
 
     jobCreator.createSyncJob(
       SOURCE_CONNECTION,
@@ -516,7 +489,7 @@ internal class DefaultJobCreatorTest {
 
     val expectedScope = STANDARD_SYNC.connectionId.toString()
 
-    verify(jobPersistence, times(1)).enqueueJob(expectedScope, expectedJobConfig, true)
+    verify(exactly = 1) { jobPersistence.enqueueJob(expectedScope, expectedJobConfig, true) }
   }
 
   @Test
@@ -598,7 +571,7 @@ internal class DefaultJobCreatorTest {
 
     val expectedScope = STANDARD_SYNC.connectionId.toString()
 
-    verify(jobPersistence, times(1)).enqueueJob(expectedScope, expectedJobConfig, true)
+    verify(exactly = 1) { jobPersistence.enqueueJob(expectedScope, expectedJobConfig, true) }
   }
 
   @ParameterizedTest
@@ -611,16 +584,16 @@ internal class DefaultJobCreatorTest {
   ) {
     val overrides = HashMap<Any?, Any?>()
     if (cpuReqOverride != null) {
-      overrides.put("cpu_request", cpuReqOverride)
+      overrides["cpu_request"] = cpuReqOverride
     }
     if (cpuLimitOverride != null) {
-      overrides.put("cpu_limit", cpuLimitOverride)
+      overrides["cpu_limit"] = cpuLimitOverride
     }
     if (memReqOverride != null) {
-      overrides.put("memory_request", memReqOverride)
+      overrides["memory_request"] = memReqOverride
     }
     if (memLimitOverride != null) {
-      overrides.put("memory_limit", memLimitOverride)
+      overrides["memory_limit"] = memLimitOverride
     }
 
     val originalReqs =
@@ -669,26 +642,26 @@ internal class DefaultJobCreatorTest {
       true,
     )
 
-    val configCaptor = argumentCaptor<JobConfig>()
-    verify(jobPersistence, times(1)).enqueueJob(any<String>(), configCaptor.capture(), eq(true))
+    val configCaptor = slot<JobConfig>()
+    verify(exactly = 1) { jobPersistence.enqueueJob(any<String>(), capture(configCaptor), true) }
 
     val destConfigValues =
-      configCaptor.firstValue
-        .getSync()
-        .getSyncResourceRequirements()
-        .getDestination()
+      configCaptor.captured
+        .sync
+        .syncResourceRequirements
+        .destination
 
-    val expectedCpuReq = if (StringUtils.isNotBlank(cpuReqOverride)) cpuReqOverride else originalReqs.getCpuRequest()
-    assertEquals(expectedCpuReq, destConfigValues.getCpuRequest())
+    val expectedCpuReq = if (StringUtils.isNotBlank(cpuReqOverride)) cpuReqOverride else originalReqs.cpuRequest
+    assertEquals(expectedCpuReq, destConfigValues.cpuRequest)
 
-    val expectedCpuLimit = if (StringUtils.isNotBlank(cpuLimitOverride)) cpuLimitOverride else originalReqs.getCpuLimit()
-    assertEquals(expectedCpuLimit, destConfigValues.getCpuLimit())
+    val expectedCpuLimit = if (StringUtils.isNotBlank(cpuLimitOverride)) cpuLimitOverride else originalReqs.cpuLimit
+    assertEquals(expectedCpuLimit, destConfigValues.cpuLimit)
 
-    val expectedMemReq = if (StringUtils.isNotBlank(memReqOverride)) memReqOverride else originalReqs.getMemoryRequest()
-    assertEquals(expectedMemReq, destConfigValues.getMemoryRequest())
+    val expectedMemReq = if (StringUtils.isNotBlank(memReqOverride)) memReqOverride else originalReqs.memoryRequest
+    assertEquals(expectedMemReq, destConfigValues.memoryRequest)
 
-    val expectedMemLimit = if (StringUtils.isNotBlank(memLimitOverride)) memLimitOverride else originalReqs.getMemoryLimit()
-    assertEquals(expectedMemLimit, destConfigValues.getMemoryLimit())
+    val expectedMemLimit = if (StringUtils.isNotBlank(memLimitOverride)) memLimitOverride else originalReqs.memoryLimit
+    assertEquals(expectedMemLimit, destConfigValues.memoryLimit)
   }
 
   @ParameterizedTest
@@ -701,16 +674,16 @@ internal class DefaultJobCreatorTest {
   ) {
     val overrides = HashMap<Any?, Any?>()
     if (cpuReqOverride != null) {
-      overrides.put("cpu_request", cpuReqOverride)
+      overrides["cpu_request"] = cpuReqOverride
     }
     if (cpuLimitOverride != null) {
-      overrides.put("cpu_limit", cpuLimitOverride)
+      overrides["cpu_limit"] = cpuLimitOverride
     }
     if (memReqOverride != null) {
-      overrides.put("memory_request", memReqOverride)
+      overrides["memory_request"] = memReqOverride
     }
     if (memLimitOverride != null) {
-      overrides.put("memory_limit", memLimitOverride)
+      overrides["memory_limit"] = memLimitOverride
     }
 
     val originalReqs =
@@ -767,26 +740,26 @@ internal class DefaultJobCreatorTest {
       true,
     )
 
-    val configCaptor = argumentCaptor<JobConfig>()
-    verify(jobPersistence, times(1)).enqueueJob(any<String>(), configCaptor.capture(), eq(true))
+    val configCaptor = slot<JobConfig>()
+    verify(exactly = 1) { jobPersistence.enqueueJob(any<String>(), capture(configCaptor), true) }
 
     val orchestratorConfigValues =
-      configCaptor.firstValue
-        .getSync()
-        .getSyncResourceRequirements()
-        .getOrchestrator()
+      configCaptor.captured
+        .sync
+        .syncResourceRequirements
+        .orchestrator
 
-    val expectedCpuReq = if (StringUtils.isNotBlank(cpuReqOverride)) cpuReqOverride else originalReqs.getCpuRequest()
-    assertEquals(expectedCpuReq, orchestratorConfigValues.getCpuRequest())
+    val expectedCpuReq = if (StringUtils.isNotBlank(cpuReqOverride)) cpuReqOverride else originalReqs.cpuRequest
+    assertEquals(expectedCpuReq, orchestratorConfigValues.cpuRequest)
 
-    val expectedCpuLimit = if (StringUtils.isNotBlank(cpuLimitOverride)) cpuLimitOverride else originalReqs.getCpuLimit()
-    assertEquals(expectedCpuLimit, orchestratorConfigValues.getCpuLimit())
+    val expectedCpuLimit = if (StringUtils.isNotBlank(cpuLimitOverride)) cpuLimitOverride else originalReqs.cpuLimit
+    assertEquals(expectedCpuLimit, orchestratorConfigValues.cpuLimit)
 
-    val expectedMemReq = if (StringUtils.isNotBlank(memReqOverride)) memReqOverride else originalReqs.getMemoryRequest()
-    assertEquals(expectedMemReq, orchestratorConfigValues.getMemoryRequest())
+    val expectedMemReq = if (StringUtils.isNotBlank(memReqOverride)) memReqOverride else originalReqs.memoryRequest
+    assertEquals(expectedMemReq, orchestratorConfigValues.memoryRequest)
 
-    val expectedMemLimit = if (StringUtils.isNotBlank(memLimitOverride)) memLimitOverride else originalReqs.getMemoryLimit()
-    assertEquals(expectedMemLimit, orchestratorConfigValues.getMemoryLimit())
+    val expectedMemLimit = if (StringUtils.isNotBlank(memLimitOverride)) memLimitOverride else originalReqs.memoryLimit
+    assertEquals(expectedMemLimit, orchestratorConfigValues.memoryLimit)
   }
 
   @ParameterizedTest
@@ -799,16 +772,16 @@ internal class DefaultJobCreatorTest {
   ) {
     val overrides = HashMap<Any?, Any?>()
     if (cpuReqOverride != null) {
-      overrides.put("cpu_request", cpuReqOverride)
+      overrides["cpu_request"] = cpuReqOverride
     }
     if (cpuLimitOverride != null) {
-      overrides.put("cpu_limit", cpuLimitOverride)
+      overrides["cpu_limit"] = cpuLimitOverride
     }
     if (memReqOverride != null) {
-      overrides.put("memory_request", memReqOverride)
+      overrides["memory_request"] = memReqOverride
     }
     if (memLimitOverride != null) {
-      overrides.put("memory_limit", memLimitOverride)
+      overrides["memory_limit"] = memLimitOverride
     }
 
     val originalReqs =
@@ -857,26 +830,26 @@ internal class DefaultJobCreatorTest {
       true,
     )
 
-    val configCaptor = argumentCaptor<JobConfig>()
-    verify(jobPersistence, times(1)).enqueueJob(any<String>(), configCaptor.capture(), eq(true))
+    val configCaptor = slot<JobConfig>()
+    verify(exactly = 1) { jobPersistence.enqueueJob(any<String>(), capture(configCaptor), true) }
 
     val sourceConfigValues =
-      configCaptor.firstValue
-        .getSync()
-        .getSyncResourceRequirements()
-        .getSource()
+      configCaptor.captured
+        .sync
+        .syncResourceRequirements
+        .source
 
-    val expectedCpuReq = if (StringUtils.isNotBlank(cpuReqOverride)) cpuReqOverride else originalReqs.getCpuRequest()
-    assertEquals(expectedCpuReq, sourceConfigValues.getCpuRequest())
+    val expectedCpuReq = if (StringUtils.isNotBlank(cpuReqOverride)) cpuReqOverride else originalReqs.cpuRequest
+    assertEquals(expectedCpuReq, sourceConfigValues.cpuRequest)
 
-    val expectedCpuLimit = if (StringUtils.isNotBlank(cpuLimitOverride)) cpuLimitOverride else originalReqs.getCpuLimit()
-    assertEquals(expectedCpuLimit, sourceConfigValues.getCpuLimit())
+    val expectedCpuLimit = if (StringUtils.isNotBlank(cpuLimitOverride)) cpuLimitOverride else originalReqs.cpuLimit
+    assertEquals(expectedCpuLimit, sourceConfigValues.cpuLimit)
 
-    val expectedMemReq = if (StringUtils.isNotBlank(memReqOverride)) memReqOverride else originalReqs.getMemoryRequest()
-    assertEquals(expectedMemReq, sourceConfigValues.getMemoryRequest())
+    val expectedMemReq = if (StringUtils.isNotBlank(memReqOverride)) memReqOverride else originalReqs.memoryRequest
+    assertEquals(expectedMemReq, sourceConfigValues.memoryRequest)
 
-    val expectedMemLimit = if (StringUtils.isNotBlank(memLimitOverride)) memLimitOverride else originalReqs.getMemoryLimit()
-    assertEquals(expectedMemLimit, sourceConfigValues.getMemoryLimit())
+    val expectedMemLimit = if (StringUtils.isNotBlank(memLimitOverride)) memLimitOverride else originalReqs.memoryLimit
+    assertEquals(expectedMemLimit, sourceConfigValues.memoryLimit)
   }
 
   @ParameterizedTest
@@ -928,44 +901,43 @@ internal class DefaultJobCreatorTest {
       true,
     )
 
-    val configCaptor = argumentCaptor<JobConfig>()
-    verify(jobPersistence, times(1))
-      .enqueueJob(any<String>(), configCaptor.capture(), eq(true))
+    val configCaptor = slot<JobConfig>()
+    verify(exactly = 1) { jobPersistence.enqueueJob(any<String>(), capture(configCaptor), true) }
     val destConfigValues =
-      configCaptor.firstValue
-        .getSync()
-        .getSyncResourceRequirements()
-        .getDestination()
+      configCaptor.captured
+        .sync
+        .syncResourceRequirements
+        .destination
 
-    assertEquals(originalReqs.getCpuRequest(), destConfigValues.getCpuRequest())
-    assertEquals(originalReqs.getCpuLimit(), destConfigValues.getCpuLimit())
-    assertEquals(originalReqs.getMemoryRequest(), destConfigValues.getMemoryRequest())
-    assertEquals(originalReqs.getMemoryLimit(), destConfigValues.getMemoryLimit())
+    assertEquals(originalReqs.cpuRequest, destConfigValues.cpuRequest)
+    assertEquals(originalReqs.cpuLimit, destConfigValues.cpuLimit)
+    assertEquals(originalReqs.memoryRequest, destConfigValues.memoryRequest)
+    assertEquals(originalReqs.memoryLimit, destConfigValues.memoryLimit)
   }
 
   @Test
   fun testCreateResetConnectionJob() {
-    whenever(
+    every {
       resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.ORCHESTRATOR,
         null,
         DEFAULT_VARIANT,
-      ),
-    ).thenReturn(workerResourceRequirements)
-    whenever(
+      )
+    } returns workerResourceRequirements
+    every {
       resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.SOURCE,
         null,
         DEFAULT_VARIANT,
-      ),
-    ).thenReturn(sourceResourceRequirements)
-    whenever(
+      )
+    } returns sourceResourceRequirements
+    every {
       resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.DESTINATION,
         null,
         DEFAULT_VARIANT,
-      ),
-    ).thenReturn(destResourceRequirements)
+      )
+    } returns destResourceRequirements
 
     val streamsToReset = listOf(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR)
     val expectedCatalog =
@@ -1004,8 +976,8 @@ internal class DefaultJobCreatorTest {
         .withResetSourceConfiguration(ResetSourceConfiguration().withStreamsToReset(streamsToReset))
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(false)
-        .withWorkspaceId(DESTINATION_CONNECTION.getWorkspaceId())
-        .withDestinationDefinitionVersionId(DESTINATION_DEFINITION_VERSION.getVersionId())
+        .withWorkspaceId(DESTINATION_CONNECTION.workspaceId)
+        .withDestinationDefinitionVersionId(DESTINATION_DEFINITION_VERSION.versionId)
 
     val jobConfig =
       JobConfig()
@@ -1013,7 +985,7 @@ internal class DefaultJobCreatorTest {
         .withResetConnection(jobResetConnectionConfig)
 
     val expectedScope = STANDARD_SYNC.connectionId.toString()
-    whenever(jobPersistence.enqueueJob(expectedScope, jobConfig, false)).thenReturn(Optional.of(JOB_ID))
+    every { jobPersistence.enqueueJob(expectedScope, jobConfig, false) } returns Optional.of(JOB_ID)
 
     val jobId =
       jobCreator.createResetConnectionJob(
@@ -1029,8 +1001,8 @@ internal class DefaultJobCreatorTest {
         WORKSPACE_ID,
       )
 
-    verify(jobPersistence).enqueueJob(expectedScope, jobConfig, false)
-    assertTrue(jobId.isPresent())
+    verify { jobPersistence.enqueueJob(expectedScope, jobConfig, false) }
+    assertTrue(jobId.isPresent)
     assertEquals(JOB_ID, jobId.get())
   }
 
@@ -1073,8 +1045,8 @@ internal class DefaultJobCreatorTest {
         .withResetSourceConfiguration(ResetSourceConfiguration().withStreamsToReset(streamsToReset))
         .withIsSourceCustomConnector(false)
         .withIsDestinationCustomConnector(false)
-        .withWorkspaceId(DESTINATION_CONNECTION.getWorkspaceId())
-        .withDestinationDefinitionVersionId(DESTINATION_DEFINITION_VERSION.getVersionId())
+        .withWorkspaceId(DESTINATION_CONNECTION.workspaceId)
+        .withDestinationDefinitionVersionId(DESTINATION_DEFINITION_VERSION.versionId)
 
     val jobConfig =
       JobConfig()
@@ -1082,7 +1054,8 @@ internal class DefaultJobCreatorTest {
         .withResetConnection(jobResetConnectionConfig)
 
     val expectedScope = STANDARD_SYNC.connectionId.toString()
-    whenever(jobPersistence.enqueueJob(expectedScope, jobConfig, true)).thenReturn(Optional.empty())
+    every { jobPersistence.enqueueJob(expectedScope, any(), true) } returns Optional.empty()
+    every { jobPersistence.enqueueJob(expectedScope, any(), false) } returns Optional.empty()
 
     val jobId =
       jobCreator.createResetConnectionJob(
@@ -1098,8 +1071,8 @@ internal class DefaultJobCreatorTest {
         WORKSPACE_ID,
       )
 
-    verify(jobPersistence).enqueueJob(expectedScope, jobConfig, false)
-    assertTrue(jobId.isEmpty())
+    verify { jobPersistence.enqueueJob(expectedScope, jobConfig, false) }
+    assertTrue(jobId.isEmpty)
   }
 
   @Test
@@ -1136,7 +1109,7 @@ internal class DefaultJobCreatorTest {
         .stream()
         .findFirst()
         .get()
-        .getName(),
+        .name,
     )
 
     streamDescriptors = jobCreator.getResumableFullRefresh(standardSync, false)

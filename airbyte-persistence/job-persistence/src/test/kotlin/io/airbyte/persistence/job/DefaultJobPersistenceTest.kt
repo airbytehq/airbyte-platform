@@ -38,6 +38,8 @@ import io.airbyte.db.instance.jobs.jooq.generated.tables.records.SyncStatsRecord
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair
 import io.airbyte.test.utils.Databases
+import io.mockk.every
+import io.mockk.mockk
 import org.jooq.DSLContext
 import org.jooq.Record
 import org.jooq.Result
@@ -60,8 +62,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import org.testcontainers.containers.PostgreSQLContainer
 import java.nio.file.Path
 import java.time.Instant
@@ -89,8 +89,8 @@ internal class DefaultJobPersistenceTest {
     jobDatabase = databaseProviders.createNewJobsDatabase()
     resetDb()
 
-    timeSupplier = mock<Supplier<Instant>>()
-    whenever(timeSupplier.get()).thenReturn(NOW)
+    timeSupplier = mockk<Supplier<Instant>>()
+    every { timeSupplier.get() } returns NOW
 
     jobPersistence = DefaultJobPersistence(jobDatabase, timeSupplier)
   }
@@ -242,7 +242,7 @@ internal class DefaultJobPersistenceTest {
       )
     val jobOutput = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput)
 
-    whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+    every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
     jobPersistence.writeOutput(jobId, attemptNumber, jobOutput)
 
     val updated = jobPersistence.getJob(jobId)
@@ -332,7 +332,7 @@ internal class DefaultJobPersistenceTest {
     val jobOutput1 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput1)
     val jobOutput2 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput2)
 
-    whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+    every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
     jobPersistence.writeOutput(jobId, attemptNumber, jobOutput1)
     jobPersistence.writeOutput(jobId, attemptNumber, jobOutput2)
 
@@ -423,7 +423,7 @@ internal class DefaultJobPersistenceTest {
     val jobOutput1 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput1)
     val jobOutput2 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput2)
 
-    whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+    every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
     jobPersistence.writeOutput(jobId, attemptNumber, jobOutput1)
     jobPersistence.writeOutput(jobId, attemptNumber, jobOutput2)
 
@@ -514,7 +514,7 @@ internal class DefaultJobPersistenceTest {
     val jobOutput1 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput1)
     val jobOutput2 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput2)
 
-    whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+    every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
     jobPersistence.writeOutput(jobId, attemptNumber, jobOutput1)
     jobPersistence.writeOutput(jobId, attemptNumber, jobOutput2)
 
@@ -560,7 +560,7 @@ internal class DefaultJobPersistenceTest {
         .withDestinationConfiguration(jsonNode(mapOf("destination" to "d_config_value")))
         .withState(State().withState(jsonNode(mapOf("state_key" to "state_value"))))
 
-    whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+    every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
     jobPersistence.writeAttemptSyncConfig(jobId, attemptNumber, attemptSyncConfig)
 
     val updated = jobPersistence.getJob(jobId)
@@ -579,7 +579,7 @@ internal class DefaultJobPersistenceTest {
         mutableListOf<FailureReason?>(FailureReason().withFailureOrigin(FailureReason.FailureOrigin.SOURCE)),
       )
 
-    whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+    every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
     jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary)
 
     val updated = jobPersistence.getJob(jobId)
@@ -603,7 +603,7 @@ internal class DefaultJobPersistenceTest {
             .withExternalMessage("Includes invalid unicode \u0000"),
         ),
       )
-    whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+    every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
     jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary)
 
     assertDoesNotThrow {
@@ -1112,7 +1112,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.writeStats(jobId, attemptNumber, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, CONNECTION_ID, streamStats)
 
       // Second write.
-      whenever(timeSupplier.get()).thenReturn(Instant.now())
+      every { timeSupplier.get() } returns Instant.now()
       streamStats =
         listOf<StreamSyncStats>(
           StreamSyncStats()
@@ -1167,7 +1167,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.writeStats(jobId, attemptNumber, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, CONNECTION_ID, streamStats)
 
       // Second write.
-      whenever(timeSupplier.get()).thenReturn(Instant.now())
+      every { timeSupplier.get() } returns Instant.now()
       streamStats =
         listOf<StreamSyncStats>(
           StreamSyncStats()
@@ -1242,7 +1242,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.writeStats(jobId, attemptNumber, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, CONNECTION_ID, streamStats)
 
       // Second write.
-      whenever(timeSupplier.get()).thenReturn(Instant.now())
+      every { timeSupplier.get() } returns Instant.now()
       streamStats =
         listOf<StreamSyncStats>(
           StreamSyncStats()
@@ -1315,7 +1315,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, CONNECTION_ID, streamStats)
 
       // Second write for first attempt. This is the record that should be returned.
-      whenever(timeSupplier.get()).thenReturn(Instant.now())
+      every { timeSupplier.get() } returns Instant.now()
       streamStats =
         listOf<StreamSyncStats>(
           StreamSyncStats()
@@ -1799,7 +1799,7 @@ internal class DefaultJobPersistenceTest {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val created = jobPersistence.getJob(jobId)
 
-      whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+      every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
       jobPersistence.cancelJob(jobId)
 
       val updated = jobPersistence.getJob(jobId)
@@ -1968,7 +1968,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.succeedAttempt(jobId1, attemptId1)
 
       val addTwoSeconds: Instant = NOW.plusSeconds(2)
-      whenever(timeSupplier.get()).thenReturn(addTwoSeconds)
+      every { timeSupplier.get() } returns addTwoSeconds
       val afterNow: Instant = NOW
 
       val jobId2 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow()
@@ -2044,7 +2044,7 @@ internal class DefaultJobPersistenceTest {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val created = jobPersistence.getJob(jobId)
 
-      whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+      every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
       jobPersistence.failJob(jobId)
 
       val updated = jobPersistence.getJob(jobId)
@@ -2084,7 +2084,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH))
 
       val afterNow: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
       val jobId2 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow()
 
       val actual = jobPersistence.getLastReplicationJob(CONNECTION_ID)
@@ -2100,7 +2100,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH))
 
       val afterNow: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
       val jobId2 = jobPersistence.enqueueJob(SCOPE, RESET_JOB_CONFIG, true).orElseThrow()
 
       val actual = jobPersistence.getLastReplicationJob(CONNECTION_ID)
@@ -2128,7 +2128,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH))
 
       val afterNow: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
       val jobId2 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId2, LOG_PATH)
 
@@ -2156,7 +2156,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.succeedAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH))
 
       val afterNow: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
 
       val actual = jobPersistence.getLastSyncJob(CONNECTION_ID)
 
@@ -2187,7 +2187,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.enqueueJob(SCOPE_3, SYNC_JOB_CONFIG, true).orElseThrow()
 
       val afterNow: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
 
       val scope1Job2 = jobPersistence.enqueueJob(SCOPE_1, SYNC_JOB_CONFIG, true).orElseThrow()
       val scope1Job2AttemptNumber = jobPersistence.createAttempt(scope1Job2, LOG_PATH)
@@ -2216,7 +2216,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.succeedAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH))
 
       val afterNow: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
 
       val actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS)
 
@@ -2252,7 +2252,7 @@ internal class DefaultJobPersistenceTest {
       val scope3Job1 = jobPersistence.enqueueJob(SCOPE_3, SYNC_JOB_CONFIG, true).orElseThrow()
 
       val afterNow: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
 
       // create a running job/attempt for scope2
       val scope2Job2 = jobPersistence.enqueueJob(SCOPE_2, SYNC_JOB_CONFIG, true).orElseThrow()
@@ -2290,7 +2290,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.createAttempt(jobId, LOG_PATH)
 
       val afterNow: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
 
       val actual = jobPersistence.getRunningSyncJobForConnections(CONNECTION_IDS)
 
@@ -2323,7 +2323,7 @@ internal class DefaultJobPersistenceTest {
           .orElseThrow()
 
       val afterNow: Instant = NOW
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
 
       val expected: MutableList<Job?> = ArrayList()
       expected.add(
@@ -2356,7 +2356,7 @@ internal class DefaultJobPersistenceTest {
           .orElseThrow()
 
       val afterNow: Instant = NOW
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
 
       val expected: MutableList<Job?> = ArrayList()
       expected.add(
@@ -2397,7 +2397,7 @@ internal class DefaultJobPersistenceTest {
       val attempts = listOf(attemptsWithJobInfo[0])
 
       val afterNow: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(afterNow)
+      every { timeSupplier.get() } returns afterNow
       jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow()
 
       val actual = jobPersistence.getFirstReplicationJob(CONNECTION_ID)
@@ -2414,18 +2414,20 @@ internal class DefaultJobPersistenceTest {
     @DisplayName("Should return the total job count for all connections in any status")
     fun testGetJobCount() {
       val numJobsToCreate = 10
-      val ids: MutableList<Long?> = ArrayList()
-      // create jobs for connection 1
-      for (i in 0..<numJobsToCreate / 2) {
-        val jobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
-        ids.add(jobId)
-      }
+      val ids: List<Long?> =
+        buildList {
+          // create jobs for connection 1
+          (0..<numJobsToCreate / 2).forEach { _ ->
+            val jobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
+            add(jobId)
+          }
 
-      // create jobs for connection 2
-      for (i in 0..<numJobsToCreate / 2) {
-        val jobId = jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
-        ids.add(jobId)
-      }
+          // create jobs for connection 2
+          (0..<numJobsToCreate / 2).forEach { _ ->
+            val jobId = jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
+            add(jobId)
+          }
+        }
 
       // fail some jobs
       for (i in 0..2) {
@@ -2442,7 +2444,7 @@ internal class DefaultJobPersistenceTest {
     @DisplayName("Should return the total job count for the connection")
     fun testGetJobCountWithConnectionFilter() {
       val numJobsToCreate = 10
-      for (i in 0..<numJobsToCreate) {
+      (0..<numJobsToCreate).forEach { _ ->
         jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true)
       }
 
@@ -2464,12 +2466,12 @@ internal class DefaultJobPersistenceTest {
     @DisplayName("Should return the total job count for the connection when filtering by failed jobs only")
     fun testGetJobCountWithFailedJobFilter() {
       val numPendingJobsToCreate = 10
-      for (i in 0..<numPendingJobsToCreate) {
+      (0..<numPendingJobsToCreate).forEach { _ ->
         jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true)
       }
 
       val numFailedJobsToCreate = 5
-      for (i in 0..<numFailedJobsToCreate) {
+      (0..<numFailedJobsToCreate).forEach { _ ->
         val jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow()
         jobPersistence.failJob(jobId)
       }
@@ -2619,20 +2621,21 @@ internal class DefaultJobPersistenceTest {
     @Test
     @DisplayName("Should return the correct page of results with multiple pages of history")
     fun testListJobsByPage() {
-      val ids: MutableList<Long?> = ArrayList()
-      for (i in 0..49) {
-        val jobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
-        ids.add(jobId)
+      val ids: List<Long?> =
+        buildList {
+          (0..49).forEach { _ ->
+            val jobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
+            add(jobId)
+            // create two attempts per job to verify pagination is applied at the job record level
+            val attemptNum1 = jobPersistence.createAttempt(jobId, LOG_PATH)
+            jobPersistence.failAttempt(jobId, attemptNum1)
+            jobPersistence.createAttempt(jobId, LOG_PATH)
 
-        // create two attempts per job to verify pagination is applied at the job record level
-        val attemptNum1 = jobPersistence.createAttempt(jobId, LOG_PATH)
-        jobPersistence.failAttempt(jobId, attemptNum1)
-        jobPersistence.createAttempt(jobId, LOG_PATH)
-
-        // also create a job for another connection, to verify the query is properly filtering down to only
-        // jobs for the desired connection
-        jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
-      }
+            // also create a job for another connection, to verify the query is properly filtering down to only
+            // jobs for the desired connection
+            jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
+          }
+        }
 
       val pagesize = 10
       val actualList =
@@ -2644,13 +2647,15 @@ internal class DefaultJobPersistenceTest {
     @Test
     @DisplayName("Should return the results in the correct sort order")
     fun testListJobsSortsDescending() {
-      val ids: MutableList<Long?> = ArrayList()
-      for (i in 0..99) {
-        // These have strictly the same created_at due to the setup() above, so should come back sorted by
-        // id desc instead.
-        val jobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
-        ids.add(jobId)
-      }
+      val ids: List<Long?> =
+        buildList {
+          (0..99).forEach { _ ->
+            // These have strictly the same created_at due to the setup() above, so should come back sorted by
+            // id desc instead.
+            val jobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
+            add(jobId)
+          }
+        }
       val pagesize = 200
       val actualList =
         jobPersistence.listJobs(setOf(SPEC_JOB_CONFIG.configType), CONNECTION_ID.toString(), pagesize)
@@ -2778,7 +2783,7 @@ internal class DefaultJobPersistenceTest {
 
       // create second job with multiple attempts
       val laterTime: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(laterTime)
+      every { timeSupplier.get() } returns laterTime
       val jobId2 = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val job2Attempt1LogPath: Path = LOG_PATH.resolve("3")
       val job2Attempt1 = jobPersistence.createAttempt(jobId2, job2Attempt1LogPath)
@@ -2798,14 +2803,14 @@ internal class DefaultJobPersistenceTest {
       val job1Attempt1 = jobPersistence.createAttempt(jobId1, LOG_PATH)
 
       val laterTime: Instant = NOW.plusSeconds(1000)
-      whenever(timeSupplier.get()).thenReturn(laterTime)
+      every { timeSupplier.get() } returns laterTime
       val jobId2 = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val job2Attempt1LogPath: Path = LOG_PATH.resolve("3")
       val job2Attempt1 = jobPersistence.createAttempt(jobId2, job2Attempt1LogPath)
       jobPersistence.succeedAttempt(jobId2, job2Attempt1)
 
       val evenLaterTime: Instant = NOW.plusSeconds(3000)
-      whenever(timeSupplier.get()).thenReturn(evenLaterTime)
+      every { timeSupplier.get() } returns evenLaterTime
       jobPersistence.succeedAttempt(jobId1, job1Attempt1)
 
       val configId: String? = null
@@ -2847,16 +2852,18 @@ internal class DefaultJobPersistenceTest {
     @DisplayName("Should list jobs across all connections in any status")
     fun testListJobsWithNoFilters() {
       val numJobsToCreate = 10
-      val ids: MutableList<Long?> = ArrayList()
-      for (i in 0..<numJobsToCreate / 2) {
-        val connection1JobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
-        ids.add(connection1JobId)
-      }
+      val ids: List<Long?> =
+        buildList {
+          (0..<numJobsToCreate / 2).forEach { _ ->
+            val connection1JobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
+            add(connection1JobId)
+          }
 
-      for (i in 0..<numJobsToCreate / 2) {
-        val connection2JobId = jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
-        ids.add(connection2JobId)
-      }
+          (0..<numJobsToCreate / 2).forEach { _ ->
+            val connection2JobId = jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
+            add(connection2JobId)
+          }
+        }
 
       // fail some jobs
       for (i in 0..2) {
@@ -2886,13 +2893,15 @@ internal class DefaultJobPersistenceTest {
     @DisplayName("Should list jobs for one connection only")
     fun testListJobsWithConnectionFilters() {
       val numJobsToCreate = 10
-      val idsConnection1: MutableSet<Long?> = HashSet()
-      for (i in 0..<numJobsToCreate / 2) {
-        val connection1JobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
-        idsConnection1.add(connection1JobId)
-      }
+      val idsConnection1: Set<Long?> =
+        buildSet {
+          (0..<numJobsToCreate / 2).forEach { _ ->
+            val connection1JobId = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
+            add(connection1JobId)
+          }
+        }
 
-      for (i in 0..<numJobsToCreate / 2) {
+      (0..<numJobsToCreate / 2).forEach { _ ->
         jobPersistence.enqueueJob(CONNECTION_ID2.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
       }
 
@@ -2954,7 +2963,7 @@ internal class DefaultJobPersistenceTest {
       val ids: MutableList<Long?> = ArrayList()
       for (i in 0..99) {
         // This makes each enqueued job have an increasingly higher createdAt time
-        whenever(timeSupplier.get()).thenReturn(Instant.ofEpochSecond(i.toLong()))
+        every { timeSupplier.get() } returns Instant.ofEpochSecond(i.toLong())
         // Alternate between spec and check job config types to verify that both config types are fetched
         // properly
         val jobConfig: JobConfig = if (i % 2 == 0) SPEC_JOB_CONFIG else CHECK_JOB_CONFIG
@@ -2986,7 +2995,7 @@ internal class DefaultJobPersistenceTest {
       val ids: MutableList<Long?> = mutableListOf()
       for (i in 0..99) {
         // This makes each enqueued job have an increasingly higher createdAt time
-        whenever(timeSupplier.get()).thenReturn(Instant.ofEpochSecond(i.toLong()))
+        every { timeSupplier.get() } returns Instant.ofEpochSecond(i.toLong())
         // Alternate between spec and check job config types to verify that both config types are fetched
         // properly
         val jobConfig: JobConfig = if (i % 2 == 0) SPEC_JOB_CONFIG else CHECK_JOB_CONFIG
@@ -3016,7 +3025,7 @@ internal class DefaultJobPersistenceTest {
       val ids: MutableList<Long?> = ArrayList()
       for (i in 0..99) {
         // This makes each enqueued job have an increasingly higher createdAt time
-        whenever(timeSupplier.get()).thenReturn(Instant.ofEpochSecond(i.toLong()))
+        every { timeSupplier.get() } returns Instant.ofEpochSecond(i.toLong())
         // Alternate between spec and check job config types to verify that both config types are fetched
         // properly
         val jobConfig: JobConfig = if (i % 2 == 0) SPEC_JOB_CONFIG else CHECK_JOB_CONFIG
@@ -3044,7 +3053,7 @@ internal class DefaultJobPersistenceTest {
     @Test
     @DisplayName("Should return an empty list if there is no job with the includingJob ID for this connection")
     fun testListJobsIncludingIdFromWrongConnection() {
-      for (i in 0..9) {
+      (0..9).forEach { _ ->
         jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true)
       }
 

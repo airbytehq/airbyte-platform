@@ -22,11 +22,11 @@ import io.airbyte.featureflag.TotalPartialFailureLimit
 import io.airbyte.featureflag.Workspace
 import io.airbyte.workers.runtime.AirbyteWorkerRetryConfig
 import io.micronaut.http.HttpStatus
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import org.openapitools.client.infrastructure.ClientException
 import java.time.Duration
 import java.util.UUID
@@ -41,12 +41,12 @@ internal class RetryStateClientTest {
 
   @BeforeEach
   fun setup() {
-    mAirbyteApiClient = Mockito.mock(AirbyteApiClient::class.java)
-    mJobRetryStatesApi = Mockito.mock(JobRetryStatesApi::class.java)
-    mWorkspaceApi = Mockito.mock(WorkspaceApi::class.java)
-    mFeatureFlagClient = Mockito.mock(TestClient::class.java)
-    Mockito.`when`(mAirbyteApiClient.jobRetryStatesApi).thenReturn(mJobRetryStatesApi)
-    Mockito.`when`(mAirbyteApiClient.workspaceApi).thenReturn(mWorkspaceApi)
+    mAirbyteApiClient = mockk()
+    mJobRetryStatesApi = mockk(relaxed = true)
+    mWorkspaceApi = mockk(relaxed = true)
+    mFeatureFlagClient = mockk<TestClient>(relaxed = true)
+    every { mAirbyteApiClient.jobRetryStatesApi } returns mJobRetryStatesApi
+    every { mAirbyteApiClient.workspaceApi } returns mWorkspaceApi
     airbyteWorkerRetryConfig =
       AirbyteWorkerRetryConfig(
         completeFailures =
@@ -73,68 +73,15 @@ internal class RetryStateClientTest {
   @Test
   fun hydratesBackoffAndLimitsFromConstructor() {
     // Mock feature flag client to return constructor values (i.e., don't override them)
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          SuccessiveCompleteFailureLimit,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(Fixtures.successiveCompleteFailureLimit)
+    every { mFeatureFlagClient.intVariation(SuccessiveCompleteFailureLimit, any()) } returns Fixtures.successiveCompleteFailureLimit
+    every { mFeatureFlagClient.intVariation(TotalCompleteFailureLimit, any()) } returns Fixtures.totalCompleteFailureLimit
+    every { mFeatureFlagClient.intVariation(SuccessivePartialFailureLimit, any()) } returns Fixtures.successivePartialFailureLimit
+    every { mFeatureFlagClient.intVariation(TotalPartialFailureLimit, any()) } returns Fixtures.totalPartialFailureLimit
+    every { mFeatureFlagClient.intVariation(CompleteFailureBackoffMinInterval, any()) } returns Fixtures.minInterval
+    every { mFeatureFlagClient.intVariation(CompleteFailureBackoffMaxInterval, any()) } returns Fixtures.maxInterval
+    every { mFeatureFlagClient.intVariation(CompleteFailureBackoffBase, any()) } returns Fixtures.base
 
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          TotalCompleteFailureLimit,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(Fixtures.totalCompleteFailureLimit)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          SuccessivePartialFailureLimit,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(Fixtures.successivePartialFailureLimit)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          TotalPartialFailureLimit,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(Fixtures.totalPartialFailureLimit)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          CompleteFailureBackoffMinInterval,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(Fixtures.minInterval)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          CompleteFailureBackoffMaxInterval,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(Fixtures.maxInterval)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          CompleteFailureBackoffBase,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(Fixtures.base)
-
-    val client =
-      RetryStateClient(
-        mAirbyteApiClient,
-        mFeatureFlagClient,
-        airbyteWorkerRetryConfig,
-      )
+    val client = RetryStateClient(mAirbyteApiClient, mFeatureFlagClient, airbyteWorkerRetryConfig)
 
     val manager = client.hydrateRetryState(Fixtures.jobId, Fixtures.workspaceId)
 
@@ -151,80 +98,27 @@ internal class RetryStateClientTest {
 
   @Test
   fun featureFlagsOverrideValues() {
-    val client =
-      RetryStateClient(
-        mAirbyteApiClient,
-        mFeatureFlagClient,
-        airbyteWorkerRetryConfig,
-      )
+    val client = RetryStateClient(mAirbyteApiClient, mFeatureFlagClient, airbyteWorkerRetryConfig)
 
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          SuccessiveCompleteFailureLimit,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(91)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          TotalCompleteFailureLimit,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(92)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          SuccessivePartialFailureLimit,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(93)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          TotalPartialFailureLimit,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(94)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          CompleteFailureBackoffMinInterval,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(0)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          CompleteFailureBackoffMaxInterval,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(96)
-
-    Mockito
-      .`when`(
-        mFeatureFlagClient.intVariation(
-          CompleteFailureBackoffBase,
-          Fixtures.testContext,
-        ),
-      ).thenReturn(97)
+    every { mFeatureFlagClient.intVariation(SuccessiveCompleteFailureLimit, any()) } returns Fixtures.successiveCompleteFailureLimit
+    every { mFeatureFlagClient.intVariation(TotalCompleteFailureLimit, any()) } returns Fixtures.totalCompleteFailureLimit
+    every { mFeatureFlagClient.intVariation(SuccessivePartialFailureLimit, any()) } returns Fixtures.successivePartialFailureLimit
+    every { mFeatureFlagClient.intVariation(TotalPartialFailureLimit, any()) } returns Fixtures.totalPartialFailureLimit
+    every { mFeatureFlagClient.intVariation(CompleteFailureBackoffMinInterval, any()) } returns 0
+    every { mFeatureFlagClient.intVariation(CompleteFailureBackoffMaxInterval, any()) } returns Fixtures.maxInterval
+    every { mFeatureFlagClient.intVariation(CompleteFailureBackoffBase, any()) } returns Fixtures.base
 
     val manager = client.hydrateRetryState(Fixtures.jobId, Fixtures.workspaceId)
 
-    Assertions.assertEquals(91, manager.successiveCompleteFailureLimit)
-    Assertions.assertEquals(92, manager.totalCompleteFailureLimit)
-    Assertions.assertEquals(93, manager.successivePartialFailureLimit)
-    Assertions.assertEquals(94, manager.totalPartialFailureLimit)
+    Assertions.assertEquals(Fixtures.successiveCompleteFailureLimit, manager.successiveCompleteFailureLimit)
+    Assertions.assertEquals(Fixtures.totalCompleteFailureLimit, manager.totalCompleteFailureLimit)
+    Assertions.assertEquals(Fixtures.successivePartialFailureLimit, manager.successivePartialFailureLimit)
+    Assertions.assertEquals(Fixtures.totalPartialFailureLimit, manager.totalPartialFailureLimit)
 
     val backoffPolicy = manager.completeFailureBackoffPolicy
-    Assertions.assertEquals(Duration.ofSeconds(0), backoffPolicy!!.minInterval)
-    Assertions.assertEquals(Duration.ofSeconds(96), backoffPolicy.maxInterval)
-    Assertions.assertEquals(97, backoffPolicy.base)
+    Assertions.assertEquals(Duration.ZERO, backoffPolicy!!.minInterval)
+    Assertions.assertEquals(Duration.ofSeconds(Fixtures.maxInterval.toLong()), backoffPolicy.maxInterval)
+    Assertions.assertEquals(Fixtures.base.toLong(), backoffPolicy.base)
     Assertions.assertEquals(Duration.ZERO, backoffPolicy.getBackoff(0))
     Assertions.assertEquals(Duration.ZERO, backoffPolicy.getBackoff(1))
     Assertions.assertEquals(Duration.ZERO, backoffPolicy.getBackoff(2))
@@ -244,9 +138,7 @@ internal class RetryStateClientTest {
         Fixtures.totalPartialFailures,
       )
 
-    Mockito
-      .`when`(mJobRetryStatesApi.get(ArgumentMatchers.any<JobIdRequestBody>()))
-      .thenReturn(retryStateRead)
+    every { mJobRetryStatesApi.get(any<JobIdRequestBody>()) } returns retryStateRead
 
     val client =
       RetryStateClient(
@@ -265,9 +157,7 @@ internal class RetryStateClientTest {
 
   @Test
   fun initializesFailureCountsFreshWhenApiReturnsNothing() {
-    Mockito
-      .`when`(mJobRetryStatesApi.get(ArgumentMatchers.any<JobIdRequestBody>()))
-      .thenAnswer { throw ClientException("Not Found.", HttpStatus.NOT_FOUND.code, null) }
+    every { mJobRetryStatesApi.get(any<JobIdRequestBody>()) } throws ClientException("Not Found.", HttpStatus.NOT_FOUND.code, null)
 
     val client =
       RetryStateClient(

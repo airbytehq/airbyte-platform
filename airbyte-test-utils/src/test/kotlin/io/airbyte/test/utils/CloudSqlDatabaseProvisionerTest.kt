@@ -8,101 +8,86 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.services.sqladmin.SQLAdmin
 import com.google.api.services.sqladmin.model.Database
 import com.google.api.services.sqladmin.model.Operation
+import io.mockk.every
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.junit.jupiter.MockitoExtension
 import java.util.concurrent.Callable
 
-@ExtendWith(MockitoExtension::class)
+@ExtendWith(MockKExtension::class)
 internal class CloudSqlDatabaseProvisionerTest {
-  @Mock
-  private val sqlAdmin: SQLAdmin? = null
+  @MockK
+  private lateinit var sqlAdmin: SQLAdmin
 
-  @Mock
-  private val databases: SQLAdmin.Databases? = null
+  @MockK
+  private lateinit var databases: SQLAdmin.Databases
 
-  @Mock
-  private val operations: SQLAdmin.Operations? = null
+  @MockK
+  private lateinit var operations: SQLAdmin.Operations
 
-  @Mock
-  private val getOperation: SQLAdmin.Operations.Get? = null
+  @MockK
+  private lateinit var getOperation: SQLAdmin.Operations.Get
 
-  @Mock
-  private val insertDatabase: SQLAdmin.Databases.Insert? = null
+  @MockK
+  private lateinit var insertDatabase: SQLAdmin.Databases.Insert
 
-  @Mock
-  private val deleteDatabase: SQLAdmin.Databases.Delete? = null
+  @MockK
+  private lateinit var deleteDatabase: SQLAdmin.Databases.Delete
 
-  @Mock
-  private val operation: Operation? = null
+  @MockK
+  private lateinit var operation: Operation
 
-  @Mock
-  private val googleJsonResponseException: GoogleJsonResponseException? = null
+  @MockK
+  private lateinit var googleJsonResponseException: GoogleJsonResponseException
 
-  @Mock
-  private val callable: Callable<Operation>? = null
+  @MockK
+  private lateinit var callable: Callable<Operation>
 
   lateinit var provisioner: CloudSqlDatabaseProvisioner
 
   @BeforeEach
   fun setUp() {
-    provisioner = CloudSqlDatabaseProvisioner(sqlAdmin!!, POLL_ATTEMPTS, API_CALL_ATTEMPTS)
+    provisioner = CloudSqlDatabaseProvisioner(sqlAdmin, POLL_ATTEMPTS, API_CALL_ATTEMPTS)
   }
 
   @Test
   fun testCreateDatabase() {
     mockOperation()
-    Mockito.`when`(operation!!.status).thenReturn("DONE")
-    Mockito.`when`(sqlAdmin!!.databases()).thenReturn(databases)
-    Mockito
-      .`when`(
-        databases!!.insert(
-          ArgumentMatchers.anyString(),
-          ArgumentMatchers.anyString(),
-          ArgumentMatchers.any(
-            Database::class.java,
-          ),
-        ),
-      ).thenReturn(insertDatabase)
-    Mockito.`when`(insertDatabase!!.execute()).thenReturn(operation)
-    Mockito.`when`(operation.name).thenReturn("operation-name")
+    every { operation.status } returns "DONE"
+    every { sqlAdmin.databases() } returns databases
+    every { databases.insert(any<String>(), any<String>(), any<Database>()) } returns insertDatabase
+    every { insertDatabase.execute() } returns operation
+    every { operation.name } returns "operation-name"
 
     provisioner.createDatabase(PROJECT_ID, INSTANCE_ID, DATABASE_NAME)
 
-    Mockito.verify(databases).insert(PROJECT_ID, INSTANCE_ID, Database().setName(DATABASE_NAME))
-    Mockito.verify(insertDatabase).execute()
+    verify { databases.insert(PROJECT_ID, INSTANCE_ID, Database().setName(DATABASE_NAME)) }
+    verify { insertDatabase.execute() }
   }
 
   @Test
   fun testDeleteDatabase() {
     mockOperation()
-    Mockito.`when`(operation!!.status).thenReturn("DONE")
-    Mockito.`when`(sqlAdmin!!.databases()).thenReturn(databases)
-    Mockito
-      .`when`(databases!!.delete(ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.anyString()))
-      .thenReturn(deleteDatabase)
-    Mockito.`when`(deleteDatabase!!.execute()).thenReturn(operation)
-    Mockito.`when`(operation.name).thenReturn("operation-name")
+    every { operation.status } returns "DONE"
+    every { sqlAdmin.databases() } returns databases
+    every { databases.delete(any<String>(), any<String>(), any<String>()) } returns deleteDatabase
+    every { deleteDatabase.execute() } returns operation
+    every { operation.name } returns "operation-name"
 
     provisioner.deleteDatabase(PROJECT_ID, INSTANCE_ID, DATABASE_NAME)
 
-    Mockito.verify(databases).delete(PROJECT_ID, INSTANCE_ID, DATABASE_NAME)
-    Mockito.verify(deleteDatabase).execute()
+    verify { databases.delete(PROJECT_ID, INSTANCE_ID, DATABASE_NAME) }
+    verify { deleteDatabase.execute() }
   }
 
   @Test
   fun testPollOperationNotDoneAfterMaxStatusChecks() {
     mockOperation()
-    Mockito
-      .`when`(operation!!.status)
-      .thenReturn("PENDING")
-      .thenReturn("RUNNING")
-      .thenReturn("DONE")
+    every { operation.status } returnsMany listOf("PENDING", "RUNNING", "DONE")
     Assertions.assertThrows(
       RuntimeException::class.java,
     ) { provisioner.pollOperation(PROJECT_ID, "operation-name") }
@@ -111,10 +96,7 @@ internal class CloudSqlDatabaseProvisionerTest {
   @Test
   fun testPollOperationDoneBeforeMaxStatusChecks() {
     mockOperation()
-    Mockito
-      .`when`(operation!!.status)
-      .thenReturn("PENDING")
-      .thenReturn("DONE")
+    every { operation.status } returnsMany listOf("PENDING", "DONE")
     Assertions.assertDoesNotThrow {
       provisioner.pollOperation(
         PROJECT_ID,
@@ -124,22 +106,15 @@ internal class CloudSqlDatabaseProvisionerTest {
   }
 
   private fun mockOperation() {
-    Mockito.`when`(sqlAdmin!!.operations()).thenReturn(operations)
-    Mockito
-      .`when`(
-        operations!![
-          ArgumentMatchers.eq(
-            PROJECT_ID,
-          ), ArgumentMatchers.anyString(),
-        ],
-      ).thenReturn(getOperation)
-    Mockito.`when`(getOperation!!.execute()).thenReturn(operation)
+    every { sqlAdmin.operations() } returns operations
+    every { operations.get(PROJECT_ID, any<String>()) } returns getOperation
+    every { getOperation.execute() } returns operation
   }
 
   @Test
   fun testMoreThanMaxAttempts() {
-    Mockito.`when`(callable!!.call()).thenAnswer { throw googleJsonResponseException!! }
-    Mockito.`when`(googleJsonResponseException!!.statusCode).thenReturn(409)
+    every { callable.call() } throws googleJsonResponseException
+    every { googleJsonResponseException.statusCode } returns 409
     Assertions.assertThrows(
       RuntimeException::class.java,
     ) { provisioner.runWithRetry(callable) }
@@ -147,7 +122,7 @@ internal class CloudSqlDatabaseProvisionerTest {
 
   @Test
   fun testNoRetry() {
-    Mockito.`when`(callable!!.call()).thenAnswer { throw RuntimeException() }
+    every { callable.call() } throws RuntimeException()
     Assertions.assertThrows(
       RuntimeException::class.java,
     ) { provisioner.runWithRetry(callable) }
@@ -155,11 +130,8 @@ internal class CloudSqlDatabaseProvisionerTest {
 
   @Test
   fun testOneRetry() {
-    Mockito.`when`(googleJsonResponseException!!.statusCode).thenReturn(409)
-    Mockito
-      .`when`(callable!!.call())
-      .thenAnswer { throw googleJsonResponseException!! }
-      .thenReturn(Operation())
+    every { googleJsonResponseException.statusCode } returns 409
+    every { callable.call() } throws googleJsonResponseException andThen Operation()
 
     Assertions.assertDoesNotThrow<Operation> { provisioner.runWithRetry(callable) }
   }

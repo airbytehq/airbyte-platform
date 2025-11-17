@@ -5,6 +5,12 @@
 package io.airbyte.keycloak.setup
 
 import io.airbyte.commons.auth.config.OidcConfig
+import io.mockk.every
+import io.mockk.impl.annotations.MockK
+import io.mockk.junit5.MockKExtension
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -15,36 +21,34 @@ import org.keycloak.admin.client.resource.IdentityProviderResource
 import org.keycloak.admin.client.resource.IdentityProvidersResource
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.IdentityProviderRepresentation
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito
-import org.mockito.junit.jupiter.MockitoExtension
 import java.util.Optional
 
-@ExtendWith(MockitoExtension::class)
+@ExtendWith(MockKExtension::class)
 internal class IdentityProvidersConfiguratorTest {
-  @Mock
+  @MockK
   private lateinit var realmResource: RealmResource
 
-  @Mock
+  @MockK
   private lateinit var configurationMapService: ConfigurationMapService
 
-  @Mock
+  @MockK
   private lateinit var oidcConfig: OidcConfig
 
-  @Mock
+  @MockK
   private lateinit var identityProvidersResource: IdentityProvidersResource
 
-  @Mock
+  @MockK
   private lateinit var identityProviderResource: IdentityProviderResource
 
-  @Mock
+  @MockK
   private lateinit var identityProviderRepresentation: IdentityProviderRepresentation
 
   private lateinit var identityProvidersConfigurator: IdentityProvidersConfigurator
 
   @BeforeEach
   fun setUp() {
+    every { oidcConfig.displayName } returns "Test IDP"
+    every { oidcConfig.appName } returns "test-app"
     identityProvidersConfigurator = IdentityProvidersConfigurator(configurationMapService, Optional.of(oidcConfig))
   }
 
@@ -56,208 +60,151 @@ internal class IdentityProvidersConfiguratorTest {
 
       identityProvidersConfigurator.configureIdp(realmResource)
 
-      Mockito.verifyNoInteractions(realmResource)
+      verify(exactly = 0) { realmResource.identityProviders() }
     }
 
-    @Suppress("UNCHECKED_CAST")
     @Test
     fun testNoExistingIdp() {
-      Mockito
-        .`when`(realmResource.identityProviders())
-        .thenReturn(identityProvidersResource)
-      Mockito
-        .`when`(identityProvidersResource.findAll())
-        .thenReturn(mutableListOf())
+      every { realmResource.identityProviders() } returns identityProvidersResource
+      every { identityProvidersResource.findAll() } returns mutableListOf()
 
-      val response = Mockito.mock(Response::class.java)
-      Mockito.`when`(response.status).thenReturn(201)
-      Mockito
-        .`when`(identityProvidersResource.create(ArgumentMatchers.any(IdentityProviderRepresentation::class.java)))
-        .thenReturn(response)
+      val response = mockk<Response>()
+      every { response.status } returns 201
+      every { response.close() } returns Unit
+      every { identityProvidersResource.create(any()) } returns response
 
-      val importedMap = Mockito.mock(MutableMap::class.java) as MutableMap<String, String>
-      val configMap = Mockito.mock(MutableMap::class.java) as MutableMap<String, String>
-      Mockito
-        .`when`(configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc"))
-        .thenReturn(importedMap)
-      Mockito
-        .`when`(configurationMapService.setupProviderConfig(oidcConfig, importedMap))
-        .thenReturn(configMap)
+      val importedMap = mutableMapOf<String, String>()
+      val configMap = mutableMapOf<String, String>()
+      every { configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc") } returns importedMap
+      every { configurationMapService.setupProviderConfig(oidcConfig, importedMap) } returns configMap
 
       identityProvidersConfigurator.configureIdp(realmResource)
 
-      Mockito
-        .verify(identityProvidersResource, Mockito.times(1))
-        .create(
-          ArgumentMatchers.argThat { idp: IdentityProviderRepresentation ->
-            idp.config == configMap
-          },
-        )
+      val idpSlot = slot<IdentityProviderRepresentation>()
+      verify(exactly = 1) { identityProvidersResource.create(capture(idpSlot)) }
+      Assertions.assertEquals(configMap, idpSlot.captured.config)
 
-      Mockito.verify(configMap, Mockito.times(1))[IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_KEY] =
-        IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_VALUE
+      Assertions.assertEquals(
+        IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_VALUE,
+        configMap[IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_KEY],
+      )
     }
 
-    @Suppress("UNCHECKED_CAST")
     @Test
     fun testOneExistingIdpNotMarked() {
-      Mockito
-        .`when`(realmResource.identityProviders())
-        .thenReturn(identityProvidersResource)
-      Mockito
-        .`when`(identityProvidersResource.findAll())
-        .thenReturn(listOf(identityProviderRepresentation))
-      Mockito.`when`(identityProviderRepresentation.internalId).thenReturn("some-internal-id")
-      Mockito.`when`(identityProviderRepresentation.alias).thenReturn("some-alias")
-      Mockito
-        .`when`(identityProvidersResource.get("some-alias"))
-        .thenReturn(identityProviderResource)
+      every { realmResource.identityProviders() } returns identityProvidersResource
+      every { identityProvidersResource.findAll() } returns listOf(identityProviderRepresentation)
+      every { identityProviderRepresentation.config } returns mapOf()
+      every { identityProviderRepresentation.internalId } returns "some-internal-id"
+      every { identityProviderRepresentation.alias } returns "some-alias"
+      every { identityProvidersResource.get("some-alias") } returns identityProviderResource
+      every { identityProviderResource.update(any()) } returns Unit
 
-      val importedMap = Mockito.mock(MutableMap::class.java) as MutableMap<String, String>
-      val configMap = Mockito.mock(MutableMap::class.java) as MutableMap<String, String>
-      Mockito
-        .`when`(configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc"))
-        .thenReturn(importedMap)
-      Mockito
-        .`when`(configurationMapService.setupProviderConfig(oidcConfig, importedMap))
-        .thenReturn(configMap)
+      val importedMap = mutableMapOf<String, String>()
+      val configMap = mutableMapOf<String, String>()
+      every { configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc") } returns importedMap
+      every { configurationMapService.setupProviderConfig(oidcConfig, importedMap) } returns configMap
 
       identityProvidersConfigurator.configureIdp(realmResource)
 
-      Mockito.verify(identityProviderResource, Mockito.times(1)).update(
-        ArgumentMatchers.argThat { idp: IdentityProviderRepresentation ->
-          idp.config == configMap && "some-internal-id" == idp.internalId
-        },
-      )
+      val idpSlot = slot<IdentityProviderRepresentation>()
+      verify(exactly = 1) { identityProviderResource.update(capture(idpSlot)) }
+      Assertions.assertEquals(configMap, idpSlot.captured.config)
+      Assertions.assertEquals("some-internal-id", idpSlot.captured.internalId)
 
-      Mockito.verify(configMap, Mockito.times(1))[IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_KEY] =
-        IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_VALUE
+      Assertions.assertEquals(
+        IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_VALUE,
+        configMap[IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_KEY],
+      )
     }
 
-    @Suppress("UNCHECKED_CAST")
     @Test
     fun testMultipleExistingIdpOnlyOneMarked() {
-      val unmarkedIdp = Mockito.mock(IdentityProviderRepresentation::class.java)
-      Mockito
-        .`when`(unmarkedIdp.config)
-        .thenReturn(mapOf()) // does not contain marked key
-      Mockito.`when`(identityProviderRepresentation.config).thenReturn(
+      val unmarkedIdp = mockk<IdentityProviderRepresentation>()
+      every { unmarkedIdp.config } returns mapOf()
+      every { identityProviderRepresentation.config } returns
         mapOf(
           IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_KEY to
             IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_VALUE,
-        ),
-      )
+        )
 
-      Mockito
-        .`when`(realmResource.identityProviders())
-        .thenReturn(identityProvidersResource)
-      Mockito
-        .`when`(identityProvidersResource.findAll())
-        .thenReturn(listOf(unmarkedIdp, identityProviderRepresentation))
-      Mockito.`when`(identityProviderRepresentation.internalId).thenReturn("some-internal-id")
-      Mockito.`when`(identityProviderRepresentation.alias).thenReturn("some-alias")
-      Mockito
-        .`when`(identityProvidersResource.get("some-alias"))
-        .thenReturn(identityProviderResource)
+      every { realmResource.identityProviders() } returns identityProvidersResource
+      every { identityProvidersResource.findAll() } returns listOf(unmarkedIdp, identityProviderRepresentation)
+      every { identityProviderRepresentation.internalId } returns "some-internal-id"
+      every { identityProviderRepresentation.alias } returns "some-alias"
+      every { identityProvidersResource.get("some-alias") } returns identityProviderResource
+      every { identityProviderResource.update(any()) } returns Unit
 
-      val importedMap = Mockito.mock(HashMap::class.java) as MutableMap<String, String>
-      val configMap = Mockito.mock(HashMap::class.java) as MutableMap<String, String>
-      Mockito
-        .`when`(configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc"))
-        .thenReturn(importedMap)
-      Mockito
-        .`when`(configurationMapService.setupProviderConfig(oidcConfig, importedMap))
-        .thenReturn(configMap)
+      val importedMap = mutableMapOf<String, String>()
+      val configMap = mutableMapOf<String, String>()
+      every { configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc") } returns importedMap
+      every { configurationMapService.setupProviderConfig(oidcConfig, importedMap) } returns configMap
 
       identityProvidersConfigurator.configureIdp(realmResource)
 
-      Mockito.verify(identityProviderResource, Mockito.times(1)).update(
-        ArgumentMatchers.argThat { idp: IdentityProviderRepresentation ->
-          idp.config == configMap && "some-internal-id" == idp.internalId
-        },
-      )
+      val idpSlot = slot<IdentityProviderRepresentation>()
+      verify(exactly = 1) { identityProviderResource.update(capture(idpSlot)) }
+      Assertions.assertEquals(configMap, idpSlot.captured.config)
+      Assertions.assertEquals("some-internal-id", idpSlot.captured.internalId)
 
-      Mockito.verify(unmarkedIdp, Mockito.times(1)).config
-      Mockito.verifyNoMoreInteractions(unmarkedIdp)
+      verify(exactly = 1) { unmarkedIdp.config }
     }
 
     @Test
     fun testMultipleExistingIdpsMultipleMarked() {
-      val otherMarkedIdp = Mockito.mock(IdentityProviderRepresentation::class.java)
-      Mockito.`when`(otherMarkedIdp.config).thenReturn(
+      val otherMarkedIdp = mockk<IdentityProviderRepresentation>()
+      every { otherMarkedIdp.config } returns
         mapOf(
           IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_KEY to
             IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_VALUE,
-        ),
-      )
-      Mockito.`when`(identityProviderRepresentation.config).thenReturn(
+        )
+      every { identityProviderRepresentation.config } returns
         mapOf(
           IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_KEY to
             IdentityProvidersConfigurator.AIRBYTE_MANAGED_IDP_VALUE,
-        ),
-      )
+        )
 
-      Mockito
-        .`when`(realmResource.identityProviders())
-        .thenReturn(identityProvidersResource)
-      Mockito
-        .`when`(identityProvidersResource.findAll())
-        .thenReturn(listOf(otherMarkedIdp, identityProviderRepresentation))
+      every { realmResource.identityProviders() } returns identityProvidersResource
+      every { identityProvidersResource.findAll() } returns listOf(otherMarkedIdp, identityProviderRepresentation)
+
+      val importedMap = mutableMapOf<String, String>()
+      val configMap = mutableMapOf<String, String>()
+      every { configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc") } returns importedMap
+      every { configurationMapService.setupProviderConfig(oidcConfig, importedMap) } returns configMap
 
       identityProvidersConfigurator.configureIdp(realmResource)
 
-      Mockito
-        .verify(identityProviderResource, Mockito.never())
-        .update(ArgumentMatchers.any(IdentityProviderRepresentation::class.java))
-
-      Mockito
-        .verify(identityProviderResource, Mockito.never())
-        .update(ArgumentMatchers.any(IdentityProviderRepresentation::class.java))
+      verify(exactly = 0) { identityProviderResource.update(any()) }
     }
 
     @Test
     fun testMultipleExistingIdpsNoneMarked() {
-      val otherUnmarkedIdp = Mockito.mock(IdentityProviderRepresentation::class.java)
-      Mockito.`when`(otherUnmarkedIdp.config).thenReturn(mapOf())
-      Mockito.`when`(identityProviderRepresentation.config).thenReturn(mapOf())
+      val otherUnmarkedIdp = mockk<IdentityProviderRepresentation>()
+      every { otherUnmarkedIdp.config } returns mapOf()
+      every { identityProviderRepresentation.config } returns mapOf()
 
-      Mockito
-        .`when`(realmResource.identityProviders())
-        .thenReturn(identityProvidersResource)
-      Mockito
-        .`when`(identityProvidersResource.findAll())
-        .thenReturn(listOf(otherUnmarkedIdp, identityProviderRepresentation))
+      every { realmResource.identityProviders() } returns identityProvidersResource
+      every { identityProvidersResource.findAll() } returns listOf(otherUnmarkedIdp, identityProviderRepresentation)
+
+      val importedMap = mutableMapOf<String, String>()
+      val configMap = mutableMapOf<String, String>()
+      every { configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc") } returns importedMap
+      every { configurationMapService.setupProviderConfig(oidcConfig, importedMap) } returns configMap
 
       identityProvidersConfigurator.configureIdp(realmResource)
 
-      Mockito
-        .verify(identityProviderResource, Mockito.never())
-        .update(ArgumentMatchers.any(IdentityProviderRepresentation::class.java))
-
-      Mockito
-        .verify(identityProviderResource, Mockito.never())
-        .update(ArgumentMatchers.any(IdentityProviderRepresentation::class.java))
+      verify(exactly = 0) { identityProviderResource.update(any()) }
     }
 
     @Test
     fun testCreateFailureThrows() {
-      Mockito
-        .`when`(realmResource.identityProviders())
-        .thenReturn(identityProvidersResource)
-      Mockito
-        .`when`(identityProvidersResource.findAll())
-        .thenReturn(mutableListOf())
-      Mockito
-        .`when`(identityProvidersResource.create(ArgumentMatchers.any(IdentityProviderRepresentation::class.java)))
-        .thenReturn(Response.status(Response.Status.BAD_REQUEST).build())
+      every { realmResource.identityProviders() } returns identityProvidersResource
+      every { identityProvidersResource.findAll() } returns mutableListOf()
+      every { identityProvidersResource.create(any()) } returns Response.status(Response.Status.BAD_REQUEST).build()
 
       val configMap: MutableMap<String, String> = HashMap()
-      Mockito
-        .`when`(configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc"))
-        .thenReturn(configMap)
-      Mockito
-        .`when`(configurationMapService.setupProviderConfig(oidcConfig, configMap))
-        .thenReturn(configMap)
+      every { configurationMapService.importProviderFrom(realmResource, oidcConfig, "oidc") } returns configMap
+      every { configurationMapService.setupProviderConfig(oidcConfig, configMap) } returns configMap
 
       Assertions.assertThrows(
         RuntimeException::class.java,

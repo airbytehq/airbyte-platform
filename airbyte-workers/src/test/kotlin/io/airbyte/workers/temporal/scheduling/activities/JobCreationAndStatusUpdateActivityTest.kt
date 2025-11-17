@@ -45,48 +45,37 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobFailureInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.Mock
-import org.mockito.junit.jupiter.MockitoExtension
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.doThrow
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import java.io.IOException
 import java.util.UUID
 
-@ExtendWith(MockitoExtension::class)
 internal class JobCreationAndStatusUpdateActivityTest {
-  @Mock
   private lateinit var airbyteApiClient: AirbyteApiClient
-
-  @Mock
   private lateinit var jobsApi: JobsApi
-
-  @Mock
   private lateinit var attemptApi: AttemptApi
-
-  @Mock
   private lateinit var connectionApi: ConnectionApi
-
-  @Mock
   private lateinit var featureFlagClient: TestClient
-
-  @Mock
   private lateinit var outputStateStorageClient: OutputStorageClient<State>
-
   private lateinit var jobCreationAndStatusUpdateActivity: JobCreationAndStatusUpdateActivityImpl
 
   @BeforeEach
   fun beforeEach() {
+    airbyteApiClient = mockk()
+    jobsApi = mockk(relaxed = true)
+    attemptApi = mockk(relaxed = true)
+    connectionApi = mockk()
+    featureFlagClient = mockk(relaxed = true)
+    outputStateStorageClient = mockk()
     jobCreationAndStatusUpdateActivity =
       JobCreationAndStatusUpdateActivityImpl(
         airbyteApiClient,
@@ -100,26 +89,24 @@ internal class JobCreationAndStatusUpdateActivityTest {
     @Test
     @DisplayName("Test job creation")
     fun createJob() {
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.createJob(JobCreate(CONNECTION_ID, true)))
-        .thenReturn(
-          JobInfoRead(
-            JobRead(
-              JOB_ID,
-              JobConfigType.SYNC,
-              CONNECTION_ID.toString(),
-              System.currentTimeMillis(),
-              System.currentTimeMillis(),
-              JobStatus.SUCCEEDED,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-            ),
-            mutableListOf(),
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.createJob(JobCreate(CONNECTION_ID, true)) } returns
+        JobInfoRead(
+          JobRead(
+            JOB_ID,
+            JobConfigType.SYNC,
+            CONNECTION_ID.toString(),
+            System.currentTimeMillis(),
+            System.currentTimeMillis(),
+            JobStatus.SUCCEEDED,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
           ),
+          mutableListOf(),
         )
       val newJob = jobCreationAndStatusUpdateActivity.createNewJob(JobCreationInput(CONNECTION_ID, true))
 
@@ -129,8 +116,8 @@ internal class JobCreationAndStatusUpdateActivityTest {
     @Test
     @DisplayName("Test job creation throws retryable exception")
     fun createJobThrows() {
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.createJob(any<JobCreate>())).thenAnswer { throw IOException() }
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.createJob(any<JobCreate>()) } answers { throw IOException() }
       Assertions.assertThrows(
         RetryableException::class.java,
       ) {
@@ -164,9 +151,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
         )
       val jobInfoLight = JobInfoLightRead(jobRead)
 
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)))
-        .thenReturn(jobInfoLight)
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)) } returns
+        jobInfoLight
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
 
@@ -193,11 +180,11 @@ internal class JobCreationAndStatusUpdateActivityTest {
         )
       val jobInfoLight = JobInfoLightRead(jobRead)
 
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)))
-        .thenReturn(jobInfoLight)
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenReturn(BooleanRead(false))
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)) } returns
+        jobInfoLight
+      every { jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()) } returns
+        BooleanRead(false)
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
 
@@ -224,11 +211,11 @@ internal class JobCreationAndStatusUpdateActivityTest {
         )
       val jobInfoLight = JobInfoLightRead(jobRead)
 
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)))
-        .thenReturn(jobInfoLight)
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenReturn(BooleanRead(true))
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)) } returns
+        jobInfoLight
+      every { jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()) } returns
+        BooleanRead(true)
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
 
@@ -255,9 +242,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
         )
       val jobInfoLight = JobInfoLightRead(jobRead)
 
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)))
-        .thenReturn(jobInfoLight)
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)) } returns
+        jobInfoLight
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
 
@@ -273,14 +260,13 @@ internal class JobCreationAndStatusUpdateActivityTest {
           CONNECTION_ID,
         )
 
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.getJobInfoLight(any<JobIdRequestBody>()))
-        .thenAnswer { throw IOException(TEST_EXCEPTION_MESSAGE) }
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.getJobInfoLight(any<JobIdRequestBody>()) } answers { throw IOException(TEST_EXCEPTION_MESSAGE) }
 
       // When the API fails to get job info, it should fall back to checking previous job status
       // For the first attempt, it should check previous job status
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenReturn(BooleanRead(false))
+      every { jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()) } returns
+        BooleanRead(false)
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
 
@@ -298,17 +284,17 @@ internal class JobCreationAndStatusUpdateActivityTest {
       val workspaceId = UUID.randomUUID()
 
       // Mock the connection API to return workspace ID
-      whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
-      whenever(connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)))
-        .thenReturn(ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null))
+      every { airbyteApiClient.connectionApi } returns connectionApi
+      every { connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+        ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null)
 
       // Enable the feature flag
-      whenever(
+      every {
         featureFlagClient.boolVariation(
           SkipCheckBeforeSync,
           Multi(listOf(Connection(CONNECTION_ID), Workspace(workspaceId))),
-        ),
-      ).thenReturn(true)
+        )
+      } returns true
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
 
@@ -326,22 +312,22 @@ internal class JobCreationAndStatusUpdateActivityTest {
       val workspaceId = UUID.randomUUID()
 
       // Mock the connection API to return workspace ID
-      whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
-      whenever(connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)))
-        .thenReturn(ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null))
+      every { airbyteApiClient.connectionApi } returns connectionApi
+      every { connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+        ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null)
 
       // Disable the feature flag
-      whenever(
+      every {
         featureFlagClient.boolVariation(
           SkipCheckBeforeSync,
           Multi(listOf(Connection(CONNECTION_ID), Workspace(workspaceId))),
-        ),
-      ).thenReturn(false)
+        )
+      } returns false
 
       // Mock previous job failed (so normal logic would return true)
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenReturn(BooleanRead(false))
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()) } returns
+        BooleanRead(false)
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
 
@@ -358,17 +344,16 @@ internal class JobCreationAndStatusUpdateActivityTest {
         )
 
       // Mock the connection API to fail
-      whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
-      whenever(connectionApi.getConnectionContext(any<ConnectionIdRequestBody>()))
-        .thenAnswer { throw IOException("Failed to fetch workspace") }
+      every { airbyteApiClient.connectionApi } returns connectionApi
+      every { connectionApi.getConnectionContext(any<ConnectionIdRequestBody>()) } answers { throw IOException("Failed to fetch workspace") }
 
       // Feature flag check should still work with just connection context
-      whenever(
+      every {
         featureFlagClient.boolVariation(
           SkipCheckBeforeSync,
           Multi(listOf(Connection(CONNECTION_ID))),
-        ),
-      ).thenReturn(true)
+        )
+      } returns true
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
 
@@ -399,9 +384,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
           CONNECTION_ID,
         )
 
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenReturn(BooleanRead(false))
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()) } returns
+        BooleanRead(false)
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
 
@@ -417,9 +402,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
           CONNECTION_ID,
         )
 
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenReturn(BooleanRead(true))
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()) } returns
+        BooleanRead(true)
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
 
@@ -437,17 +422,17 @@ internal class JobCreationAndStatusUpdateActivityTest {
       val workspaceId = UUID.randomUUID()
 
       // Mock the connection API to return workspace ID
-      whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
-      whenever(connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)))
-        .thenReturn(ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null))
+      every { airbyteApiClient.connectionApi } returns connectionApi
+      every { connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+        ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null)
 
       // Enable the feature flag
-      whenever(
+      every {
         featureFlagClient.boolVariation(
           SkipCheckBeforeSync,
           Multi(listOf(Connection(CONNECTION_ID), Workspace(workspaceId))),
-        ),
-      ).thenReturn(true)
+        )
+      } returns true
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
 
@@ -465,22 +450,22 @@ internal class JobCreationAndStatusUpdateActivityTest {
       val workspaceId = UUID.randomUUID()
 
       // Mock the connection API to return workspace ID
-      whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
-      whenever(connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)))
-        .thenReturn(ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null))
+      every { airbyteApiClient.connectionApi } returns connectionApi
+      every { connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+        ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null)
 
       // Disable the feature flag
-      whenever(
+      every {
         featureFlagClient.boolVariation(
           SkipCheckBeforeSync,
           Multi(listOf(Connection(CONNECTION_ID), Workspace(workspaceId))),
-        ),
-      ).thenReturn(false)
+        )
+      } returns false
 
       // Mock previous job failed (so normal logic would return true)
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenReturn(BooleanRead(false))
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()) } returns
+        BooleanRead(false)
 
       val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
 
@@ -517,9 +502,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
           CONNECTION_ID,
         )
 
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenReturn(BooleanRead(didSucceed))
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()) } returns
+        BooleanRead(didSucceed)
 
       // Both checks should return the opposite of didSucceed
       val sourceResult = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
@@ -539,9 +524,8 @@ internal class JobCreationAndStatusUpdateActivityTest {
           CONNECTION_ID,
         )
 
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenAnswer { throw IOException(EXCEPTION_MESSAGE) }
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()) } answers { throw IOException(EXCEPTION_MESSAGE) }
 
       // Both methods should throw RetryableException when the underlying API call fails
       Assertions.assertThrows(
@@ -549,8 +533,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
       ) { jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input) }
 
       // Reset mock for second call
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenAnswer { throw IOException(EXCEPTION_MESSAGE) }
+      every { jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()) } answers { throw IOException(EXCEPTION_MESSAGE) }
 
       Assertions.assertThrows(
         RetryableException::class.java,
@@ -560,9 +543,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
     @Test
     @DisplayName("Test attempt creation")
     fun createAttemptNumber() {
-      whenever(airbyteApiClient.attemptApi).thenReturn(attemptApi)
-      whenever(attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(JOB_ID)))
-        .thenReturn(CreateNewAttemptNumberResponse(ATTEMPT_NUMBER_1))
+      every { airbyteApiClient.attemptApi } returns attemptApi
+      every { attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(JOB_ID)) } returns
+        CreateNewAttemptNumberResponse(ATTEMPT_NUMBER_1)
 
       val output = jobCreationAndStatusUpdateActivity.createNewAttemptNumber(AttemptCreationInput(JOB_ID))
       org.assertj.core.api.Assertions
@@ -573,9 +556,8 @@ internal class JobCreationAndStatusUpdateActivityTest {
     @Test
     @DisplayName("Test exception errors are properly wrapped")
     fun createAttemptNumberThrowException() {
-      whenever(airbyteApiClient.attemptApi).thenReturn(attemptApi)
-      whenever(attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(JOB_ID)))
-        .thenAnswer { throw IOException() }
+      every { airbyteApiClient.attemptApi } returns attemptApi
+      every { attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(JOB_ID)) } answers { throw IOException() }
 
       org.assertj.core.api.Assertions
         .assertThatThrownBy {
@@ -593,18 +575,21 @@ internal class JobCreationAndStatusUpdateActivityTest {
   internal inner class Update {
     @Test
     fun setJobSuccess() {
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.jobSuccessWithAttemptNumber(any<JobSuccessWithAttemptNumberRequest>()) } returns mockk(relaxed = true)
       val request =
         JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput)
       jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(request)
-      verify(jobsApi).jobSuccessWithAttemptNumber(
-        JobSuccessWithAttemptNumberRequest(
-          request.jobId!!,
-          request.attemptNumber!!,
-          request.connectionId!!,
-          request.standardSyncOutput!!,
-        ),
-      )
+      verify {
+        jobsApi.jobSuccessWithAttemptNumber(
+          JobSuccessWithAttemptNumberRequest(
+            request.jobId!!,
+            request.attemptNumber!!,
+            request.connectionId!!,
+            request.standardSyncOutput!!,
+          ),
+        )
+      }
     }
 
     @Test
@@ -616,11 +601,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     fun setJobSuccessWrapException() {
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      every { airbyteApiClient.jobsApi } returns jobsApi
       val exception = IOException(TEST_EXCEPTION_MESSAGE)
-      doThrow(exception)
-        .`when`(jobsApi)
-        .jobSuccessWithAttemptNumber(any<JobSuccessWithAttemptNumberRequest>())
+      every { jobsApi.jobSuccessWithAttemptNumber(any<JobSuccessWithAttemptNumberRequest>()) } throws exception
 
       org.assertj.core.api.Assertions
         .assertThatThrownBy {
@@ -633,9 +616,10 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     fun setJobFailure() {
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.jobFailure(any<JobFailureRequest>()) } returns mockk(relaxed = true)
       jobCreationAndStatusUpdateActivity.jobFailure(JobFailureInput(JOB_ID, 1, CONNECTION_ID, REASON))
-      verify(jobsApi).jobFailure(JobFailureRequest(JOB_ID, 1, CONNECTION_ID, REASON))
+      verify { jobsApi.jobFailure(JobFailureRequest(JOB_ID, 1, CONNECTION_ID, REASON)) }
     }
 
     @Test
@@ -647,8 +631,8 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     fun setJobFailureWithNullJobSyncConfig() {
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.jobFailure(any<JobFailureRequest>())).thenAnswer { throw IOException() }
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.jobFailure(any<JobFailureRequest>()) } answers { throw IOException() }
 
       org.assertj.core.api.Assertions
         .assertThatThrownBy {
@@ -662,12 +646,12 @@ internal class JobCreationAndStatusUpdateActivityTest {
           )
         }.isInstanceOf(RetryableException::class.java)
         .hasCauseInstanceOf(IOException::class.java)
-      verify(jobsApi).jobFailure(JobFailureRequest(JOB_ID, 1, CONNECTION_ID, REASON))
+      verify { jobsApi.jobFailure(JobFailureRequest(JOB_ID, 1, CONNECTION_ID, REASON)) }
     }
 
     @Test
     fun attemptFailureWithAttemptNumberHappyPath() {
-      whenever(airbyteApiClient.attemptApi).thenReturn(attemptApi)
+      every { airbyteApiClient.attemptApi } returns attemptApi
       val input =
         AttemptNumberFailureInput(
           JOB_ID,
@@ -696,7 +680,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     fun attemptFailureWithAttemptNumberThrowsRetryableOnApiFailure() {
-      whenever(airbyteApiClient.attemptApi).thenReturn(attemptApi)
+      every { airbyteApiClient.attemptApi } returns attemptApi
       val input =
         AttemptNumberFailureInput(
           JOB_ID,
@@ -706,9 +690,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
           failureSummary,
         )
 
-      doThrow(IOException(EXCEPTION_MESSAGE)).`when`(attemptApi).failAttempt(
-        any<FailAttemptRequest>(),
-      )
+      every { attemptApi.failAttempt(any<FailAttemptRequest>()) } throws IOException(EXCEPTION_MESSAGE)
 
       Assertions.assertThrows(
         RetryableException::class.java,
@@ -717,7 +699,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     fun cancelJobHappyPath() {
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      every { airbyteApiClient.jobsApi } returns jobsApi
       val input =
         JobCancelledInputWithAttemptNumber(
           JOB_ID,
@@ -726,20 +708,20 @@ internal class JobCreationAndStatusUpdateActivityTest {
           failureSummary,
         )
 
-      val jobReq = argumentCaptor<PersistCancelJobRequestBody>()
+      val jobReq = slot<PersistCancelJobRequestBody>()
 
       jobCreationAndStatusUpdateActivity.jobCancelledWithAttemptNumber(input)
 
-      verify(jobsApi).persistJobCancellation(jobReq.capture())
-      Assertions.assertEquals(JOB_ID, jobReq.firstValue.jobId)
-      Assertions.assertEquals(ATTEMPT_NUMBER, jobReq.firstValue.attemptNumber)
-      Assertions.assertEquals(CONNECTION_ID, jobReq.firstValue.connectionId)
-      Assertions.assertEquals(failureSummary, jobReq.firstValue.attemptFailureSummary)
+      verify { jobsApi.persistJobCancellation(capture(jobReq)) }
+      Assertions.assertEquals(JOB_ID, jobReq.captured.jobId)
+      Assertions.assertEquals(ATTEMPT_NUMBER, jobReq.captured.attemptNumber)
+      Assertions.assertEquals(CONNECTION_ID, jobReq.captured.connectionId)
+      Assertions.assertEquals(failureSummary, jobReq.captured.attemptFailureSummary)
     }
 
     @Test
     fun cancelJobThrowsRetryableOnJobsApiFailure() {
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      every { airbyteApiClient.jobsApi } returns jobsApi
       val input =
         JobCancelledInputWithAttemptNumber(
           JOB_ID,
@@ -748,9 +730,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
           failureSummary,
         )
 
-      doThrow(IOException(EXCEPTION_MESSAGE))
-        .`when`(jobsApi)
-        .persistJobCancellation(any<PersistCancelJobRequestBody>())
+      every { jobsApi.persistJobCancellation(any<PersistCancelJobRequestBody>()) } throws IOException(EXCEPTION_MESSAGE)
 
       Assertions.assertThrows(
         RetryableException::class.java,
@@ -759,16 +739,14 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     fun ensureCleanJobStateHappyPath() {
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      every { airbyteApiClient.jobsApi } returns jobsApi
       Assertions.assertDoesNotThrow { jobCreationAndStatusUpdateActivity.ensureCleanJobState(EnsureCleanJobStateInput(CONNECTION_ID)) }
     }
 
     @Test
     fun ensureCleanJobStateThrowsRetryableOnApiFailure() {
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      doThrow(IOException(EXCEPTION_MESSAGE)).`when`(jobsApi).failNonTerminalJobs(
-        any<ConnectionIdRequestBody>(),
-      )
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.failNonTerminalJobs(any<ConnectionIdRequestBody>()) } throws IOException(EXCEPTION_MESSAGE)
 
       Assertions.assertThrows(
         RetryableException::class.java,

@@ -62,18 +62,14 @@ import io.airbyte.persistence.job.tracker.JobTracker.Companion.configToMetadata
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.Field
+import io.mockk.clearMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeastOnce
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.reset
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.verifyNoInteractions
-import org.mockito.kotlin.whenever
 import java.io.IOException
 import java.util.Optional
 import java.util.UUID
@@ -96,16 +92,19 @@ internal class JobTrackerTest {
 
   @BeforeEach
   fun setup() {
-    jobPersistence = mock<JobPersistence>()
-    workspaceHelper = mock<WorkspaceHelper>()
-    trackingClient = mock<TrackingClient>()
-    sourceService = mock<SourceService>()
-    destinationService = mock<DestinationService>()
-    connectionService = mock<ConnectionService>()
-    operationService = mock<OperationService>()
-    workspaceService = mock<WorkspaceService>()
-    actorDefinitionVersionHelper = mock<ActorDefinitionVersionHelper>()
-    jobService = mock<JobService>()
+    jobPersistence = mockk<JobPersistence>(relaxed = true)
+    workspaceHelper = mockk<WorkspaceHelper>()
+    trackingClient =
+      mockk<TrackingClient> {
+        every { track(any(), any(), any(), any()) } returns Unit
+      }
+    sourceService = mockk<SourceService>()
+    destinationService = mockk<DestinationService>(relaxed = true)
+    connectionService = mockk<ConnectionService>()
+    operationService = mockk<OperationService>()
+    workspaceService = mockk<WorkspaceService>()
+    actorDefinitionVersionHelper = mockk<ActorDefinitionVersionHelper>(relaxed = true)
+    jobService = mockk<JobService>()
     jobTracker =
       JobTracker(
         jobPersistence,
@@ -118,16 +117,16 @@ internal class JobTrackerTest {
         operationService,
         workspaceService,
         jobService,
-        mock<MetricClient>(),
+        mockk<MetricClient>(relaxed = true),
       )
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false))
-      .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME).withDataplaneGroupId(DATA_PLANE_GROUP_ID))
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, false) } returns
+      StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME).withDataplaneGroupId(DATA_PLANE_GROUP_ID)
   }
 
   @Test
   fun testTrackCheckConnectionSource() {
-    val metadata: MutableMap<String?, Any?> =
-      mutableMapOf(
+    val metadata: Map<String, Any?> =
+      mapOf(
         JOB_TYPE to ConfigType.CHECK_CONNECTION_SOURCE,
         JOB_ID_KEY to JOB_ID.toString(),
         ATTEMPT_ID to 0,
@@ -135,6 +134,8 @@ internal class JobTrackerTest {
         CONNECTOR_SOURCE_DEFINITION_ID_KEY to UUID1,
         CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY to CONNECTOR_REPOSITORY,
         CONNECTOR_SOURCE_VERSION_KEY to CONNECTOR_VERSION,
+        WORKSPACE_ID_KEY to WORKSPACE_ID,
+        WORKSPACE_NAME_KEY to WORKSPACE_NAME,
       )
 
     val sourceDefinition =
@@ -145,12 +146,10 @@ internal class JobTrackerTest {
       ActorDefinitionVersion()
         .withDockerRepository(CONNECTOR_REPOSITORY)
         .withDockerImageTag(CONNECTOR_VERSION)
-    whenever(sourceService.getStandardSourceDefinition(UUID1))
-      .thenReturn(sourceDefinition)
-    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID))
-      .thenReturn(sourceVersion)
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
-      .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
+    every { sourceService.getStandardSourceDefinition(UUID1) } returns sourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID) } returns sourceVersion
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns
+      StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME)
 
     assertCheckConnCorrectMessageForEachState(
       { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
@@ -167,8 +166,7 @@ internal class JobTrackerTest {
       metadata,
       true,
     )
-    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, null))
-      .thenReturn(sourceVersion)
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, null) } returns sourceVersion
     assertCheckConnCorrectMessageForEachState(
       { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
         jobTracker.trackCheckConnectionSource<Any?>(
@@ -188,8 +186,8 @@ internal class JobTrackerTest {
 
   @Test
   fun testTrackCheckConnectionDestination() {
-    val metadata: MutableMap<String?, Any?> =
-      mutableMapOf(
+    val metadata: Map<String, Any?> =
+      mapOf(
         JOB_TYPE to ConfigType.CHECK_CONNECTION_DESTINATION,
         JOB_ID_KEY to JOB_ID.toString(),
         ATTEMPT_ID to 0,
@@ -197,6 +195,8 @@ internal class JobTrackerTest {
         "connector_destination_definition_id" to UUID2,
         "connector_destination_docker_repository" to CONNECTOR_REPOSITORY,
         "connector_destination_version" to CONNECTOR_VERSION,
+        WORKSPACE_ID_KEY to WORKSPACE_ID,
+        WORKSPACE_NAME_KEY to WORKSPACE_NAME,
       )
 
     val destinationDefinition =
@@ -207,17 +207,16 @@ internal class JobTrackerTest {
       ActorDefinitionVersion()
         .withDockerRepository(CONNECTOR_REPOSITORY)
         .withDockerImageTag(CONNECTOR_VERSION)
-    whenever(destinationService.getStandardDestinationDefinition(UUID2))
-      .thenReturn(destinationDefinition)
-    whenever(
+    every { destinationService.getStandardDestinationDefinition(UUID2) } returns destinationDefinition
+    every {
       actorDefinitionVersionHelper.getDestinationVersion(
         destinationDefinition,
         WORKSPACE_ID,
         DESTINATION_ID,
-      ),
-    ).thenReturn(destinationVersion)
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
-      .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
+      )
+    } returns destinationVersion
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns
+      StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME)
 
     assertCheckConnCorrectMessageForEachState(
       { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
@@ -234,8 +233,7 @@ internal class JobTrackerTest {
       metadata,
       true,
     )
-    whenever(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, null))
-      .thenReturn(destinationVersion)
+    every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, null) } returns destinationVersion
     assertCheckConnCorrectMessageForEachState(
       { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
         jobTracker.trackCheckConnectionDestination<Any?>(
@@ -255,8 +253,8 @@ internal class JobTrackerTest {
 
   @Test
   fun testTrackDiscover() {
-    val metadata: MutableMap<String?, Any?> =
-      mutableMapOf(
+    val metadata: Map<String, Any?> =
+      mapOf(
         JOB_TYPE to ConfigType.DISCOVER_SCHEMA,
         JOB_ID_KEY to JOB_ID.toString(),
         ATTEMPT_ID to 0,
@@ -264,6 +262,8 @@ internal class JobTrackerTest {
         CONNECTOR_SOURCE_DEFINITION_ID_KEY to UUID1,
         CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY to CONNECTOR_REPOSITORY,
         CONNECTOR_SOURCE_VERSION_KEY to CONNECTOR_VERSION,
+        WORKSPACE_ID_KEY to WORKSPACE_ID,
+        WORKSPACE_NAME_KEY to WORKSPACE_NAME,
       )
 
     val sourceDefinition =
@@ -274,12 +274,10 @@ internal class JobTrackerTest {
       ActorDefinitionVersion()
         .withDockerRepository(CONNECTOR_REPOSITORY)
         .withDockerImageTag(CONNECTOR_VERSION)
-    whenever(sourceService.getStandardSourceDefinition(UUID1))
-      .thenReturn(sourceDefinition)
-    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID))
-      .thenReturn(sourceVersion)
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
-      .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
+    every { sourceService.getStandardSourceDefinition(UUID1) } returns sourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID) } returns sourceVersion
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns
+      StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME)
 
     assertDiscoverCorrectMessageForEachState(
       { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
@@ -294,38 +292,20 @@ internal class JobTrackerTest {
         )
       },
       metadata,
-      true,
-    )
-    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, null))
-      .thenReturn(sourceVersion)
-    assertDiscoverCorrectMessageForEachState(
-      { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
-        jobTracker.trackDiscover(
-          JOB_ID,
-          UUID1,
-          WORKSPACE_ID,
-          null,
-          null,
-          jobState!!,
-          output,
-        )
-      },
-      metadata,
-      false,
     )
   }
 
   @Test
   fun testTrackSync() {
-    testAsynchronous(ConfigType.SYNC, SYNC_CONFIG_METADATA)
+    testAsynchronous(ConfigType.SYNC, mergeMaps(SYNC_CONFIG_METADATA, mapOf(WORKSPACE_ID_KEY to WORKSPACE_ID, WORKSPACE_NAME_KEY to WORKSPACE_NAME)))
   }
 
   @Test
   fun testTrackRefresh() {
-    val expectedExtraMetadata: MutableMap<String?, Any?> =
+    val expectedExtraMetadata: Map<String, Any?> =
       mergeMaps(
         SYNC_CONFIG_METADATA,
-        mutableMapOf("refresh_types" to listOf(RefreshStream.RefreshType.TRUNCATE.toString())),
+        mapOf("refresh_types" to listOf(RefreshStream.RefreshType.TRUNCATE.toString()), ATTEMPT_STAGE_KEY to "ENDED"),
       )
     testAsynchronous(ConfigType.REFRESH, expectedExtraMetadata)
   }
@@ -337,28 +317,24 @@ internal class JobTrackerTest {
     val jobState = JobTracker.JobState.SUCCEEDED
     val exception: Exception = IOException("test")
 
-    whenever(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)).thenReturn(WORKSPACE_ID)
-    whenever(connectionService.getStandardSync(CONNECTION_ID))
-      .thenReturn(
-        StandardSync()
-          .withConnectionId(CONNECTION_ID)
-          .withSourceId(SOURCE_ID)
-          .withDestinationId(DESTINATION_ID)
-          .withCatalog(CATALOG)
-          .withManual(true),
-      )
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
-      .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
-    whenever(connectionService.getStandardSync(CONNECTION_ID))
-      .thenReturn(
-        StandardSync()
-          .withConnectionId(CONNECTION_ID)
-          .withSourceId(SOURCE_ID)
-          .withDestinationId(DESTINATION_ID)
-          .withCatalog(CATALOG)
-          .withManual(false)
-          .withSchedule(Schedule().withUnits(1L).withTimeUnit(Schedule.TimeUnit.MINUTES)),
-      )
+    every { workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId) } returns WORKSPACE_ID
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns
+      StandardSync()
+        .withConnectionId(CONNECTION_ID)
+        .withSourceId(SOURCE_ID)
+        .withDestinationId(DESTINATION_ID)
+        .withCatalog(CATALOG)
+        .withManual(true)
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns
+      StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME)
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns
+      StandardSync()
+        .withConnectionId(CONNECTION_ID)
+        .withSourceId(SOURCE_ID)
+        .withDestinationId(DESTINATION_ID)
+        .withCatalog(CATALOG)
+        .withManual(false)
+        .withSchedule(Schedule().withUnits(1L).withTimeUnit(Schedule.TimeUnit.MINUTES))
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -369,33 +345,26 @@ internal class JobTrackerTest {
         .withDestinationDefinitionId(UUID2)
         .withName(DESTINATION_DEF_NAME)
 
-    whenever(sourceService.getSourceDefinitionFromConnection(CONNECTION_ID))
-      .thenReturn(sourceDefinition)
-    whenever(destinationService.getDestinationDefinitionFromConnection(CONNECTION_ID))
-      .thenReturn(destinationDefinition)
-    whenever(sourceService.getStandardSourceDefinition(UUID1))
-      .thenReturn(sourceDefinition)
-    whenever(destinationService.getStandardDestinationDefinition(UUID2))
-      .thenReturn(destinationDefinition)
-    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID))
-      .thenReturn(
-        ActorDefinitionVersion()
-          .withDockerRepository(CONNECTOR_REPOSITORY)
-          .withDockerImageTag(CONNECTOR_VERSION)
-          .withSpec(SOURCE_SPEC),
-      )
-    whenever(
+    every { sourceService.getSourceDefinitionFromConnection(CONNECTION_ID) } returns sourceDefinition
+    every { destinationService.getDestinationDefinitionFromConnection(CONNECTION_ID) } returns destinationDefinition
+    every { sourceService.getStandardSourceDefinition(UUID1) } returns sourceDefinition
+    every { destinationService.getStandardDestinationDefinition(UUID2) } returns destinationDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID) } returns
+      ActorDefinitionVersion()
+        .withDockerRepository(CONNECTOR_REPOSITORY)
+        .withDockerImageTag(CONNECTOR_VERSION)
+        .withSpec(SOURCE_SPEC)
+    every {
       actorDefinitionVersionHelper.getDestinationVersion(
         destinationDefinition,
         WORKSPACE_ID,
         DESTINATION_ID,
-      ),
-    ).thenReturn(
+      )
+    } returns
       ActorDefinitionVersion()
         .withDockerRepository(CONNECTOR_REPOSITORY)
         .withDockerImageTag(CONNECTOR_VERSION)
-        .withSpec(DESTINATION_SPEC),
-    )
+        .withSpec(DESTINATION_SPEC)
 
     jobTracker.trackSyncForInternalFailure(jobId, CONNECTION_ID, attemptNumber, jobState, exception)
     val metadata =
@@ -407,10 +376,10 @@ internal class JobTrackerTest {
         put("internal_error_cause", exception.message)
         put(FREQUENCY_KEY, "1 min")
         put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
-        put("workspace_id", WORKSPACE_ID)
+        put(WORKSPACE_ID_KEY, WORKSPACE_ID)
         put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
         put(ATTEMPT_STAGE_KEY, "ENDED")
-        put("attempt_completion_status", jobState)
+        put(ATTEMPT_COMPLETION_STATUS_KEY, jobState)
         put("connection_id", CONNECTION_ID)
         put(JOB_ID_KEY, jobId.toString())
         put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
@@ -420,94 +389,91 @@ internal class JobTrackerTest {
         put("operation_count", 0)
         put("connector_destination_docker_repository", CONNECTOR_REPOSITORY)
         put("table_prefix", false)
-        put("workspace_name", WORKSPACE_NAME)
+        put(WORKSPACE_NAME_KEY, WORKSPACE_NAME)
         put("connector_destination_definition_id", UUID2)
         put("source_id", SOURCE_ID)
         put("destination_id", DESTINATION_ID)
       }
-    verify(trackingClient).track(
-      scopeId = WORKSPACE_ID,
-      scopeType = ScopeType.WORKSPACE,
-      action = JobTracker.INTERNAL_FAILURE_SYNC_EVENT,
-      metadata =
-        metadata
-          .mapKeys {
-            it.key
-          }.mapValues { it.value },
-    )
+    verify {
+      trackingClient.track(
+        scopeId = WORKSPACE_ID,
+        scopeType = ScopeType.WORKSPACE,
+        action = JobTracker.INTERNAL_FAILURE_SYNC_EVENT,
+        metadata =
+          metadata
+            .mapKeys {
+              it.key
+            }.mapValues { it.value },
+      )
+    }
   }
 
   @Test
   fun testTrackReset() {
-    testAsynchronous(ConfigType.RESET_CONNECTION)
+    testAsynchronous(ConfigType.RESET_CONNECTION, mapOf(WORKSPACE_ID_KEY to WORKSPACE_ID, WORKSPACE_NAME_KEY to WORKSPACE_NAME))
   }
 
   // todo update with connection-specific test
   @JvmOverloads
   fun testAsynchronous(
     configType: ConfigType,
-    additionalExpectedMetadata: MutableMap<String?, Any?>? = mutableMapOf(),
+    additionalExpectedMetadata: Map<String, Any?>? = emptyMap(),
   ) {
     // for sync the job id is a long not a uuid.
     val jobId = 10L
-    whenever(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)).thenReturn(WORKSPACE_ID)
+    every { workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId) } returns WORKSPACE_ID
 
     val metadata = getJobMetadata(configType, jobId)
     val job = getJobMock(configType, jobId)
 
     // test when frequency is manual.
-    whenever(connectionService.getStandardSync(CONNECTION_ID))
-      .thenReturn(
-        StandardSync()
-          .withConnectionId(CONNECTION_ID)
-          .withSourceId(SOURCE_ID)
-          .withDestinationId(DESTINATION_ID)
-          .withCatalog(CATALOG)
-          .withManual(true),
-      )
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns
+      StandardSync()
+        .withConnectionId(CONNECTION_ID)
+        .withSourceId(SOURCE_ID)
+        .withDestinationId(DESTINATION_ID)
+        .withCatalog(CATALOG)
+        .withManual(true)
 
-    whenever(actorDefinitionVersionHelper.getSourceVersion(any(), eq(WORKSPACE_ID), eq(SOURCE_ID)))
-      .thenReturn(
-        ActorDefinitionVersion()
-          .withActorDefinitionId(SOURCE_DEFINITION_ID)
-          .withDockerRepository(CONNECTOR_REPOSITORY)
-          .withDockerImageTag(CONNECTOR_VERSION)
-          .withSpec(SOURCE_SPEC),
-      )
-    whenever(actorDefinitionVersionHelper.getDestinationVersion(any(), eq(WORKSPACE_ID), eq(DESTINATION_ID)))
-      .thenReturn(
-        ActorDefinitionVersion()
-          .withActorDefinitionId(DESTINATION_DEFINITION_ID)
-          .withDockerRepository(CONNECTOR_REPOSITORY)
-          .withDockerImageTag(CONNECTOR_VERSION)
-          .withSpec(DESTINATION_SPEC),
-      )
+    every { actorDefinitionVersionHelper.getSourceVersion(any(), WORKSPACE_ID, SOURCE_ID) } returns
+      ActorDefinitionVersion()
+        .withActorDefinitionId(SOURCE_DEFINITION_ID)
+        .withDockerRepository(CONNECTOR_REPOSITORY)
+        .withDockerImageTag(CONNECTOR_VERSION)
+        .withSpec(SOURCE_SPEC)
+    every { actorDefinitionVersionHelper.getDestinationVersion(any(), WORKSPACE_ID, DESTINATION_ID) } returns
+      ActorDefinitionVersion()
+        .withActorDefinitionId(DESTINATION_DEFINITION_ID)
+        .withDockerRepository(CONNECTOR_REPOSITORY)
+        .withDockerImageTag(CONNECTOR_VERSION)
+        .withSpec(DESTINATION_SPEC)
 
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
-      .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
-    val manualMetadata: MutableMap<String?, Any?> =
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns
+      StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME)
+    val manualMetadata: Map<String, Any?> =
       mergeMaps(
         metadata,
-        mutableMapOf(FREQUENCY_KEY to "manual"),
+        mapOf(FREQUENCY_KEY to "manual", ATTEMPT_STAGE_KEY to "ENDED"),
         additionalExpectedMetadata,
       )
     assertCorrectMessageForEachState({ jobState: JobTracker.JobState? -> jobTracker.trackSync(job, jobState!!) }, manualMetadata)
 
+    // Clear mocks before the next scenario
+    clearMocks(trackingClient, answers = false)
+
     // test when frequency is scheduled.
-    whenever(connectionService.getStandardSync(CONNECTION_ID))
-      .thenReturn(
-        StandardSync()
-          .withConnectionId(CONNECTION_ID)
-          .withSourceId(SOURCE_ID)
-          .withDestinationId(DESTINATION_ID)
-          .withCatalog(CATALOG)
-          .withManual(false)
-          .withSchedule(Schedule().withUnits(1L).withTimeUnit(Schedule.TimeUnit.MINUTES)),
-      )
-    val scheduledMetadata: MutableMap<String?, Any?> =
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns
+      StandardSync()
+        .withConnectionId(CONNECTION_ID)
+        .withSourceId(SOURCE_ID)
+        .withDestinationId(DESTINATION_ID)
+        .withCatalog(CATALOG)
+        .withManual(false)
+        .withSchedule(Schedule().withUnits(1L).withTimeUnit(Schedule.TimeUnit.MINUTES))
+    val scheduledMetadata: Map<String, Any?> =
       mergeMaps(
         metadata,
-        mutableMapOf(FREQUENCY_KEY to "1 min"),
+        mapOf(FREQUENCY_KEY to "1 min", ATTEMPT_STAGE_KEY to "ENDED"),
         additionalExpectedMetadata,
       )
     assertCorrectMessageForEachState({ jobState: JobTracker.JobState? -> jobTracker.trackSync(job, jobState!!) }, scheduledMetadata)
@@ -520,7 +486,7 @@ internal class JobTrackerTest {
 
   @Test
   fun testTrackResetAttempt() {
-    testAsynchronousAttempt(ConfigType.RESET_CONNECTION)
+    testAsynchronousAttempt(ConfigType.RESET_CONNECTION, mapOf(WORKSPACE_ID_KEY to WORKSPACE_ID, WORKSPACE_NAME_KEY to WORKSPACE_NAME))
   }
 
   // todo (cgardens)
@@ -538,8 +504,8 @@ internal class JobTrackerTest {
     val schemaJson = read("example_config_schema.json")
     val schema = deserialize(schemaJson)
 
-    val expected: MutableMap<String?, Any?> =
-      mutableMapOf(
+    val expected: Map<String, Any?> =
+      mapOf(
         "username" to JobTracker.SET,
         "has_ssl" to false,
         "password" to JobTracker.SET,
@@ -556,7 +522,7 @@ internal class JobTrackerTest {
         "additionalPropertiesEnumString" to "foo",
       )
 
-    val actual = configToMetadata(config, schema).toMutableMap()
+    val actual = configToMetadata(config, schema)
 
     Assertions.assertEquals(expected, actual)
   }
@@ -580,7 +546,7 @@ internal class JobTrackerTest {
         true,
       )
 
-    val metadata = jobTracker.generateJobMetadata(jobId, configType, attemptId, Optional.of<Job>(previousJob)).toMutableMap()
+    val metadata = jobTracker.generateJobMetadata(jobId, configType, attemptId, Optional.of<Job>(previousJob))
     Assertions.assertEquals(jobId, metadata["job_id"])
     Assertions.assertEquals(attemptId, metadata["attempt_id"])
     Assertions.assertEquals(configType, metadata["job_type"])
@@ -589,7 +555,7 @@ internal class JobTrackerTest {
 
   fun testAsynchronousAttempt(
     configType: ConfigType,
-    additionalExpectedMetadata: MutableMap<String?, Any?>?,
+    additionalExpectedMetadata: Map<String, Any?>?,
   ) {
     testAsynchronousAttempt(configType, getJobWithAttemptsMock(configType, LONG_JOB_ID), additionalExpectedMetadata)
   }
@@ -602,45 +568,44 @@ internal class JobTrackerTest {
         configType!!,
         LONG_JOB_ID,
       ),
-    additionalExpectedMetadata: MutableMap<String?, Any?>? = mutableMapOf(),
+    additionalExpectedMetadata: Map<String, Any?>? = emptyMap(),
   ) {
+    clearMocks(trackingClient, answers = false)
     val metadata = getJobMetadata(configType, LONG_JOB_ID)
     // test when frequency is manual.
-    whenever(connectionService.getStandardSync(CONNECTION_ID))
-      .thenReturn(
-        StandardSync()
-          .withConnectionId(CONNECTION_ID)
-          .withSourceId(SOURCE_ID)
-          .withDestinationId(DESTINATION_ID)
-          .withManual(true)
-          .withCatalog(CATALOG),
-      )
+    every { connectionService.getStandardSync(CONNECTION_ID) } returns
+      StandardSync()
+        .withConnectionId(CONNECTION_ID)
+        .withSourceId(SOURCE_ID)
+        .withDestinationId(DESTINATION_ID)
+        .withManual(true)
+        .withCatalog(CATALOG)
 
-    whenever(actorDefinitionVersionHelper.getSourceVersion(any(), eq(WORKSPACE_ID), eq(SOURCE_ID)))
-      .thenReturn(
-        ActorDefinitionVersion()
-          .withActorDefinitionId(SOURCE_DEFINITION_ID)
-          .withDockerRepository(CONNECTOR_REPOSITORY)
-          .withDockerImageTag(CONNECTOR_VERSION)
-          .withSpec(SOURCE_SPEC),
-      )
-    whenever(actorDefinitionVersionHelper.getDestinationVersion(any(), eq(WORKSPACE_ID), eq(DESTINATION_ID)))
-      .thenReturn(
-        ActorDefinitionVersion()
-          .withActorDefinitionId(DESTINATION_DEFINITION_ID)
-          .withDockerRepository(CONNECTOR_REPOSITORY)
-          .withDockerImageTag(CONNECTOR_VERSION)
-          .withSpec(DESTINATION_SPEC),
-      )
+    every { actorDefinitionVersionHelper.getSourceVersion(any(), WORKSPACE_ID, SOURCE_ID) } returns
+      ActorDefinitionVersion()
+        .withActorDefinitionId(SOURCE_DEFINITION_ID)
+        .withDockerRepository(CONNECTOR_REPOSITORY)
+        .withDockerImageTag(CONNECTOR_VERSION)
+        .withSpec(SOURCE_SPEC)
+    every { actorDefinitionVersionHelper.getDestinationVersion(any(), WORKSPACE_ID, DESTINATION_ID) } returns
+      ActorDefinitionVersion()
+        .withActorDefinitionId(DESTINATION_DEFINITION_ID)
+        .withDockerRepository(CONNECTOR_REPOSITORY)
+        .withDockerImageTag(CONNECTOR_VERSION)
+        .withSpec(DESTINATION_SPEC)
 
-    whenever(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(LONG_JOB_ID)).thenReturn(WORKSPACE_ID)
-    whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
-      .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
-    val manualMetadata: MutableMap<String?, Any?> =
+    every { workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(LONG_JOB_ID) } returns WORKSPACE_ID
+    every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns
+      StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME)
+    val manualMetadata: Map<String, Any?> =
       mergeMaps(
         ATTEMPT_METADATA,
         metadata,
-        mutableMapOf(FREQUENCY_KEY to "manual"),
+        mapOf(
+          FREQUENCY_KEY to "manual",
+          ATTEMPT_STAGE_KEY to "ENDED",
+          ATTEMPT_COMPLETION_STATUS_KEY to JobTracker.JobState.SUCCEEDED,
+        ),
         additionalExpectedMetadata,
       )
 
@@ -652,7 +617,7 @@ internal class JobTrackerTest {
   }
 
   private fun configFailureJson(): JsonNode {
-    val linkedHashMap: MutableMap<String?, Any?> =
+    val linkedHashMap: Map<String, Any?> =
       linkedMapOf(
         "failureOrigin" to "source",
         "failureType" to "config_error",
@@ -666,7 +631,7 @@ internal class JobTrackerTest {
   }
 
   private fun systemFailureJson(): JsonNode {
-    val linkedHashMap1: MutableMap<String?, Any?> =
+    val linkedHashMap1: Map<String, Any?> =
       linkedMapOf(
         "failureOrigin" to "replication",
         "failureType" to "system_error",
@@ -680,7 +645,7 @@ internal class JobTrackerTest {
   }
 
   private fun unknownFailureJson(): JsonNode {
-    val linkedHashMap2: MutableMap<String?, Any?> =
+    val linkedHashMap2: Map<String, Any?> =
       linkedMapOf(
         "failureOrigin" to null,
         "failureType" to null,
@@ -695,17 +660,17 @@ internal class JobTrackerTest {
 
   fun testAsynchronousAttemptWithFailures(
     configType: ConfigType,
-    additionalExpectedMetadata: MutableMap<String?, Any?>,
+    additionalExpectedMetadata: Map<String, Any?>,
   ) {
-    val failureMetadata: MutableMap<String?, Any?> =
-      mutableMapOf(
+    val failureMetadata: Map<String, Any?> =
+      mapOf(
         "failure_reasons" to arrayNode().addAll(listOf(configFailureJson(), systemFailureJson(), unknownFailureJson())).toString(),
         "main_failure_reason" to configFailureJson().toString(),
       )
     testAsynchronousAttempt(
       configType,
       getJobWithFailuresMock(configType, LONG_JOB_ID),
-      mergeMaps<String?, Any?>(additionalExpectedMetadata, failureMetadata),
+      mergeMaps(additionalExpectedMetadata, failureMetadata),
     )
   }
 
@@ -728,43 +693,38 @@ internal class JobTrackerTest {
         .withDestinationDefinitionId(UUID2)
         .withName(DESTINATION_DEF_NAME)
 
-    whenever(sourceService.getSourceDefinitionFromConnection(CONNECTION_ID))
-      .thenReturn(sourceDefinition)
-    whenever(
+    every { sourceService.getSourceDefinitionFromConnection(CONNECTION_ID) } returns sourceDefinition
+    every {
       destinationService.getDestinationDefinitionFromConnection(
         CONNECTION_ID,
-      ),
-    ).thenReturn(destinationDefinition)
-    whenever(sourceService.getStandardSourceDefinition(UUID1))
-      .thenReturn(sourceDefinition)
-    whenever(destinationService.getStandardDestinationDefinition(UUID2))
-      .thenReturn(destinationDefinition)
+      )
+    } returns destinationDefinition
+    every { sourceService.getStandardSourceDefinition(UUID1) } returns sourceDefinition
+    every { destinationService.getStandardDestinationDefinition(UUID2) } returns destinationDefinition
 
-    whenever(
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
         WORKSPACE_ID,
         SOURCE_ID,
-      ),
-    ).thenReturn(
+      )
+    } returns
       ActorDefinitionVersion()
         .withSpec(SOURCE_SPEC)
         .withDockerImageTag(CONNECTOR_VERSION)
-        .withDockerRepository(CONNECTOR_REPOSITORY),
-    )
+        .withDockerRepository(CONNECTOR_REPOSITORY)
 
-    whenever(
+    every {
       actorDefinitionVersionHelper.getDestinationVersion(
         destinationDefinition,
         WORKSPACE_ID,
         DESTINATION_ID,
-      ),
-    ).thenReturn(
+      )
+    } returns
       ActorDefinitionVersion()
         .withSpec(DESTINATION_SPEC)
         .withDockerImageTag(CONNECTOR_VERSION)
-        .withDockerRepository(CONNECTOR_REPOSITORY),
-    )
+        .withDockerRepository(CONNECTOR_REPOSITORY)
 
     val catalog =
       ConfiguredAirbyteCatalog().withStreams(
@@ -782,14 +742,14 @@ internal class JobTrackerTest {
         .withSourceConfiguration(jsonNode(mapOf(KEY to "some_value")))
         .withDestinationConfiguration(jsonNode(mapOf(KEY to false)))
 
-    val jobConfig = mock<JobConfig>()
-    whenever(jobConfig.configType).thenReturn(configType)
+    val jobConfig = mockk<JobConfig>(relaxed = true)
+    every { jobConfig.configType } returns configType
 
     if (configType == ConfigType.SYNC) {
       val jobSyncConfig =
         JobSyncConfig()
           .withConfiguredAirbyteCatalog(catalog)
-      whenever(jobConfig.sync).thenReturn(jobSyncConfig)
+      every { jobConfig.sync } returns jobSyncConfig
     }
     if (configType == ConfigType.REFRESH) {
       val refreshConfig =
@@ -804,7 +764,13 @@ internal class JobTrackerTest {
                   .withStreamDescriptor(StreamDescriptor().withName(s!!.stream.name).withNamespace(s.stream.namespace))
               }.toList(),
           )
-      whenever(jobConfig.refresh).thenReturn(refreshConfig)
+      every { jobConfig.refresh } returns refreshConfig
+    }
+    if (configType == ConfigType.RESET_CONNECTION) {
+      val jobSyncConfig =
+        JobSyncConfig()
+          .withConfiguredAirbyteCatalog(catalog)
+      every { jobConfig.sync } returns jobSyncConfig
     }
 
     val defaultAttempt =
@@ -822,27 +788,40 @@ internal class JobTrackerTest {
         null,
       )
 
-    return Job(
-      jobId,
-      configType,
-      CONNECTION_ID.toString(),
-      jobConfig,
-      attempts?.filterNotNull() ?: listOf(defaultAttempt),
-      JobStatus.RUNNING,
-      1000L,
-      1000L,
-      1000L,
-      true,
-    )
+    val job =
+      Job(
+        jobId,
+        configType,
+        CONNECTION_ID.toString(),
+        jobConfig,
+        attempts?.filterNotNull() ?: listOf(defaultAttempt),
+        JobStatus.RUNNING,
+        1000L,
+        1000L,
+        1000L,
+        true,
+      )
+
+    // Mock listJobsIncludingId to return just this job
+    every {
+      jobPersistence.listJobsIncludingId(
+        setOf(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH),
+        CONNECTION_ID.toString(),
+        jobId,
+        2,
+      )
+    } returns listOf(job)
+
+    return job
   }
 
   private val attemptMock: Attempt
     get() {
-      val attempt = mock<Attempt>()
-      val jobOutput = mock<JobOutput>()
-      val syncOutput = mock<StandardSyncOutput>()
-      val syncSummary = mock<StandardSyncSummary>()
-      val syncStats = mock<SyncStats>()
+      val attempt = mockk<Attempt>(relaxed = true)
+      val jobOutput = mockk<JobOutput>(relaxed = true)
+      val syncOutput = mockk<StandardSyncOutput>(relaxed = true)
+      val syncSummary = mockk<StandardSyncSummary>(relaxed = true)
+      val syncStats = mockk<SyncStats>(relaxed = true)
 
       val attemptSyncConfig =
         AttemptSyncConfig()
@@ -851,28 +830,27 @@ internal class JobTrackerTest {
           ).withDestinationConfiguration(
             jsonNode(mapOf(KEY to false)),
           )
-      whenever(attempt.syncConfig)
-        .thenReturn(Optional.of(attemptSyncConfig).orElse(null))
-      whenever(syncSummary.startTime).thenReturn(SYNC_START_TIME)
-      whenever(syncSummary.endTime).thenReturn(SYNC_END_TIME)
-      whenever(syncSummary.bytesSynced).thenReturn(SYNC_BYTES_SYNC)
-      whenever(syncSummary.recordsSynced).thenReturn(SYNC_RECORDS_SYNC)
-      whenever(syncOutput.standardSyncSummary).thenReturn(syncSummary)
-      whenever(syncSummary.totalStats).thenReturn(syncStats)
-      whenever(jobOutput.sync).thenReturn(syncOutput)
-      whenever(attempt.output).thenReturn(jobOutput)
-      whenever(syncStats.sourceStateMessagesEmitted).thenReturn(3L)
-      whenever(syncStats.destinationStateMessagesEmitted).thenReturn(1L)
-      whenever(syncStats.maxSecondsBeforeSourceStateMessageEmitted).thenReturn(5L)
-      whenever(syncStats.meanSecondsBeforeSourceStateMessageEmitted).thenReturn(4L)
-      whenever(syncStats.maxSecondsBetweenStateMessageEmittedandCommitted).thenReturn(7L)
-      whenever(syncStats.meanSecondsBetweenStateMessageEmittedandCommitted).thenReturn(6L)
-      whenever(syncStats.replicationStartTime).thenReturn(7L)
-      whenever(syncStats.replicationEndTime).thenReturn(8L)
-      whenever(syncStats.sourceReadStartTime).thenReturn(9L)
-      whenever(syncStats.sourceReadEndTime).thenReturn(10L)
-      whenever(syncStats.destinationWriteStartTime).thenReturn(11L)
-      whenever(syncStats.destinationWriteEndTime).thenReturn(12L)
+      every { attempt.syncConfig } returns Optional.of(attemptSyncConfig).orElse(null)
+      every { syncSummary.startTime } returns SYNC_START_TIME
+      every { syncSummary.endTime } returns SYNC_END_TIME
+      every { syncSummary.bytesSynced } returns SYNC_BYTES_SYNC
+      every { syncSummary.recordsSynced } returns SYNC_RECORDS_SYNC
+      every { syncOutput.standardSyncSummary } returns syncSummary
+      every { syncSummary.totalStats } returns syncStats
+      every { jobOutput.sync } returns syncOutput
+      every { attempt.output } returns jobOutput
+      every { syncStats.sourceStateMessagesEmitted } returns 3L
+      every { syncStats.destinationStateMessagesEmitted } returns 1L
+      every { syncStats.maxSecondsBeforeSourceStateMessageEmitted } returns 5L
+      every { syncStats.meanSecondsBeforeSourceStateMessageEmitted } returns 4L
+      every { syncStats.maxSecondsBetweenStateMessageEmittedandCommitted } returns 7L
+      every { syncStats.meanSecondsBetweenStateMessageEmittedandCommitted } returns 6L
+      every { syncStats.replicationStartTime } returns 7L
+      every { syncStats.replicationEndTime } returns 8L
+      every { syncStats.sourceReadStartTime } returns 9L
+      every { syncStats.sourceReadEndTime } returns 10L
+      every { syncStats.destinationWriteStartTime } returns 11L
+      every { syncStats.destinationWriteEndTime } returns 12L
 
       return attempt
     }
@@ -888,7 +866,7 @@ internal class JobTrackerTest {
     attempts: MutableList<Attempt?>?,
   ): Job {
     val job = getJobMock(configType, jobId, attempts)
-    whenever(jobPersistence.getJob(jobId)).thenReturn(job)
+    every { jobPersistence.getJob(jobId) } returns job
     return job
   }
 
@@ -929,22 +907,17 @@ internal class JobTrackerTest {
   private val attemptsWithFailuresMock: MutableList<Attempt?>
     get() {
       val attemptWithSingleFailure = this.attemptMock
-      val singleFailureSummary = mock<AttemptFailureSummary>()
-      whenever(singleFailureSummary.failures)
-        .thenReturn(listOf(this.configFailureReasonMock))
-      whenever(attemptWithSingleFailure.failureSummary)
-        .thenReturn(singleFailureSummary)
+      val singleFailureSummary = mockk<AttemptFailureSummary>()
+      every { singleFailureSummary.failures } returns listOf(this.configFailureReasonMock)
+      every { attemptWithSingleFailure.failureSummary } returns singleFailureSummary
 
       val attemptWithMultipleFailures = this.attemptMock
-      val multipleFailuresSummary = mock<AttemptFailureSummary>()
-      whenever(multipleFailuresSummary.failures)
-        .thenReturn(listOf(this.systemFailureReasonMock, this.unknownFailureReasonMock))
-      whenever(attemptWithMultipleFailures.failureSummary)
-        .thenReturn(multipleFailuresSummary)
+      val multipleFailuresSummary = mockk<AttemptFailureSummary>()
+      every { multipleFailuresSummary.failures } returns listOf(this.systemFailureReasonMock, this.unknownFailureReasonMock)
+      every { attemptWithMultipleFailures.failureSummary } returns multipleFailuresSummary
 
       val attemptWithNoFailures = this.attemptMock
-      whenever(attemptWithNoFailures.failureSummary)
-        .thenReturn(null)
+      every { attemptWithNoFailures.failureSummary } returns null
 
       // in non-test cases we shouldn't actually get failures out of order chronologically
       // this is to verify that we are explicitly sorting the results with tracking failure metadata
@@ -959,8 +932,8 @@ internal class JobTrackerTest {
   private fun getJobMetadata(
     configType: ConfigType?,
     jobId: Long,
-  ): MutableMap<String?, Any?> =
-    mutableMapOf(
+  ): Map<String, Any?> =
+    mapOf(
       JOB_TYPE to if (configType != ConfigType.RESET_CONNECTION) configType else ConfigType.CLEAR,
       JOB_ID_KEY to jobId.toString(),
       ATTEMPT_ID to 1,
@@ -984,10 +957,10 @@ internal class JobTrackerTest {
   private fun assertCheckConnCorrectMessageForEachState(
     jobStateConsumer: BiConsumer<JobTracker.JobState?, ConnectorJobOutput?>,
     configType: ConfigType?,
-    metadata: MutableMap<String?, Any?>,
+    metadata: Map<String, Any?>,
     workspaceSet: Boolean,
   ) {
-    reset(trackingClient)
+    clearMocks(trackingClient)
 
     // Output does not exist when job has started.
     jobStateConsumer.accept(JobTracker.JobState.STARTED, null)
@@ -996,7 +969,12 @@ internal class JobTrackerTest {
     connectionCheckSuccessOutput.status = StandardCheckConnectionOutput.Status.SUCCEEDED
     val checkConnectionSuccessJobOutput = ConnectorJobOutput().withCheckConnection(connectionCheckSuccessOutput)
     jobStateConsumer.accept(JobTracker.JobState.SUCCEEDED, checkConnectionSuccessJobOutput)
-    val checkConnSuccessMetadata: MutableMap<String?, Any?> = mutableMapOf("check_connection_outcome" to "succeeded")
+    val checkConnSuccessMetadata: Map<String, Any?> =
+      mapOf(
+        "check_connection_outcome" to "succeeded",
+        ATTEMPT_COMPLETION_STATUS_KEY to JobTracker.JobState.SUCCEEDED,
+        ATTEMPT_STAGE_KEY to "ENDED",
+      )
 
     val connectionCheckFailureOutput = StandardCheckConnectionOutput()
     connectionCheckFailureOutput.status = StandardCheckConnectionOutput.Status.FAILED
@@ -1006,17 +984,24 @@ internal class JobTrackerTest {
       JobTracker.JobState.SUCCEEDED,
       checkConnectionFailureJobOutput,
     ) // The job still succeeded, only the connection check failed
-    val checkConnFailureMetadata: MutableMap<String?, Any?> =
-      mutableMapOf(
+    val checkConnFailureMetadata: Map<String, Any?> =
+      mapOf(
         "check_connection_outcome" to "failed",
         "check_connection_message" to "Please check your Personal Access Token.",
+        ATTEMPT_COMPLETION_STATUS_KEY to JobTracker.JobState.SUCCEEDED,
+        ATTEMPT_STAGE_KEY to "ENDED",
       )
 
     // Failure implies the job threw an exception which almost always meant no output.
     val failedCheckJobOutput = ConnectorJobOutput()
     failedCheckJobOutput.failureReason = this.configFailureReasonMock
     jobStateConsumer.accept(JobTracker.JobState.FAILED, failedCheckJobOutput)
-    val failedCheckJobMetadata: MutableMap<String?, Any?> = mutableMapOf("failure_reason" to configFailureJson().toString())
+    val failedCheckJobMetadata: Map<String, Any?> =
+      mapOf(
+        "failure_reason" to configFailureJson().toString(),
+        ATTEMPT_COMPLETION_STATUS_KEY to JobTracker.JobState.FAILED,
+        ATTEMPT_STAGE_KEY to "ENDED",
+      )
 
     if (workspaceSet) {
       assertCorrectMessageForStartedState(
@@ -1027,7 +1012,7 @@ internal class JobTrackerTest {
         } else {
           JobTracker.CHECK_CONNECTION_DESTINATION_EVENT
         },
-        metadata,
+        mergeMaps(metadata, mapOf(ATTEMPT_STAGE_KEY to JobTracker.JobState.STARTED.name)),
       )
       assertCorrectMessageForSucceededState(
         if (configType ==
@@ -1037,7 +1022,7 @@ internal class JobTrackerTest {
         } else {
           JobTracker.CHECK_CONNECTION_DESTINATION_EVENT
         },
-        mergeMaps<String?, Any?>(metadata, checkConnSuccessMetadata),
+        mergeMaps(metadata, checkConnSuccessMetadata),
       )
       assertCorrectMessageForSucceededState(
         if (configType ==
@@ -1047,7 +1032,7 @@ internal class JobTrackerTest {
         } else {
           JobTracker.CHECK_CONNECTION_DESTINATION_EVENT
         },
-        mergeMaps<String?, Any?>(metadata, checkConnFailureMetadata),
+        mergeMaps(metadata, checkConnFailureMetadata),
       )
       assertCorrectMessageForFailedState(
         if (configType ==
@@ -1057,20 +1042,17 @@ internal class JobTrackerTest {
         } else {
           JobTracker.CHECK_CONNECTION_DESTINATION_EVENT
         },
-        mergeMaps<String?, Any?>(metadata, failedCheckJobMetadata),
+        mergeMaps(metadata, failedCheckJobMetadata),
       )
     } else {
-      verifyNoInteractions(trackingClient)
+      verify(exactly = 0) { trackingClient.track(any(), any(), any(), any()) }
     }
   }
 
   private fun assertDiscoverCorrectMessageForEachState(
     jobStateConsumer: BiConsumer<JobTracker.JobState?, ConnectorJobOutput?>,
-    metadata: MutableMap<String?, Any?>,
-    workspaceSet: Boolean,
+    metadata: Map<String, Any?>,
   ) {
-    reset(trackingClient)
-
     // Output does not exist when job has started.
     jobStateConsumer.accept(JobTracker.JobState.STARTED, null)
 
@@ -1083,15 +1065,22 @@ internal class JobTrackerTest {
     failedDiscoverOutput.failureReason = this.systemFailureReasonMock
     jobStateConsumer.accept(JobTracker.JobState.FAILED, failedDiscoverOutput)
 
-    val failedDiscoverMetadata: MutableMap<String?, Any?> = mutableMapOf("failure_reason" to systemFailureJson().toString())
+    val failedDiscoverMetadata: Map<String, Any?> =
+      mapOf(
+        "failure_reason" to systemFailureJson().toString(),
+        ATTEMPT_COMPLETION_STATUS_KEY to JobTracker.JobState.FAILED,
+        ATTEMPT_STAGE_KEY to "ENDED",
+      )
 
-    if (workspaceSet) {
-      assertCorrectMessageForStartedState(JobTracker.DISCOVER_EVENT, metadata)
-      assertCorrectMessageForSucceededState(JobTracker.DISCOVER_EVENT, metadata)
-      assertCorrectMessageForFailedState(JobTracker.DISCOVER_EVENT, mergeMaps<String?, Any?>(metadata, failedDiscoverMetadata))
-    } else {
-      verifyNoInteractions(trackingClient)
-    }
+    assertCorrectMessageForStartedState(JobTracker.DISCOVER_EVENT, mergeMaps(metadata, mapOf(ATTEMPT_STAGE_KEY to JobTracker.JobState.STARTED.name)))
+    assertCorrectMessageForSucceededState(
+      JobTracker.DISCOVER_EVENT,
+      mergeMaps(
+        metadata,
+        mapOf(ATTEMPT_COMPLETION_STATUS_KEY to JobTracker.JobState.SUCCEEDED, ATTEMPT_STAGE_KEY to "ENDED"),
+      ),
+    )
+    assertCorrectMessageForFailedState(JobTracker.DISCOVER_EVENT, mergeMaps(metadata, failedDiscoverMetadata))
   }
 
   /**
@@ -1103,59 +1092,66 @@ internal class JobTrackerTest {
    */
   private fun assertCorrectMessageForEachState(
     jobStateConsumer: Consumer<JobTracker.JobState?>,
-    expectedMetadata: MutableMap<String?, Any?>,
+    expectedMetadata: Map<String, Any?>,
   ) {
     jobStateConsumer.accept(JobTracker.JobState.STARTED)
-    assertCorrectMessageForStartedState(JobTracker.SYNC_EVENT, expectedMetadata)
+    assertCorrectMessageForStartedState(
+      JobTracker.SYNC_EVENT,
+      mergeMaps(expectedMetadata, mapOf(ATTEMPT_STAGE_KEY to JobTracker.JobState.STARTED.name)),
+    )
     jobStateConsumer.accept(JobTracker.JobState.SUCCEEDED)
-    assertCorrectMessageForSucceededState(JobTracker.SYNC_EVENT, expectedMetadata)
+    assertCorrectMessageForSucceededState(
+      JobTracker.SYNC_EVENT,
+      mergeMaps(
+        expectedMetadata,
+        mapOf(ATTEMPT_COMPLETION_STATUS_KEY to JobTracker.JobState.SUCCEEDED),
+      ),
+    )
     jobStateConsumer.accept(JobTracker.JobState.FAILED)
-    assertCorrectMessageForFailedState(JobTracker.SYNC_EVENT, expectedMetadata)
+    assertCorrectMessageForFailedState(
+      JobTracker.SYNC_EVENT,
+      mergeMaps(
+        expectedMetadata,
+        mapOf(ATTEMPT_COMPLETION_STATUS_KEY to JobTracker.JobState.FAILED),
+      ),
+    )
   }
 
   private fun assertCorrectMessageForStartedState(
-    action: String?,
-    metadata: MutableMap<String?, Any?>,
+    action: String,
+    metadata: Map<String, Any?>,
   ) {
-    verify(trackingClient)
-      .track(
-        WORKSPACE_ID,
-        ScopeType.WORKSPACE,
-        action,
-        mergeMaps(metadata, STARTED_STATE_METADATA, mockWorkspaceInfo())
-          .mapKeys {
-            it.key!!
-          }.mapValues { it.value },
-      )
+    verify(atLeast = 1) {
+      trackingClient.track(any(), any(), eq(action), match { map -> map == metadata })
+    }
   }
 
   private fun assertCorrectMessageForSucceededState(
-    action: String?,
-    metadata: MutableMap<String?, Any?>,
+    action: String,
+    metadata: Map<String, Any?>,
   ) {
-    verify(trackingClient, atLeastOnce())
-      .track(eq(WORKSPACE_ID), eq(ScopeType.WORKSPACE), eq(action), any())
+    verify(atLeast = 1) {
+      trackingClient.track(any(), any(), eq(action), match { map -> map == metadata })
+    }
   }
 
   private fun assertCorrectMessageForFailedState(
-    action: String?,
-    metadata: MutableMap<String?, Any?>,
+    action: String,
+    metadata: Map<String, Any?>,
   ) {
-    verify(trackingClient, atLeastOnce())
-      .track(eq(WORKSPACE_ID), eq(ScopeType.WORKSPACE), eq(action), any())
+    verify(atLeast = 1) {
+      trackingClient.track(any(), any(), eq(action), match { map -> map == metadata })
+    }
   }
-
-  private fun mockWorkspaceInfo(): MutableMap<String?, Any?> =
-    mutableMapOf(
-      "workspace_id" to WORKSPACE_ID,
-      "workspace_name" to WORKSPACE_NAME,
-    )
 
   companion object {
     private val OBJECT_MAPPER = ObjectMapper()
 
+    private const val ATTEMPT_COMPLETION_STATUS_KEY = "attempt_completion_status"
     private val WORKSPACE_ID: UUID = UUID.randomUUID()
+    private const val WORKSPACE_ID_KEY = "workspace_id"
     private const val WORKSPACE_NAME = "WORKSPACE_TEST"
+    private const val WORKSPACE_NAME_KEY = "workspace_name"
     private val DATA_PLANE_GROUP_ID = UUID.randomUUID()
     private val JOB_ID: UUID = UUID.randomUUID()
     private val UUID1: UUID = UUID.randomUUID()
@@ -1183,24 +1179,13 @@ internal class JobTrackerTest {
 
     private const val SYNC_START_TIME = 1000L
     private const val SYNC_END_TIME = 10000L
-    private const val SYNC_DURATION = 9L // in sync between end and start time
+    private const val SYNC_DURATION = 9 // in sync between end and start time
     private const val SYNC_BYTES_SYNC = 42L
     private const val SYNC_RECORDS_SYNC = 4L
     private const val LONG_JOB_ID = 10L // for sync the job id is a long not a uuid.
 
-    private val STARTED_STATE_METADATA: MutableMap<String?, Any?> = mutableMapOf(ATTEMPT_STAGE_KEY to "STARTED")
-    private val SUCCEEDED_STATE_METADATA: MutableMap<String?, Any?> =
-      mutableMapOf(
-        ATTEMPT_STAGE_KEY to "ENDED",
-        "attempt_completion_status" to JobTracker.JobState.SUCCEEDED,
-      )
-    private val FAILED_STATE_METADATA: MutableMap<String?, Any?> =
-      mutableMapOf(
-        ATTEMPT_STAGE_KEY to "ENDED",
-        "attempt_completion_status" to JobTracker.JobState.FAILED,
-      )
-    private val ATTEMPT_METADATA: MutableMap<String?, Any?> =
-      mutableMapOf(
+    private val ATTEMPT_METADATA: Map<String, Any?> =
+      mapOf(
         "sync_start_time" to SYNC_START_TIME,
         "duration" to SYNC_DURATION,
         "volume_rows" to SYNC_RECORDS_SYNC,
@@ -1218,8 +1203,13 @@ internal class JobTrackerTest {
         "destination_write_start_time" to 11L,
         "destination_write_end_time" to 12L,
       )
-    private val SYNC_CONFIG_METADATA: MutableMap<String?, Any?> =
-      mutableMapOf(
+    private val SYNC_CONFIG_METADATA: Map<String, Any?> =
+      mapOf(
+        "connection_id" to CONNECTION_ID,
+        "source_id" to SOURCE_ID,
+        "destination_id" to DESTINATION_ID,
+        WORKSPACE_ID_KEY to WORKSPACE_ID,
+        WORKSPACE_NAME_KEY to WORKSPACE_NAME,
         JobTracker.CONFIG + ".source" to "{\"key\":\"set\"}",
         JobTracker.CONFIG + ".destination" to "{\"key\":false}",
         JobTracker.CATALOG + ".sync_mode.full_refresh" to JobTracker.SET,
@@ -1227,8 +1217,6 @@ internal class JobTrackerTest {
         "namespace_definition" to JobSyncConfig.NamespaceDefinitionType.SOURCE,
         "table_prefix" to false,
         "operation_count" to 0,
-        "source_id" to SOURCE_ID,
-        "destination_id" to DESTINATION_ID,
       )
     private val catalogHelpers = CatalogHelpers(FieldGenerator())
     private val CATALOG: ConfiguredAirbyteCatalog =
@@ -1292,15 +1280,9 @@ internal class JobTrackerTest {
      * @return map with contents of input maps
      </V></K> */
     @SafeVarargs
-    private fun <K, V> mergeMaps(vararg maps: MutableMap<K?, V?>?): MutableMap<K?, V?> {
-      val outputMap: MutableMap<K?, V?> = HashMap()
-
-      for (map in maps) {
-        requireNotNull(map!!)
-        outputMap.putAll(map)
+    private fun <K, V> mergeMaps(vararg maps: Map<K, V?>?): Map<K, V?> =
+      buildMap {
+        maps.filterNotNull().forEach { map -> putAll(map) }
       }
-
-      return outputMap
-    }
   }
 }

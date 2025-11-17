@@ -7,6 +7,10 @@ package io.airbyte.commons.temporal.queue
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import io.airbyte.commons.temporal.WorkflowClientWrapped
 import io.airbyte.metrics.MetricClient
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.spyk
+import io.mockk.verify
 import io.temporal.activity.ActivityOptions
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowOptions
@@ -17,11 +21,6 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.spy
-import org.mockito.Mockito.verify
 import java.time.Duration
 import java.util.concurrent.CountDownLatch
 
@@ -34,8 +33,10 @@ data class TestQueueInput(
   data class Builder(
     var input: String? = null,
   ) {
+    @Suppress("unused")
     fun input(input: String) = apply { this.input = input }
 
+    @Suppress("unused")
     fun build() = TestQueueInput(input = input!!)
   }
 }
@@ -90,7 +91,7 @@ class BasicQueueTest {
       client = testEnv.workflowClient
 
       consumer = TestConsumer()
-      activity = spy(QueueActivityImpl(consumer))
+      activity = spyk(QueueActivityImpl(consumer))
       worker.registerActivitiesImplementations(activity)
       testEnv.start()
     }
@@ -104,8 +105,8 @@ class BasicQueueTest {
 
   @Test
   fun testRoundTrip() {
-    val workflowClient = spy(WorkflowClientWrapped(client, mock(MetricClient::class.java)))
-    val optionsCaptor = ArgumentCaptor.forClass(WorkflowOptions::class.java)
+    val workflowClient = spyk(WorkflowClientWrapped(client, mockk<MetricClient>(relaxed = true)))
+    val optionsSlot = slot<WorkflowOptions>()
 
     val producer = TemporalMessageProducer<TestQueueInput>(workflowClient)
     val message = TestQueueInput("boom!")
@@ -114,8 +115,8 @@ class BasicQueueTest {
 
     // Since publishing is async, wait on the latch
     consumer.latch.await()
-    verify(activity).consume(Message(message))
-    verify(workflowClient).newWorkflowStub<QueueWorkflow<TestQueueInput>>(any(), optionsCaptor.capture())
-    assertEquals(messageId, optionsCaptor.value.workflowId)
+    verify { activity.consume(Message(message)) }
+    verify { workflowClient.newWorkflowStub<QueueWorkflow<TestQueueInput>>(any(), capture(optionsSlot)) }
+    assertEquals(messageId, optionsSlot.captured.workflowId)
   }
 }
