@@ -530,7 +530,7 @@ open class DataWorkerUsageService(
   }
 
   companion object {
-    val VALID_PLANS = setOf(EntitlementPlan.PRO.id, EntitlementPlan.FLEX.id, EntitlementPlan.SME.id)
+    val VALID_PLANS = setOf(EntitlementPlan.PRO.id, EntitlementPlan.FLEX.id, EntitlementPlan.SME.id, EntitlementPlan.PLUS.id)
     const val INCREMENT_OPERATION = "INCREMENT"
     const val DECREMENT_OPERATION = "DECREMENT"
   }

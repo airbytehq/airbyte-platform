@@ -29,6 +29,7 @@ enum class EntitlementPlan(
   // Self-serve
   STANDARD("plan-airbyte-standard", displayName = "Standard"),
   STANDARD_TRIAL("plan-airbyte-standard-trial", displayName = "Standard Trial"),
+  PLUS("plan-airbyte-plus", displayName = "Plus"),
 
   // fka TEAMS
   PRO("plan-airbyte-pro", displayName = "Pro"),

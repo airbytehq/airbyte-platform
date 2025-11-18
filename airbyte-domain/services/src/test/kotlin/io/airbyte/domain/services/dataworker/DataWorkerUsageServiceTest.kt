@@ -295,7 +295,7 @@ class DataWorkerUsageServiceTest {
   }
 
   @Test
-  fun `insertUsageForCompletedJob should not insert usage when organization plan is not pro, flex, or sme`() {
+  fun `insertUsageForCompletedJob should not insert usage when organization plan is not pro, flex, plus, or sme`() {
     val workspaceId = UUID.randomUUID()
     val organizationId = UUID.randomUUID()
     val dataplaneGroupId = UUID.randomUUID()

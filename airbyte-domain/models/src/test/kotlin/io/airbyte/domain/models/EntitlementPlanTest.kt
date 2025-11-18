@@ -18,6 +18,7 @@ internal class EntitlementPlanTest {
     assertEquals(EntitlementPlan.FLEX, EntitlementPlan.fromId("plan-airbyte-flex"))
     assertEquals(EntitlementPlan.PRO, EntitlementPlan.fromId("plan-airbyte-pro"))
     assertEquals(EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.fromId("plan-airbyte-unified-trial"))
+    assertEquals(EntitlementPlan.PLUS, EntitlementPlan.fromId("plan-airbyte-plus"))
   }
 
   @Test
