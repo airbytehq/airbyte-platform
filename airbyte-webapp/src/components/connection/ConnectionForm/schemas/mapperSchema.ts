@@ -4,6 +4,7 @@ import {
   StreamMapperType,
   HashingMapperConfigurationMethod,
   FieldRenamingMapperConfiguration,
+  FieldFilteringMapperConfiguration,
   HashingMapperConfiguration,
   RowFilteringMapperConfiguration,
   EncryptionMapperAESConfigurationMode,
@@ -46,6 +47,18 @@ export const fieldRenamingMapperConfiguration = z.object({
 const fieldRenamingMapperConfigurationSchema = z.object({
   type: z.literal(StreamMapperType["field-renaming"]),
   mapperConfiguration: fieldRenamingMapperConfiguration,
+});
+
+/**
+ * Field filtering
+ */
+export const fieldFilteringMapperConfiguration = z.object({
+  targetField: z.string().nonempty("form.empty.error"),
+} satisfies ToZodSchema<FieldFilteringMapperConfiguration>);
+
+const fieldFilteringMapperConfigurationSchema = z.object({
+  type: z.literal(StreamMapperType["field-filtering"]),
+  mapperConfiguration: fieldFilteringMapperConfiguration,
 });
 
 /**
@@ -113,6 +126,7 @@ const encryptionMapperConfigurationSchema = z.object({
 const mapperConfigurationSchema = z.discriminatedUnion("type", [
   hashingMapperConfigurationSchema,
   fieldRenamingMapperConfigurationSchema,
+  fieldFilteringMapperConfigurationSchema,
   rowFilteringMapperConfigurationSchema,
   encryptionMapperConfigurationSchema,
 ]);
