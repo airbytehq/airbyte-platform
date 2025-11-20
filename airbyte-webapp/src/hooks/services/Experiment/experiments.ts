@@ -45,7 +45,6 @@ export interface Experiments {
   "settings.downloadDiagnostics": boolean;
   "settings.showAdvancedSettings": boolean;
   "settings.ssoConfigValidation": boolean;
-  "sidebar.showOrgPickerV2": boolean;
 }
 
 export const defaultExperimentValues: Experiments = {
@@ -102,5 +101,4 @@ export const defaultExperimentValues: Experiments = {
   "settings.downloadDiagnostics": false,
   "settings.showAdvancedSettings": false,
   "settings.ssoConfigValidation": false,
-  "sidebar.showOrgPickerV2": true,
 };

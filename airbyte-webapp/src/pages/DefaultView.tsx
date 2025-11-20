@@ -14,7 +14,6 @@ export const DefaultView: React.FC = () => {
   const { data: workspacesData } = useListWorkspacesInfinite(2, "", true);
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
   const organizationId = useCurrentOrganizationId();
-  const isOrgPickerEnabled = useExperiment("sidebar.showOrgPickerV2");
   const isSurveyEnabled = useExperiment("onboarding.surveyEnabled");
   const showOrganizationUI = useFeature(FeatureItem.OrganizationUI);
   const user = useCurrentUser();
@@ -45,13 +44,8 @@ export const DefaultView: React.FC = () => {
       return `/${RoutePaths.Workspaces}/${workspaces[0].workspaceId}`;
     }
 
-    // if multiple workspaces with org picker enabled
-    if (isOrgPickerEnabled) {
-      return `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Workspaces}`;
-    }
-
-    // default: workspaces list
-    return `/${RoutePaths.Workspaces}`;
+    // if multiple workspaces, navigate to org workspaces page
+    return `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Workspaces}`;
   };
 
   return <Navigate to={getNavigationPath()} replace />;

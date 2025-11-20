@@ -15,8 +15,6 @@ import OrganizationUsagePage from "packages/cloud/views/billing/OrganizationUsag
 import { CloudSettingsPage } from "packages/cloud/views/settings/CloudSettingsPage";
 import { DbtCloudSettingsView } from "packages/cloud/views/settings/integrations/DbtCloudSettingsView";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
-import { AccountSettingsView } from "packages/cloud/views/users/AccountSettingsView";
-import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationSettingsView/ApplicationSettingsView";
 import { WorkspaceSettingsView } from "packages/cloud/views/workspaces/WorkspaceSettingsView";
 import WorkspaceUsagePage from "packages/cloud/views/workspaces/WorkspaceUsagePage";
 import { OnboardingPage } from "pages/OnboardingPage/OnboardingPage";
@@ -56,7 +54,6 @@ export const WorkspacesRoutes: React.FC = () => {
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
   const showOnboarding = useExperiment("onboarding.surveyEnabled");
-  const showOrgPicker = useExperiment("sidebar.showOrgPickerV2");
 
   useExperimentContext("workspace", workspace.workspaceId);
   useExperimentContext("organization", workspace.organizationId);
@@ -103,12 +100,6 @@ export const WorkspacesRoutes: React.FC = () => {
       <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
       {showOnboarding && <Route path={RoutePaths.Onboarding} element={<OnboardingPage />} />}
       <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />}>
-        {!showOrgPicker && (
-          <>
-            <Route path={CloudSettingsRoutePaths.Account} element={<AccountSettingsView />} />
-            <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
-          </>
-        )}
         <Route path={CloudSettingsRoutePaths.Workspace} element={<WorkspaceSettingsView />} />
         <Route path={CloudSettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
         <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />

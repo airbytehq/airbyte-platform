@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { createSearchParams, Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
+import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
 import { EnterpriseStubConnectorPage } from "components/EnterpriseStubConnectorPage/EnterpriseStubConnectorPage";
@@ -7,11 +7,7 @@ import { EnterpriseStubConnectorPage } from "components/EnterpriseStubConnectorP
 import MainLayout from "area/layout/MainLayout";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import {
-  useGetInstanceConfiguration,
-  useInvalidateAllWorkspaceScopeOnChange,
-  useListWorkspacesInfinite,
-} from "core/api";
+import { useGetInstanceConfiguration, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
@@ -19,13 +15,11 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useEnterpriseLicenseCheck } from "core/utils/useEnterpriseLicenseCheck";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useExperiment } from "hooks/services/Experiment";
 import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { useQuery } from "hooks/useQuery";
 import { LoginPage } from "pages/login/LoginPage";
-import MainView from "views/layout/MainView";
 
 import { EmbeddedSourceCreatePage } from "./embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { OnboardingPage } from "./OnboardingPage/OnboardingPage";
@@ -152,28 +146,6 @@ const PreferencesRoutes = () => (
   </Routes>
 );
 
-export const AutoSelectFirstWorkspace: React.FC = () => {
-  const location = useLocation();
-  const { data: workspacesData } = useListWorkspacesInfinite(2, "", true);
-  const workspaces = workspacesData?.pages?.[0]?.data.workspaces ?? [];
-
-  const currentWorkspace = workspaces.length ? workspaces[0] : undefined;
-
-  const [searchParams] = useSearchParams();
-
-  return (
-    <Navigate
-      to={{
-        pathname: currentWorkspace
-          ? `/${RoutePaths.Workspaces}/${currentWorkspace.workspaceId}${location.pathname}`
-          : `/${RoutePaths.Workspaces}`,
-        search: `?${searchParams.toString()}`,
-      }}
-      replace
-    />
-  );
-};
-
 export const Routing: React.FC = () => {
   const { pathname: originalPathname, search, hash } = useLocation();
   const { inited, loggedOut } = useAuthService();
@@ -223,7 +195,6 @@ const AuthenticatedRoutes = () => {
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
   const { initialSetupComplete } = useGetInstanceConfiguration();
   useEnterpriseLicenseCheck();
-  const isOrgPickerEnabled = useExperiment("sidebar.showOrgPickerV2");
   const showOrganizationUI = useFeature(FeatureItem.OrganizationUI);
 
   if (loginRedirect) {
@@ -235,7 +206,7 @@ const AuthenticatedRoutes = () => {
       <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
       {!initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
-      ) : isOrgPickerEnabled ? (
+      ) : (
         <Route element={<MainLayout />}>
           {showOrganizationUI && (
             <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
@@ -243,14 +214,6 @@ const AuthenticatedRoutes = () => {
           <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
           <Route path="*" element={<DefaultView />} />
         </Route>
-      ) : (
-        <>
-          <Route path="/" element={<DefaultView />} />
-          <Route element={<MainView />}>
-            <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
-          </Route>
-          <Route path="*" element={<AutoSelectFirstWorkspace />} />
-        </>
       )}
     </Routes>
   );

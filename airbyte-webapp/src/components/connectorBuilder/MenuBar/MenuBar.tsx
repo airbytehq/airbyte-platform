@@ -11,7 +11,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
-import { CloudHelpDropdown } from "packages/cloud/views/layout/CloudMainView/CloudHelpDropdown";
+import { CloudHelpDropdown } from "packages/cloud/components/CloudHelpDropdown";
 import { RoutePaths } from "pages/routePaths";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { HelpDropdown } from "views/layout/SideBar/components/HelpDropdown";

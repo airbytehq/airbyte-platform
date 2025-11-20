@@ -25,7 +25,7 @@ import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
-import { CloudHelpDropdown } from "packages/cloud/views/layout/CloudMainView/CloudHelpDropdown";
+import { CloudHelpDropdown } from "packages/cloud/components/CloudHelpDropdown";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
 import { AirbyteHomeLink } from "views/layout/SideBar/AirbyteHomeLink";

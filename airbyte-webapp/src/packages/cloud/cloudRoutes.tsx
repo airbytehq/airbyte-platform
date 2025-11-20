@@ -23,7 +23,6 @@ import {
 import { EmbeddedSourceCreatePage } from "pages/embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { OrganizationRoutes } from "pages/organization/OrganizationRoutes";
 import { RoutePaths } from "pages/routePaths";
-import WorkspacesPage from "pages/workspaces";
 
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
@@ -36,7 +35,6 @@ import { WorkspacesRoutes } from "./views/routes/WorkspacesRoutes";
 // Lazy loaded components
 const LoginPage = React.lazy(() => import("./views/auth/LoginPage"));
 const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
-const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
 const AuthLayout = React.lazy(() => import("packages/cloud/views/auth"));
 const DefaultView = React.lazy(() => import("pages/DefaultView"));
 const EmbeddedLoginPage = React.lazy(() => import("./views/auth/LoginPage/EmbeddedLoginPage"));
@@ -44,7 +42,6 @@ const EmbeddedSignupPage = React.lazy(() => import("./views/auth/SignupPage/Embe
 
 const CloudMainViewRoutes = () => {
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
-  const isOrgPickerEnabled = useExperiment("sidebar.showOrgPickerV2");
   const isEmbeddedOnboardingEnabled = useExperiment("embedded.operatorOnboarding");
 
   if (loginRedirect) {
@@ -69,19 +66,10 @@ const CloudMainViewRoutes = () => {
         </>
       )}
 
-      {isOrgPickerEnabled ? (
-        <Route element={<MainLayout />}>
-          <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
-          <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
-        </Route>
-      ) : (
-        <>
-          <Route path={RoutePaths.Workspaces} element={<WorkspacesPage />} />
-          <Route element={<CloudMainView />}>
-            <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
-          </Route>
-        </>
-      )}
+      <Route element={<MainLayout />}>
+        <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
+        <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
+      </Route>
       <Route path="*" element={<DefaultView />} />
     </Routes>
   );
