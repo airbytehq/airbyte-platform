@@ -29,22 +29,8 @@ class LocalContainerAirbyteSource(
   private val messageMetricsTracker: MessageMetricsTracker,
   private val containerIOHandle: ContainerIOHandle,
   private val containerLogMdcBuilder: MdcScope.Builder,
-  private val exitCodeWaitSeconds: Long = EXIT_CODE_WAIT_SECONDS,
 ) : AirbyteSource {
-  companion object {
-    // Fallback exit code when the source container is killed (e.g., OOM) and no exit code file is written
-    const val FALLBACK_EXIT_CODE = 1
-
-    // Time to wait for exit code file after pipe closes (to handle race condition between pipe close and exit code write)
-    const val EXIT_CODE_WAIT_SECONDS = 10L
-  }
-
   private lateinit var messageIterator: Iterator<AirbyteMessage>
-
-  // Tracks when the output stream iterator is exhausted (pipes closed).
-  // This is important for detecting OOM kills where the container dies without writing an exit code file.
-  @Volatile
-  private var outputStreamExhausted = false
 
   override fun close() {
     messageMetricsTracker.flushSourceReadCountMetric()
@@ -86,55 +72,14 @@ class LocalContainerAirbyteSource(
   }
 
   override val isFinished: Boolean
-    /**
+    /*
      * As this check is done on every message read, it is important for this operation to be efficient.
-     * Short circuit early to avoid checking the underlying process. Note: hasNext is blocking.
-     *
-     * We consider the source finished in one case:
-     * 1. The iterator has no more messages
+     * Short circuit early to avoid checking the underlying process. note: hasNext is blocking.
      */
-    get() {
-      if (outputStreamExhausted) {
-        return true
-      }
-      val hasNext = messageIterator.hasNext()
-      if (!hasNext) {
-        outputStreamExhausted = true
-        return true
-      }
-      return false
-    }
+    get() = !messageIterator.hasNext() && containerIOHandle.exitCodeExists()
 
   override val exitValue: Int
-    /**
-     * Returns the exit code of the source container.
-     * If no exit code file exists but the output stream was exhausted (pipes closed),
-     * this waits briefly for the exit code file to appear (to handle the race condition
-     * between pipe close and exit code file write), then returns a fallback exit code
-     * if the file still doesn't exist.
-     */
-    get() {
-      if (containerIOHandle.exitCodeExists()) {
-        return containerIOHandle.getExitCode()
-      }
-      if (outputStreamExhausted) {
-        // Wait for exit code file - there's a race condition where the pipe closes
-        // before the shell script writes the exit code file
-        try {
-          Thread.sleep(exitCodeWaitSeconds * 1000)
-        } catch (e: InterruptedException) {
-          Thread.currentThread().interrupt()
-        }
-        if (containerIOHandle.exitCodeExists()) {
-          return containerIOHandle.getExitCode()
-        }
-        logger.error {
-          "No exit code file found after waiting ${exitCodeWaitSeconds}s. Container may have been killed (OOM or other signal). Returning fallback exit code $FALLBACK_EXIT_CODE."
-        }
-        return FALLBACK_EXIT_CODE
-      }
-      return containerIOHandle.getExitCode() // This will throw IllegalStateException as expected
-    }
+    get() = containerIOHandle.getExitCode()
 
   override fun attemptRead(): Optional<AirbyteMessage> {
     val m = if (messageIterator.hasNext()) messageIterator.next() else null

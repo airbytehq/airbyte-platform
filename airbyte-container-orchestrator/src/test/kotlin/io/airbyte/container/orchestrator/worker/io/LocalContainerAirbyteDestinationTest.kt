@@ -213,8 +213,7 @@ internal class LocalContainerAirbyteDestinationTest {
   }
 
   @Test
-  internal fun testDestinationIsFinishedWithExitCode() {
-    // Test normal finish with exit code file present
+  internal fun testDestinationIsFinished() {
     val iterator =
       mockk<Iterator<AirbyteMessage>> {
         every { hasNext() } returns false
@@ -236,31 +235,15 @@ internal class LocalContainerAirbyteDestinationTest {
       jobRoot = jobRoot,
     )
     assertEquals(true, destination.isFinished)
-  }
 
-  @Test
-  internal fun testDestinationIsNotFinishedWhileHasMessages() {
-    // Test that destination is not finished while there are still messages
-    val iterator =
-      mockk<Iterator<AirbyteMessage>> {
-        every { hasNext() } returns true
-      }
-    every { stream.iterator() } returns iterator
+    every { iterator.hasNext() } returns true
+    assertEquals(false, destination.isFinished)
 
-    val destination =
-      LocalContainerAirbyteDestination(
-        streamFactory = streamFactory,
-        messageMetricsTracker = messageMetricsTracker,
-        messageWriterFactory = messageWriterFactory,
-        containerIOHandle = containerIOHandle,
-        containerLogMdcBuilder = containerLogMdcBuilder,
-        destinationTimeoutMonitor = destinationTimeoutMonitor,
-      )
+    every { iterator.hasNext() } returns false
+    exitValueFile.delete()
+    assertEquals(false, destination.isFinished)
 
-    destination.start(
-      destinationConfig = workerDestinationConfig,
-      jobRoot = jobRoot,
-    )
+    every { iterator.hasNext() } returns true
     assertEquals(false, destination.isFinished)
   }
 
@@ -321,7 +304,6 @@ internal class LocalContainerAirbyteDestinationTest {
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
         every { terminate() } returns true
-        every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
       }
 
@@ -351,7 +333,6 @@ internal class LocalContainerAirbyteDestinationTest {
       mockk<ContainerIOHandle> {
         every { getErrInputStream() } returns mockk<InputStream>()
         every { terminate() } returns true
-        every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
         every { getInputStream() } returns mockk<InputStream>()
         every { getOutputStream() } returns mockk<OutputStream>()
@@ -390,7 +371,6 @@ internal class LocalContainerAirbyteDestinationTest {
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
         every { terminate() } returns true
-        every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
       }
     every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
@@ -419,7 +399,6 @@ internal class LocalContainerAirbyteDestinationTest {
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
         every { terminate() } returns false
-        every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
       }
     every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
@@ -448,7 +427,6 @@ internal class LocalContainerAirbyteDestinationTest {
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
         every { terminate() } returns false
-        every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
       }
     every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
