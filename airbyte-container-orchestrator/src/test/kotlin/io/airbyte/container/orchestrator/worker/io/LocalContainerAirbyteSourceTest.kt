@@ -9,6 +9,7 @@ import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerSourceConfig
 import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.EXIT_CODE_CHECK_EXISTS_FAILURE
+import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteSource.Companion.FALLBACK_EXIT_CODE
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
@@ -105,7 +106,8 @@ internal class LocalContainerAirbyteSourceTest {
   }
 
   @Test
-  internal fun testSourceIsFinished() {
+  internal fun testSourceIsFinishedWithExitCode() {
+    // Test normal finish with exit code file present
     val iterator =
       mockk<Iterator<AirbyteMessage>> {
         every { hasNext() } returns false
@@ -123,15 +125,27 @@ internal class LocalContainerAirbyteSourceTest {
 
     source.start(sourceConfig = workerSourceConfig, jobRoot = jobRoot, connectionId = connectionId)
     assertEquals(true, source.isFinished)
+  }
 
-    every { iterator.hasNext() } returns true
-    assertEquals(false, source.isFinished)
+  @Test
+  internal fun testSourceIsNotFinishedWhileHasMessages() {
+    // Test that source is not finished while there are still messages
+    val iterator =
+      mockk<Iterator<AirbyteMessage>> {
+        every { hasNext() } returns true
+      }
+    every { stream.iterator() } returns iterator
 
-    every { iterator.hasNext() } returns false
-    exitValueFile.delete()
-    assertEquals(false, source.isFinished)
+    val source =
+      LocalContainerAirbyteSource(
+        heartbeatMonitor = heartbeatMonitor,
+        messageMetricsTracker = messageMetricsTracker,
+        streamFactory = streamFactory,
+        containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+      )
 
-    every { iterator.hasNext() } returns true
+    source.start(sourceConfig = workerSourceConfig, jobRoot = jobRoot, connectionId = connectionId)
     assertEquals(false, source.isFinished)
   }
 
@@ -187,6 +201,7 @@ internal class LocalContainerAirbyteSourceTest {
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
         every { terminate() } returns true
+        every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
       }
     every { messageMetricsTracker.trackConnectionId(connectionId) } returns Unit
@@ -211,6 +226,7 @@ internal class LocalContainerAirbyteSourceTest {
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
         every { terminate() } returns true
+        every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
       }
     every { messageMetricsTracker.trackConnectionId(connectionId) } returns Unit
@@ -278,5 +294,108 @@ internal class LocalContainerAirbyteSourceTest {
     val error = assertThrows(WorkerException::class.java, source::cancel)
     assertEquals("Source has not terminated.  This warning is normal if the job was cancelled.", error.message)
     verify(exactly = 1) { mockedContainerIOHandle.terminate() }
+  }
+
+  @Test
+  internal fun testSourceIsFinishedWhenPipeClosedWithoutExitCodeFile() {
+    // Simulate OOM scenario: iterator returns no more messages but no exit code file exists
+    val iterator =
+      mockk<Iterator<AirbyteMessage>> {
+        every { hasNext() } returns false
+      }
+    every { stream.iterator() } returns iterator
+
+    // Delete exit code file to simulate OOM where exit code is never written
+    exitValueFile.delete()
+
+    val source =
+      LocalContainerAirbyteSource(
+        heartbeatMonitor = heartbeatMonitor,
+        messageMetricsTracker = messageMetricsTracker,
+        streamFactory = streamFactory,
+        containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        // Use short timeout for test to avoid waiting 30 seconds
+        exitCodeWaitSeconds = 1L,
+      )
+
+    source.start(sourceConfig = workerSourceConfig, jobRoot = jobRoot, connectionId = connectionId)
+
+    // isFinished should return true even without exit code file when pipe is closed
+    assertEquals(true, source.isFinished)
+
+    // exitValue should return the fallback exit code after waiting for the timeout
+    assertEquals(FALLBACK_EXIT_CODE, source.exitValue)
+  }
+
+  @Test
+  internal fun testSourceExitValueWithExitCodeFileWhenPipeClosed() {
+    // When exit code file exists, it should be used even if pipe is closed
+    val expectedExitCode = 137 // OOM kill signal
+
+    val iterator =
+      mockk<Iterator<AirbyteMessage>> {
+        every { hasNext() } returns false
+      }
+    every { stream.iterator() } returns iterator
+
+    exitValueFile.writeText(expectedExitCode.toString())
+
+    val source =
+      LocalContainerAirbyteSource(
+        heartbeatMonitor = heartbeatMonitor,
+        messageMetricsTracker = messageMetricsTracker,
+        streamFactory = streamFactory,
+        containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+      )
+
+    source.start(sourceConfig = workerSourceConfig, jobRoot = jobRoot, connectionId = connectionId)
+
+    // isFinished should return true
+    assertEquals(true, source.isFinished)
+
+    // exitValue should return the actual exit code from file
+    assertEquals(expectedExitCode, source.exitValue)
+  }
+
+  @Test
+  internal fun testSourceExitValueWaitsForExitCodeFile() {
+    // Test that exitValue waits for exit code file to appear (race condition handling)
+    val expectedExitCode = 0
+
+    val iterator =
+      mockk<Iterator<AirbyteMessage>> {
+        every { hasNext() } returns false
+      }
+    every { stream.iterator() } returns iterator
+
+    // Delete exit code file initially
+    exitValueFile.delete()
+
+    val source =
+      LocalContainerAirbyteSource(
+        heartbeatMonitor = heartbeatMonitor,
+        messageMetricsTracker = messageMetricsTracker,
+        streamFactory = streamFactory,
+        containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        // Use enough time for our delayed write
+        exitCodeWaitSeconds = 5L,
+      )
+
+    source.start(sourceConfig = workerSourceConfig, jobRoot = jobRoot, connectionId = connectionId)
+
+    // isFinished should return true (pipe is closed)
+    assertEquals(true, source.isFinished)
+
+    // Simulate exit code file being written after a short delay (race condition)
+    Thread {
+      Thread.sleep(500)
+      exitValueFile.writeText(expectedExitCode.toString())
+    }.start()
+
+    // exitValue should wait and find the exit code file
+    assertEquals(expectedExitCode, source.exitValue)
   }
 }
