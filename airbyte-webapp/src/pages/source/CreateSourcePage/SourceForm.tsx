@@ -10,9 +10,8 @@ import { ConnectionConfiguration } from "area/connector/types";
 import { useGetSourceDefinitionSpecificationAsync } from "core/api";
 import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
-import { useExperiment } from "hooks/services/Experiment";
 import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
-import { ConnectorCard, NextConnectorCard } from "views/Connector/ConnectorCard";
+import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
 export interface SourceFormValues {
@@ -38,8 +37,6 @@ const hasSourceDefinitionId = (state: unknown): state is { sourceDefinitionId: s
 
 export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefinitions, selectedSourceDefinitionId }) => {
   const location = useLocation();
-  const useNextConnectorCard = useExperiment("connector.updatedSetupUx");
-  const CardComponent = useNextConnectorCard ? NextConnectorCard : ConnectorCard;
 
   const sourceDefinitionId =
     selectedSourceDefinitionId ?? (hasSourceDefinitionId(location.state) ? location.state.sourceDefinitionId : null);
@@ -73,7 +70,7 @@ export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefiniti
   };
 
   return (
-    <CardComponent
+    <ConnectorCard
       formType="source"
       description={<FormattedMessage id="sources.description" />}
       headerBlock={<HeaderBlock />}
