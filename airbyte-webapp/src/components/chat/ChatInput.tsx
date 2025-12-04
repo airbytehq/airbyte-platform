@@ -16,6 +16,7 @@ interface ChatInputProps {
   secretFieldPath?: string[];
   secretFieldName?: string;
   isMultiline?: boolean;
+  isVisible?: boolean;
   onDismissSecret?: () => void;
 }
 
@@ -28,10 +29,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   secretFieldPath = [],
   secretFieldName,
   isMultiline = false,
+  isVisible = true,
   onDismissSecret,
 }) => {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { formatMessage } = useIntl();
   const [isSecretVisible, toggleSecretVisibility] = useToggle(false);
 
@@ -66,6 +69,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   useEffect(() => {
     resizeTextarea();
   }, [message]);
+
+  // Auto-focus input when streaming stops or when component becomes visible
+  useEffect(() => {
+    if (!isStreaming && isVisible) {
+      if (isSecretMode && !isMultiline) {
+        inputRef.current?.focus();
+      } else if (!isSecretMode || isSecretVisible) {
+        textareaRef.current?.focus();
+      }
+    }
+  }, [isStreaming, isSecretMode, isMultiline, isSecretVisible, isVisible]);
 
   const placeholder = isSecretMode
     ? formatMessage(
@@ -108,6 +122,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             </button>
           ) : isSecretMode && !isMultiline ? (
             <input
+              ref={inputRef}
               type={isSecretVisible ? "text" : "password"}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -121,6 +136,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               data-bwignore="true"
               data-form-type="other"
               name="secret-input-field"
+              data-testid="chat-input"
             />
           ) : (
             <textarea
@@ -138,6 +154,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               data-bwignore={isSecretMode ? "true" : undefined}
               data-form-type={isSecretMode ? "other" : undefined}
               name={isSecretMode ? "secret-input-field" : undefined}
+              data-testid="chat-input"
             />
           )}
           {isSecretMode && !isMultiline && (

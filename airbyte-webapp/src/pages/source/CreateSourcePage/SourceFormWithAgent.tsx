@@ -119,6 +119,7 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
           secretFieldPath={secretInputState.secretFieldPath}
           secretFieldName={secretInputState.secretFieldName}
           isMultiline={secretInputState.isMultiline}
+          isVisible={isAgentView}
           onDismissSecret={secretInputState.dismissSecret}
         />
       }
