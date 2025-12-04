@@ -34,7 +34,9 @@ export const DataWorkerUsage: React.FC = () => {
   const { formatMessage } = useIntl();
 
   const regionOptions = useMemo(() => {
-    return [...regions.map((region) => ({ label: region.name, value: region.dataplane_group_id }))];
+    return regions
+      .map((region) => ({ label: region.name, value: region.dataplane_group_id }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [regions]);
 
   return (
