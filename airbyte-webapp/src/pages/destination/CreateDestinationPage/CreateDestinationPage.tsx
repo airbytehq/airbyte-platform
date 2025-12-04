@@ -13,7 +13,11 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { ViewToggleButton } from "components/ui/ViewToggleButton";
 
 import { ConnectionConfiguration } from "area/connector/types";
-import { useCreateDestination, useDestinationDefinitionList } from "core/api";
+import {
+  useCreateDestination,
+  useDestinationDefinitionList,
+  useGetDestinationDefinitionSpecificationAsync,
+} from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { clearConnectorChatBuilderStorage, CONNECTOR_CHAT_ACTIONS } from "core/utils/connectorChatBuilderStorage";
 import { useExperiment } from "hooks/services/Experiment";
@@ -36,7 +40,15 @@ export const CreateDestinationPage: React.FC = () => {
   const { destinationDefinitions } = useDestinationDefinitionList();
   const { mutateAsync: createDestination } = useCreateDestination();
   const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
+
   const [isAgentView, setIsAgentView] = useState(true);
+
+  // Fetch spec to check for OAuth - disable agent for OAuth connectors until we support it
+  const { data: destinationDefinitionSpecification, isLoading: isLoadingSpec } =
+    useGetDestinationDefinitionSpecificationAsync(destinationDefinitionId || null);
+  const hasOAuth = Boolean(destinationDefinitionSpecification?.advancedAuth);
+  const showAgentToggle = isAgentAssistedSetupEnabled && !hasOAuth && !isLoadingSpec;
+  const shouldShowAgentView = showAgentToggle && isAgentView;
 
   const onSubmitDestinationForm = async (values: {
     name: string;
@@ -85,18 +97,20 @@ export const CreateDestinationPage: React.FC = () => {
         <div className={styles.pageContainer}>
           <div className={styles.headerWrapper}>
             <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-            <div className={styles.toggleWrapper}>
-              <ViewToggleButton
-                leftLabel={formatMessage({ id: "connector.create.toggle.agent", defaultMessage: "Agent" })}
-                rightLabel={formatMessage({ id: "connector.create.toggle.form", defaultMessage: "Form" })}
-                isRightSelected={!isAgentView}
-                onClick={() => setIsAgentView(!isAgentView)}
-              />
-            </div>
+            {showAgentToggle && (
+              <div className={styles.toggleWrapper}>
+                <ViewToggleButton
+                  leftLabel={formatMessage({ id: "connector.create.toggle.agent", defaultMessage: "Agent" })}
+                  rightLabel={formatMessage({ id: "connector.create.toggle.form", defaultMessage: "Form" })}
+                  isRightSelected={!isAgentView}
+                  onClick={() => setIsAgentView(!isAgentView)}
+                />
+              </div>
+            )}
           </div>
           <div className={styles.contentWrapper}>
             <DestinationFormWithAgent
-              isAgentView={isAgentView}
+              isAgentView={shouldShowAgentView}
               onSubmit={onSubmitDestinationForm}
               destinationDefinitions={destinationDefinitions}
               selectedDestinationDefinitionId={destinationDefinitionId}

@@ -12,7 +12,7 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { ViewToggleButton } from "components/ui/ViewToggleButton";
 
 import { ConnectionConfiguration } from "area/connector/types";
-import { useCreateSource, useSourceDefinitionList } from "core/api";
+import { useCreateSource, useSourceDefinitionList, useGetSourceDefinitionSpecificationAsync } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { clearConnectorChatBuilderStorage, CONNECTOR_CHAT_ACTIONS } from "core/utils/connectorChatBuilderStorage";
 import { useExperiment } from "hooks/services/Experiment";
@@ -31,6 +31,16 @@ export const CreateSourcePage: React.FC = () => {
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
   const [isAgentView, setIsAgentView] = useState(true);
+
+  // TODO: Support Oauth flow in agent view. Currently, the agent is not able to handle Oauth flow,
+  // so we are checking and disabling it for Oauth connectors as a temporary workaround.
+  // https://github.com/airbytehq/hydra-issues-internal/issues/28
+  const { data: sourceDefinitionSpecification, isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(
+    sourceDefinitionId || null
+  );
+  const hasOAuth = Boolean(sourceDefinitionSpecification?.advancedAuth);
+  const showAgentToggle = isAgentAssistedSetupEnabled && !hasOAuth && !isLoadingSpec;
+  const shouldShowAgentView = showAgentToggle && isAgentView;
 
   useTrackPage(PageTrackingCodes.SOURCE_NEW);
   const navigate = useNavigate();
@@ -85,18 +95,20 @@ export const CreateSourcePage: React.FC = () => {
         <div className={styles.pageContainer}>
           <div className={styles.headerWrapper}>
             <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData} />
-            <div className={styles.toggleWrapper}>
-              <ViewToggleButton
-                leftLabel={formatMessage({ id: "connector.create.toggle.agent", defaultMessage: "Agent" })}
-                rightLabel={formatMessage({ id: "connector.create.toggle.form", defaultMessage: "Form" })}
-                isRightSelected={!isAgentView}
-                onClick={() => setIsAgentView(!isAgentView)}
-              />
-            </div>
+            {showAgentToggle && (
+              <div className={styles.toggleWrapper}>
+                <ViewToggleButton
+                  leftLabel={formatMessage({ id: "connector.create.toggle.agent", defaultMessage: "Agent" })}
+                  rightLabel={formatMessage({ id: "connector.create.toggle.form", defaultMessage: "Form" })}
+                  isRightSelected={!isAgentView}
+                  onClick={() => setIsAgentView(!isAgentView)}
+                />
+              </div>
+            )}
           </div>
           <div className={styles.contentWrapper}>
             <SourceFormWithAgent
-              isAgentView={isAgentView}
+              isAgentView={shouldShowAgentView}
               onSubmit={onSubmitSourceStep}
               sourceDefinitions={sourceDefinitions}
               selectedSourceDefinitionId={sourceDefinitionId}
