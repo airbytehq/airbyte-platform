@@ -1,5 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "scss/mixins";
 
 .messageContent {
   max-width: 90%;
@@ -17,6 +18,7 @@
     .messageContent {
       background-color: colors.$foreground;
       color: colors.$dark-blue-900;
+      border: variables.$border-thin solid colors.$dark-blue-900;
       border-radius: variables.$border-radius-lg variables.$border-radius-sm variables.$border-radius-lg
         variables.$border-radius-lg;
     }
@@ -26,10 +28,12 @@
     justify-content: flex-start;
 
     .messageContent {
-      background-color: colors.$blue-40;
+      background-color: colors.$white;
       color: colors.$dark-blue-900;
       border-radius: variables.$border-radius-sm variables.$border-radius-lg variables.$border-radius-lg
         variables.$border-radius-lg;
+
+      @include mixins.gradient-border(variables.$border-thin, colors.$gradient-primary);
     }
   }
 

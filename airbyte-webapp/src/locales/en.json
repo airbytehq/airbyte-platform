@@ -118,6 +118,8 @@
   "chat.toolCall.checkConfig.configurationSummary": "Configuration summary",
   "chat.toolCall.checkConfig.testResult": "Test Result",
   "chat.input.stop": "stop",
+  "connectorSetup.agent.title": "Connector Setup Assistant",
+  "connectorSetup.agent.description": "Our AI assistant will help configure your connector. Select 'Form' in the top-right to switch back to manual configuration.",
   "form.error": "Error: {message}",
   "form.error.pkAndCursor.required": "Primary key and cursor are missing",
   "form.error.pk.missing": "Primary key missing",

@@ -1,34 +1,27 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "scss/mixins";
 
 .container {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 10%);
+  background: colors.$grey-50;
 }
 
 .header {
   padding: variables.$spacing-xl;
   background-color: colors.$foreground;
-  border-bottom: variables.$border-thin solid colors.$grey-200;
-  text-align: center;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
 }
 
-.title {
-  margin: 0 0 variables.$spacing-sm;
-  color: colors.$dark-blue-900;
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.subtitle {
+.headerTitle {
   margin: 0;
-  color: colors.$grey-600;
-  font-size: 16px;
-  line-height: 1.4;
+}
+
+.headerDescription {
+  margin-top: variables.$spacing-sm;
 }
 
 .chatContainer {
