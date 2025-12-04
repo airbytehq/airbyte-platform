@@ -13,11 +13,12 @@ import {
   getWorkspace,
   listAccessInfoByWorkspaceId,
   listWorkspacesByUser,
+  listWorkspacesInOrganization,
   updateWorkspace,
   updateWorkspaceName,
   webBackendGetWorkspaceState,
 } from "../generated/AirbyteClient";
-import { SCOPE_USER, SCOPE_WORKSPACE } from "../scopes";
+import { SCOPE_USER, SCOPE_WORKSPACE, SCOPE_ORGANIZATION } from "../scopes";
 import {
   ConsumptionTimeWindow,
   WorkspaceCreate,
@@ -89,7 +90,7 @@ export const useDeleteWorkspace = () => {
   const queryClient = useQueryClient();
 
   return useMutation(async (workspaceId: string) => deleteWorkspace({ workspaceId }, requestOptions), {
-    onSuccess: (_, workspaceId) => {
+    onSuccess: async (_, workspaceId) => {
       queryClient.setQueryData(workspaceKeys.detail(workspaceId), null);
       queryClient.resetQueries(organizationKeys.firstWorkspace(organizationId));
       queryClient.resetQueries(organizationKeys.workspacesList(organizationId));
@@ -205,6 +206,52 @@ export const useWorkspaceCount = () => {
         return { count: "multiple" };
       })
   );
+};
+
+/**
+ * Hook to check if a workspace is the last active workspace in an organization.
+ * This is useful for billing-related operations like subscription cancellation.
+ */
+export const useIsLastWorkspaceInOrganization = (
+  organizationId: string | undefined,
+  workspaceId: string | undefined
+): { isLastWorkspace: boolean; isLoading: boolean; error: Error | null } => {
+  const requestOptions = useRequestOptions();
+
+  // We'll use a query to get all workspaces in the organization and check if the given workspace is the only one
+  const queryKey = [SCOPE_ORGANIZATION, "checkLastWorkspace", organizationId, workspaceId];
+
+  const { data, isLoading, error } = useQuery<boolean, Error>(
+    queryKey,
+    async () => {
+      if (!organizationId || !workspaceId) {
+        return false;
+      }
+
+      const { workspaces } = await listWorkspacesInOrganization(
+        {
+          organizationId,
+          pagination: { pageSize: 100, rowOffset: 0 },
+        },
+        requestOptions
+      );
+
+      // Count active workspaces (those that are not the one being deleted)
+      const activeWorkspaces = workspaces.filter((ws) => ws.workspaceId !== workspaceId);
+
+      return activeWorkspaces.length === 0;
+    },
+    {
+      enabled: Boolean(organizationId && workspaceId),
+      staleTime: 30000, // 30 seconds
+    }
+  );
+
+  return {
+    isLastWorkspace: data ?? false,
+    isLoading,
+    error: error ?? null,
+  };
 };
 
 export const useUpdateWorkspace = () => {

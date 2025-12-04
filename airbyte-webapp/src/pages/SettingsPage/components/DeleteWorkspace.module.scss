@@ -1,0 +1,8 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.warningBox {
+  padding: variables.$spacing-sm variables.$spacing-md;
+  background-color: colors.$yellow-50;
+  border-radius: variables.$border-radius-md;
+}
