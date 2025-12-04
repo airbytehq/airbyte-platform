@@ -1,16 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  TooltipProps,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, TooltipProps, XAxis, YAxis } from "recharts";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
@@ -21,7 +11,6 @@ import { useOrganizationWorkerUsage } from "core/api";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
 import { calculateGraphData } from "./calculateGraphData";
-import { GraphLegend } from "./GraphLegend";
 import { GraphTooltip } from "./GraphTooltip";
 import styles from "./UsageByWorkspaceGraph.module.scss";
 
@@ -45,8 +34,6 @@ const tooltipConfig: TooltipProps<number, string> = {
   isAnimationActive: false,
 };
 
-const LEGEND_ITEM_HEIGHT = 20; // Height of .graphLegend__item in GraphLegend.module.scss
-const LEGEND_ITEM_GAP = 5; // Matches variables.$spacing-sm
 const BASE_CHART_HEIGHT = 250;
 
 export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWorkspaceGraphProps) => {
@@ -97,16 +84,6 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
 
   const data = useMemo(() => calculateGraphData(dateRange, selectedRegionUsage), [dateRange, selectedRegionUsage]);
 
-  const graphHeight = useMemo(() => {
-    const numberOfWorkspaces = selectedRegionUsage?.workspaces.length ?? 0;
-
-    const legendItemsHeight = LEGEND_ITEM_HEIGHT * numberOfWorkspaces;
-    const legendItemsGap = numberOfWorkspaces > 0 ? LEGEND_ITEM_GAP * (numberOfWorkspaces - 1) : 0;
-    const legendHeight = legendItemsHeight + legendItemsGap;
-
-    return BASE_CHART_HEIGHT + legendHeight;
-  }, [selectedRegionUsage?.workspaces.length]);
-
   const animationDuration = useMemo(() => {
     const numberOfWorkspaces = Math.max(1, selectedRegionUsage?.workspaces.length ?? 0);
     return 300 / numberOfWorkspaces;
@@ -127,7 +104,7 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
 
   return (
     <Box className={styles.usageByWorkspaceGraph}>
-      <ResponsiveContainer width="99%" height={graphHeight} key={selectedRegionId}>
+      <ResponsiveContainer width="99%" height={BASE_CHART_HEIGHT} key={selectedRegionId}>
         <BarChart
           data={data}
           margin={{
@@ -137,13 +114,6 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
             bottom: 0,
           }}
         >
-          <Legend
-            verticalAlign="bottom"
-            iconType="circle"
-            layout="vertical"
-            wrapperStyle={{ left: 0 }}
-            content={<GraphLegend />}
-          />
           <XAxis
             tickFormatter={(value) => formatDate(value, { month: "short", day: "numeric" })}
             dataKey="formattedDate"
