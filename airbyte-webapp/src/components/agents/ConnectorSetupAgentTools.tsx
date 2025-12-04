@@ -26,6 +26,7 @@ interface ConnectorSetupAgentToolsProps {
     secretFieldName: string | undefined;
     isMultiline: boolean;
     submitSecret: (message: string) => void;
+    dismissSecret: () => void;
   }) => void;
   onFormValuesReady?: (getFormValues: () => Record<string, unknown>) => void;
 }
@@ -60,6 +61,7 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
     secretFieldName,
     isMultiline,
     submitSecret,
+    dismissSecret,
   } = useRequestSecretInputTool({ setSecrets });
   const checkTool = useCheckConfigurationTool({
     actorDefinitionId,
@@ -97,8 +99,17 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
       secretFieldName,
       isMultiline,
       submitSecret,
+      dismissSecret,
     });
-  }, [isSecretInputActive, secretFieldPath, secretFieldName, isMultiline, submitSecret, onSecretInputStateChange]);
+  }, [
+    isSecretInputActive,
+    secretFieldPath,
+    secretFieldName,
+    isMultiline,
+    submitSecret,
+    dismissSecret,
+    onSecretInputStateChange,
+  ]);
 
   // Notify parent when form getValues is ready
   useEffect(() => {

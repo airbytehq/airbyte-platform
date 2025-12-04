@@ -15,6 +15,7 @@ export interface UseRequestSecretInputToolReturn {
   secretFieldName: string;
   isMultiline: boolean;
   submitSecret: (value: string) => void;
+  dismissSecret: () => void;
 }
 
 export const useRequestSecretInputTool = ({
@@ -62,6 +63,22 @@ export const useRequestSecretInputTool = ({
     [secretInputState, setSecrets]
   );
 
+  const dismissSecret = useCallback(() => {
+    // Send dismissal message to LLM
+    if (secretInputState.sendResult) {
+      secretInputState.sendResult("cancelled!");
+    }
+
+    // Reset state (don't store anything in secrets map)
+    setSecretInputState({
+      isActive: false,
+      fieldPath: [],
+      fieldName: "",
+      isMultiline: false,
+      sendResult: null,
+    });
+  }, [secretInputState]);
+
   const handler: ClientToolHandler = {
     toolName: TOOL_NAMES.REQUEST_SECRET_INPUT,
     execute: (args: unknown, sendResult) => {
@@ -91,5 +108,6 @@ export const useRequestSecretInputTool = ({
     secretFieldName: secretInputState.fieldName,
     isMultiline: secretInputState.isMultiline,
     submitSecret,
+    dismissSecret,
   };
 };

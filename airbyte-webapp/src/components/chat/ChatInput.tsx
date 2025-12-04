@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useToggle } from "react-use";
 
 import { Message } from "components/ui/Message";
@@ -16,6 +16,7 @@ interface ChatInputProps {
   secretFieldPath?: string[];
   secretFieldName?: string;
   isMultiline?: boolean;
+  onDismissSecret?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -27,6 +28,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   secretFieldPath = [],
   secretFieldName,
   isMultiline = false,
+  onDismissSecret,
 }) => {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -46,6 +48,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
+    }
+    if (e.key === "Escape" && isSecretMode && onDismissSecret) {
+      e.preventDefault();
+      onDismissSecret();
     }
   };
 
@@ -152,6 +158,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               disabled={disabled}
             >
               <Icon type="eyeSlash" size="sm" />
+            </button>
+          )}
+          {isSecretMode && onDismissSecret && (
+            <button
+              type="button"
+              onClick={onDismissSecret}
+              className={styles.cancelButton}
+              disabled={disabled}
+              aria-label={formatMessage({ id: "form.cancel" })}
+            >
+              <FormattedMessage id="form.cancel" />
             </button>
           )}
           {isStreaming ? (

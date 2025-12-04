@@ -26,6 +26,7 @@ export interface ChatInterfaceProps {
   isMultiline?: boolean;
   toolComponents?: Record<string, React.ComponentType<ToolCallProps>>;
   showAllToolCalls?: boolean;
+  onDismissSecret?: () => void;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -41,6 +42,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isMultiline = false,
   toolComponents,
   showAllToolCalls = false,
+  onDismissSecret,
 }) => {
   return (
     <div className={styles.container}>
@@ -75,6 +77,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           secretFieldPath={secretFieldPath}
           secretFieldName={secretFieldName}
           isMultiline={isMultiline}
+          onDismissSecret={onDismissSecret}
         />
       </div>
     </div>

@@ -156,3 +156,34 @@
     color: colors.$grey-800;
   }
 }
+
+.cancelButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 variables.$spacing-md;
+  margin: variables.$spacing-xs;
+  border: 1px solid colors.$grey-300;
+  border-radius: variables.$border-radius-lg;
+  background-color: colors.$foreground;
+  color: colors.$grey-400;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all variables.$transition;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 3px solid colors.$blue-50;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: transparent;
+    border-color: colors.$grey-400;
+    color: colors.$grey-500;
+  }
+}

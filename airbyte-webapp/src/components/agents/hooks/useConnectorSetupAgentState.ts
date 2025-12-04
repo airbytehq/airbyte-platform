@@ -19,6 +19,7 @@ export interface SecretInputState {
   secretFieldName: string | undefined;
   isMultiline: boolean;
   submitSecret: (message: string) => void;
+  dismissSecret: () => void;
 }
 
 export const useConnectorSetupAgentState = ({
@@ -44,6 +45,7 @@ export const useConnectorSetupAgentState = ({
     secretFieldName: undefined,
     isMultiline: false,
     submitSecret: (() => {}) as (message: string) => void,
+    dismissSecret: (() => {}) as () => void,
   });
 
   // Form values tracking
