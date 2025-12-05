@@ -41,3 +41,10 @@ export const checkCursorAndPKRequirements = (config: AirbyteStreamConfiguration,
 
   return { pkRequired, cursorRequired, shouldDefinePk, shouldDefineCursor };
 };
+
+/**
+ * Check if a field is a CDC meta-field (starts with _ab_cdc_)
+ */
+export function isCdcMetaField(fieldPath: string[]): boolean {
+  return fieldPath.length > 0 && fieldPath[0].startsWith("_ab_cdc_");
+}

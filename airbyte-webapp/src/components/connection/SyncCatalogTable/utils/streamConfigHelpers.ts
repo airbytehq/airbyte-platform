@@ -10,6 +10,7 @@ import {
 import { SyncSchemaField } from "core/domain/catalog";
 
 import { mergeFieldPathArrays } from "./miscUtils";
+import { isCdcMetaField } from "./pkAndCursorUtils";
 
 interface onToggleFieldSelectedArguments {
   config: AirbyteStreamConfiguration;
@@ -18,6 +19,7 @@ interface onToggleFieldSelectedArguments {
   isSelected: boolean;
   numberOfFieldsInStream: number;
 }
+
 export function updateFieldSelected({
   config,
   fields,
@@ -42,6 +44,28 @@ export function updateFieldSelected({
       fieldSelectionEnabled: false,
     };
   } else if (isSelected) {
+    // When selecting any regular (non-CDC) field, also auto-select all CDC fields if they exist
+    const cdcFields = fields.filter((field) => isCdcMetaField(field.path));
+
+    if (cdcFields.length > 0 && !isCdcMetaField(fieldPath)) {
+      // Add the selected field plus all CDC fields
+      const cdcFieldInfos = cdcFields.map((field) => ({ fieldPath: field.path }));
+      const allSelectedFields = mergeFieldPathArrays(previouslySelectedFields, [{ fieldPath }, ...cdcFieldInfos]);
+
+      // Check if all fields are now selected
+      if (allSelectedFields.length === numberOfFieldsInStream) {
+        return {
+          selectedFields: [],
+          fieldSelectionEnabled: false,
+        };
+      }
+
+      return {
+        selectedFields: allSelectedFields,
+        fieldSelectionEnabled: true,
+      };
+    }
+
     return {
       selectedFields: [...previouslySelectedFields, { fieldPath }],
       fieldSelectionEnabled: true,

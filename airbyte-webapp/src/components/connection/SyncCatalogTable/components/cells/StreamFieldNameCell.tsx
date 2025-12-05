@@ -28,6 +28,7 @@ import {
   checkIsFieldSelected,
   getSelectedMandatoryFields,
   updateFieldSelected,
+  isCdcMetaField,
 } from "../../utils";
 
 interface StreamFieldNameCellProps {
@@ -65,12 +66,15 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   const isChildFieldCursor = checkIsChildFieldCursor(config, field.path);
   const isPrimaryKey = checkIsPrimaryKey(config, field.path);
   const isChildFieldPrimaryKey = checkIsChildFieldPrimaryKey(config, field.path);
+  const isCdcField = isCdcMetaField(field.path);
 
   const isDisabled =
-    config?.selected &&
-    ((config.syncMode === SyncMode.incremental && (isCursor || isChildFieldCursor)) ||
-      (config.destinationSyncMode === DestinationSyncMode.append_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
-      (config.destinationSyncMode === DestinationSyncMode.overwrite_dedup && (isPrimaryKey || isChildFieldPrimaryKey)));
+    isCdcField ||
+    (config?.selected &&
+      ((config.syncMode === SyncMode.incremental && (isCursor || isChildFieldCursor)) ||
+        (config.destinationSyncMode === DestinationSyncMode.append_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
+        (config.destinationSyncMode === DestinationSyncMode.overwrite_dedup &&
+          (isPrimaryKey || isChildFieldPrimaryKey))));
 
   const isUnsupportedFileBasedStream = stream?.isFileBased && !destinationSupportsFileTransfer;
 
@@ -81,6 +85,9 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   const renderDisabledReasonMessage = () => {
     if (isPrimaryKey || isChildFieldPrimaryKey) {
       return <FormattedMessage id="form.field.sync.primaryKeyTooltip" />;
+    }
+    if (isCdcField) {
+      return <FormattedMessage id="form.field.sync.cdcMetaFieldTooltip" />;
     }
     if (isCursor || isChildFieldCursor) {
       return <FormattedMessage id="form.field.sync.cursorFieldTooltip" />;

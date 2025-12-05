@@ -8,6 +8,7 @@ import {
   isPrimaryKey,
   isChildFieldPrimaryKey,
   checkCursorAndPKRequirements,
+  isCdcMetaField,
 } from "./pkAndCursorUtils";
 
 const mockIncrementalConfig: AirbyteStreamConfiguration = {
@@ -196,5 +197,28 @@ describe(`${checkCursorAndPKRequirements.name}`, () => {
       shouldDefinePk: false,
       shouldDefineCursor: false,
     });
+  });
+});
+
+describe(`${isCdcMetaField.name}`, () => {
+  it("returns true for _ab_cdc_ prefixed fields", () => {
+    expect(isCdcMetaField(["_ab_cdc_cursor"])).toBe(true);
+    expect(isCdcMetaField(["_ab_cdc_deleted_at"])).toBe(true);
+    expect(isCdcMetaField(["_ab_cdc_updated_at"])).toBe(true);
+    expect(isCdcMetaField(["_ab_cdc_lsn"])).toBe(true);
+  });
+
+  it("returns false for non-CDC fields", () => {
+    expect(isCdcMetaField(["regular_field"])).toBe(false);
+    expect(isCdcMetaField(["_ab_other"])).toBe(false);
+    expect(isCdcMetaField(["ab_cdc_cursor"])).toBe(false);
+  });
+
+  it("returns false for empty path", () => {
+    expect(isCdcMetaField([])).toBe(false);
+  });
+
+  it("returns true for nested CDC fields (checking top-level path)", () => {
+    expect(isCdcMetaField(["_ab_cdc_cursor", "nested"])).toBe(true);
   });
 });

@@ -322,6 +322,80 @@ describe(`${updateFieldSelected.name}`, () => {
       selectedFields: [],
     });
   });
+
+  it("auto-selects all CDC fields when selecting a regular field", () => {
+    const CDC_CURSOR: SyncSchemaField = {
+      path: ["_ab_cdc_cursor"],
+      cleanedName: "_ab_cdc_cursor",
+      key: "_ab_cdc_cursor",
+      type: "string",
+    };
+
+    const CDC_DELETED: SyncSchemaField = {
+      path: ["_ab_cdc_deleted_at"],
+      cleanedName: "_ab_cdc_deleted_at",
+      key: "_ab_cdc_deleted_at",
+      type: "string",
+    };
+
+    const REGULAR_FIELD: SyncSchemaField = {
+      path: ["regular_field"],
+      cleanedName: "regular_field",
+      key: "regular_field",
+      type: "string",
+    };
+
+    const fields = [CDC_CURSOR, CDC_DELETED, REGULAR_FIELD, FIELD_ONE];
+
+    const newStreamConfiguration = updateFieldSelected({
+      config: {
+        ...mockStreamConfiguration,
+        fieldSelectionEnabled: true,
+        selectedFields: [],
+      },
+      fieldPath: REGULAR_FIELD.path,
+      isSelected: true,
+      numberOfFieldsInStream: 4,
+      fields,
+    });
+
+    expect(newStreamConfiguration).toEqual({
+      fieldSelectionEnabled: true,
+      selectedFields: [
+        { fieldPath: REGULAR_FIELD.path },
+        { fieldPath: CDC_CURSOR.path },
+        { fieldPath: CDC_DELETED.path },
+      ],
+    });
+  });
+
+  it("does not auto-select CDC fields when no CDC fields exist in the stream", () => {
+    const REGULAR_FIELD: SyncSchemaField = {
+      path: ["regular_field"],
+      cleanedName: "regular_field",
+      key: "regular_field",
+      type: "string",
+    };
+
+    const fields = [REGULAR_FIELD, FIELD_ONE, FIELD_TWO];
+
+    const newStreamConfiguration = updateFieldSelected({
+      config: {
+        ...mockStreamConfiguration,
+        fieldSelectionEnabled: true,
+        selectedFields: [],
+      },
+      fieldPath: REGULAR_FIELD.path,
+      isSelected: true,
+      numberOfFieldsInStream: 3,
+      fields,
+    });
+
+    expect(newStreamConfiguration).toEqual({
+      fieldSelectionEnabled: true,
+      selectedFields: [{ fieldPath: REGULAR_FIELD.path }],
+    });
+  });
 });
 
 describe(`${getSelectedMandatoryFields.name}`, () => {
