@@ -26,7 +26,7 @@ interface ConnectorCommand<Input> {
 
   fun cancel(id: String)
 
-  fun getAwaitDuration(): Duration = 1.minutes
+  fun getAwaitDuration(): Duration = 5.minutes
 }
 
 @Singleton
