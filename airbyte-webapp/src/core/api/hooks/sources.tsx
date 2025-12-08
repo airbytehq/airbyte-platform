@@ -7,6 +7,7 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { isDefined } from "core/utils/common";
 import { useExperiment } from "hooks/services/Experiment";
+import { SourceSetupFlow } from "pages/source/CreateSourcePage/SourceFormWithAgent";
 
 import { useCancelCommand, pollCommandUntilResolved } from "./commands";
 import { useRemoveConnectionsFromList } from "./connections";
@@ -70,6 +71,7 @@ interface ValuesProps {
   serviceType?: string;
   connectionConfiguration: ConnectionConfiguration;
   resourceAllocation?: ScopedResourceRequirements;
+  setupFlow?: SourceSetupFlow;
 }
 
 interface ConnectorProps {
@@ -123,6 +125,7 @@ export const useCreateSource = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspace = useCurrentWorkspace();
+  const analyticsService = useAnalyticsService();
   const onError = useRequestErrorHandler("sources.createError");
 
   return useMutation(
@@ -147,7 +150,19 @@ export const useCreateSource = () => {
       }
     },
     {
-      onSuccess: () => {
+      onSuccess: (_data, ctx) => {
+        analyticsService.track(
+          Namespace.SOURCE,
+          Action.CREATE,
+          {
+            actionDescription: "Source created",
+            connector_source_definition_id: ctx.sourceConnector.sourceDefinitionId,
+            connector_source: ctx.sourceConnector.name,
+            source_name: ctx.values.name,
+            setup_flow: ctx.values.setupFlow ?? "form",
+          },
+          { sendToPosthog: true }
+        );
         queryClient.resetQueries(sourcesKeys.lists());
       },
       onError,

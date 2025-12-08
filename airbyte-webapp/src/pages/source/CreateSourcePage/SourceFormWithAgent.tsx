@@ -22,11 +22,13 @@ import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
+export type SourceSetupFlow = "agent" | "form";
 export interface SourceFormValues {
   name: string;
   serviceType: string;
   sourceDefinitionId?: string;
   connectionConfiguration: ConnectionConfiguration;
+  setupFlow?: SourceSetupFlow;
 }
 
 interface SourceFormWithAgentProps {
@@ -63,6 +65,7 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
     (sourceValues: { name: string; serviceType: string; connectionConfiguration: Record<string, unknown> }) => {
       return onSubmit({
         ...sourceValues,
+        setupFlow: "agent",
         sourceDefinitionId: sourceDefinitionSpecification?.sourceDefinitionId,
       });
     },

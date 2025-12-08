@@ -51,9 +51,14 @@ export class AnalyticsService {
     this.getSegmentAnalytics()?.reset?.();
   }
 
-  public track(namespace: Namespace, action: Action, params: EventParams & { actionDescription?: string }) {
+  public track(
+    namespace: Namespace,
+    action: Action,
+    params: EventParams & { actionDescription?: string },
+    options: { sendToPosthog?: boolean } = {}
+  ) {
     if (process.env.NODE_ENV === "development") {
-      console.debug(`%c[Analytics.Track] Airbyte.UI.${namespace}.${action}`, "color: teal", params);
+      console.debug(`%c[Analytics.Track] Airbyte.UI.${namespace}.${action}`, "color: teal", params, options);
     }
     const session_id = this.getPosthogAnalytics()?.get_session_id();
 
@@ -62,6 +67,14 @@ export class AnalyticsService {
       ...this.context,
       ...(session_id && { $session_id: session_id }),
     });
+
+    // we need to send some events directly to Posthog when we want a survey to be triggered
+    if (options?.sendToPosthog) {
+      this.getPosthogAnalytics()?.capture(`Airbyte.UI.${namespace}.${action}`, {
+        ...params,
+        ...this.context,
+      });
+    }
   }
 
   public identify(userId: string, traits: Record<string, unknown> = {}): void {
