@@ -1,0 +1,14 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.modalBody {
+  border-top: variables.$border-thin solid colors.$grey-100;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+  padding: variables.$spacing-xl;
+}
+
+.changesContainer {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: variables.$spacing-sm;
+}

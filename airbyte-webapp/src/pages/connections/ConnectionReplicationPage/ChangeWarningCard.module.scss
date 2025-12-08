@@ -1,0 +1,38 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.streamList__container {
+  gap: variables.$spacing-md;
+  padding-left: 0;
+
+  &:not(:last-child) {
+    margin-bottom: 0;
+  }
+}
+
+.streamList__list {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.changeCard {
+  padding: variables.$spacing-md;
+  border: variables.$border-thin solid colors.$grey-300;
+  border-radius: variables.$border-radius-xs;
+}
+
+.labelCaption {
+  display: block;
+  margin-top: variables.$spacing-xs;
+  line-height: 1.5;
+
+  a {
+    color: colors.$blue;
+    text-decoration: underline;
+
+    &:hover {
+      color: colors.$blue-600;
+    }
+  }
+}

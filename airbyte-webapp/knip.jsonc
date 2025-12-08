@@ -30,7 +30,11 @@
 
     // Ignore unused TrialEndedModal files as they will be integrated in a later PR
     "src/components/TrialEndedModal/TrialEndedModal.tsx",
-    "src/components/TrialEndedModal/index.ts"
+    "src/components/TrialEndedModal/index.ts",
+
+    // Ignore unused connection change review components as they will be integrated in a later PR
+    "src/pages/connections/ConnectionReplicationPage/ChangeWarningCard.tsx",
+    "src/pages/connections/ConnectionReplicationPage/ChangesReviewModal.tsx"
   ],
   "ignoreDependencies": [
     // Knip doesn't detect the import to this from a SASS file
