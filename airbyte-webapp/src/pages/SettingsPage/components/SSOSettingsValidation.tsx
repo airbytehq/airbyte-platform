@@ -68,8 +68,11 @@ export const SSOSettingsValidation = () => {
     };
   }, [companyIdentifier]);
 
-  // Step 1 is complete when we have a draft config that was successfully tested
-  const isStep1Complete = testResult?.success === true && ssoConfig?.status === "draft";
+  // Step 1 is complete when we have a draft config that was successfully tested,
+  // or when we have a draft config with valid credentials (test was done in a previous session)
+  const isStep1Complete =
+    (testResult?.success === true && ssoConfig?.status === "draft") ||
+    (ssoConfig?.status === "draft" && !!ssoConfig?.clientId && !!ssoConfig?.clientSecret);
 
   // Check if SSO is fully configured and active
   const isActive = ssoConfig?.status === "active";
