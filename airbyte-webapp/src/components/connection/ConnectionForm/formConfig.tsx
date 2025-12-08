@@ -25,7 +25,7 @@ import {
 } from "./ScheduleFormField/useBasicFrequencyDropdownData";
 import { updateStreamSyncMode } from "../SyncCatalogTable/utils";
 
-type AirbyteCatalogWithAnySchema = Omit<AirbyteCatalog, "streams"> & {
+export type AirbyteCatalogWithAnySchema = Omit<AirbyteCatalog, "streams"> & {
   streams: Array<
     Omit<AirbyteStreamAndConfiguration, "stream"> & {
       stream?: Omit<AirbyteStream, "jsonSchema"> & {
