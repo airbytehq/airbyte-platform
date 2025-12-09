@@ -54,6 +54,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
     if (e.key === "Escape" && isSecretMode && onDismissSecret) {
       e.preventDefault();
+      setMessage("");
       onDismissSecret();
     }
   };
@@ -180,7 +181,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           {isSecretMode && onDismissSecret && (
             <button
               type="button"
-              onClick={onDismissSecret}
+              onClick={() => {
+                setMessage("");
+                onDismissSecret();
+              }}
               className={styles.cancelButton}
               disabled={disabled}
               aria-label={formatMessage({ id: "form.cancel" })}
