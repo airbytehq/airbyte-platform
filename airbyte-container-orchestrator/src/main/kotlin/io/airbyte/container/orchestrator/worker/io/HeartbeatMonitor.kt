@@ -6,13 +6,16 @@ package io.airbyte.container.orchestrator.worker.io
 
 import io.airbyte.commons.duration.formatMilli
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
+import io.airbyte.featureflag.HeartbeatDiagnosticLogsEnabled
 import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.Instant
 import java.util.Optional
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Function
 import java.util.function.Supplier
@@ -20,6 +23,11 @@ import kotlin.Boolean
 import kotlin.Long
 import kotlin.RuntimeException
 import kotlin.let
+
+private val logger = KotlinLogging.logger {}
+
+// Log every 10000 heartbeats when diagnostic logging is enabled
+private const val HEARTBEAT_LOG_INTERVAL = 10000L
 
 /**
  * Tracks heartbeats and, when asked, says if it has been too long since the last heartbeat. He's
@@ -36,10 +44,18 @@ class HeartbeatMonitor(
   val heartbeatFreshnessThreshold: Duration = Duration.ofSeconds(replicationInput.heartbeatConfig.maxSecondsBetweenMessages)
   private val lastBeat: AtomicReference<Instant> = AtomicReference<Instant>(null)
   private val shouldFailSync = replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure)
+  private val diagnosticLogsEnabled = replicationInputFeatureFlagReader.read(HeartbeatDiagnosticLogsEnabled)
+  private val beatCount = AtomicLong(0)
 
   @PostConstruct
   fun init() {
     nowSupplier?.let { supplier -> lastBeat.set(supplier.get()) }
+    if (diagnosticLogsEnabled) {
+      logger.info {
+        "HeartbeatMonitor initialized: threshold=${heartbeatFreshnessThreshold.toSeconds()}s, " +
+          "shouldFailSync=$shouldFailSync, initialBeatTime=${lastBeat.get()}"
+      }
+    }
   }
 
   /**
@@ -47,6 +63,11 @@ class HeartbeatMonitor(
    */
   fun beat() {
     nowSupplier?.let { supplier -> lastBeat.set(supplier.get()) }
+    val count = beatCount.incrementAndGet()
+    // Log first beat and then periodically when diagnostic logs are enabled
+    if (diagnosticLogsEnabled && (count == 1L || count % HEARTBEAT_LOG_INTERVAL == 0L)) {
+      logger.info { "HeartbeatMonitor beat: count=$count, lastBeat=${lastBeat.get()}" }
+    }
   }
 
   /**

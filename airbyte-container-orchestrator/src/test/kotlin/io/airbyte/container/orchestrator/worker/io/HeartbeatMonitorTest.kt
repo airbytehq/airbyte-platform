@@ -5,6 +5,7 @@
 package io.airbyte.container.orchestrator.worker.io
 
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
+import io.airbyte.featureflag.HeartbeatDiagnosticLogsEnabled
 import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure
 import io.airbyte.persistence.job.models.HeartbeatConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -33,8 +34,9 @@ internal class HeartbeatMonitorTest {
     replicationInput = ReplicationInput().withHeartbeatConfig(HeartbeatConfig().withMaxSecondsBetweenMessages(HEART_BEAT_FRESH_DURATION.toSeconds()))
     nowSupplier = mockk()
     replicationInputFeatureFlagReader = mockk()
-    // Default to feature flag being false
+    // Default to feature flags being false
     every { replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure) } returns false
+    every { replicationInputFeatureFlagReader.read(HeartbeatDiagnosticLogsEnabled) } returns false
     heartbeatMonitor =
       HeartbeatMonitor(
         replicationInput = replicationInput,
@@ -69,6 +71,7 @@ internal class HeartbeatMonitorTest {
   fun testHasTimedOutWithFlagEnabled() {
     // Mock the feature flag reader to return true for ShouldFailSyncIfHeartbeatFailure
     every { replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure) } returns true
+    every { replicationInputFeatureFlagReader.read(HeartbeatDiagnosticLogsEnabled) } returns false
 
     // Create a monitor with a stale beat
     every { nowSupplier.get() } returnsMany listOf(THIRTY_SECONDS_BEFORE, NOW)
@@ -88,6 +91,7 @@ internal class HeartbeatMonitorTest {
   fun testHasTimedOutWithFlagDisabled() {
     // Mock the feature flag reader to return false for ShouldFailSyncIfHeartbeatFailure
     every { replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure) } returns false
+    every { replicationInputFeatureFlagReader.read(HeartbeatDiagnosticLogsEnabled) } returns false
 
     // Create a monitor with a stale beat
     every { nowSupplier.get() } returnsMany listOf(THIRTY_SECONDS_BEFORE, NOW)

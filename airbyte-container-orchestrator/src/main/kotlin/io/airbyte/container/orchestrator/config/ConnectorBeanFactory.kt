@@ -24,6 +24,7 @@ import io.airbyte.container.orchestrator.worker.io.EmptyAirbyteSource
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteSource
+import io.airbyte.featureflag.HeartbeatDiagnosticLogsEnabled
 import io.airbyte.featureflag.PrintLongRecordPks
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -88,6 +89,7 @@ class ConnectorBeanFactory {
     heartbeatMonitor: HeartbeatMonitor,
     messageMetricsTracker: MessageMetricsTracker,
     replicationInput: ReplicationInput,
+    replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
     @Named("sourceStreamFactory") sourceStreamFactory: AirbyteStreamFactory,
     @Named("sourceMdcScopeBuilder") mdcScopeBuilder: MdcScope.Builder,
   ): AirbyteSource =
@@ -100,6 +102,7 @@ class ConnectorBeanFactory {
         messageMetricsTracker = messageMetricsTracker,
         containerIOHandle = source(),
         containerLogMdcBuilder = mdcScopeBuilder,
+        diagnosticLogsEnabled = replicationInputFeatureFlagReader.read(HeartbeatDiagnosticLogsEnabled),
       )
     }
 

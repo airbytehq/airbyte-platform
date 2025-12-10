@@ -5,10 +5,12 @@
 package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.api.client.ApiException
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatTimeoutException
+import io.airbyte.featureflag.HeartbeatDiagnosticLogsEnabled
 import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
@@ -25,6 +27,9 @@ import java.util.concurrent.TimeUnit
 
 private val logger = KotlinLogging.logger {}
 
+// Log every 100 iterations (~1000s with default 10s interval) when diagnostic logging is enabled
+private const val HEARTBEAT_STATUS_LOG_INTERVAL = 100L
+
 @Singleton
 class WorkloadHeartbeatSender(
   private val workloadApiClient: WorkloadApiClient,
@@ -36,8 +41,10 @@ class WorkloadHeartbeatSender(
   @Named("workloadHeartbeatTimeout") private val heartbeatTimeoutDuration: Duration,
   @Named("hardExitCallable") private val hardExitCallable: () -> Unit,
   private val airbyteContextConfig: AirbyteContextConfig,
+  replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
 ) {
   private var sourceIsHanging = false
+  private val diagnosticLogsEnabled = replicationInputFeatureFlagReader.read(HeartbeatDiagnosticLogsEnabled)
 
   /**
    * Sends periodic heartbeat requests until cancellation, terminal error, or heartbeat timeout.
@@ -78,9 +85,22 @@ class WorkloadHeartbeatSender(
       }
     }
 
+    var heartbeatLoopIteration = 0L
     while (true) {
       // Capture current time at start of loop iteration.
       val now = Instant.now()
+      heartbeatLoopIteration++
+
+      // Log source heartbeat status periodically when diagnostic logs are enabled
+      if (diagnosticLogsEnabled && heartbeatLoopIteration % HEARTBEAT_STATUS_LOG_INTERVAL == 0L) {
+        val timeSinceLastBeat = sourceTimeoutMonitor.timeSinceLastBeat.orElse(null)
+        val threshold = sourceTimeoutMonitor.heartbeatFreshnessThreshold
+        logger.info {
+          "Source heartbeat status: timeSinceLastBeat=${timeSinceLastBeat?.toSeconds()}s, " +
+            "threshold=${threshold.toSeconds()}s, hasTimedOut=${sourceTimeoutMonitor.hasTimedOut()}"
+        }
+      }
+
       try {
         when {
           destinationTimeoutMonitor.hasTimedOut() -> {
@@ -100,10 +120,17 @@ class WorkloadHeartbeatSender(
            * exited normally.
            */
           (sourceTimeoutMonitor.hasTimedOut() && !checkSourceFinishedWithTimeout()) -> {
+            val timeSinceLastBeat = sourceTimeoutMonitor.timeSinceLastBeat.orElse(Duration.ZERO)
+            val threshold = sourceTimeoutMonitor.heartbeatFreshnessThreshold
+            // Always log timeout detection since it's an error condition
+            logger.error {
+              "Source heartbeat timeout detected: timeSinceLastBeat=${timeSinceLastBeat.toSeconds()}s, " +
+                "threshold=${threshold.toSeconds()}s, sourceIsFinished=false"
+            }
             val e =
               HeartbeatTimeoutException(
-                sourceTimeoutMonitor.heartbeatFreshnessThreshold.toMillis(),
-                sourceTimeoutMonitor.timeSinceLastBeat.orElse(Duration.ZERO).toMillis(),
+                threshold.toMillis(),
+                timeSinceLastBeat.toMillis(),
               )
             logger.warn(e) { "Source has timed out; failing the workload." }
             failWorkload(e)

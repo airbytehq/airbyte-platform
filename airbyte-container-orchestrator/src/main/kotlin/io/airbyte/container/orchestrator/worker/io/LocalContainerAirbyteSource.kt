@@ -17,11 +17,17 @@ import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.MessageOrigin
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
+import java.time.Instant
 import java.util.Optional
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 
 private val logger = KotlinLogging.logger {}
 private const val CALLER = "airbyte-source"
+
+// Log every 100000 heartbeats/messages when diagnostic logging is enabled
+private const val HEARTBEAT_LOG_INTERVAL = 100000L
+private const val MESSAGE_LOG_INTERVAL = 100000L
 
 class LocalContainerAirbyteSource(
   private val heartbeatMonitor: HeartbeatMonitor,
@@ -29,6 +35,7 @@ class LocalContainerAirbyteSource(
   private val messageMetricsTracker: MessageMetricsTracker,
   private val containerIOHandle: ContainerIOHandle,
   private val containerLogMdcBuilder: MdcScope.Builder,
+  private val diagnosticLogsEnabled: Boolean = false,
   private val exitCodeWaitSeconds: Long = EXIT_CODE_WAIT_SECONDS,
 ) : AirbyteSource {
   companion object {
@@ -45,6 +52,16 @@ class LocalContainerAirbyteSource(
   // This is important for detecting OOM kills where the container dies without writing an exit code file.
   @Volatile
   private var outputStreamExhausted = false
+
+  // Diagnostic counters for heartbeat debugging
+  private val messageCount = AtomicLong(0)
+  private val heartbeatCount = AtomicLong(0)
+
+  @Volatile
+  private var lastHeartbeatTime: Instant? = null
+
+  @Volatile
+  private var startTime: Instant? = null
 
   override fun close() {
     messageMetricsTracker.flushSourceReadCountMetric()
@@ -64,6 +81,10 @@ class LocalContainerAirbyteSource(
     connectionId: UUID?,
   ) {
     // TODO check if stdout file exists? or check if some other startup file exists?
+    startTime = Instant.now()
+    if (diagnosticLogsEnabled) {
+      logger.info { "LocalContainerAirbyteSource starting for connectionId=$connectionId" }
+    }
 
     messageMetricsTracker.trackConnectionId(connectionId)
 
@@ -76,13 +97,29 @@ class LocalContainerAirbyteSource(
           streamFactory
             .create(IOs.newBufferedReader(containerIOHandle.getInputStream()), MessageOrigin.SOURCE)
             .peek { message: AirbyteMessage ->
+              val count = messageCount.incrementAndGet()
               if (shouldBeat(message.type)) {
                 heartbeatMonitor.beat()
+                val hbCount = heartbeatCount.incrementAndGet()
+                lastHeartbeatTime = Instant.now()
+                // Log periodically to track progress when diagnostic logs are enabled
+                if (diagnosticLogsEnabled && hbCount % HEARTBEAT_LOG_INTERVAL == 0L) {
+                  logger.info { "Source heartbeat progress: heartbeatCount=$hbCount, totalMessages=$count, messageType=${message.type}" }
+                }
+              }
+              // Log periodically when diagnostic logs are enabled
+              if (diagnosticLogsEnabled && count % MESSAGE_LOG_INTERVAL == 0L) {
+                logger.info {
+                  "Source message progress: totalMessages=$count, heartbeatCount=${heartbeatCount.get()}, lastHeartbeatTime=$lastHeartbeatTime"
+                }
               }
             }.filter { message: AirbyteMessage -> LocalContainerConstants.ACCEPTED_MESSAGE_TYPES.contains(message.type) }
             .iterator()
       },
     )
+    if (diagnosticLogsEnabled) {
+      logger.info { "LocalContainerAirbyteSource message iterator initialized" }
+    }
   }
 
   override val isFinished: Boolean

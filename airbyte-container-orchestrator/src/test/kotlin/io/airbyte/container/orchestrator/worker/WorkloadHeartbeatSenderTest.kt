@@ -5,6 +5,7 @@
 package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.api.client.ApiException
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
@@ -36,6 +37,7 @@ internal class WorkloadHeartbeatSenderTest {
   private lateinit var mockReplicationWorkerState: ReplicationWorkerState
   private lateinit var mockDestinationTimeoutMonitor: DestinationTimeoutMonitor
   private lateinit var mockSourceTimeoutMonitor: HeartbeatMonitor
+  private lateinit var mockReplicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader
   private lateinit var hardExitCallable: () -> Unit
   private lateinit var source: AirbyteSource
 
@@ -51,11 +53,13 @@ internal class WorkloadHeartbeatSenderTest {
     mockReplicationWorkerState = mockk(relaxed = true)
     mockDestinationTimeoutMonitor = mockk(relaxed = true)
     mockSourceTimeoutMonitor = mockk(relaxed = true)
+    mockReplicationInputFeatureFlagReader = mockk(relaxed = true)
     hardExitCallable = mockk(relaxed = true)
     source = mockk(relaxed = true)
 
     every { mockDestinationTimeoutMonitor.hasTimedOut() } returns false
     every { mockSourceTimeoutMonitor.hasTimedOut() } returns false
+    every { mockReplicationInputFeatureFlagReader.read<Boolean>(any()) } returns false
   }
 
   @AfterEach
@@ -262,5 +266,6 @@ internal class WorkloadHeartbeatSenderTest {
       airbyteContextConfig = AirbyteContextConfig(attemptId = testAttempt, jobId = testJobId, workloadId = testWorkloadId),
       hardExitCallable = hardExitCallable,
       source = source,
+      replicationInputFeatureFlagReader = mockReplicationInputFeatureFlagReader,
     )
 }
