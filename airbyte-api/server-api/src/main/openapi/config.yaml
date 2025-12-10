@@ -6701,7 +6701,7 @@ paths:
                 persist_changes:
                   type: boolean
                   default: false
-                  description: If true, persist the catalog changes to the connection (requires connection_id and WORKSPACE_EDITOR role). Updates sourceCatalogId, breakingChange flag, status, and syncCatalog.
+                  description: If true, persist the catalog changes to the connection (requires connection_id and WORKSPACE_EDITOR role). Updates breakingChange flag and status (set to INACTIVE if breaking change detected or if nonBreakingChangesPreference is DISABLE and there are any changes). Does not update sourceCatalogId or syncCatalog.
       responses:
         "200":
           description: Successful operation

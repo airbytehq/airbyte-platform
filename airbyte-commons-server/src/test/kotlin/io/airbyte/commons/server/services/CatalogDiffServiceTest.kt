@@ -13,17 +13,22 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.StandardSync
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.protocol.models.v0.ConfiguredAirbyteStream
 import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.protocol.models.v0.SyncMode
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
 import io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog as ProtocolConfiguredAirbyteCatalog
@@ -32,6 +37,7 @@ internal class CatalogDiffServiceTest {
   private lateinit var catalogService: CatalogService
   private lateinit var connectionService: ConnectionService
   private lateinit var applySchemaChangeHelper: ApplySchemaChangeHelper
+  private lateinit var metricClient: MetricClient
   private lateinit var catalogDiffService: CatalogDiffService
 
   private lateinit var workspaceId: UUID
@@ -56,6 +62,7 @@ internal class CatalogDiffServiceTest {
     catalogService = mock()
     connectionService = mock()
     applySchemaChangeHelper = mock()
+    metricClient = mock()
 
     catalogDiffService =
       CatalogDiffService(
@@ -64,6 +71,7 @@ internal class CatalogDiffServiceTest {
         applySchemaChangeHelper,
         catalogConverter,
         catalogMergeHelper,
+        metricClient,
       )
 
     workspaceId = UUID.randomUUID()
@@ -287,5 +295,187 @@ internal class CatalogDiffServiceTest {
 
     // Assert
     assertTrue(result.mergedCatalog == null, "Merged catalog should be null when connectionId is not provided")
+  }
+
+  @Test
+  fun `diffCatalogs with persist_changes should update connection with non-breaking change`() {
+    // Setup
+    val currentCatalog = createAirbyteCatalog("users", listOf("id", "name"))
+    val newCatalog = createAirbyteCatalog("users", listOf("id", "name", "email"))
+    val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name"))
+
+    setupMocks(currentCatalog, newCatalog, configuredCatalog)
+    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
+
+    // Capture the original connection state
+    val originalConnection = connectionService.getStandardSync(connectionId)
+    val originalCatalog = originalConnection!!.catalog
+    val originalStatus = originalConnection.status
+
+    val request =
+      DiffCatalogsRequest()
+        .currentCatalogId(currentCatalogId)
+        .newCatalogId(newCatalogId)
+        .connectionId(connectionId)
+        .persistChanges(true)
+
+    // Execute
+    val result = catalogDiffService.diffCatalogs(request)
+
+    // Assert
+    assertEquals(SchemaChange.NON_BREAKING, result.schemaChange)
+
+    // Verify connection was updated
+    val connectionCaptor = argumentCaptor<StandardSync>()
+    verify(connectionService).writeStandardSync(connectionCaptor.capture())
+
+    val updatedConnection = connectionCaptor.firstValue
+    assertEquals(false, updatedConnection.breakingChange, "breakingChange flag should be false for non-breaking change")
+    assertEquals(originalStatus, updatedConnection.status, "status should remain unchanged for non-breaking change")
+    assertEquals(originalCatalog, updatedConnection.catalog, "catalog should NOT be updated")
+  }
+
+  @Test
+  fun `diffCatalogs with persist_changes should update connection with breaking change`() {
+    // Setup
+    val currentCatalog = createAirbyteCatalog("users", listOf("id", "name", "email"))
+    val newCatalog = createAirbyteCatalog("users", listOf("id", "name"))
+    val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name", "email"))
+
+    setupMocks(currentCatalog, newCatalog, configuredCatalog)
+    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(true)
+
+    // Capture the original connection state
+    val originalConnection = connectionService.getStandardSync(connectionId)
+    val originalCatalog = originalConnection!!.catalog
+
+    val request =
+      DiffCatalogsRequest()
+        .currentCatalogId(currentCatalogId)
+        .newCatalogId(newCatalogId)
+        .connectionId(connectionId)
+        .persistChanges(true)
+
+    // Execute
+    val result = catalogDiffService.diffCatalogs(request)
+
+    // Assert
+    assertEquals(SchemaChange.BREAKING, result.schemaChange)
+
+    // Verify connection was updated
+    val connectionCaptor = argumentCaptor<StandardSync>()
+    verify(connectionService).writeStandardSync(connectionCaptor.capture())
+
+    val updatedConnection = connectionCaptor.firstValue
+    assertEquals(true, updatedConnection.breakingChange, "breakingChange flag should be true for breaking change")
+    assertEquals(StandardSync.Status.INACTIVE, updatedConnection.status, "status should be set to INACTIVE for breaking change")
+    assertEquals(originalCatalog, updatedConnection.catalog, "catalog should NOT be updated")
+  }
+
+  @Test
+  fun `diffCatalogs without persist_changes should not update connection`() {
+    // Setup
+    val currentCatalog = createAirbyteCatalog("users", listOf("id", "name"))
+    val newCatalog = createAirbyteCatalog("users", listOf("id", "name", "email"))
+    val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name"))
+
+    setupMocks(currentCatalog, newCatalog, configuredCatalog)
+    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
+
+    val request =
+      DiffCatalogsRequest()
+        .currentCatalogId(currentCatalogId)
+        .newCatalogId(newCatalogId)
+        .connectionId(connectionId)
+        .persistChanges(false)
+
+    // Execute
+    val result = catalogDiffService.diffCatalogs(request)
+
+    // Assert
+    assertEquals(SchemaChange.NON_BREAKING, result.schemaChange)
+
+    // Verify connection was NOT updated
+    verify(connectionService, never()).writeStandardSync(any())
+  }
+
+  @Test
+  fun `diffCatalogs with persist_changes and NO_CHANGE should not modify connection`() {
+    // Setup
+    val catalog = createAirbyteCatalog("users", listOf("id", "name", "email"))
+    val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name", "email"))
+
+    setupMocks(catalog, catalog, configuredCatalog)
+
+    // Capture the original connection state
+    val originalConnection = connectionService.getStandardSync(connectionId)
+    val originalCatalog = originalConnection!!.catalog
+    val originalStatus = originalConnection.status
+
+    val request =
+      DiffCatalogsRequest()
+        .currentCatalogId(currentCatalogId)
+        .newCatalogId(newCatalogId)
+        .connectionId(connectionId)
+        .persistChanges(true)
+
+    // Execute
+    val result = catalogDiffService.diffCatalogs(request)
+
+    // Assert
+    assertEquals(SchemaChange.NO_CHANGE, result.schemaChange)
+
+    // Verify connection was updated
+    val connectionCaptor = argumentCaptor<StandardSync>()
+    verify(connectionService).writeStandardSync(connectionCaptor.capture())
+
+    val updatedConnection = connectionCaptor.firstValue
+    assertFalse(updatedConnection.breakingChange, "breakingChange flag should be false for no change")
+    assertEquals(originalStatus, updatedConnection.status, "status should remain unchanged for no change")
+    assertEquals(originalCatalog, updatedConnection.catalog, "catalog should NOT be updated")
+  }
+
+  @Test
+  fun `diffCatalogs with persist_changes should disable connection when nonBreakingChangesPreference is DISABLE`() {
+    // Setup
+    val currentCatalog = createAirbyteCatalog("users", listOf("id", "name"))
+    val newCatalog = createAirbyteCatalog("users", listOf("id", "name", "email"))
+    val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name"))
+
+    setupMocks(currentCatalog, newCatalog, configuredCatalog)
+    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
+    whenever(applySchemaChangeHelper.containsChanges(any())).thenReturn(true)
+
+    // Set the connection's nonBreakingChangesPreference to DISABLE
+    val connection = connectionService.getStandardSync(connectionId)
+    connection!!.nonBreakingChangesPreference = StandardSync.NonBreakingChangesPreference.DISABLE
+
+    val originalCatalog = connection.catalog
+
+    val request =
+      DiffCatalogsRequest()
+        .currentCatalogId(currentCatalogId)
+        .newCatalogId(newCatalogId)
+        .connectionId(connectionId)
+        .persistChanges(true)
+
+    // Execute
+    val result = catalogDiffService.diffCatalogs(request)
+
+    // Assert
+    assertEquals(SchemaChange.NON_BREAKING, result.schemaChange)
+
+    // Verify connection was updated
+    val connectionCaptor = argumentCaptor<StandardSync>()
+    verify(connectionService).writeStandardSync(connectionCaptor.capture())
+
+    val updatedConnection = connectionCaptor.firstValue
+    assertFalse(updatedConnection.breakingChange, "breakingChange flag should be false for non-breaking change")
+    assertEquals(
+      StandardSync.Status.INACTIVE,
+      updatedConnection.status,
+      "status should be INACTIVE when nonBreakingChangesPreference is DISABLE and there are changes",
+    )
+    assertEquals(originalCatalog, updatedConnection.catalog, "catalog should NOT be updated")
   }
 }

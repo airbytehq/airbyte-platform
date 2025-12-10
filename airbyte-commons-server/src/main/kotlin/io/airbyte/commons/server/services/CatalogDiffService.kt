@@ -19,6 +19,10 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.StandardSync
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import jakarta.inject.Singleton
 import java.util.UUID
 import io.airbyte.protocol.models.v0.AirbyteCatalog as ProtocolAirbyteCatalog
@@ -30,6 +34,7 @@ class CatalogDiffService(
   private val applySchemaChangeHelper: ApplySchemaChangeHelper,
   private val catalogConverter: CatalogConverter,
   private val catalogMergeHelper: CatalogMergeHelper,
+  private val metricClient: MetricClient,
 ) {
   fun diffCatalogs(request: DiffCatalogsRequest): DiffCatalogsResponse {
     val currentCatalogId = request.currentCatalogId
@@ -90,7 +95,7 @@ class CatalogDiffService(
 
     // Persist changes to connection if requested
     if (request.persistChanges == true && connectionId != null) {
-      persistCatalogChanges(connectionId, newCatalogId, schemaChange, mergedCatalog, configuredCatalog)
+      persistCatalogChanges(connectionId, newCatalogId, schemaChange, catalogDiff, configuredCatalog)
     }
 
     return DiffCatalogsResponse()
@@ -135,16 +140,19 @@ class CatalogDiffService(
   /**
    * Persists catalog changes to the connection database record.
    * Updates:
-   * - sourceCatalogId: set to the new catalog ID
    * - breakingChange: boolean flag indicating if there are breaking changes
-   * - status: set to INACTIVE if breaking change detected
-   * - catalog: updated to the merged catalog (if available)
+   * - status: set to INACTIVE if breaking change detected OR if nonBreakingChangesPreference is DISABLE and there are any changes
+   *
+   * Emits metrics for schema change detection.
+   *
+   * Note: Does NOT update sourceCatalogId - that should be updated separately in the caller's workflow.
+   * This aligns with disableConnectionIfNeeded behavior.
    */
   private fun persistCatalogChanges(
     connectionId: UUID,
     newCatalogId: UUID,
     schemaChange: SchemaChange,
-    mergedCatalog: AirbyteCatalog?,
+    catalogDiff: CatalogDiff,
     originalConfiguredCatalog: ConfiguredAirbyteCatalog?,
   ) {
     // Get the current connection
@@ -155,20 +163,40 @@ class CatalogDiffService(
     // Determine if there's a breaking change
     val hasBreakingChange = schemaChange == SchemaChange.BREAKING
 
-    // Update connection fields
-    connection.sourceCatalogId = newCatalogId
-    connection.breakingChange = hasBreakingChange
-
-    // Set status to INACTIVE if breaking change detected
+    // Emit metrics for schema change detection
     if (hasBreakingChange) {
-      connection.status = StandardSync.Status.INACTIVE
+      metricClient.count(
+        OssMetricsRegistry.BREAKING_SCHEMA_CHANGE_DETECTED,
+        1L,
+        MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+      )
+    } else if (schemaChange == SchemaChange.NON_BREAKING) {
+      metricClient.count(
+        OssMetricsRegistry.NON_BREAKING_SCHEMA_CHANGE_DETECTED,
+        1L,
+        MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+      )
     }
 
-    // Update the configured catalog with merged catalog if available
-    if (mergedCatalog != null) {
-      val mergedConfiguredCatalog = catalogConverter.toConfiguredInternal(mergedCatalog)
-      connection.catalog = mergedConfiguredCatalog
-      connection.fieldSelectionData = catalogConverter.getFieldSelectionData(mergedCatalog)
+    // Update connection fields
+    connection.breakingChange = hasBreakingChange
+
+    // Determine if connection should be disabled
+    // 1. Disable if there are breaking changes
+    // 2. Disable if there are non-breaking changes but the connection is configured to disable for any schema changes
+    val shouldDisable =
+      if (hasBreakingChange) {
+        true
+      } else if (connection.nonBreakingChangesPreference == StandardSync.NonBreakingChangesPreference.DISABLE &&
+        applySchemaChangeHelper.containsChanges(catalogDiff)
+      ) {
+        true
+      } else {
+        false
+      }
+
+    if (shouldDisable) {
+      connection.status = StandardSync.Status.INACTIVE
     }
 
     // Persist to database

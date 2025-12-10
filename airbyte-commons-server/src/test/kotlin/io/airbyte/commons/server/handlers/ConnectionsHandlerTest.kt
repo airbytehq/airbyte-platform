@@ -496,6 +496,7 @@ internal class ConnectionsHandlerTest {
         applySchemaChangeHelper,
         catalogConverter,
         catalogMergeHelper,
+        metricClient,
       )
 
     connectionSchedulerHelper =
