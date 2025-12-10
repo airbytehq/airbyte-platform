@@ -12,6 +12,7 @@ interface MessageListProps {
   error?: string | null;
   toolComponents?: Record<string, React.ComponentType<ToolCallProps>>;
   showAllToolCalls?: boolean;
+  isVisible?: boolean;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -20,17 +21,24 @@ export const MessageList: React.FC<MessageListProps> = ({
   error,
   toolComponents,
   showAllToolCalls = false,
+  isVisible,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasStreamingAssistant = messages.some((m) => m.isStreaming);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    if (isVisible) {
+      scrollToBottom("auto");
+    }
+  }, [isVisible]);
 
   if (messages.length === 0 && !isLoading) {
     return (

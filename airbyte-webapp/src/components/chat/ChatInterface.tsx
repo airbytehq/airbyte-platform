@@ -69,6 +69,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           error={error}
           toolComponents={toolComponents}
           showAllToolCalls={showAllToolCalls}
+          isVisible={isVisible}
         />
         <ChatInput
           onSendMessage={onSendMessage}
