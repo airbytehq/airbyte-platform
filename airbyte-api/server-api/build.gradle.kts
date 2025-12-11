@@ -380,12 +380,14 @@ private fun updateDomainClientsToIncludeHttpResponseBodyOnClientException(client
 private fun configureApiSerializer(serializerPath: String) {
   /*
    * UPDATE Serializer to match the Java generator's version
+   * Also configure StreamReadConstraints to allow large JSON strings (e.g., large HTTP response bodies).
    */
   val serializerFile = file(serializerPath)
 
   val imports =
     listOf(
       "import com.fasterxml.jackson.annotation.JsonInclude",
+      "import com.fasterxml.jackson.core.StreamReadConstraints",
       "import com.fasterxml.jackson.databind.ObjectMapper",
       "import com.fasterxml.jackson.databind.DeserializationFeature",
       "import com.fasterxml.jackson.databind.SerializationFeature",
@@ -409,15 +411,25 @@ object Serializer {
         .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
         .registerModule(JavaTimeModule())
         .registerModule(JsonNullableModule())
+        .also {
+            // Raise the max string length to allow large HTTP response bodies (e.g., >20MB)
+            // We've seen errors when calling the manifest-server, which can return large responses.
+            // 100MB seems like a reasonable limit for now.
+            it.factory.setStreamReadConstraints(
+                StreamReadConstraints.builder()
+                    .maxStringLength(100_000_000)
+                    .build()
+            )
+        }
 }
     """.trimIndent()
 
   serializerFile.writeText(
     """
 package org.openapitools.client.infrastructure
-    
+
 ${imports.joinToString("\n")}
-    
+
 $body
     """.trimIndent(),
   )
