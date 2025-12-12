@@ -1,22 +1,22 @@
 import { useMemo } from "react";
 
 import { useTestConnectorCommand } from "core/api";
+import { ActorType } from "core/api/types/AirbyteClient";
+import { type ConnectorFormValues } from "views/Connector/ConnectorForm/types";
 
 import { type ClientToolHandler } from "../../../chat/hooks/useChatMessages";
-import { type SecretsMap } from "../../types";
-import { replaceSecretsInConfig } from "../../utils/replaceSecretsInConfig";
 import { TOOL_NAMES } from "../toolNames";
 
 export interface UseCheckConfigurationToolParams {
   actorDefinitionId?: string;
-  actorType?: "source" | "destination";
-  getSecrets: () => SecretsMap;
+  actorType?: ActorType;
+  getFormValues: () => ConnectorFormValues;
 }
 
 export const useCheckConfigurationTool = ({
   actorDefinitionId,
   actorType,
-  getSecrets,
+  getFormValues,
 }: UseCheckConfigurationToolParams): ClientToolHandler => {
   const { testConnector } = useTestConnectorCommand({
     formType: actorType || "source",
@@ -25,21 +25,18 @@ export const useCheckConfigurationTool = ({
   return useMemo(
     () => ({
       toolName: TOOL_NAMES.CHECK_CONFIGURATION,
-      execute: async (args: unknown, sendResult) => {
-        // Get the current secrets at execution time to avoid stale closures
-        const secrets = getSecrets();
+      execute: async (_args: unknown, sendResult) => {
+        // Get the current form values at execution time
+        const formValues = getFormValues();
+        const configuration = formValues.connectionConfiguration;
 
-        const { configuration } = args as { configuration: Record<string, unknown> };
         if (configuration && actorDefinitionId) {
-          // Inject secrets at their respective paths before testing
-          const resolvedConfiguration = replaceSecretsInConfig(configuration, secrets);
-
           try {
-            // Test the configuration
+            // Use form values directly - they contain actual secrets
             const result = await testConnector({
-              name: "Test Configuration",
+              name: formValues.name || "Test Configuration",
               serviceType: actorDefinitionId,
-              connectionConfiguration: resolvedConfiguration as Record<string, unknown>,
+              connectionConfiguration: configuration as Record<string, unknown>,
               resourceAllocation: {},
             });
 
@@ -73,6 +70,6 @@ export const useCheckConfigurationTool = ({
         }
       },
     }),
-    [actorDefinitionId, getSecrets, testConnector]
+    [actorDefinitionId, getFormValues, testConnector]
   );
 };

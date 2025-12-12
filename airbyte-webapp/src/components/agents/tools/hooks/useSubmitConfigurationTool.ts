@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 
+import { type ConnectorFormValues } from "views/Connector/ConnectorForm/types";
+
 import { type ClientToolHandler } from "../../../chat/hooks/useChatMessages";
-import { type SecretsMap } from "../../types";
-import { replaceSecretsInConfig } from "../../utils/replaceSecretsInConfig";
 import { TOOL_NAMES } from "../toolNames";
 
 export interface UseSubmitConfigurationToolParams {
@@ -12,29 +12,27 @@ export interface UseSubmitConfigurationToolParams {
     serviceType: string;
     connectionConfiguration: Record<string, unknown>;
   }) => void;
-  getSecrets: () => SecretsMap;
+  getFormValues: () => ConnectorFormValues;
 }
 
 export const useSubmitConfigurationTool = ({
   actorDefinitionId,
   onSubmitSourceStep,
-  getSecrets,
+  getFormValues,
 }: UseSubmitConfigurationToolParams): ClientToolHandler => {
   return useMemo(
     () => ({
       toolName: TOOL_NAMES.SUBMIT_CONFIGURATION,
-      execute: (args: unknown) => {
-        const { name, configuration } = args as { name: string; configuration: Record<string, unknown> };
-        if (configuration && onSubmitSourceStep) {
-          // Get the current secrets at execution time to avoid stale closures
-          const secrets = getSecrets();
-          // Replace secret IDs with actual values
-          const resolvedConfiguration = replaceSecretsInConfig(configuration, secrets);
+      execute: (_args: unknown) => {
+        // Get the current form values at execution time
+        const formValues = getFormValues();
 
+        if (formValues.connectionConfiguration && onSubmitSourceStep) {
+          // Use form values directly - they contain actual secrets
           const sourceValues = {
-            name,
+            name: formValues.name,
             serviceType: actorDefinitionId!,
-            connectionConfiguration: resolvedConfiguration as Record<string, unknown>,
+            connectionConfiguration: formValues.connectionConfiguration as Record<string, unknown>,
           };
 
           onSubmitSourceStep(sourceValues);
@@ -43,6 +41,6 @@ export const useSubmitConfigurationTool = ({
         }
       },
     }),
-    [actorDefinitionId, onSubmitSourceStep, getSecrets]
+    [actorDefinitionId, onSubmitSourceStep, getFormValues]
   );
 };

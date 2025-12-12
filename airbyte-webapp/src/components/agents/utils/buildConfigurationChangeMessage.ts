@@ -44,5 +44,5 @@ ${JSON.stringify(currentConfig, null, 2)}
 
   return `I've made some changes to the configuration in the form:
 ${nameChangeSection}${configChangeSection}
-Please tell me an overview of which changes you see that I made, and ask me what I would want to do next, with some suggestions. Do not recap the full configuration state, just the changes. Start with something like "I noticed you've made changes to the configuration".`;
+Please tell me an overview of which changes you see that I made, and ask me what I would want to do next, with some suggestions.If you can't identify the changes, then I probably updated some secret field in the form, so you won't see the old and new value. Do not recap the full configuration state, just the changes. Start with something like "I noticed you've made changes to the configuration".`;
 };

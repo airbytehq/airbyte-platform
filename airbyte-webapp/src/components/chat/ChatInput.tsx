@@ -47,15 +47,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  const handleDismissSecret = () => {
+    setMessage("");
+    onDismissSecret?.();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
     }
-    if (e.key === "Escape" && isSecretMode && onDismissSecret) {
+    if (e.key === "Escape" && isSecretMode) {
       e.preventDefault();
-      setMessage("");
-      onDismissSecret();
+      handleDismissSecret();
     }
   };
 
@@ -181,10 +185,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           {isSecretMode && onDismissSecret && (
             <button
               type="button"
-              onClick={() => {
-                setMessage("");
-                onDismissSecret();
-              }}
+              onClick={handleDismissSecret}
               className={styles.cancelButton}
               disabled={disabled}
               aria-label={formatMessage({ id: "form.cancel" })}

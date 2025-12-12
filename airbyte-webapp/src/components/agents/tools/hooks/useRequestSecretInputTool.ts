@@ -1,12 +1,10 @@
 import { useCallback, useState } from "react";
+import { useFormContext } from "react-hook-form";
+
+import { makeConnectionConfigurationPath } from "views/Connector/ConnectorForm/utils";
 
 import { type ClientToolHandler } from "../../../chat/hooks/useChatMessages";
-import { type SecretsMap } from "../../types";
 import { TOOL_NAMES } from "../toolNames";
-
-export interface UseRequestSecretInputToolParams {
-  setSecrets: React.Dispatch<React.SetStateAction<SecretsMap>>;
-}
 
 export interface UseRequestSecretInputToolReturn {
   handler: ClientToolHandler;
@@ -15,36 +13,46 @@ export interface UseRequestSecretInputToolReturn {
   secretFieldName: string;
   isMultiline: boolean;
   submitSecret: (value: string) => void;
-  dismissSecret: () => void;
+  dismissSecret: (reason?: string) => void;
 }
 
-export const useRequestSecretInputTool = ({
-  setSecrets,
-}: UseRequestSecretInputToolParams): UseRequestSecretInputToolReturn => {
-  const [secretInputState, setSecretInputState] = useState<{
-    isActive: boolean;
-    fieldPath: string[];
-    fieldName: string;
-    isMultiline: boolean;
-    sendResult: ((result: string) => void) | null;
-  }>({
-    isActive: false,
-    fieldPath: [],
-    fieldName: "",
-    isMultiline: false,
-    sendResult: null,
-  });
+interface SecretInputState {
+  isActive: boolean;
+  fieldPath: string[];
+  fieldName: string;
+  isMultiline: boolean;
+  sendResult: ((result: string) => void) | null;
+}
+
+const DEFAULT_SECRET_INPUT_STATE: SecretInputState = {
+  isActive: false,
+  fieldPath: [],
+  fieldName: "",
+  isMultiline: false,
+  sendResult: null,
+};
+
+export const useRequestSecretInputTool = (
+  addTouchedSecretField?: (path: string) => void
+): UseRequestSecretInputToolReturn => {
+  const { setValue } = useFormContext();
+  const [secretInputState, setSecretInputState] = useState<SecretInputState>(DEFAULT_SECRET_INPUT_STATE);
 
   const submitSecret = useCallback(
     (value: string) => {
-      const pathKey = secretInputState.fieldPath.join(".");
+      const fullPath = makeConnectionConfigurationPath(secretInputState.fieldPath);
 
-      // Store the secret in the secrets map using the dot-separated path as key
-      setSecrets((prevSecrets) => {
-        const newSecrets = new Map(prevSecrets);
-        newSecrets.set(pathKey, value);
-        return newSecrets;
+      // Store actual secret value in form
+      setValue(fullPath, value, {
+        shouldDirty: true,
+        shouldValidate: true,
+        shouldTouch: true,
       });
+
+      // Track this field as touched to prevent overwrites
+      if (addTouchedSecretField) {
+        addTouchedSecretField(fullPath);
+      }
 
       // Send success confirmation back through the stored callback
       if (secretInputState.sendResult) {
@@ -52,32 +60,24 @@ export const useRequestSecretInputTool = ({
       }
 
       // Reset state
-      setSecretInputState({
-        isActive: false,
-        fieldPath: [],
-        fieldName: "",
-        isMultiline: false,
-        sendResult: null,
-      });
+      setSecretInputState(DEFAULT_SECRET_INPUT_STATE);
     },
-    [secretInputState, setSecrets]
+    [secretInputState, setValue, addTouchedSecretField]
   );
 
-  const dismissSecret = useCallback(() => {
-    // Send dismissal message to LLM
-    if (secretInputState.sendResult) {
-      secretInputState.sendResult("cancelled!");
-    }
+  const dismissSecret = useCallback(
+    (reason?: string) => {
+      // Send dismissal message to LLM
+      if (secretInputState.sendResult) {
+        const message = reason || "cancelled!";
+        secretInputState.sendResult(message);
+      }
 
-    // Reset state (don't store anything in secrets map)
-    setSecretInputState({
-      isActive: false,
-      fieldPath: [],
-      fieldName: "",
-      isMultiline: false,
-      sendResult: null,
-    });
-  }, [secretInputState]);
+      // Reset state
+      setSecretInputState(DEFAULT_SECRET_INPUT_STATE);
+    },
+    [secretInputState]
+  );
 
   const handler: ClientToolHandler = {
     toolName: TOOL_NAMES.REQUEST_SECRET_INPUT,

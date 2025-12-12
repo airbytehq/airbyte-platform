@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 
 import { useCheckConfigurationTool } from "components/agents/tools/hooks/useCheckConfigurationTool";
@@ -6,19 +6,19 @@ import { useRequestSecretInputTool } from "components/agents/tools/hooks/useRequ
 import { useSaveConfigurationTool } from "components/agents/tools/hooks/useSaveConfigurationTool";
 import { useSubmitConfigurationTool } from "components/agents/tools/hooks/useSubmitConfigurationTool";
 import { TOOL_NAMES } from "components/agents/tools/toolNames";
-import { type SecretsMap } from "components/agents/types";
 import { type ClientTools } from "components/chat/hooks/useChatMessages";
+
+import { ActorType } from "core/api/types/AirbyteClient";
+import { type ConnectorFormValues } from "views/Connector/ConnectorForm/types";
 
 interface ConnectorSetupAgentToolsProps {
   actorDefinitionId?: string;
-  actorType: "source" | "destination";
+  actorType: ActorType;
   onSubmitStep: (values: {
     name: string;
     serviceType: string;
     connectionConfiguration: Record<string, unknown>;
   }) => void;
-  setSecrets: React.Dispatch<React.SetStateAction<SecretsMap>>;
-  getSecrets: () => SecretsMap;
   onClientToolsReady: (tools: ClientTools) => void;
   onSecretInputStateChange: (state: {
     isSecretInputActive: boolean;
@@ -26,9 +26,11 @@ interface ConnectorSetupAgentToolsProps {
     secretFieldName: string | undefined;
     isMultiline: boolean;
     submitSecret: (message: string) => void;
-    dismissSecret: () => void;
+    dismissSecret: (reason?: string) => void;
   }) => void;
   onFormValuesReady?: (getFormValues: () => Record<string, unknown>) => void;
+  touchedSecretFieldsRef: React.MutableRefObject<Set<string>>;
+  addTouchedSecretField: (path: string) => void;
 }
 
 /**
@@ -39,21 +41,25 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
   actorDefinitionId,
   actorType,
   onSubmitStep,
-  setSecrets,
-  getSecrets,
   onClientToolsReady,
   onSecretInputStateChange,
   onFormValuesReady,
+  touchedSecretFieldsRef,
+  addTouchedSecretField,
 }) => {
   const { getValues } = useFormContext();
 
-  // Setup client tools - saveDraftTool uses useFormContext()
+  // Create callback that returns form values with proper typing
+  const getFormValues = useCallback(() => getValues() as ConnectorFormValues, [getValues]);
+
+  // Setup client tools - form is single source of truth
   const submitTool = useSubmitConfigurationTool({
     actorDefinitionId,
     onSubmitSourceStep: onSubmitStep,
-    getSecrets,
+    getFormValues,
   });
-  const saveDraftTool = useSaveConfigurationTool({ getSecrets });
+  const saveDraftTool = useSaveConfigurationTool(touchedSecretFieldsRef.current);
+
   const {
     handler: secretInputTool,
     isSecretInputActive,
@@ -62,11 +68,12 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
     isMultiline,
     submitSecret,
     dismissSecret,
-  } = useRequestSecretInputTool({ setSecrets });
+  } = useRequestSecretInputTool(addTouchedSecretField);
+
   const checkTool = useCheckConfigurationTool({
     actorDefinitionId,
     actorType,
-    getSecrets,
+    getFormValues,
   });
 
   const clientTools: ClientTools = useMemo(

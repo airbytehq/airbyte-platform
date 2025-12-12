@@ -14,7 +14,7 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { useGetDestinationDefinitionSpecificationAsync } from "core/api";
-import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
+import { ActorType, DestinationDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
 import { DestinationPaths } from "pages/routePaths";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
@@ -80,12 +80,12 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
 
   // Use the shared hook for all agent/form integration state
   const {
-    setSecrets,
-    getSecrets,
     handleClientToolsReady,
     secretInputState,
     handleSecretInputStateChange,
     handleFormValuesReady,
+    touchedSecretFieldsRef,
+    addTouchedSecretField,
     messages,
     sendMessage,
     isLoading,
@@ -93,7 +93,7 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
     stopGenerating,
     isStreaming,
   } = useConnectorSetupAgentState({
-    actorType: "destination",
+    actorType: ActorType.destination,
     actorDefinitionId: selectedDestinationDefinitionId,
     connectionSpecification: destinationDefinitionSpecification?.connectionSpecification,
     isAgentView,
@@ -147,13 +147,13 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
                   {/* Setup tools inside FormProvider so saveDraftTool can use useFormContext */}
                   <ConnectorSetupAgentTools
                     actorDefinitionId={selectedDestinationDefinitionId}
-                    actorType="destination"
+                    actorType={ActorType.destination}
                     onSubmitStep={onSubmitDestinationStep}
-                    setSecrets={setSecrets}
-                    getSecrets={getSecrets}
                     onClientToolsReady={handleClientToolsReady}
                     onSecretInputStateChange={handleSecretInputStateChange}
                     onFormValuesReady={handleFormValuesReady}
+                    touchedSecretFieldsRef={touchedSecretFieldsRef}
+                    addTouchedSecretField={addTouchedSecretField}
                   />
                 </>
               }

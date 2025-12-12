@@ -14,7 +14,7 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { useGetSourceDefinitionSpecificationAsync } from "core/api";
-import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
+import { ActorType, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
 import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
 import { SourcePaths } from "pages/routePaths";
@@ -84,12 +84,12 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
 
   // Use the shared hook for all agent/form integration state
   const {
-    setSecrets,
-    getSecrets,
     handleClientToolsReady,
     secretInputState,
     handleSecretInputStateChange,
     handleFormValuesReady,
+    touchedSecretFieldsRef,
+    addTouchedSecretField,
     messages,
     sendMessage,
     isLoading,
@@ -97,7 +97,7 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
     stopGenerating,
     isStreaming,
   } = useConnectorSetupAgentState({
-    actorType: "source",
+    actorType: ActorType.source,
     actorDefinitionId: selectedSourceDefinitionId,
     connectionSpecification: sourceDefinitionSpecification?.connectionSpecification,
     isAgentView,
@@ -151,13 +151,13 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
                   {/* Setup tools inside FormProvider so tools can use useFormContext */}
                   <ConnectorSetupAgentTools
                     actorDefinitionId={selectedSourceDefinitionId}
-                    actorType="source"
+                    actorType={ActorType.source}
                     onSubmitStep={onSubmitSourceStep}
-                    setSecrets={setSecrets}
-                    getSecrets={getSecrets}
                     onClientToolsReady={handleClientToolsReady}
                     onSecretInputStateChange={handleSecretInputStateChange}
                     onFormValuesReady={handleFormValuesReady}
+                    touchedSecretFieldsRef={touchedSecretFieldsRef}
+                    addTouchedSecretField={addTouchedSecretField}
                   />
                   {selectedSourceDefinition && <ForkConnectorButton sourceDefinition={selectedSourceDefinition} />}
                 </>
