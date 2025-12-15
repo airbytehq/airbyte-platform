@@ -30,6 +30,9 @@ dependencies {
   // Required for stigg
   implementation(libs.bundles.stigg)
 
+  // Required for retry logic
+  implementation(libs.failsafe)
+
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 

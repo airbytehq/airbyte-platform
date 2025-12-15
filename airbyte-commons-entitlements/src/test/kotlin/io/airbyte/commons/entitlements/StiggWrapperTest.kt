@@ -13,6 +13,8 @@ import io.airbyte.featureflag.BypassStiggEntitlementChecks
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.metrics.MetricClient
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -343,6 +345,74 @@ internal class StiggWrapperTest {
     // Should call Stigg and return the real result
     assertEquals("test-feature", result.featureId)
     assertEquals(true, result.isEntitled)
+  }
+
+  @Test
+  fun `retries on UNAVAILABLE gRPC error and succeeds`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+    val planId = EntitlementPlan.PRO.id
+
+    val successResponse =
+      GetEnumEntitlementResponse
+        .newBuilder()
+        .setEntitlement(
+          EnumEntitlement
+            .newBuilder()
+            .addEnumValues(planId)
+            .build(),
+        ).build()
+
+    // First call throws UNAVAILABLE, second call succeeds
+    every { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) } throws
+      StatusRuntimeException(Status.UNAVAILABLE) andThen successResponse
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+    val result = stiggWrapper.getPlans(organizationId)
+
+    // Should succeed after retry
+    assertEquals(1, result.size)
+    assertEquals(EntitlementPlan.PRO, result[0].planEnum)
+
+    // Verify it was called twice (initial + 1 retry)
+    verify(exactly = 2) { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) }
+  }
+
+  @Test
+  fun `does not retry on non-UNAVAILABLE gRPC errors`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+
+    // Throw PERMISSION_DENIED which should not be retried
+    every { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) } throws
+      StatusRuntimeException(Status.PERMISSION_DENIED)
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+
+    // Should throw without retrying
+    assertThrows<StatusRuntimeException> {
+      stiggWrapper.getPlans(organizationId)
+    }
+
+    // Verify it was only called once (no retry)
+    verify(exactly = 1) { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) }
+  }
+
+  @Test
+  fun `throws after max retries exceeded on persistent UNAVAILABLE error`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+
+    // Always throw UNAVAILABLE
+    every { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) } throws
+      StatusRuntimeException(Status.UNAVAILABLE)
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+
+    // Should eventually throw after retries exhausted
+    assertThrows<StatusRuntimeException> {
+      stiggWrapper.getPlans(organizationId)
+    }
+
+    // Verify it was called 4 times (initial + 3 retries)
+    verify(exactly = 4) { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) }
   }
 
   private fun createOfflineStigg(vararg entitlements: Pair<String, String>): Stigg {

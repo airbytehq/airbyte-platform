@@ -5,6 +5,8 @@
 package io.airbyte.commons.entitlements
 
 import com.apollographql.apollo3.exception.ApolloException
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.Entitlements
@@ -18,6 +20,8 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import io.stigg.api.operations.GetPaywallQuery
 import io.stigg.api.operations.ProvisionCustomerMutation
 import io.stigg.api.operations.ProvisionSubscriptionMutation
@@ -31,14 +35,61 @@ import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
 import io.stigg.sidecar.sdk.Stigg
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.time.Duration
 import java.util.concurrent.TimeoutException
 
 private val logger = KotlinLogging.logger {}
 
 private const val STIGG_TIMEOUT_MS = 30_000L
+private const val STIGG_RETRY_DELAY_MS = 200L
+private const val STIGG_RETRY_MAX_DELAY_MS = 2000L
+private const val STIGG_MAX_RETRIES = 3
 
 /**
- * Executes a Stigg API call with a 30-second timeout.
+ * Determines if an exception is a transient gRPC error that should be retried.
+ * Only retries on UNAVAILABLE status, which indicates connection issues
+ * (e.g., during pod restarts or rolling deployments).
+ */
+private fun isRetryableException(t: Throwable): Boolean {
+  // Direct StatusRuntimeException with UNAVAILABLE status
+  if (t is StatusRuntimeException && t.status.code == Status.Code.UNAVAILABLE) {
+    return true
+  }
+  // Wrapped StatusRuntimeException with UNAVAILABLE status
+  val cause = t.cause
+  if (cause is StatusRuntimeException && cause.status.code == Status.Code.UNAVAILABLE) {
+    return true
+  }
+  return false
+}
+
+/**
+ * Retry policy for Stigg API calls.
+ * Retries only on gRPC UNAVAILABLE errors, which indicate transient connection issues
+ * that can occur during pod restarts or rolling deployments.
+ */
+private val stiggRetryPolicy: RetryPolicy<Any> =
+  RetryPolicy
+    .builder<Any>()
+    .handleIf { throwable -> isRetryableException(throwable) }
+    .withBackoff(
+      Duration.ofMillis(STIGG_RETRY_DELAY_MS),
+      Duration.ofMillis(STIGG_RETRY_MAX_DELAY_MS),
+    ).withJitter(0.25)
+    .withMaxRetries(STIGG_MAX_RETRIES)
+    .onRetry { event ->
+      logger.warn {
+        "Stigg API call failed with UNAVAILABLE, retrying (attempt ${event.attemptCount}/${STIGG_MAX_RETRIES}): ${event.lastException?.message}"
+      }
+    }.onRetriesExceeded { event ->
+      logger.error(event.exception) {
+        "Stigg API call failed after $STIGG_MAX_RETRIES retries"
+      }
+    }.build()
+
+/**
+ * Executes a Stigg API call with retry logic and a 30-second timeout.
+ * Retries on transient gRPC connection errors (e.g., during rolling deployments).
  * If the call takes longer than 30 seconds, a TimeoutException is thrown.
  *
  * @param operation A description of the operation being performed (for logging)
@@ -51,9 +102,11 @@ private fun <T> withStiggTimeout(
   block: () -> T,
 ): T =
   try {
-    runBlocking {
-      withTimeout(STIGG_TIMEOUT_MS) {
-        block()
+    Failsafe.with(stiggRetryPolicy).get { _ ->
+      runBlocking {
+        withTimeout(STIGG_TIMEOUT_MS) {
+          block()
+        }
       }
     }
   } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
