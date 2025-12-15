@@ -21,7 +21,10 @@ spec:
       {{ toYaml (mergeOverwrite .Values.stiggSidecar.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
       {{- end }}
   strategy:
-    type: {{ .Values.stiggSidecar.deploymentStrategyType }} # Needed due to volume claims
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 100%
   template:
     metadata:
       labels:
@@ -52,6 +55,7 @@ spec:
         {{- end}}
       {{- end }}
     spec:
+      terminationGracePeriodSeconds: 30
       serviceAccountName: {{ default .Values.global.serviceAccountName .Values.stiggSidecar.serviceAccountName }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
@@ -133,6 +137,18 @@ spec:
           successThreshold: {{ .Values.stiggSidecar.readinessProbe.successThreshold }}
           failureThreshold: {{ .Values.stiggSidecar.readinessProbe.failureThreshold }}
         {{- end }}
+        lifecycle:
+          preStop:
+            exec:
+              # Give the pod time to drain traffic before we send a SIGTERM.
+              # ChatGPT claims that there are a few stages to remove an endpoint from a service:
+              # > EndpointSlice update: ~100 - 500 ms
+              # > kube-proxy sync: ~1 - 2 s
+              # > Worst-case jitter: ~3 - 5 s
+              # Empirically, adding this hook _does_ significantly reduce
+              # the amount of 503 errors we get from a
+              # `kubectl rollout restart deploy -n ab airbyte-stigg-sidecar`.
+              command: ["/bin/sh", "-c", "sleep 5"]
         ports:
         - name: http
           containerPort: 8800
