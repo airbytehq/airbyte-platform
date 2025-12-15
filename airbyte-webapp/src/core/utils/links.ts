@@ -58,6 +58,7 @@ export const links = {
   ssoDocs: `${BASE_DOCS_LINK}/platform/access-management/sso`,
   embeddedOnboardingDocs: `${BASE_DOCS_LINK}/ai-agents/embedded/widget/tutorials/develop-your-app`,
   fixIngress1_7: `${BASE_DOCS_LINK}/platform/next/deploying-airbyte/integrations/ingress-1-7`,
+  refreshes: `${BASE_DOCS_LINK}/platform/operator-guides/refreshes`,
 } as const;
 
 export type OutboundLinks = typeof links;

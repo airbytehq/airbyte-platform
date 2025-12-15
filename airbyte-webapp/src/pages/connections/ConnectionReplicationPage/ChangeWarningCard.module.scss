@@ -21,18 +21,3 @@
   border: variables.$border-thin solid colors.$grey-300;
   border-radius: variables.$border-radius-xs;
 }
-
-.labelCaption {
-  display: block;
-  margin-top: variables.$spacing-xs;
-  line-height: 1.5;
-
-  a {
-    color: colors.$blue;
-    text-decoration: underline;
-
-    &:hover {
-      color: colors.$blue-600;
-    }
-  }
-}

@@ -5,8 +5,11 @@ import { RadioButtonTiles } from "components/connection/CreateConnection/RadioBu
 import { Box } from "components/ui/Box";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
+
+import { links } from "core/utils/links";
 
 import styles from "./ChangeWarningCard.module.scss";
 import { ChangeItem, ChangeWarning } from "./connectionUpdateHelpers";
@@ -97,17 +100,7 @@ export const ChangeWarningCard: React.FC<ChangeWarningCardProps> = ({
       return {
         label: (
           <Text>
-            <FormattedMessage
-              id="connection.fullRefreshHighFrequency.cancel"
-              values={{
-                caption: (chunks) => (
-                  <Text as="span" className={styles.labelCaption} size="xs">
-                    {chunks}
-                  </Text>
-                ),
-                lnk: (chunks) => <a href="https://docs.airbyte.com/platform/operator-guides/refreshes">{chunks}</a>,
-              }}
-            />
+            <FormattedMessage id="connection.fullRefreshHighFrequency.cancel" />
           </Text>
         ),
         description: (
@@ -115,7 +108,7 @@ export const ChangeWarningCard: React.FC<ChangeWarningCardProps> = ({
             <FormattedMessage
               id="connection.fullRefreshHighFrequency.cancel.description"
               values={{
-                lnk: (chunks) => <a href="https://docs.airbyte.com/platform/operator-guides/refreshes">{chunks}</a>,
+                lnk: (chunks) => <ExternalLink href={links.refreshes}>{chunks}</ExternalLink>,
               }}
             />
           </Text>

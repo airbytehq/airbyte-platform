@@ -28,17 +28,25 @@ import {
 } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useFormMode } from "core/services/ui/FormModeContext";
+import { useIsCloudApp } from "core/utils/app";
 import { trackError } from "core/utils/datadog";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 import { ModalResult, useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
+import { ChangesReviewModal } from "./ChangesReviewModal";
 import { ClearDataWarningModal } from "./ClearDataWarningModal";
 import styles from "./ConnectionReplicationPage.module.scss";
-import { recommendActionOnConnectionUpdate } from "./connectionUpdateHelpers";
+import {
+  recommendActionOnConnectionUpdate,
+  analyzeConnectionChanges,
+  determineConnectionUpdateActions,
+  discardFullRefreshChanges,
+} from "./connectionUpdateHelpers";
 import { RecommendRefreshModal } from "./RecommendRefreshModal";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 
@@ -102,6 +110,9 @@ export const ConnectionReplicationPage: React.FC = () => {
     connection.destination.destinationId
   );
 
+  const isUnifiedChangesReviewEnabled = useExperiment("connection.unifiedChangesReview");
+  const isCloudApp = useIsCloudApp();
+
   type RelevantConnectionValues = Pick<ConnectionValues, (typeof relevantConnectionKeys)[number]>;
   const zodValidationSchema = useReplicationConnectionValidationZodSchema();
 
@@ -128,27 +139,82 @@ export const ConnectionReplicationPage: React.FC = () => {
        * - save the connection (unless the user cancels the action via the recommendation modal)
        */
 
-      const { shouldTrackAction, shouldRecommendRefresh } = recommendActionOnConnectionUpdate({
-        catalogDiff: connection.catalogDiff,
-        formSyncCatalog: values.syncCatalog,
-        storedSyncCatalog: connection.syncCatalog,
-      });
-
-      // handler for modal -- saves connection w/ modal result taken into account
-      async function handleModalResult(
-        result: ModalResult<boolean>,
-        values: RelevantConnectionValues,
-        saveConnection: (values: RelevantConnectionValues, skipReset: boolean) => Promise<void>
-      ) {
-        if (result.type === "completed" && isBoolean(result.reason)) {
-          // Save the connection taking into account the correct skipReset value from the dialog choice.
-          return await saveConnection(values, !result.reason /* skipReset */);
-        }
-        // We don't want to set saved to true or schema has been refreshed to false.
-        return Promise.reject();
-      }
-
       try {
+        if (isUnifiedChangesReviewEnabled) {
+          // ===== NEW FLOW: Unified Changes Review =====
+          const changes = analyzeConnectionChanges({
+            formSyncCatalog: values.syncCatalog,
+            storedSyncCatalog: connection.syncCatalog,
+            scheduleData: connection.scheduleData,
+            scheduleType: connection.scheduleType,
+            destinationSupportsRefresh: destinationSupportsRefreshes,
+            isCloudApp,
+          });
+
+          // If no changes detected, save directly
+          if (Object.keys(changes).length === 0) {
+            await saveConnection(values as Partial<ConnectionValues>, true /* skipReset */);
+            trackSchemaEdit(connection);
+            return Promise.resolve();
+          }
+
+          // Show unified modal with all warnings
+          const result = await openModal<Record<string, "accept" | "reject">>({
+            title: formatMessage({ id: "connection.reviewChanges.title" }),
+            size: "lg",
+            content: ({ onCancel, onComplete }) => (
+              <ChangesReviewModal changes={changes} onCancel={onCancel} onContinue={onComplete} />
+            ),
+          });
+
+          // If user cancels, reject and don't save
+          if (result.type !== "completed") {
+            return Promise.reject(new Error("MODAL_CANCELLED"));
+          }
+
+          const decisions = result.reason;
+
+          // Determine actions based on decisions
+          const actions = determineConnectionUpdateActions(decisions, changes);
+
+          // If user rejected fullRefreshHighFrequency, revert those streams
+          let finalValues = values;
+          if (actions.fullRefreshStreamsToRevert) {
+            finalValues = discardFullRefreshChanges(
+              values as ConnectionValues,
+              actions.fullRefreshStreamsToRevert
+            ) as RelevantConnectionValues;
+          }
+
+          // Save with correct skipReset flag
+          await saveConnection(finalValues, actions.skipReset);
+
+          // Track schema edit
+          trackSchemaEdit(connection);
+
+          return Promise.resolve();
+        }
+        // ===== OLD FLOW: Separate Modals (Backward Compatible) =====
+        const { shouldTrackAction, shouldRecommendRefresh } = recommendActionOnConnectionUpdate({
+          catalogDiff: connection.catalogDiff,
+          formSyncCatalog: values.syncCatalog,
+          storedSyncCatalog: connection.syncCatalog,
+        });
+
+        // handler for modal -- saves connection w/ modal result taken into account
+        async function handleModalResult(
+          result: ModalResult<boolean>,
+          values: RelevantConnectionValues,
+          saveConnection: (values: RelevantConnectionValues, skipReset: boolean) => Promise<void>
+        ) {
+          if (result.type === "completed" && isBoolean(result.reason)) {
+            // Save the connection taking into account the correct skipReset value from the dialog choice.
+            return await saveConnection(values, !result.reason /* skipReset */);
+          }
+          // We don't want to set saved to true or schema has been refreshed to false.
+          return Promise.reject();
+        }
+
         if (shouldRecommendRefresh) {
           // if the destination doesn't support refreshes, we need to clear data instead
           if (!destinationSupportsRefreshes) {
@@ -200,6 +266,8 @@ export const ConnectionReplicationPage: React.FC = () => {
       formatMessage,
       saveConnection,
       trackSchemaEdit,
+      isUnifiedChangesReviewEnabled,
+      isCloudApp,
     ]
   );
 
@@ -228,6 +296,10 @@ export const ConnectionReplicationPage: React.FC = () => {
     _values: RelevantConnectionValues,
     methods: UseFormReturn<RelevantConnectionValues>
   ) => {
+    // If user cancelled the modal, don't show error toast
+    if (error.message === "MODAL_CANCELLED") {
+      return;
+    }
     trackError(error, { connectionName: connection.name });
 
     if (error instanceof HttpError && HttpProblem.isType(error, "error:connection-conflicting-destination-stream")) {
