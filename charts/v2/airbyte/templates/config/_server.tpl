@@ -42,7 +42,7 @@ Renders the server.auditLoggingEnabled environment variable
 Renders the server.configDbMaxPoolSize value
 */}}
 {{- define "airbyte.server.configDbMaxPoolSize" }}
-    {{- .Values.server.configDbMaxPoolSize | default 20 }}
+    {{- .Values.server.configDbMaxPoolSize }}
 {{- end }}
 
 {{/*

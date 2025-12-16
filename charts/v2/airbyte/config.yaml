@@ -989,7 +989,6 @@ server:
   
     - env: CONFIG_DB_MAX_POOL_SIZE
       key: configDbMaxPoolSize
-      defaultValue: 20
 
     - env: CONNECTOR_DATADOG_SUPPORT_NAMES
       key: connectorDatadogSupportNames
