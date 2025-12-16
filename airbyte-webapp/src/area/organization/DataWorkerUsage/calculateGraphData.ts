@@ -43,22 +43,39 @@ export const calculateGraphData = (
 
   // Populate workspace usage data
   if (regionDataWorkerUsage) {
+    // First pass: calculate max usage per workspace per day
+    const workspaceMaxUsage = new Map<string, Map<string, number>>();
+
+    regionDataWorkerUsage.workspaces.forEach((workspace) => {
+      const dailyMaxUsage = new Map<string, number>();
+
+      workspace.dataWorkers.forEach(({ date, used }) => {
+        const formattedDate = dayjs(date).format(DATE_FORMAT);
+        if (days.has(formattedDate)) {
+          const existingMax = dailyMaxUsage.get(formattedDate) ?? 0;
+          dailyMaxUsage.set(formattedDate, Math.max(existingMax, used));
+        }
+      });
+
+      workspaceMaxUsage.set(workspace.id, dailyMaxUsage);
+    });
+
+    // Second pass: assign to top 10 or sum into "Other"
     regionDataWorkerUsage.workspaces.forEach((workspace) => {
       const isInTop10 = !top10WorkspaceIds || top10WorkspaceIds.includes(workspace.id);
       const isInOther = otherWorkspaceIds?.includes(workspace.id);
+      const dailyMaxUsage = workspaceMaxUsage.get(workspace.id)!;
 
-      workspace.dataWorkers.forEach(({ date, used }) => {
-        const day = days.get(dayjs(date).format(DATE_FORMAT));
+      dailyMaxUsage.forEach((maxUsage, formattedDate) => {
+        const day = days.get(formattedDate);
         if (day) {
           if (isInTop10 && !isInOther) {
             // Add to top 10 workspace
-            const existingUsage = day.workspaceUsage[workspace.id] ?? 0;
-            // Sum all usage values for this workspace on this day
-            day.workspaceUsage[workspace.id] = existingUsage + used;
+            day.workspaceUsage[workspace.id] = maxUsage;
           } else if (isInOther) {
-            // Aggregate into "Other" category
+            // Sum max usage values into "Other" category
             const existingOtherUsage = day.workspaceUsage.other ?? 0;
-            day.workspaceUsage.other = existingOtherUsage + used;
+            day.workspaceUsage.other = existingOtherUsage + maxUsage;
           }
         }
       });

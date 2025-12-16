@@ -102,7 +102,7 @@ describe(`${calculateGraphData.name}`, () => {
       expect(result[0].workspaceUsage["workspace-2"]).toBe(8);
     });
 
-    it("sums all usage when multiple data points exist for the same day", () => {
+    it("keeps maximum usage when multiple data points exist for the same day", () => {
       const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
       const regionData: RegionDataWorkerUsage = {
         id: "region-1",
@@ -122,7 +122,7 @@ describe(`${calculateGraphData.name}`, () => {
 
       const result = calculateGraphData(dateRange, regionData);
 
-      expect(result[0].workspaceUsage["workspace-1"]).toBe(22); // 5 + 10 + 7 = 22
+      expect(result[0].workspaceUsage["workspace-1"]).toBe(10); // max(5, 10, 7) = 10
     });
 
     it("handles empty workspaces array", () => {
@@ -180,7 +180,7 @@ describe(`${calculateGraphData.name}`, () => {
       expect(result[0].workspaceUsage["workspace-1"]).toBe(0);
     });
 
-    it("sums usage values regardless of order", () => {
+    it("keeps maximum usage regardless of order", () => {
       const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
       const regionData: RegionDataWorkerUsage = {
         id: "region-1",
@@ -199,12 +199,12 @@ describe(`${calculateGraphData.name}`, () => {
 
       const result = calculateGraphData(dateRange, regionData);
 
-      expect(result[0].workspaceUsage["workspace-1"]).toBe(15); // 10 + 5 = 15
+      expect(result[0].workspaceUsage["workspace-1"]).toBe(10); // max(10, 5) = 10
     });
   });
 
   describe("top 10 and other workspace filtering", () => {
-    it("sums usage per workspace, then aggregates 'other' workspaces", () => {
+    it("keeps max usage per workspace, then aggregates 'other' workspaces", () => {
       const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
       const regionData: RegionDataWorkerUsage = {
         id: "region-1",
@@ -237,13 +237,13 @@ describe(`${calculateGraphData.name}`, () => {
         ["workspace-11", "workspace-12"] // both in other
       );
 
-      // Workspace 11: 5 + 10 + 3 = 18
-      // Workspace 12: 7 + 8 = 15
-      // Other total: 18 + 15 = 33
-      expect(result[0].workspaceUsage.other).toBe(33);
+      // Workspace 11: max(5, 10, 3) = 10
+      // Workspace 12: max(7, 8) = 8
+      // Other total: 10 + 8 = 18
+      expect(result[0].workspaceUsage.other).toBe(18);
     });
 
-    it("sums usage for individual workspace in top 10", () => {
+    it("keeps max usage for individual workspace in top 10", () => {
       const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
       const regionData: RegionDataWorkerUsage = {
         id: "region-1",
@@ -268,8 +268,8 @@ describe(`${calculateGraphData.name}`, () => {
         [] // none in other
       );
 
-      // Should sum: 10 + 15 + 12 = 37
-      expect(result[0].workspaceUsage["workspace-1"]).toBe(37);
+      // Should keep max: max(10, 15, 12) = 15
+      expect(result[0].workspaceUsage["workspace-1"]).toBe(15);
     });
   });
 });
