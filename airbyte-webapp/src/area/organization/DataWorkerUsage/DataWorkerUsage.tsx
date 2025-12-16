@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { PageContainer } from "components/PageContainer";
@@ -11,10 +11,11 @@ import { ListBox } from "components/ui/ListBox";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Text } from "components/ui/Text";
 
-import { useListDataplaneGroups } from "core/api";
+import { useListDataplaneGroups, useOrganizationWorkerUsage } from "core/api";
 
 import styles from "./DataWorkerUsage.module.scss";
 import { UsageByWorkspaceGraph } from "./UsageByWorkspaceGraph";
+import { findFirstRegionWithUsage, getRegionOptions, sortByNameAlphabetically } from "./utils";
 
 const NOW = new Date();
 
@@ -30,14 +31,33 @@ export const DataWorkerUsage: React.FC = () => {
     dayjs(NOW).endOf("day").format("YYYY-MM-DD"),
   ]);
   const regions = useListDataplaneGroups();
-  const [selectedRegion, setSelectedRegion] = useState<string | null>(() => regions[0]?.dataplane_group_id ?? null);
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const { formatMessage } = useIntl();
 
-  const regionOptions = useMemo(() => {
-    return regions
-      .map((region) => ({ label: region.name, value: region.dataplane_group_id }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [regions]);
+  const allUsage = useOrganizationWorkerUsage({
+    startDate: selectedDateRange[0],
+    endDate: selectedDateRange[1],
+  });
+
+  // Sort regions alphabetically for consistent ordering
+  const sortedRegions = useMemo(() => [...regions].sort(sortByNameAlphabetically), [regions]);
+
+  const regionOptions = useMemo(() => getRegionOptions(sortedRegions), [sortedRegions]);
+
+  // Auto-select first region with usage data on mount
+  useEffect(() => {
+    // Only auto-select if no region is currently selected
+    if (selectedRegion !== null || !sortedRegions.length) {
+      return;
+    }
+
+    const regionWithUsage = findFirstRegionWithUsage(sortedRegions, allUsage);
+    const bestRegionId = regionWithUsage?.dataplane_group_id ?? sortedRegions[0]?.dataplane_group_id ?? null;
+
+    if (bestRegionId) {
+      setSelectedRegion(bestRegionId);
+    }
+  }, [sortedRegions, allUsage, selectedRegion]);
 
   return (
     <Box mt="xl">
