@@ -5,10 +5,20 @@
 :export {
   tooltipZindex: z-indices.$tooltip;
   gridLine: colors.$grey-100;
-  workspaceColor1: colors.$blue-400;
-  workspaceColor2: colors.$blue-200;
-  workspaceColor3: colors.$grey-200;
+  otherColor: colors.$grey-300;
   barHover: colors.$blue-40;
+
+  // Workspace colors - 10 color visualization palette
+  orange200: colors.$orange-200;
+  pink200: colors.$pink-200;
+  pink500: colors.$pink-500;
+  pink700: colors.$pink-700;
+  purple400: colors.$purple-400;
+  cyan500: colors.$cyan-500;
+  cyan700: colors.$cyan-700;
+  blueBright: colors.$blue-bright;
+  blue400: colors.$blue-400;
+  blue800: colors.$blue-800;
 }
 
 .usageByWorkspaceGraph {

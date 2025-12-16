@@ -1,0 +1,8 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.tooltipTotal {
+  border-top: variables.$border-thin solid colors.$grey-100;
+  padding-top: variables.$spacing-sm;
+  margin-top: variables.$spacing-sm;
+}

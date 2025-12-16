@@ -8,18 +8,24 @@
   flex-direction: column;
   gap: variables.$spacing-sm;
 
+  &__nameContainer {
+    display: flex;
+    align-items: center;
+    gap: variables.$spacing-md;
+  }
+
   &__dot {
-    display: "inline-block";
+    display: inline-block;
     width: 10px;
     height: 10px;
-    margin-right: variables.$spacing-md;
   }
 
   &__item {
     height: 20px;
     display: flex;
     align-items: center;
-    gap: variables.$spacing-sm;
+    justify-content: space-between;
+    gap: variables.$spacing-md;
     font-size: variables.$font-size-sm;
   }
 }

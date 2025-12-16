@@ -13,6 +13,7 @@ import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 import { calculateGraphData } from "./calculateGraphData";
 import { GraphTooltip } from "./GraphTooltip";
 import styles from "./UsageByWorkspaceGraph.module.scss";
+import { getWorkspaceColorByIndex } from "./utils";
 
 interface UsageByWorkspaceGraphProps {
   selectedRegionId: string;
@@ -21,9 +22,7 @@ interface UsageByWorkspaceGraphProps {
 
 interface ColorMap {
   gridLine: string;
-  workspaceColor1: string;
-  workspaceColor2: string;
-  workspaceColor3: string;
+  otherColor: string;
   barHover: string;
 }
 
@@ -48,9 +47,7 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
   );
   const [colorMap, setColorMap] = useState<ColorMap>({
     gridLine: "",
-    workspaceColor1: "",
-    workspaceColor2: "",
-    workspaceColor3: "",
+    otherColor: "",
     barHover: "",
   });
   const { colorValues } = useAirbyteTheme();
@@ -58,9 +55,7 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
   useEffect(() => {
     const colorMap: ColorMap = {
       gridLine: colorValues[styles.gridLine],
-      workspaceColor1: colorValues[styles.workspaceColor1],
-      workspaceColor2: colorValues[styles.workspaceColor2],
-      workspaceColor3: colorValues[styles.workspaceColor3],
+      otherColor: colorValues[styles.otherColor],
       barHover: colorValues[styles.barHover],
     };
     setColorMap(colorMap);
@@ -68,26 +63,65 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
 
   const { formatDate } = useIntl();
 
-  const stackedWorkspaceSections: Array<{ dataKey: string; fill: string; name: string }> = useMemo(
+  // Sort workspaces by total usage descending and filter out zero-usage workspaces
+  const sortedWorkspaces = useMemo(() => {
+    const workspacesWithTotals =
+      selectedRegionUsage?.workspaces.map((ws) => ({
+        workspace: ws,
+        totalUsage: ws.dataWorkers.reduce((sum, dw) => sum + dw.used, 0),
+      })) ?? [];
+
+    return workspacesWithTotals.filter((w) => w.totalUsage > 0).sort((a, b) => b.totalUsage - a.totalUsage);
+  }, [selectedRegionUsage?.workspaces]);
+
+  // Split into top 10 and others
+  const top10Workspaces = useMemo(() => sortedWorkspaces.slice(0, 10).map((w) => w.workspace), [sortedWorkspaces]);
+  const otherWorkspaces = useMemo(() => sortedWorkspaces.slice(10).map((w) => w.workspace), [sortedWorkspaces]);
+  const hasOtherCategory = otherWorkspaces.length > 0;
+
+  // Generate workspace color map with sequential colors from theme
+  const workspaceColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    top10Workspaces.forEach((workspace, index) => {
+      const color = getWorkspaceColorByIndex(index);
+      map.set(workspace.id, color);
+    });
+    return map;
+  }, [top10Workspaces]);
+
+  const stackedWorkspaceSections: Array<{ dataKey: string; fill: string; name: string }> = useMemo(() => {
+    const sections = top10Workspaces.map((workspace) => ({
+      dataKey: `workspaceUsage.${workspace.id}`,
+      name: workspace.name,
+      fill: workspaceColorMap.get(workspace.id) || "#000",
+    }));
+
+    if (hasOtherCategory) {
+      sections.push({
+        dataKey: "workspaceUsage.other",
+        name: "Other",
+        fill: colorMap.otherColor,
+      });
+    }
+
+    return sections;
+  }, [top10Workspaces, hasOtherCategory, workspaceColorMap, colorMap.otherColor]);
+
+  const data = useMemo(
     () =>
-      selectedRegionUsage?.workspaces.map((workspaceUsage, index) => {
-        const colorOptions = [colorMap.workspaceColor1, colorMap.workspaceColor2, colorMap.workspaceColor3];
-        const color = colorOptions[index % colorOptions.length];
-        return {
-          dataKey: `workspaceUsage.${workspaceUsage.id}`,
-          name: workspaceUsage.name,
-          fill: color,
-        };
-      }) ?? [],
-    [colorMap.workspaceColor1, colorMap.workspaceColor2, colorMap.workspaceColor3, selectedRegionUsage?.workspaces]
+      calculateGraphData(
+        dateRange,
+        selectedRegionUsage,
+        top10Workspaces.map((w) => w.id),
+        otherWorkspaces.map((w) => w.id)
+      ),
+    [dateRange, selectedRegionUsage, top10Workspaces, otherWorkspaces]
   );
 
-  const data = useMemo(() => calculateGraphData(dateRange, selectedRegionUsage), [dateRange, selectedRegionUsage]);
-
   const animationDuration = useMemo(() => {
-    const numberOfWorkspaces = Math.max(1, selectedRegionUsage?.workspaces.length ?? 0);
+    const numberOfWorkspaces = Math.max(1, top10Workspaces.length + (hasOtherCategory ? 1 : 0));
     return 300 / numberOfWorkspaces;
-  }, [selectedRegionUsage?.workspaces.length]);
+  }, [top10Workspaces.length, hasOtherCategory]);
 
   if (!selectedRegionUsage || selectedRegionUsage.workspaces.length === 0) {
     return (

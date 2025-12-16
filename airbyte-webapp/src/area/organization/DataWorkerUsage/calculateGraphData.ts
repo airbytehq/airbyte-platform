@@ -16,11 +16,15 @@ const DATE_FORMAT = "YYYY-MM-DD";
  *
  * @param dateRange - A tuple of [startDate, endDate] in YYYY-MM-DD format
  * @param regionDataWorkerUsage - Optional region usage data containing workspace usage information
+ * @param top10WorkspaceIds - Optional array of workspace IDs to include in the graph (top 10)
+ * @param otherWorkspaceIds - Optional array of workspace IDs to aggregate into "Other" category
  * @returns An array of RegionDataBar objects, one for each day in the range
  */
 export const calculateGraphData = (
   dateRange: [string, string],
-  regionDataWorkerUsage: RegionDataWorkerUsage | undefined
+  regionDataWorkerUsage: RegionDataWorkerUsage | undefined,
+  top10WorkspaceIds?: string[],
+  otherWorkspaceIds?: string[]
 ): RegionDataBar[] => {
   const firstDay = dayjs(dateRange[0]).startOf("day");
   const lastDay = dayjs(dateRange[1]).endOf("day");
@@ -40,12 +44,22 @@ export const calculateGraphData = (
   // Populate workspace usage data
   if (regionDataWorkerUsage) {
     regionDataWorkerUsage.workspaces.forEach((workspace) => {
+      const isInTop10 = !top10WorkspaceIds || top10WorkspaceIds.includes(workspace.id);
+      const isInOther = otherWorkspaceIds?.includes(workspace.id);
+
       workspace.dataWorkers.forEach(({ date, used }) => {
         const day = days.get(dayjs(date).format(DATE_FORMAT));
         if (day) {
-          const existingUsage = day.workspaceUsage[workspace.id] ?? 0;
-          // Keep the maximum usage value if multiple data points exist
-          day.workspaceUsage[workspace.id] = used > existingUsage ? used : existingUsage;
+          if (isInTop10 && !isInOther) {
+            // Add to top 10 workspace
+            const existingUsage = day.workspaceUsage[workspace.id] ?? 0;
+            // Sum all usage values for this workspace on this day
+            day.workspaceUsage[workspace.id] = existingUsage + used;
+          } else if (isInOther) {
+            // Aggregate into "Other" category
+            const existingOtherUsage = day.workspaceUsage.other ?? 0;
+            day.workspaceUsage.other = existingOtherUsage + used;
+          }
         }
       });
     });

@@ -27,8 +27,10 @@ interface WorkspaceLegendItemProps {
 export const WorkspaceLegendItem = ({ name, color, usage }: WorkspaceLegendItemProps) => {
   return (
     <li className={styles.graphLegend__item}>
-      <ColoredDot color={color} />
-      <Text>{name}</Text>
+      <span className={styles.graphLegend__nameContainer}>
+        <ColoredDot color={color} />
+        <Text>{name}</Text>
+      </span>
       {usage && <Text color="grey">{usage}</Text>}
     </li>
   );
