@@ -20,6 +20,7 @@ import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { TestWrapper } from "test-utils/testutils";
 
 import {
+  SchemaChange,
   WebBackendConnectionRead,
   WebBackendConnectionRequestBody,
   WebBackendConnectionUpdate,
@@ -36,9 +37,39 @@ jest.mock("core/utils/rbac", () => ({
   },
 }));
 
+jest.mock("hooks/services/Experiment", () => ({
+  useExperiment: () => true, // Enable async schema discovery
+}));
+
 const mockedUseUpdateConnection = jest.fn(async (connection: WebBackendConnectionUpdate) => {
   const { sourceCatalogId, ...connectionUpdate } = connection;
   return { ...mockConnection, ...connectionUpdate, catalogId: sourceCatalogId ?? mockConnection.catalogId };
+});
+
+// Share refreshed connection data between async mocks so test spies work correctly
+let currentRefreshedConnection: WebBackendConnectionRead | null = null;
+
+const mockedDiscoverSchemaAsync = jest.fn(async () => {
+  // Get refreshed connection once and cache it for this refresh operation
+  currentRefreshedConnection = utils.getMockConnectionWithRefreshedCatalog();
+  return {
+    catalogId: currentRefreshedConnection.catalogId,
+  };
+});
+
+const mockedDiffCatalogsAsync = jest.fn(async () => {
+  // Use the cached refreshed connection from discoverSchemaAsync
+  if (!currentRefreshedConnection) {
+    currentRefreshedConnection = utils.getMockConnectionWithRefreshedCatalog();
+  }
+  const result = {
+    merged_catalog: currentRefreshedConnection.syncCatalog,
+    catalog_diff: currentRefreshedConnection.catalogDiff,
+    schema_change: currentRefreshedConnection.schemaChange,
+  };
+  // Clear the cache after diffCatalogs completes
+  currentRefreshedConnection = null;
+  return result;
 });
 
 jest.mock("core/api", () => ({
@@ -59,6 +90,16 @@ jest.mock("core/api", () => ({
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
   useGetWebappConfig: () => mockWebappConfig,
+  useDiscoverSourceSchemaMutation: () => ({
+    mutateAsync: mockedDiscoverSchemaAsync,
+    isLoading: false,
+    error: null,
+  }),
+  useCatalogDiffMutation: () => ({
+    mutateAsync: mockedDiffCatalogsAsync,
+    isLoading: false,
+    error: null,
+  }),
 }));
 
 const utils = {
@@ -82,6 +123,9 @@ describe("ConnectionEditServiceProvider", () => {
 
   beforeEach(() => {
     refreshSchema.mockReset();
+    mockedUseUpdateConnection.mockClear();
+    mockedDiscoverSchemaAsync.mockClear();
+    mockedDiffCatalogsAsync.mockClear();
   });
 
   it("should load a Connection from a connectionId", async () => {
@@ -205,6 +249,85 @@ describe("ConnectionEditServiceProvider", () => {
     expect(result.current.editService.schemaHasBeenRefreshed).toBe(false);
     expect(result.current.editService.schemaRefreshing).toBe(false);
     expect(result.current.editService.connection).toEqual(updatedConnection);
+  });
+
+  it("should pass persist_changes: true when refreshing schema", async () => {
+    const useMyTestHook = () => useConnectionFormService();
+
+    const { result } = renderHook(useMyTestHook, {
+      wrapper: Wrapper,
+    });
+
+    await act(async () => {
+      await result.current.refreshSchema();
+    });
+
+    expect(mockedDiffCatalogsAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        persist_changes: true,
+      })
+    );
+  });
+
+  it("should use updated catalog ID for subsequent refreshes", async () => {
+    const useMyTestHook = () =>
+      ({ editService: useConnectionEditService(), formService: useConnectionFormService() }) as const;
+
+    const { result } = renderHook(useMyTestHook, {
+      wrapper: Wrapper,
+    });
+
+    const initialCatalogId = mockConnection.catalogId;
+
+    await act(async () => {
+      await result.current.formService.refreshSchema();
+    });
+
+    const refreshedConnection = utils.getMockConnectionWithRefreshedCatalog();
+    expect(result.current.editService.connection.catalogId).toBe(refreshedConnection.catalogId);
+    expect(result.current.editService.connection.catalogId).not.toBe(initialCatalogId);
+
+    await act(async () => {
+      await result.current.formService.refreshSchema();
+    });
+
+    expect(mockedDiffCatalogsAsync).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        current_catalog_id: refreshedConnection.catalogId,
+      })
+    );
+  });
+
+  it("should pass persist_changes: true to enable backend auto-disable", async () => {
+    const useMyTestHook = () => useConnectionFormService();
+
+    const { result } = renderHook(useMyTestHook, {
+      wrapper: Wrapper,
+    });
+
+    const connectionWithBreakingChange: WebBackendConnectionRead = {
+      ...mockConnection,
+      catalogDiff: mockCatalogDiff,
+      schemaChange: SchemaChange.breaking,
+      catalogId: `${mockConnection.catalogId}123`,
+    };
+
+    jest
+      .spyOn(utils, "getMockConnectionWithRefreshedCatalog")
+      .mockImplementationOnce((): WebBackendConnectionRead => connectionWithBreakingChange);
+
+    await act(async () => {
+      await result.current.refreshSchema();
+    });
+
+    await waitFor(() => {
+      expect(mockedDiffCatalogsAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          connection_id: mockConnection.connectionId,
+          persist_changes: true,
+        })
+      );
+    });
   });
 
   /**

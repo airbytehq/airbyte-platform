@@ -2,6 +2,7 @@ export * from "./actorDefinitionVersions";
 export * from "./applications";
 export * from "./auth";
 export * from "./billing";
+export * from "./catalogs";
 export * from "./commands";
 export * from "./configTemplates";
 export * from "./connections";

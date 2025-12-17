@@ -56,6 +56,21 @@ jest.mock("core/api", () => ({
   }),
   useGetDataplaneGroup: () => mockGetDataplaneGroup,
   useGetWebappConfig: () => mockWebappConfig,
+  useDiscoverSchemaMutation: () => ({
+    mutateAsync: jest.fn(),
+    isLoading: false,
+    error: null,
+  }),
+  useDiscoverSourceSchemaMutation: () => ({
+    mutateAsync: jest.fn(),
+    isLoading: false,
+    error: null,
+  }),
+  useCatalogDiffMutation: () => ({
+    mutateAsync: jest.fn(),
+    isLoading: false,
+    error: null,
+  }),
 }));
 
 jest.mock("core/utils/rbac", () => ({

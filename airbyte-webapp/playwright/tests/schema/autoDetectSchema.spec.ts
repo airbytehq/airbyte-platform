@@ -23,6 +23,7 @@ import { connectionList } from "../../helpers/connectionList";
 import { dbHelpers, alterTable, getWorkerSchema } from "../../helpers/database";
 import { schemaChange, catalogDiffModal, streamsTable, replicationForm } from "../../helpers/replication";
 import { setupWorkspaceForTests } from "../../helpers/workspace";
+import { setFeatureFlags, setFeatureServiceFlags, injectFeatureFlagsAndStyle } from "../../support/e2e";
 
 test.describe("Connection - Auto-detect schema changes", () => {
   let workspaceId: string;
@@ -30,12 +31,26 @@ test.describe("Connection - Auto-detect schema changes", () => {
 
   test.beforeAll(async () => {
     workspaceId = await setupWorkspaceForTests();
+
+    // Explicitly disable async schema discovery to guarantee sync behavior
+    // This prevents tests from accidentally using the async code path since
+    // asyncSchemaDiscovery defaults to true in experiments.ts
+    setFeatureFlags({ asyncSchemaDiscovery: false });
+  });
+
+  test.afterAll(async () => {
+    // Clean up flags to prevent cross-test contamination
+    setFeatureFlags({});
+    setFeatureServiceFlags({});
   });
 
   test.describe("No changes", () => {
     let testData: ConnectionTestData;
 
-    test.beforeEach(async ({ request }, testInfo) => {
+    test.beforeEach(async ({ request, page }, testInfo) => {
+      // Inject feature flags into page before any navigation
+      await injectFeatureFlagsAndStyle(page);
+
       // Get worker-specific schema for isolation
       schema = getWorkerSchema(testInfo.parallelIndex);
 
@@ -90,7 +105,10 @@ test.describe("Connection - Auto-detect schema changes", () => {
   test.describe("Non-breaking changes", () => {
     let testData: ConnectionTestData;
 
-    test.beforeEach(async ({ request }, testInfo) => {
+    test.beforeEach(async ({ request, page }, testInfo) => {
+      // Inject feature flags into page before any navigation
+      await injectFeatureFlagsAndStyle(page);
+
       // Get worker-specific schema for isolation
       schema = getWorkerSchema(testInfo.parallelIndex);
 
@@ -220,7 +238,10 @@ test.describe("Connection - Auto-detect schema changes", () => {
   test.describe("Breaking changes", () => {
     let testData: ConnectionTestData;
 
-    test.beforeEach(async ({ request }, testInfo) => {
+    test.beforeEach(async ({ request, page }, testInfo) => {
+      // Inject feature flags into page before any navigation
+      await injectFeatureFlagsAndStyle(page);
+
       // Get worker-specific schema for isolation
       schema = getWorkerSchema(testInfo.parallelIndex);
 
@@ -365,7 +386,10 @@ test.describe("Connection - Auto-detect schema changes", () => {
   test.describe("Non-breaking schema update preference", () => {
     let testData: ConnectionTestData;
 
-    test.beforeEach(async ({ request }, testInfo) => {
+    test.beforeEach(async ({ request, page }, testInfo) => {
+      // Inject feature flags into page before any navigation
+      await injectFeatureFlagsAndStyle(page);
+
       // Get worker-specific schema for isolation
       schema = getWorkerSchema(testInfo.parallelIndex);
 

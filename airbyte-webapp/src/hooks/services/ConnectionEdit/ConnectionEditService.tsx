@@ -5,9 +5,11 @@ import { useAsyncFn } from "react-use";
 
 import {
   useDestinationDefinitionVersion,
+  useDiscoverSourceSchemaMutation,
   useGetConnection,
   useGetConnectionQuery,
   useUpdateConnection,
+  useCatalogDiffMutation,
 } from "core/api";
 import {
   AirbyteCatalog,
@@ -24,6 +26,7 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
+import { useExperiment } from "../Experiment";
 import { useNotificationService } from "../Notification";
 
 interface ConnectionEditProps {
@@ -122,7 +125,105 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
     [updateConnectionAction]
   );
 
-  const [{ loading: schemaRefreshing, error: schemaError }, refreshSchema] = useAsyncFn(async () => {
+  const {
+    mutateAsync: discoverSchemaAsync,
+    isLoading: schemaDiscovering,
+    error: discoverSchemaError,
+  } = useDiscoverSourceSchemaMutation(connection.source);
+  const { mutateAsync: diffCatalogs, isLoading: catalogDiffing, error: catalogDiffError } = useCatalogDiffMutation();
+
+  const refreshSchemaCommand = useCallback(async () => {
+    unregisterNotificationById("connection.noDiff");
+    if (!catalog.catalogId) {
+      registerNotification({
+        id: "connection.missingCatalogId",
+        type: "error",
+        text: "No catalog ID found for this connection. Schema cannot be refreshed.",
+      });
+      return;
+    }
+    const output = await discoverSchemaAsync();
+    if (!connection.catalogId) {
+      throw new Error("No catalog ID found for this connection. Schema cannot be refreshed.");
+    }
+    const diff = await diffCatalogs({
+      current_catalog_id: connection.catalogId,
+      new_catalog_id: output.catalogId,
+      connection_id: connection.connectionId,
+      persist_changes: true, // Auto-disable connection when breaking schema changes are detected
+    });
+
+    const mergedCatalog = diff.merged_catalog;
+    if (!mergedCatalog) {
+      throw new Error("No merged catalog returned from diffing operation.");
+    }
+
+    // Fetch the fresh connection from backend (includes persisted breaking changes)
+    const freshConnection = await getConnectionQuery({ connectionId });
+
+    // Create the refreshed connection object with new catalog data
+    const refreshedConnection = {
+      ...freshConnection,
+      syncCatalog: mergedCatalog,
+      catalogId: output.catalogId,
+      catalogDiff: diff.catalog_diff,
+      schemaChange: diff.schema_change,
+    };
+
+    /**
+     * (BE issue) fix for "non-breaking" schema change and empty catalogDiff
+     * Issue: https://github.com/airbytehq/airbyte-internal-issues/issues/4867
+     */
+    if (
+      refreshedConnection.schemaChange === SchemaChange.non_breaking &&
+      !refreshedConnection?.catalogDiff?.transforms?.length
+    ) {
+      await updateConnection({
+        connectionId: refreshedConnection.connectionId,
+        sourceCatalogId: refreshedConnection.catalogId,
+      });
+      registerNotification({
+        id: "connection.updateAutomaticallyApplied",
+        type: "success",
+        text: formatMessage({ id: "connection.updateSchema.updateAutomaticallyApplied" }),
+      });
+      return;
+    }
+
+    if (refreshedConnection.catalogDiff && refreshedConnection.catalogDiff.transforms?.length > 0) {
+      setConnection(refreshedConnection);
+      setSchemaHasBeenRefreshed(true);
+    } else {
+      setConnection((connection) => ({
+        ...connection,
+        schemaChange: refreshedConnection.schemaChange,
+        /**
+         * set refreshed syncCatalog since the stream(AirbyteStream) data might have changed
+         * (eg. new sync mode is available)
+         */
+        syncCatalog: refreshedConnection.syncCatalog,
+      }));
+
+      registerNotification({
+        id: "connection.noDiff",
+        text: formatMessage({ id: "connection.updateSchema.noDiff" }),
+      });
+    }
+  }, [
+    catalog.catalogId,
+    connection.catalogId,
+    connection.connectionId,
+    connectionId,
+    diffCatalogs,
+    discoverSchemaAsync,
+    formatMessage,
+    getConnectionQuery,
+    registerNotification,
+    unregisterNotificationById,
+    updateConnection,
+  ]);
+
+  const [{ loading: syncSchemaRefreshing, error: syncSchemaError }, refreshSchemaSync] = useAsyncFn(async () => {
     unregisterNotificationById("connection.noDiff");
 
     const refreshedConnection = await getConnectionQuery({ connectionId, withRefreshedCatalog: true });
@@ -167,6 +268,17 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
       });
     }
   });
+
+  // Temporarily we will support both sync and async schema discovery based on this flag. Synchronous discovery will be
+  // removed once validated.
+  const enableAsyncDiscovery = useExperiment("asyncSchemaDiscovery");
+  const refreshSchema = enableAsyncDiscovery ? refreshSchemaCommand : refreshSchemaSync;
+  const schemaRefreshing = enableAsyncDiscovery ? catalogDiffing || schemaDiscovering : syncSchemaRefreshing;
+  const asyncError =
+    (catalogDiffError instanceof Error && catalogDiffError) ||
+    (discoverSchemaError instanceof Error && discoverSchemaError) ||
+    undefined;
+  const schemaError = enableAsyncDiscovery ? asyncError : syncSchemaError;
 
   const streamsByRefreshType = useMemo(() => {
     const streamsSupportingMergeRefresh: ConnectionStream[] = [];
