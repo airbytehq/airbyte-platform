@@ -9,8 +9,8 @@ import { Text } from "components/ui/Text";
 import { DataWorkerUsage } from "area/organization/DataWorkerUsage";
 import { ConsumptionTimeWindow } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { links } from "core/utils/links";
-import { useExperiment } from "hooks/services/Experiment";
 import { UsagePerDayGraph } from "packages/cloud/area/billing/components/UsagePerDayGraph";
 
 import { OrganizationCreditUsageContextProvider, useOrganizationCreditsContext } from "./OrganizationCreditContext";
@@ -19,7 +19,7 @@ import { UsageByWorkspaceTable } from "./UsageByWorkspaceTable";
 
 export const OrganizationUsagePage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION_USAGE);
-  const showDataWorkerUsage = useExperiment("organization.workerUsagePage");
+  const showDataWorkerUsage = useFeature(FeatureItem.AllowDataWorkerCapacity);
 
   return (
     <FlexContainer direction="column" gap="xl">

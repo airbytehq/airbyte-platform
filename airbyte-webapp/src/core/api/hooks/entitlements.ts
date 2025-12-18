@@ -31,6 +31,7 @@ const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
   "feature-multiple-workspaces": FeatureItem.CreateMultipleWorkspaces,
   "feature-ai-copilot": FeatureItem.AICopilot,
   "feature-faster-sync-frequency": FeatureItem.AllowSyncFrequencyUnderOneHour,
+  "feature-data-worker-capacity": FeatureItem.AllowDataWorkerCapacity,
 };
 
 /**
