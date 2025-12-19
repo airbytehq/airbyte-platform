@@ -1,0 +1,95 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/z-indices";
+
+.widget {
+  position: fixed;
+  bottom: 74px; // Moved up 50px from spacing-xl (24px) to prevent obscuring content
+  right: variables.$spacing-xl;
+  z-index: z-indices.$sidebar;
+}
+
+.button {
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.panel {
+  width: 420px;
+  height: 600px;
+  max-height: calc(100vh - 100px);
+  background: colors.$foreground;
+  border-radius: variables.$border-radius-lg;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 12%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slide-up 0.3s ease-out;
+}
+
+.panelExpanded {
+  width: 33vw;
+  min-width: 500px;
+  height: 100vh;
+  max-height: 100vh;
+  background: colors.$foreground;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 12%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  border-radius: 0;
+  animation: expand-panel 0.3s ease-out;
+}
+
+.chatContainer {
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-lg;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: variables.$spacing-md;
+
+  .headerContent {
+    width: 100%;
+  }
+}
+
+.workspaceIndicator {
+  padding: variables.$spacing-xs variables.$spacing-md;
+  background: colors.$blue-50;
+  border-bottom: variables.$border-thin solid colors.$grey-200;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes expand-panel {
+  from {
+    width: 420px;
+    height: 600px;
+  }
+
+  to {
+    width: 33vw;
+    height: 100vh;
+  }
+}

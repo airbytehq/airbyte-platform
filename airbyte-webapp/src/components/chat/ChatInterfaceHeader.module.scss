@@ -1,0 +1,8 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.header {
+  padding: variables.$spacing-xl;
+  background-color: colors.$foreground;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+}

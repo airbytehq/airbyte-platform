@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { DeployPreviewMessage } from "components/DeployPreviewMessage";
 import { DevToolsToggle } from "components/DevToolsToggle";
 import LoadingPage from "components/LoadingPage";
+import { SupportAgentWidget } from "components/support";
 
 import { QueryProvider } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
@@ -35,7 +36,10 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
             <ModalServiceProvider>
               <DrawerContextProvider>
                 <HelmetProvider>
-                  <ZendeskProvider>{children}</ZendeskProvider>
+                  <ZendeskProvider>
+                    {children}
+                    <SupportAgentWidget />
+                  </ZendeskProvider>
                 </HelmetProvider>
               </DrawerContextProvider>
             </ModalServiceProvider>

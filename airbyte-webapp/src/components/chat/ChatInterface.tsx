@@ -13,6 +13,10 @@ import { type ChatMessage } from "./Message";
 import { MessageList } from "./MessageList";
 import { type ToolCallProps } from "./ToolCallItem";
 
+// TODO: Refactor this component to use ChatInterfaceContainer, ChatInterfaceHeader,
+// and ChatInterfaceBody once all usages are migrated. See SupportAgentWidget
+// for an example of the new composable pattern.
+
 export interface ChatInterfaceProps {
   messages: ChatMessage[];
   isLoading: boolean;

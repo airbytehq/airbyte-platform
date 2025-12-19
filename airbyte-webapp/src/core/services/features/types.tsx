@@ -36,6 +36,7 @@ export enum FeatureItem {
   ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",
   ShowInviteUsersHint = "SHOW_INVITE_USERS_HINT",
   ShowWorkspacePicker = "SHOW_WORKSPACE_PICKER",
+  SupportAgentBot = "SUPPORT_AGENT_BOT",
 }
 
 export type FeatureSet = Partial<Record<FeatureItem, boolean>>;

@@ -3,6 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import styles from "./Message.module.scss";
 import { SafeMarkdown } from "./SafeMarkdown";
+import { StreamingIndicator } from "./StreamingIndicator";
 import { ToolCallItem, type ToolCallProps } from "./ToolCallItem";
 
 export interface ToolCall {
@@ -33,9 +34,15 @@ interface MessageProps {
   message: ChatMessage;
   toolComponents?: Record<string, React.ComponentType<ToolCallProps>>;
   showAllToolCalls?: boolean;
+  showStreamingIndicator?: boolean;
 }
 
-export const Message: React.FC<MessageProps> = ({ message, toolComponents, showAllToolCalls = false }) => {
+export const Message: React.FC<MessageProps> = ({
+  message,
+  toolComponents,
+  showAllToolCalls = false,
+  showStreamingIndicator = false,
+}) => {
   const { content, role, isStreaming, toolCall, toolResponse } = message;
 
   // Hide messages with the hidden prefix
@@ -83,8 +90,14 @@ export const Message: React.FC<MessageProps> = ({ message, toolComponents, showA
           </span>
         </div>
         <div className={styles.messageText}>
-          <SafeMarkdown content={content} />
-          {isStreaming ? <span className={styles.cursor} /> : null}
+          {isStreaming && !content && showStreamingIndicator ? (
+            <StreamingIndicator />
+          ) : (
+            <>
+              <SafeMarkdown content={content} />
+              {isStreaming && <span className={styles.cursor} />}
+            </>
+          )}
         </div>
       </div>
     </div>

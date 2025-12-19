@@ -143,6 +143,7 @@ export interface UseChatMessagesParams {
   agentParams?: Record<string, unknown>;
   clientTools?: ClientTools;
   onThreadIdChange?: (threadId: string) => void;
+  skipInitialRequest?: boolean;
 }
 
 /**
@@ -163,7 +164,7 @@ const buildStreamHandlers = (handlers: AgentStreamHandlers, onThreadIdReceived: 
 });
 
 export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesReturn => {
-  const { endpoint, agentParams = {}, clientTools = {}, onThreadIdChange } = params;
+  const { endpoint, agentParams = {}, clientTools = {}, onThreadIdChange, skipInitialRequest = false } = params;
   const [messages, dispatch] = useReducer(messageReducer, []);
   const [error, setError] = useState<string | null>(null);
   const [pendingDeferredTools, setPendingDeferredTools] = useState<Set<string>>(new Set());
@@ -407,6 +408,11 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
   // Send initial request with agentParams when component mounts
   const hasInitializedRef = useRef(false);
   useEffect(() => {
+    // Skip if explicitly requested
+    if (skipInitialRequest) {
+      return;
+    }
+
     if (agentParams && Object.keys(agentParams).length > 0 && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
 
@@ -439,6 +445,7 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
       });
     }
   }, [
+    skipInitialRequest,
     agentParams,
     handleDeferredTool,
     sendPrompt,
