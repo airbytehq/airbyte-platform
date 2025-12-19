@@ -260,9 +260,11 @@ const OAUTH_ERROR_ID = "connector.oauthError";
 export function useRunOauthFlow({
   connector,
   onDone,
+  onError,
 }: {
   connector: ConnectorDefinitionSpecificationRead;
   onDone?: (values: CompleteOAuthResponseAuthPayload) => void;
+  onError?: (error: string) => void;
 }): {
   loading: boolean;
   done?: boolean;
@@ -282,6 +284,24 @@ export function useRunOauthFlow({
 
       if (!oauthStartedPayload) {
         // unexpected call, no oauth flow was started
+        onError?.("No OAuth flow was started");
+        return false;
+      }
+
+      // Check for OAuth provider errors in the query params
+      // OAuth providers like Google return error and error_description when auth fails
+      if (queryParams.error) {
+        const errorMessage =
+          (queryParams.error_description as string) ||
+          (queryParams.error as string) ||
+          "OAuth authentication was denied or failed";
+        registerNotification({
+          id: OAUTH_ERROR_ID,
+          text: <FormattedMessage id={OAUTH_ERROR_ID} values={{ message: errorMessage }} />,
+          type: "error",
+        });
+        onError?.(errorMessage);
+        param.current = undefined;
         return false;
       }
 
@@ -293,16 +313,20 @@ export function useRunOauthFlow({
       try {
         completeOauthResponse = await completeOauthRequest(oauthStartedPayload, queryParams);
       } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : "Failed to complete OAuth";
         registerNotification({
           id: OAUTH_ERROR_ID,
-          text: <FormattedMessage id={OAUTH_ERROR_ID} values={{ message: e.message }} />,
+          text: <FormattedMessage id={OAUTH_ERROR_ID} values={{ message: errorMessage }} />,
           type: "error",
         });
+        onError?.(errorMessage);
         return false;
       }
 
       if (!completeOauthResponse.request_succeeded || !completeOauthResponse.auth_payload) {
-        // user canceled
+        // user canceled or request failed
+        const errorMessage = "OAuth request was not successful";
+        onError?.(errorMessage);
         param.current = undefined;
         return false;
       }
@@ -311,7 +335,7 @@ export function useRunOauthFlow({
       onDone?.(completeOauthResponse.auth_payload);
       return true;
     },
-    [connector, onDone]
+    [connector, onDone, onError]
   );
 
   const [{ loading }, onStartOauth] = useAsyncFn(
@@ -337,6 +361,12 @@ export function useRunOauthFlow({
          * Airbyte Embedded runs within an iframe, so we need to use postMessage to communicate with the parent window.
          * BroadcastChannel is not supported in iframes in all browsers, so we use postMessage instead.
          */
+        // NOTE: We cannot reliably monitor popup closure for cross-origin OAuth flows.
+        // When the popup navigates to Google/other OAuth providers, the browser's
+        // cross-origin security causes popupWindow.closed to return true even when
+        // the popup is still open. Instead, we provide a cancel mechanism through
+        // the onError callback that can be triggered by the user via UI.
+
         if (isAirbyteEmbedded) {
           // For embedded context, use postMessage
           const messageHandler = async (event: MessageEvent) => {
@@ -381,7 +411,7 @@ export function useRunOauthFlow({
         }
       }
     },
-    [connector]
+    [connector, onError]
   );
 
   // close the popup window and broadcast channel when unmounting

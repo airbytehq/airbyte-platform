@@ -1,0 +1,17 @@
+@use "scss/colors";
+
+.oauthPrompt {
+  padding: 0.5rem 0;
+}
+
+.promptText {
+  font-size: 0.875rem;
+  color: colors.$grey-400;
+  font-style: italic;
+}
+
+.hintText {
+  font-size: 0.75rem;
+  color: colors.$grey-300;
+  font-style: italic;
+}

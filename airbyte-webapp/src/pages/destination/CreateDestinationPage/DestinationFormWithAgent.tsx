@@ -83,6 +83,8 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
     handleClientToolsReady,
     secretInputState,
     handleSecretInputStateChange,
+    oauthState,
+    handleOAuthStateChange,
     handleFormValuesReady,
     touchedSecretFieldsRef,
     addTouchedSecretField,
@@ -120,6 +122,7 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
           isMultiline={secretInputState.isMultiline}
           isVisible={isAgentView}
           onDismissSecret={secretInputState.dismissSecret}
+          oauthState={oauthState}
         />
       }
       secondView={
@@ -151,6 +154,7 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
                     onSubmitStep={onSubmitDestinationStep}
                     onClientToolsReady={handleClientToolsReady}
                     onSecretInputStateChange={handleSecretInputStateChange}
+                    onOAuthStateChange={handleOAuthStateChange}
                     onFormValuesReady={handleFormValuesReady}
                     touchedSecretFieldsRef={touchedSecretFieldsRef}
                     addTouchedSecretField={addTouchedSecretField}

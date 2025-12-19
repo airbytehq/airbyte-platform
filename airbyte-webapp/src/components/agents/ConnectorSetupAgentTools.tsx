@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 
 import { useCheckConfigurationTool } from "components/agents/tools/hooks/useCheckConfigurationTool";
+import { useRequestOAuthTool } from "components/agents/tools/hooks/useRequestOAuthTool";
 import { useRequestSecretInputTool } from "components/agents/tools/hooks/useRequestSecretInputTool";
 import { useSaveConfigurationTool } from "components/agents/tools/hooks/useSaveConfigurationTool";
 import { useSubmitConfigurationTool } from "components/agents/tools/hooks/useSubmitConfigurationTool";
@@ -28,6 +29,11 @@ interface ConnectorSetupAgentToolsProps {
     submitSecret: (message: string) => void;
     dismissSecret: (reason?: string) => void;
   }) => void;
+  onOAuthStateChange?: (state: {
+    isOAuthPendingUserAction: boolean;
+    startOAuth: () => void;
+    cancelOAuth: () => void;
+  }) => void;
   onFormValuesReady?: (getFormValues: () => Record<string, unknown>) => void;
   touchedSecretFieldsRef: React.MutableRefObject<Set<string>>;
   addTouchedSecretField: (path: string) => void;
@@ -43,6 +49,7 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
   onSubmitStep,
   onClientToolsReady,
   onSecretInputStateChange,
+  onOAuthStateChange,
   onFormValuesReady,
   touchedSecretFieldsRef,
   addTouchedSecretField,
@@ -70,6 +77,16 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
     dismissSecret,
   } = useRequestSecretInputTool(addTouchedSecretField);
 
+  const {
+    handler: oauthTool,
+    isOAuthPendingUserAction,
+    startOAuth,
+    cancelOAuth,
+  } = useRequestOAuthTool({
+    actorDefinitionId,
+    actorType,
+  });
+
   const checkTool = useCheckConfigurationTool({
     actorDefinitionId,
     actorType,
@@ -81,9 +98,10 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
       [TOOL_NAMES.SUBMIT_CONFIGURATION]: submitTool,
       [TOOL_NAMES.SAVE_DRAFT_CONFIGURATION]: saveDraftTool,
       [TOOL_NAMES.REQUEST_SECRET_INPUT]: secretInputTool,
+      [TOOL_NAMES.REQUEST_OAUTH_AUTHENTICATION]: oauthTool,
       [TOOL_NAMES.CHECK_CONFIGURATION]: checkTool,
     }),
-    [submitTool, saveDraftTool, secretInputTool, checkTool]
+    [submitTool, saveDraftTool, secretInputTool, oauthTool, checkTool]
   );
 
   // Use a ref to track if we've already initialized tools
@@ -117,6 +135,17 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
     dismissSecret,
     onSecretInputStateChange,
   ]);
+
+  // Notify parent whenever OAuth state changes
+  useEffect(() => {
+    if (onOAuthStateChange) {
+      onOAuthStateChange({
+        isOAuthPendingUserAction,
+        startOAuth,
+        cancelOAuth,
+      });
+    }
+  }, [isOAuthPendingUserAction, startOAuth, cancelOAuth, onOAuthStateChange]);
 
   // Notify parent when form getValues is ready
   useEffect(() => {

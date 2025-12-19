@@ -6,12 +6,14 @@ import { type ToolCallProps } from "../../../chat/ToolCallItem";
 interface SimpleMessageToolRendererProps extends ToolCallProps {
   inProgressMessage?: string;
   completedMessage: string;
+  isSuccess?: boolean; // Whether the completed state is a success (default: true)
 }
 
 export const SimpleMessageToolRenderer: React.FC<SimpleMessageToolRendererProps> = ({
   toolResponse,
   inProgressMessage,
   completedMessage,
+  isSuccess = true,
 }) => {
   const isInProgress = !toolResponse;
 
@@ -21,10 +23,11 @@ export const SimpleMessageToolRenderer: React.FC<SimpleMessageToolRendererProps>
   }
 
   const message = isInProgress ? inProgressMessage : completedMessage;
-  const icon = isInProgress ? "⋯" : "✓";
+  // Show different icons for in-progress, success, and failure
+  const icon = isInProgress ? "⋯" : isSuccess ? "✓" : "✗";
 
   return (
-    <div className={styles.simpleMessageTool}>
+    <div className={`${styles.simpleMessageTool} ${!isInProgress && !isSuccess ? styles.failed : ""}`}>
       <span className={styles.icon}>{icon}</span>
       <span className={styles.message}>{message}</span>
     </div>

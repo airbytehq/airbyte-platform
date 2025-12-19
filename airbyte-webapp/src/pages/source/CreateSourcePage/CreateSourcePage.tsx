@@ -32,14 +32,8 @@ export const CreateSourcePage: React.FC = () => {
   const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
   const [isAgentView, setIsAgentView] = useState(true);
 
-  // TODO: Support Oauth flow in agent view. Currently, the agent is not able to handle Oauth flow,
-  // so we are checking and disabling it for Oauth connectors as a temporary workaround.
-  // https://github.com/airbytehq/hydra-issues-internal/issues/28
-  const { data: sourceDefinitionSpecification, isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(
-    sourceDefinitionId || null
-  );
-  const hasOAuth = Boolean(sourceDefinitionSpecification?.advancedAuth);
-  const showAgentToggle = isAgentAssistedSetupEnabled && !hasOAuth && !isLoadingSpec;
+  const { isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId || null);
+  const showAgentToggle = isAgentAssistedSetupEnabled && !isLoadingSpec;
   const shouldShowAgentView = showAgentToggle && isAgentView;
 
   useTrackPage(PageTrackingCodes.SOURCE_NEW);

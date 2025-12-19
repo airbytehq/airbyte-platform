@@ -25,6 +25,12 @@ export interface SecretInputState {
   dismissSecret: (reason?: string) => void;
 }
 
+export interface OAuthState {
+  isOAuthPendingUserAction: boolean;
+  startOAuth: () => void;
+  cancelOAuth: () => void;
+}
+
 export const useConnectorSetupAgentState = ({
   actorType,
   actorDefinitionId,
@@ -40,6 +46,11 @@ export const useConnectorSetupAgentState = ({
     isMultiline: false,
     submitSecret: (() => {}) as (message: string) => void,
     dismissSecret: (() => {}) as () => void,
+  });
+  const [oauthState, setOAuthState] = useState<OAuthState>({
+    isOAuthPendingUserAction: false,
+    startOAuth: () => {},
+    cancelOAuth: () => {},
   });
 
   // Form values tracking
@@ -57,6 +68,10 @@ export const useConnectorSetupAgentState = ({
 
   const handleSecretInputStateChange = useCallback((state: SecretInputState) => {
     setSecretInputState(state);
+  }, []);
+
+  const handleOAuthStateChange = useCallback((state: OAuthState) => {
+    setOAuthState(state);
   }, []);
 
   const handleFormValuesReady = useCallback((getFormValues: () => Record<string, unknown>) => {
@@ -183,6 +198,10 @@ export const useConnectorSetupAgentState = ({
     // Secret input state
     secretInputState,
     handleSecretInputStateChange,
+
+    // OAuth state
+    oauthState,
+    handleOAuthStateChange,
 
     // Form values tracking
     handleFormValuesReady,
