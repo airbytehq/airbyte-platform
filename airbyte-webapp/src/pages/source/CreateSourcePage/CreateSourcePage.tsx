@@ -33,7 +33,15 @@ export const CreateSourcePage: React.FC = () => {
   const [isAgentView, setIsAgentView] = useState(true);
 
   const { isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId || null);
-  const showAgentToggle = isAgentAssistedSetupEnabled && !isLoadingSpec;
+  const { sourceDefinitions } = useSourceDefinitionList();
+  const { mutateAsync: createSource } = useCreateSource();
+
+  // Disable agent for custom connectors since they don't exist in our registry
+  // and we don't have access to their specs when the agent is initialized
+  const selectedSourceDefinition = sourceDefinitions.find((s) => s.sourceDefinitionId === sourceDefinitionId);
+  const isCustomConnector = selectedSourceDefinition?.custom === true;
+
+  const showAgentToggle = isAgentAssistedSetupEnabled && !isLoadingSpec && !isCustomConnector;
   const shouldShowAgentView = showAgentToggle && isAgentView;
 
   useTrackPage(PageTrackingCodes.SOURCE_NEW);
@@ -48,9 +56,6 @@ export const CreateSourcePage: React.FC = () => {
     },
     { label: formatMessage({ id: "sources.newSource" }) },
   ];
-
-  const { sourceDefinitions } = useSourceDefinitionList();
-  const { mutateAsync: createSource } = useCreateSource();
 
   const onSubmitSourceStep = async (values: {
     name: string;

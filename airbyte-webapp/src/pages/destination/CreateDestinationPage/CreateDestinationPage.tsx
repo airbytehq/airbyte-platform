@@ -44,7 +44,15 @@ export const CreateDestinationPage: React.FC = () => {
   const [isAgentView, setIsAgentView] = useState(true);
 
   const { isLoading: isLoadingSpec } = useGetDestinationDefinitionSpecificationAsync(destinationDefinitionId || null);
-  const showAgentToggle = isAgentAssistedSetupEnabled && !isLoadingSpec;
+
+  // Disable agent for custom connectors since they don't exist in our registry
+  // and we don't have access to their specs when the agent is initialized
+  const selectedDestinationDefinition = destinationDefinitions.find(
+    (d) => d.destinationDefinitionId === destinationDefinitionId
+  );
+  const isCustomConnector = selectedDestinationDefinition?.custom === true;
+
+  const showAgentToggle = isAgentAssistedSetupEnabled && !isLoadingSpec && !isCustomConnector;
   const shouldShowAgentView = showAgentToggle && isAgentView;
 
   const onSubmitDestinationForm = async (values: {
