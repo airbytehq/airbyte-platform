@@ -490,6 +490,39 @@ internal class RemoteDefinitionsProviderTest {
     Assertions.assertTrue(manifestResult.isEmpty)
   }
 
+  @Test
+  fun testExtractPathFromDocumentationUrl() {
+    // Standard source connector
+    Assertions.assertEquals(
+      "sources/postgres",
+      RemoteDefinitionsProvider.extractPathFromDocumentationUrl("https://docs.airbyte.com/integrations/sources/postgres"),
+    )
+    // Standard destination connector
+    Assertions.assertEquals(
+      "destinations/snowflake",
+      RemoteDefinitionsProvider.extractPathFromDocumentationUrl("https://docs.airbyte.com/integrations/destinations/snowflake"),
+    )
+    // Enterprise connector
+    Assertions.assertEquals(
+      "enterprise-connectors/source-oracle-enterprise",
+      RemoteDefinitionsProvider.extractPathFromDocumentationUrl(
+        "https://docs.airbyte.com/integrations/enterprise-connectors/source-oracle-enterprise",
+      ),
+    )
+    // Non-docs.airbyte.com URL should return null
+    Assertions.assertNull(
+      RemoteDefinitionsProvider.extractPathFromDocumentationUrl("https://example.com/integrations/sources/postgres"),
+    )
+    // Non-integrations path should return null
+    Assertions.assertNull(
+      RemoteDefinitionsProvider.extractPathFromDocumentationUrl("https://docs.airbyte.com/other/sources/postgres"),
+    )
+    // Invalid URL should return null
+    Assertions.assertNull(
+      RemoteDefinitionsProvider.extractPathFromDocumentationUrl("not a valid url"),
+    )
+  }
+
   companion object {
     private val AIRBYTE_EDITION = AirbyteEdition.COMMUNITY
     private const val CONNECTOR_REPOSITORY = "airbyte/source-stripe"

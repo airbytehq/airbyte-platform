@@ -246,6 +246,65 @@ open class RemoteDefinitionsProvider(
   }
 
   /**
+   * Retrieves the live documentation for a connector directly from GitHub.
+   * This fetches the latest docs from the airbyte repo's master branch, which is the source
+   * of truth for docs.airbyte.com. This ensures users see the most up-to-date documentation
+   * even if the connector hasn't been republished.
+   *
+   * The documentationUrl field from ActorDefinitionVersion is used as the primary source
+   * to derive the GitHub path. This is more reliable than parsing docker repository names
+   * since it uses the same URL that docs.airbyte.com uses.
+   *
+   * @param documentationUrl The documentation URL from ActorDefinitionVersion (e.g., "https://docs.airbyte.com/integrations/sources/postgres")
+   * @return Optional containing the live doc if it can be found, or empty otherwise.
+   */
+  fun getLiveConnectorDocumentation(documentationUrl: String?): Optional<String> {
+    if (documentationUrl == null) {
+      return Optional.empty()
+    }
+
+    val relativePath = extractPathFromDocumentationUrl(documentationUrl)
+    if (relativePath == null) {
+      log.debug { "Could not extract path from documentationUrl: $documentationUrl" }
+      return Optional.empty()
+    }
+
+    val githubDocUrl = "$GITHUB_DOCS_BASE_URL/$relativePath.md"
+    return fetchDocFromUrl(githubDocUrl)
+  }
+
+  /**
+   * Fetches documentation from a GitHub URL.
+   * Returns Optional.empty() on 404 or any error (to allow fallback to next path or registry).
+   */
+  private fun fetchDocFromUrl(githubDocUrl: String): Optional<String> {
+    val request =
+      Request
+        .Builder()
+        .url(githubDocUrl)
+        .header(HttpHeaders.ACCEPT, MediaType.TEXT_PLAIN)
+        .build()
+
+    try {
+      okHttpClient.newCall(request).execute().use { response ->
+        return if (response.code == NOT_FOUND) {
+          log.debug { "Live documentation not found at $githubDocUrl" }
+          Optional.empty()
+        } else if (response.isSuccessful && response.body != null) {
+          log.info { "Successfully fetched live documentation from $githubDocUrl" }
+          Optional.of(response.body!!.string())
+        } else {
+          log.warn { "Failed to fetch live documentation from $githubDocUrl: ${response.code} ${response.message}" }
+          Optional.empty()
+        }
+      }
+    } catch (e: IOException) {
+      log.warn(e) { "Error fetching live documentation from $githubDocUrl" }
+      return Optional.empty()
+    }
+  }
+
+  /**
    * Retrieves the full or inapp documentation for the specified connector repo and version.
    *
    * @return Optional containing the connector doc if it can be found, or empty otherwise.
@@ -405,6 +464,36 @@ open class RemoteDefinitionsProvider(
 
     private const val NOT_FOUND = 404
     private const val CUSTOM_COMPONENTS_FILE_NAME = "components.py"
+    private const val GITHUB_DOCS_BASE_URL = "https://raw.githubusercontent.com/airbytehq/airbyte/master/docs/integrations"
+
+    /**
+     * Extracts the relative path from a docs.airbyte.com documentation URL.
+     * For example:
+     * - "https://docs.airbyte.com/integrations/sources/postgres" -> "sources/postgres"
+     * - "https://docs.airbyte.com/integrations/enterprise-connectors/source-oracle-enterprise" -> "enterprise-connectors/source-oracle-enterprise"
+     *
+     * Returns null if the URL is not a valid docs.airbyte.com integrations URL.
+     */
+    @JvmStatic
+    @InternalForTesting
+    fun extractPathFromDocumentationUrl(documentationUrl: String): String? =
+      try {
+        val uri = java.net.URI(documentationUrl)
+        if (uri.host != "docs.airbyte.com") {
+          null
+        } else {
+          val rawPath = uri.path.removePrefix("/")
+          if (!rawPath.startsWith("integrations/")) {
+            null
+          } else {
+            // "integrations/sources/postgres" -> "sources/postgres"
+            rawPath.removePrefix("integrations/")
+          }
+        }
+      } catch (e: java.net.URISyntaxException) {
+        log.warn(e) { "Invalid documentationUrl: $documentationUrl" }
+        null
+      }
 
     @JvmStatic
     fun getRegistryName(airbyteEdition: AirbyteEdition): String =

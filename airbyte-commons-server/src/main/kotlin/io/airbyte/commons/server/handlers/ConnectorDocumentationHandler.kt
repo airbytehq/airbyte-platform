@@ -37,13 +37,23 @@ open class ConnectorDocumentationHandler(
       }
     val dockerRepo = actorDefinitionVersion.dockerRepository
     val version = actorDefinitionVersion.dockerImageTag
+    val documentationUrl = actorDefinitionVersion.documentationUrl
 
-    // prioritize versioned over latest
+    // Prioritize live docs from GitHub (docs.airbyte.com source of truth)
+    // This ensures users see the most up-to-date documentation even if the connector
+    // hasn't been republished after doc-only changes
+    val liveDocString = remoteDefinitionsProvider.getLiveConnectorDocumentation(documentationUrl)
+    if (liveDocString.isPresent) {
+      return ConnectorDocumentationRead().doc(liveDocString.get())
+    }
+
+    // Fall back to versioned docs from the connector registry
     val versionedDocString = remoteDefinitionsProvider.getConnectorDocumentation(dockerRepo, version)
     if (versionedDocString.isPresent) {
       return ConnectorDocumentationRead().doc(versionedDocString.get())
     }
 
+    // Fall back to latest docs from the connector registry
     val latestDocString = remoteDefinitionsProvider.getConnectorDocumentation(dockerRepo, LATEST)
     if (latestDocString.isPresent) {
       return ConnectorDocumentationRead().doc(latestDocString.get())
