@@ -107,7 +107,7 @@ spec:
       {{- if .Values.airbyteBootloader.resources }}
       resources: {{- toYaml .Values.airbyteBootloader.resources | nindent 8 }}
       {{- end }}
-      {{- if .Values.airbyteBootloader.extraVolumeMount }}
+      {{- if .Values.airbyteBootloader.extraVolumeMounts }}
       volumeMounts:
         {{- toYaml .Values.airbyteBootloader.extraVolumeMounts | nindent 8 }}
       {{- end }}
