@@ -6,6 +6,7 @@ package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.api.client.ApiException
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
+import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
@@ -40,6 +41,7 @@ internal class WorkloadHeartbeatSenderTest {
   private lateinit var mockReplicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader
   private lateinit var hardExitCallable: () -> Unit
   private lateinit var source: AirbyteSource
+  private lateinit var destination: AirbyteDestination
 
   private val testWorkloadId = "test-workload"
   private val testJobId = 0L
@@ -56,6 +58,7 @@ internal class WorkloadHeartbeatSenderTest {
     mockReplicationInputFeatureFlagReader = mockk(relaxed = true)
     hardExitCallable = mockk(relaxed = true)
     source = mockk(relaxed = true)
+    destination = mockk(relaxed = true)
 
     every { mockDestinationTimeoutMonitor.hasTimedOut() } returns false
     every { mockSourceTimeoutMonitor.hasTimedOut() } returns false
@@ -147,6 +150,9 @@ internal class WorkloadHeartbeatSenderTest {
 
       // We should have failed the workload because of the destination timeout failure
       verify(exactly = 1) { mockReplicationWorkerState.markFailed() }
+
+      // Verify destination.close() was called to unblock any stuck reader threads
+      verify(exactly = 1) { destination.close() }
     }
 
   /**
@@ -261,11 +267,12 @@ internal class WorkloadHeartbeatSenderTest {
       replicationWorkerState = mockReplicationWorkerState,
       destinationTimeoutMonitor = mockDestinationTimeoutMonitor,
       sourceTimeoutMonitor = mockSourceTimeoutMonitor,
+      source = source,
+      destination = destination,
       heartbeatInterval = shortHeartbeatInterval,
       heartbeatTimeoutDuration = heartbeatTimeoutDuration, // e.g. 50ms
-      airbyteContextConfig = AirbyteContextConfig(attemptId = testAttempt, jobId = testJobId, workloadId = testWorkloadId),
       hardExitCallable = hardExitCallable,
-      source = source,
+      airbyteContextConfig = AirbyteContextConfig(attemptId = testAttempt, jobId = testJobId, workloadId = testWorkloadId),
       replicationInputFeatureFlagReader = mockReplicationInputFeatureFlagReader,
     )
 }

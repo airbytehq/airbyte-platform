@@ -107,6 +107,13 @@ data class ContainerIOHandle(
     timeout: Long = 1L,
     timeUnit: TimeUnit = TimeUnit.MINUTES,
   ): Boolean {
+    // Close streams first to unblock any threads stuck on blocking I/O reads.
+    // This is critical for shutdown: reader threads may be blocked in native read0() calls
+    // on named pipes (FIFOs), which ignore Thread.interrupt() and coroutine cancellation.
+    // Closing the underlying stream causes the blocked read to throw IOException,
+    // allowing the reader thread to exit and shutdown to proceed.
+    closeStreams()
+
     return try {
       terminationFile.writeText(TERMINATION_FILE_BODY)
       val future =
@@ -118,6 +125,24 @@ data class ContainerIOHandle(
     } catch (e: Exception) {
       logger.warn(e) { "Failed to wait for exit value file $exitValueFile to be found." }
       false
+    }
+  }
+
+  private fun closeStreams() {
+    try {
+      inputStream.close()
+    } catch (e: Exception) {
+      logger.debug(e) { "Exception closing input stream" }
+    }
+    try {
+      errInputStream.close()
+    } catch (e: Exception) {
+      logger.debug(e) { "Exception closing error input stream" }
+    }
+    try {
+      outputStream.close()
+    } catch (e: Exception) {
+      logger.debug(e) { "Exception closing output stream" }
     }
   }
 
