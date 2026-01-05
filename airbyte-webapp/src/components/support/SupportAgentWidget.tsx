@@ -109,7 +109,7 @@ export const SupportAgentWidget: React.FC = () => {
       {!isOpen && (
         // Collapsed button
         <Button
-          variant="primary"
+          variant="magic"
           size="sm"
           onClick={() => {
             setHasBeenOpened(true);
@@ -117,9 +117,7 @@ export const SupportAgentWidget: React.FC = () => {
           }}
           icon="chat"
           className={styles.button}
-        >
-          <FormattedMessage id="chat.supportAgent.button" />
-        </Button>
+        />
       )}
       {hasBeenOpened && (
         // Chat panel - keep mounted to preserve context, hide with CSS when closed

@@ -4,13 +4,14 @@
 
 .widget {
   position: fixed;
-  bottom: 74px; // Moved up 50px from spacing-xl (24px) to prevent obscuring content
+  bottom: 74px;
   right: variables.$spacing-xl;
   z-index: z-indices.$sidebar;
 }
 
 .button {
   transition: all 0.2s ease;
+  border-radius: variables.$border-radius-pill;
 
   &:hover {
     transform: translateY(-2px);
