@@ -29,9 +29,8 @@ const SupportChatPanel: React.FC<{
     endpoint: "/agents/support/chat",
     agentParams: {
       workspace_id: workspaceId,
+      prompt: "Introduce yourself as an AI assistant and outline your main functions.",
     },
-    clientTools: {},
-    skipInitialRequest: true,
   });
 
   return (
