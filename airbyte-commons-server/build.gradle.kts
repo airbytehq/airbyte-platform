@@ -11,7 +11,6 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
-  implementation(libs.bundles.datadog)
   implementation(libs.micronaut.cache.caffeine)
   implementation(libs.micronaut.inject)
   implementation(libs.micronaut.security)

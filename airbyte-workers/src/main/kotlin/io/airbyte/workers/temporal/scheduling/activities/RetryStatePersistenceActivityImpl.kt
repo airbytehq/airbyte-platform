@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling.activities
 
-import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.commons.temporal.exception.RetryableException
@@ -18,6 +17,7 @@ import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceAc
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.PersistInput
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.PersistOutput
 import io.micronaut.http.HttpStatus
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
@@ -32,7 +32,7 @@ class RetryStatePersistenceActivityImpl(
   private val airbyteApiClient: AirbyteApiClient,
   private val client: RetryStateClient,
 ) : RetryStatePersistenceActivity {
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun hydrateRetryState(input: HydrateInput): HydrateOutput {
     ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to input.connectionId))
     val workspaceId = getWorkspaceId(input.connectionId!!)

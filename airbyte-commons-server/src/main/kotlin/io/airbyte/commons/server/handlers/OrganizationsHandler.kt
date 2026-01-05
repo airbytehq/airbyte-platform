@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
 import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
@@ -34,6 +33,7 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UnifiedTrial
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.tools.StringUtils
@@ -194,7 +194,7 @@ open class OrganizationsHandler(
    *   3. get member counts by org id
    *   4. get workspaces by org id
    */
-  @Trace
+  @WithSpan
   fun getOrganizationSummaries(request: ListOrganizationSummariesRequestBody): ListOrganizationSummariesResponse {
     val orgListReq =
       ListOrganizationsByUserRequestBody()
@@ -280,6 +280,7 @@ open class OrganizationsHandler(
       .organizationName(organization.name)
       .sso(organization.ssoRealm != null && organization.ssoRealm.isNotEmpty())
 
+  @WithSpan
   fun getOrganizationInfo(organizationId: UUID): OrganizationInfoRead {
     val organization = organizationService.getOrganization(organizationId)
     if (organization.isEmpty) {

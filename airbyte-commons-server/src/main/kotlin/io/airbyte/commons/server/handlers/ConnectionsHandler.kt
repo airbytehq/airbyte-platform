@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import datadog.trace.api.Trace
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody
@@ -179,6 +178,7 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -1162,13 +1162,13 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
     }
 
-    @Trace
+    @WithSpan
     fun listConnectionsForWorkspace(workspaceIdRequestBody: WorkspaceIdRequestBody): ConnectionReadList {
       addTagsToTrace(mapOf(MetricTags.WORKSPACE_ID to workspaceIdRequestBody.workspaceId.toString()))
       return listConnectionsForWorkspace(workspaceIdRequestBody, false)
     }
 
-    @Trace
+    @WithSpan
     fun listConnectionsForWorkspace(
       workspaceIdRequestBody: WorkspaceIdRequestBody,
       includeDeleted: Boolean,
@@ -1213,7 +1213,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return ConnectionReadList().connections(connectionReads)
     }
 
-    @Trace
+    @WithSpan
     fun getConnection(connectionId: UUID): ConnectionRead = buildConnectionRead(connectionId)
 
     fun getConnectionForJob(
@@ -1309,7 +1309,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         ),
       )
 
-    @Trace
+    @WithSpan
     fun getConnectionAirbyteCatalog(connectionId: UUID): Optional<AirbyteCatalog> {
       val connection = connectionService.getStandardSync(connectionId)
       if (connection.sourceCatalogId == null) {
@@ -1460,7 +1460,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return failureReason
     }
 
-    @Trace
+    @WithSpan
     fun getConnectionStatuses(connectionStatusesRequestBody: ConnectionStatusesRequestBody): List<ConnectionStatusRead> {
       addTagsToTrace(mapOf(MetricTags.CONNECTION_IDS to connectionStatusesRequestBody.connectionIds.toString()))
       val connectionIds = connectionStatusesRequestBody.connectionIds
@@ -2102,7 +2102,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
     }
 
-    @Trace
+    @WithSpan
     fun getConnectionLastJobPerStream(req: ConnectionLastJobPerStreamRequestBody): List<ConnectionLastJobPerStreamReadItem> {
       addTagsToTrace(mapOf(MetricTags.CONNECTION_ID to req.connectionId.toString()))
 

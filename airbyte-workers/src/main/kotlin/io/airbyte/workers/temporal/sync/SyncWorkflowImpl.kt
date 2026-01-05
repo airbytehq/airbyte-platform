@@ -4,13 +4,13 @@
 
 package io.airbyte.workers.temporal.sync
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow
 import io.airbyte.config.StandardSyncInput
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import io.temporal.failure.ApplicationFailure
 import java.util.UUID
 
@@ -20,12 +20,12 @@ import java.util.UUID
 open class SyncWorkflowImpl : SyncWorkflow {
   private var shouldBlock: Boolean? = null
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
   override fun checkAsyncActivityStatus() {
     this.shouldBlock = false
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
   override fun run(
     jobRunConfig: JobRunConfig,
     sourceLauncherConfig: IntegrationLauncherConfig,

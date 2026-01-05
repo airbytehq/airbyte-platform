@@ -6,16 +6,15 @@
 
 package io.airbyte.server.apis
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.config.persistence.ConfigNotFoundException
-import io.airbyte.metrics.lib.ApmTraceConstants
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import org.jooq.exception.DataAccessException
 import java.io.IOException
 import java.util.concurrent.Callable
@@ -26,7 +25,8 @@ val logger = KotlinLogging.logger {}
 /**
  * Helpers for executing api code to and handling exceptions it might throw.
  */
-@Trace(operationName = ApmTraceConstants.ENDPOINT_EXECUTION_OPERATION_NAME)
+
+@WithSpan
 internal fun <T> execute(call: Callable<T>): T? {
   try {
     return call.call()

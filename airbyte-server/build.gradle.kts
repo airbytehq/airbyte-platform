@@ -28,7 +28,6 @@ dependencies {
   implementation(libs.aws.java.sdk.sts)
   implementation(libs.reactor.core)
   implementation(libs.temporal.sdk)
-  implementation(libs.bundles.datadog)
   implementation(libs.sentry.java)
   implementation(libs.swagger.annotations)
   implementation(libs.google.cloud.storage)
@@ -230,7 +229,7 @@ tasks.named("assemble") {
 airbyte {
   application {
     mainClass = "io.airbyte.server.ApplicationKt"
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
+
     localEnvVars.putAll(
       mapOf(
         "AIRBYTE_VERSION" to "dev",

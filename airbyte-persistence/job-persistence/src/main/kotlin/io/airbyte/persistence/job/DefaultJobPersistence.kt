@@ -5,7 +5,6 @@
 package io.airbyte.persistence.job
 
 import com.fasterxml.jackson.core.type.TypeReference
-import datadog.trace.api.Trace
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
@@ -37,6 +36,7 @@ import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import org.jooq.DSLContext
 import org.jooq.Field
 import org.jooq.JSONB
@@ -1079,7 +1079,7 @@ class DefaultJobPersistence
         ),
       )
 
-    @Trace
+    @WithSpan
     override fun listJobsIncludingId(
       configTypes: Set<ConfigType>,
       connectionId: String?,

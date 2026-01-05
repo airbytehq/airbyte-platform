@@ -33,6 +33,7 @@ import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.metrics.MetricClient
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.Condition
@@ -78,6 +79,7 @@ class WorkspaceServiceJooqImpl
      * @throws IOException - you never know when you IO
      * @throws ConfigNotFoundException - throws if no source with that id can be found.
      */
+    @WithSpan
     override fun getStandardWorkspaceNoSecrets(
       workspaceId: UUID,
       includeTombstone: Boolean,

@@ -446,41 +446,17 @@ global:
     secretName: ""
     apiKeySecretKey: ""
 
+  debug:
+    enabled: false
+
   datadog:
     enabled: false
+    debug: false
     env: dev
     traceAgentPort: 8126
 
     statsd:
       port: 8125
-
-    integrations:
-      dbm:
-        enabled: false
-        propagationMode: full
-
-      grpc:
-        enabled: false
-        clientEnabled: false
-        serverEnabled: false
-
-      googleHttpClient:
-        enabled: false
-
-      httpUrlConnection:
-        enabled: false
-
-      kotlinCoroutineExperimental:
-        enabled: false
-
-      urlConnection:
-        enabled: false
-
-      netty:
-        enabled: false
-
-      netty41:
-        enabled: false
 
   customerio:
     secretName: ""
@@ -785,6 +761,8 @@ server:
   # -- Number of server replicas
   replicaCount: 1
 
+  datadog:
+    serviceName: airbyte-server
   auditLoggingEnabled: false
 
   serviceAccountName:
@@ -1005,7 +983,6 @@ server:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
@@ -1041,6 +1018,8 @@ worker:
     pullPolicy: IfNotPresent
 
   annotations: {}
+  datadog:
+    serviceName: airbyte-worker
 
   # -- Add extra annotations to the worker pods
   podAnnotations: {}
@@ -1158,7 +1137,6 @@ worker:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
@@ -1204,6 +1182,9 @@ workloadLauncher:
     clientSecretSecretKey: ""
 
   env_vars: {}
+
+  datadog:
+    serviceName: airbyte-workload-launcher
 
   annotations: {}
 
@@ -1323,7 +1304,6 @@ workloadLauncher:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
@@ -1374,6 +1354,9 @@ connectorRolloutWorker:
     repository: airbyte/connector-rollout-worker
     # -- The pull policy to use for the airbyte connector rollout worker image
     pullPolicy: IfNotPresent
+
+  datadog:
+    serviceName: airbyte-connector-rollout-worker
 
   annotations: {}
 
@@ -1495,7 +1478,6 @@ connectorRolloutWorker:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
@@ -1529,6 +1511,9 @@ metrics:
     repository: airbyte/metrics-reporter
     # -- The pull policy to use for the airbyte metrics-reporter image
     pullPolicy: IfNotPresent
+
+  datadog:
+    serviceName: airbyte-metrics
 
   annotations: {}
 
@@ -1617,7 +1602,6 @@ metrics:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
@@ -1635,6 +1619,8 @@ airbyteBootloader:
     # -- The pull policy to use for the airbyte bootloader image
     pullPolicy: IfNotPresent
 
+  datadog:
+    serviceName: airbyte-bootloader
   annotations: {}
 
   # -- Add extra annotations to the bootloader pod
@@ -1778,7 +1764,6 @@ airbyteBootloader:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
@@ -2073,12 +2058,9 @@ temporalUi:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
-
-
 
 ## @section Airbyte Database parameters
 
@@ -2193,6 +2175,8 @@ cron:
   ##   bearerTokenSecretKey: workload-api-bearer-token-key kubernetes secret key where bearer token is stored
   workloadApi: {}
 
+  datadog:
+    serviceName: airbyte-cron
   annotations: {}
 
   # -- Add extra annotations to the cron pods
@@ -2363,7 +2347,6 @@ cron:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
@@ -2557,7 +2540,6 @@ keycloakSetup:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   extraInitContainers: []
   extraContainers: []
@@ -2575,6 +2557,8 @@ manifestServer:
     tag: 7.4.2
     pullPolicy: IfNotPresent
 
+  datadog:
+    serviceName: airbyte-manifest-server
   annotations: {}
 
   podSecurityContext:
@@ -2683,6 +2667,8 @@ manifestServer:
 
 workloadApiServer:
   enabled: true
+  datadog:
+    serviceName: airbyte-workload-api
 
   bearerToken: token
   bearerTokenSecretName: ""
@@ -2811,7 +2797,6 @@ workloadApiServer:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
@@ -2834,6 +2819,9 @@ featureflagServer:
     repository: airbyte/featureflag-server
     # -- The pull policy to use for the airbyte-workload-api-server image
     pullPolicy: IfNotPresent
+
+  datadog:
+    serviceName: airbyte-featureflag-server
 
   annotations: {}
 
@@ -2948,7 +2936,6 @@ featureflagServer:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
@@ -3048,7 +3035,6 @@ stiggSidecar:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085

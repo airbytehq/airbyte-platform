@@ -64,12 +64,10 @@ spec:
       - name: airbyte-server-container
         image: {{ include "imageUrl" (list .Values.server.image $) }}
         imagePullPolicy: "{{ .Values.server.image.pullPolicy }}"
+        envFrom:
+          - configMapRef:
+              name: {{ .Release.Name }}-airbyte-telemetry-env
         env:
-        {{- if .Values.server.debug.enabled }}
-        - name: JAVA_TOOL_OPTIONS
-          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.server.debug.remoteDebugPort }},server=y,suspend=n"
-        {{- end}}
-
         {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "enterprise")) }}
         {{- include "airbyte.auth.envs" . | nindent 8 }}
         {{- end}}
@@ -78,6 +76,7 @@ spec:
         {{- include "airbyte.auth.security.envs" . | nindent 8 }}
         {{- end }}
 
+        {{- include "airbyte.java_opts.envs" (list .Values.server $) | nindent 8 }}
         {{- include "airbyte.auth.jwt.envs" . | nindent 8 }}
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.cluster.envs" . | nindent 8 }}
@@ -99,13 +98,7 @@ spec:
         {{- include "airbyte.tracking.envs" . | nindent 8 }}
         {{- include "airbyte.worker.envs" . | nindent 8 }}
         {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
-
-        {{- if .Values.global.datadog.enabled }}
-        - name: DD_SERVICE 
-          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
-        {{- include "airbyte.datadog.envs" . | nindent 8 }}
-        {{- include "airbyte.otel.envs" . | nindent 8 }}
-        {{- end}}
+        {{- include "airbyte.datadog.envs" .Values.server.datadog | nindent 8 }}
 
         {{- if (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.auth.instanceAdmin.enterprise.envs" . | nindent 8 }} 
@@ -187,7 +180,7 @@ spec:
           protocol: TCP
         {{- if .Values.server.debug.enabled }}
         - name: debug
-          containerPort: {{ .Values.server.debug.remoteDebugPort }}
+          containerPort: 5005
           protocol: TCP
         {{- end}}
         {{- if .Values.server.resources }}

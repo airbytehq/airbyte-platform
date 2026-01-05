@@ -418,78 +418,6 @@ database.migrations:
       key: jobsDb.minimumFlywayMigrationVersion
       defaultValue: 0.29.15.001
 
-datadog:
-  keyBasePath: global.datadog
-  config:
-    - env: DD_AGENT_HOST
-      key: agentHost 
-      valueFrom: 
-        fieldRef:
-          fieldPath: status.hostIP
-
-    - env: DD_ENABLED
-      key: enabled
-      defaultValue: false
-
-    - env: DD_ENV
-      key: env
-
-    - env: DD_VERSION
-      key: version
-      valueExp: .Values.global.image.tag
-
-    - env: DD_DOGSTATSD_PORT
-      key: statsd.port
-      defaultValue: 8125
-
-    - env: DD_TRACE_AGENT_PORT
-      key: traceAgentPort
-      defaultValue: 8126
-
-    - env: DD_INTEGRATION_DBM_ENABLED
-      key: integrations.dbm.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_DBM_PROPAGATION_MODE
-      key: integrations.dbm.propagationMode
-      defaultValue: full
-
-    - env: DD_INTEGRATION_GOOGLE_HTTP_CLIENT_ENABLED
-      key: integrations.googleHttpClient.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_GRPC_ENABLED
-      key: integrations.grpc.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_GRPC_CLIENT_ENABLED
-      key: integrations.grpc.clientEnabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_GRPC_SERVER_ENABLED
-      key: integrations.grpc.serverEnabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_HTTPURLCONNECTION_ENABLED
-      key: integrations.httpUrlConnection.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_KOTLIN_COROUTINE_EXPERIMENTAL_ENABLED
-      key: integrations.kotlinCoroutineExperimental.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_NETTY_ENABLED
-      key: integrations.netty.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_NETTY_4_1_ENABLED
-      key: integrations.netty41.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_URLCONNECTION_ENABLED
-      key: integrations.urlConnection.enabled
-      defaultValue: false
-
 dataplaneGroups:
   keyBasePath: global.dataplaneGroups
   config:
@@ -525,13 +453,6 @@ featureFlags:
       discriminatorOpts: 
         - launchdarkly
       sensitive: true
-
-java:
-  keyBasePath: global.java
-  config:
-    - env: JAVA_TOOL_OPTIONS
-      key: opts
-      valueExp: join " " .Values.global.java.opts
 
 jobs:
   keyBasePath: global.jobs
@@ -800,33 +721,6 @@ minio:
       refKey: AWS_SECRET_ACCESS_KEY
       sensitive: true
       secretRef: airbyte.storage.secretName
-
-otel:
-  keyBasePath: global.metrics.otel
-  config:
-    - env: OTEL_EXPORTER_OTLP_ENDPOINT
-      key: exporter.endpoint
-      defaultValueExp: (ternary "http://${DD_AGENT_HOST}:4317" "" .Values.global.datadog.enabled)
-
-    - env: OTEL_EXPORTER_OTLP_PROTOCOL
-      key: exporter.protocol
-      defaultValue: grpc
-
-    - env: OTEL_EXPORTER_OTLP_TIMEOUT
-      key: exporter.timeout
-      defaultValue: 30000
-
-    - env: OTEL_METRIC_EXPORT_INTERVAL
-      key: exporter.metricExportInterval
-      defaultValue: 10000
-
-    - env: OTEL_METRICS_EXPORTER
-      key: exporter.name
-      defaultValue: otlp
-
-    - env: OTEL_RESOURCE_ATTRIBUTES
-      key: resourceAttributes
-      defaultValueExp: (printf "service.name=%s,deployment.environment=%s,service.version=%s" (include "airbyte.componentName" .) .Values.global.env (include "airbyte.common.version" .))
 
 secretsManager:
   keyBasePath: global.secretsManager
@@ -1613,7 +1507,6 @@ workloads:
 
     - env: CONTAINER_ORCHESTRATOR_JAVA_OPTS
       key: containerOrchestrator.javaOpts
-      defaultValue: -XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=75.0 -javaagent:/app/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=0.5 -Ddd.trace.request_header.tags=User-Agent:http.useragent
 
     - env: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
       key: kubernetesClientMaxIdleConnections

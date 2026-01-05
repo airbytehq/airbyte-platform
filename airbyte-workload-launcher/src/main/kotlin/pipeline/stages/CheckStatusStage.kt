@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher.pipeline.stages
 
-import datadog.trace.api.Trace
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -16,6 +15,8 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pods.KubePodClient
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
@@ -32,13 +33,16 @@ open class CheckStatusStage(
   private val podClient: KubePodClient,
   metricClient: MetricClient,
 ) : LaunchStage(metricClient) {
-  @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "CheckStatusStage")
+  @WithSpan(MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
     tags = [Tag(key = MetricTags.STAGE_NAME_TAG, value = "check_status")],
   )
-  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> = super.apply(input)
+  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
+    Span.current().setAttribute("resource.name", "CheckStatusStage")
+    return super.apply(input)
+  }
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     val podExists = podClient.podsExistForAutoId(input.msg.autoId)

@@ -5,7 +5,6 @@ azure-kevault-secrets = "4.3.5"
 azure-identity = "1.3.5"
 azure-storage = "12.27.1"
 bouncycastle = "1.79"
-datadog-version = "1.40.1"
 docker-java = "3.2.8"
 fasterxml_version = "2.19.2"
 failsafe = "3.3.2"
@@ -38,10 +37,12 @@ micronaut-micrometer = "5.13.1"
 micronaut-openapi = "6.19.2"
 micronaut-security = "4.15.0"
 micronaut-test = "4.10.2"
+micronaut-tracing = "7.2.0"
 moshi = "1.15.0"
 mockito = "5.18.0"
 mockito-kotlin = "5.2.1"
 okhttp3 = "4.12.0"
+otel-api = "1.56.0"
 picocli = "4.7.6"
 platform-testcontainers = "1.19.4"
 pmd = "7.6.0"
@@ -74,8 +75,6 @@ bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref 
 byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.14.10" }
 cron-utils = { module = "com.cronutils:cron-utils", version = "9.2.1" }
 datadog-statsd-client = { module = "com.datadoghq:java-dogstatsd-client", version = "4.0.0" }
-datadog-trace-api = { module = "com.datadoghq:dd-trace-api", version.ref = "datadog-version" }
-datadog-trace-ot = { module = "com.datadoghq:dd-trace-ot", version.ref = "datadog-version" }
 docker-java = { module = "com.github.docker-java:docker-java", version.ref = "docker-java" }
 docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker.java" }
 elasticsearch = { module = "org.elasticsearch:elasticsearch", version = "7.17.21" }
@@ -162,15 +161,13 @@ okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
 okhttp-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp3" }
 openai-java = { module = "com.openai:openai-java", version = "0.36.0" }
 openapi-jackson-databind-nullable = { module = "org.openapitools:jackson-databind-nullable", version = "0.2.5" }
-opentracing-util = { module = "io.opentracing:opentracing-util", version = "0.33.0" }
 orb = { module = "com.withorb.api:orb-kotlin", version = "0.1.0-alpha.10" }
-otel-bom = { module = "io.opentelemetry:opentelemetry-bom", version = "1.43.0" }
-otel-bom-alpha = { module = "io.opentelemetry:opentelemetry-bom-alpha", version = "1.43.0-alpha" }
-otel-ext-annotations = { module = "io.opentelemetry:opentelemetry-extension-annotations", version = "1.18.0" }
-otel-incubator-metrics-alpha = { module = "io.opentelemetry:opentelemetry-api-incubator", version = "1.43.0-alpha" }
-otel-sdk = { module = "io.opentelemetry:opentelemetry-sdk-metrics", version = "1.43.0" }
-otel-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing", version = "1.43.0" }
-otel-semconv = { module = "io.opentelemetry.semconv:opentelemetry-semconv-incubating", version = "1.30.0-alpha-rc.1" }
+
+otel-api = { module = "io.opentelemetry:opentelemetry-api", version.ref = "otel-api" }
+otel-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version = "2.21.0"}
+otel-opentracing-shim = { module = "io.opentelemetry:opentelemetry-opentracing-shim", version.ref = "otel-api"}
+otel-semconv = { module = "io.opentelemetry.semconv:opentelemetry-semconv", version = "1.37.0" }
+
 picocli = { module = "info.picocli:picocli", version.ref = "picocli" }
 picocli-codegen = { module = "info.picocli:picocli-codegen", version.ref = "picocli" }
 platform-testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "platform-testcontainers" }
@@ -258,6 +255,7 @@ micronaut-security-jwt = { module = "io.micronaut.security:micronaut-security-jw
 micronaut-security-oauth2 = { module = "io.micronaut.security:micronaut-security-oauth2", version.ref = "micronaut-security" }
 micronaut-test-core = { module = "io.micronaut.test:micronaut-test-core", version.ref = "micronaut-test" }
 micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5", version.ref = "micronaut-test" }
+micronaut-tracing-opentelemetry-http = { module = "io.micronaut.tracing:micronaut-tracing-opentelemetry-http", version.ref = "micronaut-tracing"}
 micronaut-validation = { module = "io.micronaut.validation:micronaut-validation", version = "4.12.0" }
 
 # Transitive security patches direct dependency does not have a fix
@@ -268,7 +266,6 @@ httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", versio
 
 [bundles]
 bouncycastle = ["bouncycastle-bcprov", "bouncycastle-bcpkix"]
-datadog = ["datadog-trace-api", "datadog-trace-ot"]
 flyway = ["flyway-core", "flyway-postgresql"]
 jackson = ["jackson-databind", "jackson-annotations", "jackson-dataformat-yml", "jackson-dataformat-xml", "jackson-datatype", "jackson-jdk-datatype", "jackson-kotlin"]
 junit = ["junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "mockito-junit-jupiter"]
@@ -276,7 +273,13 @@ keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kotest = ["kotest-assertions"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client", "kubernetes-httpclient-okhttp"]
 logback = ["logback-classic", "logback-core"]
-micronaut = ["jakarta-annotation-api", "jakarta-transaction-api", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq", "micronaut-jackson-databind", "netty-handler", "netty-common", "httpclient5"]
+micronaut = [
+    "jakarta-annotation-api", "jakarta-transaction-api",
+    "micronaut-http-server-netty", "micronaut-http-client",
+    "micronaut-inject", "micronaut-validation", "micronaut-runtime",
+    "micronaut-management", "micronaut-flyway", "micronaut-jdbc-hikari",
+    "micronaut-jooq", "micronaut-jackson-databind", "netty-handler",
+    "netty-common", "httpclient5", "micronaut-tracing-opentelemetry-http", "otel-annotations"]
 micronaut-light = ["jakarta-annotation-api", "micronaut-inject-java", "micronaut-runtime"]
 micronaut-annotation = ["jakarta-annotation-api", "micronaut-inject-java", "micronaut-inject-kotlin"]
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-inject-kotlin", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation"]

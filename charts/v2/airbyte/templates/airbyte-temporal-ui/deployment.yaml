@@ -94,11 +94,6 @@ spec:
         - name: http
           containerPort: 8080
           protocol: TCP
-        {{- if .Values.temporalUi.debug.enabled }}
-        - name: debug 
-          containerPort: {{ .Values.temporalUi.debug.remoteDebugPort }}
-          protocol: TCP
-        {{- end}}
         {{- if .Values.temporalUi.resources }}
         resources: {{- toYaml .Values.temporalUi.resources | nindent 8 }}
         {{- end }}

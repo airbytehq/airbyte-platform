@@ -4,7 +4,6 @@
 
 package io.airbyte.cron.jobs
 
-import datadog.trace.api.Trace
 import io.airbyte.featureflag.CanCleanWorkloadQueue
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
@@ -24,6 +23,7 @@ import io.airbyte.workload.api.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
 import io.micronaut.scheduling.annotation.Scheduled
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.OffsetDateTime
@@ -54,7 +54,7 @@ open class WorkloadMonitor(
     val DEFAULT_TIME_PROVIDER: (ZoneId) -> OffsetDateTime = OffsetDateTime::now
   }
 
-  @Trace
+  @WithSpan
   @Instrument(
     start = "WORKLOAD_MONITOR_RUN",
     end = "WORKLOAD_MONITOR_DONE",
@@ -81,7 +81,7 @@ open class WorkloadMonitor(
     )
   }
 
-  @Trace
+  @WithSpan
   @Instrument(
     start = "WORKLOAD_MONITOR_RUN",
     end = "WORKLOAD_MONITOR_DONE",
@@ -108,7 +108,7 @@ open class WorkloadMonitor(
     )
   }
 
-  @Trace
+  @WithSpan
   @Instrument(
     start = "WORKLOAD_MONITOR_RUN",
     end = "WORKLOAD_MONITOR_DONE",
@@ -136,7 +136,7 @@ open class WorkloadMonitor(
     )
   }
 
-  @Trace
+  @WithSpan
   @Instrument(
     start = "WORKLOAD_MONITOR_RUN",
     end = "WORKLOAD_MONITOR_DONE",
@@ -157,7 +157,7 @@ open class WorkloadMonitor(
     failWorkloads(nonHeartbeatingWorkloads.workloads, "Non sync workload timeout", CHECK_NON_SYNC_TIMEOUT)
   }
 
-  @Trace
+  @WithSpan
   @Instrument(
     start = "WORKLOAD_MONITOR_RUN",
     end = "WORKLOAD_MONITOR_DONE",
@@ -178,7 +178,7 @@ open class WorkloadMonitor(
     failWorkloads(nonHeartbeatingWorkloads.workloads, "Sync workload timeout", CHECK_SYNC_TIMEOUT)
   }
 
-  @Trace
+  @WithSpan
   @Instrument(
     start = "WORKLOAD_MONITOR_RUN",
     end = "WORKLOAD_MONITOR_DONE",

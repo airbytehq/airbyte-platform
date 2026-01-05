@@ -258,7 +258,6 @@ workloadLauncher:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085

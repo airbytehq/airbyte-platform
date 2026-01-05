@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher.pods
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
 import io.airbyte.featureflag.Connection
@@ -31,6 +30,7 @@ import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -56,7 +56,7 @@ class KubePodClient(
 ) {
   fun podsExistForAutoId(autoId: UUID): Boolean = kubePodLauncher.podsRunning(labeler.getAutoIdLabels(autoId))
 
-  @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
+  @WithSpan(LAUNCH_REPLICATION_OPERATION_NAME)
   fun launchReplication(
     payload: SyncPayload,
     launcherInput: LauncherInput,
@@ -126,7 +126,7 @@ class KubePodClient(
     }
   }
 
-  @Trace(operationName = LAUNCH_RESET_OPERATION_NAME)
+  @WithSpan(LAUNCH_RESET_OPERATION_NAME)
   fun launchReset(
     payload: SyncPayload,
     launcherInput: LauncherInput,

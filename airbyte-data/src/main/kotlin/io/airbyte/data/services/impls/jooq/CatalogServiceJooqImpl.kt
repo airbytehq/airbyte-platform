@@ -5,7 +5,6 @@
 package io.airbyte.data.services.impls.jooq
 
 import com.fasterxml.jackson.databind.JsonNode
-import datadog.trace.api.Trace
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.security.murmur332
@@ -23,6 +22,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ActorCatalogType
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.DestinationCatalog
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.DSLContext
@@ -249,7 +249,7 @@ class CatalogServiceJooqImpl
      * @return map of source id to the last actor catalog fetch event
      * @throws IOException - error while interacting with db
      */
-    @Trace
+    @WithSpan
     override fun getMostRecentActorCatalogFetchEventForSources(sourceIds: List<UUID>): Map<UUID, ActorCatalogFetchEvent> {
       // noinspection SqlResolve
       if (sourceIds.isEmpty()) {

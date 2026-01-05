@@ -4,8 +4,6 @@
 
 package io.airbyte.cron.jobs
 
-import datadog.trace.api.Trace
-import io.airbyte.cron.SCHEDULED_TRACE_OPERATION_NAME
 import io.airbyte.featureflag.DisableDbPrune
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
@@ -17,6 +15,7 @@ import io.airbyte.persistence.job.DbPrune
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.scheduling.annotation.Scheduled
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
@@ -45,7 +44,7 @@ class DbPruneWorkflow(
    * Runs daily at 10pm PST (2am UTC) to reduce the chance of a deploy stopping it.
    * Wanted a consistent time so we can see patterns if any arise.
    */
-  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
+  @WithSpan
   @Scheduled(cron = "0 0 22 * * *", zoneId = "America/Los_Angeles")
   @Synchronized
   fun pruneRecords() {

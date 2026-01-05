@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.CatalogConfigDiff
 import io.airbyte.api.model.generated.CatalogDiff
@@ -73,6 +72,7 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.metrics.lib.MetricTags
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import java.util.Optional
@@ -346,19 +346,19 @@ class WebBackendConnectionsHandler(
       .name(tag.name)
       .color(tag.color)
 
-  @Trace
+  @WithSpan
   private fun getSourceRead(sourceId: UUID): SourceRead {
     val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceId)
     return sourceHandler.getSource(sourceIdRequestBody)
   }
 
-  @Trace
+  @WithSpan
   private fun getDestinationRead(destinationId: UUID): DestinationRead {
     val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationId)
     return destinationHandler.getDestination(destinationIdRequestBody)
   }
 
-  @Trace
+  @WithSpan
   private fun getOperationReadList(connectionRead: ConnectionRead): OperationReadList {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionRead.connectionId)
     return operationsHandler.listOperationsForConnection(connectionIdRequestBody)
@@ -366,7 +366,7 @@ class WebBackendConnectionsHandler(
 
   // todo (cgardens) - This logic is a headache to follow it stems from the internal data model not
   // tracking selected streams in any reasonable way. We should update that.
-  @Trace
+  @WithSpan
   fun webBackendGetConnection(webBackendConnectionRequestBody: WebBackendConnectionRequestBody): WebBackendConnectionRead {
     addTagsToTrace(mapOf(MetricTags.CONNECTION_ID to webBackendConnectionRequestBody.connectionId.toString()))
     val connectionIdRequestBody =

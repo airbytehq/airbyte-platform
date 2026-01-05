@@ -66,6 +66,7 @@ import io.airbyte.featureflag.HydrateLimits
 import io.airbyte.featureflag.Workspace
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.core.util.CollectionUtils
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.tools.StringUtils
@@ -277,6 +278,7 @@ class WorkspacesHandler
       return WorkspaceReadList().workspaces(reads)
     }
 
+    @WithSpan
     fun getWorkspace(workspaceIdRequestBody: WorkspaceIdRequestBody): WorkspaceRead {
       val workspaceId = workspaceIdRequestBody.workspaceId
       val includeTombstone = if (workspaceIdRequestBody.includeTombstone != null) workspaceIdRequestBody.includeTombstone else false

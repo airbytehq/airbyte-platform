@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.server.scheduler
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.temporal.ManualOperationResult
 import io.airbyte.commons.temporal.TemporalClient
 import io.airbyte.config.RefreshStream
 import io.airbyte.config.StreamDescriptor
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import java.util.UUID
 
 /**
@@ -17,24 +17,24 @@ import java.util.UUID
 class TemporalEventRunner(
   private val temporalClient: TemporalClient,
 ) : EventRunner {
-  @Trace
+  @WithSpan
   override fun createConnectionManagerWorkflow(connectionId: UUID) {
     temporalClient.submitConnectionUpdaterAsync(connectionId)
   }
 
-  @Trace
+  @WithSpan
   override fun startNewManualSync(connectionId: UUID): ManualOperationResult = temporalClient.startNewManualSync(connectionId)
 
-  @Trace
+  @WithSpan
   override fun startNewCancellation(connectionId: UUID): ManualOperationResult = temporalClient.startNewCancellation(connectionId)
 
-  @Trace
+  @WithSpan
   override fun resetConnection(
     connectionId: UUID,
     streamsToReset: List<StreamDescriptor>,
   ): ManualOperationResult = temporalClient.resetConnection(connectionId, streamsToReset)
 
-  @Trace
+  @WithSpan
   override fun refreshConnectionAsync(
     connectionId: UUID,
     streamsToRefresh: List<StreamDescriptor>,
@@ -43,7 +43,7 @@ class TemporalEventRunner(
     temporalClient.refreshConnectionAsync(connectionId, streamsToRefresh, refreshType)
   }
 
-  @Trace
+  @WithSpan
   override fun resetConnectionAsync(
     connectionId: UUID,
     streamsToReset: List<StreamDescriptor>,
@@ -51,17 +51,17 @@ class TemporalEventRunner(
     temporalClient.resetConnectionAsync(connectionId, streamsToReset)
   }
 
-  @Trace
+  @WithSpan
   override fun forceDeleteConnection(connectionId: UUID) {
     temporalClient.forceDeleteWorkflow(connectionId)
   }
 
-  @Trace
+  @WithSpan
   override fun migrateSyncIfNeeded(connectionIds: Set<UUID>) {
     temporalClient.migrateSyncIfNeeded(connectionIds)
   }
 
-  @Trace
+  @WithSpan
   override fun update(connectionId: UUID) {
     temporalClient.update(connectionId)
   }

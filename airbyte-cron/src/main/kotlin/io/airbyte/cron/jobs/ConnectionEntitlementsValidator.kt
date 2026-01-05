@@ -4,17 +4,16 @@
 
 package io.airbyte.cron.jobs
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ActorType
-import io.airbyte.cron.SCHEDULED_TRACE_OPERATION_NAME
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.scheduling.annotation.Scheduled
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -33,7 +32,7 @@ class ConnectionEntitlementsValidator(
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
 ) {
   @Scheduled(fixedRate = "1h")
-  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
+  @WithSpan
   fun validateEntitlements() {
     logger.info { "Validating entitlements for actively used source connectors..." }
     sourceService

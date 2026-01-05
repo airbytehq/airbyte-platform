@@ -4,7 +4,6 @@
 
 package io.airbyte.server.handlers
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.JobHistoryHandler
@@ -22,6 +21,7 @@ import io.airbyte.domain.services.llm.OpenAIProjectId
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -60,7 +60,7 @@ class JobExplanationHandler(
     Do not ask the user to engage with you any further. The user will only see your initial response.
     """.trimIndent()
 
-  @Trace
+  @WithSpan
   fun getJobExplanation(
     jobId: Long,
     workspaceId: UUID,

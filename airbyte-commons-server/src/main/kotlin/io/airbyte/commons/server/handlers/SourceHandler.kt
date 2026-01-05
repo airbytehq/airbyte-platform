@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
@@ -77,6 +76,7 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.Optional
@@ -131,7 +131,7 @@ class SourceHandler
       return createSource(sourceCreate)
     }
 
-    @Trace
+    @WithSpan
     fun updateSourceWithOptionalSecret(partialSourceUpdate: PartialSourceUpdate): SourceRead {
       val spec = getSourceVersionForSourceId(partialSourceUpdate.sourceId).spec
       addTagsToTrace(
@@ -238,7 +238,7 @@ class SourceHandler
       return buildSourceRead(sourceService.getSourceConnection(sourceId), spec)
     }
 
-    @Trace
+    @WithSpan
     fun updateSource(sourceUpdate: SourceUpdate): SourceRead {
       if (sourceUpdate.resourceAllocation != null && airbyteEdition == AirbyteEdition.CLOUD) {
         throw BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition))

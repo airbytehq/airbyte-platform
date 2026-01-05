@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.worker
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
@@ -31,6 +30,7 @@ import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.io.IOException
@@ -75,7 +75,7 @@ class ReplicationJobOrchestrator(
   private val outputWriter: WorkloadOutputWriter,
   private val metricClient: MetricClient,
 ) {
-  @Trace(operationName = ApmTraceConstants.JOB_ORCHESTRATOR_OPERATION_NAME)
+  @WithSpan(ApmTraceConstants.JOB_ORCHESTRATOR_OPERATION_NAME)
   fun runJob(): Optional<String> {
     val sourceLauncherConfig = replicationInput.sourceLauncherConfig
     val destinationLauncherConfig = replicationInput.destinationLauncherConfig

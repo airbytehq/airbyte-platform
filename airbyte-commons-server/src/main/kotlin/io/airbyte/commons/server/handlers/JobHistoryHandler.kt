@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionSyncProgressRead
@@ -58,6 +57,7 @@ import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
 import io.micronaut.core.util.CollectionUtils
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
 import java.util.Locale
@@ -87,7 +87,7 @@ class JobHistoryHandler(
 ) {
   private val workflowStateConverter = WorkflowStateConverter()
 
-  @Trace
+  @WithSpan
   fun listJobsFor(request: JobListRequestBody): JobReadList {
     requireNotNull(request.configTypes) { "configType cannot be null." }
     check(!request.configTypes.isEmpty()) { "Must include at least one configType." }
@@ -329,7 +329,7 @@ class JobHistoryHandler(
     return jobDebugInfoRead
   }
 
-  @Trace
+  @WithSpan
   fun getLatestRunningSyncJob(connectionId: UUID): Optional<JobRead> {
     val nonTerminalSyncJobsForConnection =
       jobPersistence.listJobsForConnectionWithStatuses(
@@ -427,14 +427,14 @@ class JobHistoryHandler(
       .streams(finalStreamsWithStats)
   }
 
-  @Trace
+  @WithSpan
   fun getLatestSyncJob(connectionId: UUID): Optional<JobRead> =
     jobPersistence.getLastSyncJob(connectionId).map { obj: Job -> JobConverter.getJobRead(obj) }
 
-  @Trace
+  @WithSpan
   fun getLatestSyncJobsForConnections(connectionIds: List<UUID>): List<JobStatusSummary> = jobPersistence.getLastSyncJobForConnections(connectionIds)
 
-  @Trace
+  @WithSpan
   fun getRunningSyncJobForConnections(connectionIds: List<UUID>): List<JobRead> =
     jobPersistence
       .getRunningSyncJobForConnections(connectionIds)

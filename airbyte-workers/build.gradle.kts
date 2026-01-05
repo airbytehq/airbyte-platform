@@ -59,9 +59,9 @@ dependencies {
   }
   implementation(libs.quartz.scheduler)
   implementation(libs.micrometer.statsd)
-  implementation(libs.bundles.datadog)
   implementation(libs.sentry.java)
   implementation(libs.failsafe)
+  implementation("com.datadoghq:dd-trace-api:1.55.0")
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:server-api"))
@@ -114,7 +114,6 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.retrofit.mock)
-  testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 
@@ -133,7 +132,7 @@ dependencies {
 airbyte {
   application {
     mainClass = "io.airbyte.workers.ApplicationKt"
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
+
     localEnvVars.putAll(
       mapOf(
         "AIRBYTE_VERSION" to "dev",

@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher
 
-import datadog.trace.api.Trace
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
@@ -26,6 +25,7 @@ import io.airbyte.workload.launcher.pipeline.LaunchPipeline
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
@@ -49,7 +49,7 @@ class ClaimedProcessor(
 ) {
   private val scheduler = Schedulers.newParallel("process-claimed-scheduler", workloadLauncherConfiguration.parallelism.defaultQueue)
 
-  @Trace(operationName = RESUME_CLAIMED_OPERATION_NAME)
+  @WithSpan(RESUME_CLAIMED_OPERATION_NAME)
   fun retrieveAndProcess(dataplaneId: String) {
     ApmTraceUtils.addTagsToTrace(mapOf(MetricTags.DATA_PLANE_ID_TAG to dataplaneId))
 

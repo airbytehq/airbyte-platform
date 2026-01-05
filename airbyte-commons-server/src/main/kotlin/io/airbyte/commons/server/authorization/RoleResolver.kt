@@ -25,6 +25,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.security.utils.SecurityService
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -150,6 +151,7 @@ open class RoleResolver(
     /**
      * roles() resolves the request details into a set of available roles.
      */
+    @WithSpan
     fun roles(): Set<String> {
       // these make null-checking cleaner
       val subject = subject

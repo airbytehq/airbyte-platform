@@ -9,6 +9,7 @@ dependencies {
 
   implementation(libs.bundles.micronaut.annotation)
   implementation(libs.micronaut.cache.caffeine)
+  implementation(libs.otel.annotations)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
@@ -27,7 +28,6 @@ dependencies {
   implementation(libs.bundles.jackson)
   implementation(libs.semver4j)
   implementation(libs.kotlin.logging)
-
 
   testImplementation(project(":oss:airbyte-test-utils"))
   testRuntimeOnly(libs.junit.jupiter.engine)

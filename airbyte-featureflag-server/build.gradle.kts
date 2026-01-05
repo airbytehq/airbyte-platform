@@ -8,7 +8,6 @@ dependencies {
   ksp(libs.v3.swagger.annotations)
   ksp(platform(libs.micronaut.platform))
 
-
   compileOnly(libs.v3.swagger.annotations)
   compileOnly(libs.micronaut.openapi.annotations)
 
@@ -38,7 +37,7 @@ dependencies {
 airbyte {
   application {
     mainClass = "io.airbyte.featureflag.server.ApplicationKt"
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
+
     localEnvVars.putAll(
       mapOf(
         "AIRBYTE_VERSION" to "dev",

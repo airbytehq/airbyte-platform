@@ -4,7 +4,6 @@
 
 package io.airbyte.data.services.shared
 
-import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.JobStatus
@@ -14,6 +13,7 @@ import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.DSLContext
@@ -465,7 +465,7 @@ class ActorServicePaginationHelper(
     return getCursorActor(cursorId, internalSortKey, filters, ascending, pageSize, actorType)
   }
 
-  @Trace
+  @WithSpan
   fun getCursorActor(
     cursorId: UUID?,
     internalSortKey: SortKey,

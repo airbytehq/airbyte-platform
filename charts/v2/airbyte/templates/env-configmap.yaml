@@ -20,10 +20,8 @@ data:
   {{- include "airbyte.cron.configVars" . | nindent 2 }}
   {{- include "airbyte.database.configVars" . | nindent 2 }}
   {{- include "airbyte.database.migrations.configVars" . | nindent 2 }}
-  {{- include "airbyte.datadog.configVars" . | nindent 2 }}
   {{- include "airbyte.dataplaneGroups.configVars" . | nindent 2 }}
   {{- include "airbyte.featureFlags.configVars" . | nindent 2 }}
-  {{- include "airbyte.java.configVars" . | nindent 2 }}
   {{- include "airbyte.jobs.configVars" . | nindent 2 }}
   {{- include "airbyte.jobs.scheduling.configVars" . | nindent 2 }}
   {{- include "airbyte.jobs.errors.configVars" . | nindent 2 }}
@@ -34,7 +32,6 @@ data:
   {{- include "airbyte.logging.configVars" . | nindent 2 }}
   {{- include "airbyte.metrics.configVars" . | nindent 2 }}
   {{- include "airbyte.micronaut.configVars" . | nindent 2 }}
-  {{- include "airbyte.otel.configVars" . | nindent 2 }}
   {{- include "airbyte.secretsManager.configVars" . | nindent 2 }}
   {{- include "airbyte.server.configVars" . | nindent 2 }}
   {{- include "airbyte.stigg.configVars" . | nindent 2 }}

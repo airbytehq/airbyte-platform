@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.TemporalTaskQueueUtils.getTaskQueue
 import io.airbyte.commons.temporal.TemporalWorkflowUtils.buildStartWorkflowInput
@@ -77,6 +76,7 @@ import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceAc
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity.DeleteStreamResetRecordsForJobInput
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import io.temporal.api.enums.v1.ParentClosePolicy
 import io.temporal.failure.ActivityFailure
 import io.temporal.failure.CanceledFailure
@@ -144,7 +144,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   private var connectionContext: ConnectionContext? = null
 
   @Suppress("UNUSED")
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
   override fun run(connectionUpdaterInput: ConnectionUpdaterInput) {
     try {
       if (connectionUpdaterInput.connectionId == null || isTombstone(connectionUpdaterInput.connectionId)) {
@@ -717,7 +717,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     workflowState.isSkipScheduling = true
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
   override fun cancelJob() {
     traceConnectionId()
     if (!workflowState.isRunning) {
@@ -729,7 +729,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   }
 
   // TODO: Delete when the don't delete in temporal is removed
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
   override fun deleteConnection() {
     traceConnectionId()
     workflowState.isDeleted = true
@@ -741,7 +741,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     workflowState.isUpdated = true
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
   override fun resetConnection() {
     traceConnectionId()
 
@@ -755,7 +755,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     }
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
   override fun resetConnectionAndSkipNextScheduling() {
     traceConnectionId()
 

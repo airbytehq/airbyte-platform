@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.worker.io
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ResetSourceConfiguration
@@ -22,6 +21,7 @@ import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
 import io.airbyte.workers.testutils.AirbyteMessageUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import java.nio.file.Path
 import java.util.LinkedList
 import java.util.Optional
@@ -54,7 +54,7 @@ class EmptyAirbyteSource(
     hasEmittedStreamStatus = AtomicBoolean()
   }
 
-  @Trace(operationName = ApmTraceConstants.WORKER_OPERATION_NAME)
+  @WithSpan(ApmTraceConstants.WORKER_OPERATION_NAME)
   override fun start(
     sourceConfig: WorkerSourceConfig,
     jobRoot: Path?,
@@ -81,16 +81,16 @@ class EmptyAirbyteSource(
     isStarted = true
   }
 
-  @get:Trace(operationName = ApmTraceConstants.WORKER_OPERATION_NAME)
   override val isFinished: Boolean
     // always finished. it has no data to send.
+    @WithSpan(ApmTraceConstants.WORKER_OPERATION_NAME)
     get() = hasEmittedState.get() && (hasEmittedStreamStatus.get() || hasCustomNamespace.get())
 
-  @get:Trace(operationName = ApmTraceConstants.WORKER_OPERATION_NAME)
   override val exitValue: Int
+    @WithSpan(ApmTraceConstants.WORKER_OPERATION_NAME)
     get() = 0
 
-  @Trace(operationName = ApmTraceConstants.WORKER_OPERATION_NAME)
+  @WithSpan(ApmTraceConstants.WORKER_OPERATION_NAME)
   override fun attemptRead(): Optional<AirbyteMessage> {
     check(isStarted) { "The empty source has not been started." }
 
@@ -109,12 +109,12 @@ class EmptyAirbyteSource(
     return emitLegacyState(false)
   }
 
-  @Trace(operationName = ApmTraceConstants.WORKER_OPERATION_NAME)
+  @WithSpan(ApmTraceConstants.WORKER_OPERATION_NAME)
   override fun close() {
     // no op.
   }
 
-  @Trace(operationName = ApmTraceConstants.WORKER_OPERATION_NAME)
+  @WithSpan(ApmTraceConstants.WORKER_OPERATION_NAME)
   override fun cancel() {
     // no op.
   }

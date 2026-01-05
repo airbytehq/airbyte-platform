@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher.pipeline.stages
 
-import datadog.trace.api.Trace
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Context
 import io.airbyte.metrics.MetricClient
@@ -26,6 +25,8 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.WorkloadPayload
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
@@ -42,13 +43,16 @@ open class BuildInputStage(
   metricClient: MetricClient,
   private val ffCtxMapper: InputFeatureFlagContextMapper,
 ) : LaunchStage(metricClient) {
-  @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "BuildInputStage")
+  @WithSpan(MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
     tags = [Tag(key = MetricTags.STAGE_NAME_TAG, value = "build")],
   )
-  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> = super.apply(input)
+  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
+    Span.current().setAttribute("resource.name", "BuildInputStage")
+    return super.apply(input)
+  }
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     val built = buildPayload(input.msg.workloadInput, input.msg.workloadType)

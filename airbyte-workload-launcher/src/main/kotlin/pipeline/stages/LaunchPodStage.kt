@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher.pipeline.stages
 
-import datadog.trace.api.Trace
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
@@ -17,6 +16,8 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.KubePodClient
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
@@ -31,13 +32,16 @@ open class LaunchPodStage(
   private val launcher: KubePodClient,
   metricClient: MetricClient,
 ) : LaunchStage(metricClient) {
-  @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "LaunchPodStage")
+  @WithSpan(MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   @Instrument(
     start = "WORKLOAD_STAGE_START",
     end = "WORKLOAD_STAGE_DONE",
     tags = [Tag(key = MetricTags.STAGE_NAME_TAG, value = "launch")],
   )
-  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> = super.apply(input)
+  override fun apply(input: LaunchStageIO): Mono<LaunchStageIO> {
+    Span.current().setAttribute("resource.name", "LaunchPodStage")
+    return super.apply(input)
+  }
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     when (val payload = input.payload!!) {

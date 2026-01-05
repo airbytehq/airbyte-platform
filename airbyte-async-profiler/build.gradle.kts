@@ -57,17 +57,16 @@ dependencies {
 airbyte {
   application {
     mainClass.set("io.airbyte.async.profiler.ApplicationKt")
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
+
     localEnvVars.putAll(
       mapOf(
         "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
-        "MICRONAUT_ENVIRONMENTS" to "test"
-      )
+        "MICRONAUT_ENVIRONMENTS" to "test",
+      ),
     )
   }
   docker {
     imageName.set("async-profiler")
   }
 }
-

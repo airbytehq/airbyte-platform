@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling.activities
 
-import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionJobRequestBody
@@ -43,6 +42,7 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.ReportJobStartInput
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpStatus
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
@@ -62,7 +62,7 @@ class JobCreationAndStatusUpdateActivityImpl(
   private val featureFlagClient: FeatureFlagClient,
   @param:Named("outputStateClient") private val stateClient: OutputStorageClient<State>?,
 ) : JobCreationAndStatusUpdateActivity {
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun createNewJob(input: JobCreationInput): JobCreationOutput {
     AttemptContext(input.connectionId, null, null).addTagsToTrace()
     try {
@@ -81,7 +81,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun createNewAttemptNumber(input: AttemptCreationInput): AttemptNumberCreationOutput {
     AttemptContext(null, input.jobId, null).addTagsToTrace()
 
@@ -102,7 +102,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun jobSuccessWithAttemptNumber(input: JobSuccessInputWithAttemptNumber) {
     AttemptContext(input.connectionId, input.jobId, input.attemptNumber).addTagsToTrace()
 
@@ -133,7 +133,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun jobFailure(input: JobFailureInput) {
     AttemptContext(input.connectionId, input.jobId, input.attemptNumber).addTagsToTrace()
 
@@ -161,7 +161,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun attemptFailureWithAttemptNumber(input: AttemptNumberFailureInput) {
     AttemptContext(input.connectionId, input.jobId, input.attemptNumber).addTagsToTrace()
 
@@ -192,7 +192,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun jobCancelledWithAttemptNumber(input: JobCancelledInputWithAttemptNumber) {
     AttemptContext(input.connectionId, input.jobId, input.attemptNumber).addTagsToTrace()
 
@@ -216,7 +216,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun reportJobStart(input: ReportJobStartInput) {
     AttemptContext(input.connectionId, input.jobId, null).addTagsToTrace()
 
@@ -232,7 +232,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun ensureCleanJobState(input: EnsureCleanJobStateInput) {
     AttemptContext(input.connectionId, null, null).addTagsToTrace()
     try {
@@ -303,7 +303,7 @@ class JobCreationAndStatusUpdateActivityImpl(
    * @param input - JobCheckFailureInput.
    * @return - boolean.
    */
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun shouldRunSourceCheck(input: JobCheckFailureInput): Boolean =
     when {
       isResetJob(input.jobId!!) -> {
@@ -324,7 +324,7 @@ class JobCreationAndStatusUpdateActivityImpl(
    * @param input - JobCheckFailureInput.
    * @return - boolean.
    */
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun shouldRunDestinationCheck(input: JobCheckFailureInput): Boolean =
     when {
       shouldSkipDestinationCheck(input.connectionId!!) -> {

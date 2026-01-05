@@ -4,10 +4,8 @@
 
 package io.airbyte.cron.jobs
 
-import datadog.trace.api.Trace
 import io.airbyte.config.Configs
 import io.airbyte.config.init.ApplyDefinitionsHelper
-import io.airbyte.cron.SCHEDULED_TRACE_OPERATION_NAME
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -15,6 +13,7 @@ import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.scheduling.annotation.Scheduled
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 
 private val log = KotlinLogging.logger {}
@@ -52,7 +51,7 @@ class CloudDefinitionsUpdater(
     log.info { "Creating connector definitions updater for CLOUD" }
   }
 
-  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
+  @WithSpan
   @Scheduled(fixedRate = "1m", initialDelay = "5m")
   fun updateDefinitions() = baseDefinitionsUpdater.doUpdate()
 }
@@ -67,7 +66,7 @@ class CommunityDefinitionsUpdater(
     log.info { "Creating connector definitions updater for COMMUNITY/ENTERPRISE" }
   }
 
-  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
+  @WithSpan
   @Scheduled(fixedRate = "1d", initialDelay = "1m")
   fun updateDefinitions() = baseDefinitionsUpdater.doUpdate()
 }

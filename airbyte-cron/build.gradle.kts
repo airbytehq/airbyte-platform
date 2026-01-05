@@ -14,7 +14,6 @@ dependencies {
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.bundles.temporal)
-  implementation(libs.bundles.datadog)
   implementation(libs.failsafe)
   implementation(libs.failsafe.okhttp)
   implementation(libs.java.jwt)
@@ -59,7 +58,6 @@ dependencies {
 airbyte {
   application {
     mainClass = "io.airbyte.cron.ApplicationKt"
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(
         "AIRBYTE_VERSION" to "dev",

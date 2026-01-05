@@ -4,7 +4,6 @@
 
 package io.airbyte.cron.jobs
 
-import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.DomainVerificationIdRequestBody
 import io.airbyte.api.client.model.generated.DomainVerificationResponse
@@ -13,6 +12,7 @@ import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.scheduling.annotation.Scheduled
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.OffsetDateTime
@@ -45,7 +45,7 @@ open class DomainVerificationJob(
     const val MAX_BACKOFF_MINUTES = 60L // Cap at 1 hour between checks
   }
 
-  @Trace
+  @WithSpan
   @Instrument(
     start = "DOMAIN_VERIFICATION_RUN",
     end = "DOMAIN_VERIFICATION_DONE",

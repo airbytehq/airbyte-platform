@@ -5,7 +5,6 @@
 package io.airbyte.workers.temporal.sync
 
 import com.fasterxml.jackson.databind.JsonNode
-import datadog.trace.api.Trace
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
@@ -28,6 +27,7 @@ import io.airbyte.metrics.lib.ApmTraceConstants.Tags.WEBHOOK_CONFIG_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workers.helper.toModel
 import io.micronaut.http.HttpStatus
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.slf4j.Logger
@@ -50,7 +50,7 @@ class WebhookOperationActivityImpl(
   private val featureFlagClient: FeatureFlagClient,
   private val metricClient: MetricClient,
 ) : WebhookOperationActivity {
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun invokeWebhook(input: OperatorWebhookInput): Boolean {
     metricClient.count(OssMetricsRegistry.ACTIVITY_WEBHOOK_OPERATION)
 

@@ -64,11 +64,15 @@ spec:
               protocol: TCP
             {{- if .Values.cron.debug.enabled }}
             - name: debug
-              containerPort: {{ .Values.cron.debug.remoteDebugPort }}
+              containerPort: 5005
               protocol: TCP
             {{- end}}
 
+          envFrom:
+          - configMapRef:
+              name: {{ .Release.Name }}-airbyte-telemetry-env
           env:
+            {{- include "airbyte.java_opts.envs" (list .Values.cron $) | nindent 12 }}
             {{- include "airbyte.auth.jwt.envs" . | nindent 12 }}
             {{- include "airbyte.common.envs" . | nindent 12 }}
             {{- include "airbyte.connector.envs" . | nindent 12 }}
@@ -83,13 +87,7 @@ spec:
             {{- include "airbyte.tracking.envs" . | nindent 12 }}
             {{- include "airbyte.worker.envs" . | nindent 12 }}
             {{- include "airbyte.workloadApiServer.envs" . | nindent 12 }}
-
-            {{- if .Values.global.datadog.enabled }}
-            - name: DD_SERVICE 
-              value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
-            {{- include "airbyte.datadog.envs" . | nindent 12 }}
-            {{- include "airbyte.otel.envs" . | nindent 12 }}
-            {{- end}}
+            {{- include "airbyte.datadog.envs" .Values.cron.datadog | nindent 12 }}
 
             {{- if (eq .Values.global.edition "enterprise") }}
             {{- include "airbyte.enterprise.envs" . | nindent 12 }}

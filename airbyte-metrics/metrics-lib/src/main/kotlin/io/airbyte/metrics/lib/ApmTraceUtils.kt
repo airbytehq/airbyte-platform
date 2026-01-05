@@ -4,18 +4,16 @@
 
 package io.airbyte.metrics.lib
 
-import datadog.trace.api.DDTags
-import datadog.trace.api.interceptor.MutableSpan
 import io.airbyte.metrics.MetricAttribute
-import io.opentracing.Span
-import io.opentracing.log.Fields
-import io.opentracing.tag.Tags
-import io.opentracing.util.GlobalTracer
-import java.io.PrintWriter
-import java.io.StringWriter
+import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.context.Context
+import io.opentelemetry.context.ContextKey
 import java.nio.file.Path
 import java.util.UUID
 import java.util.stream.Collectors
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Collection of utility methods to help with performance tracing.
@@ -38,7 +36,6 @@ object ApmTraceUtils {
    *
    * @param attrs A list of attributes to be converted to tags and added to the currently active span.
    */
-  @JvmStatic
   fun addTagsToTrace(attrs: List<MetricAttribute>) {
     val tags =
       attrs
@@ -56,7 +53,6 @@ object ApmTraceUtils {
    * @param tagPrefix The prefix to be added to each custom tag name.
    */
 
-  @JvmStatic
   fun addTagsToTrace(tags: Map<String?, Any?>) {
     addTagsToTrace(tags, TAG_PREFIX)
   }
@@ -67,13 +63,14 @@ object ApmTraceUtils {
    *
    * @param tags A map of tags to be added to the currently active span.
    */
-  @JvmStatic
   fun addTagsToTrace(
     tags: Map<String?, Any?>,
     tagPrefix: String = TAG_PREFIX,
   ) {
-    addTagsToTrace(GlobalTracer.get().activeSpan(), tags, tagPrefix)
+    addTagsToTrace(Span.current(), tags, tagPrefix)
   }
+
+  fun rootSpan(): Span? = Context.current().get(ContextKey.named("opentelemetry-traces-local-root-span"))
 
   /**
    * Adds all the provided tags to the provided span, if one exists.
@@ -82,7 +79,6 @@ object ApmTraceUtils {
    * @param tags A map of tags to be added to the currently active span.
    * @param tagPrefix The prefix to be added to each custom tag name.
    */
-  @JvmStatic
   fun addTagsToTrace(
     span: Span?,
     tags: Map<String?, Any?>,
@@ -93,7 +89,7 @@ object ApmTraceUtils {
         .stream()
         .filter { e: Map.Entry<String?, Any?> -> e.key != null && e.value != null }
         .forEach { entry: Map.Entry<String?, Any?> ->
-          span.setTag(
+          span.setAttribute(
             formatTag(entry.key, tagPrefix),
             entry.value.toString(),
           )
@@ -106,7 +102,6 @@ object ApmTraceUtils {
    * All tags added via this method will use the default [.TAG_PREFIX] namespace. Any null
    * values will be ignored.
    */
-  @JvmStatic
   fun addTagsToTrace(
     connectionId: UUID?,
     attemptNumber: Long?,
@@ -135,26 +130,8 @@ object ApmTraceUtils {
    *
    * @param t The [Throwable] to be added to the currently active span.
    */
-  @JvmStatic
   fun addExceptionToTrace(t: Throwable) {
-    addExceptionToTrace(GlobalTracer.get().activeSpan(), t)
-  }
-
-  /**
-   * Adds an exception to the provided span, if one exists.
-   *
-   * @param span The [Span] that will be associated with the exception.
-   * @param t The [Throwable] to be added to the provided span.
-   */
-  @JvmStatic
-  fun addExceptionToTrace(
-    span: Span?,
-    t: Throwable,
-  ) {
-    if (span != null) {
-      span.setTag(Tags.ERROR, true)
-      span.log(mapOf(Fields.ERROR_OBJECT to t))
-    }
+    Span.current().recordException(t)
   }
 
   /**
@@ -162,12 +139,9 @@ object ApmTraceUtils {
    *
    * @param tags A map of tags to be added to the root span.
    */
-  @JvmStatic
   fun addTagsToRootSpan(tags: Map<String?, Any?>) {
-    val activeSpan = GlobalTracer.get().activeSpan()
-    if (activeSpan is MutableSpan) {
-      val localRootSpan = (activeSpan as MutableSpan).localRootSpan
-      tags.forEach { (key: String?, value: Any?) -> localRootSpan.setTag(formatTag(key, TAG_PREFIX), value.toString()) }
+    rootSpan()?.also {
+      tags.forEach { (key: String?, value: Any?) -> it.setAttribute(formatTag(key, TAG_PREFIX), value.toString()) }
     }
   }
 
@@ -176,21 +150,9 @@ object ApmTraceUtils {
    *
    * @param t The [Throwable] to be added to the provided span.
    */
-  @JvmStatic
   fun recordErrorOnRootSpan(t: Throwable) {
-    val activeSpan = GlobalTracer.get().activeSpan()
-    if (activeSpan != null) {
-      activeSpan.setTag(Tags.ERROR, true)
-      activeSpan.log(mapOf(Fields.ERROR_OBJECT to t))
-    }
-    if (activeSpan is MutableSpan) {
-      val localRootSpan = (activeSpan as MutableSpan).localRootSpan
-      localRootSpan.setError(true)
-      localRootSpan.setTag(DDTags.ERROR_MSG, t.message)
-      localRootSpan.setTag(DDTags.ERROR_TYPE, t.javaClass.name)
-      val errorString = StringWriter()
-      t.printStackTrace(PrintWriter(errorString))
-      localRootSpan.setTag(DDTags.ERROR_STACK, errorString.toString())
+    rootSpan()?.also {
+      it.recordException(t)
     }
   }
 
@@ -202,19 +164,8 @@ object ApmTraceUtils {
    * @param tagPrefix The prefix to be added to each custom tag name.
    * @return The formatted tag key.
    */
-  @JvmStatic
-  @JvmOverloads
   fun formatTag(
     tagKey: String?,
     tagPrefix: String? = TAG_PREFIX,
   ): String = String.format(TAG_FORMAT, tagPrefix, tagKey)
-
-  @JvmStatic
-  fun addActualRootCauseToTrace(e: Exception?) {
-    var inner: Throwable? = e
-    while (inner!!.cause != null) {
-      inner = inner.cause
-    }
-    addTagsToTrace(mapOf(ApmTraceConstants.Tags.ERROR_ACTUAL_TYPE_KEY to inner.javaClass.name))
-  }
 }

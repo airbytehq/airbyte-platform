@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.persistence
 
-import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.AttemptStats
 import io.airbyte.api.client.model.generated.AttemptStreamStats
@@ -25,6 +24,7 @@ import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -74,7 +74,7 @@ class SyncPersistenceImpl(
     startBackgroundFlushStateTask(airbyteContextConfig.connectionIdAsUUID())
   }
 
-  @Trace
+  @WithSpan
   override fun accept(
     connectionId: UUID,
     stateMessage: AirbyteStateMessage,

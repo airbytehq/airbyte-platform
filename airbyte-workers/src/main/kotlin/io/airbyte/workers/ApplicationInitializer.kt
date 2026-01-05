@@ -46,7 +46,6 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import kotlin.math.max
 
 /**
  * Performs any required initialization logic on application context start.

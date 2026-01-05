@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling.activities
 
-import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionContextRead
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
@@ -42,6 +41,7 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.Sch
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpStatus
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.joda.time.DateTimeZone
@@ -75,7 +75,7 @@ class ConfigFetchActivityImpl
     private val scheduleJitterHelper: ScheduleJitterHelper,
     private val ffContextMapper: InputFeatureFlagContextMapper,
   ) : ConfigFetchActivity {
-    @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+    @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
     override fun getTimeToWait(input: ScheduleRetrieverInput): ScheduleRetrieverOutput {
       try {
         ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to input.connectionId))
@@ -258,7 +258,7 @@ class ConfigFetchActivityImpl
       return timeToWait.plusMinutes(minutesToWait).plusSeconds(1)
     }
 
-    @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+    @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
     override fun getMaxAttempt(): GetMaxAttemptOutput = GetMaxAttemptOutput(syncJobMaxAttempts)
 
     override fun isWorkspaceTombstone(connectionId: UUID): Boolean {

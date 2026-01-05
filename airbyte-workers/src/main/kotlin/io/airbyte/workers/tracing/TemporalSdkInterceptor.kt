@@ -4,10 +4,10 @@
 
 package io.airbyte.workers.tracing
 
-import datadog.trace.api.DDTags
 import datadog.trace.api.interceptor.MutableSpan
 import datadog.trace.api.interceptor.TraceInterceptor
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.metrics.lib.ApmTraceConstants
 import io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME
 
 /**
@@ -118,7 +118,7 @@ class TemporalSdkInterceptor : TraceInterceptor {
     /**
      * The `error.message` tag name.
      */
-    const val ERROR_MESSAGE_TAG: String = DDTags.ERROR_MSG
+    const val ERROR_MESSAGE_TAG: String = ApmTraceConstants.Tags.ERROR_MSG
 
     /**
      * The `error.type` tag name.

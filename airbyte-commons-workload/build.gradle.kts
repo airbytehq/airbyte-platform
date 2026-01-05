@@ -22,7 +22,6 @@ dependencies {
   implementation(libs.reactor.core)
   implementation(libs.kotlin.logging)
   implementation(libs.bundles.micronaut.metrics)
-  implementation(libs.bundles.datadog)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))

@@ -208,3 +208,31 @@ Usage:
     {{- $value }}
 {{- end }}
 {{- end -}}
+
+
+{{- define "airbyte.datadog.envs" }}
+- name: DD_SERVICE
+  value: {{ .serviceName }}
+- name: DD_AGENT_HOST
+  valueFrom:
+    fieldRef:
+      fieldPath: status.hostIP
+{{- end }}
+
+
+{{- define "airbyte.java_opts.envs" }}
+{{- $local := index . 0 -}}
+{{- $root := index . 1 -}}
+{{- $opts := $root.Values.global.java.opts }}
+
+{{- if $root.Values.global.datadog.enabled }}
+{{- $opts = append $opts "-javaagent:/app/dd-java-agent.jar" }}
+{{- end }}
+
+{{- if (or $root.Values.global.debug.enabled $local.debug.enabled) }}
+{{- $opts = append $opts "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:5005,server=y,suspend=n" }}
+{{- end }}
+
+- name: JAVA_OPTS
+  value: "-XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=75.0 -XX:FlightRecorderOptions=stackdepth=256 {{ join " " $opts }}"
+{{- end }}

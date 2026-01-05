@@ -26,7 +26,6 @@ dependencies {
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)
 
-
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.postgresql)
@@ -43,7 +42,6 @@ airbyte {
   application {
     name = "airbyte-metrics-reporter"
     mainClass = "io.airbyte.metrics.reporter.ApplicationKt"
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
   }
   docker {
     imageName = "metrics-reporter"

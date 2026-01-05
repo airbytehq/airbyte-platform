@@ -7,11 +7,13 @@ package io.airbyte.commons.server.support
 import io.airbyte.commons.server.errors.AuthException
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.runtime.http.scope.RequestScope
 import io.micronaut.security.utils.SecurityService
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import java.util.Optional
 import java.util.UUID
 
@@ -32,11 +34,17 @@ open class SecurityAwareCurrentUserService(
 ) : CurrentUserService {
   private var retrievedCurrentUser: AuthenticatedUser? = null
 
+  @WithSpan
   override fun getCurrentUser(): AuthenticatedUser {
     if (this.retrievedCurrentUser == null) {
       try {
         val authUserId = securityService.username().orElseThrow()
         this.retrievedCurrentUser = userPersistence.getUserByAuthId(authUserId).orElseThrow()
+
+        retrievedCurrentUser?.also {
+          ApmTraceUtils.addTagsToRootSpan(mapOf("userId" to it.userId))
+        }
+
         log.debug { "Setting current user for request to: $retrievedCurrentUser" }
       } catch (e: Exception) {
         throw AuthException("Could not get the current Airbyte user due to an internal error.", e)

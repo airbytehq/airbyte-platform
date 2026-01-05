@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling.activities
 
-import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.commons.micronaut.EnvConstants
@@ -23,6 +22,7 @@ import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.Re
 import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpStatus
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
 import org.slf4j.Logger
@@ -47,7 +47,7 @@ open class RecordMetricActivityImpl(
    *
    * @param metricInput The information about the metric to record.
    */
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
   override fun recordWorkflowCountMetric(metricInput: RecordMetricInput) {
     ApmTraceUtils.addTagsToTrace(generateTags(metricInput.connectionUpdaterInput))
     val baseMetricAttributes = generateMetricAttributes(metricInput.connectionUpdaterInput!!)

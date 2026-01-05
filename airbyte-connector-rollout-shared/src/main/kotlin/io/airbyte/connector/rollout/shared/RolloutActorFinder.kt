@@ -30,7 +30,7 @@ import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.http.annotation.Trace
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -80,7 +80,7 @@ class RolloutActorFinder(
    * - The most recent sync for each of their connections succeeded.
    * - They are using the default version of the connector (i.e. aren't pinned to a non-default image).
    */
-  @Trace
+  @WithSpan
   fun getActorSelectionInfo(
     connectorRollout: ConnectorRollout,
     targetPercent: Int?,
@@ -220,7 +220,7 @@ class RolloutActorFinder(
     )
   }
 
-  @Trace
+  @WithSpan
   internal fun getActorJobInfo(
     connectorRollout: ConnectorRollout,
     connectionsWithLatestJob: List<ConnectionWithLatestJob>,
@@ -331,7 +331,7 @@ class RolloutActorFinder(
       }
     }
 
-  @Trace
+  @WithSpan
   internal fun filterByTier(
     connectorRollout: ConnectorRollout,
     candidates: Collection<ConfigScopeMapWithId>,
@@ -382,7 +382,7 @@ class RolloutActorFinder(
       connectorRollout.filters?.customerTierFilters,
     ).map { it.id }
 
-  @Trace
+  @WithSpan
   internal fun filterByAlreadyPinned(
     actorDefinitionId: UUID,
     configScopeMaps: Collection<ConfigScopeMapWithId>,
@@ -397,7 +397,7 @@ class RolloutActorFinder(
     }
   }
 
-  @Trace
+  @WithSpan
   internal fun getActorsPinnedToReleaseCandidate(connectorRollout: ConnectorRollout): List<UUID> {
     val scopedConfigurations =
       scopedConfigurationService.listScopedConfigurationsWithValues(
@@ -424,7 +424,7 @@ class RolloutActorFinder(
     return filtered
   }
 
-  @Trace
+  @WithSpan
   internal fun getSortedConnectionsWithLatestJob(
     connectorRollout: ConnectorRollout,
     actorIds: List<UUID>,
@@ -497,7 +497,7 @@ class RolloutActorFinder(
     return sortedConnections
   }
 
-  @Trace
+  @WithSpan
   internal fun getConnectionsWithLatestJob(
     connectorRollout: ConnectorRollout,
     connectionSummaryMap: Map<UUID, ConnectionSummary>,

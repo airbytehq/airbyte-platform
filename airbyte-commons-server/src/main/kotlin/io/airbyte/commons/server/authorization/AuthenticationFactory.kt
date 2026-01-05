@@ -5,11 +5,13 @@
 package io.airbyte.commons.server.authorization
 
 import com.nimbusds.jwt.JWT
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.token.jwt.validator.DefaultJwtAuthenticationFactory
 import io.micronaut.security.token.jwt.validator.JwtAuthenticationFactory
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.util.Optional
 
@@ -20,6 +22,7 @@ private val logger = KotlinLogging.logger {}
 class AuthenticationFactory(
   private val roleResolver: RoleResolver,
 ) : JwtAuthenticationFactory {
+  @WithSpan
   override fun createAuthentication(token: JWT): Optional<Authentication> {
     val claimsSet = token.jwtClaimsSet
     if (claimsSet == null) {
@@ -40,6 +43,8 @@ class AuthenticationFactory(
         .withClaims(subject, claims)
         .withRefsFromCurrentHttpRequest()
         .roles()
+
+    ApmTraceUtils.addTagsToRootSpan(mapOf("authUserId" to subject))
 
     return Authentication.build(subject, roles, claims)
   }

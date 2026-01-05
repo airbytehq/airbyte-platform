@@ -4,10 +4,8 @@
 
 package io.airbyte.cron.jobs
 
-import datadog.trace.api.Trace
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.persistence.SecretPersistence
-import io.airbyte.cron.SCHEDULED_TRACE_OPERATION_NAME
 import io.airbyte.data.services.SecretConfigService
 import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.domain.models.SecretStorageId
@@ -21,6 +19,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.scheduling.annotation.Scheduled
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -38,7 +37,7 @@ class OrphanedSecretConfigCleanup(
     log.info { "Creating orphaned secret config cleanup job" }
   }
 
-  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
+  @WithSpan
   @Scheduled(fixedRate = "30m", initialDelay = "5m")
   fun cleanupOrphanedSecrets() {
     log.info { "Starting orphaned secret config cleanup" }

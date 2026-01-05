@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-airbyte-telemetry-env
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-1"
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+data:
+  DD_DBM_TRACE_PREPARED_STATEMENTS: "true"
+  DD_DOGSTATSD_PORT: {{ .Values.global.datadog.statsd.port | quote }}
+  DD_ENABLED: {{ .Values.global.datadog.enabled | quote }}
+  DD_INTEGRATION_DBM_PROPAGATION_MODE: "full"
+  DD_INTEGRATION_JDBC_DATASOURCE_ENABLED: "true"
+  DD_INTEGRATION_JDBC_ENABLED: "true"
+  DD_INTEGRATION_OKHTTP_ENABLED: "true"
+  DD_INTEGRATIONS_ENABLED: "false"
+  DD_PROFILING_ENABLED: "true"
+  DD_TRACE_AGENT_PORT: {{ .Values.global.datadog.traceAgentPort | quote }}
+  DD_TRACE_DEBUG: {{ .Values.global.datadog.debug | quote }}
+  DD_TRACE_OTEL_ENABLED: "true"
+  DD_TRACE_STARTUP_LOGS: "true"
+  DD_TRACE_SAMPLING_RULES: {{ .Values.global.datadog.samplingRules | quote }}
+  DD_VERSION: {{ .Values.global.image.tag | quote }}
+  OTEL_EXPORTER_OTLP_PROTOCOL: {{ .Values.global.metrics.otel.exporter.protocol | quote }}
+  OTEL_EXPORTER_OTLP_TIMEOUT: {{ .Values.global.metrics.otel.exporter.timeout | quote }}
+  OTEL_METRIC_EXPORT_INTERVAL: {{ .Values.global.metrics.otel.exporter.metricExportInterval | quote }}
+  OTEL_METRICS_EXPORTER: {{ .Values.global.metrics.otel.exporter.name | quote }}
+  OTEL_SDK_DISABLED: "true"

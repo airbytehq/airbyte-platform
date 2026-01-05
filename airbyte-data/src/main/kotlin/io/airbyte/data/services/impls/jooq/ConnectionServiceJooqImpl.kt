@@ -4,7 +4,6 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.toEnum
@@ -53,6 +52,7 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.Condition
@@ -128,7 +128,7 @@ class ConnectionServiceJooqImpl
      * @throws ConfigNotFoundException if the config does not exist
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Trace
+    @WithSpan
     override fun getStandardSync(connectionId: UUID): StandardSync {
       val result = listStandardSyncWithMetadata(Optional.of(connectionId))
 
@@ -266,7 +266,7 @@ class ConnectionServiceJooqImpl
      * @return list of connections
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Trace
+    @WithSpan
     override fun listWorkspaceStandardSyncs(standardSyncQuery: StandardSyncQuery): List<StandardSync> {
       val connectionAndOperationIdsResult =
         database
@@ -332,7 +332,7 @@ class ConnectionServiceJooqImpl
       )
     }
 
-    @Trace
+    @WithSpan
     fun getWorkspaceStandardSyncWithJobInfo(connectionId: UUID): ConnectionWithJobInfo {
       val connectionAndOperationIdsResult =
         database.query { ctx: DSLContext ->
@@ -411,7 +411,7 @@ class ConnectionServiceJooqImpl
       return result.first()
     }
 
-    @Trace
+    @WithSpan
     override fun listWorkspaceStandardSyncsCursorPaginated(
       standardSyncQuery: StandardSyncQuery,
       workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,

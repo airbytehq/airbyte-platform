@@ -99,7 +99,7 @@ Renders the workloads.containerOrchestrator.dataPlane.secretKey environment vari
 Renders the global.workloads.containerOrchestrator.javaOpts value
 */}}
 {{- define "airbyte.workloads.containerOrchestrator.javaOpts" }}
-    {{- .Values.global.workloads.containerOrchestrator.javaOpts | default "-XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=75.0 -javaagent:/app/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=0.5 -Ddd.trace.request_header.tags=User-Agent:http.useragent" }}
+    {{- .Values.global.workloads.containerOrchestrator.javaOpts }}
 {{- end }}
 
 {{/*

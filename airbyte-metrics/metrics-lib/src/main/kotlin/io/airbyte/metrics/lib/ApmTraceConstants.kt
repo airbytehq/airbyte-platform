@@ -37,6 +37,11 @@ object ApmTraceConstants {
    * Trace tag constants.
    */
   object Tags {
+    const val ERROR: String = "error"
+    const val ERROR_MSG: String = "error.message"
+    const val ERROR_TYPE: String = "error.type"
+    const val ERROR_STACK: String = "error.stack"
+
     /**
      * Name of the APM trace tag that holds the attempt number value associated with the trace.
      */

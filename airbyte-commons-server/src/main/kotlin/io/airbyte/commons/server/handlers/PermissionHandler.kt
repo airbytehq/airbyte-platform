@@ -27,6 +27,7 @@ import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
@@ -417,8 +418,10 @@ open class PermissionHandler(
     }
   }
 
+  @WithSpan
   fun getPermissionsByAuthUserId(authUserId: String): List<Permission> = permissionService.getPermissionsByAuthUserId(authUserId)
 
+  @WithSpan
   fun getPermissionsByServiceAccountId(serviceAccountId: UUID): List<Permission> =
     permissionService.getPermissionsByServiceAccountId(serviceAccountId)
 

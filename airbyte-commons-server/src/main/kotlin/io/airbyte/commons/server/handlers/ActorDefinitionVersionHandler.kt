@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.model.generated.DestinationIdRequestBody
@@ -24,6 +23,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionResolver
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -44,7 +44,7 @@ open class ActorDefinitionVersionHandler
     private val actorDefinitionHandlerHelper: ActorDefinitionHandlerHelper,
     private val apiPojoConverters: ApiPojoConverters,
   ) {
-    @Trace
+    @WithSpan
     fun getActorDefinitionVersionForSourceId(sourceIdRequestBody: SourceIdRequestBody): ActorDefinitionVersionRead {
       val sourceConnection = sourceService.getSourceConnection(sourceIdRequestBody.sourceId)
       val sourceDefinition = sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId)
@@ -113,7 +113,7 @@ open class ActorDefinitionVersionHandler
         .connectorIPCOptions(resolvedVersion.connectorIPCOptions)
     }
 
-    @Trace
+    @WithSpan
     fun getActorDefinitionVersionForDestinationId(destinationIdRequestBody: DestinationIdRequestBody): ActorDefinitionVersionRead {
       val destinationConnection = destinationService.getDestinationConnection(destinationIdRequestBody.destinationId)
       val destinationDefinition =

@@ -11,7 +11,6 @@ dependencies {
   implementation(libs.bundles.micronaut)
 
   implementation("org.apache.commons:commons-text:1.10.0")
-
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons"))
@@ -20,7 +19,6 @@ dependencies {
   implementation(project(":oss:airbyte-mappers"))
   implementation(libs.airbyte.protocol)
   implementation(libs.slf4j.api)
-  implementation(libs.bundles.datadog)
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.test.annotation.processor)

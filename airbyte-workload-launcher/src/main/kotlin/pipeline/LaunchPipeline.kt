@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher.pipeline
 
-import datadog.trace.api.Trace
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_OPERATION_NAME
@@ -13,6 +12,7 @@ import io.airbyte.workload.launcher.pipeline.handlers.FailureHandler
 import io.airbyte.workload.launcher.pipeline.handlers.SuccessHandler
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStage
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Flux
@@ -45,7 +45,7 @@ class LaunchPipeline(
     )
   }
 
-  @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
+  @WithSpan(LAUNCH_PIPELINE_OPERATION_NAME)
   fun accept(input: LauncherInput) {
     val disposable =
       buildPipeline(input)

@@ -39,6 +39,7 @@ import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.WorkspaceResponseMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
 import java.util.UUID
@@ -211,6 +212,7 @@ open class WorkspaceServiceImpl(
   /**
    * Fetches a workspace by ID.
    */
+  @WithSpan
   override fun getWorkspace(workspaceId: UUID): WorkspaceResponse {
     val workspaceIdRequestBody = WorkspaceIdRequestBody()
     workspaceIdRequestBody.workspaceId = workspaceId
@@ -225,6 +227,7 @@ open class WorkspaceServiceImpl(
     return WorkspaceResponseMapper.from(result.getOrNull()!!, dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name)
   }
 
+  @WithSpan
   override fun controllerGetWorkspace(workspaceId: UUID): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
 

@@ -57,18 +57,15 @@ spec:
       - name: airbyte-manifest-server
         image: {{ include "imageUrl" (list .Values.manifestServer.image $) }}
         imagePullPolicy: "{{ .Values.manifestServer.image.pullPolicy }}"
+        envFrom:
+          - configMapRef:
+              name: {{ .Release.Name }}-airbyte-telemetry-env
         env:
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.auth.jwt.envs" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
-
-        {{- if .Values.global.datadog.enabled }}
-        - name: DD_SERVICE
-          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
-        {{- include "airbyte.datadog.envs" . | nindent 8 }}
-        {{- include "airbyte.otel.envs" . | nindent 8 }}
-        {{- end}}
+        {{- include "airbyte.datadog.envs" .Values.manifestServer.datadog | nindent 8 }}
 
         # Values from secret
         {{- if .Values.manifestServer.secrets }}

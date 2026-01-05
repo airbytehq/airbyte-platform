@@ -4,13 +4,13 @@
 
 package io.airbyte.container.orchestrator.bookkeeping.state
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.State
 import io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.v0.StreamDescriptor
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
@@ -104,7 +104,7 @@ class DefaultStateAggregator(
 class SingleStateAggregator : StateAggregator {
   private var state: AirbyteStateMessage? = null
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
+  @WithSpan(WORKER_OPERATION_NAME)
   override fun ingest(stateMessage: AirbyteStateMessage) {
     state = stateMessage
   }
@@ -116,7 +116,7 @@ class SingleStateAggregator : StateAggregator {
     }
   }
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
+  @WithSpan(WORKER_OPERATION_NAME)
   override fun getAggregated(): State {
     val localState = state
 
@@ -148,7 +148,7 @@ class SingleStateAggregator : StateAggregator {
 class StreamStateAggregator : StateAggregator {
   private val aggregatedState = mutableMapOf<StreamDescriptor, AirbyteStateMessage>()
 
-  @Trace(operationName = WORKER_OPERATION_NAME)
+  @WithSpan(WORKER_OPERATION_NAME)
   override fun ingest(stateMessage: AirbyteStateMessage) {
     /*
      * The destination emit a Legacy state in order to be retro-compatible with old platform. If we are

@@ -28,6 +28,7 @@ import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.authentication.AuthenticationException
 import io.micronaut.security.token.jwt.validator.JwtAuthenticationFactory
 import io.micronaut.security.token.validator.TokenValidator
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Mono
@@ -60,6 +61,7 @@ class KeycloakTokenValidator(
    */
   override fun getOrder(): Int = Ordered.HIGHEST_PRECEDENCE
 
+  @WithSpan
   override fun validateToken(
     token: String,
     request: HttpRequest<*>,

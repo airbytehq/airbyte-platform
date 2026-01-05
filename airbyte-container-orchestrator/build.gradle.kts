@@ -33,12 +33,11 @@ dependencies {
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.cache)
   implementation(libs.bundles.micronaut.metrics)
-  implementation(libs.google.cloud.pubsub)  // Explicitly needed for Pub/Sub Publisher usage
+  implementation(libs.google.cloud.pubsub) // Explicitly needed for Pub/Sub Publisher usage
   implementation(libs.s3)
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.sts)
   implementation(libs.kubernetes.client)
-  implementation(libs.bundles.datadog)
   implementation(libs.kotlin.coroutines)
   implementation(libs.kotlin.coroutines.sl4j)
 
@@ -90,7 +89,6 @@ dependencies {
 airbyte {
   application {
     mainClass = "io.airbyte.container.orchestrator.ApplicationKt"
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
   }
   docker {
     imageName = "container-orchestrator"
