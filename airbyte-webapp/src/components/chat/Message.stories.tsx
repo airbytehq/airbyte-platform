@@ -13,7 +13,6 @@ const meta: Meta<typeof Message> = {
 export default meta;
 type Story = StoryObj<typeof Message>;
 
-// Base message for stories
 const baseMessage: ChatMessage = {
   id: "1",
   content: "Here is the analysis of your workspace configuration...",
@@ -28,7 +27,7 @@ export const CompletedMessage: Story = {
   },
 };
 
-// 2. Streaming with content (current behavior)
+// 2. Streaming with content - shows content with cursor
 export const StreamingWithContent: Story = {
   args: {
     message: {
@@ -38,42 +37,14 @@ export const StreamingWithContent: Story = {
   },
 };
 
-// 3. Streaming without content - OLD behavior (blank/cursor only)
-export const StreamingNoContent_OldBehavior: Story = {
+// 3. Streaming without content - shows ThinkingIndicator
+export const StreamingNoContent: Story = {
   args: {
     message: {
       ...baseMessage,
       content: "",
       isStreaming: true,
     },
-    showStreamingIndicator: false, // Explicitly disabled
+    showThinkingIndicator: true,
   },
-};
-
-// 4. Streaming without content - NEW behavior (with indicator)
-export const StreamingNoContent_WithIndicator: Story = {
-  args: {
-    message: {
-      ...baseMessage,
-      content: "",
-      isStreaming: true,
-    },
-    showStreamingIndicator: true, // NEW feature
-  },
-};
-
-// 5. Comparison side-by-side (using Storybook layout)
-export const Comparison: Story = {
-  render: () => (
-    <div style={{ display: "flex", gap: "20px" }}>
-      <div>
-        <h3>Without Indicator (Old)</h3>
-        <Message message={{ ...baseMessage, content: "", isStreaming: true }} showStreamingIndicator={false} />
-      </div>
-      <div>
-        <h3>With Indicator (New)</h3>
-        <Message message={{ ...baseMessage, content: "", isStreaming: true }} showStreamingIndicator />
-      </div>
-    </div>
-  ),
 };

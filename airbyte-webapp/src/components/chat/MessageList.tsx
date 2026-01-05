@@ -64,6 +64,7 @@ export const MessageList: React.FC<MessageListProps> = ({
             message={message}
             toolComponents={toolComponents}
             showAllToolCalls={showAllToolCalls}
+            showThinkingIndicator
           />
         ))}
 

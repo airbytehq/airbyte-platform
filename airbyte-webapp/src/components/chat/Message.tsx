@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import styles from "./Message.module.scss";
 import { SafeMarkdown } from "./SafeMarkdown";
-import { StreamingIndicator } from "./StreamingIndicator";
+import { ThinkingIndicator } from "./ThinkingIndicator";
 import { ToolCallItem, type ToolCallProps } from "./ToolCallItem";
 
 export interface ToolCall {
@@ -34,14 +34,14 @@ interface MessageProps {
   message: ChatMessage;
   toolComponents?: Record<string, React.ComponentType<ToolCallProps>>;
   showAllToolCalls?: boolean;
-  showStreamingIndicator?: boolean;
+  showThinkingIndicator?: boolean;
 }
 
 export const Message: React.FC<MessageProps> = ({
   message,
   toolComponents,
   showAllToolCalls = false,
-  showStreamingIndicator = false,
+  showThinkingIndicator = false,
 }) => {
   const { content, role, isStreaming, toolCall, toolResponse } = message;
 
@@ -77,7 +77,8 @@ export const Message: React.FC<MessageProps> = ({
     );
   }
 
-  if (content === "") {
+  // Only hide empty messages if they're not streaming with an indicator
+  if (content === "" && !(isStreaming && showThinkingIndicator)) {
     return null;
   }
 
@@ -90,8 +91,8 @@ export const Message: React.FC<MessageProps> = ({
           </span>
         </div>
         <div className={styles.messageText}>
-          {isStreaming && !content && showStreamingIndicator ? (
-            <StreamingIndicator />
+          {isStreaming && !content && showThinkingIndicator ? (
+            <ThinkingIndicator />
           ) : (
             <>
               <SafeMarkdown content={content} />

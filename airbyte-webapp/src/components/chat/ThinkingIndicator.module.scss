@@ -3,7 +3,12 @@
 .indicator {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+
+  p {
+    margin: 0;
+  }
 }
 
 .pulse {
