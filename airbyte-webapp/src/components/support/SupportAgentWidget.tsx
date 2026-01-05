@@ -1,6 +1,8 @@
+import classNames from "classnames";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { FormattedMessage } from "react-intl";
+import { useLocation, matchPath } from "react-router-dom";
 
 import { ChatInterfaceBody, ChatInterfaceContainer, ChatInterfaceHeader } from "components/chat";
 import { ChatInput } from "components/chat/ChatInput";
@@ -15,8 +17,15 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useFeature, FeatureItem } from "core/services/features";
+import { RoutePaths, SourcePaths, DestinationPaths } from "pages/routePaths";
 
 import styles from "./SupportAgentWidget.module.scss";
+
+// Routes where support bot should be hidden to avoid conflict with setup bot
+const HIDDEN_SUPPORT_BOT_PATHS = [
+  `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.Source}/${SourcePaths.SourceNew}`,
+  `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.Destination}/${DestinationPaths.DestinationNew}`,
+];
 
 // Inner component that uses the chat hook - only rendered when widget is open
 const SupportChatPanel: React.FC<{
@@ -92,19 +101,23 @@ const SupportChatPanel: React.FC<{
 export const SupportAgentWidget: React.FC = () => {
   const supportEnabled = useFeature(FeatureItem.SupportAgentBot);
   const workspaceId = useCurrentWorkspaceId();
+  const { pathname } = useLocation();
 
   // Widget display state
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasBeenOpened, setHasBeenOpened] = useState(false);
 
-  // Don't render if feature disabled or no workspace context
-  if (!supportEnabled || !workspaceId) {
+  // Don't render if feature disabled
+  if (!supportEnabled) {
     return null;
   }
 
+  // Hide if on connector creation routes or no workspace context
+  const shouldHide = !workspaceId || HIDDEN_SUPPORT_BOT_PATHS.some((path) => !!matchPath(path, pathname));
+
   return createPortal(
-    <div className={styles.widget}>
+    <div className={classNames(styles.widget, { [styles.hidden]: shouldHide })}>
       {!isOpen && (
         // Collapsed button
         <Button

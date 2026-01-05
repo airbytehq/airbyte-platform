@@ -7,6 +7,10 @@
   bottom: 74px;
   right: variables.$spacing-xl;
   z-index: z-indices.$sidebar;
+
+  &.hidden {
+    display: none;
+  }
 }
 
 .button {
