@@ -71342,7 +71342,7 @@ components:
               description: "The Client Secret of your Drift developer application."
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "Drift Spec"
     snapchat-marketing:
       properties:
         client_id:
@@ -71357,7 +71357,7 @@ components:
           order: 1
           title: "Client Secret"
           type: "string"
-      title: null
+      title: "Snapchat Marketing Spec"
     gitlab:
       properties:
         credentials:
@@ -71433,7 +71433,7 @@ components:
               description: "Client Secret"
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "Zendesk Talk Spec"
     linkedin-ads:
       properties:
         credentials:
@@ -71517,7 +71517,7 @@ components:
               airbyte_secret: true
               description: "The Client Secret the Typeform developer application."
               type: "string"
-      title: null
+      title: "Typeform Spec"
     facebook-pages:
       title: "Facebook Pages Spec"
     surveymonkey:
@@ -71536,7 +71536,7 @@ components:
               order: 2
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "SurveyMonkey Spec"
     amazon-ads:
       properties:
         client_id:
@@ -71649,9 +71649,9 @@ components:
                 >here</a>."
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "TickTick Spec"
     trello:
-      title: null
+      title: "Trello Spec"
     sharepoint-enterprise:
       properties:
         credentials:
@@ -71891,7 +71891,7 @@ components:
               type: "string"
       title: "Google Analytics (Data API) Spec"
     intercom:
-      title: null
+      title: "Intercom Spec"
     facebook-marketing:
       properties:
         credentials:
@@ -71970,7 +71970,7 @@ components:
               description: "The client secret of the Airtable developer application."
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "Airtable Spec"
     destination-hubspot:
       properties:
         credentials:
