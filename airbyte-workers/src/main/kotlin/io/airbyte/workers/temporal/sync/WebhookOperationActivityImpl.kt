@@ -22,7 +22,6 @@ import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.WEBHOOK_CONFIG_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workers.helper.toModel
@@ -50,7 +49,7 @@ class WebhookOperationActivityImpl(
   private val featureFlagClient: FeatureFlagClient,
   private val metricClient: MetricClient,
 ) : WebhookOperationActivity {
-  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun invokeWebhook(input: OperatorWebhookInput): Boolean {
     metricClient.count(OssMetricsRegistry.ACTIVITY_WEBHOOK_OPERATION)
 

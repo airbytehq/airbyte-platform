@@ -24,7 +24,6 @@ import io.airbyte.featureflag.LoadShedSchedulerBackoffMinutes
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.UseNewCronScheduleCalculation
 import io.airbyte.featureflag.Workspace
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workers.helpers.CronSchedulingHelper
@@ -75,7 +74,7 @@ class ConfigFetchActivityImpl
     private val scheduleJitterHelper: ScheduleJitterHelper,
     private val ffContextMapper: InputFeatureFlagContextMapper,
   ) : ConfigFetchActivity {
-    @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+    @WithSpan
     override fun getTimeToWait(input: ScheduleRetrieverInput): ScheduleRetrieverOutput {
       try {
         ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to input.connectionId))
@@ -258,7 +257,7 @@ class ConfigFetchActivityImpl
       return timeToWait.plusMinutes(minutesToWait).plusSeconds(1)
     }
 
-    @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+    @WithSpan
     override fun getMaxAttempt(): GetMaxAttemptOutput = GetMaxAttemptOutput(syncJobMaxAttempts)
 
     override fun isWorkspaceTombstone(connectionId: UUID): Boolean {

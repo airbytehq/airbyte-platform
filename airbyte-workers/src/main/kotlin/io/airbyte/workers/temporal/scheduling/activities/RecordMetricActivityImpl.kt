@@ -11,7 +11,6 @@ import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY
@@ -47,7 +46,7 @@ open class RecordMetricActivityImpl(
    *
    * @param metricInput The information about the metric to record.
    */
-  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun recordWorkflowCountMetric(metricInput: RecordMetricInput) {
     ApmTraceUtils.addTagsToTrace(generateTags(metricInput.connectionUpdaterInput))
     val baseMetricAttributes = generateMetricAttributes(metricInput.connectionUpdaterInput!!)

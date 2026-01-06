@@ -8,7 +8,6 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.DeleteStreamResetRecordsForJobRequest
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.temporal.exception.RetryableException
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceUtils
@@ -28,7 +27,7 @@ import java.io.IOException
 class StreamResetActivityImpl(
   private val airbyteApiClient: AirbyteApiClient,
 ) : StreamResetActivity {
-  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun deleteStreamResetRecordsForJob(input: DeleteStreamResetRecordsForJobInput) {
     ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to input.connectionId, JOB_ID_KEY to input.jobId))
 

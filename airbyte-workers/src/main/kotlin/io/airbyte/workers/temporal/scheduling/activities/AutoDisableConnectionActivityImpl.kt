@@ -8,7 +8,6 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.temporal.exception.RetryableException
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput
@@ -32,7 +31,7 @@ class AutoDisableConnectionActivityImpl(
   // to INACTIVE if auto-disable conditions defined by the API are met.
   // The api call will also send notifications if a connection is disabled or warned if it has reached
   // halfway to disable limits
-  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun autoDisableFailingConnection(input: AutoDisableConnectionActivityInput): AutoDisableConnectionOutput =
     input.connectionId?.let {
       ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to it))

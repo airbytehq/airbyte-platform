@@ -7,7 +7,6 @@ package io.airbyte.workers.temporal.sync
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow
 import io.airbyte.config.StandardSyncInput
 import io.airbyte.config.StandardSyncOutput
-import io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.opentelemetry.instrumentation.annotations.WithSpan
@@ -20,12 +19,12 @@ import java.util.UUID
 open class SyncWorkflowImpl : SyncWorkflow {
   private var shouldBlock: Boolean? = null
 
-  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun checkAsyncActivityStatus() {
     this.shouldBlock = false
   }
 
-  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun run(
     jobRunConfig: JobRunConfig,
     sourceLauncherConfig: IntegrationLauncherConfig,

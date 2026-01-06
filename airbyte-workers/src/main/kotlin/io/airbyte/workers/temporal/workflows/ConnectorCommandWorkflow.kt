@@ -24,7 +24,6 @@ import io.airbyte.config.SignalInput
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
@@ -150,7 +149,7 @@ class ConnectorCommandActivityImpl(
     val logger = KotlinLogging.logger {}
   }
 
-  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun startCommand(activityInput: ConnectorCommandActivityInput): String =
     withInstrumentation(activityInput) {
       when (activityInput.input) {
@@ -164,19 +163,19 @@ class ConnectorCommandActivityImpl(
       }
     }
 
-  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun isCommandTerminal(activityInput: ConnectorCommandActivityInput): Boolean =
     withInstrumentation(activityInput) {
       getCommand(activityInput.input).isTerminal(id = activityInput.id ?: throw IllegalStateException("id must exist"))
     }
 
-  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun getCommandOutput(activityInput: ConnectorCommandActivityInput): ConnectorJobOutput =
     withInstrumentation(activityInput, reportCommandSummaryMetrics = true) {
       getCommand(activityInput.input).getOutput(id = activityInput.id ?: throw IllegalStateException("id must exist"))
     }
 
-  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun cancelCommand(activityInput: ConnectorCommandActivityInput) {
     withInstrumentation(activityInput, reportCommandSummaryMetrics = true) {
       getCommand(activityInput.input).cancel(id = activityInput.id ?: throw IllegalStateException("id must exist"))

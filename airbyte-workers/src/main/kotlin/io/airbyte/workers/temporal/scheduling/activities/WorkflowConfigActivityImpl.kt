@@ -5,7 +5,6 @@
 package io.airbyte.workers.temporal.scheduling.activities
 
 import io.airbyte.commons.micronaut.EnvConstants
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.micronaut.runtime.AirbyteWorkflowConfig
 import io.micronaut.context.annotation.Requires
 import io.opentelemetry.instrumentation.annotations.WithSpan
@@ -21,6 +20,6 @@ import java.time.Duration
 class WorkflowConfigActivityImpl(
   private val airbyteWorkflowConfig: AirbyteWorkflowConfig,
 ) : WorkflowConfigActivity {
-  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun getWorkflowRestartDelaySeconds(): Duration = Duration.ofSeconds(airbyteWorkflowConfig.failure.restartDelay)
 }

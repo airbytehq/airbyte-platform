@@ -9,11 +9,6 @@ package io.airbyte.metrics.lib
  */
 object ApmTraceConstants {
   /**
-   * Operation name for an APM trace of a Temporal activity.
-   */
-  const val ACTIVITY_TRACE_OPERATION_NAME: String = "activity"
-
-  /**
    * Operation name for an APM trace of API endpoint execution.
    */
   const val ENDPOINT_EXECUTION_OPERATION_NAME: String = "execute"

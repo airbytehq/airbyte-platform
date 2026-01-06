@@ -7,7 +7,6 @@ package io.airbyte.workers.temporal.scheduling.activities
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.commons.temporal.exception.RetryableException
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceUtils
@@ -32,7 +31,7 @@ class RetryStatePersistenceActivityImpl(
   private val airbyteApiClient: AirbyteApiClient,
   private val client: RetryStateClient,
 ) : RetryStatePersistenceActivity {
-  @WithSpan(ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun hydrateRetryState(input: HydrateInput): HydrateOutput {
     ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to input.connectionId))
     val workspaceId = getWorkspaceId(input.connectionId!!)

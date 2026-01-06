@@ -6,7 +6,6 @@ package io.airbyte.workers.temporal.spec
 
 import io.airbyte.commons.temporal.scheduling.SpecWorkflow
 import io.airbyte.config.ConnectorJobOutput
-import io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.opentelemetry.instrumentation.annotations.WithSpan
@@ -16,7 +15,7 @@ import io.temporal.failure.ApplicationFailure
  * SpecWorkflowImpl.
  */
 open class SpecWorkflowImpl : SpecWorkflow {
-  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun run(
     jobRunConfig: JobRunConfig,
     launcherConfig: IntegrationLauncherConfig,

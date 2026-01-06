@@ -31,7 +31,6 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY
-import io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.ApmTraceUtils.addExceptionToTrace
 import io.airbyte.metrics.lib.MetricTags
@@ -144,7 +143,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   private var connectionContext: ConnectionContext? = null
 
   @Suppress("UNUSED")
-  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun run(connectionUpdaterInput: ConnectionUpdaterInput) {
     try {
       if (connectionUpdaterInput.connectionId == null || isTombstone(connectionUpdaterInput.connectionId)) {
@@ -717,7 +716,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     workflowState.isSkipScheduling = true
   }
 
-  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun cancelJob() {
     traceConnectionId()
     if (!workflowState.isRunning) {
@@ -729,7 +728,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   }
 
   // TODO: Delete when the don't delete in temporal is removed
-  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun deleteConnection() {
     traceConnectionId()
     workflowState.isDeleted = true
@@ -741,7 +740,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     workflowState.isUpdated = true
   }
 
-  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun resetConnection() {
     traceConnectionId()
 
@@ -755,7 +754,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     }
   }
 
-  @WithSpan(WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun resetConnectionAndSkipNextScheduling() {
     traceConnectionId()
 
