@@ -1,0 +1,16 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.workspaceRow {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+  min-height: 44px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: colors.$grey-30;
+  }
+}

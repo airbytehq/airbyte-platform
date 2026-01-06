@@ -40,6 +40,7 @@ export interface Experiments {
   "platform.use-runtime-secret-persistence": boolean;
   "platform.use-verified-domains-for-sso-activate": boolean;
   productLimitsUI: boolean;
+  "regions.nestedDataplaneView": boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.domainVerification": boolean;
   "settings.downloadDiagnostics": boolean;
@@ -96,6 +97,7 @@ export const defaultExperimentValues: Experiments = {
   "platform.use-runtime-secret-persistence": false,
   "platform.use-verified-domains-for-sso-activate": false,
   productLimitsUI: false,
+  "regions.nestedDataplaneView": false,
   "settings.breakingChangeNotifications": false,
   "settings.domainVerification": false,
   "settings.downloadDiagnostics": false,

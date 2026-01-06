@@ -1,0 +1,33 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.dataplaneRow {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+  min-height: 44px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: colors.$grey-30;
+  }
+}
+
+.leftSection {
+  flex: 1;
+}
+
+.dataplaneName {
+  min-width: 150px;
+}
+
+.statusContainer {
+  min-width: 80px;
+}
+
+.lastHeartbeat {
+  min-width: 60px;
+  text-align: right;
+}

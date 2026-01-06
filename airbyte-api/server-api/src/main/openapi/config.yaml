@@ -22105,8 +22105,8 @@ components:
             - UNHEALTHY
             - UNKNOWN
         last_heartbeat_timestamp:
-          type: string
-          format: date-time
+          type: integer
+          format: int64
         recent_heartbeats:
           type: array
           items:
@@ -22121,8 +22121,8 @@ components:
         - timestamp
       properties:
         timestamp:
-          type: string
-          format: date-time
+          type: integer
+          format: int64
     DataplaneInitRequestBody:
       required:
         - client_id

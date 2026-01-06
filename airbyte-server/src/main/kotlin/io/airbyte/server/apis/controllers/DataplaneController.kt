@@ -305,11 +305,11 @@ open class DataplaneController(
           .dataplaneGroupId(dataplane.dataplaneGroupId)
           .organizationId(dataplaneGroup.organizationId)
           .status(DataplaneHealthRead.StatusEnum.fromValue(healthInfo.status.name))
-          .lastHeartbeatTimestamp(healthInfo.lastHeartbeatTimestamp)
+          .lastHeartbeatTimestamp(healthInfo.lastHeartbeatTimestamp?.toInstant()?.toEpochMilli())
           .recentHeartbeats(
             healthInfo.recentHeartbeats.map { hb ->
               HeartbeatRecord()
-                .timestamp(hb.timestamp)
+                .timestamp(hb.timestamp.toInstant().toEpochMilli())
             },
           ).controlPlaneVersion(healthInfo.controlPlaneVersion)
           .dataplaneVersion(healthInfo.dataplaneVersion)

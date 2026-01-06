@@ -15,6 +15,7 @@ export * from "./connectorOAuth";
 export * from "./connectorUpdates";
 export * from "./cron";
 export * from "./dataplaneGroups";
+export * from "./dataplaneHealth";
 export * from "./destinations";
 export * from "./destinationDefinitions";
 export * from "./diagnostics";
