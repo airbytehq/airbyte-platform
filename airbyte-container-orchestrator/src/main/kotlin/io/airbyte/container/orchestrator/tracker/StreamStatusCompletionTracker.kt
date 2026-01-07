@@ -11,8 +11,11 @@ import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteMapper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.Clock
+
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 class StreamStatusCompletionTracker(
@@ -41,6 +44,10 @@ class StreamStatusCompletionTracker(
           "A stream status (${streamStatus.streamDescriptor.namespace}.${streamStatus.streamDescriptor.name}) " +
             "has been detected for a stream not present in the catalog",
         )
+      }
+      if (hasCompletedStatus[streamStatus.streamDescriptor] == false) {
+        logger.info { "Stream completed: ${streamStatus.streamDescriptor.namespace}.${streamStatus.streamDescriptor.name}" }
+        logger.info { "Current stream completion status: $hasCompletedStatus" }
       }
       hasCompletedStatus[streamStatus.streamDescriptor] = true
     }
