@@ -35,6 +35,7 @@ import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+import java.util.UUID
 import kotlin.math.min
 
 private val logger = KotlinLogging.logger {}
@@ -150,14 +151,21 @@ class ArchitectureDecider(
       }.getOrElse {
         serialisation
       }
-    // 1. Decide socket‑count (override flag > CPU‑based heuristic)
+    // 1. Decide socket‑count (override flag > destination+dedup check > CPU‑based heuristic)
     val overrideCnt = featureFlags.intVariation(SocketCount, ffContext)
-    val defaultCnt =
-      min(
-        extractCpuLimit(input, isSource = true),
-        extractCpuLimit(input, isSource = false),
-      ) * 2
-    val socketCount = if (overrideCnt > 0) overrideCnt else defaultCnt
+    val socketCount =
+      when {
+        overrideCnt > 0 -> overrideCnt
+        shouldOverrideSocketCountToOne(input) -> 1
+        else -> {
+          val defaultCnt =
+            min(
+              extractCpuLimit(input, isSource = true),
+              extractCpuLimit(input, isSource = false),
+            ) * 2
+          defaultCnt
+        }
+      }
 
     // 2. Build comma‑separated socket paths
     val socketPaths =
@@ -177,6 +185,9 @@ class ArchitectureDecider(
   }
 
   companion object {
+    private val GCS_DATALAKE_DEFINITION_ID: UUID = UUID.fromString("8c8a2d3e-1b4f-4a9c-9e7d-6f5a4b3c2d1e") // GCS Datalake
+    private const val GCS_DATALAKE_DOCKER_REPOSITORY = "airbyte/destination-gcs-data-lake"
+
     fun buildLegacyEnvironment(): ArchitectureEnvironmentVariables =
       buildNonSocketEnvironment(Serialization.JSONL.name, Transport.STDIO.name, ORCHESTRATOR)
 
@@ -199,6 +210,25 @@ class ArchitectureDecider(
         EnvVar(DATA_CHANNEL_FORMAT, serialisation, null),
         EnvVar(DATA_CHANNEL_MEDIUM, transport, null),
       )
+  }
+
+  private fun hasAnyDedupStream(input: ReplicationInput): Boolean =
+    input.catalog?.streams?.any { stream ->
+      stream.destinationSyncMode == io.airbyte.config.DestinationSyncMode.APPEND_DEDUP ||
+        stream.destinationSyncMode == io.airbyte.config.DestinationSyncMode.OVERWRITE_DEDUP
+    } ?: false
+
+  private fun shouldOverrideSocketCountToOne(input: ReplicationInput): Boolean {
+    val destinationDefinitionId = input.connectionContext?.destinationDefinitionId
+    val dockerImage = input.destinationLauncherConfig?.dockerImage
+
+    val dockerImageRepository = dockerImage?.substringBefore(':')
+
+    val matchesDestination =
+      (destinationDefinitionId == GCS_DATALAKE_DEFINITION_ID) ||
+        (dockerImageRepository == GCS_DATALAKE_DOCKER_REPOSITORY)
+
+    return matchesDestination && hasAnyDedupStream(input)
   }
 
   private fun extractCpuLimit(

@@ -257,6 +257,7 @@ class ArchitectureDeciderTest {
     every { input.isReset } returns isReset
     every { input.syncResourceRequirements } returns syncRes
     every { input.connectionContext } returns ConnectionContext()
+    every { input.destinationLauncherConfig } returns null
     return input
   }
 
