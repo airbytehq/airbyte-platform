@@ -136,50 +136,44 @@ const FirstNav: React.FC = () => {
   });
 
   return (
-    <Box pb="xl" px="xl" pt="lg" className={styles.fixedBottomNav}>
-      <FlexContainer justifyContent="space-between">
+    <FlexContainer justifyContent="space-between" alignItems="center" className={styles.fixedBottomNav}>
+      <Link
+        to={{
+          pathname: createLink(`/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`),
+          search: `?${SOURCE_ID_PARAM}=${source.sourceId}`,
+        }}
+        variant="button"
+      >
+        <FormattedMessage id="connectionForm.backToDefineDestination" />
+      </Link>
+      {errorMessage && !canProceed && (
+        <Text color="red" size="lg" as="span">
+          {errorMessage}
+        </Text>
+      )}
+      {canProceed ? (
         <Link
           to={{
-            pathname: createLink(`/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`),
-            search: `?${SOURCE_ID_PARAM}=${source.sourceId}`,
+            pathname: createLink(
+              `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}/${ConnectionRoutePaths.ConfigureContinued}`
+            ),
+            search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
           }}
-          variant="button"
+          className={classNames(styles.nextLink)}
+          onClick={() => {
+            // we're navigating to the next step which retains the creation form's state
+            clearFormChange(CREATE_CONNECTION_FORM_ID);
+          }}
+          data-testid="next-creation-page"
         >
-          <FormattedMessage id="connectionForm.backToDefineDestination" />
+          <FormattedMessage id="connectionForm.nextButton" />
         </Link>
-        <div>
-          {errorMessage && !canProceed /* if the error message applies to this view */ && (
-            <Box as="span" mr="lg">
-              <Text color="red" size="lg" as="span">
-                {errorMessage}
-              </Text>
-            </Box>
-          )}
-          {canProceed ? (
-            <Link
-              to={{
-                pathname: createLink(
-                  `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}/${ConnectionRoutePaths.ConfigureContinued}`
-                ),
-                search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
-              }}
-              className={classNames(styles.nextLink)}
-              onClick={() => {
-                // we're navigating to the next step which retains the creation form's state
-                clearFormChange(CREATE_CONNECTION_FORM_ID);
-              }}
-              data-testid="next-creation-page"
-            >
-              <FormattedMessage id="connectionForm.nextButton" />
-            </Link>
-          ) : (
-            <Button disabled data-testid="next-creation-page">
-              <FormattedMessage id="connectionForm.nextButton" />
-            </Button>
-          )}
-        </div>
-      </FlexContainer>
-    </Box>
+      ) : (
+        <Button disabled data-testid="next-creation-page">
+          <FormattedMessage id="connectionForm.nextButton" />
+        </Button>
+      )}
+    </FlexContainer>
   );
 };
 
@@ -190,25 +184,23 @@ const SecondNav: React.FC = () => {
   const { clearFormChange } = useFormChangeTrackerService();
 
   return (
-    <Box pb="xl" px="xl" pt="lg" className={styles.fixedBottomNav}>
-      <FlexContainer justifyContent="space-between">
-        <Link
-          to={{
-            pathname: createLink(
-              `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}`
-            ),
-            search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
-          }}
-          variant="button"
-          onClick={() => {
-            // we're navigating to the previous step which retains the creation form's state
-            clearFormChange(CREATE_CONNECTION_FORM_ID);
-          }}
-        >
-          <FormattedMessage id="connectionForm.backToSetupSchema" />
-        </Link>
-        <CreateConnectionFormControls />
-      </FlexContainer>
-    </Box>
+    <FlexContainer justifyContent="space-between" className={styles.fixedBottomNav}>
+      <Link
+        to={{
+          pathname: createLink(
+            `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}`
+          ),
+          search: `?${SOURCE_ID_PARAM}=${source.sourceId}&${DESTINATION_ID_PARAM}=${destination.destinationId}`,
+        }}
+        variant="button"
+        onClick={() => {
+          // we're navigating to the previous step which retains the creation form's state
+          clearFormChange(CREATE_CONNECTION_FORM_ID);
+        }}
+      >
+        <FormattedMessage id="connectionForm.backToSetupSchema" />
+      </Link>
+      <CreateConnectionFormControls />
+    </FlexContainer>
   );
 };

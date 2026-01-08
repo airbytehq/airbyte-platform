@@ -21,6 +21,7 @@
 }
 
 .fixedBottomNav {
+  padding: variables.$spacing-lg variables.$spacing-xl variables.$spacing-xl;
   background-color: colors.$foreground;
   border-top: variables.$border-thin solid colors.$grey-100;
 }

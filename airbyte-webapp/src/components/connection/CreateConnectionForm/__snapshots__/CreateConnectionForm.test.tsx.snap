@@ -1205,39 +1205,29 @@ exports[`CreateConnectionForm should render 1`] = `
             <div
               class="<removed-for-snapshot-test>"
             >
-              <div
+              <a
                 class="<removed-for-snapshot-test>"
+                href="/link/to/workspace?sourceId=a3295ed7-4acf-4c0b-b16b-07a00e624a52"
               >
-                <a
+                Back to Define destination
+              </a>
+              <span
+                class="<removed-for-snapshot-test>"
+                data-type="text"
+              >
+                Primary key missing
+              </span>
+              <button
+                class="<removed-for-snapshot-test>"
+                data-testid="next-creation-page"
+                disabled=""
+              >
+                <span
                   class="<removed-for-snapshot-test>"
-                  href="/link/to/workspace?sourceId=a3295ed7-4acf-4c0b-b16b-07a00e624a52"
                 >
-                  Back to Define destination
-                </a>
-                <div>
-                  <span
-                    class="<removed-for-snapshot-test>"
-                  >
-                    <span
-                      class="<removed-for-snapshot-test>"
-                      data-type="text"
-                    >
-                      Primary key missing
-                    </span>
-                  </span>
-                  <button
-                    class="<removed-for-snapshot-test>"
-                    data-testid="next-creation-page"
-                    disabled=""
-                  >
-                    <span
-                      class="<removed-for-snapshot-test>"
-                    >
-                      Next
-                    </span>
-                  </button>
-                </div>
-              </div>
+                  Next
+                </span>
+              </button>
             </div>
           </div>
         </fieldset>
