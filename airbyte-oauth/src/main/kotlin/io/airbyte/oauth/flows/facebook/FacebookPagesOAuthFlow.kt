@@ -20,6 +20,6 @@ class FacebookPagesOAuthFlow : FacebookOAuthFlow {
   override fun getScopes(): String = SCOPES
 
   companion object {
-    private const val SCOPES = "pages_manage_ads,pages_manage_metadata,pages_read_engagement,pages_read_user_content,read_insights"
+    private const val SCOPES = "pages_manage_ads,pages_manage_metadata,pages_read_engagement,pages_read_user_content,read_insights,catalog_management"
   }
 }
