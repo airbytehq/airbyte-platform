@@ -142,24 +142,34 @@ internal class DefaultJobPersistenceTest {
       attemptNumber,
       AttemptFailureSummary().withFailures(
         listOf(
-          FailureReason().withInternalMessage(
-            // kotlin's raw (triple-quoted) strings don't respect backslash escapes.
-            // After json-serialization, this will turn into
-            // {"internalMessage": "Here are some weird characters: \u0000, \\\u0000, \\\\\u0000, u0000, \\u0000, \\\\u0000, \\\\\\u0000."}
-            """Here are some weird characters: ${'\u0000'}, \${'\u0000'}, \\${'\u0000'}, u0000, \u0000, \\u0000, \\\u0000.""",
-          ),
+          FailureReason()
+            .withInternalMessage(
+              // kotlin's raw (triple-quoted) strings don't respect backslash escapes.
+              // After json-serialization, this will turn into
+              // {"internalMessage": "Here are some weird characters: \u0000, \\\u0000, \\\\\u0000, u0000, \\u0000, \\\\u0000, \\\\\\u0000."}
+              """Here are some weird characters: ${'\u0000'}, \${'\u0000'}, \\${'\u0000'}, u0000, \u0000, \\u0000, \\\u0000.""",
+            ).withStacktrace(
+              // regex+string.replace struggles with multiple null chars in sequence, so verify that we can handle this
+              """java.time.format.DateTimeParseException: Text '2026-01E${'\u0000'}${'\u0000'}${'\u0000'}-SFATAL${'\u0000'}C08P01${'\u0000'}' could not be parsed at index 7""",
+            ),
         ),
       ),
     )
 
     val persistedAttempt = jobPersistence.getAttemptForJob(jobId, attemptNumber).get()
     assertEquals(
-      // Note that we stripped the literal null characters, but preserved the literal `u0000`s.
-      """Here are some weird characters: , \, \\, u0000, \u0000, \\u0000, \\\u0000.""",
+      """Here are some weird characters: <NULL>, <NULL>, <NULL>, u0000, <NULL>, <NULL>, <NULL>.""",
       persistedAttempt.failureSummary!!
         .failures
         .first()
         .internalMessage,
+    )
+    assertEquals(
+      """java.time.format.DateTimeParseException: Text '2026-01E<NULL><NULL><NULL>-SFATAL<NULL>C08P01<NULL>' could not be parsed at index 7""",
+      persistedAttempt.failureSummary!!
+        .failures
+        .first()
+        .stacktrace,
     )
   }
 

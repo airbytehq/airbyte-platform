@@ -1573,19 +1573,13 @@ class DefaultJobPersistence
         // Strip literal nulls. Frankly, this should never happen in a JSON-serialized string,
         // but I'm keeping this logic in case there's historical reasons for needing this.
         ?.replace("""\u0000""".toRegex(), "")
-        // Strip the `\u0000` sequence, but only if it's not escaped.
-        // For example, `"\\u0000"` is perfectly valid, but `"\\\u0000"` needs to be stripped.
-        // In general: an even number of backslashes is fine; an odd number is not.
-        // This monstrosity matches:
-        // 1. Any non-backslash character
-        // 2. Any even number of backslashes (including 0) - these represent escaped backslashes.
-        // 3. A single backslash
-        // 4. u0000
-        // And captures 1+2 into $1.
-        // We then emit just $1 - which is equivalent to stripping 3+4 (i.e. the \u0000 sequence).
-        // (NB: triple-quoted string doesn't respect backslashes, but we still need to double up
-        // because regex itself needs us to escape those backslashes.)
-        ?.replace("""([^\\](\\\\)*)\\u0000""".toRegex(), "$1")
+        // Strip the `\u0000` sequence aggressively.
+        // This is overly conservative (e.g. """{"foo": "bar\\u0000"}""" is a perfectly safe string),
+        // but this is simple and reliable.
+        // Doing a fancier replacement to handle escape sequences would be complicated,
+        // and there are performance concerns in this function,
+        // so we don't necessarily want to parse the entire JSON tree and search for null chars.
+        ?.replace("""\\+u0000""".toRegex(), "<NULL>")
 
     /**
      * Needed to get the jooq sort field for the subquery job order by clause.
