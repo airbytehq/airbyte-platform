@@ -5,9 +5,9 @@ import { FormattedMessage } from "react-intl";
 import { useLocation, matchPath } from "react-router-dom";
 
 import { ChatInterfaceBody, ChatInterfaceContainer, ChatInterfaceHeader } from "components/chat";
-import { ChatInput } from "components/chat/ChatInput";
 import { useChatMessages } from "components/chat/hooks/useChatMessages";
 import { MessageList } from "components/chat/MessageList";
+import { ChatTextInput } from "components/support/ChatTextInput";
 import { Badge } from "components/ui/Badge";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -73,8 +73,16 @@ const SupportChatPanel: React.FC<{
                 onClick={() => setIsExpanded(!isExpanded)}
                 icon={isExpanded ? "shrink" : "expand"}
                 aria-label={isExpanded ? "Compact view" : "Expand view"}
+                className={styles.headerButton}
               />
-              <Button variant="clear" size="xs" onClick={onClose} icon="cross" aria-label="Close support chat" />
+              <Button
+                variant="clear"
+                size="xs"
+                onClick={onClose}
+                icon="cross"
+                aria-label="Close support chat"
+                className={styles.headerButton}
+              />
             </FlexContainer>
           </FlexContainer>
         </ChatInterfaceHeader>
@@ -89,13 +97,7 @@ const SupportChatPanel: React.FC<{
         <ChatInterfaceBody>
           <MessageList messages={messages} isLoading={isLoading} error={error} showAllToolCalls isVisible />
 
-          <ChatInput
-            onSendMessage={sendMessage}
-            onStop={stopGenerating}
-            isStreaming={isStreaming}
-            disabled={isLoading}
-            isVisible
-          />
+          <ChatTextInput onSendMessage={sendMessage} onStop={stopGenerating} isStreaming={isStreaming} />
         </ChatInterfaceBody>
       </ChatInterfaceContainer>
     </div>

@@ -75,6 +75,10 @@
   border-bottom: variables.$border-thin solid colors.$grey-200;
 }
 
+.headerButton {
+  padding: 0 variables.$spacing-sm;
+}
+
 @keyframes slide-up {
   from {
     opacity: 0;
