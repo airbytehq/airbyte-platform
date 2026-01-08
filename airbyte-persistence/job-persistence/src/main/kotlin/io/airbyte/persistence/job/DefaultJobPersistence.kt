@@ -2138,23 +2138,26 @@ class DefaultJobPersistence
             record.get(ATTEMPT_NUMBER_FIELD, Int::class.javaPrimitiveType),
             record.get(JOB_ID, Long::class.java),
             Path.of(record.get("log_path", String::class.java)),
-            if (record.get("attempt_sync_config", String::class.java) == null) {
-              null
-            } else {
-              try {
+            try {
+              // record.get will try to deserialized the json blob before converting it to a string.
+              // We are swallowing the exception because we don't want to fail here if the JSON is invalid since it is a recoverable error.
+              val syncConfig = record.get("attempt_sync_config", String::class.java)
+              if (syncConfig == null) {
+                null
+              } else {
                 Jsons.deserialize(
-                  record.get("attempt_sync_config", String::class.java),
+                  syncConfig,
                   AttemptSyncConfig::class.java,
                 )
-              } catch (e: Exception) {
-                log.error(e) {
-                  "Failed to deserialize attempt_sync_config for job ${record.get(
-                    JOB_ID,
-                    Long::class.java,
-                  )} attempt ${record.get(ATTEMPT_NUMBER_FIELD, Int::class.javaPrimitiveType)}"
-                }
-                null
               }
+            } catch (e: Exception) {
+              log.error(e) {
+                "Failed to deserialize attempt_sync_config for job ${record.get(
+                  JOB_ID,
+                  Long::class.java,
+                )} attempt ${record.get(ATTEMPT_NUMBER_FIELD, Int::class.javaPrimitiveType)}"
+              }
+              null
             },
             if (attemptOutputString == null) null else parseJobOutputFromString(attemptOutputString),
             record.get("attempt_status", String::class.java).toEnum<AttemptStatus>()!!,
