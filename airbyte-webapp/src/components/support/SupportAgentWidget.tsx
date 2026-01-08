@@ -41,7 +41,7 @@ const SupportChatPanel: React.FC<{
     prompt: "Introduce yourself as an AI assistant and outline your main functions.",
     agentParams: {
       workspace_id: workspaceId,
-      user_email: user.email,
+      email: user.email,
     },
     clientTools: {},
   });
