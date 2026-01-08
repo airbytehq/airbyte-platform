@@ -16,6 +16,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCurrentUser } from "core/services/auth";
 import { useFeature, FeatureItem } from "core/services/features";
 import { RoutePaths, SourcePaths, DestinationPaths } from "pages/routePaths";
 
@@ -34,13 +35,15 @@ const SupportChatPanel: React.FC<{
   setIsExpanded: (value: boolean) => void;
   onClose: () => void;
 }> = ({ workspaceId, isExpanded, setIsExpanded, onClose }) => {
+  const user = useCurrentUser();
   const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
     endpoint: "/agents/support/chat",
+    prompt: "Introduce yourself as an AI assistant and outline your main functions.",
     agentParams: {
       workspace_id: workspaceId,
+      user_email: user.email,
     },
     clientTools: {},
-    skipInitialRequest: true,
   });
 
   return (
