@@ -49,30 +49,45 @@ class ArchitectureDecider(
    * Decide what environment variables each container needs for the given replication.
    */
   fun computeEnvironmentVariables(input: ReplicationInput): ArchitectureEnvironmentVariables {
-    if (input.useFileTransfer ||
-      input.isReset
-    ) {
+    if (input.useFileTransfer) {
+      logger.info { "Building STDIO environment: file transfer mode enabled" }
+      return buildLegacyEnvironment()
+    }
+
+    if (input.isReset) {
+      logger.info { "Building STDIO environment: reset mode enabled" }
       return buildLegacyEnvironment()
     }
 
     val ffContext = input.toFeatureFlagContext()
 
     if (featureFlags.boolVariation(ForceRunStdioMode, ffContext)) {
+      logger.info { "Building STDIO environment: ForceRunStdioMode flag enabled" }
       return buildLegacyEnvironment()
     }
 
     if (featureFlags.boolVariation(SocketTest, ffContext)) {
+      logger.info { "Building socket environment: SocketTest flag enabled" }
       return buildSocketEnvironment(input, Serialization.PROTOBUF.name, Transport.SOCKET.name, BOOKKEEPER, ffContext)
     }
-    val ipcInfoMissing =
-      input.sourceIPCOptions == null ||
-        input.sourceIPCOptions.isNull ||
-        input.destinationIPCOptions == null ||
-        input.destinationIPCOptions.isNull
+    if (input.sourceIPCOptions == null || input.sourceIPCOptions.isNull) {
+      logger.info { "Building STDIO environment: source IPC options missing" }
+      return buildLegacyEnvironment()
+    }
 
-    if (ipcInfoMissing ||
-      hasHashedFieldsOrMappers(airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(input.connectionId)))
-    ) {
+    if (input.destinationIPCOptions == null || input.destinationIPCOptions.isNull) {
+      logger.info { "Building STDIO environment: destination IPC options missing" }
+      return buildLegacyEnvironment()
+    }
+
+    val connection = airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(input.connectionId))
+    if (hasHashedFields(connection)) {
+      logger.info { "Building STDIO environment: connection has hashed fields" }
+      return buildLegacyEnvironment()
+    }
+
+    if (hasMappers(connection)) {
+      logger.info { "Building STDIO environment: connection has mappers" }
       return buildLegacyEnvironment()
     }
 
@@ -81,11 +96,18 @@ class ArchitectureDecider(
         Jsons.`object`(input.sourceIPCOptions, IPCOptions::class.java) to
           Jsons.`object`(input.destinationIPCOptions, IPCOptions::class.java)
       } catch (e: Exception) {
-        logger.warn(e) { "Failed to parse IPCOptions, falling back to legacy mode" }
+        logger.warn(e) { "Failed to parse IPCOptions, falling back to standard mode" }
+        logger.info { "Building STDIO environment: Failed to parse IPCOptions" }
         return buildLegacyEnvironment()
       }
 
-    if (srcOpts == null || dstOpts == null) {
+    if (srcOpts == null) {
+      logger.info { "Building STDIO environment: parsed source IPCOptions is null" }
+      return buildLegacyEnvironment()
+    }
+
+    if (dstOpts == null) {
+      logger.info { "Building STDIO environment: parsed destination IPCOptions is null" }
       return buildLegacyEnvironment()
     }
 
@@ -93,8 +115,9 @@ class ArchitectureDecider(
     if (srcOpts.dataChannel.version != dstOpts.dataChannel.version) {
       logger.warn {
         "Data‑channel version mismatch (${srcOpts.dataChannel.version} vs " +
-          "${dstOpts.dataChannel.version}); falling back to legacy mode."
+          "${dstOpts.dataChannel.version}); falling back to STDIO mode."
       }
+      logger.info { "Building STDIO environment: Data-channel version mismatch" }
       return buildLegacyEnvironment()
     }
 
@@ -121,18 +144,22 @@ class ArchitectureDecider(
       }
 
     return if (transport == Transport.SOCKET.name) {
+      logger.info { "Building socket environment: transport=$transport, serialization=$serialization" }
       buildSocketEnvironment(input, serialization, transport, BOOKKEEPER, ffContext)
     } else {
+      logger.info { "Building non-socket environment: transport=$transport, serialization=$serialization" }
       buildNonSocketEnvironment(serialization, transport, ORCHESTRATOR)
     }
   }
 
-  private fun hasHashedFieldsOrMappers(connection: ConnectionRead): Boolean =
+  private fun hasHashedFields(connection: ConnectionRead): Boolean =
     connection.syncCatalog.streams.any { stream ->
-      val config = stream.config
-      val hasHashedFields = config?.hashedFields?.isNotEmpty() == true
-      val hasMappers = config?.mappers?.isNotEmpty() == true
-      hasHashedFields || hasMappers
+      stream.config?.hashedFields?.isNotEmpty() == true
+    }
+
+  private fun hasMappers(connection: ConnectionRead): Boolean =
+    connection.syncCatalog.streams.any { stream ->
+      stream.config?.mappers?.isNotEmpty() == true
     }
 
   private fun buildSocketEnvironment(
