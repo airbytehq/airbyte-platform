@@ -38,7 +38,7 @@ const SupportChatPanel: React.FC<{
   const user = useCurrentUser();
   const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
     endpoint: "/agents/support/chat",
-    prompt: "Introduce yourself as an AI assistant and outline your main functions.",
+    prompt: "Introduce yourself as an AI support agent and briefly outline your main functions using emojis.",
     agentParams: {
       workspace_id: workspaceId,
       email: user.email,
