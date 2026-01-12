@@ -125,6 +125,10 @@ enum class OssMetricsRegistry(
     metricName = "keycloak_token_validation",
     metricDescription = "increments when a keycloak auth token validation occurs",
   ),
+  KEYCLOAK_TOKEN_INVALID_REALM(
+    metricName = "keycloak_token_invalid_realm",
+    metricDescription = "increments when a keycloak auth token validation fails because of an invalid realm",
+  ),
   OIDC_TOKEN_VALIDATION(
     metricName = "oidc_token_validation",
     metricDescription = "increments when a oidc auth token validation occurs",

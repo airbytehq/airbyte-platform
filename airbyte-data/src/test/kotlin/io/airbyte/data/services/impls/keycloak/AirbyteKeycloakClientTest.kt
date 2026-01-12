@@ -8,6 +8,8 @@ import com.auth0.jwt.algorithms.Algorithm
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigStatus
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.mockk.clearMocks
@@ -41,6 +43,7 @@ class AirbyteKeycloakClientTest {
   private lateinit var airbyteKeycloakAdminClientProvider: AirbyteKeycloakAdminClientProvider
   private lateinit var airbyteKeycloakClient: AirbyteKeycloakClient
   private lateinit var mockHttpClient: OkHttpClient
+  private lateinit var mockMetricClient: MetricClient
 
   private var keycloakClientMock = mockk<Keycloak>(relaxed = true)
 
@@ -48,13 +51,21 @@ class AirbyteKeycloakClientTest {
   fun setup() {
     airbyteKeycloakAdminClientProvider = mockk<AirbyteKeycloakAdminClientProvider>(relaxed = true)
     mockHttpClient = mockk<OkHttpClient>()
+    mockMetricClient = mockk<MetricClient>(relaxed = true)
     every { airbyteKeycloakAdminClientProvider.createKeycloakAdminClient() } returns keycloakClientMock
-    airbyteKeycloakClient = AirbyteKeycloakClient(airbyteKeycloakAdminClientProvider, airbyteConfig, keycloakConfiguration, mockHttpClient)
+    airbyteKeycloakClient =
+      AirbyteKeycloakClient(
+        airbyteKeycloakAdminClientProvider,
+        airbyteConfig,
+        keycloakConfiguration,
+        mockHttpClient,
+        mockMetricClient,
+      )
   }
 
   @AfterEach
   fun tearDown() {
-    clearMocks(keycloakClientMock)
+    clearMocks(keycloakClientMock, mockMetricClient)
   }
 
   @Test
@@ -279,6 +290,21 @@ class AirbyteKeycloakClientTest {
     assertThrows<InvalidTokenException> {
       airbyteKeycloakClient.validateToken(blankJWT)
     }
+  }
+
+  @Test
+  fun `validateToken throws InvalidTokenException for token with issuer URL but no realm`() {
+    val token =
+      com.auth0.jwt.JWT
+        .create()
+        .withIssuer("https://cloud.airbyte.com")
+        .sign(Algorithm.none())
+
+    assertThrows<InvalidTokenException> {
+      airbyteKeycloakClient.validateToken(token)
+    }
+
+    verify(exactly = 1) { mockMetricClient.count(OssMetricsRegistry.KEYCLOAK_TOKEN_INVALID_REALM, 1) }
   }
 
   @Test

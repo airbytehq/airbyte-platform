@@ -10,6 +10,8 @@ import io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM
 import io.airbyte.commons.auth.support.JwtTokenParser.tokenToAttributes
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -34,6 +36,7 @@ class AirbyteKeycloakClient(
   private val airbyteConfig: AirbyteConfig,
   private val keycloakConfiguration: AirbyteKeycloakConfig,
   @Named("keycloakHttpClient") private val httpClient: OkHttpClient,
+  private val metricClient: MetricClient,
 ) {
   private val keycloakAdminClient: Keycloak = keycloakAdminClientProvider.createKeycloakAdminClient()
 
@@ -440,8 +443,18 @@ class AirbyteKeycloakClient(
     try {
       val jwtAttributes = tokenToAttributes(token)
       val realm = jwtAttributes[JWT_SSO_REALM] as String?
-      logger.debug { "Extracted realm $realm" }
-      realm
+
+      // For Keycloak, the realm should be a simple name, not a URL.
+      // If JwtTokenParser cannot extract the realm (e.g. missing "auth/realms/"),
+      // it returns the full issuer URL. We should ignore such values here.
+      if (realm != null && (realm.startsWith("http://") || realm.startsWith("https://"))) {
+        logger.error { "Extracted realm $realm appears to be a URL, ignoring." }
+        metricClient.count(OssMetricsRegistry.KEYCLOAK_TOKEN_INVALID_REALM, 1)
+        null
+      } else {
+        logger.debug { "Extracted realm $realm" }
+        realm
+      }
     } catch (e: Exception) {
       logger.debug(e) { "Failed to parse realm from JWT token" }
       null
