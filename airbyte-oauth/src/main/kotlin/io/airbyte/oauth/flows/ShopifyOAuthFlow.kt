@@ -32,21 +32,39 @@ class ShopifyOAuthFlow(
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
   ): String {
-        /*
-         * Build the URL that leads to the Shopify Marketplace showing the `Airbyte` application to install.
-         */
-    val builder =
-      URIBuilder()
-        .setScheme("https")
-        .setHost("apps.shopify.com")
-        .setPath("airbyte")
-
     try {
+      val redirectUri = URI.create(redirectUrl)
+      val redirectHost = redirectUri.host?.lowercase() ?: ""
+
+      if (isExternalOrigin(redirectHost)) {
+        val origin = "${redirectUri.scheme}://${redirectUri.host}"
+        val builder =
+          URIBuilder()
+            .setScheme("https")
+            .setHost("cloud.airbyte.com")
+            .setPath("partner/v1/shopify/oauth/preflight")
+            .addParameter("origin", origin)
+
+        return builder.build().toString()
+      }
+
+      val builder =
+        URIBuilder()
+          .setScheme("https")
+          .setHost("apps.shopify.com")
+          .setPath("airbyte")
+
       return builder.build().toString()
     } catch (e: URISyntaxException) {
       throw IOException("Failed to format Consent URL for OAuth flow", e)
     }
   }
+
+  private fun isExternalOrigin(host: String): Boolean =
+    host != "cloud.airbyte.com" &&
+      !host.endsWith(".airbyte.com") &&
+      !host.endsWith(".airbyte.dev") &&
+      host != "localhost"
 
   override fun completeSourceOAuth(
     workspaceId: UUID,
