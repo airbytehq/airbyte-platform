@@ -1686,7 +1686,7 @@
   "connector.supportLevel.community.description": "<b>Marketplace</b> connectors are maintained by the Airbyte community. Airbyte does not offer support SLAs around them, and encourages caution when using them in production.",
   "connector.supportLevel.archived.description": "<b>Archived</b> connectors have been removed from the Airbyte Registry due to low quality or low usage.",
   "connector.supportLevel.custom.description": "<b>Custom</b> connectors are added to the workspace manually by the user.",
-  "connector.supportLevel.enterprise.description": "<b>Enterprise</b> connectors are maintained by the Airbyte team and are exclusively available for Airbyte Self-Managed Enterprise and Airbyte Teams customers.",
+  "connector.supportLevel.enterprise.description": "<b>Enterprise</b> connectors are maintained by the Airbyte team and are exclusively available for Airbyte Pro and Enterprise customers.",
   "connector.connectorsInDevelopment.docLink": "See our <lnk>documentation</lnk> for more details.",
   "connector.setupGuide": "Setup Guide",
   "connector.setupGuide.notFound": "No Setup Guide found for this connector.",
