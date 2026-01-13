@@ -17,7 +17,7 @@ class FacebookMarketingOAuthFlowTest : BaseOAuthFlowTest() {
 
   @Suppress("ktlint:standard:max-line-length")
   override val expectedConsentUrl: String
-    get() = "https://www.facebook.com/v23.0/dialog/oauth?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=ads_management%2Cads_read%2Cread_insights%2Cbusiness_management"
+    get() = "https://www.facebook.com/v23.0/dialog/oauth?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=ads_management%2Cads_read%2Cbusiness_management"
 
   override val expectedOutputPath: List<String>
     get() = listOf("credentials")
