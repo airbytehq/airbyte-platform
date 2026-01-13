@@ -55,6 +55,14 @@ object MetricTags {
   const val PUBLIC: String = "public"
   const val DATA_WORKER_USAGE_OPERATION: String = "data_worker_usage_operation"
   const val ORB_PLAN: String = "orb_plan"
+  const val ORB_ENDPOINT: String = "orb_endpoint"
+
+  // Orb endpoint values
+  const val ORB_ENDPOINT_GET_SUBSCRIPTION_INFO: String = "get_subscription_info"
+  const val ORB_ENDPOINT_GET_TRIAL_STATUS: String = "get_trial_status"
+  const val ORB_ENDPOINT_LIST_SUBSCRIPTIONS: String = "list_subscriptions"
+  const val ORB_ENDPOINT_CANCEL_SUBSCRIPTION: String = "cancel_subscription"
+  const val ORB_ENDPOINT_UNSCHEDULE_CANCELLATION: String = "unschedule_cancellation"
 
   // the release stage of the highest release connector in the sync (GA > Beta > Alpha)
   const val MAX_CONNECTOR_RELEASE_STATE: String = "max_connector_release_stage"
