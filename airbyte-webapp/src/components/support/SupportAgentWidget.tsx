@@ -15,6 +15,7 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { useCurrentConnectionIdOptional } from "area/connection/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentUser } from "core/services/auth";
 import { useFeature, FeatureItem } from "core/services/features";
@@ -31,10 +32,11 @@ const HIDDEN_SUPPORT_BOT_PATHS = [
 // Inner component that uses the chat hook - only rendered when widget is open
 const SupportChatPanel: React.FC<{
   workspaceId: string;
+  connectionId?: string;
   isExpanded: boolean;
   setIsExpanded: (value: boolean) => void;
   onClose: () => void;
-}> = ({ workspaceId, isExpanded, setIsExpanded, onClose }) => {
+}> = ({ workspaceId, connectionId, isExpanded, setIsExpanded, onClose }) => {
   const user = useCurrentUser();
   const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
     endpoint: "/agents/support/chat",
@@ -42,6 +44,7 @@ const SupportChatPanel: React.FC<{
     agentParams: {
       workspace_id: workspaceId,
       email: user.email,
+      ...(connectionId && { connection_id: connectionId }),
     },
     clientTools: {},
   });
@@ -107,6 +110,7 @@ const SupportChatPanel: React.FC<{
 export const SupportAgentWidget: React.FC = () => {
   const supportEnabled = useFeature(FeatureItem.SupportAgentBot);
   const workspaceId = useCurrentWorkspaceId();
+  const connectionId = useCurrentConnectionIdOptional();
   const { pathname } = useLocation();
 
   // Widget display state
@@ -142,6 +146,7 @@ export const SupportAgentWidget: React.FC = () => {
         <div style={{ display: isOpen ? "flex" : "none" }}>
           <SupportChatPanel
             workspaceId={workspaceId}
+            connectionId={connectionId}
             isExpanded={isExpanded}
             setIsExpanded={setIsExpanded}
             onClose={() => setIsOpen(false)}
