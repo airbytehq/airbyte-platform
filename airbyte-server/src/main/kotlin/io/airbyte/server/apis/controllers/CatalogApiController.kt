@@ -78,28 +78,38 @@ class CatalogApiController(
     role: String,
     call: () -> T,
   ): T {
-    // Resolve workspace IDs from catalogs
-    val currentCatalogWorkspaceId = resolveWorkspaceIdFromCatalog(currentCatalogId)
-    val newCatalogWorkspaceId = resolveWorkspaceIdFromCatalog(newCatalogId)
+    val workspaceId: UUID
 
-    // Ensure both catalogs belong to the same workspace
-    if (currentCatalogWorkspaceId != newCatalogWorkspaceId) {
-      throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
-    }
-
-    // If connection ID is provided, validate it belongs to the same workspace
+    // Priority 1: If connection ID is provided, use it for workspace resolution
+    // This is the preferred path as it's more reliable and doesn't depend on ActorCatalogFetchEvent records
     if (connectionId != null) {
-      val connectionWorkspaceId = resolveWorkspaceIdFromConnection(connectionId)
-      if (currentCatalogWorkspaceId != connectionWorkspaceId) {
+      workspaceId = resolveWorkspaceIdFromConnection(connectionId)
+
+      // Validate both catalogs belong to the connection's source
+      val connection =
+        connectionService.getStandardSync(connectionId)
+          ?: throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
+
+      validateCatalogBelongsToSource(currentCatalogId, connection.sourceId)
+      validateCatalogBelongsToSource(newCatalogId, connection.sourceId)
+    } else {
+      // Priority 2: Fall back to catalog-based resolution (for direct catalog diff API usage without connection context)
+      val currentCatalogWorkspaceId = resolveWorkspaceIdFromCatalog(currentCatalogId)
+      val newCatalogWorkspaceId = resolveWorkspaceIdFromCatalog(newCatalogId)
+
+      // Ensure both catalogs belong to the same workspace
+      if (currentCatalogWorkspaceId != newCatalogWorkspaceId) {
         throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
       }
+
+      workspaceId = currentCatalogWorkspaceId
     }
 
     // Validate user has required role for the workspace
     roleResolver
       .newRequest()
       .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, currentCatalogWorkspaceId)
+      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireOneOfRoles(setOf(role))
 
     return call()
@@ -131,5 +141,25 @@ class CatalogApiController(
         ?: throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
 
     return source.workspaceId
+  }
+
+  @InternalForTesting
+  internal fun validateCatalogBelongsToSource(
+    catalogId: UUID,
+    sourceId: UUID,
+  ) {
+    // Try to find the catalog's actor via ActorCatalogFetchEvent (if exists)
+    val catalogActorId = catalogService.getActorIdByCatalogId(catalogId)
+
+    if (catalogActorId.isPresent) {
+      // If fetch event exists, validate it matches the expected source
+      if (catalogActorId.get() != sourceId) {
+        throw ForbiddenProblem(
+          ProblemMessageData().message("Catalog does not belong to the specified connection's source"),
+        )
+      }
+    }
+    // If no fetch event exists (new async flow), we trust the connection-based validation
+    // The catalog was just discovered for this source, so it implicitly belongs to it
   }
 }
