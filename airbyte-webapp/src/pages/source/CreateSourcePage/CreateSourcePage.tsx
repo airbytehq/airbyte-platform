@@ -44,7 +44,10 @@ export const CreateSourcePage: React.FC = () => {
   const showAgentToggle = isAgentAssistedSetupEnabled && !isLoadingSpec && !isCustomConnector;
   const shouldShowAgentView = showAgentToggle && isAgentView;
 
-  useTrackPage(PageTrackingCodes.SOURCE_NEW);
+  useTrackPage(PageTrackingCodes.SOURCE_NEW, {
+    agent_toggle_available: showAgentToggle,
+  });
+
   const navigate = useNavigate();
   const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Source}`;
   const { formatMessage } = useIntl();
