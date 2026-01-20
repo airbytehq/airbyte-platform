@@ -173,6 +173,53 @@ internal class DefaultJobPersistenceTest {
     )
   }
 
+  /**
+   * Very similar to [testWriteAttemptFailureWithNullChars], but exercises writeOutput.
+   */
+  @Test
+  @DisplayName("Should write output even if the failure reason contains null bytes")
+  fun testWriteOutputWithNullChars() {
+    val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+    val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+
+    val standardSyncOutput =
+      StandardSyncOutput()
+        .withFailures(
+          listOf(
+            FailureReason()
+              .withInternalMessage(
+                // kotlin's raw (triple-quoted) strings don't respect backslash escapes.
+                // After json-serialization, this will turn into
+                // {"internalMessage": "Here are some weird characters: \u0000, \\\u0000, \\\\\u0000, u0000, \\u0000, \\\\u0000, \\\\\\u0000."}
+                """Here are some weird characters: ${'\u0000'}, \${'\u0000'}, \\${'\u0000'}, u0000, \u0000, \\u0000, \\\u0000.""",
+              ).withStacktrace(
+                // regex+string.replace struggles with multiple null chars in sequence, so verify that we can handle this
+                """java.time.format.DateTimeParseException: Text '2026-01E${'\u0000'}${'\u0000'}${'\u0000'}-SFATAL${'\u0000'}C08P01${'\u0000'}' could not be parsed at index 7""",
+              ),
+          ),
+        ).withStandardSyncSummary(StandardSyncSummary())
+    val jobOutput = JobOutput().withOutputType(JobOutput.OutputType.SYNC).withSync(standardSyncOutput)
+
+    jobPersistence.writeOutput(jobId, attemptNumber, jobOutput)
+
+    val updated = jobPersistence.getJob(jobId)
+    val persistedOutput = updated.attempts[0].output
+
+    assertEquals(
+      """Here are some weird characters: <NULL>, <NULL>, <NULL>, u0000, <NULL>, <NULL>, <NULL>.""",
+      persistedOutput!!
+        .sync.failures
+        .first()
+        .internalMessage,
+    )
+    assertEquals(
+      """java.time.format.DateTimeParseException: Text '2026-01E<NULL><NULL><NULL>-SFATAL<NULL>C08P01<NULL>' could not be parsed at index 7""",
+      persistedOutput.sync.failures
+        .first()
+        .stacktrace,
+    )
+  }
+
   @Test
   @DisplayName("Should set a job to incomplete if an attempt fails")
   fun testCompleteAttemptFailed() {

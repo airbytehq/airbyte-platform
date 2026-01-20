@@ -323,7 +323,7 @@ class DefaultJobPersistence
           .update(Tables.ATTEMPTS)
           .set(
             Tables.ATTEMPTS.OUTPUT,
-            JSONB.valueOf(Jsons.serialize(output)),
+            JSONB.valueOf(removeUnsupportedUnicodeFromSerializedJson(Jsons.serialize(output))),
           ).set(Tables.ATTEMPTS.UPDATED_AT, now)
           .where(
             Tables.ATTEMPTS.JOB_ID.eq(jobId),
