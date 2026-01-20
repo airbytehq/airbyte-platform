@@ -115,6 +115,41 @@ abstract class StreamStatusesRepository :
   )
   abstract fun findAllPerRunStateByConnectionId(connectionId: UUID): List<StreamStatus>
 
+  /**
+   * Returns the latest stream status per run state (and job type) for a connection,
+   * limited to recent jobs for better performance on high-volume connections.
+   *
+   * This is the same logic as findAllPerRunStateByConnectionId but with a recency filter
+   * that limits processing to the last N jobs, reducing query time from 2+ minutes to ~18 seconds
+   * for connections with millions of stream_statuses.
+   */
+  @Query(
+    """
+    SELECT DISTINCT ON (ss.stream_name, ss.stream_namespace, 1 /* computed run_state */, 2 /* computed incomplete_run_cause */, ss.job_type)
+      $STREAM_STATUS_WITH_FALLBACKS
+      FROM stream_statuses ss
+      JOIN jobs j on j.id = ss.job_id
+      WHERE ss.connection_id = :connectionId
+        AND ss.job_id >= (
+          SELECT COALESCE(MIN(id), 0)
+          FROM (
+            SELECT id FROM jobs
+            WHERE scope = CAST(:connectionId AS VARCHAR)
+              AND config_type IN ('sync', 'refresh')
+            ORDER BY id DESC
+            LIMIT :recentJobsLimit
+          ) recent_jobs
+        )
+      ORDER BY
+        ss.job_type, ss.stream_name, ss.stream_namespace,
+        1 /* computed run_state */,2 /* computed incomplete_run_cause */, ss.transitioned_at desc
+      """,
+  )
+  abstract fun findAllPerRunStateByConnectionIdWithRecentJobsFilter(
+    connectionId: UUID,
+    recentJobsLimit: Int,
+  ): List<StreamStatus>
+
   @Query(
     """
            SELECT

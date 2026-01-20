@@ -29,6 +29,9 @@ import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusRunState
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseOptimizedStreamStatusQuery
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.server.handlers.apidomainmapping.StreamStatusesMapper
 import io.airbyte.server.repositories.StreamStatusesRepository
@@ -51,6 +54,7 @@ internal class StreamStatusesHandlerTest {
   private lateinit var handler: StreamStatusesHandler
   private lateinit var jobPersistence: JobPersistence
   private lateinit var jobHistoryHandler: JobHistoryHandler
+  private lateinit var featureFlagClient: FeatureFlagClient
 
   @BeforeEach
   fun setup() {
@@ -58,7 +62,8 @@ internal class StreamStatusesHandlerTest {
     mapper = mockk()
     jobHistoryHandler = mockk()
     jobPersistence = mockk()
-    handler = StreamStatusesHandler(repo, mapper, jobHistoryHandler, jobPersistence)
+    featureFlagClient = mockk()
+    handler = StreamStatusesHandler(repo, mapper, jobHistoryHandler, jobPersistence, featureFlagClient)
   }
 
   @Test
@@ -107,14 +112,32 @@ internal class StreamStatusesHandlerTest {
   }
 
   @Test
-  fun testListPerRunState() {
+  fun testListPerRunStateOriginal() {
     val connectionId = UUID.randomUUID()
     val apiReq = ConnectionIdRequestBody().connectionId(connectionId)
     val domainItem = StreamStatusBuilder().build()
     val apiItem = StreamStatusRead()
     val apiResp = StreamStatusReadList().streamStatuses(listOf<@Valid StreamStatusRead?>(apiItem))
 
+    // Use original implementation (feature flag disabled)
+    every { featureFlagClient.boolVariation(UseOptimizedStreamStatusQuery, Connection(connectionId)) } returns false
     every { repo.findAllPerRunStateByConnectionId(connectionId) } returns listOf(domainItem)
+    every { mapper.map(domainItem) } returns apiItem
+
+    Assertions.assertEquals(apiResp, handler.listStreamStatusPerRunState(apiReq))
+  }
+
+  @Test
+  fun testListPerRunStateOptimized() {
+    val connectionId = UUID.randomUUID()
+    val apiReq = ConnectionIdRequestBody().connectionId(connectionId)
+    val domainItem = StreamStatusBuilder().build()
+    val apiItem = StreamStatusRead()
+    val apiResp = StreamStatusReadList().streamStatuses(listOf<@Valid StreamStatusRead?>(apiItem))
+
+    // Use optimized implementation (feature flag enabled)
+    every { featureFlagClient.boolVariation(UseOptimizedStreamStatusQuery, Connection(connectionId)) } returns true
+    every { repo.findAllPerRunStateByConnectionIdWithRecentJobsFilter(connectionId, 100) } returns listOf(domainItem)
     every { mapper.map(domainItem) } returns apiItem
 
     Assertions.assertEquals(apiResp, handler.listStreamStatusPerRunState(apiReq))
@@ -379,6 +402,7 @@ internal class StreamStatusesHandlerTest {
         StreamStatusesMapper(),
         jobHistoryHandler,
         jobPersistence,
+        featureFlagClient,
       )
     Assertions.assertEquals(expected, handlerWithRealMapper.getConnectionUptimeHistory(apiReq))
   }

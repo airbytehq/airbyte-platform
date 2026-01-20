@@ -19,6 +19,9 @@ import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper
 import io.airbyte.config.Job
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseOptimizedStreamStatusQuery
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.server.handlers.apidomainmapping.StreamStatusesMapper
 import io.airbyte.server.repositories.StreamStatusesRepository
@@ -34,6 +37,7 @@ open class StreamStatusesHandler(
   val mapper: StreamStatusesMapper,
   private val jobHistoryHandler: JobHistoryHandler,
   private val jobPersistence: JobPersistence,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   fun createStreamStatus(req: StreamStatusCreateRequestBody): StreamStatusRead {
     val model = mapper.map(req)
@@ -64,12 +68,23 @@ open class StreamStatusesHandler(
   }
 
   fun listStreamStatusPerRunState(req: ConnectionIdRequestBody): StreamStatusReadList {
-    val apiList =
-      repo
-        .findAllPerRunStateByConnectionId(req.connectionId)
-        .map { domain -> mapper.map(domain) }
+    val useOptimized = featureFlagClient.boolVariation(UseOptimizedStreamStatusQuery, Connection(req.connectionId))
 
+    val streamStatuses =
+      if (useOptimized) {
+        // Optimized: same query but with recency filter (last 100 jobs)
+        // Reduces query time from 2+ min to ~18 sec for high-volume connections
+        repo.findAllPerRunStateByConnectionIdWithRecentJobsFilter(req.connectionId, RECENT_JOBS_LIMIT)
+      } else {
+        repo.findAllPerRunStateByConnectionId(req.connectionId)
+      }
+
+    val apiList = streamStatuses.map { domain -> mapper.map(domain) }
     return StreamStatusReadList().streamStatuses(apiList)
+  }
+
+  companion object {
+    const val RECENT_JOBS_LIMIT = 100
   }
 
   fun mapStreamStatusToSyncReadResult(streamStatus: StreamStatusRead): ConnectionSyncResultRead {
