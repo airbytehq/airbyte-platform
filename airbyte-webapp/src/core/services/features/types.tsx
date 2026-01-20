@@ -12,7 +12,7 @@ export enum FeatureItem {
   AllowUploadCustomImage = "ALLOW_UPLOAD_CUSTOM_IMAGE",
   AllowUpdateSSOConfig = "ALLOW_UPDATE_SSO_CONFIG", // corresponds to the feature-sso entitlement
   AllowUpdateConnectors = "ALLOW_UPDATE_CONNECTORS",
-  AllowChangeDataplanes = "ALLOW_CHANGE_DATAPLANES",
+  AllowChangeDataplanes = "ALLOW_CHANGE_DATAPLANES", // corresponds to the feature-self-managed-regions entitlement
   AllowDBTCloudIntegration = "ALLOW_DBT_CLOUD_INTEGRATION",
   CloudForTeamsBranding = "CLOUD_FOR_TEAMS_BRANDING",
   CloudForTeamsUpsell = "CLOUD_FOR_TEAMS_UPSELLING",
