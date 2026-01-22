@@ -29,6 +29,7 @@ export const defaultEnterpriseFeatures = [
 
 export const defaultCloudFeatures = [
   FeatureItem.AllowAutoDetectSchema,
+  FeatureItem.AllowChangeDataplanes,
   FeatureItem.AllowDBTCloudIntegration,
   FeatureItem.CloudForTeamsUpsell,
   FeatureItem.ConnectionHistoryGraphs,
