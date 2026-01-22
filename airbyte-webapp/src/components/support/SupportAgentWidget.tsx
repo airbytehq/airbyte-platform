@@ -39,7 +39,7 @@ const SupportChatPanel: React.FC<{
   onClose: () => void;
 }> = ({ workspaceId, connectionId, isExpanded, setIsExpanded, onClose }) => {
   const user = useCurrentUser();
-  const { trackChatLinkClicked } = useAnalyticsTrackFunctions();
+  const { trackChatLinkClicked, trackMessageSent } = useAnalyticsTrackFunctions();
   const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
     endpoint: "/agents/support/chat",
     prompt: "Introduce yourself as an AI support agent and briefly outline your main functions using emojis.",
@@ -50,6 +50,17 @@ const SupportChatPanel: React.FC<{
     },
     clientTools: {},
   });
+
+  // Send message and track
+  const handleSendMessage = useCallback(
+    (content: string) => {
+      const userMessageCount = messages.filter((msg) => msg.role === "user").length + 1;
+      const totalMessageCount = messages.length + 1;
+      sendMessage(content);
+      trackMessageSent(content, userMessageCount, totalMessageCount);
+    },
+    [messages, sendMessage, trackMessageSent]
+  );
 
   const handleLinkClick = useCallback(
     (url: string, text: string) => {
@@ -116,7 +127,7 @@ const SupportChatPanel: React.FC<{
             onLinkClick={handleLinkClick}
           />
 
-          <ChatTextInput onSendMessage={sendMessage} onStop={stopGenerating} isStreaming={isStreaming} />
+          <ChatTextInput onSendMessage={handleSendMessage} onStop={stopGenerating} isStreaming={isStreaming} />
         </ChatInterfaceBody>
       </ChatInterfaceContainer>
     </div>

@@ -22,8 +22,21 @@ export const useAnalyticsTrackFunctions = () => {
     [analyticsService]
   );
 
+  const trackMessageSent = useCallback(
+    (messageContent: string, userMessageCount: number, totalMessageCount: number) => {
+      analyticsService.track(Namespace.SUPPORT_AGENT_BOT, Action.CHAT_MESSAGE_SENT, {
+        actionDescription: "User message sent in Support Agent Bot chat",
+        message_content: messageContent,
+        user_message_count: userMessageCount,
+        total_message_count: totalMessageCount,
+      });
+    },
+    [analyticsService]
+  );
+
   return {
     trackChatInitiated,
     trackChatLinkClicked,
+    trackMessageSent,
   };
 };
