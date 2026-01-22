@@ -62,6 +62,7 @@ export const WorkspacesRoutes: React.FC = () => {
     () => ({
       workspace_id: workspace.workspaceId,
       customer_id: workspace.customerId,
+      organization_id: workspace.organizationId,
     }),
     [workspace]
   );

@@ -58,8 +58,9 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
     () => ({
       workspace_id: workspace.workspaceId,
       customer_id: workspace.customerId,
+      organization_id: workspace.organizationId,
     }),
-    [workspace.workspaceId, workspace.customerId]
+    [workspace.workspaceId, workspace.customerId, workspace.organizationId]
   );
   useAnalyticsRegisterValues(analyticsContext);
   const userTraits = useMemo(

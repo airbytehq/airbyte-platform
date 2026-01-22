@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { FormattedMessage } from "react-intl";
 import { useLocation, matchPath } from "react-router-dom";
@@ -22,6 +22,7 @@ import { useFeature, FeatureItem } from "core/services/features";
 import { RoutePaths, SourcePaths, DestinationPaths } from "pages/routePaths";
 
 import styles from "./SupportAgentWidget.module.scss";
+import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 
 // Routes where support bot should be hidden to avoid conflict with setup bot
 const HIDDEN_SUPPORT_BOT_PATHS = [
@@ -112,11 +113,19 @@ export const SupportAgentWidget: React.FC = () => {
   const workspaceId = useCurrentWorkspaceId();
   const connectionId = useCurrentConnectionIdOptional();
   const { pathname } = useLocation();
+  const { trackChatInitiated } = useAnalyticsTrackFunctions();
 
   // Widget display state
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasBeenOpened, setHasBeenOpened] = useState(false);
+
+  // Track chat initiated only once when first opened
+  useEffect(() => {
+    if (hasBeenOpened) {
+      trackChatInitiated();
+    }
+  }, [hasBeenOpened, trackChatInitiated]);
 
   // Don't render if feature disabled
   if (!supportEnabled) {
