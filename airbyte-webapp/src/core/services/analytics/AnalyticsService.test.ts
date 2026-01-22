@@ -1,3 +1,5 @@
+import { PostHog } from "posthog-js";
+
 import { AnalyticsService } from "./AnalyticsService";
 import { Action, Namespace } from "./types";
 
@@ -68,5 +70,52 @@ describe("AnalyticsService", () => {
       expect.anything(),
       expect.objectContaining({ actionDescription: "Created new connection", context: 42 })
     );
+  });
+
+  describe("Session ID tracking", () => {
+    it("should include PostHog session_id in direct PostHog capture when sendToPosthog is true", () => {
+      window.posthog = {
+        get_session_id: jest.fn().mockReturnValue("test-session-789"),
+        capture: jest.fn(),
+        identify: jest.fn(),
+      } as unknown as PostHog;
+
+      const service = new AnalyticsService();
+      service.track(Namespace.SOURCE, Action.CREATE, { source_name: "test-source" }, { sendToPosthog: true });
+
+      // Verify PostHog receives the session ID
+      expect(window.posthog.capture).toHaveBeenCalledWith(
+        "Airbyte.UI.Source.Create",
+        expect.objectContaining({
+          source_name: "test-source",
+          $session_id: "test-session-789",
+        })
+      );
+    });
+
+    it("should not include $session_id in PostHog capture when session is unavailable", () => {
+      window.posthog = {
+        get_session_id: jest.fn().mockReturnValue(undefined),
+        capture: jest.fn(),
+        identify: jest.fn(),
+      } as unknown as PostHog;
+
+      const service = new AnalyticsService();
+      service.track(Namespace.SOURCE, Action.CREATE, { source_name: "test-source" }, { sendToPosthog: true });
+
+      const captureCall = (window.posthog.capture as jest.Mock).mock.calls[0][1];
+      expect(captureCall).not.toHaveProperty("$session_id");
+    });
+
+    it("should not error when PostHog is not initialized", () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).posthog = undefined;
+
+      const service = new AnalyticsService();
+
+      expect(() => {
+        service.track(Namespace.SOURCE, Action.CREATE, { source_name: "test-source" }, { sendToPosthog: true });
+      }).not.toThrow();
+    });
   });
 });

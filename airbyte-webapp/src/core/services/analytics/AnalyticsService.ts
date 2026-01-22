@@ -73,6 +73,7 @@ export class AnalyticsService {
       this.getPosthogAnalytics()?.capture(`Airbyte.UI.${namespace}.${action}`, {
         ...params,
         ...this.context,
+        ...(session_id && { $session_id: session_id }),
       });
     }
   }
