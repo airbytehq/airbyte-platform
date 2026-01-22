@@ -1,22 +1,10 @@
 import MarkdownToJsx, { MarkdownToJSX } from "markdown-to-jsx";
-import React from "react";
+import React, { useMemo } from "react";
 
 interface SafeMarkdownProps {
   content: string;
+  onLinkClick?: (url: string, text: string) => void;
 }
-
-const markdownOptions: MarkdownToJSX.Options = {
-  disableParsingRawHTML: true,
-  forceWrapper: true,
-  overrides: {
-    a: {
-      props: {
-        rel: "noreferrer noopener",
-        target: "_blank",
-      },
-    },
-  },
-};
 
 class MarkdownErrorBoundary extends React.Component<
   React.PropsWithChildren<{ fallback: React.ReactNode }>,
@@ -40,7 +28,34 @@ class MarkdownErrorBoundary extends React.Component<
   }
 }
 
-export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({ content }) => {
+export const SafeMarkdown: React.FC<SafeMarkdownProps> = ({ content, onLinkClick }) => {
+  const markdownOptions: MarkdownToJSX.Options = useMemo(
+    () => ({
+      disableParsingRawHTML: true,
+      forceWrapper: true,
+      overrides: {
+        a: {
+          component: ({ children, href, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+            <a
+              {...props}
+              href={href}
+              rel="noreferrer noopener"
+              target="_blank"
+              onClick={() => {
+                if (onLinkClick && href) {
+                  onLinkClick(href, String(children));
+                }
+              }}
+            >
+              {children}
+            </a>
+          ),
+        },
+      },
+    }),
+    [onLinkClick]
+  );
+
   return (
     <MarkdownErrorBoundary fallback={<>{content}</>}>
       <MarkdownToJsx options={markdownOptions}>{content}</MarkdownToJsx>

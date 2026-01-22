@@ -11,7 +11,19 @@ export const useAnalyticsTrackFunctions = () => {
     });
   }, [analyticsService]);
 
+  const trackChatLinkClicked = useCallback(
+    (linkUrl: string, linkText?: string) => {
+      analyticsService.track(Namespace.SUPPORT_AGENT_BOT, Action.CHAT_LINK_CLICKED, {
+        actionDescription: "Link clicked in Support Agent Bot chat",
+        link_url: linkUrl,
+        ...(linkText && { link_text: linkText }),
+      });
+    },
+    [analyticsService]
+  );
+
   return {
     trackChatInitiated,
+    trackChatLinkClicked,
   };
 };

@@ -35,6 +35,7 @@ interface MessageProps {
   toolComponents?: Record<string, React.ComponentType<ToolCallProps>>;
   showAllToolCalls?: boolean;
   showThinkingIndicator?: boolean;
+  onLinkClick?: (url: string, text: string) => void;
 }
 
 export const Message: React.FC<MessageProps> = ({
@@ -42,6 +43,7 @@ export const Message: React.FC<MessageProps> = ({
   toolComponents,
   showAllToolCalls = false,
   showThinkingIndicator = false,
+  onLinkClick,
 }) => {
   const { content, role, isStreaming, toolCall, toolResponse } = message;
 
@@ -95,7 +97,7 @@ export const Message: React.FC<MessageProps> = ({
             <ThinkingIndicator />
           ) : (
             <>
-              <SafeMarkdown content={content} />
+              <SafeMarkdown content={content} onLinkClick={onLinkClick} />
               {isStreaming && <span className={styles.cursor} />}
             </>
           )}

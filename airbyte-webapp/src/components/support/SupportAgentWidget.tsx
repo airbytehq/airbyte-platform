@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { FormattedMessage } from "react-intl";
 import { useLocation, matchPath } from "react-router-dom";
@@ -39,6 +39,7 @@ const SupportChatPanel: React.FC<{
   onClose: () => void;
 }> = ({ workspaceId, connectionId, isExpanded, setIsExpanded, onClose }) => {
   const user = useCurrentUser();
+  const { trackChatLinkClicked } = useAnalyticsTrackFunctions();
   const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
     endpoint: "/agents/support/chat",
     prompt: "Introduce yourself as an AI support agent and briefly outline your main functions using emojis.",
@@ -49,6 +50,13 @@ const SupportChatPanel: React.FC<{
     },
     clientTools: {},
   });
+
+  const handleLinkClick = useCallback(
+    (url: string, text: string) => {
+      trackChatLinkClicked(url, text);
+    },
+    [trackChatLinkClicked]
+  );
 
   return (
     <div className={isExpanded ? styles.panelExpanded : styles.panel}>
@@ -99,7 +107,14 @@ const SupportChatPanel: React.FC<{
         </div>
         {/* Chat Body */}
         <ChatInterfaceBody>
-          <MessageList messages={messages} isLoading={isLoading} error={error} showAllToolCalls isVisible />
+          <MessageList
+            messages={messages}
+            isLoading={isLoading}
+            error={error}
+            showAllToolCalls
+            isVisible
+            onLinkClick={handleLinkClick}
+          />
 
           <ChatTextInput onSendMessage={sendMessage} onStop={stopGenerating} isStreaming={isStreaming} />
         </ChatInterfaceBody>

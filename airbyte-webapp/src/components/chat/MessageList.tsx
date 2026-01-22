@@ -13,6 +13,7 @@ interface MessageListProps {
   toolComponents?: Record<string, React.ComponentType<ToolCallProps>>;
   showAllToolCalls?: boolean;
   isVisible?: boolean;
+  onLinkClick?: (url: string, text: string) => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -22,6 +23,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   toolComponents,
   showAllToolCalls = false,
   isVisible,
+  onLinkClick,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasStreamingAssistant = messages.some((m) => m.isStreaming);
@@ -65,6 +67,7 @@ export const MessageList: React.FC<MessageListProps> = ({
             toolComponents={toolComponents}
             showAllToolCalls={showAllToolCalls}
             showThinkingIndicator
+            onLinkClick={onLinkClick}
           />
         ))}
 
