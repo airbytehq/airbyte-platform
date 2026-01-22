@@ -57,7 +57,7 @@ class OrganizationDomainVerificationServiceTest {
         createdAt = OffsetDateTime.now(),
       )
 
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns null
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns emptyList()
     every { organizationDomainVerificationRepository.save(any()) } returns savedEntity
 
     val result =
@@ -84,7 +84,7 @@ class OrganizationDomainVerificationServiceTest {
         status = EntityDomainVerificationStatus.verified,
       )
 
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns existingEntity
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns listOf(existingEntity)
 
     val exception =
       assertThrows<IllegalArgumentException> {
@@ -107,7 +107,7 @@ class OrganizationDomainVerificationServiceTest {
         status = EntityDomainVerificationStatus.expired,
       )
 
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns existingEntity
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns listOf(existingEntity)
 
     val exception =
       assertThrows<IllegalArgumentException> {

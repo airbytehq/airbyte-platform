@@ -146,13 +146,13 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
     )
 
     val found = organizationDomainVerificationRepository.findByOrganizationIdAndDomain(org1, "example.com", false)
-    assert(found != null)
-    assert(found!!.organizationId == org1)
-    assert(found.domain == "example.com")
-    assert(found.status == DomainVerificationStatus.verified)
+    assert(found.isNotEmpty())
+    assert(found.first().organizationId == org1)
+    assert(found.first().domain == "example.com")
+    assert(found.first().status == DomainVerificationStatus.verified)
 
     val notFound = organizationDomainVerificationRepository.findByOrganizationIdAndDomain(org1, "test.com", false)
-    assert(notFound == null)
+    assert(notFound.isEmpty())
   }
 
   @Test
@@ -384,9 +384,9 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
         "example.com",
         includeDeleted = false,
       )
-    assert(found != null)
-    assert(!found!!.tombstone)
-    assert(found.status == DomainVerificationStatus.verified)
+    assert(found.isNotEmpty())
+    assert(!found.first().tombstone)
+    assert(found.first().status == DomainVerificationStatus.verified)
 
     val foundWithDeleted =
       organizationDomainVerificationRepository.findByOrganizationIdAndDomain(
@@ -394,7 +394,7 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
         "example.com",
         includeDeleted = true,
       )
-    assert(foundWithDeleted != null)
+    assert(foundWithDeleted.isNotEmpty())
   }
 
   @Test
@@ -447,5 +447,74 @@ class OrganizationDomainVerificationRepositoryTest : AbstractConfigRepositoryTes
     assert(allPending.size == 2)
     assert(allPending.count { !it.tombstone } == 1)
     assert(allPending.count { it.tombstone } == 1)
+  }
+
+  @Test
+  fun `test soft-delete then insert same organization_id and domain`() {
+    val orgId = UUID.randomUUID()
+    val domain = "reusable-domain.com"
+
+    // Insert first record
+    val firstRecord =
+      organizationDomainVerificationRepository.save(
+        OrganizationDomainVerification(
+          organizationId = orgId,
+          domain = domain,
+          verificationMethod = DomainVerificationMethod.dns_txt,
+          status = DomainVerificationStatus.verified,
+          verificationToken = "token1",
+          dnsRecordName = "_airbyte-verification.$domain",
+          dnsRecordPrefix = "_airbyte-verification",
+          tombstone = false,
+        ),
+      )
+    assert(firstRecord.id != null)
+
+    // Soft-delete the first record
+    val deletedRecord =
+      organizationDomainVerificationRepository.update(
+        firstRecord.copy(tombstone = true),
+      )
+    assert(deletedRecord.tombstone)
+
+    // Insert second record with same organization_id and domain (should succeed)
+    val secondRecord =
+      organizationDomainVerificationRepository.save(
+        OrganizationDomainVerification(
+          organizationId = orgId,
+          domain = domain,
+          verificationMethod = DomainVerificationMethod.dns_txt,
+          status = DomainVerificationStatus.pending,
+          verificationToken = "token2",
+          dnsRecordName = "_airbyte-verification.$domain",
+          dnsRecordPrefix = "_airbyte-verification",
+          tombstone = false,
+        ),
+      )
+    assert(secondRecord.id != null)
+    assert(secondRecord.id != firstRecord.id)
+
+    // Verify both records exist when including deleted
+    val allRecords =
+      organizationDomainVerificationRepository.findByOrganizationIdAndDomain(
+        orgId,
+        domain,
+        includeDeleted = true,
+      )
+    assert(allRecords.size == 2)
+    assert(allRecords.count { it.tombstone } == 1)
+    assert(allRecords.count { !it.tombstone } == 1)
+
+    // Verify only active record is returned when excluding deleted
+    val activeRecords =
+      organizationDomainVerificationRepository.findByOrganizationIdAndDomain(
+        orgId,
+        domain,
+        includeDeleted = false,
+      )
+    assert(activeRecords.size == 1)
+    assert(activeRecords[0].id == secondRecord.id)
+    assert(!activeRecords[0].tombstone)
+    assert(activeRecords[0].status == DomainVerificationStatus.pending)
   }
 }

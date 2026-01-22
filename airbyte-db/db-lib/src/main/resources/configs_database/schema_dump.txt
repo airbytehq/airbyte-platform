@@ -518,8 +518,7 @@ create table "public"."organization_domain_verification" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "tombstone" boolean not null default false,
-  constraint "organization_domain_verification_pkey" primary key ("id"),
-  constraint "organization_domain_verification_organization_id_domain_key" unique ("organization_id", "domain")
+  constraint "organization_domain_verification_pkey" primary key ("id")
 );
 create table "public"."organization_email_domain" (
   "id" uuid not null,
@@ -868,6 +867,8 @@ create index "idx_domain_verification_created_by" on "public"."organization_doma
 create index "idx_domain_verification_domain" on "public"."organization_domain_verification"("domain" asc);
 create index "idx_domain_verification_org" on "public"."organization_domain_verification"("organization_id" asc);
 create index "idx_domain_verification_status" on "public"."organization_domain_verification"("status" asc);
+create unique index "organization_domain_verification_organization_id_domain_key" on "public"."organization_domain_verification"("organization_id" asc, "domain" asc)
+where ((tombstone = false));
 create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
 create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
 create index "organization_payment_config_grace_period_end_at_idx" on "public"."organization_payment_config"("grace_period_end_at" asc);

@@ -142,8 +142,8 @@ open class OrganizationDomainVerificationService(
   fun findByOrganizationIdAndDomain(
     organizationId: UUID,
     domain: String,
-    includeDeleted: Boolean = false,
-  ): OrganizationDomainVerification? = repository.findByOrganizationIdAndDomain(organizationId, domain, includeDeleted)?.toDomainModel()
+  ): OrganizationDomainVerification? =
+    repository.findByOrganizationIdAndDomain(organizationId, domain, includeDeleted = false).map { it.toDomainModel() }.firstOrNull()
 
   /**
    * Finds verifications by status (for background verification job).
@@ -322,12 +322,14 @@ open class OrganizationDomainVerificationService(
             "from status ${domainModel.status} to PENDING"
         }
       }
+
       DomainVerificationStatus.PENDING -> {
         throw IllegalArgumentException(
           "Domain verification for '${domainModel.domain}' is already pending. " +
             "The verification check is running automatically.",
         )
       }
+
       DomainVerificationStatus.VERIFIED -> {
         throw IllegalArgumentException(
           "Domain verification for '${domainModel.domain}' is already verified. " +
@@ -430,6 +432,7 @@ open class OrganizationDomainVerificationService(
           status = DomainVerificationStatus.EXPIRED,
         )
       }
+
       else -> {
         logger.debug {
           "Domain verification continues for ${verification.domain} " +

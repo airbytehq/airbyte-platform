@@ -27,6 +27,16 @@ interface OrganizationDomainVerificationRepository : PageableRepository<Organiza
     includeDeleted: Boolean,
   ): List<OrganizationDomainVerification>
 
+  /**
+   * Finds a specific domain verification by organization and domain.
+   *
+   * This method will always return _at most_ one non-tombstoned record. This is enforced by a partial
+   * uniqueness index `ON (organization_id, domain) WHERE tombstone = false`.
+   *
+   * If `includeDeleted = true`, this method will return _0 or more_ tombstoned records.
+   *
+   * If the (org, domain) pair has no records, this method will return an empty list.
+   */
   @Query(
     """
       SELECT * FROM organization_domain_verification
@@ -39,7 +49,7 @@ interface OrganizationDomainVerificationRepository : PageableRepository<Organiza
     organizationId: UUID,
     domain: String,
     includeDeleted: Boolean,
-  ): OrganizationDomainVerification?
+  ): List<OrganizationDomainVerification>
 
   @Query(
     """
