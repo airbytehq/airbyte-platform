@@ -1,7 +1,6 @@
 # Playwright E2E Tests
 
-This directory contains end-to-end (E2E) tests for the Airbyte webapp, using [Playwright](https://playwright.dev/).  
-🚧 We are currently in the process of migrating from Cypress to Playwright, meaning the e2e tests you need to look at may not be here yet! All new tests should be added here, though. 🚧
+This directory contains end-to-end (E2E) tests for the Airbyte webapp, using [Playwright](https://playwright.dev/).
 
 ## Structure
 

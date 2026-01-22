@@ -479,21 +479,6 @@ module.exports = {
       },
     },
     {
-      // Only for cypress files
-      files: ["cypress/**"],
-      env: {
-        browser: true,
-        node: true,
-      },
-      extends: ["plugin:cypress/recommended"],
-      rules: {
-        "cypress/no-unnecessary-waiting": "warn",
-        "no-template-curly-in-string": "off",
-        "@typescript-eslint/no-unused-expressions": "off",
-        "no-only-tests/no-only-tests": "error",
-      },
-    },
-    {
       files: ["**/*.test.*", "**/*.stories.tsx"],
       rules: {
         "react/display-name": "off",

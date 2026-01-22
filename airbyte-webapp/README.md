@@ -77,53 +77,33 @@ To run unit tests interactively, use `pnpm test`. To start a one-off headless ru
 `pnpm test:ci` instead. Unit test files are located in the same directory as the module
 they're testing, using the `.test.ts` extension.
 
-### End-to-end (e2e) tests with Cypress
+### End-to-end (e2e) tests with Playwright
 
-There are two separate e2e test suites: one for the open-source build of Airbyte (located
-in `cypress/e2e/`).
-
-🚧 We are in the process of migrating e2e tests to Playwright. Our Playwright suite can be found in `/playwright` along with a separate README for running and debugging them.
+End-to-end tests are written using [Playwright](https://playwright.dev/). The test suite can be found in the `/playwright` directory. For detailed instructions on running and debugging Playwright tests, please refer to the [Playwright README](/playwright/README.md).
 
 #### Using local k8s and `make` (recommended)
 
-##### Running an interactive Cypress session
+##### Running an interactive Playwright session
 
-The most useful way to run tests locally is with the `cypress open` command. It opens a
-dispatcher window that lets you select which tests and browser to run; the Electron
-browser (whose devtools will be very familiar to chrome users) opens a child window, and
-having both cypress windows grouped behaves nicely when switching between applications. In
-an interactive session, you can use `it.skip` and `it.only` to focus on the tests you care
-about; any change to the source file of a running test will cause tests to be
-automatically rerun. At the end of a test run, the web page is left "dangling" with all
-state present at the end of the last test; you can click around, "inspect element", and
-interact with the page however you wish, which makes it easy to incrementally develop
-tests.
+The most useful way to run tests locally is in Playwright's UI mode, which lets you select which tests and browser to run, see the browser in action, and use the Playwright inspector for debugging.
 
 1. Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
-2. Run `make test.e2e.oss.open`. This will take care off all dependencies, start Cypress, and launch the interactive GUI.
-3. Launch the tests in Electron browser (Chrome is not able to properly connect to the Cypress server in this case, and Electron is what we use on CI anyways!)
+2. Run `make test.e2e.oss.open` to start Playwright in UI mode with all dependencies configured.
 
 ##### Reproducing CI test results
 
 This triggers headless runs: you won't have a live browser to interact with, just terminal output. This can be useful for debugging the occasional e2e failures that are not reproducible in the typical browser mode. This will print the same output you would see on CI.
 
 1. Build and start the OSS backend by running either `make dev.up.oss` or `make build.oss deploy.oss`
-2. Run `make test.e2e.oss`. This will take care of running dependency scripts to spin up a source and destination db and dummy API, and finally run `npm run cypress:ci` to begin the tests.
+2. Run `make test.e2e.oss`. This will take care of running dependency scripts to spin up a source and destination db and dummy API, and run the Playwright tests.
 
 #### Test setup
 
-When the tests are run as described above, the platform under test is started via kubernetes in the ab namespace. To test connections from real sources and destinations,
-additional docker containers are started for hosting these. For basic connections,
-additional postgres instances are started (`createdbsource` and `createdbdestination`).
+When the tests are run as described above, the platform under test is started via kubernetes in the ab namespace. To test connections from real sources and destinations, additional docker containers are started for hosting these. For basic connections, additional postgres instances are started (`createdbsource` and `createdbdestination`).
 
-For testing the connector builder UI, a dummy api server based on a node script is started
-(`createdummyapi`). It is providing a simple http API with bearer authentication returning
-a few records of hardcoded data. By running it in the internal airbyte network, the
-connector builder server can access it under its container name.
+For testing the connector builder UI, a dummy api server based on a node script is started (`createdummyapi`). It is providing a simple http API with bearer authentication returning a few records of hardcoded data. By running it in the internal airbyte network, the connector builder server can access it under its container name.
 
-The tests in here are instrumenting an Electron instance to test the full functionality of
-Airbyte from the frontend, so other components of the platform (scheduler, worker,
-connector builder server) are also tested in a rudimentary way.
+The tests instrument a browser to test the full functionality of Airbyte from the frontend, so other components of the platform (scheduler, worker, connector builder server) are also tested in a rudimentary way.
 
 ##### Caveats
 
