@@ -58,11 +58,6 @@ airbyte {
 }
 
 tasks.named("pnpmInstall") {
-    /*
-    Add patches folder to inputs of pnpmInstall task, since it has pnpm-lock.yml as an output
-    thus wouldn't rerun in case a patch get changed
-     */
-    inputs.dir("patches")
     doNotTrackState("gradle is slower at caching than pnpm install")
 }
 

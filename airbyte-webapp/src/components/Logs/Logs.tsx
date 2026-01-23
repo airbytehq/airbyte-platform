@@ -1,6 +1,6 @@
+import { LazyLog } from "@melloware/react-logviewer";
 import classNames from "classnames";
 import { FormattedMessage } from "react-intl";
-import { LazyLog } from "react-lazylog";
 
 import styles from "./Logs.module.scss";
 
