@@ -176,7 +176,7 @@ open class SourcesController(
       .build()
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest): Response = sourceService.controllerInitiateOAuth(initiateOauthRequest)
 
