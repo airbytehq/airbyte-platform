@@ -1,0 +1,6 @@
+@use "scss/variables";
+
+.toggleContainer {
+  cursor: pointer;
+  padding: variables.$spacing-xs;
+}

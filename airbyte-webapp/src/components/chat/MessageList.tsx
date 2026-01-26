@@ -14,6 +14,7 @@ interface MessageListProps {
   showAllToolCalls?: boolean;
   isVisible?: boolean;
   onLinkClick?: (url: string, text: string) => void;
+  autoScroll?: boolean;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -24,6 +25,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   showAllToolCalls = false,
   isVisible,
   onLinkClick,
+  autoScroll = true,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasStreamingAssistant = messages.some((m) => m.isStreaming);
@@ -33,14 +35,16 @@ export const MessageList: React.FC<MessageListProps> = ({
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+    if (autoScroll) {
+      scrollToBottom();
+    }
+  }, [messages, isLoading, autoScroll]);
 
   useEffect(() => {
-    if (isVisible) {
+    if (isVisible && autoScroll) {
       scrollToBottom("auto");
     }
-  }, [isVisible]);
+  }, [isVisible, autoScroll]);
 
   if (messages.length === 0 && !isLoading) {
     return (

@@ -19,8 +19,10 @@ import { useCurrentConnectionIdOptional } from "area/connection/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentUser } from "core/services/auth";
 import { useFeature, FeatureItem } from "core/services/features";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { RoutePaths, SourcePaths, DestinationPaths } from "pages/routePaths";
 
+import { AutoScrollToggle } from "./AutoScrollToggle";
 import styles from "./SupportAgentWidget.module.scss";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 
@@ -40,6 +42,7 @@ const SupportChatPanel: React.FC<{
 }> = ({ workspaceId, connectionId, isExpanded, setIsExpanded, onClose }) => {
   const user = useCurrentUser();
   const { trackChatLinkClicked, trackMessageSent } = useAnalyticsTrackFunctions();
+  const [autoScrollEnabled, setAutoScrollEnabled] = useLocalStorage("airbyte_support-chat-autoscroll", true);
   const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
     endpoint: "/agents/support/chat",
     prompt: "Introduce yourself as an AI support agent and briefly outline your main functions using emojis.",
@@ -89,7 +92,8 @@ const SupportChatPanel: React.FC<{
                 <FormattedMessage id="ui.badge.beta" />
               </Badge>
             </FlexContainer>
-            <FlexContainer direction="row" gap="xs">
+            <FlexContainer direction="row" gap="xs" alignItems="center">
+              <AutoScrollToggle checked={autoScrollEnabled} onChange={setAutoScrollEnabled} />
               <Button
                 variant="clear"
                 size="xs"
@@ -125,6 +129,7 @@ const SupportChatPanel: React.FC<{
             showAllToolCalls
             isVisible
             onLinkClick={handleLinkClick}
+            autoScroll={autoScrollEnabled}
           />
 
           <ChatTextInput onSendMessage={handleSendMessage} onStop={stopGenerating} isStreaming={isStreaming} />
