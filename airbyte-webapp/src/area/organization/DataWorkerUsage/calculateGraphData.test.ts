@@ -63,8 +63,8 @@ describe(`${calculateGraphData.name}`, () => {
             id: "workspace-1",
             name: "Workspace 1",
             dataWorkers: [
-              { date: "2025-01-15", used: 5 },
-              { date: "2025-01-16", used: 10 },
+              { date: "2025-01-15T10:00:00Z", used: 5 },
+              { date: "2025-01-16T10:00:00Z", used: 10 },
             ],
           },
         ],
@@ -77,7 +77,7 @@ describe(`${calculateGraphData.name}`, () => {
       expect(result[2].workspaceUsage["workspace-1"]).toBeUndefined();
     });
 
-    it("handles multiple workspaces", () => {
+    it("handles multiple workspaces at the same hour", () => {
       const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
       const regionData: RegionDataWorkerUsage = {
         id: "region-1",
@@ -86,12 +86,12 @@ describe(`${calculateGraphData.name}`, () => {
           {
             id: "workspace-1",
             name: "Workspace 1",
-            dataWorkers: [{ date: "2025-01-15", used: 5 }],
+            dataWorkers: [{ date: "2025-01-15T10:00:00Z", used: 5 }],
           },
           {
             id: "workspace-2",
             name: "Workspace 2",
-            dataWorkers: [{ date: "2025-01-15", used: 8 }],
+            dataWorkers: [{ date: "2025-01-15T10:00:00Z", used: 8 }],
           },
         ],
       };
@@ -102,7 +102,7 @@ describe(`${calculateGraphData.name}`, () => {
       expect(result[0].workspaceUsage["workspace-2"]).toBe(8);
     });
 
-    it("keeps maximum usage when multiple data points exist for the same day", () => {
+    it("uses peak hour values when multiple hours exist for the same day", () => {
       const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
       const regionData: RegionDataWorkerUsage = {
         id: "region-1",
@@ -112,9 +112,9 @@ describe(`${calculateGraphData.name}`, () => {
             id: "workspace-1",
             name: "Workspace 1",
             dataWorkers: [
-              { date: "2025-01-15", used: 5 },
-              { date: "2025-01-15", used: 10 },
-              { date: "2025-01-15", used: 7 },
+              { date: "2025-01-15T10:00:00Z", used: 5 },
+              { date: "2025-01-15T11:00:00Z", used: 10 },
+              { date: "2025-01-15T12:00:00Z", used: 7 },
             ],
           },
         ],
@@ -122,7 +122,8 @@ describe(`${calculateGraphData.name}`, () => {
 
       const result = calculateGraphData(dateRange, regionData);
 
-      expect(result[0].workspaceUsage["workspace-1"]).toBe(10); // max(5, 10, 7) = 10
+      // Peak hour is 11:00 with total 10, so workspace-1 gets its value at 11:00
+      expect(result[0].workspaceUsage["workspace-1"]).toBe(10);
     });
 
     it("handles empty workspaces array", () => {
@@ -170,7 +171,7 @@ describe(`${calculateGraphData.name}`, () => {
           {
             id: "workspace-1",
             name: "Workspace 1",
-            dataWorkers: [{ date: "2025-01-15", used: 0 }],
+            dataWorkers: [{ date: "2025-01-15T10:00:00Z", used: 0 }],
           },
         ],
       };
@@ -180,7 +181,7 @@ describe(`${calculateGraphData.name}`, () => {
       expect(result[0].workspaceUsage["workspace-1"]).toBe(0);
     });
 
-    it("keeps maximum usage regardless of order", () => {
+    it("uses peak hour value based on total across workspaces", () => {
       const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
       const regionData: RegionDataWorkerUsage = {
         id: "region-1",
@@ -190,8 +191,8 @@ describe(`${calculateGraphData.name}`, () => {
             id: "workspace-1",
             name: "Workspace 1",
             dataWorkers: [
-              { date: "2025-01-15", used: 10 },
-              { date: "2025-01-15", used: 5 },
+              { date: "2025-01-15T10:00:00Z", used: 10 },
+              { date: "2025-01-15T11:00:00Z", used: 5 },
             ],
           },
         ],
@@ -199,12 +200,13 @@ describe(`${calculateGraphData.name}`, () => {
 
       const result = calculateGraphData(dateRange, regionData);
 
-      expect(result[0].workspaceUsage["workspace-1"]).toBe(10); // max(10, 5) = 10
+      // Peak hour is 10:00 with total 10, so workspace-1 gets its value at 10:00
+      expect(result[0].workspaceUsage["workspace-1"]).toBe(10);
     });
   });
 
   describe("top 10 and other workspace filtering", () => {
-    it("keeps max usage per workspace, then aggregates 'other' workspaces", () => {
+    it("uses peak hour values and aggregates 'other' workspaces", () => {
       const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
       const regionData: RegionDataWorkerUsage = {
         id: "region-1",
@@ -214,17 +216,17 @@ describe(`${calculateGraphData.name}`, () => {
             id: "workspace-11",
             name: "Workspace 11",
             dataWorkers: [
-              { date: "2025-01-15", used: 5 },
-              { date: "2025-01-15", used: 10 },
-              { date: "2025-01-15", used: 3 },
+              { date: "2025-01-15T10:00:00Z", used: 5 },
+              { date: "2025-01-15T11:00:00Z", used: 10 },
+              { date: "2025-01-15T12:00:00Z", used: 3 },
             ],
           },
           {
             id: "workspace-12",
             name: "Workspace 12",
             dataWorkers: [
-              { date: "2025-01-15", used: 7 },
-              { date: "2025-01-15", used: 8 },
+              { date: "2025-01-15T10:00:00Z", used: 7 },
+              { date: "2025-01-15T11:00:00Z", used: 8 },
             ],
           },
         ],
@@ -237,13 +239,14 @@ describe(`${calculateGraphData.name}`, () => {
         ["workspace-11", "workspace-12"] // both in other
       );
 
-      // Workspace 11: max(5, 10, 3) = 10
-      // Workspace 12: max(7, 8) = 8
+      // Peak hour is 11:00 with total 10 + 8 = 18
+      // Workspace 11 at 11:00: 10
+      // Workspace 12 at 11:00: 8
       // Other total: 10 + 8 = 18
       expect(result[0].workspaceUsage.other).toBe(18);
     });
 
-    it("keeps max usage for individual workspace in top 10", () => {
+    it("uses peak hour value for individual workspace in top 10", () => {
       const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
       const regionData: RegionDataWorkerUsage = {
         id: "region-1",
@@ -253,9 +256,9 @@ describe(`${calculateGraphData.name}`, () => {
             id: "workspace-1",
             name: "Workspace 1",
             dataWorkers: [
-              { date: "2025-01-15", used: 10 },
-              { date: "2025-01-15", used: 15 },
-              { date: "2025-01-15", used: 12 },
+              { date: "2025-01-15T10:00:00Z", used: 10 },
+              { date: "2025-01-15T11:00:00Z", used: 15 },
+              { date: "2025-01-15T12:00:00Z", used: 12 },
             ],
           },
         ],
@@ -268,8 +271,73 @@ describe(`${calculateGraphData.name}`, () => {
         [] // none in other
       );
 
-      // Should keep max: max(10, 15, 12) = 15
+      // Peak hour is 11:00 with total 15, so workspace-1 gets its value at 11:00
       expect(result[0].workspaceUsage["workspace-1"]).toBe(15);
+    });
+  });
+
+  describe("peak hour calculation across workspaces", () => {
+    it("finds peak hour based on total usage across all workspaces", () => {
+      const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
+      const regionData: RegionDataWorkerUsage = {
+        id: "region-1",
+        name: "Region 1",
+        workspaces: [
+          {
+            id: "workspace-1",
+            name: "Workspace 1",
+            dataWorkers: [
+              { date: "2025-01-15T10:00:00Z", used: 10 }, // hour 10 total: 10 + 2 = 12
+              { date: "2025-01-15T11:00:00Z", used: 5 }, // hour 11 total: 5 + 20 = 25 (peak)
+            ],
+          },
+          {
+            id: "workspace-2",
+            name: "Workspace 2",
+            dataWorkers: [
+              { date: "2025-01-15T10:00:00Z", used: 2 },
+              { date: "2025-01-15T11:00:00Z", used: 20 },
+            ],
+          },
+        ],
+      };
+
+      const result = calculateGraphData(dateRange, regionData);
+
+      // Peak hour is 11:00 (total 25), so each workspace gets its 11:00 value
+      expect(result[0].workspaceUsage["workspace-1"]).toBe(5);
+      expect(result[0].workspaceUsage["workspace-2"]).toBe(20);
+    });
+
+    it("returns 0 for workspace that has no data at peak hour", () => {
+      const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
+      const regionData: RegionDataWorkerUsage = {
+        id: "region-1",
+        name: "Region 1",
+        workspaces: [
+          {
+            id: "workspace-1",
+            name: "Workspace 1",
+            dataWorkers: [
+              { date: "2025-01-15T10:00:00Z", used: 5 },
+              { date: "2025-01-15T11:00:00Z", used: 15 }, // peak hour
+            ],
+          },
+          {
+            id: "workspace-2",
+            name: "Workspace 2",
+            dataWorkers: [
+              { date: "2025-01-15T10:00:00Z", used: 3 }, // only has data at 10:00
+            ],
+          },
+        ],
+      };
+
+      const result = calculateGraphData(dateRange, regionData);
+
+      // Peak hour is 11:00 (total 15 > 8)
+      expect(result[0].workspaceUsage["workspace-1"]).toBe(15);
+      expect(result[0].workspaceUsage["workspace-2"]).toBe(0); // no data at peak hour
     });
   });
 });
