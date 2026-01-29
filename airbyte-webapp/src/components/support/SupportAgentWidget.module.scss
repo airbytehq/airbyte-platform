@@ -16,9 +16,11 @@
 .button {
   transition: all 0.2s ease;
   border-radius: variables.$border-radius-pill;
+  transform: scale(1.5);
+  transform-origin: bottom right;
 
   &:hover {
-    transform: translateY(-2px);
+    transform: scale(1.5) translateY(-2px);
   }
 }
 
