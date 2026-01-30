@@ -11,10 +11,10 @@ export const Disclaimer: React.FC = () => (
   <Box mt="xl">
     <Text>
       <FormattedMessage
-        id="login.disclaimer"
+        id="login.disclaimer.cloud"
         values={{
           terms: (terms: React.ReactNode) => (
-            <ExternalLink href={links.termsLink} variant="primary">
+            <ExternalLink href={links.termsLinkCloud} variant="primary">
               {terms}
             </ExternalLink>
           ),
@@ -26,5 +26,24 @@ export const Disclaimer: React.FC = () => (
         }}
       />
     </Text>
+    <Box mt="md">
+      <Text>
+        <FormattedMessage
+          id="login.disclaimer.agentEngine"
+          values={{
+            terms: (terms: React.ReactNode) => (
+              <ExternalLink href={links.termsLinkAgentEngine} variant="primary">
+                {terms}
+              </ExternalLink>
+            ),
+            privacy: (privacy: React.ReactNode) => (
+              <ExternalLink href={links.privacyLink} variant="primary">
+                {privacy}
+              </ExternalLink>
+            ),
+          }}
+        />
+      </Text>
+    </Box>
   </Box>
 );
