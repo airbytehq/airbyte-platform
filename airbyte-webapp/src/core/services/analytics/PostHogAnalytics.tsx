@@ -1,4 +1,5 @@
-import { PostHog } from "posthog-js";
+import type { PostHogInterface } from "posthog-js";
+
 import { PostHogProvider } from "posthog-js/react";
 import React from "react";
 
@@ -6,7 +7,7 @@ import { useWebappConfig } from "core/config";
 
 declare global {
   interface Window {
-    posthog: PostHog;
+    posthog: PostHogInterface;
   }
 }
 export const PostHogAnalytics: React.FC<React.PropsWithChildren> = ({ children }) => {

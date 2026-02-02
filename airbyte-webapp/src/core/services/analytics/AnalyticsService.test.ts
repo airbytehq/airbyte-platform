@@ -1,4 +1,4 @@
-import { PostHog } from "posthog-js";
+import type { PostHogInterface } from "posthog-js";
 
 import { AnalyticsService } from "./AnalyticsService";
 import { Action, Namespace } from "./types";
@@ -78,7 +78,7 @@ describe("AnalyticsService", () => {
         get_session_id: jest.fn().mockReturnValue("test-session-789"),
         capture: jest.fn(),
         identify: jest.fn(),
-      } as unknown as PostHog;
+      } as unknown as PostHogInterface;
 
       const service = new AnalyticsService();
       service.track(Namespace.SOURCE, Action.CREATE, { source_name: "test-source" }, { sendToPosthog: true });
@@ -98,7 +98,7 @@ describe("AnalyticsService", () => {
         get_session_id: jest.fn().mockReturnValue(undefined),
         capture: jest.fn(),
         identify: jest.fn(),
-      } as unknown as PostHog;
+      } as unknown as PostHogInterface;
 
       const service = new AnalyticsService();
       service.track(Namespace.SOURCE, Action.CREATE, { source_name: "test-source" }, { sendToPosthog: true });

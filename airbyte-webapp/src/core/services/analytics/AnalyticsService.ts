@@ -1,4 +1,4 @@
-import { PostHog } from "posthog-js";
+import type { PostHogInterface } from "posthog-js";
 
 import { HockeyStackAnalyticsObject } from "./HockeyStackAnalytics";
 import { Action, EventParams, Namespace } from "./types";
@@ -12,7 +12,7 @@ export class AnalyticsService {
 
   private getHockeyStackAnalytics = (): HockeyStackAnalyticsObject | undefined => window.HockeyStack;
 
-  private getPosthogAnalytics = (): PostHog | undefined => window.posthog;
+  private getPosthogAnalytics = (): PostHogInterface | undefined => window.posthog;
 
   public setContext(context: Context) {
     this.context = {
