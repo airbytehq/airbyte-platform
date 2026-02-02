@@ -82,7 +82,12 @@ open class ScopedConfigurationHandler
       return try {
         sourceService.getSourceConnection(actorId).name
       } catch (e: ConfigNotFoundException) {
-        destinationService.getDestinationConnection(actorId).name
+        try {
+          destinationService.getDestinationConnection(actorId).name
+        } catch (e: ConfigNotFoundException) {
+          // Actor has been deleted, return a placeholder name
+          "Deleted Actor ($actorId)"
+        }
       }
     }
 
