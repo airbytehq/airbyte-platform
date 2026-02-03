@@ -25,7 +25,11 @@ import io.airbyte.workers.models.ArchitectureConstants.PLATFORM_MODE
 import io.airbyte.workers.models.ArchitectureConstants.SOCKET_FILE_POSTFIX
 import io.airbyte.workers.models.ArchitectureConstants.SOCKET_FILE_PREFIX
 import io.airbyte.workers.models.ArchitectureConstants.SOCKET_PATH
+import io.airbyte.workload.launcher.constants.GCS_DATALAKE_DEFINITION_ID
+import io.airbyte.workload.launcher.constants.GCS_DATALAKE_DOCKER_IMAGE
 import io.airbyte.workload.launcher.constants.PodConstants.CPU_RESOURCE_KEY
+import io.airbyte.workload.launcher.constants.S3_DATALAKE_DEFINITION_ID
+import io.airbyte.workload.launcher.constants.S3_DATALAKE_DOCKER_IMAGE
 import io.airbyte.workload.launcher.pipeline.stages.model.ArchitectureEnvironmentVariables
 import io.airbyte.workload.launcher.pipeline.stages.model.IPCOptions
 import io.airbyte.workload.launcher.pipeline.stages.model.Serialization
@@ -212,9 +216,6 @@ class ArchitectureDecider(
   }
 
   companion object {
-    private val GCS_DATALAKE_DEFINITION_ID: UUID = UUID.fromString("8c8a2d3e-1b4f-4a9c-9e7d-6f5a4b3c2d1e") // GCS Datalake
-    private const val GCS_DATALAKE_DOCKER_REPOSITORY = "airbyte/destination-gcs-data-lake"
-
     fun buildLegacyEnvironment(): ArchitectureEnvironmentVariables =
       buildNonSocketEnvironment(Serialization.JSONL.name, Transport.STDIO.name, ORCHESTRATOR)
 
@@ -249,14 +250,19 @@ class ArchitectureDecider(
     val destinationDefinitionId = input.connectionContext?.destinationDefinitionId
     val dockerImage = input.destinationLauncherConfig?.dockerImage
 
-    val dockerImageRepository = dockerImage?.substringBefore(':')
+    val dockerImageWithoutTag = dockerImage?.substringBefore(':')
 
-    val matchesDestination =
-      (destinationDefinitionId == GCS_DATALAKE_DEFINITION_ID) ||
-        (dockerImageRepository == GCS_DATALAKE_DOCKER_REPOSITORY)
+    val isIceberg = isIcebergConnector(destinationDefinitionId, dockerImageWithoutTag)
 
-    return matchesDestination && hasAnyDedupStream(input)
+    return isIceberg && hasAnyDedupStream(input)
   }
+
+  private fun isIcebergConnector(
+    actorDefinitionId: UUID?,
+    dockerImage: String?,
+  ): Boolean =
+    actorDefinitionId == GCS_DATALAKE_DEFINITION_ID || actorDefinitionId == S3_DATALAKE_DEFINITION_ID ||
+      dockerImage == GCS_DATALAKE_DOCKER_IMAGE || dockerImage == S3_DATALAKE_DOCKER_IMAGE
 
   private fun extractCpuLimit(
     input: ReplicationInput,
