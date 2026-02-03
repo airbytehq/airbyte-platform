@@ -1,6 +1,7 @@
-/* stylelint-disable airbyte/no-use-renaming */
-@import "./StreamConfigView.module";
-
 .fullHeight {
   height: 100%;
+}
+
+.relative {
+  position: relative;
 }

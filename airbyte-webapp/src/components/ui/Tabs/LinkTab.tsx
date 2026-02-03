@@ -2,6 +2,7 @@ import classNames from "classnames";
 import React from "react";
 
 import styles from "./LinkTab.module.scss";
+import { FlexContainer } from "../Flex";
 import { Link } from "../Link";
 import { Text } from "../Text";
 
@@ -18,7 +19,9 @@ interface LinkTabInnerProps {
 
 const LinkTabInner: React.FC<LinkTabInnerProps> = ({ name, isActive, disabled = false }) => {
   return (
-    <div
+    <FlexContainer
+      gap="sm"
+      alignItems="center"
       className={classNames(styles.tabContainer, {
         [styles["tabContainer--active"]]: isActive,
         [styles["tabContainer--inactive"]]: !isActive,
@@ -28,7 +31,7 @@ const LinkTabInner: React.FC<LinkTabInnerProps> = ({ name, isActive, disabled = 
       <Text color={disabled ? "grey300" : isActive ? "darkBlue" : "grey"} size="lg">
         {name}
       </Text>
-    </div>
+    </FlexContainer>
   );
 };
 

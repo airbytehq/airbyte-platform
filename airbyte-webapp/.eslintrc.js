@@ -102,6 +102,9 @@ module.exports = {
     react: {
       version: "detect",
     },
+    "css-modules": {
+      basePath: path.resolve(__dirname, "src"),
+    },
   },
   rules: {
     "jsx-a11y/label-has-associated-control": [
@@ -111,7 +114,7 @@ module.exports = {
       },
     ],
     curly: "warn",
-    "css-modules/no-undef-class": "off",
+    "css-modules/no-undef-class": ["error", { camelCase: true }],
     "css-modules/no-unused-class": ["error", { camelCase: true }],
     "dot-location": ["warn", "property"],
     "dot-notation": "warn",
