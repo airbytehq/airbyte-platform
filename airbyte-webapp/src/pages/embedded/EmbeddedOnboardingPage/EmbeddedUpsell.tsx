@@ -1,13 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { FormattedMessage } from "react-intl";
 
-import { HeadTitle } from "components/HeadTitle";
-import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { Icon } from "components/ui/Icon";
+import AirbyteLogo from "components/ui/illustrations/airbyte-logo.svg?react";
 import { ExternalLink, Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 import { UpsellCard } from "components/ui/UpsellCard/UpsellCard";

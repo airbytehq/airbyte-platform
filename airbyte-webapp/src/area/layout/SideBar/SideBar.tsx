@@ -9,10 +9,13 @@ import { Icon } from "components/ui/Icon";
 import { Separator } from "components/ui/Separator";
 import { Text } from "components/ui/Text";
 import { ThemeToggle } from "components/ui/ThemeToggle";
-import { WorkspacesPickerNext } from "components/workspace/WorkspacesPickerNext";
 
+import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
+import { AirbyteHomeLink } from "area/layout/SideBar/AirbyteHomeLink";
 import { OrganizationPicker } from "area/organization/OrganizationPicker/OrganizationPicker";
 import { useCurrentOrganizationId } from "area/organization/utils";
+import { WorkspacesPickerNext } from "area/workspace/components/WorkspacesPickerNext";
+import { CloudHelpDropdown } from "cloud/components/CloudHelpDropdown";
 import {
   useCurrentWorkspaceOrUndefined,
   useDefaultWorkspaceInOrganization,
@@ -24,11 +27,8 @@ import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/feature
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
-import { CloudHelpDropdown } from "packages/cloud/components/CloudHelpDropdown";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
-import { AirbyteHomeLink } from "views/layout/SideBar/AirbyteHomeLink";
 
 import { HelpDropdown } from "./components/HelpDropdown";
 import { MenuContent } from "./components/MenuContent";

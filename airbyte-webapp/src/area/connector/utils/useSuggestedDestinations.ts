@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { useExperiment } from "hooks/services/Experiment";
+import { useExperiment } from "core/services/Experiment";
 
 export const useSuggestedDestinations = () => {
   const suggestedDestinationConnectors = useExperiment("connector.suggestedDestinationConnectors");

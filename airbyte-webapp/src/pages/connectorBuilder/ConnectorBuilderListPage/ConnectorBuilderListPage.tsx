@@ -2,13 +2,13 @@ import { FormattedMessage } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { MainPageWithScroll } from "components";
-import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
-import { HeadTitle } from "components/HeadTitle";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { PageHeader } from "components/ui/PageHeader";
 
+import { ConnectorBuilderProjectTable } from "area/connector/components/ConnectorBuilderProjectTable";
 import { useListBuilderProjects } from "core/api";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 

@@ -2,14 +2,14 @@ import React, { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { HeadTitle } from "components/HeadTitle";
+import { HeadTitle } from "components/ui/HeadTitle";
 
+import { ConnectionEditServiceProvider } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { useCurrentConnectionId } from "area/connection/utils/useCurrentConnectionId";
 import { useCurrentConnection } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { ConnectionEditServiceProvider } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperimentContext } from "hooks/services/Experiment";
+import { useExperimentContext } from "core/services/Experiment";
 
 import styles from "./ConnectionPage.module.scss";
 import { ConnectionPageHeader } from "./ConnectionPageHeader";

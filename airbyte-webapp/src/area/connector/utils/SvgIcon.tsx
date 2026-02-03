@@ -1,7 +1,7 @@
 import classNames from "classnames";
 
 import { isHttpUrl } from "core/utils/common";
-import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
+import { useAirbyteTheme } from "core/utils/useAirbyteTheme";
 
 import styles from "./SvgIcon.module.scss";
 

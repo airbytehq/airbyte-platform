@@ -4,15 +4,15 @@ import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
 
+import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/SettingsLayout";
 import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
+import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useDefaultWorkspaceInOrganization } from "core/api";
 import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
-import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { SettingsRoutePaths } from "pages/routePaths";
 
 export const OrganizationSettingsPage: React.FC = () => {

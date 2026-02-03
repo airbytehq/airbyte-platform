@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 
-import { useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 import { organizationKeys } from "./organizations";
 import { workspaceKeys } from "./workspaces";

@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
+import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import {
   OperatorType,
   WebBackendConnectionRead,
@@ -24,8 +25,7 @@ import {
   WorkspaceGetDbtJobsResponse,
 } from "core/api/types/AirbyteClient";
 import { useRequestOptions } from "core/api/useRequestOptions";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 import { getAvailableDbtJobsForWorkspace } from "../../generated/AirbyteClient";
 import { useCurrentWorkspace, useUpdateWorkspace } from "../workspaces";

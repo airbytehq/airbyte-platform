@@ -2,10 +2,11 @@ import { useCallback, useMemo } from "react";
 
 import { ORG_PLAN_IDS } from "components/ui/BrandingBadge/BrandingBadge";
 
+import { ProFeaturesWarnModal } from "area/organization/components/ProFeaturesWarnModal";
+import { useModalService } from "core/services/Modal";
+
 import { useLocalStorage } from "./useLocalStorage";
 import { useOrganizationSubscriptionStatus } from "./useOrganizationSubscriptionStatus";
-import { ProFeaturesWarnModal } from "../../components/ProFeaturesWarnModal";
-import { useModalService } from "../../hooks/services/Modal";
 
 /**
  * Custom hook to manage ProFeaturesWarnModal display logic for unified trial users and standard plan users.

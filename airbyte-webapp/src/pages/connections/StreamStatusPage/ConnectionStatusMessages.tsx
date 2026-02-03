@@ -2,8 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -11,7 +9,10 @@ import { Link } from "components/ui/Link";
 import { Message, MessageProps, MessageType, isHigherSeverity, MESSAGE_SEVERITY_LEVELS } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import { useStreamsStatuses } from "area/connection/utils";
+import { useSchemaChanges } from "area/connection/utils/useSchemaChanges";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentConnection, useDestinationDefinitionVersion, useSourceDefinitionVersion } from "core/api";
 import {
@@ -26,7 +27,6 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { FeatureItem, useFeature } from "core/services/features";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { useCurrentTime, useFormatLengthOfTime } from "core/utils/time";
-import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionStatusMessages.module.scss";

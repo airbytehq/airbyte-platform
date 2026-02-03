@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { useIntl } from "react-intl";
 import { z } from "zod";
 
-import { Form, FormControl } from "components/forms";
-import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
+import { Form, FormControl } from "components/ui/forms";
+import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useUpdateOrganization, useOrganization } from "core/api";
+import { useNotificationService } from "core/services/Notification";
 import { useIntent } from "core/utils/rbac";
-import { useNotificationService } from "hooks/services/Notification";
 
 const ORGANIZATION_UPDATE_NOTIFICATION_ID = "organization-update-notification";
 

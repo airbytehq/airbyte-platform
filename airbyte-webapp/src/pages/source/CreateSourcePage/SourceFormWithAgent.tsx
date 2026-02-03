@@ -2,25 +2,25 @@ import React, { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { ConnectorSetupAgent } from "components/agents/ConnectorSetupAgent";
-import { ConnectorSetupAgentTools } from "components/agents/ConnectorSetupAgentTools";
-import { useConnectorSetupAgentState } from "components/agents/hooks/useConnectorSetupAgentState";
-import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
-import { FormPageContent } from "components/ConnectorBlocks";
-import { MountedViewSwapper } from "components/MountedViewSwapper";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { MountedViewSwapper } from "components/ui/MountedViewSwapper";
 
+import { ConnectorSetupAgent } from "area/connector/components/agents/ConnectorSetupAgent";
+import { ConnectorSetupAgentTools } from "area/connector/components/agents/ConnectorSetupAgentTools";
+import { useConnectorSetupAgentState } from "area/connector/components/agents/hooks/useConnectorSetupAgentState";
+import { FormPageContent } from "area/connector/components/ConnectorBlocks";
+import { ConnectorCard } from "area/connector/components/ConnectorCard";
+import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
+import { ConnectorCardValues } from "area/connector/components/ConnectorForm/types";
 import { ConnectionConfiguration } from "area/connector/types";
+import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { useGetSourceDefinitionSpecificationAsync } from "core/api";
 import { ActorType, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
 import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
 import { SourcePaths } from "pages/routePaths";
-import { ConnectorCard } from "views/Connector/ConnectorCard";
-import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
-import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
 export type SourceSetupFlow = "agent" | "form";
 export interface SourceFormValues {

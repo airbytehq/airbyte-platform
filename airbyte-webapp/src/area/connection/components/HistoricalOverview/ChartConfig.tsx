@@ -4,7 +4,7 @@ import { BaseAxisProps } from "recharts/types/util/types";
 import { scaleLinear } from "victory-vendor/d3-scale";
 
 import { useCurrentConnection } from "core/api";
-import { useModalService } from "hooks/services/Modal";
+import { useModalService } from "core/services/Modal";
 import { openJobLogsModal } from "pages/connections/ConnectionTimelinePage/JobEventMenu";
 
 import styles from "./ChartConfig.module.scss";

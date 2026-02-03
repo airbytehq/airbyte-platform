@@ -1,8 +1,8 @@
 import { FlexContainer } from "components/ui/Flex";
 
+import { ConnectorForm, ConnectorFormValues } from "area/connector/components/ConnectorForm";
 import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
-import { ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import styles from "./PartialUserConfigForm.module.scss";
 import { PartialUserConfigFormControls } from "./PartialUserConfigFormControls";

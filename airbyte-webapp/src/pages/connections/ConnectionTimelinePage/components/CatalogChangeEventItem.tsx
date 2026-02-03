@@ -7,7 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { CatalogConfigDiff, FieldDataTypeDiff, StreamFieldStatusChanged } from "core/api/types/AirbyteClient";
-import { useModalService } from "hooks/services/Modal";
+import { useModalService } from "core/services/Modal";
 
 import styles from "./CatalogChangeEventItem.module.scss";
 import { CatalogConfigDiffModal } from "./CatalogConfigDiffModal/CatalogConfigDiffModal";

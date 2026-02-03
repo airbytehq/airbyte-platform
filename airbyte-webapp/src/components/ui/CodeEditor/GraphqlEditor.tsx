@@ -2,7 +2,7 @@ import { useIntl } from "react-intl";
 
 import { formatGraphqlQuery } from "components/ui/CodeEditor/GraphqlFormatter";
 
-import { useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 import { CodeEditor } from "./CodeEditor";
 

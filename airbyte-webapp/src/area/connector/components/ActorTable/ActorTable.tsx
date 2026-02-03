@@ -2,17 +2,17 @@ import { ColumnSort, createColumnHelper } from "@tanstack/react-table";
 import React, { useContext, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { AllConnectionsStatusCell } from "components/EntityTable/components/AllConnectionsStatusCell";
-import { ConnectorName } from "components/EntityTable/components/ConnectorName";
-import { EntityNameCell } from "components/EntityTable/components/EntityNameCell";
-import { LastSyncCell } from "components/EntityTable/components/LastSyncCell";
-import { NumberOfConnectionsCell } from "components/EntityTable/components/NumberOfConnectionsCell";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { AllConnectionsStatusCell } from "area/connection/components/EntityTable/components/AllConnectionsStatusCell";
+import { ConnectorName } from "area/connection/components/EntityTable/components/ConnectorName";
+import { EntityNameCell } from "area/connection/components/EntityTable/components/EntityNameCell";
+import { LastSyncCell } from "area/connection/components/EntityTable/components/LastSyncCell";
+import { NumberOfConnectionsCell } from "area/connection/components/EntityTable/components/NumberOfConnectionsCell";
 import {
   ActorDefinitionVersionBreakingChanges,
   ActorListSortKey,

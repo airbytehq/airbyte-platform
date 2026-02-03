@@ -2,10 +2,10 @@ import classNames from "classnames";
 import { FormattedDate, FormattedMessage } from "react-intl";
 import { ContentType } from "recharts/types/component/Tooltip";
 
-import { FormattedTimeRange } from "components/FormattedTimeRange";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { FormattedTimeRange } from "components/ui/FormattedTimeRange";
 import { Text } from "components/ui/Text";
 
 import styles from "./ConnectionsGraph.module.scss";

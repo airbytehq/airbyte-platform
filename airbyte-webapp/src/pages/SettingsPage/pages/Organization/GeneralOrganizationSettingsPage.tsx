@@ -9,9 +9,9 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
 import { DiagnosticsButton } from "pages/SettingsPage/components/DiagnosticButton";
 import { NestedRegionsView } from "pages/SettingsPage/components/NestedRegionsView";
 import { RegionsTable } from "pages/SettingsPage/components/RegionsTable";

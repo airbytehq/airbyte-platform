@@ -9,7 +9,7 @@ import {
   StreamMapperType,
 } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 import { StreamMapperWithId } from "./types";
 import { useGetMappingsForCurrentConnection } from "./useGetMappingsForCurrentConnection";

@@ -1,7 +1,7 @@
 import { FormattedMessage } from "react-intl";
 
-import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
+import { EmptyState } from "components/ui/EmptyState";
 
 import { useListPartialUserConfigs } from "core/api";
 import { SourceTemplateListItem } from "core/api/types/SonarClient";

@@ -14,10 +14,10 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useListUserInvitations, useListUsersInOrganization } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useModalService } from "core/services/Modal";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useModalService } from "hooks/services/Modal";
 
 import { AddUserModal } from "./components/AddUserModal";
 import { UnifiedUserModel, unifyOrganizationUserData } from "./components/util";

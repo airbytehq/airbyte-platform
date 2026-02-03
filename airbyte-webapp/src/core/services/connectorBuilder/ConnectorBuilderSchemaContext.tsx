@@ -1,7 +1,8 @@
 import { createContext, useContext, useState } from "react";
 
-import { defaultBuilderStateSchema } from "components/connectorBuilder/types";
-import { AirbyteJsonSchema } from "components/forms/SchemaForm/utils";
+import { AirbyteJsonSchema } from "components/ui/forms/SchemaForm/utils";
+
+import { defaultBuilderStateSchema } from "area/connectorBuilder/components/types";
 
 interface SchemaContext {
   builderStateSchema: AirbyteJsonSchema;

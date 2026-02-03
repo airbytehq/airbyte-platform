@@ -7,11 +7,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { FormControl } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer } from "components/ui/Flex";
+import { FormControl } from "components/ui/forms/FormControl";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
 import { ExternalLink } from "components/ui/Link";
@@ -22,11 +22,11 @@ import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrga
 import { useActivateSsoConfig, useListDomainVerifications, useSSOConfigManagement } from "core/api";
 import { useFormatError } from "core/errors";
 import { useAuthService } from "core/services/auth";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
+import { useExperiment } from "core/services/Experiment";
+import { useNotificationService } from "core/services/Notification";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useExperiment } from "hooks/services/Experiment";
-import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./SSOSettings.module.scss";
 import { isSsoTestCallback } from "./ssoTestUtils";

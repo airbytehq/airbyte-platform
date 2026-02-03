@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 
 import { MessageType } from "components/ui/Message";
 
-import { Notification, useNotificationService } from "hooks/services/Notification";
+import { Notification, useNotificationService } from "core/services/Notification";
 
 import { workspaceKeys } from "./workspaces";
 import {

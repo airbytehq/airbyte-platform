@@ -210,6 +210,9 @@ export default defineConfig({
     "SonarClient",
     "sonarApiCall"
   ),
-  connectorManifest: createApi("./src/services/connectorBuilder/connector_manifest_openapi.yaml", "ConnectorManifest"),
+  connectorManifest: createApi(
+    "./src/core/services/connectorBuilder/connector_manifest_openapi.yaml",
+    "ConnectorManifest"
+  ),
   apiErrorTypes: errorTypeGeneration("../airbyte-api/problems-api/src/main/openapi/api-problems.yaml"),
 });

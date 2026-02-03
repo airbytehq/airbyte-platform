@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { ConnectorFormValues } from "area/connector/components/ConnectorForm";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useNotificationService } from "hooks/services/Notification";
-import { ConnectorFormValues } from "views/Connector/ConnectorForm";
+import { useNotificationService } from "core/services/Notification";
 
 import { createIntegrationsTemplatesConnections } from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION } from "../scopes";

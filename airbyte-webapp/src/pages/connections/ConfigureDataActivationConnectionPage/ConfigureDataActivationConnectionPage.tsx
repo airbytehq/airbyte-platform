@@ -4,28 +4,28 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 
-import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
-import { BASIC_FREQUENCY_DEFAULT_VALUE } from "components/connection/ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
-import { CreateConnectionFlowLayout } from "components/connection/CreateConnectionFlowLayout";
-import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
-import { FormDevTools } from "components/forms/FormDevTools";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
+import { FormDevTools } from "components/ui/forms/FormDevTools";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { FormConnectionFormValues } from "area/connection/components/ConnectionForm/formConfig";
+import { BASIC_FREQUENCY_DEFAULT_VALUE } from "area/connection/components/ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
+import { CreateConnectionFlowLayout } from "area/connection/components/CreateConnectionFlowLayout";
+import { SimplifiedConnectionsSettingsCard } from "area/connection/components/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
+import {
+  ConnectionFormServiceProvider,
+  useConnectionFormService,
+} from "area/connection/utils/ConnectionForm/ConnectionFormService";
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { createSyncCatalogFromFormValues } from "area/dataActivation/utils/createSyncCatalogFromFormValues";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { CreateConnectionProps, useCreateConnection, useDiscoverDestination, useDiscoverSchemaQuery } from "core/api";
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
+import { useNotificationService } from "core/services/Notification";
 import { FormModeProvider } from "core/services/ui/FormModeContext";
 import { trackError } from "core/utils/datadog";
-import {
-  ConnectionFormServiceProvider,
-  useConnectionFormService,
-} from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useNotificationService } from "hooks/services/Notification";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConfigureConnectionRoute.module.scss";

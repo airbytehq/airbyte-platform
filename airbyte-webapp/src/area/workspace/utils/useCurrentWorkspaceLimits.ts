@@ -1,7 +1,7 @@
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useGetWorkspace } from "core/api";
 import { WorkspaceRead } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
+import { useExperiment } from "core/services/Experiment";
 
 interface CurrentWorkspaceLimits {
   activeConnectionLimitReached: boolean;

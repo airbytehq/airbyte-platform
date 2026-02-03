@@ -20,9 +20,9 @@ import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { mockWorkspaceId } from "test-utils/mock-data/mockWorkspaceId";
 import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
+import { ConnectionEditServiceProvider } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { useGetConnectionQuery } from "core/api";
 import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
-import { ConnectionEditServiceProvider } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { ConnectionReplicationPage } from "./ConnectionReplicationPage";
 
@@ -81,7 +81,7 @@ jest.mock("core/utils/rbac", () => ({
   },
 }));
 
-jest.mock("hooks/theme/useAirbyteTheme", () => ({
+jest.mock("core/utils/useAirbyteTheme", () => ({
   useAirbyteTheme: () => mockTheme,
 }));
 

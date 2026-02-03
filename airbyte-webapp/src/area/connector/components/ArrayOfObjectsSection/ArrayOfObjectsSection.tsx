@@ -4,17 +4,17 @@ import React, { useState } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
-import GroupControls from "components/GroupControls";
 import { Button } from "components/ui/Button";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import GroupControls from "components/ui/GroupControls";
 import { RemoveButton } from "components/ui/RemoveButton/RemoveButton";
 
+import { FormSection } from "area/connector/components/ConnectorForm/components/Sections/FormSection";
+import { GroupLabel } from "area/connector/components/ConnectorForm/components/Sections/GroupLabel";
+import { SectionContainer } from "area/connector/components/ConnectorForm/components/Sections/SectionContainer";
+import { setDefaultValues } from "area/connector/components/ConnectorForm/useBuildForm";
 import { FormBlock, FormGroupItem, FormObjectArrayItem } from "core/form/types";
-import { FormSection } from "views/Connector/ConnectorForm/components/Sections/FormSection";
-import { GroupLabel } from "views/Connector/ConnectorForm/components/Sections/GroupLabel";
-import { SectionContainer } from "views/Connector/ConnectorForm/components/Sections/SectionContainer";
-import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
 import styles from "./ArrayOfObjectsSection.module.scss";
 

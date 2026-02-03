@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 
-import { useGetConnectorsOutOfDate, useUpdateAllConnectors } from "hooks/services/useConnector";
+import { useGetConnectorsOutOfDate, useUpdateAllConnectors } from "area/connector/utils/useConnector";
 
 import { useUpdatingState } from "./ConnectorsViewContext";
 

@@ -13,9 +13,9 @@ import {
   useCancelSubscription,
 } from "core/api";
 import { OrganizationPaymentConfigReadSubscriptionStatus } from "core/api/types/AirbyteClient";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
+import { useNotificationService } from "core/services/Notification";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useNotificationService } from "hooks/services/Notification";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./DeleteWorkspace.module.scss";

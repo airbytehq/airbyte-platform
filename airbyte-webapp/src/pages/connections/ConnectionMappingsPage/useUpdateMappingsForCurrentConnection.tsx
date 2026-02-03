@@ -1,12 +1,12 @@
 import isBoolean from "lodash/isBoolean";
 import { useIntl } from "react-intl";
 
+import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { useDestinationDefinitionVersion, useGetConnection, useGetStateTypeQuery } from "core/api";
 import { AirbyteStreamAndConfiguration, ConfiguredStreamMapper } from "core/api/types/AirbyteClient";
+import { ModalResult, useModalService } from "core/services/Modal";
+import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { ModalResult, useModalService } from "hooks/services/Modal";
-import { useNotificationService } from "hooks/services/Notification";
 
 import { getKeyForStream } from "./MappingContext";
 import { ClearDataWarningModal } from "../ConnectionReplicationPage/ClearDataWarningModal";

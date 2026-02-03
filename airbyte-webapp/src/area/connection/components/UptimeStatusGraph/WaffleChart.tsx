@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState } from "react";
 import { BaseAxisProps, ChartOffset } from "recharts/types/util/types";
 
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 
 export interface ChartStream {
   streamNamespace?: string;

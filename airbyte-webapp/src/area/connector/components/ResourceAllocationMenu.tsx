@@ -5,20 +5,20 @@ import { useFormContext, Controller } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { LabelInfo } from "components";
-import { ControlLabels } from "components/LabeledControl";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { ControlLabels } from "components/ui/LabeledControl";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { ConnectorFormValues } from "area/connector/components/ConnectorForm";
+import { PropertyError } from "area/connector/components/ConnectorForm/components/Property/PropertyError";
+import { useConnectorForm } from "area/connector/components/ConnectorForm/connectorFormContext";
 import { JobType, ScopedResourceRequirements } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { useIsAirbyteEmbeddedContext } from "core/services/embedded";
 import { FeatureItem, useFeature } from "core/services/features";
-import { ConnectorFormValues } from "views/Connector/ConnectorForm";
-import { PropertyError } from "views/Connector/ConnectorForm/components/Property/PropertyError";
-import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
 
 export const API_RESOURCE_DEFAULTS: Record<string, SimpleResourceRequirement> = {
   default: {

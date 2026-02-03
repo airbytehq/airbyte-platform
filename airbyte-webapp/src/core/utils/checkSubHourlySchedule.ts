@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 
-import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
-
+import { FormConnectionFormValues } from "area/connection/components/ConnectionForm/formConfig";
 import { useDescribeCronExpressionFetchQuery } from "core/api";
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 

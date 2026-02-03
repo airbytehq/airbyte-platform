@@ -1,7 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
-import Logs from "components/Logs";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -10,12 +9,13 @@ import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
+import Logs from "components/ui/Logs";
 import { Separator } from "components/ui/Separator";
 import { Text } from "components/ui/Text";
 
 import { HttpProblem } from "core/api";
+import { useGetAllExperiments } from "core/services/Experiment";
 import { fullStorySessionLink } from "core/utils/fullstory";
-import { useGetAllExperiments } from "hooks/services/Experiment";
 
 import styles from "./ErrorDetails.module.scss";
 import octavia from "./pixel-octavia.png";

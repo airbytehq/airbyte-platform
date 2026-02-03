@@ -6,29 +6,32 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { v4 as uuid } from "uuid";
 import { z } from "zod";
 
-import {
-  AssistErrorFormError,
-  parseAssistErrorToFormErrors,
-  useBuilderAssistCreateConnectorMutation,
-} from "components/connectorBuilder/Builder/Assist/assist";
-import { AssistWaiting } from "components/connectorBuilder/Builder/Assist/AssistWaiting";
-import {
-  DEFAULT_CONNECTOR_NAME,
-  DEFAULT_JSON_MANIFEST_STREAM,
-  DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
-} from "components/connectorBuilder/constants";
-import { Form, FormControl } from "components/forms";
-import { HeadTitle } from "components/HeadTitle";
 import { Badge } from "components/ui/Badge";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Form, FormControl } from "components/ui/forms";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import {
+  AssistErrorFormError,
+  parseAssistErrorToFormErrors,
+  useBuilderAssistCreateConnectorMutation,
+} from "area/connectorBuilder/components/Builder/Assist/assist";
+import { AssistWaiting } from "area/connectorBuilder/components/Builder/Assist/AssistWaiting";
+import {
+  DEFAULT_CONNECTOR_NAME,
+  DEFAULT_JSON_MANIFEST_STREAM,
+  DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
+} from "area/connectorBuilder/components/constants";
 import { DeclarativeComponentSchema, DeclarativeStream } from "core/api/types/ConnectorManifest";
+import { ConnectorBuilderLocalStorageProvider } from "core/services/connectorBuilder/ConnectorBuilderLocalStorageService";
+import { ConnectorBuilderFormManagementStateProvider } from "core/services/connectorBuilder/ConnectorBuilderStateService";
+import { useExperiment } from "core/services/Experiment";
 import {
   clearConnectorChatBuilderStorage,
   CONNECTOR_CHAT_ACTIONS,
@@ -38,9 +41,6 @@ import { links } from "core/utils/links";
 import { convertSnakeToCamel } from "core/utils/strings";
 import { useDebounceValue } from "core/utils/useDebounceValue";
 import { ToZodSchema } from "core/utils/zod";
-import { useExperiment } from "hooks/services/Experiment";
-import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
-import { ConnectorBuilderFormManagementStateProvider } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./ConnectorBuilderGeneratePage.module.scss";
 import { AirbyteTitle } from "../components/AirbyteTitle";

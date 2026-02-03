@@ -1,0 +1,148 @@
+import { screen, render } from "@testing-library/react";
+
+import { TestWrapper } from "test-utils/testutils";
+
+import { useFormOauthAdapter } from "area/connector/components/ConnectorForm/components/Sections/auth/useOauthFlowAdapter";
+import { useConnectorForm } from "area/connector/components/ConnectorForm/connectorFormContext";
+import { useAuthentication } from "area/connector/components/ConnectorForm/useAuthentication";
+import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
+
+import { AuthButton } from "./AuthButton";
+jest.setTimeout(10000);
+
+/**
+ * Mock services to reuse multiple times with different values:
+ * 1. mock the service
+ * 2. cast the type as shown below.  `as unknown` is required to get the typing to play nice as there isn't crossover
+ *    Partial is optional, but required if you do not want to mock the entire object
+ *
+ * Then, can implement in tests using useWhateverServiceYouMocked.mockImplementationOnce or useWhateverServiceYouMocked.mockImplementation
+ */
+
+jest.mock("area/connector/components/ConnectorForm/components/Sections/auth/useOauthFlowAdapter");
+const mockUseFormOauthAdapter = useFormOauthAdapter as unknown as jest.Mock<Partial<typeof useFormOauthAdapter>>;
+const baseUseFormOauthAdapterValues = {
+  run: jest.fn(),
+  loading: false,
+};
+
+jest.mock("area/connector/components/ConnectorForm/connectorFormContext");
+const mockUseConnectorForm = useConnectorForm as unknown as jest.Mock<Partial<typeof useConnectorForm>>;
+const baseUseConnectorFormValues: Partial<ReturnType<typeof useConnectorForm>> = {
+  selectedConnectorDefinition: { sourceDefinitionId: "abcde", name: "Acme" } as ConnectorDefinition,
+  selectedConnectorDefinitionSpecification: {} as ConnectorDefinitionSpecificationRead,
+};
+
+jest.mock("area/connector/components/ConnectorForm/useAuthentication");
+const mockUseAuthentication = useAuthentication as unknown as jest.Mock<Partial<typeof useAuthentication>>;
+
+describe("auth button", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    mockUseAuthentication.mockReturnValue({ hiddenAuthFieldErrors: {} });
+  });
+
+  it("initially renders with correct message and no status message", () => {
+    // no auth errors
+    mockUseConnectorForm.mockImplementationOnce(() => {
+      const { selectedConnectorDefinition } = baseUseConnectorFormValues;
+
+      return { selectedConnectorDefinition };
+    });
+
+    // not done
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
+      const done = false;
+      const { run, loading } = baseUseFormOauthAdapterValues;
+
+      return { done, run, loading };
+    });
+
+    render(
+      <TestWrapper>
+        <AuthButton
+          selectedConnectorDefinitionSpecification={
+            baseUseConnectorFormValues.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecificationRead
+          }
+        />
+      </TestWrapper>
+    );
+
+    // correct button text
+    const button = screen.getByRole("button", { name: "Authenticate your Acme account" });
+    expect(button).toBeInTheDocument();
+
+    // no error message
+    const errorMessage = screen.queryByText(/Authentication required/i);
+    expect(errorMessage).not.toBeInTheDocument();
+  });
+
+  it("after successful authentication, it renders with correct message and success message", () => {
+    // no auth errors
+    mockUseConnectorForm.mockImplementationOnce(() => {
+      const { selectedConnectorDefinition } = baseUseConnectorFormValues;
+
+      return { selectedConnectorDefinition };
+    });
+
+    // done
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
+      const done = true;
+      const { run, loading } = baseUseFormOauthAdapterValues;
+
+      return { done, run, loading, hasRun: done };
+    });
+
+    render(
+      <TestWrapper>
+        <AuthButton
+          selectedConnectorDefinitionSpecification={
+            baseUseConnectorFormValues.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecificationRead
+          }
+        />
+      </TestWrapper>
+    );
+
+    // correct button text
+    const button = screen.getByRole("button", { name: "Re-authenticate" });
+    expect(button).toBeInTheDocument();
+  });
+
+  it("renders an error if there are any auth fields with empty values", () => {
+    // auth errors
+    mockUseAuthentication.mockReturnValue({ hiddenAuthFieldErrors: { field: "required" } });
+
+    mockUseConnectorForm.mockImplementationOnce(() => {
+      const { selectedConnectorDefinition } = baseUseConnectorFormValues;
+
+      return { selectedConnectorDefinition };
+    });
+
+    // not done
+    mockUseFormOauthAdapter.mockImplementationOnce(() => {
+      const done = false;
+      const { run, loading } = baseUseFormOauthAdapterValues;
+
+      return { done, run, loading };
+    });
+
+    render(
+      <TestWrapper>
+        <AuthButton
+          selectedConnectorDefinitionSpecification={
+            baseUseConnectorFormValues.selectedConnectorDefinitionSpecification as ConnectorDefinitionSpecificationRead
+          }
+        />
+      </TestWrapper>
+    );
+
+    // correct button
+    const button = screen.getByRole("button", { name: "Authenticate your Acme account" });
+    expect(button).toBeInTheDocument();
+
+    // error message
+    const errorMessage = screen.getByText(/Authentication required/i);
+    expect(errorMessage).toBeInTheDocument();
+  });
+});

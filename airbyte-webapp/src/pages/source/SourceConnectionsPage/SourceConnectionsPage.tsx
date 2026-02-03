@@ -3,14 +3,14 @@ import { FormattedMessage } from "react-intl";
 import { createSearchParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { ConnectorEmptyStateContent } from "components/connector/ConnectorEmptyStateContent";
-import { TableItemTitle } from "components/ConnectorBlocks";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { ScrollParent } from "components/ui/ScrollParent";
 import { Text } from "components/ui/Text";
 
+import { TableItemTitle } from "area/connector/components/ConnectorBlocks";
+import { ConnectorEmptyStateContent } from "area/connector/components/ConnectorEmptyStateContent";
 import { useGetSourceFromParams } from "area/connector/utils";
 import { useCurrentWorkspace, useConnectionList } from "core/api";
 import { WebBackendConnectionListSortKey } from "core/api/types/AirbyteClient";

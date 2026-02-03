@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { z } from "zod";
 
-import { Form, FormControl } from "components/forms";
-import { ModalFormSubmissionButtons } from "components/forms/ModalFormSubmissionButtons";
 import { Box } from "components/ui/Box";
+import { Form, FormControl } from "components/ui/forms";
+import { ModalFormSubmissionButtons } from "components/ui/forms/ModalFormSubmissionButtons";
 import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { ModalBody, ModalFooter } from "components/ui/Modal";

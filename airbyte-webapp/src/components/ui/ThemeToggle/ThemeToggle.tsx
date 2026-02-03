@@ -1,7 +1,7 @@
 import { useIntl } from "react-intl";
 
-import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
-import { NavItem } from "views/layout/SideBar/components/NavItem";
+import { NavItem } from "area/layout/SideBar/components/NavItem";
+import { useAirbyteTheme } from "core/utils/useAirbyteTheme";
 
 export const ThemeToggle: React.FC = () => {
   const { theme, setTheme } = useAirbyteTheme();

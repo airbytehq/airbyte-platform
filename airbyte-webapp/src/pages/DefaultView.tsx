@@ -3,11 +3,11 @@ import { Navigate } from "react-router-dom";
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useListWorkspacesInfinite } from "core/api";
 import { useCurrentUser } from "core/services/auth";
+import { useExperiment } from "core/services/Experiment";
 import { useFeature } from "core/services/features/FeatureService";
 import { FeatureItem } from "core/services/features/types";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useRedirectFromChatConnectorBuilder } from "core/utils/useRedirectFromChatConnectorBuilder";
-import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths } from "pages/routePaths";
 
 export const DefaultView: React.FC = () => {

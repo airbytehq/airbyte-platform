@@ -2,8 +2,8 @@ import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react
 import classNames from "classnames";
 import React from "react";
 
-import Indicator from "components/Indicator";
 import { Icon } from "components/ui/Icon";
+import Indicator from "components/ui/Indicator";
 
 import styles from "./Collapsible.module.scss";
 import { FlexContainer } from "../Flex";

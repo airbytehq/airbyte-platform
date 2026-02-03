@@ -1,0 +1,5 @@
+@use "scss/colors";
+
+.primary p {
+  color: colors.$blue;
+}

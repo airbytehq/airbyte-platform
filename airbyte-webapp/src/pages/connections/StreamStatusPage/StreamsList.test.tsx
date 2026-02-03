@@ -2,21 +2,21 @@ import { render, screen } from "@testing-library/react";
 import dayjs from "dayjs";
 import { VirtuosoMockContext } from "react-virtuoso";
 
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { TestWrapper, mocked } from "test-utils";
 import { mockConnection } from "test-utils/mock-data/mockConnection";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
+import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
 import { ConnectionSyncStatus } from "core/api/types/AirbyteClient";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 
 import { StreamsList } from "./StreamsList";
 import { StreamsListContextProvider } from "./StreamsListContext";
 
-jest.mock("hooks/services/ConnectionEdit/ConnectionEditService");
-jest.mock("hooks/services/ConnectionForm/ConnectionFormService", () => ({
+jest.mock("area/connection/utils/ConnectionEdit/ConnectionEditService");
+jest.mock("area/connection/utils/ConnectionForm/ConnectionFormService", () => ({
   useConnectionFormService: () => ({
     connection: mockConnection,
   }),
@@ -26,14 +26,14 @@ jest.mock("core/services/ui/FormModeContext", () => ({
     mode: "create",
   }),
 }));
-jest.mock("components/connection/ConnectionSync/ConnectionSyncContext", () => ({
+jest.mock("area/connection/components/ConnectionSync/ConnectionSyncContext", () => ({
   useConnectionSyncContext: () => ({
     syncConnection: jest.fn(),
     isSyncConnectionAvailable: true,
     syncStarting: false,
   }),
 }));
-jest.mock("components/connection/ConnectionStatus/useConnectionStatus");
+jest.mock("area/connection/components/ConnectionStatus/useConnectionStatus");
 jest.mock("core/api", () => ({
   useDestinationDefinitionVersion: () => ({ supportsRefreshes: true }),
   useListStreamsStatuses: () => [],

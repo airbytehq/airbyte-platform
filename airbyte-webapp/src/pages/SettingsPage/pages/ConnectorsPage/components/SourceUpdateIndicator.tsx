@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import Indicator from "components/Indicator";
+import Indicator from "components/ui/Indicator";
 
 import { useLatestSourceDefinitionList } from "core/api";
 

@@ -1,5 +1,5 @@
-import { HeadTitle } from "components/HeadTitle";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { HeadTitle } from "components/ui/HeadTitle";
 
 import styles from "./SettingsLayout.module.scss";
 

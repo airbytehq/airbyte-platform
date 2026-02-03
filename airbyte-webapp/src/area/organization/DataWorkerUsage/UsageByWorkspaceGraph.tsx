@@ -8,7 +8,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { useOrganizationWorkerUsage } from "core/api";
-import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
+import { useAirbyteTheme } from "core/utils/useAirbyteTheme";
 
 import { calculateGraphData } from "./calculateGraphData";
 import { GraphTooltip } from "./GraphTooltip";

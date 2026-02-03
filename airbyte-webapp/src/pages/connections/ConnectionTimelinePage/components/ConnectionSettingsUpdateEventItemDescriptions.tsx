@@ -3,9 +3,9 @@ import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { z } from "zod";
 
-import { FormattedScheduleDataMessage } from "components/connection/ConnectionHeaderControls/FormattedScheduleDataMessage";
 import { Text } from "components/ui/Text";
 
+import { FormattedScheduleDataMessage } from "area/connection/components/ConnectionHeaderControls/FormattedScheduleDataMessage";
 import { ConnectionScheduleData } from "core/api/types/AirbyteClient";
 
 import { TimelineEventUser } from "./TimelineEventUser";

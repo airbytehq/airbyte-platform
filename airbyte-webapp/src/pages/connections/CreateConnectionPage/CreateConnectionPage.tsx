@@ -3,17 +3,17 @@ import { useIntl } from "react-intl";
 import { Navigate, useSearchParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { DefineDestination } from "components/connection/CreateConnection/DefineDestination";
-import { DefineSource } from "components/connection/CreateConnection/DefineSource";
-import { HeadTitle } from "components/HeadTitle";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
+import { DefineDestination } from "area/connection/components/CreateConnection/DefineDestination";
+import { DefineSource } from "area/connection/components/CreateConnection/DefineSource";
+import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useDestinationDefinitionList, useGetDestination, useGetSource } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { AppActionCodes, trackAction } from "core/utils/datadog";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
-import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 import { CreateConnectionTitleBlock } from "./CreateConnectionTitleBlock";
 

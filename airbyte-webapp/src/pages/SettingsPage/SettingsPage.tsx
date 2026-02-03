@@ -4,6 +4,7 @@ import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
 
+import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
 import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/SettingsLayout";
 import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
 import { useGetInstanceConfiguration } from "core/api";
@@ -11,7 +12,6 @@ import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/Ai
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { SettingsRoutePaths } from "pages/routePaths";
 
 export const SettingsPage: React.FC = () => {

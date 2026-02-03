@@ -12,7 +12,7 @@ jest.mock("core/utils/datadog", () => ({
   trackError: jest.fn(),
 }));
 
-jest.mock("hooks/theme/useAirbyteTheme", () => {
+jest.mock("core/utils/useAirbyteTheme", () => {
   const themeContextValue = {
     theme: "airbyteThemeLight",
     colorValues: {},

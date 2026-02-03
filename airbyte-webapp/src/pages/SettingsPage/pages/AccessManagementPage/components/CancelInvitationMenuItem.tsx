@@ -4,7 +4,7 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useCancelUserInvitation, useCurrentOrganizationInfo, useCurrentWorkspaceOrUndefined } from "core/api";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
 
 import styles from "./RemoveRoleMenuItem.module.scss";
 import { UnifiedUserModel } from "./util";

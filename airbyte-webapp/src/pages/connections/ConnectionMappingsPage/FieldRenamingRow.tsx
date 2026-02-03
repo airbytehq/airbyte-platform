@@ -2,10 +2,10 @@ import React, { useEffect, useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { fieldRenamingMapperConfiguration } from "components/connection/ConnectionForm/schemas/mapperSchema";
-import { FormControlErrorMessage } from "components/forms/FormControl";
+import { FormControlErrorMessage } from "components/ui/forms/FormControl";
 import { Text } from "components/ui/Text";
 
+import { fieldRenamingMapperConfiguration } from "area/connection/components/ConnectionForm/schemas/mapperSchema";
 import {
   FieldRenamingMapperConfiguration,
   MapperValidationErrorType,

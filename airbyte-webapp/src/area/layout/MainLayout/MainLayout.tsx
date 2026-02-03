@@ -3,16 +3,16 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { LicenseBanner } from "components/LicenseBanner/LicenseBanner";
 import { FlexContainer } from "components/ui/Flex";
+import { LicenseBanner } from "components/ui/LicenseBanner/LicenseBanner";
 
 import { SideBar } from "area/layout/SideBar";
+import { StatusBanner } from "cloud/area/billing/components/StatusBanner";
+import { useTrialEndedModal } from "cloud/area/billing/utils/useTrialEndedModal";
 import { usePrefetchOrganizationSummaries } from "core/api/";
 import { DefaultErrorBoundary, ForbiddenErrorBoundary } from "core/errors";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
-import { StatusBanner } from "packages/cloud/area/billing/components/StatusBanner";
-import { useTrialEndedModal } from "packages/cloud/area/billing/utils/useTrialEndedModal";
 
 import styles from "./MainLayout.module.scss";
 

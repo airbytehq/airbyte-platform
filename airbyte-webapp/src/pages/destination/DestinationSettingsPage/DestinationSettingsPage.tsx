@@ -5,6 +5,8 @@ import { useEffectOnce } from "react-use";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
+import { ConnectorCard } from "area/connector/components/ConnectorCard";
+import { ConnectorCardValues } from "area/connector/components/ConnectorForm/types";
 import { useGetDestinationFromParams } from "area/connector/utils";
 import {
   useDestinationDefinitionVersion,
@@ -15,11 +17,9 @@ import {
   useUpdateDestination,
 } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useFormChangeTrackerService, useUniqueFormId } from "core/services/FormChangeTracker";
 import { trackTiming } from "core/utils/datadog";
-import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
-import { useDeleteModal } from "hooks/useDeleteModal";
-import { ConnectorCard } from "views/Connector/ConnectorCard";
-import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
+import { useDeleteModal } from "core/utils/useDeleteModal";
 
 import styles from "./DestinationSettings.module.scss";
 

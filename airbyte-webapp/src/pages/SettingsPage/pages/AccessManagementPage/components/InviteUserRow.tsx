@@ -3,7 +3,6 @@ import React, { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { SelectedIndicatorDot } from "components/connection/CreateConnection/SelectedIndicatorDot";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { FloatLayout } from "components/ui/ListBox/FloatLayout";
@@ -12,6 +11,7 @@ import { ListboxOption } from "components/ui/ListBox/ListboxOption";
 import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
 import { Text } from "components/ui/Text";
 
+import { SelectedIndicatorDot } from "area/connection/components/CreateConnection/SelectedIndicatorDot";
 import { PermissionType, ScopeType } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";

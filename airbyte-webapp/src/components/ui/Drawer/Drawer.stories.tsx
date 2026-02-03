@@ -1,8 +1,9 @@
 import { StoryFn, StoryObj } from "@storybook/react";
 import { useState } from "react";
 
-import { CatalogDiffModal } from "components/connection/CatalogDiffModal";
 import { mockCatalogDiff } from "test-utils/mock-data/mockCatalogDiff";
+
+import { CatalogDiffModal } from "area/connection/components/CatalogDiffModal";
 
 import { Drawer } from "./Drawer";
 import { Box } from "../Box";

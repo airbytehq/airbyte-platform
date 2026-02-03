@@ -2,10 +2,10 @@ import { useMemo } from "react";
 import { Controller, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { FormControlErrorMessage } from "components/forms/FormControl";
 import { Button } from "components/ui/Button";
 import { ComboBox } from "components/ui/ComboBox";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { FormControlErrorMessage } from "components/ui/forms/FormControl";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";

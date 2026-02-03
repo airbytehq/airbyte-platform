@@ -1,8 +1,7 @@
 import React from "react";
 
-import { ConnectionTable } from "components/EntityTable";
-import { getConnectionTableData } from "components/EntityTable/utils";
-
+import { ConnectionTable } from "area/connection/components/EntityTable";
+import { getConnectionTableData } from "area/connection/components/EntityTable/utils";
 import { WebBackendConnectionListItem, WebBackendConnectionListSortKey } from "core/api/types/AirbyteClient";
 
 interface SourceConnectionTableProps {

@@ -7,8 +7,8 @@ import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
 import { PermissionType, ScopeType } from "core/api/types/AirbyteClient";
+import { useModalService } from "core/services/Modal";
 import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
-import { useModalService } from "hooks/services/Modal";
 
 import { AddUserFormValues, AddUserModal } from "./AddUserModal";
 import styles from "./AddUserModalBody.module.scss";

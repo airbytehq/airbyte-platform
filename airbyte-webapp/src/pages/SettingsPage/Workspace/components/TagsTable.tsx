@@ -12,10 +12,10 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useDeleteTag, useTagsList } from "core/api";
 import { Tag } from "core/api/types/AirbyteClient";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
+import { useModalService } from "core/services/Modal";
+import { useNotificationService } from "core/services/Notification";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useModalService } from "hooks/services/Modal";
-import { useNotificationService } from "hooks/services/Notification";
 
 import { TagFormModal } from "./TagFormModal";
 import styles from "./TagsTable.module.scss";

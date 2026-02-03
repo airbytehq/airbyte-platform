@@ -3,13 +3,12 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { statusFilterOptions } from "components/EntityTable/utils";
-import { HeadTitle } from "components/HeadTitle";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { ListBox } from "components/ui/ListBox";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { PageGridContainer } from "components/ui/PageGridContainer";
@@ -18,14 +17,15 @@ import { ScrollParent } from "components/ui/ScrollParent";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
+import { statusFilterOptions } from "area/connection/components/EntityTable/utils";
 import { ActorTable } from "area/connector/components/ActorTable";
 import { SourceLimitReachedModal } from "area/workspace/components/SourceLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
 import { useFilters, useSourceList } from "core/api";
 import { ActorListSortKey, ActorStatus, SourceRead, SourceReadList } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useModalService } from "core/services/Modal";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useModalService } from "hooks/services/Modal";
 
 import styles from "./AllSourcesPage.module.scss";
 import { SourcePaths } from "../../routePaths";

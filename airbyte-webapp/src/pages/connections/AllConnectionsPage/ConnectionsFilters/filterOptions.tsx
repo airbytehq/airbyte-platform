@@ -1,11 +1,11 @@
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text, TextColor } from "components/ui/Text";
 
+import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { useDestinationDefinitionList, useSourceDefinitionList } from "core/api";
 import { naturalComparatorBy } from "core/utils/objects";
 

@@ -1,12 +1,12 @@
 import React from "react";
 import { useIntl } from "react-intl";
 
-import { NotificationSettingsForm } from "components/NotificationSettingsForm";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Separator } from "components/ui/Separator";
-import { WorkspaceEmailForm } from "components/WorkspaceEmailForm";
 
+import { NotificationSettingsForm } from "area/settings/components/NotificationSettingsForm";
+import { WorkspaceEmailForm } from "area/workspace/components/WorkspaceEmailForm";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 

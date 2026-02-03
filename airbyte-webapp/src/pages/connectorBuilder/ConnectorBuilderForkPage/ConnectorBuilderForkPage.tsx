@@ -3,17 +3,17 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { ControlLabels } from "components";
-import { ConnectorIcon } from "components/ConnectorIcon";
-import { HeadTitle } from "components/HeadTitle";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { ComboBox, Option, OptionSection } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { useListBuilderProjects, useListBuilderProjectVersions } from "core/api";
-import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
+import { ConnectorBuilderLocalStorageProvider } from "core/services/connectorBuilder/ConnectorBuilderLocalStorageService";
 
 import styles from "./ConnectorBuilderForkPage.module.scss";
 import { AirbyteTitle } from "../components/AirbyteTitle";

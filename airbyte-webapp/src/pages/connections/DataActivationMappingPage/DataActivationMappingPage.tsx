@@ -4,26 +4,26 @@ import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { SOURCE_ID_PARAM } from "components/connection/CreateConnection/DefineSource";
-import { CreateConnectionFlowLayout } from "components/connection/CreateConnectionFlowLayout";
-import { FormChangeTracker } from "components/forms/FormChangeTracker";
-import LoadingSchema from "components/LoadingSchema";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { FormChangeTracker } from "components/ui/forms/FormChangeTracker";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ExternalLink, Link } from "components/ui/Link";
+import LoadingSchema from "components/ui/LoadingSchema";
 import { Text } from "components/ui/Text";
 
+import { SOURCE_ID_PARAM } from "area/connection/components/CreateConnection/DefineSource";
+import { CreateConnectionFlowLayout } from "area/connection/components/CreateConnectionFlowLayout";
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { StreamMappings } from "area/dataActivation/components/ConnectionForm/StreamMappings";
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
 import { DataActivationConnectionFormSchema, EMPTY_STREAM } from "area/dataActivation/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useDestinationDefinitionList, useDiscoverDestination, useDiscoverSchemaQuery } from "core/api";
+import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
 import { links } from "core/utils/links";
-import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./DataActivationMappingPage.module.scss";

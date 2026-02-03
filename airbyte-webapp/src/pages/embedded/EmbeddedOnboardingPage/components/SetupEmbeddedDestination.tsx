@@ -2,24 +2,24 @@ import { FormattedMessage } from "react-intl";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { DESTINATION_DEFINITION_PARAM } from "components/connection/CreateConnection/CreateNewDestination";
-import { FormPageContent } from "components/ConnectorBlocks";
-import { DestinationFormValues } from "components/destination/DestinationForm/DestinationForm";
-import { HeadTitle } from "components/HeadTitle";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBranding";
 import { FlexContainer } from "components/ui/Flex";
+import { HeadTitle } from "components/ui/HeadTitle";
 
+import { DESTINATION_DEFINITION_PARAM } from "area/connection/components/CreateConnection/CreateNewDestination";
+import { FormPageContent } from "area/connector/components/ConnectorBlocks";
+import { ConnectorCard } from "area/connector/components/ConnectorCard";
+import { ConnectorFormValues } from "area/connector/components/ConnectorForm";
+import { DestinationFormValues } from "area/connector/components/destination/DestinationForm/DestinationForm";
 import {
   useCreateConnectionTemplate,
   useGetDestinationDefinitionSpecificationAsync,
   useGlobalDestinationDefinitionList,
 } from "core/api";
 import { Action, Namespace, PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
-import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { ConnectorCard } from "views/Connector/ConnectorCard";
-import { ConnectorFormValues } from "views/Connector/ConnectorForm";
+import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
 
 import { EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep } from "../EmbeddedOnboardingPageLayout";
 

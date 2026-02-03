@@ -1,8 +1,8 @@
+import { useExperiment } from "core/services/Experiment";
 import {
   getLaunchBuilderParamsFromStorage,
   getSetUpNewConnectorParamsFromStorage,
 } from "core/utils/connectorChatBuilderStorage";
-import { useExperiment } from "hooks/services/Experiment";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, SourcePaths, DestinationPaths } from "pages/routePaths";
 

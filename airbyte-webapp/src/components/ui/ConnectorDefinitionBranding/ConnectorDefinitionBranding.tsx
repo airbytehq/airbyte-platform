@@ -1,6 +1,6 @@
-import { ConnectorIcon } from "components/ConnectorIcon";
 import { Text } from "components/ui/Text";
 
+import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { useSourceDefinitionList, useDestinationDefinitionList } from "core/api";
 import { DestinationDefinitionId, SourceDefinitionId } from "core/api/types/AirbyteClient";
 

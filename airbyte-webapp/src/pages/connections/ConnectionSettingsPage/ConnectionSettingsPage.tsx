@@ -4,28 +4,28 @@ import React, { useCallback } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
-import { useConnectionValidationZodSchema } from "components/connection/ConnectionForm/schemas/connectionSchema";
-import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
-import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
-import { Form } from "components/forms";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Form } from "components/ui/forms";
 import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
 import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
+import { FormConnectionFormValues, useInitialFormValues } from "area/connection/components/ConnectionForm/formConfig";
+import { useConnectionValidationZodSchema } from "area/connection/components/ConnectionForm/schemas/connectionSchema";
+import { ConnectionSyncContextProvider } from "area/connection/components/ConnectionSync/ConnectionSyncContext";
+import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "area/connection/components/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
+import { SimplifiedConnectionsSettingsCard } from "area/connection/components/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
+import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { HttpError, HttpProblem } from "core/api";
 import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useNotificationService } from "core/services/Notification";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { useCheckSubHourlySchedule } from "core/utils/checkSubHourlySchedule";
 import { trackError } from "core/utils/datadog";
 import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./ConnectionSettingsPage.module.scss";
 import { StateBlock } from "./StateBlock";

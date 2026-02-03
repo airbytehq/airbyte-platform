@@ -1,6 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
-import { EmptyState } from "components/EmptyState";
+import { EmptyState } from "components/ui/EmptyState";
 import { FlexContainer } from "components/ui/Flex";
 
 import { AddStreamForMappingComboBox } from "./AddStreamForMappingComboBox";

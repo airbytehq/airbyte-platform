@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { useIntl } from "react-intl";
 
-import { useNotificationService } from "../../hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 const NOTIFICATION_ID = "unexpected-request-error";
 

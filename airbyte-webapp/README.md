@@ -24,50 +24,96 @@ Please also check our [styleguide](./STYLEGUIDE.md) for details around code styl
 
 ### Folder Structure
 
-> 💡 Please note that this isn't representing the current state yet, but rather the targeted structure
-> we're trying to move towards.
-
-**Services** folders are containing "services" which are usually React Context implementations
+**Services** folders contain "services" which are usually React Context implementations
 (including their corresponding hooks to access them) or similar singleton type services.
 
-**Utils** folders are containing any form of static utility functions or hooks not related to any service (otherwise they should go together with that service into a services folder).
+**Utils** folders contain any form of static utility functions or hooks not related to any service (otherwise they should go together with that service into a services folder).
 
 ```sh
 src/
-├ ui/ # All basic UI components
-├ locales/ # Translation files
-├ scss/ # SCSS variables, themes and utility files
-├ types/ # TypeScript types needed across the code base
-├ core/ # Core systems fundamental to the application
-│ ├ api/ # API/request code
-│ ├ config/ # Configuration system
-│ ├ services/ # All core systems not belonging to a specific domain
-│ └ utils/ # All core utilities not belonging to a specific domain
-├ pages/ # Routing and page entry points (not all of the further components though)
+├ App.tsx                    # OSS entrypoint
+│
+├ core/                      # SHARED: Core systems used by both OSS & Cloud
+│ ├ api/                     # API layer (generated code, hooks, types)
+│ ├ config/                  # Configuration and environment
+│ ├ errors/                  # Error utilities
+│ ├ form/                    # Form utilities
+│ ├ services/                # Cross-domain services
+│ │ ├ analytics/
+│ │ ├ auth/
+│ │ ├ connectorBuilder/
+│ │ ├ features/              # Feature flags
+│ │ ├ i18n/
+│ │ ├ ConfirmationModal/
+│ │ ├ Experiment/
+│ │ ├ FormChangeTracker/
+│ │ ├ Health/
+│ │ ├ Modal/
+│ │ ├ navigation/
+│ │ ├ Notification/
+│ │ └ ui/
+│ └ utils/                   # Core utilities & hooks
+│
+├ area/                      # SHARED: Domain areas used by both OSS & Cloud
+│ ├ auth/                    # Authentication domain
+│ │ └ components/
+│ ├ connection/              # Connection domain
+│ │ ├ components/            # Connection-specific components (forms, tables, status)
+│ │ ├ types/
+│ │ └ utils/
+│ ├ connector/               # Connector domain
+│ │ ├ components/            # Connector forms, cards, documentation
+│ │ ├ types/
+│ │ └ utils/
+│ ├ connectorBuilder/        # Connector Builder domain
+│ │ └ components/
+│ ├ layout/                  # Layout components (MainLayout, SideBar)
+│ ├ organization/            # Organization domain
+│ │ └ components/
+│ ├ settings/                # Settings domain
+│ │ └ components/
+│ └ workspace/               # Workspace domain
+│   ├ components/
+│   └ utils/
+│
+├ components/                # SHARED: Reusable UI components
+│ └ ui/                      # UI primitives ONLY (Button, Modal, Input, etc.)
+│
+├ pages/                     # SHARED: Route handlers for both OSS & Cloud
 │ ├ routes.tsx
 │ ├ connections/
-│ │ ├ AllConnectionPage/
-│ │ └ # ...
-│ └ # ...
-├ area/ # Code for a specific domain of the webapp
-│ ├ connection/
-│ │ ├ services/ # Services for this area
-│ │ ├ types/ # Types and enums that must be available widely and are not explicitly
-│ │ │        # belonging to a component or util (e.g. prop types) in which case they should
-│ │ │        # be living within that component/util file.
-│ │ ├ utils/ # Utils for this area
-│ │ └ components/ # Components related to this area or for pages specific to this area
-│ ├ connector/ # Has the same services/, utils/, components/ structure
 │ ├ connectorBuilder/
-│ ├ settings/
-│ └ workspace/
-└ cloud/ # Cloud specific code (following a similar structure as above)
+│ ├ destination/
+│ ├ source/
+│ └ ...
+│
+├ cloud/                     # CLOUD-ONLY: Cloud-specific additions
+│ ├ App.tsx                  # Cloud entrypoint
+│ ├ cloudRoutes.tsx
+│ ├ area/                    # Cloud-specific domain areas
+│ │ └ billing/
+│ ├ components/              # Cloud-specific components
+│ ├ services/                # Cloud-specific services (auth, third-party)
+│ │ ├ auth/
+│ │ └ thirdParty/
+│ └ views/                   # Cloud-specific page views
+│
+├ locales/                   # SHARED: i18n translation files
+├ scss/                      # SHARED: Global styles, variables, themes
+├ test-utils/                # SHARED: Test utilities and mock data
+└ types/                     # SHARED: Global TypeScript types
 ```
+
+**Key principles:**
+- `core/`, `area/`, `components/ui/`, `pages/` are shared between OSS and Cloud
+- `cloud/` only contains Cloud-specific additions (billing, auth, integrations)
+- Domain-specific code lives in `area/`
+- Only basic reusable UI components in `components/ui/`
 
 ### Entrypoints
 
 - `src/App.tsx` is the entrypoint into the OSS version of the webapp.
-- `src/packages/cloud/App.tsx` is the entrypoint into the Cloud version of the webapp.
+- `src/cloud/App.tsx` is the entrypoint into the Cloud version of the webapp.
 
 ## Testing the webapp
 

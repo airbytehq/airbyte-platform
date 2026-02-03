@@ -1,23 +1,23 @@
 import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
-import { DESTINATION_DEFINITION_PARAM } from "components/connection/CreateConnection/CreateNewDestination";
-import { EmptyState } from "components/EmptyState";
-import { HeadTitle } from "components/HeadTitle";
-import { PageContainer } from "components/PageContainer";
-import { ConnectorList } from "components/source/SelectConnector/ConnectorList";
 import { Box } from "components/ui/Box";
+import { EmptyState } from "components/ui/EmptyState";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { ExternalLink } from "components/ui/Link";
+import { PageContainer } from "components/ui/PageContainer";
 import { Text } from "components/ui/Text";
 
+import { DESTINATION_DEFINITION_PARAM } from "area/connection/components/CreateConnection/CreateNewDestination";
+import { ConnectorList } from "area/connector/components/source/SelectConnector/ConnectorList";
 import { useGlobalDestinationDefinitionList } from "core/api";
 import { ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { Action, Namespace, PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
+import { useExperiment } from "core/services/Experiment/ExperimentService";
 import { links } from "core/utils/links";
-import { useExperiment } from "hooks/services/Experiment/ExperimentService";
 
 import { EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep } from "../EmbeddedOnboardingPageLayout";
 

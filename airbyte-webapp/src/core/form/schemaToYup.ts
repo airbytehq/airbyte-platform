@@ -2,9 +2,9 @@ import { JSONSchema7Type } from "json-schema";
 import { MessageDescriptor } from "react-intl";
 import * as yup from "yup";
 
+import { getPatternDescriptor } from "area/connector/components/ConnectorForm/utils";
 import { FormBlock, FormGroupItem, FormObjectArrayItem, FormConditionItem, FORM_PATTERN_ERROR } from "core/form/types";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import { getPatternDescriptor } from "views/Connector/ConnectorForm/utils";
 
 import { FormBuildError } from "./FormBuildError";
 

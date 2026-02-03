@@ -1,7 +1,7 @@
-import * as experimentModule from "hooks/services/Experiment";
-import { Experiments } from "hooks/services/Experiment/experiments";
+import * as experimentModule from "core/services/Experiment";
+import { Experiments } from "core/services/Experiment/experiments";
 
-jest.mock("hooks/services/Experiment");
+jest.mock("core/services/Experiment");
 
 /**
  * Takes an object of experiments and values which are used to mock the useExperiment() hook.

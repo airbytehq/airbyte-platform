@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-import { publicKey } from "components/connection/ConnectionForm/schemas/mapperSchema";
-
+import { publicKey } from "area/connection/components/ConnectionForm/schemas/mapperSchema";
 import {
   AirbyteCatalog,
   AirbyteStreamConfiguration,

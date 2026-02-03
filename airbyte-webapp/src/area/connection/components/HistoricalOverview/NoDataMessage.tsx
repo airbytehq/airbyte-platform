@@ -1,9 +1,9 @@
 import { FormattedMessage } from "react-intl";
 
-import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { EmptyState } from "components/EmptyState";
 import { Button } from "components/ui/Button";
+import { EmptyState } from "components/ui/EmptyState";
 
+import { useConnectionSyncContext } from "area/connection/components/ConnectionSync/ConnectionSyncContext";
 import { useCurrentConnection } from "core/api";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 

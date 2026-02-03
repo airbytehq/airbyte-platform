@@ -2,13 +2,13 @@ import { useMemo } from "react";
 import { FormattedDate, FormattedList, FormattedMessage, useIntl } from "react-intl";
 import { z } from "zod";
 
-import { CatalogDiffModal } from "components/connection/CatalogDiffModal";
-import { getSortedDiff } from "components/connection/CatalogDiffModal/utils";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { useModalService } from "hooks/services/Modal";
+import { CatalogDiffModal } from "area/connection/components/CatalogDiffModal";
+import { getSortedDiff } from "area/connection/components/CatalogDiffModal/utils";
+import { useModalService } from "core/services/Modal";
 
 import { TimelineEventUser } from "./TimelineEventUser";
 import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";

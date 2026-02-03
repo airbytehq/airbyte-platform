@@ -4,9 +4,9 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import { z } from "zod";
 
-import { Form } from "components/forms";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
+import { Form } from "components/ui/forms";
 import { ModalFooter } from "components/ui/Modal";
 import { SearchInput } from "components/ui/SearchInput";
 

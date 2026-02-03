@@ -1,21 +1,21 @@
 import { FormattedMessage, useIntl } from "react-intl";
 import { Navigate } from "react-router-dom";
 
-import { FormChangeTracker } from "components/forms/FormChangeTracker";
-import { PageContainer } from "components/PageContainer";
 import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { FormChangeTracker } from "components/ui/forms/FormChangeTracker";
 import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
+import { PageContainer } from "components/ui/PageContainer";
 import { ScrollParent } from "components/ui/ScrollParent";
 
+import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { useIsDataActivationConnection } from "area/connection/utils/useIsDataActivationConnection";
+import { useNotificationService } from "core/services/Notification";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useNotificationService } from "hooks/services/Notification";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionMappingsList } from "./ConnectionMappingsList";

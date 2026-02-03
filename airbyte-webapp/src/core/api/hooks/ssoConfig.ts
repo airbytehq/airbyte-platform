@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
-import { useExperiment } from "hooks/services/Experiment";
+import { useExperiment } from "core/services/Experiment";
 import { SSOFormValues, SSOFormValuesValidation } from "pages/SettingsPage/UpdateSSOSettingsForm";
 
 import {

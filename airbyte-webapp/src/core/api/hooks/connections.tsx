@@ -15,12 +15,12 @@ import { ExternalLink } from "components/ui/Link";
 
 import { useCurrentConnectionId } from "area/connection/utils/useCurrentConnectionId";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useFormatError } from "core/errors";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
+import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
-import { useNotificationService } from "hooks/services/Notification";
-import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { RoutePaths } from "pages/routePaths";
 
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";

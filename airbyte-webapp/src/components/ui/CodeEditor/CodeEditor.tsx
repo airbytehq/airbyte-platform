@@ -9,9 +9,8 @@ import {
   JINJA_OTHER_TOKEN,
   JINJA_CLOSING_BRACKET_TOKEN,
   JINJA_FIRST_BRACKET_TOKEN,
-} from "components/connectorBuilder/Builder/jinja";
-
-import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
+} from "area/connectorBuilder/components/Builder/jinja";
+import { useAirbyteTheme } from "core/utils/useAirbyteTheme";
 
 import styles from "./CodeEditor.module.scss";
 import { Spinner } from "../Spinner";

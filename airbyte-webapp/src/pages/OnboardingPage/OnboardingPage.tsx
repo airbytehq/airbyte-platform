@@ -2,13 +2,13 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 import { Navigate } from "react-router-dom";
 
-import { HeadTitle } from "components/HeadTitle";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useExperiment } from "hooks/services/Experiment";
+import { useExperiment } from "core/services/Experiment";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./OnboardingPage.module.scss";

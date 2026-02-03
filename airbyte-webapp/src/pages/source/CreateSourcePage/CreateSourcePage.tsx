@@ -2,23 +2,23 @@ import React, { useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
-import { CloudInviteUsersHint } from "components/CloudInviteUsersHint";
-import { FormPageContent } from "components/ConnectorBlocks";
-import { HeadTitle } from "components/HeadTitle";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { ViewToggleButton } from "components/ui/ViewToggleButton";
 
+import { FormPageContent } from "area/connector/components/ConnectorBlocks";
+import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 import { ConnectionConfiguration } from "area/connector/types";
+import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { useCreateSource, useSourceDefinitionList, useGetSourceDefinitionSpecificationAsync } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useExperiment } from "core/services/Experiment";
+import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
 import { clearConnectorChatBuilderStorage, CONNECTOR_CHAT_ACTIONS } from "core/utils/connectorChatBuilderStorage";
-import { useExperiment } from "hooks/services/Experiment";
-import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { RoutePaths, SourcePaths } from "pages/routePaths";
-import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 
 import styles from "./CreateSourcePage.module.scss";
 import { SourceForm } from "./SourceForm";

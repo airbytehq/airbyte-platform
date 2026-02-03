@@ -20,7 +20,7 @@ jest.mock("core/services/auth", () => {
 });
 
 // Mock the AirbyteTheme
-jest.mock("hooks/theme/useAirbyteTheme", () => {
+jest.mock("core/utils/useAirbyteTheme", () => {
   const themeContextValue = {
     theme: "airbyteThemeLight",
     colorValues: {},

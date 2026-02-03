@@ -2,14 +2,14 @@ import { useEffect } from "react";
 import { useIntl } from "react-intl";
 import { z } from "zod";
 
-import { Form } from "components/forms";
+import { Form } from "components/ui/forms";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { HttpProblem, useSSOConfigManagement } from "core/api";
 import { useFormatError } from "core/errors";
+import { useExperiment } from "core/services/Experiment";
+import { useNotificationService } from "core/services/Notification";
 import { useIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
-import { useNotificationService } from "hooks/services/Notification";
 
 import { SSOSettings } from "./components/SSOSettings";
 import { SSOSettingsValidation } from "./components/SSOSettingsValidation";

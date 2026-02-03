@@ -7,13 +7,13 @@ import { I18nProvider } from "core/services/i18n";
 import { CLOUD_EDITION } from "core/utils/app";
 import { loadDatadog } from "core/utils/datadog";
 import { loadOsano } from "core/utils/dataPrivacy";
-import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
+import { AirbyteThemeProvider } from "core/utils/useAirbyteTheme";
 
 import "react-reflex/styles.css";
 import "./dayjs-setup";
 import "./scss/global.scss";
 
-const CloudApp = lazy(() => import(`packages/cloud/App`));
+const CloudApp = lazy(() => import(`cloud/App`));
 const App = lazy(() => import(`./App`));
 
 loadConfig()

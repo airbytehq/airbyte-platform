@@ -1,13 +1,13 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
-import { HeadTitle } from "components/HeadTitle";
-import { PageViewContainer } from "components/PageViewContainer";
-import { SetupForm } from "components/settings/SetupForm";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
+import { PageViewContainer } from "components/ui/PageViewContainer";
 
+import { SetupForm } from "area/settings/components/SetupForm";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 
 export const SetupPage: React.FC = () => {

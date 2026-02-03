@@ -1,12 +1,12 @@
 import { FormattedMessage } from "react-intl";
 
-import { ConfirmationModal } from "components/ConfirmationModal";
 import { Box } from "components/ui/Box";
+import { ConfirmationModal } from "components/ui/ConfirmationModal";
 import { Text } from "components/ui/Text";
 
 import { useDeleteDomainVerification } from "core/api";
 import { DomainVerificationResponse, SSOConfigRead } from "core/api/types/AirbyteClient";
-import { useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 interface DeleteDomainConfirmationModalProps {
   domain: DomainVerificationResponse;

@@ -1,0 +1,75 @@
+import classnames from "classnames";
+import React from "react";
+import { FormattedMessage } from "react-intl";
+
+import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
+import { FlexContainer } from "components/ui/Flex";
+
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useConnectorBuilderResolve } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
+import { useConnectorBuilderFormState } from "core/services/connectorBuilder/ConnectorBuilderStateService";
+import { FeatureItem, IfFeatureEnabled } from "core/services/features";
+
+import { BaseConnectorInfo } from "./BaseConnectorInfo";
+import { NameInput } from "./NameInput";
+import { SavingIndicator } from "./SavingIndicator";
+import styles from "./Sidebar.module.scss";
+import { UiYamlToggleButton } from "./UiYamlToggleButton";
+import { useBuilderWatch } from "./useBuilderWatch";
+
+interface SidebarProps {
+  className?: string;
+  yamlSelected: boolean;
+}
+
+export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ className, yamlSelected, children }) => {
+  const analyticsService = useAnalyticsService();
+  const { toggleUI, currentProject } = useConnectorBuilderFormState();
+  const { isResolving } = useConnectorBuilderResolve();
+  const manifest = useBuilderWatch("manifest");
+  const hasStreams =
+    (manifest.streams && manifest.streams.length > 0) ||
+    (manifest.dynamic_streams && manifest.dynamic_streams.length > 0);
+  const showSavingIndicator = yamlSelected || hasStreams;
+
+  const OnUiToggleClick = () => {
+    toggleUI(yamlSelected ? "ui" : "yaml");
+    analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.TOGGLE_UI_YAML, {
+      actionDescription: "User clicked the UI | YAML toggle button",
+      current_view: yamlSelected ? "yaml" : "ui",
+      new_view: yamlSelected ? "ui" : "yaml",
+    });
+  };
+
+  return (
+    <FlexContainer direction="column" alignItems="stretch" gap="lg" className={classnames(className, styles.container)}>
+      <IfFeatureEnabled feature={FeatureItem.ShowAdminWarningInWorkspace}>
+        <AdminWorkspaceWarning />
+      </IfFeatureEnabled>
+      <UiYamlToggleButton
+        yamlSelected={yamlSelected}
+        onClick={OnUiToggleClick}
+        size="sm"
+        disabled={yamlSelected && isResolving}
+        tooltip={
+          yamlSelected && isResolving ? <FormattedMessage id="connectorBuilder.resolvingStreamList" /> : undefined
+        }
+      />
+
+      <FlexContainer direction="column" alignItems="center" className={styles.contained}>
+        <FlexContainer direction="column" gap="none" className={styles.contained}>
+          <NameInput className={styles.connectorName} size="md" />
+          {currentProject.baseActorDefinitionVersionInfo && (
+            <BaseConnectorInfo {...currentProject.baseActorDefinitionVersionInfo} showDocsLink />
+          )}
+        </FlexContainer>
+
+        {showSavingIndicator && <SavingIndicator />}
+      </FlexContainer>
+
+      <FlexContainer direction="column" alignItems="stretch" gap="xl" className={styles.modeSpecificContent}>
+        {children}
+      </FlexContainer>
+    </FlexContainer>
+  );
+};

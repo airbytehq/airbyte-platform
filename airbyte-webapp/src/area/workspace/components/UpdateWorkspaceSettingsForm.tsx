@@ -1,15 +1,15 @@
 import { useIntl } from "react-intl";
 import { z } from "zod";
 
-import { Form, FormControl } from "components/forms";
-import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
-import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
+import { Form, FormControl } from "components/ui/forms";
+import { DataResidencyDropdown } from "components/ui/forms/DataResidencyDropdown";
+import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useUpdateWorkspace, useInvalidateWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useNotificationService } from "hooks/services/Notification";
 
 const workspaceSettingsSchema = z.object({
   name: z.string().trim().nonempty("form.empty.error"),

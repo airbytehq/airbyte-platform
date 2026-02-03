@@ -4,16 +4,16 @@ import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { HeadTitle } from "components/HeadTitle";
-import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { HeadTitle } from "components/ui/HeadTitle";
+import AirbyteLogo from "components/ui/illustrations/airbyte-logo.svg?react";
 import { StepStatus, StepsIndicators } from "components/ui/StepsIndicators/StepsIndicators";
 
+import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout";
 import { useCreateApplication, useNonblockingListApplications } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { useAuthService } from "core/services/auth";
-import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 import { EmbedCodeStep } from "./components/EmbedCodeStep";
 import { EmbeddedSetupFinish } from "./components/EmbeddedSetupFinish";

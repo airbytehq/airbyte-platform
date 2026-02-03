@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { ConnectorIcon } from "components/ConnectorIcon";
+import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 
 import { Input } from "./Input";
 

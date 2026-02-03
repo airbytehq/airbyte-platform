@@ -1,12 +1,11 @@
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { StreamWithStatus } from "components/connection/StreamStatus/streamStatusUtils";
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
-
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
+import { StreamWithStatus } from "area/connection/components/StreamStatus/streamStatusUtils";
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
+import { useSchemaChanges } from "area/connection/utils/useSchemaChanges";
 import { useListStreamsStatuses, useGetConnection } from "core/api";
 import { ConnectionSyncStatus, StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
+import { useExperiment } from "core/services/Experiment";
 import { assertNever } from "core/utils/asserts";
-import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-import { useExperiment } from "hooks/services/Experiment";
 
 import {
   AirbyteStreamAndConfigurationWithEnforcedStream,

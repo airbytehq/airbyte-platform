@@ -1,8 +1,8 @@
+import { ConnectorFormValues } from "area/connector/components/ConnectorForm";
 import { useCreatePartialUserConfig, useGetConfigTemplate } from "core/api";
 import { SourceDefinitionSpecification } from "core/api/types/AirbyteClient";
 import { IsAirbyteEmbeddedContext } from "core/services/embedded";
 import { convertUserConfigSpec } from "pages/embedded/EmbeddedSourceCreatePage/components/advancedAuthConversion";
-import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { PartialUserConfigForm } from "./PartialUserConfigForm";
 import { PartialUserConfigSuccessView } from "./PartialUserConfigSuccessView";

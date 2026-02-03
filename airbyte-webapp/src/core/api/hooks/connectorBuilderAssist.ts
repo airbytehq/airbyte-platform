@@ -4,8 +4,8 @@ import omit from "lodash/omit";
 
 import { HttpError } from "core/api";
 import { useFormatError } from "core/errors";
+import { useNotificationService } from "core/services/Notification";
 import { useDebounceValue } from "core/utils/useDebounceValue";
-import { useNotificationService } from "hooks/services/Notification";
 
 import { ApiCallOptions } from "../apiCall";
 import { assistV1Process } from "../generated/AirbyteClient";

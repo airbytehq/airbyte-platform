@@ -5,10 +5,10 @@ import { useParams } from "react-router-dom";
 import { useMount } from "react-use";
 
 import { LoadingPage } from "components";
-import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
-import { getStreamHash } from "components/connectorBuilder/useStreamTestMetadata";
-import { convertJsonToYaml, getStreamName } from "components/connectorBuilder/utils";
 
+import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "area/connectorBuilder/components/constants";
+import { getStreamHash } from "area/connectorBuilder/components/useStreamTestMetadata";
+import { convertJsonToYaml, getStreamName } from "area/connectorBuilder/components/utils";
 import { HttpError, useBuilderProject, useResolveManifest } from "core/api";
 import {
   ConnectorBuilderProjectRead,

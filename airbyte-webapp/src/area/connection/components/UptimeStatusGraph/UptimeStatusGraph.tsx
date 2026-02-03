@@ -8,12 +8,11 @@ import { generateCategoricalChart } from "recharts/es6/chart/generateCategorical
 // @ts-ignore-next-line
 import { formatAxisMap } from "recharts/es6/util/CartesianUtils";
 
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
-
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import { getStreamKey } from "area/connection/utils";
 import { ConnectionUptimeHistoryRead, JobStatus } from "core/api/types/AirbyteClient";
 import { assertNever } from "core/utils/asserts";
-import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
+import { useAirbyteTheme } from "core/utils/useAirbyteTheme";
 
 import { UpdateTooltipTickPositions } from "./UpdateTooltipTickPositions";
 import styles from "./UptimeStatusGraph.module.scss";

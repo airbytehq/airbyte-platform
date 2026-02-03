@@ -4,11 +4,11 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 
+import { ConnectorFormValues } from "area/connector/components/ConnectorForm";
 import { useDeletePartialUserConfig, useGetPartialUserConfig, useUpdatePartialUserConfig } from "core/api";
 import { SourceDefinitionSpecification } from "core/api/types/AirbyteClient";
 import { IsAirbyteEmbeddedContext } from "core/services/embedded";
 import { convertUserConfigSpec } from "pages/embedded/EmbeddedSourceCreatePage/components/advancedAuthConversion";
-import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import styles from "./PartialUserConfigEditForm.module.scss";
 import { PartialUserConfigForm } from "./PartialUserConfigForm";

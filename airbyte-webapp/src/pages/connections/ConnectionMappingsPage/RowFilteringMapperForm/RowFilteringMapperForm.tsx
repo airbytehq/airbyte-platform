@@ -3,7 +3,7 @@ import { Controller, FormProvider, useForm, useFormContext } from "react-hook-fo
 import { FormattedMessage, useIntl } from "react-intl";
 import { z } from "zod";
 
-import { FormControlErrorMessage } from "components/forms/FormControl";
+import { FormControlErrorMessage } from "components/ui/forms/FormControl";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 

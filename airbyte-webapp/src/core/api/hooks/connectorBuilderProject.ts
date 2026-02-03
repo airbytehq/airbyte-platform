@@ -2,15 +2,14 @@ import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/re
 import isArray from "lodash/isArray";
 import { useCallback } from "react";
 
-import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
-
+import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "area/connectorBuilder/components/constants";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError, sourceDefinitionKeys, useDefaultWorkspaceInOrganization } from "core/api";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useExperiment } from "hooks/services/Experiment";
-import { useNotificationService } from "hooks/services/Notification";
+import { useExperiment } from "core/services/Experiment";
+import { useNotificationService } from "core/services/Notification";
 
 import {
   checkContribution,

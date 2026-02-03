@@ -2,19 +2,19 @@ import React, { Suspense } from "react";
 import { useIntl } from "react-intl";
 import { Outlet, useParams } from "react-router-dom";
 
-import { ConnectorNavigationTabs } from "components/connector/ConnectorNavigationTabs";
-import { ConnectorTitleBlock } from "components/connector/ConnectorTitleBlock";
-import { StepsTypes } from "components/ConnectorBlocks";
-import { HeadTitle } from "components/HeadTitle";
-import LoadingPage from "components/LoadingPage";
+import { HeadTitle } from "components/ui/HeadTitle";
+import LoadingPage from "components/ui/LoadingPage";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
+import { StepsTypes } from "area/connector/components/ConnectorBlocks";
+import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout";
+import { ConnectorNavigationTabs } from "area/connector/components/ConnectorNavigationTabs";
+import { ConnectorTitleBlock } from "area/connector/components/ConnectorTitleBlock";
 import { useGetSourceFromParams } from "area/connector/utils";
 import { useSourceDefinitionVersion, useSourceDefinition } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { RoutePaths } from "pages/routePaths";
-import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 import styles from "./SourceItemPage.module.scss";
 

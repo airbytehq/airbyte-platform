@@ -1,9 +1,9 @@
 import { CellContext } from "@tanstack/react-table";
 import { FormattedMessage } from "react-intl";
 
-import { StreamStatusType, StreamStatusIndicator } from "components/connection/StreamStatusIndicator";
 import { FlexContainer } from "components/ui/Flex";
 
+import { StreamStatusType, StreamStatusIndicator } from "area/connection/components/StreamStatusIndicator";
 import { UIStreamState } from "area/connection/utils/useUiStreamsStates";
 import { useCurrentTime, useFormatLengthOfTime } from "core/utils/time";
 

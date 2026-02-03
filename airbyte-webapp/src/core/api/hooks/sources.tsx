@@ -5,8 +5,8 @@ import { v4 as uuidv4 } from "uuid";
 import { ConnectionConfiguration } from "area/connector/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useExperiment } from "core/services/Experiment";
 import { isDefined } from "core/utils/common";
-import { useExperiment } from "hooks/services/Experiment";
 import { SourceSetupFlow } from "pages/source/CreateSourcePage/SourceFormWithAgent";
 
 import { useCancelCommand, pollCommandUntilResolved } from "./commands";

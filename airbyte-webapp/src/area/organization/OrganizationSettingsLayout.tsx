@@ -2,8 +2,8 @@ import React, { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { HeadTitle } from "components/HeadTitle";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { HeadTitle } from "components/ui/HeadTitle";
 
 import styles from "./OrganizationSettingsLayout.module.scss";
 

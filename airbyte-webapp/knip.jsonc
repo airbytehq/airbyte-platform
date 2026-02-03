@@ -26,12 +26,8 @@
     "src/core/utils/useMemoDebug.ts",
 
     // Ignore unused Builder file as it will come back in a later PR
-    "src/components/connectorBuilder/Builder/AddStreamButton.tsx",
-    "src/components/connectorBuilder/Builder/Assist/AssistButton.tsx",
-
-    // Ignore unused TrialEndedModal files as they will be integrated in a later PR
-    "src/components/TrialEndedModal/TrialEndedModal.tsx",
-    "src/components/TrialEndedModal/index.ts",
+    "src/area/connectorBuilder/components/Builder/AddStreamButton.tsx",
+    "src/area/connectorBuilder/components/Builder/Assist/AssistButton.tsx",
 
     // Ignore unused connection change review components as they will be integrated in a later PR
     "src/pages/connections/ConnectionReplicationPage/ChangeWarningCard.tsx",

@@ -3,18 +3,18 @@ import { useIntl } from "react-intl";
 import { Outlet, useParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { ConnectorNavigationTabs } from "components/connector/ConnectorNavigationTabs";
-import { ConnectorTitleBlock } from "components/connector/ConnectorTitleBlock";
-import { StepsTypes } from "components/ConnectorBlocks";
-import { HeadTitle } from "components/HeadTitle";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
+import { StepsTypes } from "area/connector/components/ConnectorBlocks";
+import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout";
+import { ConnectorNavigationTabs } from "area/connector/components/ConnectorNavigationTabs";
+import { ConnectorTitleBlock } from "area/connector/components/ConnectorTitleBlock";
 import { useGetDestinationFromParams } from "area/connector/utils";
 import { useDestinationDefinitionVersion, useDestinationDefinition } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { RoutePaths } from "pages/routePaths";
-import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 import styles from "./DestinationItemPage.module.scss";
 

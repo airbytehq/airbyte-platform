@@ -3,9 +3,9 @@ import React, { useCallback, useMemo } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { FormControlErrorMessage } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { FormControlErrorMessage } from "components/ui/forms/FormControl";
 import { Option } from "components/ui/ListBox";
 import { FloatLayout } from "components/ui/ListBox/FloatLayout";
 import { ListboxButton } from "components/ui/ListBox/ListboxButton";

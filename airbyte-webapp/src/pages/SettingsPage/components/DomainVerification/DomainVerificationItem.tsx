@@ -8,7 +8,7 @@ import { Text } from "components/ui/Text";
 
 import { useCheckDomainVerification } from "core/api";
 import { DomainVerificationResponse, DomainVerificationResponseStatus } from "core/api/types/AirbyteClient";
-import { useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 import styles from "./DomainVerification.module.scss";
 

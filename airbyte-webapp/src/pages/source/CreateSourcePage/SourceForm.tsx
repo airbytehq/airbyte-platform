@@ -6,13 +6,13 @@ import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBr
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
+import { ConnectorCard } from "area/connector/components/ConnectorCard";
+import { ConnectorCardValues } from "area/connector/components/ConnectorForm/types";
 import { ConnectionConfiguration } from "area/connector/types";
 import { useGetSourceDefinitionSpecificationAsync } from "core/api";
 import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
 import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
-import { ConnectorCard } from "views/Connector/ConnectorCard";
-import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
 export interface SourceFormValues {
   name: string;

@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Modal } from "components/ui/Modal";
 
-import { ModalServiceProvider } from "hooks/services/Modal";
+import { ModalServiceProvider } from "core/services/Modal";
 
 import { ChangesReviewModal } from "./ChangesReviewModal";
 

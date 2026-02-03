@@ -1,18 +1,18 @@
 import { useLayoutEffect } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { PageContainer } from "components/PageContainer";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { PageContainer } from "components/ui/PageContainer";
 import { ScrollParent } from "components/ui/ScrollParent";
 
+import { ConnectionSyncContextProvider } from "area/connection/components/ConnectionSync/ConnectionSyncContext";
 import { useCurrentConnection, useFilters, useGetConnectionEvent } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useModalService } from "core/services/Modal";
 import { useDrawerActions } from "core/services/ui/DrawerService";
-import { useModalService } from "hooks/services/Modal";
 
 import { ConnectionTimelineAllEventsList, validateAndMapEvent } from "./ConnectionTimelineAllEventsList";
 import { ConnectionTimelineFilters } from "./ConnectionTimelineFilters";

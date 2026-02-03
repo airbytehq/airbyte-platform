@@ -2,11 +2,11 @@ import { useMemo, useState } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
-import { FormDevTools } from "components/forms/FormDevTools";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { FormDevTools } from "components/ui/forms/FormDevTools";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 

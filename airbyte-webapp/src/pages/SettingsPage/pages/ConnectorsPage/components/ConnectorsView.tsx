@@ -2,16 +2,16 @@ import { createColumnHelper } from "@tanstack/react-table";
 import React, { useCallback, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { DeleteDestinationDefinitionButton } from "components/connector/DeleteDestinationDefinitionButton";
-import { DeleteSourceDefinitionButton } from "components/connector/DeleteSourceDefinitionButton";
-import { EditDestinationDefinitionButton } from "components/connector/EditDestinationDefinitionButton";
-import { EditSourceDefinitionButton } from "components/connector/EditSourceDefinitionButton";
-import { ConnectorBuilderProjectTable } from "components/ConnectorBuilderProjectTable";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { ConnectorBuilderProjectTable } from "area/connector/components/ConnectorBuilderProjectTable";
+import { DeleteDestinationDefinitionButton } from "area/connector/components/DeleteDestinationDefinitionButton";
+import { DeleteSourceDefinitionButton } from "area/connector/components/DeleteSourceDefinitionButton";
+import { EditDestinationDefinitionButton } from "area/connector/components/EditDestinationDefinitionButton";
+import { EditSourceDefinitionButton } from "area/connector/components/EditSourceDefinitionButton";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { BuilderProject } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";

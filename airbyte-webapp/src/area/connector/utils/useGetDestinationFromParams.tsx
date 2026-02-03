@@ -1,7 +1,6 @@
 import { useParams, useSearchParams } from "react-router-dom";
 
-import { StepsTypes } from "components/ConnectorBlocks";
-
+import { StepsTypes } from "area/connector/components/ConnectorBlocks";
 import { useGetDestination } from "core/api";
 
 export const useGetDestinationFromParams = () => {

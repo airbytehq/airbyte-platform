@@ -1,7 +1,7 @@
 import React from "react";
 
-import { PageContainer } from "components/PageContainer";
 import { FlexContainer } from "components/ui/Flex";
+import { PageContainer } from "components/ui/PageContainer";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";

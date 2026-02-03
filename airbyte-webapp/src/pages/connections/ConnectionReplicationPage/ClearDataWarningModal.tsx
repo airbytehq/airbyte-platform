@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
+import { RadioButtonTiles } from "area/connection/components/CreateConnection/RadioButtonTiles";
 import { ConnectionStateType } from "core/api/types/AirbyteClient";
 
 interface ResetWarningModalProps {

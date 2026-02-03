@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { LoadingPage } from "components";
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -11,6 +10,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
 
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
 import {
   useCurrentConnection,
   useGetConnectionDataHistory,

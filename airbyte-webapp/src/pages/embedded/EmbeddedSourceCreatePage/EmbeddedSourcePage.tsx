@@ -11,7 +11,7 @@ import { ButtonTab, Tabs } from "components/ui/Tabs";
 import { Text } from "components/ui/Text";
 
 import { useListPartialUserConfigs, useGetScopedOrganization, useListConfigTemplates } from "core/api";
-import { useExperimentContext } from "hooks/services/Experiment";
+import { useExperimentContext } from "core/services/Experiment";
 
 import { ConfigTemplateSelectList } from "./components/ConfigTemplateList";
 import { PartialUserConfigCreateForm } from "./components/PartialUserConfigCreateForm";

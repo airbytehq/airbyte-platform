@@ -5,24 +5,24 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { DEFAULT_CONNECTOR_NAME } from "components/connectorBuilder/constants";
-import { HeadTitle } from "components/HeadTitle";
 import { Button, ButtonProps } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { DEFAULT_CONNECTOR_NAME } from "area/connectorBuilder/components/constants";
 import { useListBuilderProjects } from "core/api";
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { ConnectorBuilderLocalStorageProvider } from "core/services/connectorBuilder/ConnectorBuilderLocalStorageService";
+import { useExperiment } from "core/services/Experiment";
+import { useNotificationService } from "core/services/Notification";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
-import { useNotificationService } from "hooks/services/Notification";
-import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 
 import styles from "./ConnectorBuilderCreatePage.module.scss";
 import ImportYamlImage from "./import-yaml.svg?react";

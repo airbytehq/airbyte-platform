@@ -3,7 +3,6 @@ import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { DESTINATION_DEFINITION_PARAM } from "components/connection/CreateConnection/CreateNewDestination";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -14,6 +13,7 @@ import { ExternalLink } from "components/ui/Link";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text/Text";
 
+import { DESTINATION_DEFINITION_PARAM } from "area/connection/components/CreateConnection/CreateNewDestination";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useListApplications, useUpdateEmbeddedOnboardingStatus } from "core/api";
 import { OnboardingStatusEnum } from "core/api/types/SonarClient";

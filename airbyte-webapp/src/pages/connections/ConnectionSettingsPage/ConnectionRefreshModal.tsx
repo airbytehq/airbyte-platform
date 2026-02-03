@@ -2,13 +2,13 @@ import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import * as yup from "yup";
 
-import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
-import { Form } from "components/forms";
-import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { Form } from "components/ui/forms";
+import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
 import { Text } from "components/ui/Text";
 
+import { RadioButtonTiles } from "area/connection/components/CreateConnection/RadioButtonTiles";
 import { ConnectionStream, JobReadResponse, RefreshMode } from "core/api/types/AirbyteClient";
 
 import { StreamsRefreshListBlock } from "./StreamsRefreshListBlock";

@@ -10,8 +10,8 @@ import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useListUserInvitations, useListWorkspaceAccessUsers } from "core/api";
+import { useModalService } from "core/services/Modal";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useModalService } from "hooks/services/Modal";
 
 import { AddUserModal } from "./components/AddUserModal";
 import { UnifiedUserModel, unifyWorkspaceUserData } from "./components/util";

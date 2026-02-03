@@ -4,8 +4,8 @@ import { Fragment, useState } from "react";
 import { Controller, FieldValues, Path, get, useFormContext, useFormState } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import { FormControlErrorMessage } from "components/forms/FormControl";
 import { FlexContainer } from "components/ui/Flex";
+import { FormControlErrorMessage } from "components/ui/forms/FormControl";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
 import { FloatLayout } from "components/ui/ListBox/FloatLayout";

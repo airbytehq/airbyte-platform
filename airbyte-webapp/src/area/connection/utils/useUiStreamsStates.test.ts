@@ -1,10 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { TestWrapper } from "test-utils";
 
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import { connectionsKeys, useGetConnectionSyncProgress, useCurrentConnection } from "core/api";
 import { ConnectionSyncStatus, StreamStatusJobType, StreamStatusRunState } from "core/api/types/AirbyteClient";
 import { useStreamsListContext } from "pages/connections/StreamStatusPage/StreamsListContext";
@@ -14,7 +14,7 @@ import { useStreamsStatuses } from "./useStreamsStatuses";
 import { useStreamsSyncProgress } from "./useStreamsSyncProgress";
 import { RateLimitedUIStreamState, useUiStreamStates } from "./useUiStreamsStates";
 
-jest.mock("components/connection/ConnectionStatus/useConnectionStatus");
+jest.mock("area/connection/components/ConnectionStatus/useConnectionStatus");
 jest.mock("core/api");
 jest.mock("pages/connections/StreamStatusPage/StreamsListContext");
 jest.mock("./useStreamsHistoricalData");

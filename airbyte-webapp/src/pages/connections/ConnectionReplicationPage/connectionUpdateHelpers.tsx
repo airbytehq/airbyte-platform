@@ -1,5 +1,4 @@
-import { AirbyteCatalogWithAnySchema } from "components/connection/ConnectionForm/formConfig";
-
+import { AirbyteCatalogWithAnySchema } from "area/connection/components/ConnectionForm/formConfig";
 import { ConnectionValues } from "core/api";
 import {
   AirbyteCatalog,

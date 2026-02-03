@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const path = require("node:path");
 
-const legacyFiles = require("./.eslintLegacyFolderStructure.js");
-
 const confusingBrowserGlobals = [
   "addEventListener",
   "blur",
@@ -147,7 +145,7 @@ module.exports = {
             group: "internal",
           },
           {
-            pattern: "+(area|core|hooks|locales|packages|pages|services|types|views){/**,}",
+            pattern: "+(area|cloud|core|locales|pages|types){/**,}",
             group: "internal",
             position: "after",
           },
@@ -430,29 +428,6 @@ module.exports = {
       files: ["scripts/**/*", "packages/**/*", "playwright/scripts/**/*"],
       rules: {
         "@typescript-eslint/no-var-requires": "off",
-      },
-    },
-    {
-      // Prevent new files being created in the legacy folder structure.
-      // This makes sure to forbid any new files in the legacy folders
-      // we want to get rid of in favor of the new folder structure outlined
-      // in the README.md.
-      files: ["src/**/*"],
-      // Only exclude the files that already existed and haven't been moved
-      // to the new folder structure yet
-      excludedFiles: legacyFiles,
-      rules: {
-        "check-file/filename-blocklist": [
-          "error",
-          {
-            // Services should be in either src/core/services or src/area/*/services
-            "src/services/**/*": "src/core/services/**/*",
-            // Hooks (not belonging to any service) should just be in src/core/utils or src/area/*/utils
-            "src/hooks/**/*": "src/core/utils/*",
-            // Components should be in either ui/ (basic UI components) or src/area/*/components/*
-            "src/views/**/*": "src/area/*/components/*",
-          },
-        ],
       },
     },
     {

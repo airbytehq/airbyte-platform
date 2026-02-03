@@ -3,9 +3,9 @@ import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
 import { formatLogEvent } from "area/connection/components/JobHistoryItem/useCleanLogs";
+import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
 import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
-import { useNotificationService } from "hooks/services/Notification";
 import { jobSummarySchema } from "pages/connections/ConnectionTimelinePage/types";
 
 import { useCurrentWorkspace } from "./workspaces";

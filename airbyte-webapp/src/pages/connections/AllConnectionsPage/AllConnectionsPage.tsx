@@ -3,10 +3,10 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { HeadTitle } from "components/HeadTitle";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { PageGridContainer } from "components/ui/PageGridContainer";
 import { PageHeader } from "components/ui/PageHeader";
 import { ScrollParent } from "components/ui/ScrollParent";
@@ -16,10 +16,10 @@ import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorksp
 import { useConnectionList, useCurrentWorkspace, useListConnectionsStatusesAsync, useFilters } from "core/api";
 import { WebBackendConnectionListSortKey } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useExperiment } from "core/services/Experiment";
+import { useModalService } from "core/services/Modal";
 import { useDrawerActions } from "core/services/ui/DrawerService";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
-import { useModalService } from "hooks/services/Modal";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
 
 import styles from "./AllConnectionsPage.module.scss";
@@ -28,7 +28,7 @@ import { ConnectionsListCard } from "./ConnectionsListCard";
 import { ConnectionsSummary } from "./ConnectionsSummary";
 
 const ConnectionOnboarding = React.lazy(() =>
-  import("components/connection/ConnectionOnboarding").then((module) => ({ default: module.ConnectionOnboarding }))
+  import("area/connection/components/ConnectionOnboarding").then((module) => ({ default: module.ConnectionOnboarding }))
 );
 
 export const AllConnectionsPage: React.FC = () => {

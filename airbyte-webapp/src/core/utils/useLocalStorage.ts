@@ -2,9 +2,8 @@ import { Dispatch, SetStateAction } from "react";
 // eslint-disable-next-line no-restricted-imports
 import { useLocalStorage as useLocalStorageWithUndefinedBug } from "react-use";
 
-import { BuilderState } from "components/connectorBuilder/types";
-
-import { Theme } from "hooks/theme/useAirbyteTheme";
+import { BuilderState } from "area/connectorBuilder/components/types";
+import { Theme } from "core/utils/useAirbyteTheme";
 
 export interface AssistLocalStorageProject {
   sessionId: string;

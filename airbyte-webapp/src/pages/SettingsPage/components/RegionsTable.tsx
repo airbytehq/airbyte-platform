@@ -1,7 +1,7 @@
 import { useIntl } from "react-intl";
 
-import { FormLabel } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
+import { FormLabel } from "components/ui/forms/FormControl";
 import { Table } from "components/ui/Table";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
