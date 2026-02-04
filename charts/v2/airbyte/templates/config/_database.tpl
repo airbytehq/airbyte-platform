@@ -139,74 +139,6 @@ Renders the database.name environment variable
 {{- end }}
 
 {{/*
-Renders the global.database.replica.url value
-*/}}
-{{- define "airbyte.database.replica.url" }}
-    {{- (dig "replica" "url" "" .Values.global.database | default (include "airbyte.database.url" .)) }}
-{{- end }}
-
-{{/*
-Renders the database.replica.url environment variable
-*/}}
-{{- define "airbyte.database.replica.url.env" }}
-- name: CONFIG_DATABASE_REPLICA_URL
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: CONFIG_DATABASE_REPLICA_URL
-{{- end }}
-
-{{/*
-Renders the global.database.replica.user value
-*/}}
-{{- define "airbyte.database.replica.user" }}
-    {{- (dig "replica" "user" "" .Values.global.database | default (include "airbyte.database.user" .)) }}
-{{- end }}
-
-{{/*
-Renders the database.replica.user secret key
-*/}}
-{{- define "airbyte.database.replica.user.secretKey" }}
-	{{- .Values.global.database.replica.userSecretKey | default "CONFIG_DATABASE_REPLICA_USER" }}
-{{- end }}
-
-{{/*
-Renders the database.replica.user environment variable
-*/}}
-{{- define "airbyte.database.replica.user.env" }}
-- name: CONFIG_DATABASE_REPLICA_USER
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "airbyte.database.secretName" . }}
-      key: {{ include "airbyte.database.replica.user.secretKey" . }}
-{{- end }}
-
-{{/*
-Renders the global.database.replica.password value
-*/}}
-{{- define "airbyte.database.replica.password" }}
-    {{- (dig "replica" "password" "" .Values.global.database | default (include "airbyte.database.password" .)) }}
-{{- end }}
-
-{{/*
-Renders the database.replica.password secret key
-*/}}
-{{- define "airbyte.database.replica.password.secretKey" }}
-	{{- .Values.global.database.replica.passwordSecretKey | default "CONFIG_DATABASE_REPLICA_PASSWORD" }}
-{{- end }}
-
-{{/*
-Renders the database.replica.password environment variable
-*/}}
-{{- define "airbyte.database.replica.password.env" }}
-- name: CONFIG_DATABASE_REPLICA_PASSWORD
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "airbyte.database.secretName" . }}
-      key: {{ include "airbyte.database.replica.password.secretKey" . }}
-{{- end }}
-
-{{/*
 Renders the set of all database environment variables
 */}}
 {{- define "airbyte.database.envs" }}
@@ -220,13 +152,6 @@ Renders the set of all database environment variables
 {{- include "airbyte.database.password.env" . }}
 {{- end }}
 {{- include "airbyte.database.name.env" . }}
-{{- include "airbyte.database.replica.url.env" . }}
-{{- if (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false") }}
-{{- include "airbyte.database.replica.user.env" . }}
-{{- end }}
-{{- if (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false") }}
-{{- include "airbyte.database.replica.password.env" . }}
-{{- end }}
 {{- end }}
 
 {{/*
@@ -237,7 +162,6 @@ DATABASE_HOST: {{ include "airbyte.database.host" . | quote }}
 DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
 DATABASE_URL: {{ include "airbyte.database.url" . | quote }}
 DATABASE_DB: {{ include "airbyte.database.name" . | quote }}
-CONFIG_DATABASE_REPLICA_URL: {{ include "airbyte.database.replica.url" . | quote }}
 {{- end }}
 
 {{/*
@@ -249,12 +173,6 @@ DATABASE_USER: {{ include "airbyte.database.user" . | quote }}
 {{- end }}
 {{- if (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false") }}
 DATABASE_PASSWORD: {{ include "airbyte.database.password" . | quote }}
-{{- end }}
-{{- if (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false") }}
-CONFIG_DATABASE_REPLICA_USER: {{ (dig "replica" "user" "" .Values.global.database | default (include "airbyte.database.user" .)) | quote }}
-{{- end }}
-{{- if (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false") }}
-CONFIG_DATABASE_REPLICA_PASSWORD: {{ (dig "replica" "password" "" .Values.global.database | default (include "airbyte.database.password" .)) | quote }}
 {{- end }}
 {{- end }}
 

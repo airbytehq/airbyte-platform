@@ -154,13 +154,6 @@ global:
     # -- The key within `secretName` where the password is stored
     #passwordSecretKey: "" # e.g."database-password"
 
-    # -- Replica database configuration (optional)
-    # If not configured, falls back to primary database values
-    replica: {}
-    #  url: "" # e.g. "jdbc:postgresql://replica-host:5432/db-airbyte"
-    #  user: ""
-    #  password: ""
-
   dataplaneGroups: {}
 
   migrations:
