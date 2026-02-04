@@ -519,6 +519,23 @@ datasources:
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD:}
     pool-name: config-pool
+  config-replica:
+    connection-test-query: SELECT 1
+    connection-timeout: 30000
+    maximum-pool-size: ${CONFIG_DB_REPLICA_MAX_POOL_SIZE:20}
+    minimum-idle: 0
+    idle-timeout: 600000
+    initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
+    # CONFIG_DATABASE_REPLICA_URL is set by Helm chart, falls back to DATABASE_URL if replica not configured
+    url: ${CONFIG_DATABASE_REPLICA_URL}
+    driverClassName: org.postgresql.Driver
+    # CONFIG_DATABASE_REPLICA_USER is set by Helm chart, falls back to DATABASE_USER if replica not configured
+    username: ${CONFIG_DATABASE_REPLICA_USER}
+    # CONFIG_DATABASE_REPLICA_PASSWORD is set by Helm chart, falls back to DATABASE_PASSWORD if replica not configured
+    password: ${CONFIG_DATABASE_REPLICA_PASSWORD:}
+    leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
+    max-lifetime: 600000
+    read-only: true
 
 endpoints:
   all:
@@ -582,6 +599,9 @@ jooq:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
     local-secrets:
+      jackson-converter-enabled: true
+      sql-dialect: POSTGRES
+    config-replica:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
 

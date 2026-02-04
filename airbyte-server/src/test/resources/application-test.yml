@@ -70,6 +70,11 @@ datasources:
     driverClassName: org.h2.Driver
     username: sa
     password: ""
+  config-replica:
+    url: jdbc:h2:mem:default
+    driverClassName: org.h2.Driver
+    username: sa
+    password: ""
 
 flyway:
   enabled: true
@@ -94,6 +99,9 @@ jooq:
     local-secrets:
       jackson-converter-enabled: true
       sql-dialect: H2
+    config-replica:
+      jackson-converter-enabled: true
+      sql-dialect: POSTGRES
 
 endpoints:
   all:
