@@ -6,9 +6,27 @@ This serves as a living document regarding conventions we have agreed upon as a 
 
  Where possible, we rely on automated systems (ESLint, prettier, stylelint) to maintain consistency in code style. The configuration files including VSCode workspace settings and recommended extensions are checked into our repository, so no individual setup should be required - just open the `airbyte-webapp` folder in your VSCode.
 
-- Don’t use single-character names. Using meaningful name for function parameters is a way of making the code self-documented and we always should do it. Example:
+- Don't use single-character names. Using meaningful name for function parameters is a way of making the code self-documented and we always should do it. Example:
   - `.filter(([key, value]) => isDefined(value.default))` ✅
   - `.filter(([k, v]) => isDefined(v.default))` ❌
+
+## ESLint
+
+When disabling ESLint rules, always leave a comment explaining why the rule was disabled. This helps other developers understand the reasoning and prevents cargo-cult copying of disabled rules.
+
+✅ Correct
+
+```typescript
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Legacy API returns untyped data
+const data: any = await legacyApiCall();
+```
+
+❌ Incorrect
+
+```typescript
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const data: any = await legacyApiCall();
+```
 
 ## Spacing and Layout
 
@@ -125,17 +143,275 @@ const MyComponent = ({ isHighlighted, hasError }) => {
 - Test files should be store alongside the files/features they are testing
 - Use the prop `data-testid` instead of `data-id`
 
-## Types
+## Launch Darkly Experiments
+
+When developing a new component version to replace an existing one using Launch Darkly experiments (not feature flags), use the "Next" prefix to distinguish between versions. Place the experimental component in the same folder as the original component.
+
+✅ Correct
+
+```typescript
+// In src/components/ui/Button/
+import { useExperiment } from "core/services/Experiment";
+import { Button } from "./Button";
+import { NextButton } from "./NextButton";
+
+const MyComponent = () => {
+  const isNewButtonEnabled = useExperiment("button.newDesign");
+
+  return isNewButtonEnabled ? <NextButton /> : <Button />;
+};
+```
+
+This convention makes it easy to:
+- Identify experimental components at a glance
+- Keep related versions together in the codebase
+- Remove the old version once the experiment succeeds
+
+## TypeScript Best Practices
+
+### Types vs Enums
 
 - For component props, prefer type unions over enums:
-  - `type SomeType = “some” | “type”;` ✅
-  - `enum SomeEnum = { SOME: “some”, TYPE: “type” };` ❌
+  - `type SomeType = "some" | "type";` ✅
+  - `enum SomeEnum = { SOME: "some", TYPE: "type" };` ❌
   - Exceptions may include:
     - Generated using enums from the API
     - When the value on an enum is cleaner than the string
       - In this case use `const enum` instead
 
+### Data Transformation Patterns
+
+Chain data transformations instead of storing intermediate variables. This makes the code more concise and easier to read.
+
+❌ Incorrect
+
+```typescript
+const filteredData = data.filter((item) => item.id > 0);
+const mappedData = filteredData.map((item) => item.name);
+return mappedData;
+```
+
+✅ Correct
+
+```typescript
+return data
+  .filter((item) => item.id > 0)
+  .map((item) => item.name);
+```
+
+### Pure Functions
+
+Prefer pure functions that don't have side effects. Pure functions are easier to test, debug, and reason about.
+
+❌ Incorrect
+
+```typescript
+let counter = 0;
+
+function incrementCounter(): number {
+  counter++; // Side effect: modifies external variable
+  return counter;
+}
+```
+
+✅ Correct
+
+```typescript
+const incrementCounter = (counter: number) => counter + 1;
+```
+
+### Extracting Reusable Callbacks
+
+If a callback function is reusable across multiple places, extract it to a separate utility function. Balance this with keeping simple, one-off callbacks inline.
+
+❌ Incorrect - extracting when not needed
+
+```typescript
+const filterById = (item: Item) => item.id > 0;
+const mapToName = (item: Item) => item.name;
+
+// Used only once
+return data.filter(filterById).map(mapToName);
+```
+
+✅ Correct - extract when reused
+
+```typescript
+// In src/area/connection/utils/connectionHelpers.ts
+export const isActiveConnection = (connection: Connection) =>
+  connection.status === "active";
+
+// Used in multiple components
+const activeConnections = connections.filter(isActiveConnection);
+```
+
+### Immutable State Updates
+
+Always use immutable patterns when updating state or objects. Never mutate objects directly.
+
+❌ Incorrect
+
+```typescript
+const state = { name: "John", age: 30 };
+state.name = "Jane"; // Direct mutation
+```
+
+✅ Correct
+
+```typescript
+const state = { name: "John", age: 30 };
+const newState = { ...state, name: "Jane" };
+```
+
+For arrays:
+
+```typescript
+// ❌ Incorrect
+items.push(newItem);
+
+// ✅ Correct
+const newItems = [...items, newItem];
+```
+
+### Early Returns
+
+Use early returns to flatten nested if statements. This makes code more readable and reduces cognitive load.
+
+❌ Incorrect
+
+```typescript
+function processConnection(connection: Connection) {
+  if (connection.status === "active") {
+    if (connection.hasError) {
+      return "error";
+    } else {
+      return "success";
+    }
+  } else {
+    return "inactive";
+  }
+}
+```
+
+✅ Correct
+
+```typescript
+function processConnection(connection: Connection) {
+  if (connection.status !== "active") {
+    return "inactive";
+  }
+
+  if (connection.hasError) {
+    return "error";
+  }
+
+  return "success";
+}
+```
+
 ## Styling
+
+### When to Use Inline Styles
+
+Inline styles should only be used as a last resort when there is no other way to style a component. Follow this order when styling:
+
+1. **Style props first** - Use component style props if available (e.g., `<FlexContainer gap="md" />`)
+2. **className second** - Use CSS modules with className
+3. **Inline style last** - Only when absolutely necessary (e.g., dynamic values from API)
+
+❌ Incorrect
+
+```typescript
+// Using inline styles for static values
+<div style={{ padding: "16px", display: "flex" }}>
+```
+
+✅ Correct
+
+```typescript
+// Using layout components with props
+<FlexContainer gap="md">
+```
+
+### Layout Components
+
+We have two layout components for common styling patterns:
+
+#### FlexContainer
+
+Use `FlexContainer` for flexbox layouts. It provides props for all common flexbox properties.
+
+```typescript
+import { FlexContainer } from "components/ui/Flex";
+
+<FlexContainer
+  direction="row"              // "row" | "column" | "row-reverse" | "column-reverse"
+  gap="md"                     // "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl"
+  alignItems="center"          // "flex-start" | "flex-end" | "center" | "baseline" | "stretch"
+  justifyContent="space-between" // "flex-start" | "flex-end" | "center" | "space-between" | "space-around" | "space-evenly"
+  wrap="nowrap"                // "wrap" | "nowrap" | "wrap-reverse"
+>
+  {children}
+</FlexContainer>
+```
+
+#### Box
+
+Use `Box` for adding spacing (padding and margin) to components without creating custom CSS.
+
+```typescript
+import { Box } from "components/ui/Box";
+
+<Box
+  p="lg"    // padding (all sides)
+  py="md"   // padding y-axis (top and bottom)
+  px="sm"   // padding x-axis (left and right)
+  pt="xs"   // padding-top
+  pr="md"   // padding-right
+  pb="lg"   // padding-bottom
+  pl="xl"   // padding-left
+  m="md"    // margin (all sides)
+  my="sm"   // margin y-axis (top and bottom)
+  mx="lg"   // margin x-axis (left and right)
+  mt="xs"   // margin-top
+  mr="md"   // margin-right
+  mb="lg"   // margin-bottom
+  ml="xl"   // margin-left
+>
+  {children}
+</Box>
+```
+
+Available spacing sizes: `"none"` | `"xs"` | `"sm"` | `"md"` | `"lg"` | `"xl"` | `"2xl"`
+
+### Using Existing Variables
+
+Before setting any custom values, check if there's an existing variable in our SCSS files:
+
+- **`src/scss/_variables.scss`** - Spacing, sizes, borders, font sizes, etc.
+- **`src/scss/_colors.scss`** - Color palette and theme colors
+- **`src/scss/_z-indices.scss`** - Z-index values for layering
+
+```scss
+// ✅ Correct - using existing variables
+@use "scss/variables";
+@use "scss/colors";
+
+.myComponent {
+  padding: variables.$spacing-md;
+  background-color: colors.$blue-400;
+  border-radius: variables.$border-radius;
+}
+```
+
+### Checking for Existing Classes
+
+Before creating a new CSS class, search the codebase for existing classes that might already serve the same purpose. Reusing existing styles promotes consistency and reduces bundle size.
+
+Use your IDE's search or grep to find similar class names:
+- Search for keywords related to the styling you need
+- Check similar components for reusable patterns
+- Look in `src/scss/` for global utility classes
 
 ### Color variables cannot be used inside of rgba() functions
 
