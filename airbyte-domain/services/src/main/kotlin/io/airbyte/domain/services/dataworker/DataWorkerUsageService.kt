@@ -4,7 +4,6 @@
 
 package io.airbyte.domain.services.dataworker
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.Job
@@ -36,7 +35,6 @@ import jakarta.inject.Singleton
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
@@ -263,8 +261,7 @@ open class DataWorkerUsageService(
    * 2. Groups records by dataplane group ID and workspace ID
    * 3. Aggregates hourly records by summing CPU requests across source, destination, and orchestrator
    * 4. Calculates data worker counts based on total CPU usage (divided by 8)
-   * 5. Fills gaps in hourly data to maintain continuity when usage > 0
-   * 6. Filters out any dataplane groups or workspaces that no longer exist
+   * 5. Filters out any dataplane groups or workspaces that no longer exist
    *
    * Time range handling:
    * - Start date is converted to 00:00:00 UTC
@@ -316,16 +313,10 @@ open class DataWorkerUsageService(
                         )
                       }.sortedBy { it.usageStartTime }
 
-                  // Fill gaps in hourly usage. Gaps can exist when a single job runs over multiple hours
-                  // in which no other jobs are started or finished. Because we create hourly buckets
-                  // based on when jobs start and end, in this case the buckets will not be present in
-                  // the db. We fill them in here at query time, so the data returned is consistent.
-                  val filledHourlyUsage = fillGapsInHourlyUsage(hourlyUsage)
-
                   WorkspaceDataWorkerUsage(
                     workspaceId = WorkspaceId(workspaceId),
                     workspaceName = workspace.name,
-                    dataWorkers = filledHourlyUsage,
+                    dataWorkers = hourlyUsage,
                   )
                 },
           )
@@ -437,67 +428,6 @@ open class DataWorkerUsageService(
       logger.error(e) { "Failed to fetch workspace $workspaceId, skipping usage retrieval" }
       return null
     }
-  }
-
-  /**
-   * Fills gaps in hourly usage data to ensure continuity when jobs run across multiple hours.
-   *
-   * This function addresses a gap in the bucketing system: when a single job runs for multiple
-   * hours without any other jobs starting or finishing, no usage buckets are created for the
-   * intermediate hours. This is because buckets are only created when jobs start or complete.
-   *
-   * For example, if a job starts at 10:00 and completes at 13:00 with no other job events:
-   * - A bucket exists for 10:00 (job start)
-   * - A bucket exists for 13:00 (job complete)
-   * - Buckets for 11:00 and 12:00 are missing from the database
-   *
-   * This function fills these missing hours at query time by:
-   * 1. Identifying gaps larger than 1 hour between consecutive usage records
-   * 2. Only filling gaps when the current usage is greater than 0 (indicating active jobs)
-   * 3. Creating synthetic hourly records with the same usage values as the preceding hour
-   * 4. Maintaining chronological order of all records
-   *
-   * This ensures that usage data remains consistent and complete for reporting purposes, showing
-   * continuous resource usage for long-running jobs.
-   *
-   * @param hourlyUsage A list of hourly usage records sorted by date, potentially with gaps
-   * @return A new list with all gaps filled, or the original list if empty or no gaps exist
-   */
-  @VisibleForTesting
-  fun fillGapsInHourlyUsage(hourlyUsage: List<DataWorkerUsageWithTime>): List<DataWorkerUsageWithTime> {
-    if (hourlyUsage.isEmpty()) {
-      return hourlyUsage
-    }
-
-    val result = mutableListOf<DataWorkerUsageWithTime>()
-
-    for (i in hourlyUsage.indices) {
-      val current = hourlyUsage[i]
-      result.add(current)
-
-      if (i < hourlyUsage.size - 1) {
-        val next = hourlyUsage[i + 1]
-        val currentHour = current.usageStartTime.truncatedTo(ChronoUnit.HOURS)
-        val nextHour = next.usageStartTime.truncatedTo(ChronoUnit.HOURS)
-
-        val hoursDifference = ChronoUnit.HOURS.between(currentHour, nextHour)
-        if (hoursDifference > 1 && current.currentUsage > 0.0) {
-          var gapHour = currentHour.plusHours(1)
-          while (gapHour.isBefore(nextHour)) {
-            result.add(
-              DataWorkerUsageWithTime(
-                usageStartTime = gapHour,
-                currentUsage = current.currentUsage,
-                dataWorkers = current.dataWorkers,
-              ),
-            )
-            gapHour = gapHour.plusHours(1)
-          }
-        }
-      }
-    }
-
-    return result
   }
 
   /**
