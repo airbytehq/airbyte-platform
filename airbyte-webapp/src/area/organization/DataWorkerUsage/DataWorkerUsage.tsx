@@ -10,6 +10,7 @@ import { ListBox } from "components/ui/ListBox";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { PageContainer } from "components/ui/PageContainer";
 import { Text } from "components/ui/Text";
+import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useListDataplaneGroups, useOrganizationWorkerUsage } from "core/api";
 
@@ -121,9 +122,14 @@ export const DataWorkerUsage: React.FC = () => {
           </FlexContainer>
           <Box mt="xl">
             <FlexContainer direction="column" gap="lg">
-              <Heading as="h2" size="sm">
-                <FormattedMessage id="settings.organization.usageByWorkspace" />
-              </Heading>
+              <FlexContainer alignItems="center" gap="sm">
+                <Heading as="h2" size="sm">
+                  <FormattedMessage id="settings.organization.usageByWorkspace" />
+                </Heading>
+                <InfoTooltip>
+                  <FormattedMessage id="settings.organization.usageByWorkspace.tooltip" />
+                </InfoTooltip>
+              </FlexContainer>
               {selectedRegion && (
                 <Suspense
                   fallback={
