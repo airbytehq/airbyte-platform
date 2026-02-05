@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.api.model.generated.ActorTypeEnum
 import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
@@ -22,6 +23,8 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.domain.models.ActorDefinitionId
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.domain.services.secrets.SecretStorageService
@@ -138,6 +141,32 @@ internal class OAuthHandlerTest {
     verify { oauthService.writeDestinationOAuthParam(capture(argumentSlot)) }
     Assertions.assertEquals(jsonNode(params), argumentSlot.captured.configuration)
     Assertions.assertEquals(destinationDefId, argumentSlot.captured.destinationDefinitionId)
+  }
+
+  @Test
+  fun deleteOrganizationSourceOverrideOauthParams() {
+    val organizationId = OrganizationId(UUID.randomUUID())
+    val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
+
+    every { oauthService.deleteSourceOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value) } returns 1
+
+    handler.deleteOrganizationOverrideOAuthParams(organizationId, actorDefinitionId, ActorTypeEnum.SOURCE)
+
+    verify { oauthService.deleteSourceOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value) }
+    verify(exactly = 0) { oauthService.deleteDestinationOAuthParamByDefinitionId(any(), any()) }
+  }
+
+  @Test
+  fun deleteOrganizationDestinationOverrideOauthParams() {
+    val organizationId = OrganizationId(UUID.randomUUID())
+    val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
+
+    every { oauthService.deleteDestinationOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value) } returns 1
+
+    handler.deleteOrganizationOverrideOAuthParams(organizationId, actorDefinitionId, ActorTypeEnum.DESTINATION)
+
+    verify { oauthService.deleteDestinationOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value) }
+    verify(exactly = 0) { oauthService.deleteSourceOAuthParamByDefinitionId(any(), any()) }
   }
 
   @Test

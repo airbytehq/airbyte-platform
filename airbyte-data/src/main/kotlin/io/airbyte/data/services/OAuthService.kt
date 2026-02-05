@@ -37,6 +37,16 @@ interface OAuthService {
     sourceDefinitionId: UUID,
   ): Optional<SourceOAuthParameter>
 
+  /**
+   * Deletes the organization-level source OAuth parameter override for the given definition.
+   *
+   * @return number of rows deleted.
+   */
+  fun deleteSourceOAuthParamByDefinitionId(
+    organizationId: UUID,
+    sourceDefinitionId: UUID,
+  ): Int
+
   fun writeDestinationOAuthParam(destinationOAuthParameter: DestinationOAuthParameter)
 
   fun getDestinationOAuthParameterWithSecretsOptional(
@@ -60,4 +70,14 @@ interface OAuthService {
     organizationId: Optional<UUID>,
     destinationDefinitionId: UUID,
   ): Optional<DestinationOAuthParameter>
+
+  /**
+   * Deletes the organization-level destination OAuth parameter override for the given definition.
+   *
+   * @return number of rows deleted.
+   */
+  fun deleteDestinationOAuthParamByDefinitionId(
+    organizationId: UUID,
+    destinationDefinitionId: UUID,
+  ): Int
 }

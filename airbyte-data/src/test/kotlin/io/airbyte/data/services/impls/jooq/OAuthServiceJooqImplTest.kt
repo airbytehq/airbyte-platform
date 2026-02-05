@@ -251,6 +251,78 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Nested
+  internal inner class OrganizationOverrideDeleteSourceTests {
+    @Test
+    fun testDeleteOrganizationSourceOverrideRemovesOnlyTargetDefinition() {
+      val firstDefinitionId = ACTOR_DEFINITION_ID
+      val secondDefinitionId = UUID.randomUUID()
+      val firstParamId = UUID.randomUUID()
+      val secondParamId = UUID.randomUUID()
+
+      createActorOAuthParameter(firstParamId, Optional.empty(), Optional.of(ORGANIZATION_ID), ActorType.SOURCE, firstDefinitionId)
+      createActorOAuthParameter(secondParamId, Optional.empty(), Optional.of(ORGANIZATION_ID), ActorType.SOURCE, secondDefinitionId)
+
+      val deleted = oAuthService.deleteSourceOAuthParamByDefinitionId(ORGANIZATION_ID, firstDefinitionId)
+      Assertions.assertEquals(1, deleted)
+
+      Assertions.assertTrue(
+        oAuthService
+          .getSourceOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.of(ORGANIZATION_ID), firstDefinitionId)
+          .isEmpty,
+      )
+      Assertions.assertTrue(
+        oAuthService
+          .getSourceOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.of(ORGANIZATION_ID), secondDefinitionId)
+          .isPresent,
+      )
+    }
+
+    @Test
+    fun testDeleteOrganizationSourceOverrideDoesNotAffectOtherOrganizations() {
+      val definitionId = ACTOR_DEFINITION_ID
+      val orgParamId = UUID.randomUUID()
+      val otherOrgParamId = UUID.randomUUID()
+
+      createActorOAuthParameter(orgParamId, Optional.empty(), Optional.of(ORGANIZATION_ID), ActorType.SOURCE, definitionId)
+      createActorOAuthParameter(otherOrgParamId, Optional.empty(), Optional.of(A_DIFFERENT_ORGANIZATION_ID), ActorType.SOURCE, definitionId)
+
+      val deleted = oAuthService.deleteSourceOAuthParamByDefinitionId(ORGANIZATION_ID, definitionId)
+      Assertions.assertEquals(1, deleted)
+
+      Assertions.assertTrue(
+        oAuthService
+          .getSourceOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.of(ORGANIZATION_ID), definitionId)
+          .isEmpty,
+      )
+      Assertions.assertTrue(
+        oAuthService
+          .getSourceOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.of(A_DIFFERENT_ORGANIZATION_ID), definitionId)
+          .isPresent,
+      )
+    }
+
+    @Test
+    fun testDeleteOrganizationSourceOverrideDoesNotRemoveWorkspaceOverride() {
+      val definitionId = ACTOR_DEFINITION_ID
+      val organizationParamId = UUID.randomUUID()
+      val workspaceParamId = UUID.randomUUID()
+
+      createActorOAuthParameter(organizationParamId, Optional.empty(), Optional.of(ORGANIZATION_ID), ActorType.SOURCE, definitionId)
+      createActorOAuthParameter(workspaceParamId, Optional.of(WORKSPACE_ID), Optional.empty(), ActorType.SOURCE, definitionId)
+
+      val deleted = oAuthService.deleteSourceOAuthParamByDefinitionId(ORGANIZATION_ID, definitionId)
+      Assertions.assertEquals(1, deleted)
+
+      val fetchedOAuthParam =
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, definitionId)
+
+      Assertions.assertTrue(fetchedOAuthParam.isPresent)
+      Assertions.assertEquals(WORKSPACE_ID, fetchedOAuthParam.get().workspaceId)
+      Assertions.assertEquals(workspaceParamId, fetchedOAuthParam.get().oauthParameterId)
+    }
+  }
+
+  @Nested
   internal inner class DestinationOAuthTests {
     @Test
     fun testGetInstanceWideDestinatonOAuthParam() {
@@ -417,11 +489,12 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     workspaceId: Optional<UUID>,
     organizationId: Optional<UUID>,
     actorType: ActorType?,
+    actorDefinitionId: UUID = ACTOR_DEFINITION_ID,
   ) {
     if (actorType == ActorType.SOURCE) {
       val param =
         SourceOAuthParameter()
-          .withSourceDefinitionId(ACTOR_DEFINITION_ID)
+          .withSourceDefinitionId(actorDefinitionId)
           .withOauthParameterId(id)
           .withWorkspaceId(workspaceId.orElse(null))
           .withOrganizationId(organizationId.orElse(null))
@@ -430,7 +503,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     } else {
       val param =
         DestinationOAuthParameter()
-          .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
+          .withDestinationDefinitionId(actorDefinitionId)
           .withOauthParameterId(id)
           .withWorkspaceId(workspaceId.orElse(null))
           .withOrganizationId(organizationId.orElse(null))

@@ -297,6 +297,36 @@ class OAuthServiceJooqImpl(
     }
   }
 
+  override fun deleteSourceOAuthParamByDefinitionId(
+    organizationId: UUID,
+    sourceDefinitionId: UUID,
+  ): Int =
+    database.transaction { ctx: DSLContext ->
+      ctx
+        .deleteFrom(Tables.ACTOR_OAUTH_PARAMETER)
+        .where(
+          Tables.ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.source),
+          Tables.ACTOR_OAUTH_PARAMETER.ORGANIZATION_ID.eq(organizationId),
+          Tables.ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.isNull(),
+          Tables.ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID.eq(sourceDefinitionId),
+        ).execute()
+    }
+
+  override fun deleteDestinationOAuthParamByDefinitionId(
+    organizationId: UUID,
+    destinationDefinitionId: UUID,
+  ): Int =
+    database.transaction { ctx: DSLContext ->
+      ctx
+        .deleteFrom(Tables.ACTOR_OAUTH_PARAMETER)
+        .where(
+          Tables.ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.destination),
+          Tables.ACTOR_OAUTH_PARAMETER.ORGANIZATION_ID.eq(organizationId),
+          Tables.ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.isNull(),
+          Tables.ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID.eq(destinationDefinitionId),
+        ).execute()
+    }
+
   /**
    * Write destination oauth param.
    *

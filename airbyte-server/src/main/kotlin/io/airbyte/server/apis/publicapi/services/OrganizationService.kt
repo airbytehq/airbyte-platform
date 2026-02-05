@@ -33,6 +33,12 @@ interface OrganizationService {
     actorType: ActorTypeEnum,
     configuration: JsonNode,
   ): Unit
+
+  fun deleteOrganizationOverrideOauthParams(
+    organizationId: OrganizationId,
+    actorName: String,
+    actorType: ActorTypeEnum,
+  ): Unit
 }
 
 private val log = KotlinLogging.logger {}
@@ -75,5 +81,24 @@ open class OrganizationServiceImpl(
       )
 
     oAuthHandler.setOrganizationOverrideOAuthParams(organizationId, ActorDefinitionId(definitionId), actorType, configuration)
+  }
+
+  override fun deleteOrganizationOverrideOauthParams(
+    organizationId: OrganizationId,
+    actorName: String,
+    actorType: ActorTypeEnum,
+  ) {
+    val nameToDefinitionMap: Map<String, UUID> =
+      when (actorType) {
+        ActorTypeEnum.SOURCE -> SOURCE_NAME_TO_DEFINITION_ID
+        ActorTypeEnum.DESTINATION -> DESTINATION_NAME_TO_DEFINITION_ID
+      }
+
+    val definitionId: UUID =
+      nameToDefinitionMap[actorName] ?: throw UnknownValueProblem(
+        ProblemValueData().value(actorName),
+      )
+
+    oAuthHandler.deleteOrganizationOverrideOAuthParams(organizationId, ActorDefinitionId(definitionId), actorType)
   }
 }

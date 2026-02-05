@@ -711,6 +711,31 @@ open class OAuthHandler(
     }
   }
 
+  fun deleteOrganizationOverrideOAuthParams(
+    organizationId: OrganizationId,
+    actorDefinitionId: ActorDefinitionId,
+    actorType: ActorTypeEnum,
+  ) {
+    when (actorType) {
+      ActorTypeEnum.SOURCE -> deleteSourceOrganizationOverrideOauthParams(organizationId, actorDefinitionId)
+      ActorTypeEnum.DESTINATION -> deleteDestinationOrganizationOverrideOauthParams(organizationId, actorDefinitionId)
+    }
+  }
+
+  fun deleteSourceOrganizationOverrideOauthParams(
+    organizationId: OrganizationId,
+    actorDefinitionId: ActorDefinitionId,
+  ) {
+    oAuthService.deleteSourceOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value)
+  }
+
+  fun deleteDestinationOrganizationOverrideOauthParams(
+    organizationId: OrganizationId,
+    actorDefinitionId: ActorDefinitionId,
+  ) {
+    oAuthService.deleteDestinationOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value)
+  }
+
   fun setSourceOrganizationOverrideOauthParams(
     organizationId: OrganizationId,
     actorDefinitionId: ActorDefinitionId,

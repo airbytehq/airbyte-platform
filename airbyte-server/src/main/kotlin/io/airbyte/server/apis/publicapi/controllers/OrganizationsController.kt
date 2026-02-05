@@ -17,6 +17,7 @@ import io.airbyte.publicApi.server.generated.models.ActorTypeEnum
 import io.airbyte.publicApi.server.generated.models.OrganizationOAuthCredentialsRequest
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.API_PATH
+import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.ORGANIZATIONS_PATH
 import io.airbyte.server.apis.publicapi.constants.PUT
@@ -74,6 +75,47 @@ open class OrganizationsController(
     )
     return Response
       .status(Response.Status.OK.statusCode)
+      .build()
+  }
+
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  override fun deleteOrganizationOAuthCredentials(
+    organizationId: String,
+    actorType: ActorTypeEnum,
+    name: String,
+  ): Response {
+    roleResolver
+      .newRequest()
+      .withCurrentUser()
+      .withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
+      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
+
+    trackingHelper.callWithTracker(
+      {
+        licenseEntitlementChecker.ensureEntitled(
+          UUID.fromString(organizationId),
+          Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+        )
+
+        val internalActorType =
+          when (actorType) {
+            ActorTypeEnum.SOURCE -> io.airbyte.api.model.generated.ActorTypeEnum.SOURCE
+            ActorTypeEnum.DESTINATION -> io.airbyte.api.model.generated.ActorTypeEnum.DESTINATION
+          }
+
+        organizationService.deleteOrganizationOverrideOauthParams(
+          OrganizationId(UUID.fromString(organizationId)),
+          name,
+          internalActorType,
+        )
+      },
+      ORGANIZATIONS_PATH,
+      DELETE,
+      currentUserService.getCurrentUser().userId,
+    )
+
+    return Response
+      .status(Response.Status.NO_CONTENT.statusCode)
       .build()
   }
 
