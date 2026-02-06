@@ -20501,7 +20501,7 @@ components:
       type: string
       x-sdk-component: true
     JobTypeEnum:
-      description: Enum that describes the different types of jobs that the platform runs.
+      description: Enum that describes the different types of jobs that the platform runs. When not specified, all job types are returned.
       enum:
         - sync
         - reset

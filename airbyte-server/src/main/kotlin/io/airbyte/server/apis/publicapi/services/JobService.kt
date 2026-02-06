@@ -12,7 +12,6 @@ import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByFie
 import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.model.generated.JobListRequestBody
 import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -220,14 +219,13 @@ class JobServiceImpl(
   private fun getJobConfigTypes(jobType: JobTypeEnum?): List<JobConfigType> {
     val configTypes: MutableList<JobConfigType> = ArrayList()
     if (jobType == null) {
-      configTypes.addAll(listOf(JobConfigType.SYNC, JobConfigType.RESET_CONNECTION))
+      configTypes.addAll(listOf(JobConfigType.SYNC, JobConfigType.RESET_CONNECTION, JobConfigType.CLEAR, JobConfigType.REFRESH))
     } else {
       when (jobType) {
         JobTypeEnum.SYNC -> configTypes.add(JobConfigType.SYNC)
         JobTypeEnum.RESET -> configTypes.add(JobConfigType.RESET_CONNECTION)
         JobTypeEnum.CLEAR -> configTypes.add(JobConfigType.CLEAR)
         JobTypeEnum.REFRESH -> configTypes.add(JobConfigType.REFRESH)
-        else -> throw UnprocessableEntityProblem()
       }
     }
     return configTypes
