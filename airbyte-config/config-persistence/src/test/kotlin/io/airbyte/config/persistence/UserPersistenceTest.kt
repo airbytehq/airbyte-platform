@@ -29,6 +29,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Function
@@ -120,6 +122,50 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     fun deleteUserByIdTest() {
       userPersistence.deleteUserById(MockData.CREATOR_USER_ID_1)
       Assertions.assertEquals(Optional.empty<Any?>(), userPersistence.getAuthenticatedUser(MockData.CREATOR_USER_ID_1))
+    }
+
+    @Test
+    fun agenticEnabledAtPersistenceTest() {
+      val userId = UUID.randomUUID()
+      val agenticEnabledAt = OffsetDateTime.of(2026, 2, 5, 12, 0, 0, 0, ZoneOffset.UTC)
+
+      val userWithAgenticEnabled =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withName("agentic-user")
+          .withAuthUserId(userId.toString())
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withEmail("agentic@test.com")
+          .withAgenticEnabledAt(agenticEnabledAt)
+
+      userPersistence.writeAuthenticatedUser(userWithAgenticEnabled)
+
+      val retrievedUser = userPersistence.getAuthenticatedUser(userId)
+      Assertions.assertTrue(retrievedUser.isPresent)
+      Assertions.assertEquals(agenticEnabledAt, retrievedUser.get().agenticEnabledAt)
+
+      val retrievedByAuthId = userPersistence.getUserByAuthId(userId.toString())
+      Assertions.assertTrue(retrievedByAuthId.isPresent)
+      Assertions.assertEquals(agenticEnabledAt, retrievedByAuthId.get().agenticEnabledAt)
+    }
+
+    @Test
+    fun agenticEnabledAtNullTest() {
+      val userId = UUID.randomUUID()
+
+      val userWithoutAgenticEnabled =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withName("non-agentic-user")
+          .withAuthUserId(userId.toString())
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withEmail("non-agentic@test.com")
+
+      userPersistence.writeAuthenticatedUser(userWithoutAgenticEnabled)
+
+      val retrievedUser = userPersistence.getAuthenticatedUser(userId)
+      Assertions.assertTrue(retrievedUser.isPresent)
+      Assertions.assertNull(retrievedUser.get().agenticEnabledAt)
     }
 
     @Test

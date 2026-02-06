@@ -20,6 +20,7 @@ object AuthenticatedUserConverter {
       .withEmail(user.email)
       .withNews(user.news)
       .withUiMetadata(user.uiMetadata)
+      .withAgenticEnabledAt(user.agenticEnabledAt)
 
   @JvmStatic
   fun toAuthenticatedUser(
@@ -38,4 +39,5 @@ object AuthenticatedUserConverter {
       .withEmail(user.email)
       .withNews(user.news)
       .withUiMetadata(user.uiMetadata)
+      .withAgenticEnabledAt(user.agenticEnabledAt)
 }

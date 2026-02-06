@@ -87,6 +87,7 @@ open class UserPersistence(
       .set(Tables.USER.EMAIL, user.email)
       .set(Tables.USER.NEWS, user.news)
       .set(Tables.USER.UI_METADATA, JSONB.valueOf(Jsons.serialize(user.uiMetadata)))
+      .set(Tables.USER.AGENTIC_ENABLED_AT, user.agenticEnabledAt)
       .set(Tables.USER.UPDATED_AT, timestamp)
       .where(Tables.USER.ID.eq(user.userId))
       .execute()
@@ -113,6 +114,7 @@ open class UserPersistence(
       .set(Tables.USER.EMAIL, user.email)
       .set(Tables.USER.NEWS, user.news)
       .set(Tables.USER.UI_METADATA, JSONB.valueOf(Jsons.serialize(user.uiMetadata)))
+      .set(Tables.USER.AGENTIC_ENABLED_AT, user.agenticEnabledAt)
       .set(Tables.USER.CREATED_AT, timestamp)
       .set(Tables.USER.UPDATED_AT, timestamp)
       .execute()
@@ -291,7 +293,7 @@ open class UserPersistence(
             JsonNode::class.java,
           )
         },
-      )
+      ).withAgenticEnabledAt(record.get(Tables.USER.AGENTIC_ENABLED_AT))
 
   private fun createAuthenticatedUserFromRecord(record: Record): AuthenticatedUser {
     val user = createUserFromRecord(record)
@@ -304,6 +306,7 @@ open class UserPersistence(
       .withEmail(user.email)
       .withNews(user.news)
       .withUiMetadata(user.uiMetadata)
+      .withAgenticEnabledAt(user.agenticEnabledAt)
       .withAuthUserId(record.get(Tables.AUTH_USER.AUTH_USER_ID))
       .withAuthProvider(
         if (record.get(Tables.AUTH_USER.AUTH_PROVIDER) == null) {
@@ -340,6 +343,7 @@ open class UserPersistence(
             Tables.USER.EMAIL,
             Tables.USER.NEWS,
             Tables.USER.UI_METADATA,
+            Tables.USER.AGENTIC_ENABLED_AT,
           ).from(Tables.AUTH_USER)
           .innerJoin(Tables.USER)
           .on(Tables.AUTH_USER.USER_ID.eq(Tables.USER.ID))

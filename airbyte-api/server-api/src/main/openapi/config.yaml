@@ -16836,6 +16836,10 @@ components:
         metadata:
           type: object
           description: UI metadata required by frontend
+        agenticEnabledAt:
+          type: string
+          format: date-time
+          description: Timestamp when the user was enabled for agentic features. Null if user is data-replication-only.
 
     UserUpdate:
       type: object
@@ -16866,6 +16870,20 @@ components:
       properties:
         authUserId:
           type: string
+        isAgenticUser:
+          type: boolean
+          description: |
+            Indicates whether this user should have agentic features enabled.
+
+            Behavior:
+            - New user + true: User created with agenticEnabledAt timestamp
+            - New user + false/omitted: User created as non-agentic (agenticEnabledAt = null)
+            - Existing agentic user + any value: Timestamp preserved (immutable, cannot downgrade)
+            - Existing non-agentic user + true: User upgraded, agenticEnabledAt set to current time
+            - Existing non-agentic user + false/omitted: Remains non-agentic
+
+            Note: agenticEnabledAt is one-way - once set, it cannot be unset. Users can be upgraded
+            from non-agentic to agentic, but not downgraded.
 
     UserEmailRequestBody:
       type: object

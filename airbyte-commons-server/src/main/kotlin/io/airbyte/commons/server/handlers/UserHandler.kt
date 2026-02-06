@@ -155,6 +155,7 @@ open class UserHandler
         .metadata(if (user.uiMetadata != null) user.uiMetadata else emptyMap<Any, Any>())
         .news(user.news)
         .defaultWorkspaceId(user.defaultWorkspaceId)
+        .agenticEnabledAt(user.agenticEnabledAt)
 
     /**
      * Patch update a user object.
@@ -344,8 +345,8 @@ open class UserHandler
       }
     }
 
-    private fun handleNewUserLogin(incomingJwtUser: AuthenticatedUser): UserGetOrCreateByAuthIdResponse {
-      val createdUser = createUserFromIncomingUser(incomingJwtUser)
+    private fun handleNewUserLogin(userToCreate: AuthenticatedUser): UserGetOrCreateByAuthIdResponse {
+      val createdUser = createUserFromIncomingUser(userToCreate)
       handleUserPermissionsAndWorkspace(createdUser)
 
       // refresh the user from the database in case anything changed during permission/workspace
@@ -362,9 +363,9 @@ open class UserHandler
 
       return UserGetOrCreateByAuthIdResponse()
         .userRead(buildUserRead(updatedUser))
-        .authUserId(incomingJwtUser.authUserId)
+        .authUserId(userToCreate.authUserId)
         .authProvider(
-          incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
+          userToCreate.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
         ).newUserCreated(true)
     }
 
@@ -459,8 +460,30 @@ open class UserHandler
 
       // (2) Authenticate existing auth_user
       if (existingAuthUser.isPresent) {
+        val existingUser = existingAuthUser.get()
+
+        // Support upgrading non-agentic users to agentic (one-way operation)
+        // If user is not agentic yet AND request wants to make them agentic, upgrade them
+        if (existingUser.agenticEnabledAt == null &&
+          userAuthIdRequestBody.isAgenticUser == true &&
+          incomingJwtUser.agenticEnabledAt != null
+        ) {
+          // Upgrade user: set agenticEnabledAt timestamp
+          val upgradedUser = existingUser.withAgenticEnabledAt(incomingJwtUser.agenticEnabledAt)
+          userPersistence.writeAuthenticatedUser(upgradedUser)
+          log.info { "Upgraded user ${existingUser.userId} to agentic user" }
+
+          return UserGetOrCreateByAuthIdResponse()
+            .userRead(buildUserRead(toUser(upgradedUser)))
+            .authUserId(userAuthIdRequestBody.authUserId)
+            .authProvider(
+              incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
+            ).newUserCreated(false)
+        }
+
+        // Otherwise, return existing user as-is (agenticEnabledAt is immutable once set)
         return UserGetOrCreateByAuthIdResponse()
-          .userRead(buildUserRead(toUser(existingAuthUser.get())))
+          .userRead(buildUserRead(toUser(existingUser)))
           .authUserId(userAuthIdRequestBody.authUserId)
           .authProvider(
             incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
@@ -511,7 +534,18 @@ open class UserHandler
 
     private fun resolveIncomingJwtUser(userAuthIdRequestBody: UserAuthIdRequestBody): AuthenticatedUser {
       val authUserId = userAuthIdRequestBody.authUserId
-      return userAuthenticationResolver.resolveUser(authUserId)
+      // Create fresh AuthenticatedUser from JWT claims (agenticEnabledAt is always null here)
+      val user = userAuthenticationResolver.resolveUser(authUserId)
+
+      // If isAgenticUser is true, set the timestamp to now on this fresh object
+      // This applies to both new user creation and upgrading existing non-agentic users
+      // Note: For existing users, the database value is checked separately (line 467)
+      //       and this timestamp is only used if the DB value is null (upgrading)
+      if (userAuthIdRequestBody.isAgenticUser == true) {
+        return user.withAgenticEnabledAt(java.time.OffsetDateTime.now())
+      }
+
+      return user
     }
 
     private fun createUserFromIncomingUser(incomingUser: AuthenticatedUser): UserRead {

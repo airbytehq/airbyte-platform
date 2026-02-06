@@ -250,6 +250,237 @@ class UserHandlerTest {
 
   @Nested
   internal inner class GetOrCreateUserByAuthIdTest {
+    @Test
+    fun testAgenticFeaturesEnabledDuringUserCreation() {
+      val authUserId = "test-auth-user-id"
+      val newUserId = UUID.randomUUID()
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("agentic@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.empty())
+      whenever(uuidSupplier.get()).thenReturn(newUserId)
+
+      val createdUser =
+        User()
+          .withUserId(newUserId)
+          .withEmail("agentic@test.com")
+          .withAgenticEnabledAt(java.time.OffsetDateTime.now())
+      whenever(userPersistence.getUser(newUserId)).thenReturn(Optional.of(createdUser))
+
+      val defaultWorkspace = WorkspaceRead().workspaceId(UUID.randomUUID())
+      whenever(resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any())).thenReturn(defaultWorkspace)
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(true)
+
+      userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that the user was written with agenticEnabledAt set to a timestamp
+      Mockito.verify(userPersistence).writeAuthenticatedUser(
+        argThat { user: AuthenticatedUser? ->
+          user!!.agenticEnabledAt != null
+        },
+      )
+    }
+
+    @Test
+    fun testNewUserWithoutAgenticFlagCreatesNonAgenticUser() {
+      val authUserId = "test-auth-user-id"
+      val newUserId = UUID.randomUUID()
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("nonagentic@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.empty())
+      whenever(uuidSupplier.get()).thenReturn(newUserId)
+
+      val createdUser =
+        User()
+          .withUserId(newUserId)
+          .withEmail("nonagentic@test.com")
+          .withAgenticEnabledAt(null)
+      whenever(userPersistence.getUser(newUserId)).thenReturn(Optional.of(createdUser))
+
+      val defaultWorkspace = WorkspaceRead().workspaceId(UUID.randomUUID())
+      whenever(resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any())).thenReturn(defaultWorkspace)
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(false)
+
+      userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that the user was written with agenticEnabledAt = null
+      Mockito.verify(userPersistence).writeAuthenticatedUser(
+        argThat { user: AuthenticatedUser? ->
+          user!!.agenticEnabledAt == null
+        },
+      )
+    }
+
+    @Test
+    fun testExistingNonAgenticUserUpgradedWhenFlagIsTrue() {
+      val authUserId = "test-auth-user-id"
+      val userId = UUID.randomUUID()
+      val originalTimestamp = java.time.OffsetDateTime.now()
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("upgrade@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      val existingNonAgenticUser =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withEmail("upgrade@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withAgenticEnabledAt(null) // Non-agentic user
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingNonAgenticUser))
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(true) // Request to upgrade
+
+      val response = userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that writeAuthenticatedUser was called (upgrading the user)
+      Mockito.verify(userPersistence).writeAuthenticatedUser(
+        argThat { user: AuthenticatedUser? ->
+          user!!.userId == userId && user.agenticEnabledAt != null
+        },
+      )
+
+      // Verify response indicates existing user (not new)
+      Assertions.assertFalse(response.newUserCreated)
+    }
+
+    @Test
+    fun testExistingNonAgenticUserStaysNonAgenticWhenFlagIsFalse() {
+      val authUserId = "test-auth-user-id"
+      val userId = UUID.randomUUID()
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("stay@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      val existingNonAgenticUser =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withEmail("stay@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withAgenticEnabledAt(null)
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingNonAgenticUser))
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(false)
+
+      val response = userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that writeAuthenticatedUser was NOT called (no upgrade)
+      Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+
+      // Verify user returned is non-agentic
+      Assertions.assertNull(response.userRead.agenticEnabledAt)
+    }
+
+    @Test
+    fun testExistingAgenticUserPreservesTimestampWhenFlagIsTrue() {
+      val authUserId = "test-auth-user-id"
+      val userId = UUID.randomUUID()
+      val originalTimestamp = java.time.OffsetDateTime.of(2024, 1, 15, 10, 0, 0, 0, java.time.ZoneOffset.UTC)
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("preserve@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      val existingAgenticUser =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withEmail("preserve@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withAgenticEnabledAt(originalTimestamp) // Already agentic
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingAgenticUser))
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(true)
+
+      val response = userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that writeAuthenticatedUser was NOT called (timestamp immutable)
+      Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+
+      // Verify original timestamp preserved
+      Assertions.assertEquals(originalTimestamp, response.userRead.agenticEnabledAt)
+    }
+
+    @Test
+    fun testExistingAgenticUserCannotBeDowngraded() {
+      val authUserId = "test-auth-user-id"
+      val userId = UUID.randomUUID()
+      val originalTimestamp = java.time.OffsetDateTime.of(2024, 1, 15, 10, 0, 0, 0, java.time.ZoneOffset.UTC)
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("nodowngrade@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      val existingAgenticUser =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withEmail("nodowngrade@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withAgenticEnabledAt(originalTimestamp)
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingAgenticUser))
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(false) // Attempt to downgrade
+
+      val response = userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that writeAuthenticatedUser was NOT called (cannot downgrade)
+      Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+
+      // Verify timestamp still present (downgrade rejected)
+      Assertions.assertEquals(originalTimestamp, response.userRead.agenticEnabledAt)
+    }
+
     @ParameterizedTest
     @EnumSource(AuthProvider::class)
     fun authIdExists(authProvider: AuthProvider) {
