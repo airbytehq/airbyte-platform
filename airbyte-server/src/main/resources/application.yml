@@ -571,6 +571,8 @@ flyway:
 jackson:
   mapper:
     ACCEPT_CASE_INSENSITIVE_ENUMS: true
+  serialization:
+    WRITE_DATES_AS_TIMESTAMPS: false
   serialization-inclusion: NON_ABSENT
 
 jooq:

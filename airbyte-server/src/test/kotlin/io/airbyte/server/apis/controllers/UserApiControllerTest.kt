@@ -28,9 +28,13 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
@@ -120,5 +124,25 @@ internal class UserApiControllerTest {
 
     val path = "/api/v1/users/list_access_info_by_workspace_id"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, Jsons.serialize(WorkspaceIdRequestBody()))))
+  }
+
+  @Test
+  fun testAgenticEnabledAtSerializesAsIsoString() {
+    val agenticEnabledAt = OffsetDateTime.of(2026, 2, 5, 12, 0, 0, 0, ZoneOffset.UTC)
+    val userRead =
+      UserRead()
+        .userId(UUID.randomUUID())
+        .email("test@test.com")
+        .name("test")
+        .agenticEnabledAt(agenticEnabledAt)
+
+    every { userHandler.getUser(any()) } returns userRead
+
+    val path = "/api/v1/users/get"
+    val response = client.toBlocking().retrieve(HttpRequest.POST(path, UserIdRequestBody()), String::class.java)
+
+    // Verify the response contains an ISO-8601 date string, not a numeric timestamp
+    Assertions.assertTrue(response.contains("2026-02-05T12:00:00"), "agenticEnabledAt should be serialized as ISO-8601 string, got: $response")
+    Assertions.assertFalse(response.contains("\"agenticEnabledAt\":1"), "agenticEnabledAt should not be a numeric timestamp, got: $response")
   }
 }
