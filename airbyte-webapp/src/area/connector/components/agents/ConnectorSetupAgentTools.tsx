@@ -34,6 +34,7 @@ interface ConnectorSetupAgentToolsProps {
     cancelOAuth: () => void;
   }) => void;
   onFormValuesReady?: (getFormValues: () => Record<string, unknown>) => void;
+  onCheckComplete?: (success: boolean) => void;
   touchedSecretFieldsRef: React.MutableRefObject<Set<string>>;
   addTouchedSecretField: (path: string) => void;
 }
@@ -50,6 +51,7 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
   onSecretInputStateChange,
   onOAuthStateChange,
   onFormValuesReady,
+  onCheckComplete,
   touchedSecretFieldsRef,
   addTouchedSecretField,
 }) => {
@@ -90,6 +92,7 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
     actorDefinitionId,
     actorType,
     getFormValues,
+    onCheckComplete,
   });
 
   const clientTools: ClientTools = useMemo(

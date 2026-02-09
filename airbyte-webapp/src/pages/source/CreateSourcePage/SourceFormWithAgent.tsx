@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -10,6 +10,7 @@ import { MountedViewSwapper } from "components/ui/MountedViewSwapper";
 import { ConnectorSetupAgent } from "area/connector/components/agents/ConnectorSetupAgent";
 import { ConnectorSetupAgentTools } from "area/connector/components/agents/ConnectorSetupAgentTools";
 import { useConnectorSetupAgentState } from "area/connector/components/agents/hooks/useConnectorSetupAgentState";
+import { useConnectorSetupAgentAnalytics } from "area/connector/components/agents/useAnalyticsTrackFunctions";
 import { FormPageContent } from "area/connector/components/ConnectorBlocks";
 import { ConnectorCard } from "area/connector/components/ConnectorCard";
 import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
@@ -55,6 +56,9 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
 
   const location = useLocation();
   const navigate = useNavigate();
+  const { trackAgentStarted, trackMessageSent, trackConfigurationChecked, trackConfigurationSubmitted } =
+    useConnectorSetupAgentAnalytics();
+  const [hasTrackedStart, setHasTrackedStart] = useState(false);
   // save previous path on mount so that it remains unchanged even if search params are added on this page
   const [prevPath] = useState<string>(location.state?.prevPath || `../${SourcePaths.SelectSourceNew}`);
   const onGoBack = () => {
@@ -62,14 +66,22 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
   };
 
   const onSubmitSourceStep = useCallback(
-    (sourceValues: { name: string; serviceType: string; connectionConfiguration: Record<string, unknown> }) => {
-      return onSubmit({
-        ...sourceValues,
-        setupFlow: "agent",
-        sourceDefinitionId: sourceDefinitionSpecification?.sourceDefinitionId,
-      });
+    async (sourceValues: { name: string; serviceType: string; connectionConfiguration: Record<string, unknown> }) => {
+      try {
+        await onSubmit({
+          ...sourceValues,
+          setupFlow: "agent",
+          sourceDefinitionId: sourceDefinitionSpecification?.sourceDefinitionId,
+        });
+        // Track successful submission
+        trackConfigurationSubmitted("source", sourceDefinitionSpecification?.sourceDefinitionId, true);
+      } catch (error) {
+        // Track failed submission
+        trackConfigurationSubmitted("source", sourceDefinitionSpecification?.sourceDefinitionId, false);
+        throw error;
+      }
     },
-    [onSubmit, sourceDefinitionSpecification?.sourceDefinitionId]
+    [onSubmit, sourceDefinitionSpecification?.sourceDefinitionId, trackConfigurationSubmitted]
   );
 
   const onSubmitConnectorCard = useCallback(
@@ -105,6 +117,33 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
     isAgentView,
   });
 
+  // Track agent started when first entering agent view
+  useEffect(() => {
+    if (isAgentView && !hasTrackedStart && selectedSourceDefinitionId) {
+      trackAgentStarted("source", selectedSourceDefinitionId);
+      setHasTrackedStart(true);
+    }
+  }, [isAgentView, hasTrackedStart, selectedSourceDefinitionId, trackAgentStarted]);
+
+  // Wrap sendMessage to track analytics (without message content for PII safety)
+  const handleSendMessage = useCallback(
+    (content: string) => {
+      const userMessageCount = messages.filter((msg) => msg.role === "user").length + 1;
+      const totalMessageCount = messages.length + 1;
+      sendMessage(content);
+      trackMessageSent(userMessageCount, totalMessageCount);
+    },
+    [messages, sendMessage, trackMessageSent]
+  );
+
+  // Handle configuration check tracking
+  const handleCheckComplete = useCallback(
+    (success: boolean) => {
+      trackConfigurationChecked("source", selectedSourceDefinitionId, success);
+    },
+    [trackConfigurationChecked, selectedSourceDefinitionId]
+  );
+
   if (!selectedSourceDefinition || !sourceDefinitionSpecification) {
     return null;
   }
@@ -118,7 +157,7 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
           isLoading={isLoading}
           error={error}
           isStreaming={isStreaming}
-          onSendMessage={secretInputState.isSecretInputActive ? secretInputState.submitSecret : sendMessage}
+          onSendMessage={secretInputState.isSecretInputActive ? secretInputState.submitSecret : handleSendMessage}
           onStop={stopGenerating}
           isSecretMode={secretInputState.isSecretInputActive}
           secretFieldPath={secretInputState.secretFieldPath}
@@ -160,6 +199,7 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
                     onSecretInputStateChange={handleSecretInputStateChange}
                     onOAuthStateChange={handleOAuthStateChange}
                     onFormValuesReady={handleFormValuesReady}
+                    onCheckComplete={handleCheckComplete}
                     touchedSecretFieldsRef={touchedSecretFieldsRef}
                     addTouchedSecretField={addTouchedSecretField}
                   />

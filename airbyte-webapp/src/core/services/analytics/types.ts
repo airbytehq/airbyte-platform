@@ -16,6 +16,7 @@ export const enum Namespace {
   CONNECTIONS = "Connections",
   EMBEDDED = "Embedded",
   SUPPORT_AGENT_BOT = "SupportAgentBot",
+  CONNECTOR_SETUP_AGENT = "ConnectorSetupAgent",
 }
 
 export const enum Action {
@@ -127,6 +128,12 @@ export const enum Action {
   CHAT_LINK_CLICKED = "ChatLinkClicked",
   CHAT_MESSAGE_SENT = "ChatMessageSent",
   CHAT_COMPLETED = "ChatCompleted",
+
+  // Connector Setup Agent Actions
+  CONNECTOR_SETUP_AGENT_STARTED = "Started",
+  CONNECTOR_SETUP_AGENT_MESSAGE_SENT = "MessageSent",
+  CONNECTOR_SETUP_AGENT_CONFIGURATION_CHECKED = "ConfigurationChecked",
+  CONNECTOR_SETUP_AGENT_CONFIGURATION_SUBMITTED = "ConfigurationSubmitted",
 }
 
 export type EventParams = Record<string, unknown>;

@@ -11,12 +11,14 @@ export interface UseCheckConfigurationToolParams {
   actorDefinitionId?: string;
   actorType?: ActorType;
   getFormValues: () => ConnectorFormValues;
+  onCheckComplete?: (success: boolean) => void;
 }
 
 export const useCheckConfigurationTool = ({
   actorDefinitionId,
   actorType,
   getFormValues,
+  onCheckComplete,
 }: UseCheckConfigurationToolParams): ClientToolHandler => {
   const { testConnector } = useTestConnectorCommand({
     formType: actorType || "source",
@@ -47,6 +49,7 @@ export const useCheckConfigurationTool = ({
                 status: result.status,
               })
             );
+            onCheckComplete?.(true);
           } catch (error) {
             console.error("[useCheckConfigurationTool] Configuration test failed:", error);
             sendResult(
@@ -56,6 +59,7 @@ export const useCheckConfigurationTool = ({
                 error: error instanceof Error ? error.toString() : String(error),
               })
             );
+            onCheckComplete?.(false);
           }
         } else {
           console.error(
@@ -70,6 +74,6 @@ export const useCheckConfigurationTool = ({
         }
       },
     }),
-    [actorDefinitionId, getFormValues, testConnector]
+    [actorDefinitionId, getFormValues, testConnector, onCheckComplete]
   );
 };
