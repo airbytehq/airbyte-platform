@@ -31,7 +31,7 @@ dependencies {
   implementation(libs.cron.utils)
 
   // CBServer dependencies - should probably move to deps.toml
-  implementation("org.kohsuke:github-api:1.327")
+  implementation(libs.kohsuke.github.api)
   implementation("org.yaml:snakeyaml:2.2")
   implementation("io.pebbletemplates:pebble:3.2.4")
 
