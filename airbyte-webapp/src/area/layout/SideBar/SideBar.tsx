@@ -13,7 +13,7 @@ import { ThemeToggle } from "components/ui/ThemeToggle";
 import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
 import { AirbyteHomeLink } from "area/layout/SideBar/AirbyteHomeLink";
 import { OrganizationPicker } from "area/organization/OrganizationPicker/OrganizationPicker";
-import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentOrganizationId, useTrackLastOrganization } from "area/organization/utils";
 import { WorkspacesPickerNext } from "area/workspace/components/WorkspacesPickerNext";
 import { CloudHelpDropdown } from "cloud/components/CloudHelpDropdown";
 import {
@@ -150,6 +150,8 @@ export const SideBar: React.FC<PropsWithChildren> = () => {
   const showOrganizationUI = useFeature(FeatureItem.OrganizationUI);
 
   const workspace = useCurrentWorkspaceForOrganization();
+
+  useTrackLastOrganization();
 
   const username =
     authType === "simple" || authType === "none"

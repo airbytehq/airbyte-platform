@@ -28,6 +28,7 @@ interface AirbyteLocalStorage {
   "airbyte_connector-builder-modes": Record<string, BuilderState["mode"]>;
   "airbyte_license-check-dismissed-at": string | null;
   "airbyte_organization-workspace-map": Record<string, string>;
+  "airbyte_last-visited-organization-id": string;
   "airbyte_new-signup": boolean;
   "airbyte_pro-features-shown": Record<string, string>;
   "airbyte_support-chat-autoscroll": boolean;

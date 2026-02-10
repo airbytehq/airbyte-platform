@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 
-import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useCurrentOrganizationId, useLastVisitedOrganizationId } from "area/organization/utils";
 import { useListWorkspacesInfinite } from "core/api";
 import { useCurrentUser } from "core/services/auth";
 import { useExperiment } from "core/services/Experiment";
@@ -13,7 +13,9 @@ import { RoutePaths } from "pages/routePaths";
 export const DefaultView: React.FC = () => {
   const { data: workspacesData } = useListWorkspacesInfinite(2, "", true);
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
-  const organizationId = useCurrentOrganizationId();
+  const lastVisitedOrganizationId = useLastVisitedOrganizationId();
+  const fallbackOrganizationId = useCurrentOrganizationId();
+  const organizationId = lastVisitedOrganizationId || fallbackOrganizationId;
   const isSurveyEnabled = useExperiment("onboarding.surveyEnabled");
   const showOrganizationUI = useFeature(FeatureItem.OrganizationUI);
   const user = useCurrentUser();

@@ -264,13 +264,19 @@ export const useListWorkspacesInOrganization = ({
   });
 };
 
-export const useListOrganizationsByUser = (requestBody: ListOrganizationsByUserRequestBody) => {
+export const useListOrganizationsByUser = (
+  requestBody: ListOrganizationsByUserRequestBody,
+  options?: {
+    enabled?: boolean;
+  }
+) => {
   const requestOptions = useRequestOptions();
   return useSuspenseQuery(
     organizationKeys.listByUser(requestBody),
     () => listOrganizationsByUser(requestBody, requestOptions),
     {
       staleTime: 30_0000,
+      enabled: options?.enabled,
     }
   );
 };
