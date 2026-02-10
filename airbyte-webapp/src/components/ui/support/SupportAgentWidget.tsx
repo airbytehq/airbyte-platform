@@ -41,6 +41,7 @@ const SupportChatPanel: React.FC<{
   onClose: () => void;
 }> = ({ workspaceId, connectionId, isExpanded, setIsExpanded, onClose }) => {
   const user = useCurrentUser();
+  const { pathname } = useLocation();
   const { trackChatLinkClicked, trackMessageSent } = useAnalyticsTrackFunctions();
   const [autoScrollEnabled, setAutoScrollEnabled] = useLocalStorage("airbyte_support-chat-autoscroll", true);
   const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
@@ -49,6 +50,7 @@ const SupportChatPanel: React.FC<{
     agentParams: {
       workspace_id: workspaceId,
       email: user.email,
+      current_page_path: pathname,
       ...(connectionId && { connection_id: connectionId }),
     },
     clientTools: {},
