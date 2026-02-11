@@ -57,7 +57,6 @@ export const links = {
   connectionMappings: `${BASE_DOCS_LINK}/using-airbyte/mappings`,
   dataActivationDocs: `${BASE_DOCS_LINK}/platform/move-data/elt-data-activation`,
   ssoDocs: `${BASE_DOCS_LINK}/platform/access-management/sso`,
-  embeddedOnboardingDocs: `${BASE_DOCS_LINK}/ai-agents/embedded/widget/tutorials/develop-your-app`,
   fixIngress1_7: `${BASE_DOCS_LINK}/platform/deploying-airbyte/integrations/ingress-1-7`,
   refreshes: `${BASE_DOCS_LINK}/platform/operator-guides/refreshes`,
 } as const;

@@ -8,8 +8,6 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
-import { Icon } from "components/ui/Icon";
-import { ExternalLink } from "components/ui/Link";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text/Text";
 
@@ -18,7 +16,6 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import { useListApplications, useUpdateEmbeddedOnboardingStatus } from "core/api";
 import { OnboardingStatusEnum } from "core/api/types/SonarClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { links } from "core/utils/links";
 
 import styles from "./EmbedCodeStep.module.scss";
 import { EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep } from "../EmbeddedOnboardingPageLayout";
@@ -67,11 +64,7 @@ AIRBYTE_CLIENT_SECRET=${applications[0]?.clientSecret}`;
               <Pre>{envContent}</Pre>
             </Text>
           </Box>
-          <FlexContainer justifyContent="space-between">
-            <ExternalLink variant="button" href={links.embeddedOnboardingDocs} className={styles.viewDocsLink}>
-              <Icon type="export" />
-              <FormattedMessage id="embedded.viewDocs" defaultMessage="View docs" />
-            </ExternalLink>
+          <FlexContainer justifyContent="flex-end">
             <CopyButton full content={envContent}>
               <FormattedMessage id="embedded.onboarding.embedCode.copy" />
             </CopyButton>
