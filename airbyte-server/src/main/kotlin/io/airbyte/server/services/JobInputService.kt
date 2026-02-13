@@ -236,11 +236,11 @@ class JobInputService(
     val (definition, definitionVersion, resourceRequirements) =
       when (actorInfo.actorType) {
         ActorType.source -> {
-          val info = getSourceInformationByDefinitionId(actorInfo.actorDefinitionId, actorInfo.workspaceId)
+          val info = getSourceInformationByDefinitionId(actorInfo.actorDefinitionId, actorInfo.workspaceId, actorInfo.actorId)
           Triple(info.sourceDefinition as Any, info.sourceDefinitionVersion, info.resourceRequirements)
         }
         ActorType.destination -> {
-          val info = getDestinationInformationByDefinitionId(actorInfo.actorDefinitionId, actorInfo.workspaceId)
+          val info = getDestinationInformationByDefinitionId(actorInfo.actorDefinitionId, actorInfo.workspaceId, actorInfo.actorId)
           Triple(info.destinationDefinition as Any, info.destinationDefinitionVersion, info.resourceRequirements)
         }
         else -> throw IllegalStateException("Unsupported actor type: ${actorInfo.actorType}")
@@ -907,9 +907,10 @@ class JobInputService(
   private fun getSourceInformationByDefinitionId(
     sourceDefinitionId: UUID,
     workspaceId: UUID,
+    actorId: UUID?,
   ): SourceDefinitionInformation {
     val sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId)
-    val sourceDefinitionVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, null)
+    val sourceDefinitionVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, actorId)
     val resourceRequirements =
       ResourceRequirementsUtils.getResourceRequirementsForJobType(
         sourceDefinition.resourceRequirements,
@@ -954,9 +955,10 @@ class JobInputService(
   private fun getDestinationInformationByDefinitionId(
     destinationDefinitionId: UUID,
     workspaceId: UUID,
+    actorId: UUID?,
   ): DestinationInformation {
     val destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId)
-    val destinationDefinitionVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, null)
+    val destinationDefinitionVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, actorId)
     val resourceRequirements =
       ResourceRequirementsUtils.getResourceRequirementsForJobType(
         destinationDefinition.resourceRequirements,

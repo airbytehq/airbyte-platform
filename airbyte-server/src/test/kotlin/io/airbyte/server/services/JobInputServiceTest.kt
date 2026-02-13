@@ -172,7 +172,6 @@ class JobInputServiceTest {
     every { sourceService.getSourceConnection(sourceId) } returns mockSource
     every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
     every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
-    every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, null) } returns mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
@@ -252,8 +251,6 @@ class JobInputServiceTest {
     every { destinationService.getDestinationConnection(destinationId) } returns mockDestination
     every { destinationService.getStandardDestinationDefinition(destinationDefinitionId) } returns mockDestinationDefinition
     every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, destinationId) } returns
-      mockActorDefinitionVersion
-    every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, null) } returns
       mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
@@ -533,7 +530,6 @@ class JobInputServiceTest {
     every { sourceService.getSourceConnection(sourceId) } returns mockSource
     every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
     every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
-    every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, null) } returns mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
@@ -656,8 +652,6 @@ class JobInputServiceTest {
     every { destinationService.getStandardDestinationDefinition(destinationDefinitionId) } returns mockDestinationDefinition
     every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, destinationId) } returns
       mockActorDefinitionVersion
-    every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, null) } returns
-      mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
@@ -759,7 +753,7 @@ class JobInputServiceTest {
     val expectedNamespaceFormat = "$configType-format"
     val expectedPrefix = "$configType-prefix"
     when (configType) {
-      JobConfig.ConfigType.SYNC ->
+      JobConfig.ConfigType.SYNC -> {
         every { jobConfig.sync } returns
           mockk {
             every { namespaceDefinition } returns expectedNamespaceDefinition
@@ -768,8 +762,9 @@ class JobInputServiceTest {
             every { syncResourceRequirements } returns SyncResourceRequirements()
             every { configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
           }
+      }
 
-      JobConfig.ConfigType.REFRESH ->
+      JobConfig.ConfigType.REFRESH -> {
         every { jobConfig.refresh } returns
           mockk {
             every { namespaceDefinition } returns expectedNamespaceDefinition
@@ -778,8 +773,9 @@ class JobInputServiceTest {
             every { syncResourceRequirements } returns SyncResourceRequirements()
             every { configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
           }
+      }
 
-      JobConfig.ConfigType.CLEAR, JobConfig.ConfigType.RESET_CONNECTION ->
+      JobConfig.ConfigType.CLEAR, JobConfig.ConfigType.RESET_CONNECTION -> {
         every { jobConfig.resetConnection } returns
           mockk {
             every { namespaceDefinition } returns expectedNamespaceDefinition
@@ -788,8 +784,11 @@ class JobInputServiceTest {
             every { syncResourceRequirements } returns SyncResourceRequirements()
             every { configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
           }
+      }
 
-      else -> throw IllegalStateException("$configType not handled by the test setup")
+      else -> {
+        throw IllegalStateException("$configType not handled by the test setup")
+      }
     }
 
     val mockJob =
@@ -1055,7 +1054,6 @@ class JobInputServiceTest {
     every { sourceService.getSourceConnection(sourceId) } returns mockSource
     every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
     every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
-    every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, null) } returns mockActorDefinitionVersion
 
     // Capture the merged config passed to OAuth supplier
     val capturedConfig = slot<JsonNode>()
