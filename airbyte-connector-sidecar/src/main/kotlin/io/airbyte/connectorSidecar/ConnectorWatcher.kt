@@ -78,7 +78,20 @@ class ConnectorWatcher(
           exitInternalError()
         }
         val connectorOutput = processConnectorOutput(sidecarInput)
-        saveConnectorOutput(sidecarInput.workloadId, connectorOutput)
+        try {
+          saveConnectorOutput(sidecarInput.workloadId, connectorOutput)
+        } catch (e: Exception) {
+          logger.error(e) { "Failed to write connector output to doc store" }
+          failWorkload(
+            sidecarInput.workloadId,
+            FailureReason()
+              .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+              .withExternalMessage("Unable to persist the job output, check the document store credentials.")
+              .withInternalMessage(e.message)
+              .withStacktrace(e.stackTraceToString()),
+          )
+          exitInternalError()
+        }
         markWorkloadSuccess(sidecarInput.workloadId)
       } catch (e: Exception) {
         handleException(sidecarInput, e)
@@ -214,7 +227,7 @@ class ConnectorWatcher(
         input.workloadId,
         FailureReason()
           .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
-          .withExternalMessage("Unable to persist the job Output, check the document store credentials.")
+          .withExternalMessage("Unable to persist the job output to the doc store.")
           .withInternalMessage(e.message)
           .withStacktrace(e.stackTraceToString()),
       )

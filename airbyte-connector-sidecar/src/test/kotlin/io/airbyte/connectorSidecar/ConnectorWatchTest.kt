@@ -9,6 +9,7 @@ import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
+import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
@@ -27,6 +28,7 @@ import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
+import io.mockk.CapturingSlot
 import io.mockk.MockKException
 import io.mockk.Runs
 import io.mockk.every
@@ -345,5 +347,39 @@ internal class ConnectorWatchTest {
     connectorWatcher.run()
 
     verify { workloadApiClient.workloadFailure(any()) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `doc store write failure on success path should fail with AIRBYTE_PLATFORM origin`(operationType: OperationType) {
+    val output =
+      ConnectorJobOutput()
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
+
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
+
+    // Throw only on the first call (in saveConnectorOutput), succeed on subsequent calls (in handleException)
+    // This exposes the bug where the first write failure goes through handleException with wrong origin
+    every { outputWriter.write(any(), any()) } throws RuntimeException("Unable to Write") andThen Unit
+
+    // Mock workloadSuccess since markWorkloadSuccess may be called if exitInternalError doesn't actually exit (in tests)
+    every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
+
+    val failureRequestSlot = CapturingSlot<WorkloadFailureRequest>()
+    every { workloadApiClient.workloadFailure(capture(failureRequestSlot)) } returns Unit
+
+    every { sidecarInput.operationType } returns operationType
+
+    connectorWatcher.run()
+
+    verify { workloadApiClient.workloadFailure(any()) }
+    assertTrue(failureRequestSlot.isCaptured)
+    assertTrue(
+      failureRequestSlot.captured.source == FailureReason.FailureOrigin.AIRBYTE_PLATFORM.value(),
+      "Expected failure origin to be AIRBYTE_PLATFORM but was ${failureRequestSlot.captured.source}",
+    )
   }
 }
