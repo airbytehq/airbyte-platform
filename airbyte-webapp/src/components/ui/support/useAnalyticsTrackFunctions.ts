@@ -34,9 +34,20 @@ export const useAnalyticsTrackFunctions = () => {
     [analyticsService]
   );
 
+  const trackTicketCreated = useCallback(
+    (ticketId?: string) => {
+      analyticsService.track(Namespace.SUPPORT_AGENT_BOT, Action.CHAT_TICKET_CREATED, {
+        actionDescription: "Zendesk ticket created via Support Agent Bot",
+        ...(ticketId && { ticket_id: ticketId }),
+      });
+    },
+    [analyticsService]
+  );
+
   return {
     trackChatInitiated,
     trackChatLinkClicked,
     trackMessageSent,
+    trackTicketCreated,
   };
 };

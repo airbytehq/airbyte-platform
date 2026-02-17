@@ -128,6 +128,7 @@ export const enum Action {
   CHAT_LINK_CLICKED = "ChatLinkClicked",
   CHAT_MESSAGE_SENT = "ChatMessageSent",
   CHAT_COMPLETED = "ChatCompleted",
+  CHAT_TICKET_CREATED = "ChatTicketCreated",
 
   // Connector Setup Agent Actions
   CONNECTOR_SETUP_AGENT_STARTED = "Started",

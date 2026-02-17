@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { FormattedMessage } from "react-intl";
 import { useLocation, matchPath } from "react-router-dom";
@@ -42,8 +42,9 @@ const SupportChatPanel: React.FC<{
 }> = ({ workspaceId, connectionId, isExpanded, setIsExpanded, onClose }) => {
   const user = useCurrentUser();
   const { pathname } = useLocation();
-  const { trackChatLinkClicked, trackMessageSent } = useAnalyticsTrackFunctions();
+  const { trackChatLinkClicked, trackMessageSent, trackTicketCreated } = useAnalyticsTrackFunctions();
   const [autoScrollEnabled, setAutoScrollEnabled] = useLocalStorage("airbyte_support-chat-autoscroll", true);
+  const trackedTicketIdsRef = useRef<Set<string>>(new Set());
   const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
     endpoint: "/agents/support/chat",
     prompt: "Introduce yourself as an AI support agent and briefly outline your main functions using emojis.",
@@ -55,6 +56,24 @@ const SupportChatPanel: React.FC<{
     },
     clientTools: {},
   });
+
+  useEffect(() => {
+    for (const msg of messages) {
+      if (
+        msg.role === "tool" &&
+        msg.toolResponse?.tool_name === "create_zendesk_ticket" &&
+        typeof msg.toolResponse.response === "string" &&
+        msg.toolResponse.response.includes("Successfully created Zendesk ticket")
+      ) {
+        const callId = msg.toolResponse.call_id;
+        if (callId && !trackedTicketIdsRef.current.has(callId)) {
+          trackedTicketIdsRef.current.add(callId);
+          const ticketIdMatch = msg.toolResponse.response.match(/ticket (\d+)/);
+          trackTicketCreated(ticketIdMatch?.[1]);
+        }
+      }
+    }
+  }, [messages, trackTicketCreated]);
 
   // Send message and track
   const handleSendMessage = useCallback(
