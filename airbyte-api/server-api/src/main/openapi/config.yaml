@@ -15982,7 +15982,6 @@ components:
           required:
             - currency
             - amount
-            - dueDate
           properties:
             currency:
               type: string
