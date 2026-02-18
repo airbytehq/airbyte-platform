@@ -33,6 +33,7 @@ object LocalContainerConstants {
     exitCode: Int,
     workspaceId: UUID?,
     connectionId: UUID?,
+    dockerImage: String? = null,
   ) {
     val attributes =
       listOfNotNull(
@@ -40,6 +41,7 @@ object LocalContainerConstants {
         MetricAttribute(MetricTags.EXIT_CODE, exitCode.toString()),
         workspaceId?.let { MetricAttribute(MetricTags.WORKSPACE_ID, it.toString()) },
         connectionId?.let { MetricAttribute(MetricTags.CONNECTION_ID, it.toString()) },
+        dockerImage?.let { MetricAttribute(MetricTags.CONNECTOR_IMAGE, it) },
       )
     metricClient.count(
       OssMetricsRegistry.CONNECTOR_EXIT_CODE,

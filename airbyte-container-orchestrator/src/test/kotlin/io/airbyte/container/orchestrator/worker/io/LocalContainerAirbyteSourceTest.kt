@@ -426,6 +426,7 @@ internal class LocalContainerAirbyteSourceTest {
       }
     every { messageMetricsTracker.flushSourceReadCountMetric() } returns Unit
 
+    val testImage = "airbyte/source-postgres:1.2.3"
     val source =
       LocalContainerAirbyteSource(
         heartbeatMonitor = heartbeatMonitor,
@@ -434,6 +435,7 @@ internal class LocalContainerAirbyteSourceTest {
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
         metricClient = metricClient,
+        dockerImage = testImage,
       )
 
     assertThrows(WorkerException::class.java, source::close)
@@ -443,6 +445,7 @@ internal class LocalContainerAirbyteSourceTest {
         1,
         match<MetricAttribute> { it.key == "connector_type" && it.value == "source" },
         match<MetricAttribute> { it.key == "exit_code" && it.value == "3" },
+        match<MetricAttribute> { it.key == "connector_image" && it.value == testImage },
       )
     }
   }

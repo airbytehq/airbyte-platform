@@ -533,6 +533,7 @@ internal class LocalContainerAirbyteDestinationTest {
     every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
     every { messageMetricsTracker.flushDestSentCountMetric() } returns Unit
 
+    val testImage = "airbyte/destination-bigquery:2.0.1"
     val destination =
       LocalContainerAirbyteDestination(
         streamFactory = streamFactory,
@@ -541,6 +542,7 @@ internal class LocalContainerAirbyteDestinationTest {
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
         metricClient = metricClient,
+        dockerImage = testImage,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -553,6 +555,7 @@ internal class LocalContainerAirbyteDestinationTest {
         1,
         match<MetricAttribute> { it.key == "connector_type" && it.value == "destination" },
         match<MetricAttribute> { it.key == "exit_code" && it.value == "3" },
+        match<MetricAttribute> { it.key == "connector_image" && it.value == testImage },
       )
     }
   }

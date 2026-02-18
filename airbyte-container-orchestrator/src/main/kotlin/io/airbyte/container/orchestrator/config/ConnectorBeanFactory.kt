@@ -85,6 +85,7 @@ class ConnectorBeanFactory {
       metricClient = metricClient,
       workspaceId = replicationInput.workspaceId,
       connectionId = replicationInput.connectionId,
+      dockerImage = replicationInput.destinationLauncherConfig.dockerImage,
       flushImmediately = replicationInput.useFileTransfer,
     )
 
@@ -110,6 +111,7 @@ class ConnectorBeanFactory {
         metricClient = metricClient,
         workspaceId = replicationInput.workspaceId,
         connectionId = replicationInput.connectionId,
+        dockerImage = replicationInput.sourceLauncherConfig.dockerImage,
         diagnosticLogsEnabled = replicationInputFeatureFlagReader.read(HeartbeatDiagnosticLogsEnabled),
       )
     }

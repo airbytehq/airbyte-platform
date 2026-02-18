@@ -39,6 +39,7 @@ class LocalContainerAirbyteDestination(
   private val metricClient: MetricClient,
   private val workspaceId: UUID? = null,
   private val connectionId: UUID? = null,
+  private val dockerImage: String? = null,
   private val flushImmediately: Boolean = false,
   private val exitCodeWaitSeconds: Long = EXIT_CODE_WAIT_SECONDS,
 ) : AirbyteDestination {
@@ -69,7 +70,7 @@ class LocalContainerAirbyteDestination(
     val terminationResult = containerIOHandle.terminate()
     if (terminationResult) {
       if (!LocalContainerConstants.IGNORED_EXIT_CODES.contains(exitValue)) {
-        LocalContainerConstants.emitExitCodeMetric(metricClient, "destination", exitValue, workspaceId, connectionId)
+        LocalContainerConstants.emitExitCodeMetric(metricClient, "destination", exitValue, workspaceId, connectionId, dockerImage)
         throw WorkerException("Destination process exit with code $exitValue. This warning is normal if the job was cancelled.")
       }
     } else {
