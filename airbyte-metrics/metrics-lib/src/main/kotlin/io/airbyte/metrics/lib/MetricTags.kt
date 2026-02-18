@@ -35,6 +35,7 @@ object MetricTags {
   const val DESTINATION_IMAGE_TAG: String = "destination_image_tag"
   const val DESTINATION_IMAGE_IS_DEFAULT: String = "destination_image_is_default"
   const val ERROR: String = "error"
+  const val EXIT_CODE: String = "exit_code"
   const val EXPIRE_SECRET: String = "expire_secret"
   const val FAILURE: String = "failure"
   const val FAILURE_CAUSE: String = "failure_cause"

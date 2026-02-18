@@ -71,6 +71,7 @@ class ConnectorBeanFactory {
     @Named("destinationStreamFactory") destinationStreamFactory: AirbyteStreamFactory,
     messageWriterFactory: AirbyteMessageBufferedWriterFactory,
     messageMetricsTracker: MessageMetricsTracker,
+    metricClient: MetricClient,
     replicationInput: ReplicationInput,
     @Named("destinationMdcScopeBuilder") mdcScopeBuilder: MdcScope.Builder,
   ): AirbyteDestination =
@@ -81,6 +82,9 @@ class ConnectorBeanFactory {
       destinationTimeoutMonitor = airbyteDestinationMonitor,
       containerIOHandle = dest(),
       containerLogMdcBuilder = mdcScopeBuilder,
+      metricClient = metricClient,
+      workspaceId = replicationInput.workspaceId,
+      connectionId = replicationInput.connectionId,
       flushImmediately = replicationInput.useFileTransfer,
     )
 
@@ -88,6 +92,7 @@ class ConnectorBeanFactory {
   fun airbyteSource(
     heartbeatMonitor: HeartbeatMonitor,
     messageMetricsTracker: MessageMetricsTracker,
+    metricClient: MetricClient,
     replicationInput: ReplicationInput,
     replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
     @Named("sourceStreamFactory") sourceStreamFactory: AirbyteStreamFactory,
@@ -102,6 +107,9 @@ class ConnectorBeanFactory {
         messageMetricsTracker = messageMetricsTracker,
         containerIOHandle = source(),
         containerLogMdcBuilder = mdcScopeBuilder,
+        metricClient = metricClient,
+        workspaceId = replicationInput.workspaceId,
+        connectionId = replicationInput.connectionId,
         diagnosticLogsEnabled = replicationInputFeatureFlagReader.read(HeartbeatDiagnosticLogsEnabled),
       )
     }

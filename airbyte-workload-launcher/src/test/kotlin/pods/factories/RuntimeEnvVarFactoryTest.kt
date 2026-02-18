@@ -176,17 +176,17 @@ internal class RuntimeEnvVarFactoryTest {
   }
 
   @Test
-  fun `does not build apm env vars if disabled (mutative API)`() {
+  fun `sets OOM flag when apm disabled`() {
     val image = "image-name"
     val context = Connection(UUID.randomUUID())
     every { ffClient.boolVariation(ConnectorApmEnabled, context) } returns false
 
-    every { connectorApmSupportHelper.addApmEnvVars(any()) } returns Unit
-    every { connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, any()) } returns Unit
+    val result = factory.getConnectorApmEnvVars(image, context)
 
-    factory.getConnectorApmEnvVars(image, context)
-
-    // the API is mutative for some reason that means this is the best we can do
+    assertEquals(
+      listOf(EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, RuntimeEnvVarFactory.CONNECTOR_BASE_JVM_OPTS, null)),
+      result,
+    )
     verify(exactly = 0) { connectorApmSupportHelper.addApmEnvVars(any()) }
     verify(exactly = 0) { connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, any()) }
   }
@@ -368,7 +368,9 @@ internal class RuntimeEnvVarFactoryTest {
     val result = factory.replicationConnectorEnvVars(config, resourceReqs, false)
 
     val expected =
-      awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars + customCodeEnvVars + debugLogLevelEnvVars
+      awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars +
+        customCodeEnvVars +
+        debugLogLevelEnvVars
 
     assertEquals(expected, result)
   }

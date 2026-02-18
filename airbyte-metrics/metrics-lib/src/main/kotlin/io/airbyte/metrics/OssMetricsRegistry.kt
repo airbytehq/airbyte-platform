@@ -141,6 +141,10 @@ enum class OssMetricsRegistry(
     metricName = "cron_jobs_run",
     metricDescription = "number of cron runs by cron type",
   ),
+  CONNECTOR_EXIT_CODE(
+    metricName = "connector_exit_code",
+    metricDescription = "connector container process exit code",
+  ),
   CONNECTOR_REGISTRY_DEFINITION_PROCESSED(
     // Actually `cron` or `bootloader` based on which metric client calls the code
     metricName = "connector_registry_definition_processed",

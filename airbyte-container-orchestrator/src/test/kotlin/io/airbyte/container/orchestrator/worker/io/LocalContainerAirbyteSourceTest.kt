@@ -10,6 +10,9 @@ import io.airbyte.config.WorkerSourceConfig
 import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.EXIT_CODE_CHECK_EXISTS_FAILURE
 import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteSource.Companion.FALLBACK_EXIT_CODE
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
@@ -32,6 +35,7 @@ internal class LocalContainerAirbyteSourceTest {
   private lateinit var containerLogMdcBuilder: MdcScope.Builder
   private lateinit var exitValueFile: File
   private lateinit var heartbeatMonitor: HeartbeatMonitor
+  private lateinit var metricClient: MetricClient
   private lateinit var jobRoot: Path
   private lateinit var containerIOHandle: ContainerIOHandle
   private lateinit var message: AirbyteMessage
@@ -63,6 +67,7 @@ internal class LocalContainerAirbyteSourceTest {
         .setExtraMdcEntriesNonNullable(LogSource.SOURCE.toMdc())
     connectionId = UUID.randomUUID()
     heartbeatMonitor = mockk<HeartbeatMonitor>()
+    metricClient = mockk<MetricClient>(relaxed = true)
     jobRoot = Path.of(".")
     message = mockk<AirbyteMessage>()
     messageMetricsTracker =
@@ -97,6 +102,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
       )
 
     source.start(sourceConfig = workerSourceConfig, jobRoot = jobRoot, connectionId = connectionId)
@@ -121,6 +127,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
       )
 
     source.start(sourceConfig = workerSourceConfig, jobRoot = jobRoot, connectionId = connectionId)
@@ -143,6 +150,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
       )
 
     source.start(sourceConfig = workerSourceConfig, jobRoot = jobRoot, connectionId = connectionId)
@@ -162,6 +170,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
       )
 
     assertEquals(exitValue, source.exitValue)
@@ -183,6 +192,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
       )
 
     source.start(sourceConfig = workerSourceConfig, jobRoot = jobRoot, connectionId = connectionId)
@@ -214,6 +224,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
       )
 
     assertDoesNotThrow { source.close() }
@@ -239,6 +250,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
       )
 
     val error = assertThrows(WorkerException::class.java, source::close)
@@ -264,6 +276,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
       )
 
     val error = assertThrows(WorkerException::class.java, source::close)
@@ -289,6 +302,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
       )
 
     val error = assertThrows(WorkerException::class.java, source::cancel)
@@ -315,6 +329,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         // Use short timeout for test to avoid waiting 30 seconds
         exitCodeWaitSeconds = 1L,
       )
@@ -348,6 +363,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
       )
 
     source.start(sourceConfig = workerSourceConfig, jobRoot = jobRoot, connectionId = connectionId)
@@ -380,6 +396,7 @@ internal class LocalContainerAirbyteSourceTest {
         streamFactory = streamFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         // Use enough time for our delayed write
         exitCodeWaitSeconds = 5L,
       )
@@ -397,5 +414,60 @@ internal class LocalContainerAirbyteSourceTest {
 
     // exitValue should wait and find the exit code file
     assertEquals(expectedExitCode, source.exitValue)
+  }
+
+  @Test
+  internal fun testSourceCloseEmitsExitCodeMetricOnNonIgnoredExitCode() {
+    val mockedContainerIOHandle =
+      mockk<ContainerIOHandle> {
+        every { terminate() } returns true
+        every { exitCodeExists() } returns true
+        every { getExitCode() } returns 3
+      }
+    every { messageMetricsTracker.flushSourceReadCountMetric() } returns Unit
+
+    val source =
+      LocalContainerAirbyteSource(
+        heartbeatMonitor = heartbeatMonitor,
+        messageMetricsTracker = messageMetricsTracker,
+        streamFactory = streamFactory,
+        containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
+      )
+
+    assertThrows(WorkerException::class.java, source::close)
+    verify(exactly = 1) {
+      metricClient.count(
+        OssMetricsRegistry.CONNECTOR_EXIT_CODE,
+        1,
+        match<MetricAttribute> { it.key == "connector_type" && it.value == "source" },
+        match<MetricAttribute> { it.key == "exit_code" && it.value == "3" },
+      )
+    }
+  }
+
+  @Test
+  internal fun testSourceCloseDoesNotEmitExitCodeMetricOnIgnoredExitCodes() {
+    val mockedContainerIOHandle =
+      mockk<ContainerIOHandle> {
+        every { terminate() } returns true
+        every { exitCodeExists() } returns true
+        every { getExitCode() } returns 0
+      }
+    every { messageMetricsTracker.flushSourceReadCountMetric() } returns Unit
+
+    val source =
+      LocalContainerAirbyteSource(
+        heartbeatMonitor = heartbeatMonitor,
+        messageMetricsTracker = messageMetricsTracker,
+        streamFactory = streamFactory,
+        containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
+      )
+
+    source.close()
+    verify(exactly = 0) { metricClient.count(OssMetricsRegistry.CONNECTOR_EXIT_CODE, any(), *anyVararg()) }
   }
 }
