@@ -6,6 +6,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
 import { isAnyModalOpen, isElementInModal } from "components/ui/Modal";
+import { SupportAgentButton } from "components/ui/support";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
@@ -161,6 +162,7 @@ export const MenuBar: React.FC = () => {
         <AssistConfigButton />
       </FlexContainer>
       <FlexContainer direction="row" alignItems="center" className={styles.rightSide}>
+        <SupportAgentButton />
         {isCloudApp ? (
           <CloudHelpDropdown className={styles.helpButton} hideLabel placement="bottom" />
         ) : (

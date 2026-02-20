@@ -2,26 +2,25 @@
 @use "scss/colors";
 @use "scss/z-indices";
 
-.widget {
-  position: fixed;
-  bottom: 74px;
-  right: variables.$spacing-xl;
-  z-index: z-indices.$sidebar;
-
-  &.hidden {
-    display: none;
-  }
-}
-
 .button {
+  position: fixed;
+  bottom: 75px;
+  right: 15px;
+  z-index: z-indices.$sidebar;
+  height: 30px;
+  padding: revert;
   transition: all 0.2s ease;
-  border-radius: variables.$border-radius-pill;
+  border-radius: variables.$border-radius-lg;
   transform: scale(1.5);
   transform-origin: bottom right;
 
   &:hover {
     transform: scale(1.5) translateY(-2px);
   }
+}
+
+.hidden {
+  display: none;
 }
 
 .panel {

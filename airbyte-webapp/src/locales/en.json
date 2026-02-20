@@ -1930,6 +1930,7 @@
   "connectorBuilder.assist.config.openapiSpecUrl.tooltip": "Direct link to a JSON or YAML file containing the OpenAPI specification for the API you want to connect to.",
   "connectorBuilder.assist.config.title": "AI Assistant",
   "connectorBuilder.assist.config.button": "AI Assistant",
+  "connectorBuilder.supportAgent.tooltip": "Support Agent",
   "connectorBuilder.assist.config.description": "By providing this information, you will enable the AI Assistant to make suggestions for the configuration of your connector. Learn more <lnk>here</lnk>.",
   "connectorBuilder.assist.tooltip.needMoreInfo": "Your AI Assistant needs more information to make suggestions. Please provide more information by clicking the AI Assistant button in the header.",
   "connectorBuilder.assist.tooltip.fetching": "Fetching AI Assistant data…",

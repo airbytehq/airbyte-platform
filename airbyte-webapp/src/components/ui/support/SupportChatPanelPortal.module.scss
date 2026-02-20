@@ -1,0 +1,12 @@
+@use "scss/z-indices";
+
+.panelContainer {
+  position: fixed;
+  bottom: 75px;
+  right: 15px;
+  z-index: z-indices.$sidebar;
+
+  &.hidden {
+    display: none;
+  }
+}

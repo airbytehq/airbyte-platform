@@ -1,6 +1,5 @@
 import classNames from "classnames";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useRef, useEffect } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation, matchPath } from "react-router-dom";
 
@@ -24,16 +23,19 @@ import { RoutePaths, SourcePaths, DestinationPaths } from "pages/routePaths";
 
 import { AutoScrollToggle } from "./AutoScrollToggle";
 import styles from "./SupportAgentWidget.module.scss";
+import { SupportChatPanelPortal } from "./SupportChatPanelPortal";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
+import { useSupportChatPanelState } from "./useSupportChatPanelState";
 
-// Routes where support bot should be hidden to avoid conflict with setup bot
+// Routes where support bot should be hidden to avoid conflict with setup bot or other assistant buttons
 const HIDDEN_SUPPORT_BOT_PATHS = [
   `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.Source}/${SourcePaths.SourceNew}`,
   `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.Destination}/${DestinationPaths.DestinationNew}`,
+  `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.ConnectorBuilder}/edit/*`,
 ];
 
 // Inner component that uses the chat hook - only rendered when widget is open
-const SupportChatPanel: React.FC<{
+export const SupportChatPanel: React.FC<{
   workspaceId: string;
   connectionId?: string;
   isExpanded: boolean;
@@ -165,19 +167,7 @@ export const SupportAgentWidget: React.FC = () => {
   const workspaceId = useCurrentWorkspaceId();
   const connectionId = useCurrentConnectionIdOptional();
   const { pathname } = useLocation();
-  const { trackChatInitiated } = useAnalyticsTrackFunctions();
-
-  // Widget display state
-  const [isOpen, setIsOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [hasBeenOpened, setHasBeenOpened] = useState(false);
-
-  // Track chat initiated only once when first opened
-  useEffect(() => {
-    if (hasBeenOpened) {
-      trackChatInitiated();
-    }
-  }, [hasBeenOpened, trackChatInitiated]);
+  const { isOpen, setIsOpen, isExpanded, setIsExpanded, hasBeenOpened, setHasBeenOpened } = useSupportChatPanelState();
 
   // Don't render if feature disabled
   if (!supportEnabled) {
@@ -187,24 +177,26 @@ export const SupportAgentWidget: React.FC = () => {
   // Hide if on connector creation routes or no workspace context
   const shouldHide = !workspaceId || HIDDEN_SUPPORT_BOT_PATHS.some((path) => !!matchPath(path, pathname));
 
-  return createPortal(
-    <div className={classNames(styles.widget, { [styles.hidden]: shouldHide })}>
-      {!isOpen && (
-        // Collapsed button
-        <Button
-          variant="magic"
-          size="sm"
-          onClick={() => {
-            setHasBeenOpened(true);
-            setIsOpen(true);
-          }}
-          icon="chat"
-          className={styles.button}
-        />
-      )}
+  if (shouldHide) {
+    return null;
+  }
+
+  return (
+    <>
+      <Button
+        variant="magic"
+        size="xs"
+        icon="chat"
+        iconSize="md"
+        type="button"
+        onClick={() => {
+          setHasBeenOpened(true);
+          setIsOpen(true);
+        }}
+        className={classNames(styles.button, { [styles.hidden]: isOpen })}
+      />
       {hasBeenOpened && (
-        // Chat panel - keep mounted to preserve context, hide with CSS when closed
-        <div style={{ display: isOpen ? "flex" : "none" }}>
+        <SupportChatPanelPortal isOpen={isOpen}>
           <SupportChatPanel
             workspaceId={workspaceId}
             connectionId={connectionId}
@@ -212,9 +204,8 @@ export const SupportAgentWidget: React.FC = () => {
             setIsExpanded={setIsExpanded}
             onClose={() => setIsOpen(false)}
           />
-        </div>
+        </SupportChatPanelPortal>
       )}
-    </div>,
-    document.body
+    </>
   );
 };
