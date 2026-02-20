@@ -6,7 +6,10 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
+
+import { links } from "core/utils/links";
 
 import { type OAuthState } from "./hooks/useConnectorSetupAgentState";
 import { OAuthProvider } from "./OAuthContext";
@@ -84,7 +87,16 @@ export const ConnectorSetupAgent: React.FC<ConnectorSetupAgentProps> = ({
           </FlexContainer>
           <Box mt="sm">
             <Text size="sm" color="grey">
-              <FormattedMessage id="connectorSetup.agent.description" />
+              <FormattedMessage
+                id="connectorSetup.agent.description"
+                values={{
+                  privacy: (privacy: React.ReactNode) => (
+                    <ExternalLink href={links.privacyLink} variant="primary">
+                      {privacy}
+                    </ExternalLink>
+                  ),
+                }}
+              />
             </Text>
           </Box>
         </ChatInterfaceHeader>
