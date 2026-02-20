@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceReadList
+import io.airbyte.api.model.generated.SourceReadWithMetadata
 import io.airbyte.api.model.generated.SourceSearch
 import io.airbyte.api.model.generated.SourceSnippetRead
 import io.airbyte.api.model.generated.SourceUpdate
@@ -56,6 +57,7 @@ import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
+import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.DEFAULT_PAGE_SIZE
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.data.services.shared.buildFilters
@@ -100,6 +102,7 @@ class SourceHandler
     private val oAuthConfigSupplier: OAuthConfigSupplier,
     private val actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
     private val sourceService: SourceService,
+    private val workspaceService: WorkspaceService,
     private val workspaceHelper: WorkspaceHelper,
     private val secretPersistenceService: SecretPersistenceService,
     private val actorDefinitionHandlerHelper: ActorDefinitionHandlerHelper,
@@ -293,6 +296,27 @@ class SourceHandler
       sourceIdRequestBody: SourceIdRequestBody,
       includeSecretCoordinates: Boolean,
     ): SourceRead = buildSourceRead(sourceIdRequestBody.sourceId, includeSecretCoordinates)
+
+    fun getSourceWithMetadata(sourceIdRequestBody: SourceIdRequestBody): SourceReadWithMetadata {
+      val sourceRead = buildSourceRead(sourceIdRequestBody.sourceId)
+      val workspace = workspaceService.getStandardWorkspaceNoSecrets(sourceRead.workspaceId, false)
+      return SourceReadWithMetadata()
+        .sourceDefinitionId(sourceRead.sourceDefinitionId)
+        .sourceId(sourceRead.sourceId)
+        .workspaceId(sourceRead.workspaceId)
+        .connectionConfiguration(sourceRead.connectionConfiguration)
+        .name(sourceRead.name)
+        .sourceName(sourceRead.sourceName)
+        .icon(sourceRead.icon)
+        .isVersionOverrideApplied(sourceRead.isVersionOverrideApplied)
+        .isEntitled(sourceRead.isEntitled)
+        .breakingChanges(sourceRead.breakingChanges)
+        .supportState(sourceRead.supportState)
+        .status(sourceRead.status)
+        .createdAt(sourceRead.createdAt)
+        .resourceAllocation(sourceRead.resourceAllocation)
+        .workspaceName(workspace.name)
+    }
 
     fun getMostRecentSourceActorCatalogWithUpdatedAt(sourceIdRequestBody: SourceIdRequestBody): ActorCatalogWithUpdatedAt {
       val actorCatalog =

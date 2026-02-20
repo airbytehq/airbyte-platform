@@ -581,6 +581,7 @@ internal class ConnectionsHandlerTest {
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
         sourceService,
+        workspaceService,
         workspaceHelper,
         secretPersistenceService,
         actorDefinitionHandlerHelper,

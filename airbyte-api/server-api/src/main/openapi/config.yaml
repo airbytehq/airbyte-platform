@@ -1680,6 +1680,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sources/get_with_metadata:
+    post:
+      tags:
+        - source
+      summary: Get source with metadata
+      operationId: getSourceWithMetadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceReadWithMetadata"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/sources/most_recent_source_actor_catalog:
     post:
       tags:
@@ -13843,6 +13866,16 @@ components:
           additionalProperties:
             type: integer
           description: "Map of job status to count of connections whose latest job has that status"
+    SourceReadWithMetadata:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/SourceRead"
+        - type: object
+          required:
+            - workspaceName
+          properties:
+            workspaceName:
+              type: string
     ActorStatus:
       description: An actor(source/destination) is active if it has at least one active or manual connection.
       type: string

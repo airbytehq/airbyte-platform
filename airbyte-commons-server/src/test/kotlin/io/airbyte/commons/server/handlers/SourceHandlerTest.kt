@@ -42,6 +42,7 @@ import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.Configs
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
+import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SuggestedStreams
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
@@ -60,6 +61,7 @@ import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
+import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.SourceConnectionWithCount
 import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination
 import io.airbyte.domain.models.ActorId
@@ -112,6 +114,7 @@ internal class SourceHandlerTest {
   lateinit var partialUserConfigService: PartialUserConfigService
 
   lateinit var sourceService: SourceService
+  lateinit var workspaceService: WorkspaceService
   lateinit var workspaceHelper: WorkspaceHelper
   lateinit var actorDefinitionHandlerHelper: ActorDefinitionHandlerHelper
   lateinit var licenseEntitlementChecker: LicenseEntitlementChecker
@@ -139,6 +142,7 @@ internal class SourceHandlerTest {
     oAuthConfigSupplier = mockk(relaxed = true)
     actorDefinitionVersionHelper = mockk(relaxed = true)
     sourceService = mockk(relaxed = true)
+    workspaceService = mockk(relaxed = true)
     workspaceHelper = mockk(relaxed = true)
     secretPersistenceService = mockk(relaxed = true)
     actorDefinitionHandlerHelper = mockk(relaxed = true)
@@ -207,6 +211,7 @@ internal class SourceHandlerTest {
         oAuthConfigSupplier = oAuthConfigSupplier,
         actorDefinitionVersionHelper = actorDefinitionVersionHelper,
         sourceService = sourceService,
+        workspaceService = workspaceService,
         workspaceHelper = workspaceHelper,
         secretPersistenceService = secretPersistenceService,
         actorDefinitionHandlerHelper = actorDefinitionHandlerHelper,
@@ -457,6 +462,7 @@ internal class SourceHandlerTest {
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
         sourceService,
+        workspaceService,
         workspaceHelper,
         secretPersistenceService,
         actorDefinitionHandlerHelper,
@@ -791,6 +797,7 @@ internal class SourceHandlerTest {
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
         sourceService,
+        workspaceService,
         workspaceHelper,
         secretPersistenceService,
         actorDefinitionHandlerHelper,
@@ -907,6 +914,71 @@ internal class SourceHandlerTest {
         sourceDefinitionSpecificationRead.connectionSpecification,
       )
     }
+  }
+
+  @Test
+  fun testGetSourceWithMetadata() {
+    val workspaceName = "My Test Workspace"
+    val expectedSourceRead =
+      SourceHelpers.getSourceRead(
+        sourceConnection,
+        standardSourceDefinition,
+        IS_VERSION_OVERRIDE_APPLIED,
+        IS_ENTITLED,
+        SUPPORT_STATE,
+        RESOURCE_ALLOCATION,
+      )
+    val sourceIdRequestBody = SourceIdRequestBody().sourceId(expectedSourceRead.sourceId)
+
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
+    every {
+      actorDefinitionVersionHelper.getSourceVersion(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
+      )
+    } returns sourceDefinitionVersion
+    every { sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId) } returns standardSourceDefinition
+    every {
+      secretsProcessor.prepareSecretsForOutput(
+        sourceConnection.configuration,
+        sourceDefinitionSpecificationRead.connectionSpecification,
+      )
+    } returns sourceConnection.configuration
+    every {
+      actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
+      )
+    } returns sourceDefinitionVersionWithOverrideStatus
+    every {
+      secretReferenceService.getConfigWithSecretReferences(
+        any(),
+        any(),
+        any(),
+      )
+    } answers {
+      ConfigWithSecretReferences(
+        secondArg(),
+        mapOf(),
+      )
+    }
+
+    val workspace = StandardWorkspace().withWorkspaceId(sourceConnection.workspaceId).withName(workspaceName)
+    every { workspaceService.getStandardWorkspaceNoSecrets(sourceConnection.workspaceId, false) } returns workspace
+
+    val result = sourceHandler.getSourceWithMetadata(sourceIdRequestBody)
+
+    Assertions.assertEquals(expectedSourceRead.sourceId, result.sourceId)
+    Assertions.assertEquals(expectedSourceRead.sourceDefinitionId, result.sourceDefinitionId)
+    Assertions.assertEquals(expectedSourceRead.workspaceId, result.workspaceId)
+    Assertions.assertEquals(expectedSourceRead.name, result.name)
+    Assertions.assertEquals(expectedSourceRead.sourceName, result.sourceName)
+    Assertions.assertEquals(expectedSourceRead.connectionConfiguration, result.connectionConfiguration)
+    Assertions.assertEquals(expectedSourceRead.icon, result.icon)
+    Assertions.assertEquals(workspaceName, result.workspaceName)
   }
 
   @Test

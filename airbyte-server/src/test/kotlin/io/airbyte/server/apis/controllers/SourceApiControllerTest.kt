@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceReadList
+import io.airbyte.api.model.generated.SourceReadWithMetadata
 import io.airbyte.api.model.generated.SourceSearch
 import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
@@ -109,6 +110,15 @@ internal class SourceApiControllerTest {
     every { sourceHandler.getSource(any()) } returns SourceRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/get"
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceIdRequestBody())))
+  }
+
+  @Test
+  fun testGetSourceWithMetadata() {
+    every { sourceHandler.getSourceWithMetadata(any()) } returns SourceReadWithMetadata() andThenThrows ConfigNotFoundException("", "")
+
+    val path = "/api/v1/sources/get_with_metadata"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
     assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceIdRequestBody())))
   }

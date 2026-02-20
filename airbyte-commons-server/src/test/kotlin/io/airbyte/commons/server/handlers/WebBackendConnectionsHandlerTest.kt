@@ -258,6 +258,7 @@ internal class WebBackendConnectionsHandlerTest {
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
         sourceService,
+        workspaceService,
         workspaceHelper,
         secretPersistenceService,
         actorDefinitionHandlerHelper,

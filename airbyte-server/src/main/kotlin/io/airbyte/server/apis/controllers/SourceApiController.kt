@@ -19,6 +19,7 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceReadList
+import io.airbyte.api.model.generated.SourceReadWithMetadata
 import io.airbyte.api.model.generated.SourceSearch
 import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.commons.annotation.AuditLogging
@@ -111,6 +112,13 @@ open class SourceApiController(
   override fun getSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): SourceRead? = execute { sourceHandler.getSource(sourceIdRequestBody) }
+
+  @Post("/get_with_metadata")
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getSourceWithMetadata(
+    @Body sourceIdRequestBody: SourceIdRequestBody,
+  ): SourceReadWithMetadata? = execute { sourceHandler.getSourceWithMetadata(sourceIdRequestBody) }
 
   @Post("/most_recent_source_actor_catalog")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
