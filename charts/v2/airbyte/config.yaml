@@ -396,6 +396,24 @@ database:
       key: name
       defaultValue: db-airbyte
 
+    # Replica database configuration (falls back to primary values if not configured)
+    - env: CONFIG_DATABASE_REPLICA_URL
+      key: replica.url
+      valueExp: (dig "replica" "url" "" .Values.global.database | default (include "airbyte.database.url" .))
+      includeIf: (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false")
+
+    - env: CONFIG_DATABASE_REPLICA_USER
+      key: replica.user
+      sensitive: true
+      valueExp: (dig "replica" "user" "" .Values.global.database | default (include "airbyte.database.user" .))
+      includeIf: (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false")
+
+    - env: CONFIG_DATABASE_REPLICA_PASSWORD
+      key: replica.password
+      sensitive: true
+      valueExp: (dig "replica" "password" "" .Values.global.database | default (include "airbyte.database.password" .))
+      includeIf: (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false")
+
 database.cloudSqlProxy:
   keyBasePath: global.cloudSqlProxy
   config:

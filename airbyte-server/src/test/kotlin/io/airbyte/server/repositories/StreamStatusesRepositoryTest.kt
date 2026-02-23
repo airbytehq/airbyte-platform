@@ -214,7 +214,7 @@ internal class StreamStatusesRepositoryTest {
     val inserted1 = repo!!.save(s1)
     val inserted2 = repo!!.save(s2)
 
-    val result = repo!!.findAllFiltered(FilterParams(Fixtures.workspaceId1, null, null, null, null, null, null, null))
+    val result = readRepo!!.findAllFiltered(FilterParams(Fixtures.workspaceId1, null, null, null, null, null, null, null))
 
     Assertions.assertEquals(1, result.content.size)
     Assertions.assertEquals(inserted1.id, result.content.first().id)
@@ -261,21 +261,21 @@ internal class StreamStatusesRepositoryTest {
     val f14 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, JobStreamStatusJobType.sync, null)
     val f15 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, JobStreamStatusJobType.reset, null)
 
-    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13, s14, s15), repo!!.findAllFiltered(f1).content)
-    assertContainsSameElements(listOf(s6), repo!!.findAllFiltered(f2).content)
-    assertContainsSameElements(listOf(s7), repo!!.findAllFiltered(f3).content)
-    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s13, s14, s15), repo!!.findAllFiltered(f4).content)
-    assertContainsSameElements(listOf(s11), repo!!.findAllFiltered(f5).content)
-    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s14, s15), repo!!.findAllFiltered(f6).content)
-    assertContainsSameElements(listOf(s1, s2, s3, s8, s9, s14, s15), repo!!.findAllFiltered(f7).content)
-    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s11, s12, s13, s14), repo!!.findAllFiltered(f8).content)
-    assertContainsSameElements(listOf(s8, s9, s10, s15), repo!!.findAllFiltered(f9).content)
-    assertContainsSameElements(listOf(), repo!!.findAllFiltered(f10).content)
-    assertContainsSameElements(listOf(s1, s2, s3, s11, s12, s14), repo!!.findAllFiltered(f11).content)
-    assertContainsSameElements(listOf(s4, s5), repo!!.findAllFiltered(f12).content)
-    assertContainsSameElements(listOf(s3), repo!!.findAllFiltered(f13).content)
-    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13), repo!!.findAllFiltered(f14).content)
-    assertContainsSameElements(listOf(s14, s15), repo!!.findAllFiltered(f15).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13, s14, s15), readRepo!!.findAllFiltered(f1).content)
+    assertContainsSameElements(listOf(s6), readRepo!!.findAllFiltered(f2).content)
+    assertContainsSameElements(listOf(s7), readRepo!!.findAllFiltered(f3).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s13, s14, s15), readRepo!!.findAllFiltered(f4).content)
+    assertContainsSameElements(listOf(s11), readRepo!!.findAllFiltered(f5).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s14, s15), readRepo!!.findAllFiltered(f6).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s8, s9, s14, s15), readRepo!!.findAllFiltered(f7).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s11, s12, s13, s14), readRepo!!.findAllFiltered(f8).content)
+    assertContainsSameElements(listOf(s8, s9, s10, s15), readRepo!!.findAllFiltered(f9).content)
+    assertContainsSameElements(listOf(), readRepo!!.findAllFiltered(f10).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s11, s12, s14), readRepo!!.findAllFiltered(f11).content)
+    assertContainsSameElements(listOf(s4, s5), readRepo!!.findAllFiltered(f12).content)
+    assertContainsSameElements(listOf(s3), readRepo!!.findAllFiltered(f13).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s8, s9, s10, s11, s12, s13), readRepo!!.findAllFiltered(f14).content)
+    assertContainsSameElements(listOf(s14, s15), readRepo!!.findAllFiltered(f15).content)
   }
 
   @Test
@@ -310,18 +310,18 @@ internal class StreamStatusesRepositoryTest {
     val f9 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, StreamStatusesRepository.Pagination(3, 3))
     val f10 = Fixtures.filters(Fixtures.workspaceId1, null, null, null, null, null, null, StreamStatusesRepository.Pagination(4, 3))
 
-    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10), repo!!.findAllFiltered(f1).content)
-    assertContainsSameElements(listOf(), repo!!.findAllFiltered(f2).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10), readRepo!!.findAllFiltered(f1).content)
+    assertContainsSameElements(listOf(), readRepo!!.findAllFiltered(f2).content)
 
-    assertContainsSameElements(listOf(s1, s2, s3, s4, s5), repo!!.findAllFiltered(f3).content)
-    assertContainsSameElements(listOf(s6, s7, s8, s9, s10), repo!!.findAllFiltered(f4).content)
-    assertContainsSameElements(listOf(), repo!!.findAllFiltered(f5).content)
+    assertContainsSameElements(listOf(s1, s2, s3, s4, s5), readRepo!!.findAllFiltered(f3).content)
+    assertContainsSameElements(listOf(s6, s7, s8, s9, s10), readRepo!!.findAllFiltered(f4).content)
+    assertContainsSameElements(listOf(), readRepo!!.findAllFiltered(f5).content)
 
-    assertContainsSameElements(listOf(s1, s2, s3), repo!!.findAllFiltered(f6).content)
-    assertContainsSameElements(listOf(s4, s5, s6), repo!!.findAllFiltered(f7).content)
-    assertContainsSameElements(listOf(s7, s8, s9), repo!!.findAllFiltered(f8).content)
-    assertContainsSameElements(listOf(s10), repo!!.findAllFiltered(f9).content)
-    assertContainsSameElements(listOf(), repo!!.findAllFiltered(f10).content)
+    assertContainsSameElements(listOf(s1, s2, s3), readRepo!!.findAllFiltered(f6).content)
+    assertContainsSameElements(listOf(s4, s5, s6), readRepo!!.findAllFiltered(f7).content)
+    assertContainsSameElements(listOf(s7, s8, s9), readRepo!!.findAllFiltered(f8).content)
+    assertContainsSameElements(listOf(s10), readRepo!!.findAllFiltered(f9).content)
+    assertContainsSameElements(listOf(), readRepo!!.findAllFiltered(f10).content)
   }
 
   @Test
@@ -557,8 +557,8 @@ internal class StreamStatusesRepositoryTest {
       ),
     )
 
-    val results1 = repo!!.findAllPerRunStateByConnectionId(Fixtures.connectionId1)
-    val results2 = repo!!.findAllPerRunStateByConnectionId(Fixtures.connectionId2)
+    val results1 = readRepo!!.findAllPerRunStateByConnectionId(Fixtures.connectionId1)
+    val results2 = readRepo!!.findAllPerRunStateByConnectionId(Fixtures.connectionId2)
 
     assertContainsSameElements(listOf(p2, p3, r2, rate2, c1, if3, if4, ic3, ic4, reset2), results1)
     assertContainsSameElements(listOf(p4, r3, r4, rate3, rate4, c3, c4, if2), results2)
@@ -684,8 +684,8 @@ internal class StreamStatusesRepositoryTest {
 
     repo!!.saveAll(listOf(p1, p2, p3, p4, r1, r2, r3, c1, c2, c3, f1, f2, f3))
 
-    val results1 = repo!!.findLastAttemptsOfLastXJobsForConnection(Fixtures.connectionId1, 3)
-    val results2 = repo!!.findLastAttemptsOfLastXJobsForConnection(Fixtures.connectionId2, 2)
+    val results1 = readRepo!!.findLastAttemptsOfLastXJobsForConnection(Fixtures.connectionId1, 3)
+    val results2 = readRepo!!.findLastAttemptsOfLastXJobsForConnection(Fixtures.connectionId2, 2)
 
     assertContainsSameElements(listOf(c1, r1, r2), results1)
     assertContainsSameElements(listOf(f2, f3), results2)
@@ -811,12 +811,14 @@ internal class StreamStatusesRepositoryTest {
   }
 
   companion object {
-    private const val DATA_SOURCE_NAME = "config"
+    private const val PRIMARY_DATA_SOURCE_NAME = "config"
+    private const val REPLICA_DATA_SOURCE_NAME = "config-replica"
     private const val DATA_SOURCES = "datasources."
 
     var context: ApplicationContext? = null
 
     var repo: StreamStatusesRepository? = null
+    var readRepo: StreamStatusesReadRepository? = null
 
     var jooqDslContext: DSLContext? = null
 
@@ -831,24 +833,33 @@ internal class StreamStatusesRepositoryTest {
     @JvmStatic
     fun setup() {
       container.start()
+      val jdbcUrlPrimary = withApplicationName(container.jdbcUrl, "primary")
+      val jdbcUrlReplica = withApplicationName(container.jdbcUrl, "replica")
       // set the micronaut datasource properties to match our container we started up
       context =
         ApplicationContext.run(
           PropertySource.of(
             "test",
             mapOf<String, Any>(
-              DATA_SOURCES + DATA_SOURCE_NAME + ".driverClassName" to "org.postgresql.Driver",
-              DATA_SOURCES + DATA_SOURCE_NAME + ".db-type" to "postgres",
-              DATA_SOURCES + DATA_SOURCE_NAME + ".dialect" to "POSTGRES",
-              DATA_SOURCES + DATA_SOURCE_NAME + ".url" to container.jdbcUrl,
-              DATA_SOURCES + DATA_SOURCE_NAME + ".username" to container.username,
-              DATA_SOURCES + DATA_SOURCE_NAME + ".password" to container.password,
+              DATA_SOURCES + PRIMARY_DATA_SOURCE_NAME + ".driverClassName" to "org.postgresql.Driver",
+              DATA_SOURCES + PRIMARY_DATA_SOURCE_NAME + ".db-type" to "postgres",
+              DATA_SOURCES + PRIMARY_DATA_SOURCE_NAME + ".dialect" to "POSTGRES",
+              DATA_SOURCES + PRIMARY_DATA_SOURCE_NAME + ".url" to jdbcUrlPrimary,
+              DATA_SOURCES + PRIMARY_DATA_SOURCE_NAME + ".username" to container.username,
+              DATA_SOURCES + PRIMARY_DATA_SOURCE_NAME + ".password" to container.password,
+              DATA_SOURCES + REPLICA_DATA_SOURCE_NAME + ".driverClassName" to "org.postgresql.Driver",
+              DATA_SOURCES + REPLICA_DATA_SOURCE_NAME + ".db-type" to "postgres",
+              DATA_SOURCES + REPLICA_DATA_SOURCE_NAME + ".dialect" to "POSTGRES",
+              DATA_SOURCES + REPLICA_DATA_SOURCE_NAME + ".url" to jdbcUrlReplica,
+              DATA_SOURCES + REPLICA_DATA_SOURCE_NAME + ".username" to container.username,
+              DATA_SOURCES + REPLICA_DATA_SOURCE_NAME + ".password" to container.password,
             ),
           ),
         )
 
       // removes micronaut transactional wrapper that doesn't play nice with our non-micronaut factories
-      val dataSource = (context!!.getBean(DataSource::class.java, Qualifiers.byName(DATA_SOURCE_NAME)) as DelegatingDataSource).targetDataSource
+      val dataSource =
+        (context!!.getBean(DataSource::class.java, Qualifiers.byName(PRIMARY_DATA_SOURCE_NAME)) as DelegatingDataSource).targetDataSource
       jooqDslContext = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES)
       val databaseProviders = TestDatabaseProviders(dataSource, jooqDslContext!!)
 
@@ -866,6 +877,10 @@ internal class StreamStatusesRepositoryTest {
         context!!.getBean(
           StreamStatusesRepository::class.java,
         )
+      readRepo =
+        context!!.getBean(
+          StreamStatusesReadRepository::class.java,
+        )
     }
 
     @AfterAll
@@ -882,6 +897,14 @@ internal class StreamStatusesRepositoryTest {
       org.assertj.core.api.Assertions
         .assertThat(actual)
         .containsExactlyInAnyOrderElementsOf(expected)
+    }
+
+    private fun withApplicationName(
+      jdbcUrl: String,
+      applicationName: String,
+    ): String {
+      val separator = if (jdbcUrl.contains("?")) "&" else "?"
+      return jdbcUrl + separator + "ApplicationName=" + applicationName
     }
   }
 }
