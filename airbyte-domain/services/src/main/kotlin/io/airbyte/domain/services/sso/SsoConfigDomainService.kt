@@ -20,10 +20,12 @@ import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
 import io.airbyte.api.problems.throwable.generated.SSOTokenValidationProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.OrganizationEmailDomain
+import io.airbyte.config.Permission
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.OrganizationDomainVerificationService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
+import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.data.mappers.toDomain
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
@@ -44,6 +46,7 @@ import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigRetrieval
 import io.airbyte.domain.models.SsoConfigStatus
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
+import io.airbyte.featureflag.AutoGrantOrgPermissionsOnSsoActivation
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseVerifiedDomainsForSsoActivate
@@ -64,6 +67,7 @@ open class SsoConfigDomainService internal constructor(
   private val userPersistence: UserPersistence,
   private val organizationDomainVerificationService: OrganizationDomainVerificationService,
   private val featureFlagClient: FeatureFlagClient,
+  private val permissionService: PermissionService,
 ) {
   fun retrieveSsoConfig(organizationId: UUID): SsoConfigRetrieval {
     val currentConfig =
@@ -274,7 +278,7 @@ open class SsoConfigDomainService internal constructor(
           .companyIdentifier(config.companyIdentifier)
           .errorMessage("An email domain is required when creating an active SSO configuration."),
       )
-    validateEmailDomainForActivation(config.organizationId, configEmailDomain, config.companyIdentifier)
+    validateEmailDomainAndGrantPermissionsIfNeeded(config.organizationId, configEmailDomain, config.companyIdentifier)
 
     val existingConfig = ssoConfigService.getSsoConfig(config.organizationId)
     if (existingConfig != null) {
@@ -584,6 +588,36 @@ open class SsoConfigDomainService internal constructor(
     }
   }
 
+  /**
+   * Grant ORGANIZATION_MEMBER permission to a list of users for the specified organization.
+   * This is used during SSO activation to grant access to existing users with the email domain.
+   *
+   * @param userIds list of user IDs to grant permissions to
+   * @param organizationId the organization to grant permissions for
+   */
+  fun grantOrgMembershipToUsers(
+    userIds: List<UUID>,
+    organizationId: UUID,
+  ) {
+    if (userIds.isEmpty()) {
+      return
+    }
+
+    // Note: This is N+1 (one createPermission call per user). If this becomes a performance
+    // issue, consider adding a batch createPermissions method to PermissionService.
+    userIds.forEach { userId ->
+      val permission =
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userId)
+          .withOrganizationId(organizationId)
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+      permissionService.createPermission(permission)
+    }
+
+    logger.info { "Granted ORGANIZATION_MEMBER permission to ${userIds.size} users for organization $organizationId" }
+  }
+
   private fun validateDiscoveryUrl(config: SsoConfig) {
     try {
       URL(config.discoveryUrl)
@@ -605,6 +639,38 @@ open class SsoConfigDomainService internal constructor(
     validateEmailDomainMatchesOrganization(organizationId, emailDomain, companyIdentifier)
     validateEmailDomainNotExists(emailDomain, organizationId, companyIdentifier)
     validateNoExistingUsersOutsideOrganization(emailDomain, organizationId, companyIdentifier)
+  }
+
+  /**
+   * Validates the email domain and grants permissions to users if the auto-grant flag is enabled.
+   * When AutoGrantOrgPermissionsOnSsoActivation is ON, skips the blocking validation and instead
+   * grants ORGANIZATION_MEMBER permission to users with the email domain who don't have org access.
+   * When OFF, uses the old behavior that blocks activation if users exist outside the org.
+   */
+  private fun validateEmailDomainAndGrantPermissionsIfNeeded(
+    organizationId: UUID,
+    emailDomain: String,
+    companyIdentifier: String,
+  ) {
+    val autoGrantEnabled = featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, Organization(organizationId))
+
+    if (autoGrantEnabled) {
+      // NEW BEHAVIOR: Skip blocking validation, auto-grant permissions instead
+      validateEmailDomainMatchesOrganization(organizationId, emailDomain, companyIdentifier)
+      validateEmailDomainNotExists(emailDomain, organizationId, companyIdentifier)
+      // Note: validateNoExistingUsersOutsideOrganization is SKIPPED
+
+      // Find and grant permissions to users who need them
+      val usersNeedingPermission =
+        userPersistence.findUsersWithEmailDomainWithoutOrgPermission(
+          emailDomain,
+          organizationId,
+        )
+      grantOrgMembershipToUsers(usersNeedingPermission, organizationId)
+    } else {
+      // OLD BEHAVIOR: Full validation including blocking on outside-org users
+      validateEmailDomainForActivation(organizationId, emailDomain, companyIdentifier)
+    }
   }
 
   @Transactional("config")
@@ -682,7 +748,7 @@ open class SsoConfigDomainService internal constructor(
         )
       }
 
-      validateEmailDomainForActivation(organizationId, emailDomain, currentSsoConfig.keycloakRealm)
+      validateEmailDomainAndGrantPermissionsIfNeeded(organizationId, emailDomain, currentSsoConfig.keycloakRealm)
 
       try {
         ssoConfigService.updateSsoConfigStatus(organizationId, SsoConfigStatus.ACTIVE)
