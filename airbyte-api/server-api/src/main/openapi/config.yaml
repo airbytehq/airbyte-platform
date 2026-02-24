@@ -9569,7 +9569,9 @@ paths:
           in: query
       responses:
         "302":
-          description: Redirect to the URL requested in the initiate call with the created secret ID.
+          description: >-
+            Redirect to the URL requested in the initiate call. In api mode, includes secret_id and
+            internal IDs. In webapp mode, forwards provider callback query params.
       operationId: oauthCallback
       x-sdk-alias: oauthCallback
       x-sdk-group: OAuth
@@ -9611,6 +9613,9 @@ paths:
 
 
         That secret ID can be used to create a source with credentials in place of actual tokens.
+        By default (`clientType=api` or omitted), callback behavior is unchanged. If
+        `clientType=webapp`, callback redirects with provider callback query params and does not
+        create a secret during callback.
   /public/v1/connections:
     post:
       requestBody:
@@ -20647,9 +20652,18 @@ components:
           type: string
         redirectUrl:
           description: >-
-            The URL to redirect the user to with the OAuth secret stored in the secret_id query
-            string parameter after authentication is complete.
+            Redirect target after OAuth callback. In `api` mode, callback includes `secret_id`,
+            `state`, `workspace_id`, and `definition_id`. In `webapp` mode, callback forwards all
+            provider callback query params.
           type: string
+        clientType:
+          description: >-
+            OAuth callback mode. `api` is default when omitted. `webapp` forwards provider callback
+            query params and does not create a secret during callback.
+          type: string
+          enum:
+            - api
+            - webapp
         workspaceId:
           format: uuid
           description: The workspace to create the secret and eventually the full source.
