@@ -35,6 +35,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import secrets.persistence.SecretCoordinateException
 import kotlin.jvm.optionals.getOrElse
 
 private val logger = KotlinLogging.logger {}
@@ -211,6 +212,12 @@ interface AwsSecretsManagerClient {
           logger.warn { "Secret ${coordinate.coordinateBase} not found" }
         }
       }
+    } catch (e: AWSSecretsManagerException) {
+      throw SecretCoordinateException(
+        "Failed to read secret ${coordinate.fullCoordinate}: ${e.errorMessage}",
+        "aws",
+        e,
+      )
     }
 
     return secretString

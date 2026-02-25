@@ -6,11 +6,13 @@ package io.airbyte.config.secrets.persistence
 
 import com.amazonaws.secretsmanager.caching.SecretCache
 import com.amazonaws.services.secretsmanager.AWSSecretsManager
+import com.amazonaws.services.secretsmanager.model.AWSSecretsManagerException
 import com.amazonaws.services.secretsmanager.model.CreateSecretResult
 import com.amazonaws.services.secretsmanager.model.DeleteSecretResult
 import com.amazonaws.services.secretsmanager.model.ResourceNotFoundException
 import com.amazonaws.services.secretsmanager.model.Tag
 import com.amazonaws.services.secretsmanager.model.UpdateSecretResult
+import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.micronaut.runtime.AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.AwsSecretsManagerConfig
 import io.mockk.every
@@ -19,6 +21,7 @@ import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import secrets.persistence.SecretCoordinateException
 
 class AwsSecretManagerPersistenceTest {
   @Test
@@ -103,6 +106,48 @@ class AwsSecretManagerPersistenceTest {
     verify(exactly = 1) {
       mockAwsCache.getSecretString(coordinate.coordinateBase)
     }
+  }
+
+  @Test
+  fun `test reading secret throws SecretCoordinateException when AWS auth fails`() {
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val mockAwsCache: SecretCache = mockk()
+    val awsException = AWSSecretsManagerException("The security token included in the request is invalid.")
+    every { mockAwsCache.getSecretString(any()) } throws awsException
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getCache() } returns mockAwsCache
+
+    val exception =
+      Assertions.assertThrows(SecretCoordinateException::class.java) {
+        spyAwsClient.getSecret(coordinate)
+      }
+    Assertions.assertSame(awsException, exception.cause)
+    Assertions.assertTrue(exception.message!!.contains(coordinate.fullCoordinate))
+    Assertions.assertEquals("aws", exception.secretStoreType)
+  }
+
+  @Test
+  fun `test reading secret still returns empty when ResourceNotFoundException is thrown`() {
+    val coordinate = SecretCoordinate.ExternalSecretCoordinate("external_secret_coordinate")
+
+    val mockAwsCache: SecretCache = mockk()
+    every { mockAwsCache.getSecretString(any()) } throws ResourceNotFoundException("not found")
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getCache() } returns mockAwsCache
+
+    val result = spyAwsClient.getSecret(coordinate)
+    Assertions.assertEquals("", result)
   }
 
   @Test

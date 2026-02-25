@@ -51,6 +51,9 @@ class DiscoverHydrationProcessor(
         if (parsed.launcherConfig.connectionId != null) {
           attrs.add(MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()))
         }
+        e.secretStoreType?.let { storeType ->
+          attrs.add(MetricAttribute("secret_store_type", storeType))
+        }
 
         metricClient.count(
           metric = OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
