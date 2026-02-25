@@ -34,5 +34,34 @@ interface SecretConfigRepository : PageableRepository<SecretConfig, UUID> {
     limit: Int,
   ): List<SecretConfig>
 
+  @Query(
+    """
+    SELECT DISTINCT sc.secret_storage_id FROM secret_config sc 
+    LEFT JOIN secret_reference sr ON sc.id = sr.secret_config_id 
+    WHERE sr.secret_config_id IS NULL
+    AND sc.created_at < :excludeCreatedBefore
+    AND sc.airbyte_managed = true
+  """,
+  )
+  fun findDistinctOrphanedStorageIds(excludeCreatedBefore: java.time.OffsetDateTime): List<UUID>
+
+  @Query(
+    """
+    SELECT sc.* FROM secret_config sc 
+    LEFT JOIN secret_reference sr ON sc.id = sr.secret_config_id 
+    WHERE sr.secret_config_id IS NULL
+    AND sc.created_at < :excludeCreatedBefore
+    AND sc.airbyte_managed = true
+    AND sc.secret_storage_id IN (:storageIds)
+    ORDER BY sc.created_at ASC
+    LIMIT :limit
+  """,
+  )
+  fun findAirbyteManagedConfigsWithoutReferencesByStorageIds(
+    excludeCreatedBefore: java.time.OffsetDateTime,
+    limit: Int,
+    storageIds: List<UUID>,
+  ): List<SecretConfig>
+
   fun deleteByIdIn(ids: List<UUID>)
 }
