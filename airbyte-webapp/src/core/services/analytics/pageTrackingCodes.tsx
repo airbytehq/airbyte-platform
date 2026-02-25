@@ -1,7 +1,5 @@
 export enum PageTrackingCodes {
   SIGNUP = "Auth.Signup",
-  EMBEDDED_SIGNUP = "Auth.EmbeddedSignup",
-  EMBEDDED_LOGIN = "Auth.EmbeddedLogin",
   LOGIN = "Auth.Login",
   SOURCE_NEW = "Source.New",
   SOURCE_LIST = "Source.List",
@@ -41,10 +39,5 @@ export enum PageTrackingCodes {
   SETTINGS_DATA_RESIDENCY = "Settings.DataResidency",
   WORKSPACES = "Workspaces",
   PREFERENCES = "Preferences",
-  EMBEDDED_ONBOARDING_SELECT_DESTINATION = "EmbeddedOnboarding.SelectDestination",
-  EMBEDDED_ONBOARDING_SET_UP_DESTINATION = "EmbeddedOnboarding.SetUpDestination",
-  EMBEDDED_ONBOARDING_EMBED_CODE = "EmbeddedOnboarding.EmbedCode",
-  EMBEDDED_ONBOARDING_FINISH = "EmbeddedOnboarding.Finish",
-  EMBEDDED_UPSELL = "EmbeddedOnboarding.Upsell",
   ONBOARDING = "Onboarding",
 }

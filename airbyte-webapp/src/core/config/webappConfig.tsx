@@ -27,7 +27,6 @@ export async function loadConfig() {
     launchdarklyKey: config.launchdarklyKey || process.env.REACT_APP_LAUNCHDARKLY_KEY,
     osanoKey: config.osanoKey || process.env.REACT_APP_OSANO_KEY,
     segmentToken: config.segmentToken || process.env.REACT_APP_SEGMENT_TOKEN,
-    sonarApiUrl: config.sonarApiUrl || process.env.REACT_APP_SONAR_API_URL,
     zendeskKey: config.zendeskKey || process.env.REACT_APP_ZENDESK_KEY,
     posthogApiKey: config.posthogApiKey || process.env.REACT_APP_POSTHOG_API_KEY,
     posthogHost: config.posthogHost || process.env.REACT_APP_POSTHOG_HOST,
