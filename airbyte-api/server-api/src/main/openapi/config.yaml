@@ -1690,7 +1690,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SourceIdRequestBody"
+              $ref: "#/components/schemas/SourceIdWithSecretCoordinatesRequestBody"
         required: true
       responses:
         "200":
@@ -13684,6 +13684,17 @@ components:
       properties:
         sourceId:
           $ref: "#/components/schemas/SourceId"
+    SourceIdWithSecretCoordinatesRequestBody:
+      type: object
+      required:
+        - sourceId
+      properties:
+        sourceId:
+          $ref: "#/components/schemas/SourceId"
+        includeSecretCoordinates:
+          description: If true, the response will include secret coordinates in the connection configuration.
+          type: boolean
+          default: false
     SourceCloneRequestBody:
       description: The values required to configure the source. The schema for this should have an id of the existing source along with the configuration you want to change in case.
       type: object
@@ -13877,10 +13888,17 @@ components:
         - $ref: "#/components/schemas/SourceRead"
         - type: object
           required:
-            - workspaceName
+            - metadata
           properties:
-            workspaceName:
-              type: string
+            metadata:
+              $ref: "#/components/schemas/SourceMetadata"
+    SourceMetadata:
+      type: object
+      required:
+        - workspaceName
+      properties:
+        workspaceName:
+          type: string
     ActorStatus:
       description: An actor(source/destination) is active if it has at least one active or manual connection.
       type: string

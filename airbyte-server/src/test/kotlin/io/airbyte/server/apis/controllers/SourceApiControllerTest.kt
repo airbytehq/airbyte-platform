@@ -116,7 +116,7 @@ internal class SourceApiControllerTest {
 
   @Test
   fun testGetSourceWithMetadata() {
-    every { sourceHandler.getSourceWithMetadata(any()) } returns SourceReadWithMetadata() andThenThrows ConfigNotFoundException("", "")
+    every { sourceHandler.getSourceWithMetadata(any(), any()) } returns SourceReadWithMetadata() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/sources/get_with_metadata"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
