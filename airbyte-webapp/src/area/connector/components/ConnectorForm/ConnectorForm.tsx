@@ -8,7 +8,6 @@ import {
   ConnectorDefinitionSpecificationRead,
   SourceDefinitionSpecificationDraft,
 } from "core/domain/connector";
-import { useIsAirbyteEmbeddedContext } from "core/services/embedded";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useFormChangeTrackerService, useUniqueFormId } from "core/services/FormChangeTracker";
 import { removeEmptyProperties } from "core/utils/form";
@@ -37,9 +36,7 @@ export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "
 export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
   const formId = useUniqueFormId(props.formId);
   const { clearFormChange } = useFormChangeTrackerService();
-  const hasResourceAllocationFeature = useFeature(FeatureItem.ConnectorResourceAllocation);
-  const isEmbedded = useIsAirbyteEmbeddedContext();
-  const isResourceAllocationEnabled = hasResourceAllocationFeature && !isEmbedded;
+  const isResourceAllocationEnabled = useFeature(FeatureItem.ConnectorResourceAllocation);
 
   const {
     formType,

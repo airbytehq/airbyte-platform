@@ -336,6 +336,133 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
       val usersWithNonexistentDomain = userPersistence.findUsersWithEmailDomainOutsideOrganization("nonexistent.com", org1.organizationId)
       Assertions.assertEquals(0, usersWithNonexistentDomain.size)
     }
+
+    @Test
+    fun findUsersWithEmailDomainWithoutOrgPermissionTest() {
+      // Create two organizations
+      val org1 =
+        Organization()
+          .withOrganizationId(UUID.randomUUID())
+          .withName("Org 1")
+          .withEmail("admin@org1.com")
+      val org2 =
+        Organization()
+          .withOrganizationId(UUID.randomUUID())
+          .withName("Org 2")
+          .withEmail("admin@org2.com")
+
+      organizationService.writeOrganization(org1)
+      organizationService.writeOrganization(org2)
+
+      // Create users with different email domains
+      val userInOrg1 =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User in Org1")
+          .withEmail("user1@example.com")
+          .withAuthUserId("auth1")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+      val userInOrg2 =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User in Org2")
+          .withEmail("user2@example.com")
+          .withAuthUserId("auth2")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+      val userNoOrgPermission =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User with no org permission")
+          .withEmail("user3@example.com")
+          .withAuthUserId("auth3")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+      val userDifferentDomain =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User with different domain")
+          .withEmail("user4@other.com")
+          .withAuthUserId("auth4")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+      val userMixedCaseEmail =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User with mixed case email")
+          .withEmail("User5@Example.COM")
+          .withAuthUserId("auth5")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+      val userOrgAdmin =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User Org Admin")
+          .withEmail("admin@example.com")
+          .withAuthUserId("auth6")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      userPersistence.writeAuthenticatedUser(userInOrg1)
+      userPersistence.writeAuthenticatedUser(userInOrg2)
+      userPersistence.writeAuthenticatedUser(userNoOrgPermission)
+      userPersistence.writeAuthenticatedUser(userDifferentDomain)
+      userPersistence.writeAuthenticatedUser(userMixedCaseEmail)
+      userPersistence.writeAuthenticatedUser(userOrgAdmin)
+
+      // Create permissions
+      // userInOrg1 has ORGANIZATION_MEMBER to org1
+      writePermission(
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userInOrg1.userId)
+          .withOrganizationId(org1.organizationId)
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER),
+      )
+      // userInOrg2 has ORGANIZATION_MEMBER to org2
+      writePermission(
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userInOrg2.userId)
+          .withOrganizationId(org2.organizationId)
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER),
+      )
+      // userOrgAdmin has ORGANIZATION_ADMIN to org1
+      writePermission(
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userOrgAdmin.userId)
+          .withOrganizationId(org1.organizationId)
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN),
+      )
+      // userNoOrgPermission and userMixedCaseEmail have no org permissions
+
+      // Test: Find users with @example.com who do NOT have permission to org1
+      // Should return: userInOrg2 (in org2, not org1), userNoOrgPermission (no org), userMixedCaseEmail (no org)
+      // Should NOT return: userInOrg1 (has ORGANIZATION_MEMBER to org1), userOrgAdmin (has ORGANIZATION_ADMIN to org1)
+      val usersWithoutOrg1Permission = userPersistence.findUsersWithEmailDomainWithoutOrgPermission("example.com", org1.organizationId)
+      Assertions.assertEquals(3, usersWithoutOrg1Permission.size)
+      Assertions.assertTrue(usersWithoutOrg1Permission.contains(userInOrg2.userId))
+      Assertions.assertTrue(usersWithoutOrg1Permission.contains(userNoOrgPermission.userId))
+      Assertions.assertTrue(usersWithoutOrg1Permission.contains(userMixedCaseEmail.userId))
+      Assertions.assertFalse(usersWithoutOrg1Permission.contains(userInOrg1.userId))
+      Assertions.assertFalse(usersWithoutOrg1Permission.contains(userOrgAdmin.userId))
+      Assertions.assertFalse(usersWithoutOrg1Permission.contains(userDifferentDomain.userId))
+
+      // Test: Find users with @example.com who do NOT have permission to org2
+      // Should return: userInOrg1, userNoOrgPermission, userMixedCaseEmail, userOrgAdmin
+      // Should NOT return: userInOrg2 (has permission to org2)
+      val usersWithoutOrg2Permission = userPersistence.findUsersWithEmailDomainWithoutOrgPermission("example.com", org2.organizationId)
+      Assertions.assertEquals(4, usersWithoutOrg2Permission.size)
+      Assertions.assertTrue(usersWithoutOrg2Permission.contains(userInOrg1.userId))
+      Assertions.assertTrue(usersWithoutOrg2Permission.contains(userNoOrgPermission.userId))
+      Assertions.assertTrue(usersWithoutOrg2Permission.contains(userMixedCaseEmail.userId))
+      Assertions.assertTrue(usersWithoutOrg2Permission.contains(userOrgAdmin.userId))
+      Assertions.assertFalse(usersWithoutOrg2Permission.contains(userInOrg2.userId))
+
+      // Test: Find users with non-existent domain
+      val usersWithNonexistentDomain = userPersistence.findUsersWithEmailDomainWithoutOrgPermission("nonexistent.com", org1.organizationId)
+      Assertions.assertEquals(0, usersWithNonexistentDomain.size)
+
+      // Test: Case-insensitive domain matching
+      val usersWithUppercaseDomain = userPersistence.findUsersWithEmailDomainWithoutOrgPermission("EXAMPLE.COM", org1.organizationId)
+      Assertions.assertEquals(3, usersWithUppercaseDomain.size)
+    }
   }
 
   @Nested

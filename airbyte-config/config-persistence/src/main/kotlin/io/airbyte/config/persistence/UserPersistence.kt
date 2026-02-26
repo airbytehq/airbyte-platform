@@ -525,6 +525,36 @@ open class UserPersistence(
         .fetch(Tables.USER.ID)
     }
 
+  /**
+   * Find users with emails matching the given domain who do NOT have any permission to the specified organization.
+   * This is used during SSO activation to find users who need to be granted organization membership.
+   *
+   * @param emailDomain the email domain to check (e.g., "example.com")
+   * @param organizationId the organization ID to check permissions against
+   * @return list of user IDs with the email domain who do not have permission to the organization
+   */
+  fun findUsersWithEmailDomainWithoutOrgPermission(
+    emailDomain: String,
+    organizationId: UUID,
+  ): List<UUID> =
+    database.query { ctx: DSLContext ->
+      // Subquery to find users who DO have permission to this org
+      val usersWithOrgPermission =
+        ctx
+          .select(Tables.PERMISSION.USER_ID)
+          .from(Tables.PERMISSION)
+          .where(Tables.PERMISSION.ORGANIZATION_ID.eq(organizationId))
+          .and(Tables.PERMISSION.USER_ID.isNotNull)
+
+      // Find users with matching email domain who are NOT in the subquery
+      ctx
+        .select(Tables.USER.ID)
+        .from(Tables.USER)
+        .where(Tables.USER.EMAIL.likeIgnoreCase("%@$emailDomain"))
+        .and(Tables.USER.ID.notIn(usersWithOrgPermission))
+        .fetch(Tables.USER.ID)
+    }
+
   private fun buildWorkspaceUserAccessInfoFromRecord(
     record: Record,
     workspaceId: UUID,

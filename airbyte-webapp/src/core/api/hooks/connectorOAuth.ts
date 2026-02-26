@@ -4,7 +4,6 @@ import {
   completeDestinationOAuth,
   completeSourceOAuth,
   getDestinationOAuthConsent,
-  getEmbeddedSourceOAuthConsent,
   getSourceOAuthConsent,
   revokeSourceOAuthTokens,
   getConnectorBuilderProjectOAuthConsent,
@@ -14,7 +13,6 @@ import {
   CompleteDestinationOAuthRequest,
   CompleteSourceOauthRequest,
   DestinationOauthConsentRequest,
-  EmbeddedSourceOauthConsentRequest,
   RevokeSourceOauthTokensRequest,
   SourceOauthConsentRequest,
   BuilderProjectOauthConsentRequest,
@@ -29,9 +27,6 @@ export function useConsentUrls() {
     () => ({
       getSourceConsentUrl(request: SourceOauthConsentRequest) {
         return getSourceOAuthConsent(request, requestOptions);
-      },
-      getEmbeddedSourceConsentUrl(request: EmbeddedSourceOauthConsentRequest) {
-        return getEmbeddedSourceOAuthConsent(request, requestOptions);
       },
       getDestinationConsentUrl(request: DestinationOauthConsentRequest) {
         return getDestinationOAuthConsent(request, requestOptions);

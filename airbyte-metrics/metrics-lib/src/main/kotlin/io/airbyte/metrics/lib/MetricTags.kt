@@ -28,6 +28,7 @@ object MetricTags {
   const val CONNECTOR_IMAGE: String = "connector_image"
   const val CONNECTOR_TYPE: String = "connector_type"
   const val CRON_TYPE: String = "cron_type"
+  const val DRY_RUN: String = "dry_run"
   const val CRUD_OPERATION: String = "crud_operation"
   const val DESTINATION_DEFINITION_ID: String = "destination_definition_id"
   const val DESTINATION_ID: String = "destination_id"

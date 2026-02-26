@@ -15,7 +15,6 @@ import {
   CompleteOAuthResponse,
   CompleteOAuthResponseAuthPayload,
   DestinationOauthConsentRequest,
-  EmbeddedSourceOauthConsentRequest,
   SourceOauthConsentRequest,
   BuilderProjectOauthConsentRequest,
   CompleteConnectorBuilderProjectOauthRequest,
@@ -23,7 +22,6 @@ import {
 import { ConnectorDefinitionSpecificationRead, ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecification } from "core/domain/connector/source";
 import { useFormatError } from "core/errors";
-import { useIsAirbyteEmbeddedContext } from "core/services/embedded";
 import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
 
@@ -71,7 +69,7 @@ export function useConnectorAuth(): {
     connector: ConnectorDefinitionSpecificationRead,
     oAuthInputConfiguration: Record<string, unknown>
   ) => Promise<{
-    payload: SourceOauthConsentRequest | EmbeddedSourceOauthConsentRequest | DestinationOauthConsentRequest;
+    payload: SourceOauthConsentRequest | DestinationOauthConsentRequest;
     consentUrl: string;
   }>;
   completeOauthRequest: (
@@ -81,33 +79,21 @@ export function useConnectorAuth(): {
 } {
   const { formatMessage } = useIntl();
   const workspaceId = useCurrentWorkspaceId();
-  const { getDestinationConsentUrl, getSourceConsentUrl, getEmbeddedSourceConsentUrl } = useConsentUrls();
+  const { getDestinationConsentUrl, getSourceConsentUrl } = useConsentUrls();
   const { completeDestinationOAuth, completeSourceOAuth } = useCompleteOAuth();
   const notificationService = useNotificationService();
   const { connectorId } = useConnectorForm();
-  const isEmbedded = useIsAirbyteEmbeddedContext();
 
   return {
     getConsentUrl: async (
       connector: ConnectorDefinitionSpecificationRead,
       oAuthInputConfiguration: Record<string, unknown>
     ): Promise<{
-      payload: SourceOauthConsentRequest | EmbeddedSourceOauthConsentRequest | DestinationOauthConsentRequest;
+      payload: SourceOauthConsentRequest | DestinationOauthConsentRequest;
       consentUrl: string;
     }> => {
       try {
         if (isSourceDefinitionSpecification(connector)) {
-          if (isEmbedded) {
-            const payload: EmbeddedSourceOauthConsentRequest = {
-              workspaceId,
-              sourceDefinitionId: ConnectorSpecification.id(connector),
-              redirectUrl: OAUTH_REDIRECT_URL,
-              sourceId: connectorId,
-            };
-            const response = await getEmbeddedSourceConsentUrl(payload);
-
-            return { consentUrl: response.consentUrl, payload };
-          }
           const payload: SourceOauthConsentRequest = {
             workspaceId,
             sourceDefinitionId: ConnectorSpecification.id(connector),
@@ -275,7 +261,6 @@ export function useRunOauthFlow({
   const param = useRef<SourceOauthConsentRequest | DestinationOauthConsentRequest>();
   const connectorType = isSourceDefinitionSpecification(connector) ? "source" : "destination";
   const { trackOAuthSuccess, trackOAuthAttemp } = useAnalyticsTrackFunctions(connectorType);
-  const isAirbyteEmbedded = useIsAirbyteEmbeddedContext();
 
   const [{ loading: loadingCompleteOauth, value }, completeOauth] = useAsyncFn(
     async (queryParams: Record<string, unknown>) => {
@@ -302,10 +287,6 @@ export function useRunOauthFlow({
         onError?.(errorMessage);
         param.current = undefined;
         return false;
-      }
-
-      if (isAirbyteEmbedded) {
-        oauthStartedPayload.oAuthInputConfiguration = {};
       }
 
       let completeOauthResponse: CompleteOAuthResponse;
@@ -356,58 +337,36 @@ export function useRunOauthFlow({
         // popup window is not open, so open it and start listening on broadcast channel
         const popupWindow = openWindow(consentRequestInProgress.consentUrl);
 
-        /**
-         * Airbyte Embedded runs within an iframe, so we need to use postMessage to communicate with the parent window.
-         * BroadcastChannel is not supported in iframes in all browsers, so we use postMessage instead.
-         */
         // NOTE: We cannot reliably monitor popup closure for cross-origin OAuth flows.
         // When the popup navigates to Google/other OAuth providers, the browser's
         // cross-origin security causes popupWindow.closed to return true even when
         // the popup is still open. Instead, we provide a cancel mechanism through
         // the onError callback that can be triggered by the user via UI.
 
-        if (isAirbyteEmbedded) {
-          // For embedded context, use postMessage
-          const messageHandler = async (event: MessageEvent) => {
-            if (event.origin === window.location.origin && event.data.type === "completed") {
-              const queryParams = {
-                ...consentUrlQueryParams, // ensure we pass along params from the consent url
-                ...event.data.query, // but any params provided here take priority and override
-              };
+        const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
 
-              await completeOauth(queryParams);
-              window.removeEventListener("message", messageHandler);
-              popupWindow?.close();
-            }
-          };
-          window.addEventListener("message", messageHandler);
-        } else {
-          // For non-embedded contexts, use BroadcastChannel
-          const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
+        bc.postMessage({ type: "takeover" });
+        bc.onmessage = async (event) => {
+          if (event.type === "cancel" && event.tabUuid !== tabUuid) {
+            // cancel event is not meant for this tab, so ignore it
+            return;
+          }
+          if (event.type === "completed") {
+            const queryParams = {
+              ...consentUrlQueryParams, // ensure we pass along params from the consent url
+              ...event.query, // but any params provided here take priority and override
+            };
 
-          bc.postMessage({ type: "takeover" });
-          bc.onmessage = async (event) => {
-            if (event.type === "cancel" && event.tabUuid !== tabUuid) {
-              // cancel event is not meant for this tab, so ignore it
-              return;
-            }
-            if (event.type === "completed") {
-              const queryParams = {
-                ...consentUrlQueryParams, // ensure we pass along params from the consent url
-                ...event.query, // but any params provided here take priority and override
-              };
+            await completeOauth(queryParams);
 
-              await completeOauth(queryParams);
-
-              // Close the /auth_flow page after completing the oauth flow
-              bc.postMessage({ type: "close" });
-            }
-            // OAuth flow is completed or taken over by another tab, so close the broadcast channel
-            // and popup window if it is still open.
-            await bc.close();
-            popupWindow?.close();
-          };
-        }
+            // Close the /auth_flow page after completing the oauth flow
+            bc.postMessage({ type: "close" });
+          }
+          // OAuth flow is completed or taken over by another tab, so close the broadcast channel
+          // and popup window if it is still open.
+          await bc.close();
+          popupWindow?.close();
+        };
       }
     },
     [connector, onError]
@@ -415,11 +374,9 @@ export function useRunOauthFlow({
 
   // close the popup window and broadcast channel when unmounting
   useUnmount(() => {
-    if (!isAirbyteEmbedded) {
-      const cancelBc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
-      cancelBc.postMessage({ type: "cancel", tabUuid });
-      cancelBc.close();
-    }
+    const cancelBc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
+    cancelBc.postMessage({ type: "cancel", tabUuid });
+    cancelBc.close();
   });
 
   const onCloseWindow = useCallback(() => {

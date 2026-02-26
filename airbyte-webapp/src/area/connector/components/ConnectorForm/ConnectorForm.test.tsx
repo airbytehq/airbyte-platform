@@ -14,7 +14,6 @@ import { useCompleteOAuth } from "core/api";
 import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
-import * as EmbeddedContext from "core/services/embedded";
 import { FeatureItem } from "core/services/features";
 
 import { ConnectorFormValues } from "./types";
@@ -1029,7 +1028,6 @@ describe("Connector form", () => {
           });
         },
       });
-      jest.spyOn(EmbeddedContext, "useIsAirbyteEmbeddedContext").mockReturnValue(false);
       const container = await renderNewOAuthForm();
 
       await executeOAuthFlow(container);

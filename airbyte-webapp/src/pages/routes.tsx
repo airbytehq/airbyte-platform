@@ -20,7 +20,6 @@ import { useQuery } from "core/utils/useQuery";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { LoginPage } from "pages/login/LoginPage";
 
-import { EmbeddedSourceCreatePage } from "./embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { OnboardingPage } from "./OnboardingPage/OnboardingPage";
 import { OrganizationRoutes } from "./organization/OrganizationRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
@@ -203,7 +202,6 @@ const AuthenticatedRoutes = () => {
 
   return (
     <Routes>
-      <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
       {!initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
       ) : (

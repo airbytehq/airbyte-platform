@@ -8,7 +8,6 @@
 
 export interface Experiments {
   asyncSchemaDiscovery: boolean;
-  "authPage.embedded.rightSideUrl": string | undefined;
   "authPage.rightSideUrl": string | undefined;
   "billing.early-sync-enabled": boolean;
   "connection.allowToSupportAllSyncModes": boolean;
@@ -29,13 +28,8 @@ export interface Experiments {
   "connectorBuilder.declarativeOauth": boolean;
   "connectorBuilder.dynamicStreams": boolean;
   "connectorBuilder.generateConnectorFromParams": boolean;
-  "embedded.operatorOnboarding.destinations": string;
-  "embedded.operatorOnboarding": boolean;
-  "embedded.templateCreateButton": boolean;
-  "embedded.useSonarServer": boolean;
   "onboarding.surveyEnabled": boolean;
   "organization.workerUsagePage": boolean;
-  "platform.allow-config-template-endpoints": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
   "platform.use-verified-domains-for-sso-activate": boolean;
@@ -50,7 +44,6 @@ export interface Experiments {
 
 export const defaultExperimentValues: Experiments = {
   asyncSchemaDiscovery: true,
-  "authPage.embedded.rightSideUrl": undefined,
   "authPage.rightSideUrl": undefined,
   "billing.early-sync-enabled": false,
   "connection.allowToSupportAllSyncModes": false,
@@ -86,13 +79,8 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.declarativeOauth": true,
   "connectorBuilder.dynamicStreams": false,
   "connectorBuilder.generateConnectorFromParams": false,
-  "embedded.operatorOnboarding": false,
-  "embedded.operatorOnboarding.destinations": "ConnectorIds.Destinations.S3",
-  "embedded.templateCreateButton": false,
-  "embedded.useSonarServer": false,
   "onboarding.surveyEnabled": false,
   "organization.workerUsagePage": false,
-  "platform.allow-config-template-endpoints": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,
   "platform.use-verified-domains-for-sso-activate": false,

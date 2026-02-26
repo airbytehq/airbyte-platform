@@ -978,7 +978,7 @@ internal class SourceHandlerTest {
     Assertions.assertEquals(expectedSourceRead.sourceName, result.sourceName)
     Assertions.assertEquals(expectedSourceRead.connectionConfiguration, result.connectionConfiguration)
     Assertions.assertEquals(expectedSourceRead.icon, result.icon)
-    Assertions.assertEquals(workspaceName, result.workspaceName)
+    Assertions.assertEquals(workspaceName, result.metadata.workspaceName)
   }
 
   @Test

@@ -9,10 +9,12 @@ import io.airbyte.api.problems.throwable.generated.SSOActivationProblem
 import io.airbyte.api.problems.throwable.generated.SSODeletionProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
 import io.airbyte.config.Organization
+import io.airbyte.config.Permission
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.OrganizationDomainVerificationService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
+import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
 import io.airbyte.data.services.impls.keycloak.IdpNotFoundException
@@ -23,6 +25,7 @@ import io.airbyte.domain.models.DomainVerificationStatus
 import io.airbyte.domain.models.OrganizationDomainVerification
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigStatus
+import io.airbyte.featureflag.AutoGrantOrgPermissionsOnSsoActivation
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseVerifiedDomainsForSsoActivate
 import io.mockk.Runs
@@ -49,6 +52,7 @@ class SsoConfigDomainServiceTest {
   private lateinit var userPersistence: UserPersistence
   private lateinit var organizationDomainVerificationService: OrganizationDomainVerificationService
   private lateinit var featureFlagClient: FeatureFlagClient
+  private lateinit var permissionService: PermissionService
 
   private lateinit var ssoConfigDomainService: SsoConfigDomainService
 
@@ -61,6 +65,7 @@ class SsoConfigDomainServiceTest {
     userPersistence = mockk()
     organizationDomainVerificationService = mockk()
     featureFlagClient = mockk()
+    permissionService = mockk()
     ssoConfigDomainService =
       SsoConfigDomainService(
         ssoConfigService,
@@ -70,7 +75,11 @@ class SsoConfigDomainServiceTest {
         userPersistence,
         organizationDomainVerificationService,
         featureFlagClient,
+        permissionService,
       )
+
+    // Default to old behavior (flag OFF) - tests can override as needed
+    every { featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, any()) } returns false
   }
 
   @Test
@@ -826,8 +835,9 @@ class SsoConfigDomainServiceTest {
 
     val org = buildTestOrganization(orgId, orgEmail)
 
-    // Feature flag OFF - use old behavior
+    // Feature flags OFF - use old behavior
     every { featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, any()) } returns false
+    every { featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, any()) } returns false
     every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
     every { organizationService.getOrganization(orgId) } returns Optional.of(org)
     every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
@@ -879,5 +889,231 @@ class SsoConfigDomainServiceTest {
         .toString()
         .contains("1 user(s) from other organizations"),
     )
+  }
+
+  @Test
+  fun `grantOrgMembershipToUsers creates ORGANIZATION_MEMBER permission for each user`() {
+    val orgId = UUID.randomUUID()
+    val user1Id = UUID.randomUUID()
+    val user2Id = UUID.randomUUID()
+    val userIds = listOf(user1Id, user2Id)
+
+    every { permissionService.createPermission(any()) } returns mockk()
+
+    ssoConfigDomainService.grantOrgMembershipToUsers(userIds, orgId)
+
+    verify(exactly = 2) { permissionService.createPermission(any()) }
+    verify {
+      permissionService.createPermission(
+        withArg { permission ->
+          assertEquals(user1Id, permission.userId)
+          assertEquals(orgId, permission.organizationId)
+          assertEquals(Permission.PermissionType.ORGANIZATION_MEMBER, permission.permissionType)
+        },
+      )
+    }
+    verify {
+      permissionService.createPermission(
+        withArg { permission ->
+          assertEquals(user2Id, permission.userId)
+          assertEquals(orgId, permission.organizationId)
+          assertEquals(Permission.PermissionType.ORGANIZATION_MEMBER, permission.permissionType)
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `grantOrgMembershipToUsers handles empty user list gracefully`() {
+    val orgId = UUID.randomUUID()
+    val userIds = emptyList<UUID>()
+
+    ssoConfigDomainService.grantOrgMembershipToUsers(userIds, orgId)
+
+    verify(exactly = 0) { permissionService.createPermission(any()) }
+  }
+
+  @Test
+  fun `grantOrgMembershipToUsers handles single user`() {
+    val orgId = UUID.randomUUID()
+    val userId = UUID.randomUUID()
+    val userIds = listOf(userId)
+
+    every { permissionService.createPermission(any()) } returns mockk()
+
+    ssoConfigDomainService.grantOrgMembershipToUsers(userIds, orgId)
+
+    verify(exactly = 1) {
+      permissionService.createPermission(
+        withArg { permission ->
+          assertEquals(userId, permission.userId)
+          assertEquals(orgId, permission.organizationId)
+          assertEquals(Permission.PermissionType.ORGANIZATION_MEMBER, permission.permissionType)
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `activateSsoConfig with AutoGrantOrgPermissionsOnSsoActivation ON - grants permissions to users outside org`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+    val outsideUserId = UUID.randomUUID()
+
+    val existingConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("test-realm")
+        .withStatus(ConfigSsoConfigStatus.DRAFT)
+
+    val org = buildTestOrganization(orgId, orgEmail)
+
+    // UseVerifiedDomainsForSsoActivate OFF - use legacy email domain flow
+    every { featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, any()) } returns false
+    // AutoGrantOrgPermissionsOnSsoActivation ON - auto-grant permissions
+    every { featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, any()) } returns true
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
+    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
+    // Users exist outside the org
+    every { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) } returns listOf(outsideUserId)
+    every { permissionService.createPermission(any()) } returns mockk()
+    every { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) } just Runs
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+
+    ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+
+    // Should NOT call the blocking validation
+    verify(exactly = 0) { userPersistence.findUsersWithEmailDomainOutsideOrganization(any(), any()) }
+    // Should find users needing permission and grant them
+    verify(exactly = 1) { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) }
+    verify(exactly = 1) {
+      permissionService.createPermission(
+        withArg { permission ->
+          assertEquals(outsideUserId, permission.userId)
+          assertEquals(orgId, permission.organizationId)
+          assertEquals(Permission.PermissionType.ORGANIZATION_MEMBER, permission.permissionType)
+        },
+      )
+    }
+    verify(exactly = 1) { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) }
+  }
+
+  @Test
+  fun `activateSsoConfig with AutoGrantOrgPermissionsOnSsoActivation OFF - blocks on users outside org`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+    val outsideUserId = UUID.randomUUID()
+
+    val existingConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("test-realm")
+        .withStatus(ConfigSsoConfigStatus.DRAFT)
+
+    val org = buildTestOrganization(orgId, orgEmail)
+
+    // UseVerifiedDomainsForSsoActivate OFF - use legacy email domain flow
+    every { featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, any()) } returns false
+    // AutoGrantOrgPermissionsOnSsoActivation OFF - use old blocking behavior
+    every { featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, any()) } returns false
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
+    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
+    // Users exist outside the org - should block activation
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(emailDomain, orgId) } returns listOf(outsideUserId)
+
+    val exception =
+      assertThrows<SSOActivationProblem> {
+        ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+      }
+
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("1 user(s) from other organizations"),
+    )
+
+    // Should NOT try to grant permissions
+    verify(exactly = 0) { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(any(), any()) }
+    verify(exactly = 0) { permissionService.createPermission(any()) }
+    verify(exactly = 0) { ssoConfigService.updateSsoConfigStatus(any(), any()) }
+  }
+
+  @Test
+  fun `activateSsoConfig with AutoGrantOrgPermissionsOnSsoActivation ON - no users to grant permissions to`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+
+    val existingConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("test-realm")
+        .withStatus(ConfigSsoConfigStatus.DRAFT)
+
+    val org = buildTestOrganization(orgId, orgEmail)
+
+    every { featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, any()) } returns false
+    every { featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, any()) } returns true
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
+    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
+    // No users need permissions
+    every { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) } returns emptyList()
+    every { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) } just Runs
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+
+    ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+
+    verify(exactly = 1) { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) }
+    // No permissions should be created
+    verify(exactly = 0) { permissionService.createPermission(any()) }
+    verify(exactly = 1) { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) }
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig with ACTIVE status and AutoGrantOrgPermissionsOnSsoActivation ON - grants permissions`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+    val outsideUserId = UUID.randomUUID()
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val config = buildTestSsoConfig(orgId, emailDomain)
+
+    // AutoGrantOrgPermissionsOnSsoActivation ON - auto-grant permissions
+    every { featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, any()) } returns true
+    every { airbyteKeycloakClient.createOidcSsoConfig(config) } just Runs
+    every { ssoConfigService.createSsoConfig(any()) } returns mockk()
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+    every { ssoConfigService.getSsoConfigByCompanyIdentifier(any()) } returns null
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
+    every { organizationService.getOrganization(any()) } returns Optional.of(org)
+    // Users exist outside the org
+    every { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) } returns listOf(outsideUserId)
+    every { permissionService.createPermission(any()) } returns mockk()
+
+    ssoConfigDomainService.createAndStoreSsoConfig(config)
+
+    // Should NOT call the blocking validation
+    verify(exactly = 0) { userPersistence.findUsersWithEmailDomainOutsideOrganization(any(), any()) }
+    // Should find users needing permission and grant them
+    verify(exactly = 1) { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) }
+    verify(exactly = 1) {
+      permissionService.createPermission(
+        withArg { permission ->
+          assertEquals(outsideUserId, permission.userId)
+          assertEquals(orgId, permission.organizationId)
+          assertEquals(Permission.PermissionType.ORGANIZATION_MEMBER, permission.permissionType)
+        },
+      )
+    }
+    verify(exactly = 1) { ssoConfigService.createSsoConfig(any()) }
+    verify(exactly = 1) { organizationEmailDomainService.createEmailDomain(any()) }
   }
 }

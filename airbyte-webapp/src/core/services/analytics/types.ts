@@ -14,7 +14,6 @@ export const enum Namespace {
   FORM = "Form",
   ENTERPRISE_SOURCE_STUB = "EnterpriseSourceStub",
   CONNECTIONS = "Connections",
-  EMBEDDED = "Embedded",
   SUPPORT_AGENT_BOT = "SupportAgentBot",
   CONNECTOR_SETUP_AGENT = "ConnectorSetupAgent",
 }
@@ -116,12 +115,6 @@ export const enum Action {
   CONNECTIONS_GRAPH_DRAWER_LOADED = "ConnectionGraphDrawerLoaded",
   SYNC_FAILURE_EXPLANATION_OPENED = "SyncFailureExplanationOpened",
   REFRESH_FAILURE_EXPLANATION_OPENED = "RefreshFailureExplanationOpened",
-
-  // Embedded Onboarding Actions
-  DESTINATION_SELECTED = "DestinationSelected",
-  CONNECTION_TEMPLATE_CREATED = "ConnectionTemplateCreated",
-  CONNECTION_TEMPLATE_CREATE_FAILED = "ConnectionTemplateCreateFailed",
-  BACK_TO_SELECT_DESTINATION = "BackToSelectDestination",
 
   // Support Agent Bot Actions
   CHAT_INITIATED = "ChatInitiated",

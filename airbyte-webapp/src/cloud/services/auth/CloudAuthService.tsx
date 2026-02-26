@@ -4,7 +4,7 @@ import Keycloak from "keycloak-js";
 import isEqual from "lodash/isEqual";
 import { User, UserManager, WebStorageStateStore } from "oidc-client-ts";
 import React, { PropsWithChildren, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { LoadingPage } from "components";
 
@@ -15,8 +15,6 @@ import { buildConfig } from "core/config";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { AuthContext, AuthContextApi } from "core/services/auth";
-import { EmbeddedAuthService } from "core/services/auth/EmbeddedAuthService";
-import { RoutePaths } from "pages/routePaths";
 
 /**
  * The ID of the client in Keycloak that should be used by the webapp.
@@ -490,12 +488,5 @@ const CloudKeycloakAuthService: React.FC<PropsWithChildren> = ({ children }) => 
 };
 
 export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
-  const location = useLocation();
-  /* This is the route for the embedded widget.  It uses scoped auth tokens and will not have an associated user.
-      Thus, it leverages the EmbeddedAuthService to provide an empty user object to the AuthContext. */
-  if (location.pathname === `/${RoutePaths.EmbeddedWidget}`) {
-    return <EmbeddedAuthService>{children}</EmbeddedAuthService>;
-  }
-
   return <CloudKeycloakAuthService>{children}</CloudKeycloakAuthService>;
 };

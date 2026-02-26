@@ -19,6 +19,7 @@ import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
+import io.airbyte.api.model.generated.SourceMetadata
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceReadList
 import io.airbyte.api.model.generated.SourceReadWithMetadata
@@ -297,9 +298,13 @@ class SourceHandler
       includeSecretCoordinates: Boolean,
     ): SourceRead = buildSourceRead(sourceIdRequestBody.sourceId, includeSecretCoordinates)
 
-    fun getSourceWithMetadata(sourceIdRequestBody: SourceIdRequestBody): SourceReadWithMetadata {
-      val sourceRead = buildSourceRead(sourceIdRequestBody.sourceId)
+    fun getSourceWithMetadata(
+      sourceIdRequestBody: SourceIdRequestBody,
+      includeSecretCoordinates: Boolean = false,
+    ): SourceReadWithMetadata {
+      val sourceRead = buildSourceRead(sourceIdRequestBody.sourceId, includeSecretCoordinates)
       val workspace = workspaceService.getStandardWorkspaceNoSecrets(sourceRead.workspaceId, false)
+      val metadata = SourceMetadata().workspaceName(workspace.name)
       return SourceReadWithMetadata()
         .sourceDefinitionId(sourceRead.sourceDefinitionId)
         .sourceId(sourceRead.sourceId)
@@ -315,7 +320,7 @@ class SourceHandler
         .status(sourceRead.status)
         .createdAt(sourceRead.createdAt)
         .resourceAllocation(sourceRead.resourceAllocation)
-        .workspaceName(workspace.name)
+        .metadata(metadata)
     }
 
     fun getMostRecentSourceActorCatalogWithUpdatedAt(sourceIdRequestBody: SourceIdRequestBody): ActorCatalogWithUpdatedAt {

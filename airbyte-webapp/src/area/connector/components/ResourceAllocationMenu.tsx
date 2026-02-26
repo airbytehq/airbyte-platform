@@ -17,7 +17,6 @@ import { useConnectorForm } from "area/connector/components/ConnectorForm/connec
 import { JobType, ScopedResourceRequirements } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
-import { useIsAirbyteEmbeddedContext } from "core/services/embedded";
 import { FeatureItem, useFeature } from "core/services/features";
 
 export const API_RESOURCE_DEFAULTS: Record<string, SimpleResourceRequirement> = {
@@ -107,14 +106,13 @@ export const getConnectorType = (selectedConnectorDefinition: ConnectorDefinitio
 
 export const useConnectorResourceAllocation = () => {
   const supportsResourceAllocation = useFeature(FeatureItem.ConnectorResourceAllocation);
-  const isEmbedded = useIsAirbyteEmbeddedContext();
 
   const isHiddenResourceAllocationField = useCallback(
     (fieldPath: string) => {
       // we want to hide the resourceAllocation sub-fields
-      return supportsResourceAllocation && !isEmbedded && fieldPath.startsWith("resourceAllocation.");
+      return supportsResourceAllocation && fieldPath.startsWith("resourceAllocation.");
     },
-    [supportsResourceAllocation, isEmbedded]
+    [supportsResourceAllocation]
   );
   return { isHiddenResourceAllocationField };
 };

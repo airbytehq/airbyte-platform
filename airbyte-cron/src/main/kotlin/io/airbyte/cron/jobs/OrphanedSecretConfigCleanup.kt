@@ -50,10 +50,37 @@ class OrphanedSecretConfigCleanup(
     // Find orphaned configs that were created more than 1 hour ago
     // This gives a grace period for recently created configs that might not have references yet
     val oneHourAgo = OffsetDateTime.now().minusHours(1)
-    val orphanedConfigs = secretConfigService.findAirbyteManagedConfigsWithoutReferences(oneHourAgo, 10000)
+
+    // First, find distinct storage IDs that have orphaned configs
+    val orphanedStorageIds = secretConfigService.findDistinctOrphanedStorageIds(excludeCreatedBefore = oneHourAgo)
+    if (orphanedStorageIds.isEmpty()) {
+      log.info { "No orphaned secret configs found" }
+      return
+    }
+
+    // Filter to only storage IDs where the feature flag is enabled
+    val enabledStorageIds =
+      orphanedStorageIds.filter { storageId ->
+        featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(storageId.toString()))
+      }
+
+    if (enabledStorageIds.isEmpty()) {
+      log.info { "Found orphaned configs in ${orphanedStorageIds.size} storage(s) but cleanup is not enabled for any of them" }
+      return
+    }
+
+    log.info { "Found orphaned configs in ${orphanedStorageIds.size} storage(s), cleanup enabled for ${enabledStorageIds.size}" }
+
+    // Now fetch orphaned configs only for enabled storage IDs
+    val orphanedConfigs =
+      secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(
+        excludeCreatedBefore = oneHourAgo,
+        limit = 50,
+        storageIds = enabledStorageIds,
+      )
 
     if (orphanedConfigs.isEmpty()) {
-      log.info { "No orphaned secret configs found" }
+      log.info { "No orphaned secret configs found for enabled storages" }
       return
     }
 
@@ -65,10 +92,6 @@ class OrphanedSecretConfigCleanup(
     // Delete secrets from secret storage
     for (secretConfig in orphanedConfigs) {
       try {
-        if (!featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(secretConfig.secretStorageId.toString()))) {
-          continue
-        }
-
         val secretPersistence =
           secretPersistenceMap.getOrPut(secretConfig.secretStorageId) {
             log.info { "Fetching persistence for storage ID: ${secretConfig.secretStorageId}" }
@@ -85,11 +108,14 @@ class OrphanedSecretConfigCleanup(
           continue
         }
 
+        // DRY RUN: Log what would be deleted without actually deleting
         log.info {
-          "Deleting: ${coordinate.fullCoordinate} from storage ID ${secretConfig.secretStorageId} (persistence: ${secretPersistence::class.simpleName})"
+          "[DRY RUN] Would delete: ${coordinate.fullCoordinate} from storage ID ${secretConfig.secretStorageId} (persistence: ${secretPersistence::class.simpleName})"
         }
-        secretPersistence.delete(coordinate)
         deletedIds.add(secretConfig.id)
+
+        // TODO: Re-enable actual deletion after dry-run validation
+        // secretPersistence.delete(coordinate)
 
         metricClient.count(
           metric = OssMetricsRegistry.DELETE_SECRET,
@@ -97,6 +123,7 @@ class OrphanedSecretConfigCleanup(
             arrayOf(
               MetricAttribute(MetricTags.SUCCESS, "true"),
               MetricAttribute(MetricTags.SECRET_STORAGE_ID, secretConfig.secretStorageId.toString()),
+              MetricAttribute(MetricTags.DRY_RUN, "true"),
             ),
         )
       } catch (e: Exception) {
@@ -112,8 +139,11 @@ class OrphanedSecretConfigCleanup(
       }
     }
 
-    // Delete the orphaned secret configs from the database
-    secretConfigService.deleteByIds(deletedIds)
-    log.info { "Cleaned up ${deletedIds.size} orphaned secret configs" }
+    // DRY RUN: Log what would be deleted from the database without actually deleting
+    log.info { "[DRY RUN] Would clean up ${deletedIds.size} orphaned secret configs (IDs: ${deletedIds.map { it.value }})" }
+
+    // TODO: Re-enable actual deletion after dry-run validation
+    // secretConfigService.deleteByIds(deletedIds)
+    // log.info { "Cleaned up ${deletedIds.size} orphaned secret configs" }
   }
 }

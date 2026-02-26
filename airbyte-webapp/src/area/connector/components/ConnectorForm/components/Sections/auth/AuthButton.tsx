@@ -7,7 +7,6 @@ import { Text } from "components/ui/Text";
 
 import { ConnectorIds } from "area/connector/utils";
 import { ConnectorDefinitionSpecificationRead, ConnectorSpecification } from "core/domain/connector";
-import { useIsAirbyteEmbeddedContext } from "core/services/embedded";
 
 import styles from "./AuthButton.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -55,7 +54,6 @@ export const AuthButton: React.FC<{
   selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecificationRead;
 }> = ({ selectedConnectorDefinitionSpecification }) => {
   const { selectedConnectorDefinition } = useConnectorForm();
-  const isAirbyteEmbedded = useIsAirbyteEmbeddedContext();
 
   const { hiddenAuthFieldErrors, manualOAuthMode, toggleManualOAuthMode } = useAuthentication();
   const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("required");
@@ -89,11 +87,9 @@ export const AuthButton: React.FC<{
           )}
         </Component>
 
-        {!isAirbyteEmbedded && (
-          <Button variant="clear" onClick={toggleManualOAuthMode}>
-            <FormattedMessage id="connectorForm.manualAuth.toggle" />
-          </Button>
-        )}
+        <Button variant="clear" onClick={toggleManualOAuthMode}>
+          <FormattedMessage id="connectorForm.manualAuth.toggle" />
+        </Button>
       </FlexContainer>
 
       {authRequiredError && (
