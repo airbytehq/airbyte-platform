@@ -211,7 +211,6 @@ const NameCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, string>> 
       className={styles.cellContent}
     >
       <ConnectionStatus
-        connectionId={props.row.original.connectionId}
         status={props.row.original.lastSyncStatus}
         value={props.cell.getValue()}
         enabled={props.row.original.enabled}
