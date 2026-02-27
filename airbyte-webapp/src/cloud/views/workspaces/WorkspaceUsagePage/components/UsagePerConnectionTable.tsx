@@ -169,38 +169,53 @@ export const UsagePerConnectionTable: React.FC<UsagePerConnectionTableProps> = (
         },
         sortingFn: "basic",
         cell: (props) => (
-          <FlexContainer
-            alignItems="center"
+          <div
             className={classNames({
               [styles.deleted]: props.row.original.connection.status === ConnectionStatus.deprecated,
             })}
           >
             <UsagePerDayGraph chartData={props.row.original.usage} minimized />
-            <FlexContainer direction="column" gap="none" className={styles.usageTotals}>
-              {props.row.original.totalFreeUsage > 0 && (
-                <FormattedCredits
-                  credits={props.row.original.totalFreeUsage}
-                  color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : "green"}
-                  size="sm"
-                />
-              )}
-              {props.row.original.totalInternalUsage > 0 && (
-                <FormattedCredits
-                  credits={props.row.original.totalInternalUsage}
-                  color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : "blue"}
-                  size="sm"
-                />
-              )}
-              {props.row.original.totalBilledCost > 0 && (
-                <FormattedCredits
-                  color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
-                  credits={props.row.original.totalBilledCost}
-                  size="sm"
-                />
-              )}
-            </FlexContainer>
+          </div>
+        ),
+      }),
+      columnHelper.display({
+        id: "credits",
+        header: () => <FormattedMessage id="credits.usageCredits" />,
+        cell: (props) => (
+          <FlexContainer
+            direction="column"
+            gap="none"
+            className={classNames(styles.usageTotals, {
+              [styles.deleted]: props.row.original.connection.status === ConnectionStatus.deprecated,
+            })}
+          >
+            {props.row.original.totalFreeUsage > 0 && (
+              <FormattedCredits
+                credits={props.row.original.totalFreeUsage}
+                color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : "green"}
+                size="sm"
+              />
+            )}
+            {props.row.original.totalInternalUsage > 0 && (
+              <FormattedCredits
+                credits={props.row.original.totalInternalUsage}
+                color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : "blue"}
+                size="sm"
+              />
+            )}
+            {props.row.original.totalBilledCost > 0 && (
+              <FormattedCredits
+                color={props.row.original.connection.status === ConnectionStatus.deprecated ? "grey300" : undefined}
+                credits={props.row.original.totalBilledCost}
+                size="sm"
+              />
+            )}
           </FlexContainer>
         ),
+        enableSorting: false,
+        meta: {
+          responsive: true,
+        },
       }),
     ];
   }, [columnHelper, workspaceId]);
