@@ -13,10 +13,9 @@ import { ScrollParent } from "components/ui/ScrollParent";
 
 import { ActiveConnectionLimitReachedModal } from "area/workspace/components/ActiveConnectionLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
-import { useConnectionList, useCurrentWorkspace, useListConnectionsStatusesAsync, useFilters } from "core/api";
+import { useConnectionList, useCurrentWorkspace, useFilters } from "core/api";
 import { WebBackendConnectionListSortKey } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
-import { useExperiment } from "core/services/Experiment";
 import { useModalService } from "core/services/Modal";
 import { useDrawerActions } from "core/services/ui/DrawerService";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -74,18 +73,12 @@ export const AllConnectionsPage: React.FC = () => {
     () => connectionListQuery.data?.pages.flatMap((page) => page.connections) ?? [],
     [connectionListQuery.data?.pages]
   );
-  const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
 
   const onCreateConnection = () => {
     navigate(
       `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`
     );
   };
-
-  useListConnectionsStatusesAsync(
-    connections.map((connection) => connection.connectionId),
-    isAllConnectionsStatusEnabled
-  );
 
   const onCreateClick = (sourceDefinitionId?: string) => {
     if (activeConnectionLimitReached && limits) {

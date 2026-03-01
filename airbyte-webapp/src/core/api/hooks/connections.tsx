@@ -57,7 +57,6 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
-  ConnectionStatusesRead,
   ConnectionStatusRead,
   ConnectionStream,
   ConnectionSyncStatus,
@@ -825,29 +824,6 @@ export const useListConnectionsStatuses = (connectionIds: string[]) => {
       refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
     }) ?? []
   );
-};
-
-export const useListConnectionsStatusesAsync = (connectionIds: string[], enabled: boolean = true) => {
-  const requestOptions = useRequestOptions();
-  const queryKey = connectionsKeys.statuses(connectionIds);
-
-  return (
-    useQuery(queryKey, async () => getConnectionStatuses({ connectionIds }, requestOptions), {
-      enabled,
-      refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
-    }) ?? []
-  );
-};
-
-export const useGetCachedConnectionStatusesById = (connectionIds: string[]) => {
-  const queryClient = useQueryClient();
-  const queryData = queryClient.getQueriesData<ConnectionStatusesRead>(connectionsKeys.statuses());
-  const allStatuses = queryData.flatMap(([_, data]) => data ?? []);
-
-  return connectionIds.reduce<Record<string, ConnectionStatusRead | undefined>>((acc, connectionId) => {
-    acc[connectionId] = allStatuses.find((status) => status.connectionId === connectionId);
-    return acc;
-  }, {});
 };
 
 export const useSetConnectionStatusActiveJob = () => {

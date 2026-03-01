@@ -1,6 +1,6 @@
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
@@ -150,13 +150,9 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
     onComplete();
   };
 
-  const refreshConnectionFormSchema = yup.object().shape({
-    refreshMode: yup.mixed<ConnectionRefreshFormValues["refreshMode"]>().required(),
-    streams: yup.array().when("refreshScope", {
-      is: "connection",
-      then: yup.array().strip(),
-      otherwise: yup.array().min(1),
-    }),
+  const refreshConnectionFormSchema = z.object({
+    refreshMode: z.nativeEnum(RefreshMode),
+    streams: z.array(z.custom<ConnectionStream>()).optional(),
   });
 
   return (
@@ -181,7 +177,7 @@ export const ConnectionRefreshModal: React.FC<ConnectionRefreshModalProps> = ({
         </Box>
       </Box>
       <Form<ConnectionRefreshFormValues>
-        schema={refreshConnectionFormSchema}
+        zodSchema={refreshConnectionFormSchema}
         onSubmit={async (values) => {
           await onSubmitRefreshStreamForm(values);
         }}
