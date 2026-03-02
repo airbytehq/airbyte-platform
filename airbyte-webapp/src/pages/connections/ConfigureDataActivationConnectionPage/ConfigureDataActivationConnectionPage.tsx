@@ -13,7 +13,7 @@ import { Text } from "components/ui/Text";
 import { FormConnectionFormValues } from "area/connection/components/ConnectionForm/formConfig";
 import { BASIC_FREQUENCY_DEFAULT_VALUE } from "area/connection/components/ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
 import { CreateConnectionFlowLayout } from "area/connection/components/CreateConnectionFlowLayout";
-import { SimplifiedConnectionsSettingsCard } from "area/connection/components/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
+import { ConnectionsSettingsCard } from "area/connection/components/CreateConnectionForm/ConnectionCreation/ConnectionSettingsCard";
 import {
   ConnectionFormServiceProvider,
   useConnectionFormService,
@@ -118,7 +118,7 @@ export const ConfigureDataActivationConnectionPage: React.FC = () => {
           <form onSubmit={methods.handleSubmit(createConnection)} className={styles.form}>
             <CreateConnectionFlowLayout.Main>
               <Box p="xl">
-                <SimplifiedConnectionsSettingsCard
+                <ConnectionsSettingsCard
                   title={formatMessage({ id: "connectionForm.configureConnection" })}
                   source={source}
                   destination={destination}

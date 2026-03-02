@@ -15,8 +15,8 @@ import { ConnectionActionsBlock } from "area/connection/components/ConnectionAct
 import { FormConnectionFormValues, useInitialFormValues } from "area/connection/components/ConnectionForm/formConfig";
 import { useConnectionValidationZodSchema } from "area/connection/components/ConnectionForm/schemas/connectionSchema";
 import { ConnectionSyncContextProvider } from "area/connection/components/ConnectionSync/ConnectionSyncContext";
-import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "area/connection/components/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
-import { SimplifiedConnectionsSettingsCard } from "area/connection/components/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
+import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "area/connection/components/CreateConnectionForm/ConnectionCreation/ConnectionScheduleFormField";
+import { ConnectionsSettingsCard } from "area/connection/components/CreateConnectionForm/ConnectionCreation/ConnectionSettingsCard";
 import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { HttpError, HttpProblem } from "core/api";
 import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
@@ -144,7 +144,7 @@ export const ConnectionSettingsPage: React.FC = () => {
           defaultValues={simplifiedInitialValues}
           reinitializeDefaultValues
         >
-          <SimplifiedConnectionsSettingsCard
+          <ConnectionsSettingsCard
             title={formatMessage({ id: "sources.settings" })}
             source={connection.source}
             destination={connection.destination}

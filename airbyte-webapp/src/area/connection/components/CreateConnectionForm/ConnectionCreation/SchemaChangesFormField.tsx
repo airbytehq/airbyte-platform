@@ -19,7 +19,7 @@ import { links } from "core/utils/links";
 
 import { InputContainer } from "./InputContainer";
 
-export const SimplfiedSchemaChangesFormField: React.FC<{ isCreating: boolean; disabled?: boolean }> = ({
+export const SchemaChangesFormField: React.FC<{ isCreating: boolean; disabled?: boolean }> = ({
   isCreating,
   disabled,
 }) => {

@@ -1,8 +1,9 @@
 import uniqueId from "lodash/uniqueId";
 import { useState } from "react";
-import { Controller, useFormContext, useWatch } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { ControlLabels } from "components/ui/LabeledControl";
@@ -13,31 +14,26 @@ import { FormFieldLayout } from "area/connection/components/ConnectionForm/FormF
 
 import { InputContainer } from "./InputContainer";
 
-export const SimplifiedDestinationStreamPrefixNameFormField: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
+export const ConnectionNameFormField = () => {
   const { formatMessage } = useIntl();
   const { control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
-  const prefix = useWatch({ name: "prefix", control });
 
   return (
     <Controller
-      name="prefix"
+      name="name"
       control={control}
-      render={({ field }) => (
-        <FormFieldLayout alignItems="flex-start" nextSizing data-testid="stream-prefix">
+      render={({ field, fieldState }) => (
+        <FormFieldLayout alignItems="flex-start" nextSizing>
           <ControlLabels
             htmlFor={controlId}
             label={
               <FlexContainer direction="column" gap="sm">
                 <Text bold>
-                  <FormattedMessage id="form.prefix" />
-                  &nbsp;
-                  <Text as="span" size="sm" color="grey" italicized>
-                    <FormattedMessage id="form.optional" />
-                  </Text>
+                  <FormattedMessage id="form.connectionName" />
                 </Text>
                 <Text size="sm" color="grey">
-                  <FormattedMessage id="form.prefix.subtitle" />
+                  <FormattedMessage id="form.connectionName.subtitle" />
                 </Text>
               </FlexContainer>
             }
@@ -45,19 +41,20 @@ export const SimplifiedDestinationStreamPrefixNameFormField: React.FC<{ disabled
           <InputContainer>
             <Input
               id={controlId}
-              name="prefix"
-              placeholder={formatMessage({ id: "connectionForm.modal.destinationStreamNames.input.placeholderNext" })}
+              name="name"
+              placeholder={formatMessage({ id: "form.connectionName.placeholder" })}
               inline={false}
               value={field.value}
               onChange={field.onChange}
-              disabled={disabled}
-              data-testid="stream-prefix-input"
+              data-testid="connectionName"
             />
           </InputContainer>
-          {prefix && (
-            <Text data-testid="stream-prefix-preview">
-              <FormattedMessage id="form.prefix.example" values={{ prefix }} />
-            </Text>
+          {fieldState.error && (
+            <Box mt="sm">
+              <Text color="red">
+                <FormattedMessage id={fieldState.error.message} />
+              </Text>
+            </Box>
           )}
         </FormFieldLayout>
       )}

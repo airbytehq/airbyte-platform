@@ -11,18 +11,18 @@ import { Text } from "components/ui/Text";
 import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 
+import { BackfillFormField } from "./BackfillFormField";
+import { ConnectionDataResidencyFormField } from "./ConnectionDataResidencyFormField";
+import { ConnectionNameFormField } from "./ConnectionNameFormField";
+import { ConnectionScheduleFormField } from "./ConnectionScheduleFormField";
+import styles from "./ConnectionSettingsCard.module.scss";
 import { ConnectionTagsFormField } from "./ConnectionTagsFormField";
-import { SimplfiedSchemaChangesFormField } from "./SimplfiedSchemaChangesFormField";
-import { SimplifiedBackfillFormField } from "./SimplifiedBackfillFormField";
-import { SimplfiedConnectionDataResidencyFormField } from "./SimplifiedConnectionDataResidencyFormField";
-import { SimplifiedConnectionNameFormField } from "./SimplifiedConnectionNameFormField";
-import { SimplifiedConnectionScheduleFormField } from "./SimplifiedConnectionScheduleFormField";
-import styles from "./SimplifiedConnectionSettingsCard.module.scss";
-import { SimplifiedDestinationNamespaceFormField } from "./SimplifiedDestinationNamespaceFormField";
-import { SimplifiedDestinationStreamPrefixNameFormField } from "./SimplifiedDestinationStreamPrefixNameFormField";
-import { SimplifiedSchemaChangeNotificationFormField } from "./SimplifiedSchemaChangeNotificationFormField";
+import { DestinationNamespaceFormField } from "./DestinationNamespaceFormField";
+import { DestinationStreamPrefixNameFormField } from "./DestinationStreamPrefixNameFormField";
+import { SchemaChangeNotificationFormField } from "./SchemaChangeNotificationFormField";
+import { SchemaChangesFormField } from "./SchemaChangesFormField";
 
-interface SimplifiedConnectionsSettingsCardProps {
+interface ConnectionsSettingsCardProps {
   title: string;
   isCreating: boolean;
   hasConfiguredGeography?: boolean;
@@ -31,7 +31,7 @@ interface SimplifiedConnectionsSettingsCardProps {
   isDeprecated?: boolean;
 }
 
-export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSettingsCardProps> = ({
+export const ConnectionsSettingsCard: React.FC<ConnectionsSettingsCardProps> = ({
   title,
   isCreating,
   hasConfiguredGeography = false,
@@ -45,14 +45,14 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
   return (
     <Card title={title}>
       <FlexContainer direction="column" gap="xl">
-        <SimplifiedConnectionNameFormField />
+        <ConnectionNameFormField />
 
         <ConnectionTagsFormField />
-        <SimplifiedConnectionScheduleFormField disabled={isDeprecated} />
+        <ConnectionScheduleFormField disabled={isDeprecated} />
         {isCreating && (
-          <SimplifiedDestinationNamespaceFormField isCreating={isCreating} source={source} destination={destination} />
+          <DestinationNamespaceFormField isCreating={isCreating} source={source} destination={destination} />
         )}
-        {isCreating && <SimplifiedDestinationStreamPrefixNameFormField />}
+        {isCreating && <DestinationStreamPrefixNameFormField />}
       </FlexContainer>
 
       <Box mt="lg">
@@ -84,20 +84,20 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
         <Box mt="xl">
           <FlexContainer direction="column" gap="xl" className={isAdvancedOpen ? undefined : styles.hidden}>
             {canEditDataGeographies && hasConfiguredGeography && (
-              <SimplfiedConnectionDataResidencyFormField disabled={isDeprecated} />
+              <ConnectionDataResidencyFormField disabled={isDeprecated} />
             )}
             {!isCreating && (
-              <SimplifiedDestinationNamespaceFormField
+              <DestinationNamespaceFormField
                 isCreating={isCreating}
                 source={source}
                 destination={destination}
                 disabled={isDeprecated}
               />
             )}
-            {!isCreating && <SimplifiedDestinationStreamPrefixNameFormField disabled={isDeprecated} />}
-            <SimplfiedSchemaChangesFormField isCreating={isCreating} disabled={isDeprecated} />
-            <SimplifiedSchemaChangeNotificationFormField disabled={isDeprecated} />
-            <SimplifiedBackfillFormField disabled={isDeprecated} />
+            {!isCreating && <DestinationStreamPrefixNameFormField disabled={isDeprecated} />}
+            <SchemaChangesFormField isCreating={isCreating} disabled={isDeprecated} />
+            <SchemaChangeNotificationFormField disabled={isDeprecated} />
+            <BackfillFormField disabled={isDeprecated} />
           </FlexContainer>
         </Box>
 
