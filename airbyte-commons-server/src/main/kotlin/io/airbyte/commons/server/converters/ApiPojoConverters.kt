@@ -187,6 +187,7 @@ class ApiPojoConverters(
         .notifySchemaChanges(standardSync.notifySchemaChanges)
         .createdAt(standardSync.createdAt)
         .notifySchemaChangesByEmail(standardSync.notifySchemaChangesByEmail)
+        .onDemandEnabled(standardSync.onDemandEnabled)
         .tags(
           standardSync.tags
             .stream()
@@ -328,7 +329,9 @@ class ApiPojoConverters(
           ConnectionScheduleType.CRON
         }
 
-        else -> throw RuntimeException("Unexpected scheduleType " + standardSync.scheduleType)
+        else -> {
+          throw RuntimeException("Unexpected scheduleType " + standardSync.scheduleType)
+        }
       }
     } else if (standardSync.manual) {
       // Legacy schema, manual sync.
@@ -363,7 +366,9 @@ class ApiPojoConverters(
             )
         }
 
-        else -> throw RuntimeException("Unexpected scheduleType " + standardSync.scheduleType)
+        else -> {
+          throw RuntimeException("Unexpected scheduleType " + standardSync.scheduleType)
+        }
       }
     } else if (standardSync.manual) {
       // Legacy schema, manual sync.
@@ -393,7 +398,9 @@ class ApiPojoConverters(
             .units(standardSync.scheduleData.basicSchedule.units)
         }
 
-        else -> throw RuntimeException("Unexpected scheduleType " + standardSync.scheduleType)
+        else -> {
+          throw RuntimeException("Unexpected scheduleType " + standardSync.scheduleType)
+        }
       }
     } else if (standardSync.manual) {
       // Legacy schema, manual sync.
@@ -419,8 +426,11 @@ class ApiPojoConverters(
 
   fun failureReasonToApi(failureReason: io.airbyte.config.FailureReason?): ApiFailureReason? =
     when (failureReason) {
-      null -> null
-      else ->
+      null -> {
+        null
+      }
+
+      else -> {
         ApiFailureReason()
           .failureOrigin(failureReason.failureOrigin?.convertTo())
           .failureType(failureReason.failureType?.convertTo())
@@ -438,5 +448,6 @@ class ApiPojoConverters(
               streamDescriptor = internalStreamDescriptor.toApi()
             }
           }
+      }
     }
 }

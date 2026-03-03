@@ -78,6 +78,7 @@ import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.OnDemandCapacityEnabledEntitlement
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.jackson.MoreMappers.initMapper
@@ -239,6 +240,8 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockStatic
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
@@ -543,6 +546,7 @@ internal class ConnectionsHandlerTest {
         licenseEntitlementChecker,
         contextBuilder,
         catalogDiffService,
+        entitlementService,
       )
 
     destinationHandler =
@@ -1399,6 +1403,54 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
+      fun testCreateConnectionWithOnDemandEnabledShouldThrowWhenNotEntitled() {
+        val catalog = generateBasicApiCatalog()
+
+        val workspace =
+          StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+
+        val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
+        connectionCreate.onDemandEnabled = true
+
+        doAnswer { throw LicenseEntitlementProblem() }
+          .whenever(entitlementService)
+          .ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+
+        assertThrows(
+          LicenseEntitlementProblem::class.java,
+        ) { connectionsHandler.createConnection(connectionCreate) }
+
+        verifyNoInteractions(connectionService)
+      }
+
+      @Test
+      fun testCreateConnectionWithOnDemandEnabledShouldSucceedWhenEntitled() {
+        val catalog = generateBasicApiCatalog()
+
+        val workspace =
+          StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+        whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace)
+
+        val connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
+        connectionCreate.onDemandEnabled = true
+
+        doNothing()
+          .whenever(entitlementService)
+          .ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+
+        // Mock getStandardSync to return a sync with onDemandEnabled=true after write
+        whenever(connectionService.getStandardSync(standardSync.connectionId))
+          .thenReturn(standardSync.withOnDemandEnabled(true))
+
+        val actualConnectionRead = connectionsHandler.createConnection(connectionCreate)
+
+        assertEquals(true, actualConnectionRead.onDemandEnabled)
+      }
+
+      @Test
       fun testCreateConnectionWithSelectedFields() {
         val workspace =
           StandardWorkspace()
@@ -2195,6 +2247,38 @@ internal class ConnectionsHandlerTest {
         assertThrows(
           LicenseEntitlementProblem::class.java,
         ) { connectionsHandler.updateConnection(connectionUpdate, null, false) }
+      }
+
+      @Test
+      fun testUpdateConnectionWithOnDemandEnabledShouldThrowWhenNotEntitled() {
+        val connectionUpdate =
+          ConnectionUpdate()
+            .connectionId(standardSync.connectionId)
+            .onDemandEnabled(true)
+
+        doAnswer { throw LicenseEntitlementProblem() }
+          .whenever(entitlementService)
+          .ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+
+        assertThrows(
+          LicenseEntitlementProblem::class.java,
+        ) { connectionsHandler.updateConnection(connectionUpdate, null, false) }
+      }
+
+      @Test
+      fun testUpdateConnectionWithOnDemandEnabledShouldSucceedWhenEntitled() {
+        val connectionUpdate =
+          ConnectionUpdate()
+            .connectionId(standardSync.connectionId)
+            .onDemandEnabled(true)
+
+        doNothing()
+          .whenever(entitlementService)
+          .ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+
+        val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
+
+        assertEquals(true, actualConnectionRead.onDemandEnabled)
       }
 
       @Test

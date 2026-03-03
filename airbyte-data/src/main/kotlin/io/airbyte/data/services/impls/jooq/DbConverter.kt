@@ -196,6 +196,7 @@ object DbConverter {
           .literal
           .toEnum<StandardSync.BackfillPreference>()!!,
       ).withTags(tags)
+      .withOnDemandEnabled(record.get(Tables.CONNECTION.ON_DEMAND_ENABLED) ?: false)
   }
 
   private fun parseConfiguredAirbyteCatalog(configuredAirbyteCatalogString: String): ConfiguredAirbyteCatalog =

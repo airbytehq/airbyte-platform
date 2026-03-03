@@ -87,7 +87,9 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ApiConverters.Companion.toInternal
 import io.airbyte.commons.converters.toServerApi
 import io.airbyte.commons.entitlements.Entitlement
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.entitlements.models.OnDemandCapacityEnabledEntitlement
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
@@ -157,6 +159,7 @@ import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason
 import io.airbyte.data.services.shared.ConnectionEvent
 import io.airbyte.data.services.shared.FailedEvent
 import io.airbyte.data.services.shared.FinalStatusEvent
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.CheckWithCatalog
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EnableDestinationCatalogValidation
@@ -241,6 +244,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     private val licenseEntitlementChecker: LicenseEntitlementChecker,
     private val contextBuilder: ContextBuilder,
     private val catalogDiffService: CatalogDiffService,
+    private val entitlementService: EntitlementService,
   ) {
     private val maxJobLookback = 10
 
@@ -343,6 +347,10 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                 tag!!,
               )
             }.toList()
+      }
+
+      if (patch.onDemandEnabled != null) {
+        sync.onDemandEnabled = patch.onDemandEnabled
       }
     }
 
@@ -502,6 +510,11 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceConnection.sourceDefinitionId)
       licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationConnection.destinationDefinitionId)
 
+      // Ensure org is entitled to use on-demand capacity if requested
+      if (connectionCreate.onDemandEnabled == true) {
+        entitlementService.ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+      }
+
       val connectionId = uuidGenerator.get()
 
       // If not specified, default the NamespaceDefinition to 'source'
@@ -528,6 +541,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           .withDestinationCatalogId(connectionCreate.destinationCatalogId)
           .withBreakingChange(false)
           .withNotifySchemaChanges(connectionCreate.notifySchemaChanges)
+          .withOnDemandEnabled(connectionCreate.onDemandEnabled ?: false)
           .withNonBreakingChangesPreference(
             apiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.nonBreakingChangesPreference),
           ).withBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(connectionCreate.backfillPreference))
@@ -761,6 +775,11 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
       licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceDefinition.sourceDefinitionId)
       licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationDefinition.destinationDefinitionId)
+
+      // Ensure org is entitled to use on-demand capacity if requested
+      if (connectionPatch.onDemandEnabled == true) {
+        entitlementService.ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+      }
 
       if (connectionPatch.syncCatalog != null) {
         val sourceVersion =
@@ -1146,18 +1165,23 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         require(patch.scheduleData == null) { "ConnectionUpdate should not include any scheduleData without also specifying a valid scheduleType." }
       } else {
         when (patch.scheduleType) {
-          ConnectionScheduleType.MANUAL ->
+          ConnectionScheduleType.MANUAL -> {
             require(
               patch.scheduleData == null,
             ) { "ConnectionUpdate should not include any scheduleData when setting the Connection scheduleType to MANUAL." }
+          }
 
-          ConnectionScheduleType.BASIC ->
+          ConnectionScheduleType.BASIC -> {
             requireNotNull(patch.scheduleData) { "ConnectionUpdate should include scheduleData when setting the Connection scheduleType to BASIC." }
+          }
 
-          ConnectionScheduleType.CRON ->
+          ConnectionScheduleType.CRON -> {
             requireNotNull(patch.scheduleData) { "ConnectionUpdate should include scheduleData when setting the Connection scheduleType to CRON." }
+          }
 
-          else -> throw RuntimeException("Unrecognized scheduleType!")
+          else -> {
+            throw RuntimeException("Unrecognized scheduleType!")
+          }
         }
       }
     }
