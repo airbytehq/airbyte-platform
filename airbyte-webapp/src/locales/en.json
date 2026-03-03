@@ -1324,6 +1324,7 @@
   "settings.organization.billing.cancelSubscriptionConfirm": "Cancel Subscription",
   "settings.organization.billing.cancelSubscriptionCancel": "Go Back",
   "settings.organization.billing.cancelSubscriptionModalText": "Upon cancelling your subscription, your syncs can continue until the end of your current billing period. You will receive a final invoice on <b>{endDate, date, medium}</b>. Are you sure you want to cancel your subscription?",
+  "settings.organization.billing.cancelSubscriptionModalTextNoInvoice": "Upon cancelling your subscription, your syncs can continue until the end of your current billing period. Are you sure you want to cancel your subscription?",
   "settings.organization.billing.resubscribe": "Re-subscribe",
   "settings.organization.billing.resubscribed": "You have successfully re-subscribed to Airbyte.",
   "settings.organization.billing.noSelfServePlan": "Reach out to <lnk>Sales</lnk> if you have any questions about your plan.",

@@ -49,8 +49,16 @@ export const CancelSubscription: React.FC<CancelSubscriptionProps> = ({ disabled
       text: (
         <Text>
           <FormattedMessage
-            id="settings.organization.billing.cancelSubscriptionModalText"
-            values={{ endDate: dayjs(subscription.upcomingInvoice?.dueDate).toDate() }}
+            id={
+              subscription.upcomingInvoice?.dueDate
+                ? "settings.organization.billing.cancelSubscriptionModalText"
+                : "settings.organization.billing.cancelSubscriptionModalTextNoInvoice"
+            }
+            values={
+              subscription.upcomingInvoice?.dueDate
+                ? { endDate: dayjs(subscription.upcomingInvoice.dueDate).toDate() }
+                : undefined
+            }
           />
         </Text>
       ),
