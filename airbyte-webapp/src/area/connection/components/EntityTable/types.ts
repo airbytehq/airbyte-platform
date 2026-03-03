@@ -35,6 +35,7 @@ const enum Status {
   CANCELLED = "cancelled",
   EMPTY = "empty",
   PENDING = "pending",
+  QUEUED = "queued",
 }
 
 enum SortOrderEnum {

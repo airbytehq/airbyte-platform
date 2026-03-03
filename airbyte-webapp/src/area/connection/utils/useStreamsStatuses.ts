@@ -2,8 +2,8 @@ import { useConnectionStatus } from "area/connection/components/ConnectionStatus
 import { StreamWithStatus } from "area/connection/components/StreamStatus/streamStatusUtils";
 import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import { useSchemaChanges } from "area/connection/utils/useSchemaChanges";
-import { useListStreamsStatuses, useGetConnection } from "core/api";
-import { ConnectionSyncStatus, StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
+import { ConnectionSyncStatus, useListStreamsStatuses, useGetConnection } from "core/api";
+import { StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
 import { useExperiment } from "core/services/Experiment";
 import { assertNever } from "core/utils/asserts";
 
@@ -94,6 +94,8 @@ export const useStreamsStatuses = (
           streamStatus.status = StreamStatusType.Syncing;
         } else if (connectionStatus.status === ConnectionSyncStatus.synced) {
           streamStatus.status = StreamStatusType.Synced;
+        } else if (connectionStatus.status === ConnectionSyncStatus.queued) {
+          streamStatus.status = StreamStatusType.Queued;
         } else {
           assertNever(connectionStatus.status);
         }

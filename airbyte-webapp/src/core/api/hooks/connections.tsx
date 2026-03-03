@@ -872,9 +872,14 @@ export const useGetConnectionStatusesCounts = () => {
   const workspaceId = useCurrentWorkspaceId();
   const requestOptions = useRequestOptions();
 
-  return useQuery(connectionsKeys.statusCounts(workspaceId), () =>
-    webBackendGetConnectionStatusCounts({ workspaceId }, requestOptions)
-  );
+  return useQuery(connectionsKeys.statusCounts(workspaceId), async () => {
+    const result = await webBackendGetConnectionStatusCounts({ workspaceId }, requestOptions);
+    // TODO(https://github.com/airbytehq/hydra-issues-internal/issues/106): Remove this mock when backend implements queued field
+    return {
+      ...result,
+      queued: 0, // Mock: will be replaced by real backend data
+    };
+  });
 };
 
 export const useGetWorkspacesStatusesCounts = (

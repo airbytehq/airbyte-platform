@@ -14,7 +14,7 @@ import {
 
 import styles from "./ConnectionsSummary.module.scss";
 
-export type SummaryKey = "healthy" | "failed" | "paused" | "running" | "notSynced";
+export type SummaryKey = "queued" | "healthy" | "failed" | "paused" | "running" | "notSynced";
 
 export const isConnectionEnabled = (
   connection: WebBackendConnectionListItem
@@ -77,6 +77,12 @@ export const ConnectionsSummary: React.FC = () => {
       count: statuses.running,
       color: "blue",
       labelId: "tables.connections.filters.status.running",
+    } as const,
+    {
+      key: "queued",
+      count: statuses.queued ?? 0,
+      color: "yellow600",
+      labelId: "tables.connections.filters.status.queued",
     } as const,
     {
       key: "healthy",
