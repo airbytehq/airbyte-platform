@@ -26,6 +26,8 @@ const ConnectionStatusIcon: React.FC<Pick<ConnectionStatusProps, "status">> = ({
         ? "inactive"
         : status === Status.PENDING
         ? "loading"
+        : status === Status.QUEUED
+        ? "queued"
         : status === Status.CANCELLED
         ? "cancelled"
         : undefined,
@@ -48,6 +50,8 @@ const ConnectionStatusIcon: React.FC<Pick<ConnectionStatusProps, "status">> = ({
       ? formatMessage({
           id: "connection.pendingSync",
         })
+      : status === Status.QUEUED
+      ? formatMessage({ id: "connection.status.queued" })
       : status === Status.CANCELLED
       ? formatMessage({ id: "connection.cancelledSync" })
       : formatMessage({

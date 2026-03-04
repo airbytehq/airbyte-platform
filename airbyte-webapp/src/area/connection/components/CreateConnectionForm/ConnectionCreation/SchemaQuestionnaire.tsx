@@ -22,7 +22,7 @@ import { useGetDestinationDefinitionSpecification } from "core/api";
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 
-import styles from "./SimplifiedSchemaQuestionnaire.module.scss";
+import styles from "./SchemaQuestionnaire.module.scss";
 import { SyncModeValue } from "../../SyncCatalogTable/components/SyncModeCell";
 
 type Delivery = "replicateSource" | "appendChanges";
@@ -98,7 +98,7 @@ export const getEnforcedIncrementOrRefresh = (supportedSyncModes: SyncMode[]) =>
   return supportedSyncModes.length === 1 ? supportedSyncModes[0] : undefined;
 };
 
-export const SimplifiedSchemaQuestionnaire = () => {
+export const SchemaQuestionnaire = () => {
   const analyticsService = useAnalyticsService();
   const { connection } = useConnectionFormService();
   const { supportedDestinationSyncModes } = useGetDestinationDefinitionSpecification(

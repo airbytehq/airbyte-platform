@@ -801,6 +801,7 @@ class WebBackendConnectionsHandler(
       connectionCreate.nonBreakingChangesPreference(webBackendConnectionCreate.nonBreakingChangesPreference)
       connectionCreate.backfillPreference(webBackendConnectionCreate.backfillPreference)
       connectionCreate.tags(webBackendConnectionCreate.tags)
+      connectionCreate.onDemandEnabled(webBackendConnectionCreate.onDemandEnabled)
 
       return connectionCreate
     }
@@ -842,6 +843,7 @@ class WebBackendConnectionsHandler(
       connectionPatch.backfillPreference(webBackendConnectionPatch.backfillPreference)
       connectionPatch.breakingChange(breakingChange)
       connectionPatch.tags(webBackendConnectionPatch.tags)
+      connectionPatch.onDemandEnabled(webBackendConnectionPatch.onDemandEnabled)
 
       connectionPatch.operationIds(finalOperationIds)
 

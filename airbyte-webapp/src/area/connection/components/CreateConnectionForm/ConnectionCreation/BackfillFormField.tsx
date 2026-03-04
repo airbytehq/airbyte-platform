@@ -4,22 +4,23 @@ import { Controller, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
-import { StandaloneDataResidencyDropdown } from "components/ui/forms/DataResidencyDropdown";
 import { ControlLabels } from "components/ui/LabeledControl";
+import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { FormConnectionFormValues } from "area/connection/components/ConnectionForm/formConfig";
 import { FormFieldLayout } from "area/connection/components/ConnectionForm/FormFieldLayout";
+import { SchemaChangeBackfillPreference } from "core/api/types/AirbyteClient";
+import { useIsCloudApp } from "core/utils/app";
 
-import { InputContainer } from "./InputContainer";
-
-export const SimplfiedConnectionDataResidencyFormField: React.FC<{ disabled: boolean }> = ({ disabled }) => {
+export const BackfillFormField: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
+  const isCloudApp = useIsCloudApp();
 
   return (
     <Controller
-      name="geography"
+      name="backfillPreference"
       control={control}
       render={({ field }) => (
         <FormFieldLayout alignItems="flex-start" nextSizing>
@@ -28,17 +29,33 @@ export const SimplfiedConnectionDataResidencyFormField: React.FC<{ disabled: boo
             label={
               <FlexContainer direction="column" gap="sm">
                 <Text bold>
-                  <FormattedMessage id="connection.geographyTitle" />
+                  <FormattedMessage id="connectionForm.backfillColumns.title" />
                 </Text>
                 <Text size="sm" color="grey">
-                  <FormattedMessage id="connection.geographyDescription" />
+                  <FormattedMessage
+                    id={
+                      isCloudApp
+                        ? "connectionForm.backfillColumns.descriptionCloud"
+                        : "connectionForm.backfillColumns.description"
+                    }
+                  />
                 </Text>
               </FlexContainer>
             }
           />
-          <InputContainer>
-            <StandaloneDataResidencyDropdown<FormConnectionFormValues> name={field.name} disabled={disabled} />
-          </InputContainer>
+          <Switch
+            id={controlId}
+            checked={field.value === SchemaChangeBackfillPreference.enabled}
+            onChange={(e) => {
+              field.onChange(
+                e.currentTarget.checked
+                  ? SchemaChangeBackfillPreference.enabled
+                  : SchemaChangeBackfillPreference.disabled
+              );
+            }}
+            size="lg"
+            disabled={disabled}
+          />
         </FormFieldLayout>
       )}
     />

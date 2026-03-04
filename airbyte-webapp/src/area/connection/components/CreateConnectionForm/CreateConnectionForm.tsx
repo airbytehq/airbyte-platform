@@ -31,10 +31,10 @@ import { FormModeProvider, useFormMode } from "core/services/ui/FormModeContext"
 import { useCheckSubHourlySchedule } from "core/utils/checkSubHourlySchedule";
 import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 
+import { ConnectionConfiguration } from "./ConnectionCreation/ConnectionConfiguration";
+import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "./ConnectionCreation/ConnectionScheduleFormField";
 import styles from "./CreateConnectionForm.module.scss";
 import { SchemaError } from "./SchemaError";
-import { SimplifiedConnectionConfiguration } from "./SimplifiedConnectionCreation/SimplifiedConnectionConfiguration";
-import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "./SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
 import { FormConnectionFormValues, useInitialFormValues } from "../ConnectionForm/formConfig";
 import { useConnectionValidationZodSchema } from "../ConnectionForm/schemas/connectionSchema";
 
@@ -182,7 +182,7 @@ const CreateConnectionFormInner: React.FC = () => {
           formTrackerId={CREATE_CONNECTION_FORM_ID}
         >
           <div className={styles.formContainer}>
-            <SimplifiedConnectionConfiguration />
+            <ConnectionConfiguration />
           </div>
         </Form>
       </Suspense>

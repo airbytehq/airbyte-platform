@@ -1,0 +1,3 @@
+<svg fill="none" viewBox="0 0 24 24" data-icon="statusQueuedConnection" role="img">
+    <path fill="currentColor" fill-rule="evenodd" d="M6.444 3.685a10 10 0 1 1 11.112 16.63A10 10 0 0 1 6.444 3.685ZM17 6a1 1 0 0 0-1-1H8a1 1 0 0 0 0 2v1.5a3 3 0 0 0 1.2 2.4L11 12l-1.8 1.1a3 3 0 0 0-1.2 2.4V17a1 1 0 0 0 0 2h8a1 1 0 0 0 0-2v-1.5a3 3 0 0 0-1.2-2.4L13 12l1.8-1.1a3 3 0 0 0 1.2-2.4V7a1 1 0 0 0 1-1Zm-7 2.5V7h4v1.5a1 1 0 0 1-.4.8L12 10.5l-1.6-1.2a1 1 0 0 1-.4-.8ZM14 17h-4v-1.5a1 1 0 0 1 .4-.8l1.6-1.2 1.6 1.2a1 1 0 0 1 .4.8V17Z" clip-rule="evenodd"/>
+</svg>

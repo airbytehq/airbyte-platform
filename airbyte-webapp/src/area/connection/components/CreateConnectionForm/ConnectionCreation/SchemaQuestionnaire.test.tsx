@@ -1,6 +1,6 @@
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 
-import { getEnforcedDelivery, getEnforcedIncrementOrRefresh } from "./SimplifiedSchemaQuestionnaire";
+import { getEnforcedDelivery, getEnforcedIncrementOrRefresh } from "./SchemaQuestionnaire";
 
 describe("getEnforcedDelivery", () => {
   it("selects appendChanges when there are no replicateSource options", () => {

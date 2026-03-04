@@ -4,7 +4,7 @@ import React, { cloneElement } from "react";
 import { Icon, IconProps } from "components/ui/Icon";
 import { CircleLoader } from "components/ui/StatusIcon/CircleLoader";
 
-import { ConnectionSyncStatus } from "core/api/types/AirbyteClient";
+import { ConnectionSyncStatus } from "core/api";
 
 import styles from "./ConnectionStatusIndicator.module.scss";
 
@@ -13,6 +13,7 @@ const ICON_BY_STATUS: Readonly<Record<ConnectionSyncStatus | "undefined", JSX.El
   incomplete: <Icon type="statusWarning" size="md" />,
   paused: <Icon type="statusInactive" size="md" />,
   pending: <Icon type="statusInactive" size="md" />,
+  queued: <Icon type="statusQueuedConnection" size="md" />,
   failed: <Icon type="statusError" size="md" />,
   running: <CircleLoader className={styles.circleLoader} />,
   undefined: (
@@ -27,6 +28,7 @@ const STYLE_BY_STATUS: Readonly<Record<ConnectionSyncStatus | "undefined", strin
   incomplete: styles["status--incomplete"],
   paused: styles["status--paused"],
   pending: styles["status--pending"],
+  queued: styles["status--queued"],
   failed: styles["status--failed"],
   running: styles["status--syncing"],
   undefined: styles["status--undefined"],
@@ -37,6 +39,7 @@ const BOX_STYLE_BY_STATUS: Readonly<Record<ConnectionSyncStatus | "undefined", s
   incomplete: styles["status--incomplete-withBox"],
   paused: styles["status--paused-withBox"],
   pending: styles["status--pending-withBox"],
+  queued: styles["status--queued-withBox"],
   failed: styles["status--failed-withBox"],
   running: styles["status--syncing-withBox"],
   undefined: styles["status--undefined-withBox"],

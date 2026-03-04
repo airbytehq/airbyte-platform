@@ -2,11 +2,11 @@ import { FormattedMessage } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
+import { JobStatus } from "core/api";
 import {
   ActorStatus,
   ConnectionStatus,
   DestinationSnippetRead,
-  JobStatus,
   SourceSnippetRead,
   WebBackendConnectionListItem,
 } from "core/api/types/AirbyteClient";
@@ -62,6 +62,9 @@ export const getConnectionSyncStatus = (
 
     case JobStatus.cancelled:
       return ConnectionSyncStatus.CANCELLED;
+
+    case JobStatus.queued:
+      return ConnectionSyncStatus.QUEUED;
 
     case JobStatus.pending:
     case JobStatus.running:

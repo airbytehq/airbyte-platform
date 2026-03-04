@@ -16,7 +16,7 @@ import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useCurrentWorkspace } from "core/api";
 import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
 
-export const SimplifiedSchemaChangeNotificationFormField: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
+export const SchemaChangeNotificationFormField: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
   const { notificationSettings } = useCurrentWorkspace();

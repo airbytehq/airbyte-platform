@@ -14779,6 +14779,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          default: false
+          description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
     WebBackendConnectionCreate:
       type: object
       required:
@@ -14842,6 +14846,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          default: false
+          description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
     ConnectionStateCreateOrUpdate:
       type: object
       required:
@@ -14914,6 +14922,9 @@ components:
           nullable: true
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
     ConnectionUpdateWithReason:
       type: object
       required:
@@ -14988,6 +14999,9 @@ components:
           nullable: true
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
     ConnectionRead:
       type: object
       required:
@@ -15065,6 +15079,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
     ConnectionStatusesRequestBody:
       type: object
       required:

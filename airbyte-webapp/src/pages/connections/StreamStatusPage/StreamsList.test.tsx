@@ -41,6 +41,16 @@ jest.mock("core/api", () => ({
   useGetConnection: () => mockConnection,
   useCurrentConnection: () => mockConnection,
   useCurrentWorkspace: () => mockWorkspace,
+  // TODO(https://github.com/airbytehq/hydra-issues-internal/issues/106): Remove once backend adds "queued" to ConnectionSyncStatus
+  ConnectionSyncStatus: {
+    pending: "pending",
+    running: "running",
+    incomplete: "incomplete",
+    failed: "failed",
+    synced: "synced",
+    paused: "paused",
+    queued: "queued",
+  },
 }));
 jest.mock("core/utils/rbac", () => ({
   useGeneratedIntent: () => true,

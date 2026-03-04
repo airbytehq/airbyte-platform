@@ -20,13 +20,13 @@ import { links } from "core/utils/links";
 import { naturalComparator } from "core/utils/objects";
 
 import { DestinationNamespaceConfiguration, SourceNamespaceConfiguration } from "./ConnectorNamespaceConfiguration";
+import styles from "./DestinationNamespaceFormField.module.scss";
 import { InputContainer } from "./InputContainer";
-import styles from "./SimplifiedDestinationNamespaceFormField.module.scss";
 
 // eslint-disable-next-line no-template-curly-in-string
 const SOURCE_NAMESPACE_REPLACEMENT_STRING = "${SOURCE_NAMESPACE}";
 
-export const SimplifiedDestinationNamespaceFormField: React.FC<{
+export const DestinationNamespaceFormField: React.FC<{
   isCreating: boolean;
   source: SourceRead;
   destination: DestinationRead;

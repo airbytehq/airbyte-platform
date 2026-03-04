@@ -519,7 +519,7 @@ class ConnectionServiceJooqImpl
       val ascending = cursor.ascending
 
       when (sortKey) {
-        SortKey.CONNECTION_NAME ->
+        SortKey.CONNECTION_NAME -> {
           orderByFields.add(
             if (ascending) {
               DSL.lower(Tables.CONNECTION.NAME).cast(String::class.java).asc()
@@ -527,7 +527,9 @@ class ConnectionServiceJooqImpl
               DSL.lower(Tables.CONNECTION.NAME).cast(String::class.java).desc()
             },
           )
-        SortKey.SOURCE_NAME ->
+        }
+
+        SortKey.SOURCE_NAME -> {
           orderByFields.add(
             if (ascending) {
               DSL.lower(Tables.ACTOR.NAME).cast(String::class.java).asc()
@@ -535,8 +537,9 @@ class ConnectionServiceJooqImpl
               DSL.lower(Tables.ACTOR.NAME).cast(String::class.java).desc()
             },
           )
+        }
 
-        SortKey.DESTINATION_NAME ->
+        SortKey.DESTINATION_NAME -> {
           orderByFields.add(
             if (ascending) {
               DSL.lower(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS).NAME).cast(String::class.java).asc()
@@ -544,6 +547,7 @@ class ConnectionServiceJooqImpl
               DSL.lower(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS).NAME).cast(String::class.java).desc()
             },
           )
+        }
 
         SortKey.LAST_SYNC -> {
           if (ascending) {
@@ -553,7 +557,9 @@ class ConnectionServiceJooqImpl
           }
         }
 
-        else -> throw IllegalArgumentException("Invalid sort key for connection cursor = ${cursor.cursorId}: $sortKey")
+        else -> {
+          throw IllegalArgumentException("Invalid sort key for connection cursor = ${cursor.cursorId}: $sortKey")
+        }
       }
 
       // Always add connection ID as the final sort field for consistent pagination
@@ -625,7 +631,9 @@ class ConnectionServiceJooqImpl
           }
         }
 
-        else -> throw IllegalArgumentException("Invalid sort key for source cursor = ${cursor.cursorId}: $sortKey")
+        else -> {
+          throw IllegalArgumentException("Invalid sort key for source cursor = ${cursor.cursorId}: $sortKey")
+        }
       }
 
       // Always add connection ID for consistent pagination
@@ -757,17 +765,19 @@ class ConnectionServiceJooqImpl
           )
         condition =
           when (statusFilter) {
-            ConnectionJobStatus.FAILED ->
+            ConnectionJobStatus.FAILED -> {
               condition.or(
                 statusField.`in`(JobStatus.failed, JobStatus.cancelled, JobStatus.incomplete),
               )
+            }
 
-            ConnectionJobStatus.RUNNING ->
+            ConnectionJobStatus.RUNNING -> {
               condition.or(
                 statusField.eq(JobStatus.running),
               )
+            }
 
-            ConnectionJobStatus.HEALTHY ->
+            ConnectionJobStatus.HEALTHY -> {
               condition.or(
                 Tables.CONNECTION.STATUS
                   .eq(StatusType.active)
@@ -777,6 +787,7 @@ class ConnectionServiceJooqImpl
                       .or(statusField.`in`(JobStatus.succeeded, JobStatus.pending)),
                   ),
               )
+            }
           }
       }
       return condition
@@ -1291,14 +1302,17 @@ class ConnectionServiceJooqImpl
     ): List<StandardSync> {
       val actorDefinitionJoinCondition =
         when (ActorType.valueOf(actorTypeValue)) {
-          ActorType.source ->
+          ActorType.source -> {
             Tables.ACTOR.ACTOR_TYPE
               .eq(ActorType.source)
               .and(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
-          ActorType.destination ->
+          }
+
+          ActorType.destination -> {
             Tables.ACTOR.ACTOR_TYPE
               .eq(ActorType.destination)
               .and(Tables.ACTOR.ID.eq(Tables.CONNECTION.DESTINATION_ID))
+          }
         }
 
       val connectionAndOperationIdsResult =
@@ -1373,14 +1387,17 @@ class ConnectionServiceJooqImpl
     ): List<ConnectionSummary> {
       val actorJoinCondition =
         when (ActorType.valueOf(actorTypeValue)) {
-          ActorType.source ->
+          ActorType.source -> {
             Tables.ACTOR.ACTOR_TYPE
               .eq(ActorType.source)
               .and(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
-          ActorType.destination ->
+          }
+
+          ActorType.destination -> {
             Tables.ACTOR.ACTOR_TYPE
               .eq(ActorType.destination)
               .and(Tables.ACTOR.ID.eq(Tables.CONNECTION.DESTINATION_ID))
+          }
         }
 
       val actorIdFilter = Tables.ACTOR.ID.`in`(actorIds)
@@ -1879,6 +1896,7 @@ class ConnectionServiceJooqImpl
           .set(Tables.CONNECTION.SOURCE_CATALOG_ID, standardSync.sourceCatalogId)
           .set(Tables.CONNECTION.DESTINATION_CATALOG_ID, standardSync.destinationCatalogId)
           .set(Tables.CONNECTION.BREAKING_CHANGE, standardSync.breakingChange)
+          .set(Tables.CONNECTION.ON_DEMAND_ENABLED, standardSync.onDemandEnabled ?: false)
           .where(Tables.CONNECTION.ID.eq(standardSync.connectionId))
           .execute()
 
@@ -1945,6 +1963,7 @@ class ConnectionServiceJooqImpl
           ).set(Tables.CONNECTION.SOURCE_CATALOG_ID, standardSync.sourceCatalogId)
           .set(Tables.CONNECTION.DESTINATION_CATALOG_ID, standardSync.destinationCatalogId)
           .set(Tables.CONNECTION.BREAKING_CHANGE, standardSync.breakingChange)
+          .set(Tables.CONNECTION.ON_DEMAND_ENABLED, standardSync.onDemandEnabled ?: false)
           .set(Tables.CONNECTION.CREATED_AT, timestamp)
           .set(Tables.CONNECTION.UPDATED_AT, timestamp)
           .execute()

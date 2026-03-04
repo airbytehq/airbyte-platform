@@ -1107,6 +1107,7 @@ internal class WebBackendConnectionsHandlerTest {
         "tags",
         "addTagsItem",
         "removeTagsItem",
+        "onDemandEnabled",
       )
 
     val methods =
@@ -1156,6 +1157,7 @@ internal class WebBackendConnectionsHandlerTest {
         "tags",
         "addTagsItem",
         "removeTagsItem",
+        "onDemandEnabled",
       )
 
     val methods =

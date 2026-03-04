@@ -27,6 +27,17 @@
       }
     }
   }
+
+  // Override queued status colors for connection context (orange icon, yellow background)
+  &--queued {
+    .icon {
+      color: colors.$yellow-700;
+    }
+
+    &-withBox {
+      background-color: colors.$yellow-50;
+    }
+  }
 }
 
 .circleLoader {

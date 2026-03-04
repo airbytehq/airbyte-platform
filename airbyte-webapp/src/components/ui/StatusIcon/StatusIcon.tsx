@@ -9,7 +9,15 @@ import { FlexContainer } from "../Flex";
 import { Text } from "../Text";
 import { Tooltip } from "../Tooltip";
 
-export type StatusIconStatus = "sleep" | "inactive" | "success" | "warning" | "loading" | "error" | "cancelled";
+export type StatusIconStatus =
+  | "sleep"
+  | "inactive"
+  | "success"
+  | "warning"
+  | "loading"
+  | "error"
+  | "cancelled"
+  | "queued";
 type Size = "sm" | "md" | "lg";
 
 export interface StatusIconProps {
@@ -34,6 +42,7 @@ const colorStyles: Record<StatusIconStatus, string> = {
   error: styles.error,
   cancelled: styles.default,
   loading: styles.none,
+  queued: styles.queued,
 };
 
 const _iconByStatus = {
@@ -43,6 +52,7 @@ const _iconByStatus = {
   inactive: "statusInactive",
   sleep: "statusSleep",
   error: "statusError",
+  queued: "statusQueuedConnection",
 } as const;
 
 export const StatusIcon: React.FC<StatusIconProps> = ({ title, status = "error", size = "md", value }) => {

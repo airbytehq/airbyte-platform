@@ -24,20 +24,20 @@ import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
-import styles from "./SimplifiedConnectionConfiguration.module.scss";
-import { SimplifiedConnectionsSettingsCard } from "./SimplifiedConnectionSettingsCard";
-import { SimplifiedSchemaQuestionnaire } from "./SimplifiedSchemaQuestionnaire";
+import styles from "./ConnectionConfiguration.module.scss";
+import { ConnectionsSettingsCard } from "./ConnectionSettingsCard";
+import { SchemaQuestionnaire } from "./SchemaQuestionnaire";
 import { SyncCatalogTable } from "../../SyncCatalogTable";
 import { CREATE_CONNECTION_FORM_ID } from "../CreateConnectionForm";
 
-export const SimplifiedConnectionConfiguration: React.FC = () => {
+export const ConnectionConfiguration: React.FC = () => {
   return (
     <Routes>
       <Route
         index
         element={
           <>
-            <SimplifiedConnectionCreationReplication />
+            <ConnectionCreationReplication />
             <FirstNav />
           </>
         }
@@ -46,7 +46,7 @@ export const SimplifiedConnectionConfiguration: React.FC = () => {
         path={ConnectionRoutePaths.ConfigureContinued}
         element={
           <>
-            <SimplifiedConnectionCreationConfigureConnection />
+            <ConnectionCreationConfigureConnection />
             <SecondNav />
           </>
         }
@@ -55,7 +55,7 @@ export const SimplifiedConnectionConfiguration: React.FC = () => {
   );
 };
 
-const SimplifiedConnectionCreationReplication: React.FC = () => {
+const ConnectionCreationReplication: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_SELECT_STREAMS);
 
   const { formatMessage } = useIntl();
@@ -74,7 +74,7 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
           title={formatMessage({ id: "connectionForm.selectSyncMode" })}
           helpText={formatMessage({ id: "connectionForm.selectSyncModeDescription" })}
         >
-          <SimplifiedSchemaQuestionnaire />
+          <SchemaQuestionnaire />
         </Card>
         <Card noPadding title={formatMessage({ id: "connection.schema" })}>
           <Box mb="xl">
@@ -86,7 +86,7 @@ const SimplifiedConnectionCreationReplication: React.FC = () => {
   );
 };
 
-const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
+const ConnectionCreationConfigureConnection: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_CONFIGURE_CONNECTION);
   const { formatMessage } = useIntl();
   const { isDirty } = useFormState<FormConnectionFormValues>();
@@ -102,7 +102,7 @@ const SimplifiedConnectionCreationConfigureConnection: React.FC = () => {
 
   return (
     <ScrollParent>
-      <SimplifiedConnectionsSettingsCard
+      <ConnectionsSettingsCard
         title={formatMessage({ id: "connectionForm.configureConnection" })}
         source={source}
         destination={destination}

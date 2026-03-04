@@ -33,26 +33,24 @@ import { cronTimeZones, CRON_DEFAULT_VALUE } from "core/utils/cron";
 import { links } from "core/utils/links";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
+import styles from "./ConnectionScheduleFormField.module.scss";
 import { InputContainer } from "./InputContainer";
-import styles from "./SimplifiedConnectionScheduleFormField.module.scss";
 
 export const I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED = "form.cronExpression.underOneHourNotAllowed";
 
-export const SimplifiedConnectionScheduleFormField: React.FC<{ disabled: boolean }> = ({ disabled }) => {
+export const ConnectionScheduleFormField: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const watchedScheduleType = useWatch<FormConnectionFormValues>({ name: "scheduleType" });
 
   return (
     <>
-      <SimplifiedScheduleTypeFormControl disabled={disabled} />
-      {watchedScheduleType === ConnectionScheduleType.basic && (
-        <SimplifiedBasicScheduleFormControl disabled={disabled} />
-      )}
-      {watchedScheduleType === ConnectionScheduleType.cron && <SimplifiedCronScheduleFormControl disabled={disabled} />}
+      <ScheduleTypeFormControl disabled={disabled} />
+      {watchedScheduleType === ConnectionScheduleType.basic && <BasicScheduleFormControl disabled={disabled} />}
+      {watchedScheduleType === ConnectionScheduleType.cron && <CronScheduleFormControl disabled={disabled} />}
     </>
   );
 };
 
-const SimplifiedScheduleTypeFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) => {
+const ScheduleTypeFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const { formatMessage } = useIntl();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
   const { defaultValues } = useFormState<FormConnectionFormValues>();
@@ -150,7 +148,7 @@ const SimplifiedScheduleTypeFormControl: React.FC<{ disabled: boolean }> = ({ di
   );
 };
 
-const SimplifiedBasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) => {
+const BasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const { connection } = useConnectionFormService();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
@@ -240,7 +238,7 @@ const SimplifiedBasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ d
   );
 };
 
-const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) => {
+const CronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const [controlId] = useState(`input-control-${uniqueId()}`);
   const { formatMessage } = useIntl();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();

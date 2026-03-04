@@ -116,6 +116,14 @@ object GroupsEntitlement : FeatureEntitlement(
   featureId = "feature-groups",
 )
 
+object OnDemandCapacityEnabledEntitlement : FeatureEntitlement(
+  featureId = "feature-on-demand-capacity-enabled",
+)
+
+object CommittedDataWorkersEntitlement : FeatureEntitlement(
+  featureId = "feature-committed-data-workers",
+)
+
 object Entitlements {
   private val ALL: List<Entitlement> =
     listOf(
@@ -142,6 +150,8 @@ object Entitlements {
       SourceDb2EnterpriseConnector,
       SourceSharepointEnterpriseListsConnector,
       GroupsEntitlement,
+      OnDemandCapacityEnabledEntitlement,
+      CommittedDataWorkersEntitlement,
     )
 
   private val BY_FEATURE_ID: Map<String, Entitlement> =
