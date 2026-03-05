@@ -25,6 +25,7 @@ import { EnterpriseConnectorStub } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useExperiment } from "core/services/Experiment";
 import { useModalService } from "core/services/Modal";
 import { useAirbyteTheme } from "core/utils/useAirbyteTheme";
 import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
@@ -37,6 +38,10 @@ import { useTrackSelectConnector, useTrackSelectEnterpriseStub } from "./useTrac
 
 const AIRBYTE_CONNECTORS_CHECKBOX = "airbyteConnectorsCheckbox";
 const ENTERPRISE_CONNECTORS_CHECKBOX = "enterpriseConnectorsCheckbox";
+const MARKETPLACE_CONNECTORS_CHECKBOX = "marketplaceConnectorsCheckbox";
+const CUSTOM_CONNECTORS_CHECKBOX = "customConnectorsCheckbox";
+
+export type UnifiedConnectorCategory = "enterprise" | "certified" | "marketplace" | "custom";
 
 export type ConnectorTab = "certified" | "marketplace" | "custom";
 export type ConnectorSortColumn = "name" | "successRate" | "usage";
@@ -65,8 +70,12 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const trackSelectEnterpriseStub = useTrackSelectEnterpriseStub();
   const { showProFeatureModalIfNeeded } = useProFeaturesModal("enterprise-connectors");
 
+  const isUnifiedView = useExperiment("connector.unifiedConnectorView");
+
   const [showAirbyteConnectors, setShowAirbyteConnectors] = useState(true);
   const [showEnterpriseConnectors, setShowEnterpriseConnectors] = useState(true);
+  const [showMarketplaceConnectors, setShowMarketplaceConnectors] = useState(true);
+  const [showCustomConnectors, setShowCustomConnectors] = useState(true);
 
   const handleAirbyteCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (showEnterpriseConnectors || e.target.checked) {
@@ -220,6 +229,50 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     [connectorDefinitions]
   );
 
+  const unifiedFilteredConnectors = useMemo<ConnectorDefinitionOrEnterpriseStub[]>(() => {
+    if (!isUnifiedView) {
+      return [];
+    }
+    const allConnectors: ConnectorDefinitionOrEnterpriseStub[] =
+      connectorType === "source"
+        ? [...connectorDefinitions, ...enterpriseSourceDefinitions]
+        : connectorType === "destination"
+        ? [...connectorDefinitions, ...enterpriseDestinationDefinitions]
+        : [...connectorDefinitions];
+
+    return allConnectors.filter((definition) => {
+      if (!keywordMatch(definition, searchTerm)) {
+        return false;
+      }
+      const isEnterpriseConnector = "isEnterprise" in definition || definition.enterprise;
+      if (isEnterpriseConnector) {
+        return showEnterpriseConnectors;
+      }
+      const supportLevel = definition.supportLevel;
+      switch (supportLevel) {
+        case "certified":
+          return showAirbyteConnectors;
+        case "community":
+          return showMarketplaceConnectors;
+        case "none":
+          return showCustomConnectors;
+        default:
+          return true;
+      }
+    });
+  }, [
+    isUnifiedView,
+    connectorType,
+    connectorDefinitions,
+    enterpriseSourceDefinitions,
+    enterpriseDestinationDefinitions,
+    searchTerm,
+    showEnterpriseConnectors,
+    showAirbyteConnectors,
+    showMarketplaceConnectors,
+    showCustomConnectors,
+  ]);
+
   // Combine regular connectors with enterprise stubs
   const connectorListWithEnterpriseStubs = useMemo<ConnectorDefinitionOrEnterpriseStub[]>(() => {
     if (connectorType === "source") {
@@ -372,6 +425,132 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
         })}
     </FlexContainer>
   );
+
+  if (isUnifiedView) {
+    return (
+      <div className={styles.selectConnector}>
+        <div className={classNames(styles.selectConnector__stickied, styles["selectConnector__gutter--left"])} />
+        <FlexContainer
+          className={classNames(styles.selectConnector__stickied, styles.selectConnector__header)}
+          direction="column"
+          gap="lg"
+        >
+          <SearchInput
+            value={searchTerm}
+            onChange={(value) => setFilterValue(searchFilterName, value)}
+            placeholder={formatMessage({ id: "connector.searchPlaceholder.unified" })}
+          />
+          <FlexContainer direction="row" gap="lg" alignItems="center">
+            <Text size="lg">
+              <FormattedMessage id="connector.checkboxFilter.type" />
+            </Text>
+            <FlexContainer alignItems="center" gap="md">
+              <CheckBox
+                id={ENTERPRISE_CONNECTORS_CHECKBOX}
+                checked={showEnterpriseConnectors}
+                onChange={(e) => setShowEnterpriseConnectors(e.target.checked)}
+              />
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+              <label htmlFor={ENTERPRISE_CONNECTORS_CHECKBOX} className={styles.checkboxLabel}>
+                <Text size="sm">
+                  <FormattedMessage id="connector.checkboxFilter.enterprise" />
+                </Text>
+              </label>
+            </FlexContainer>
+            <FlexContainer alignItems="center" gap="md">
+              <CheckBox
+                id={AIRBYTE_CONNECTORS_CHECKBOX}
+                checked={showAirbyteConnectors}
+                onChange={(e) => setShowAirbyteConnectors(e.target.checked)}
+              />
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+              <label htmlFor={AIRBYTE_CONNECTORS_CHECKBOX} className={styles.checkboxLabel}>
+                <Text size="sm">
+                  <FormattedMessage id="connector.checkboxFilter.certified" />
+                </Text>
+              </label>
+            </FlexContainer>
+            <FlexContainer alignItems="center" gap="md">
+              <CheckBox
+                id={MARKETPLACE_CONNECTORS_CHECKBOX}
+                checked={showMarketplaceConnectors}
+                onChange={(e) => setShowMarketplaceConnectors(e.target.checked)}
+              />
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+              <label htmlFor={MARKETPLACE_CONNECTORS_CHECKBOX} className={styles.checkboxLabel}>
+                <Text size="sm">
+                  <FormattedMessage id="connector.checkboxFilter.marketplace" />
+                </Text>
+              </label>
+            </FlexContainer>
+            {hasCustomConnectors && (
+              <FlexContainer alignItems="center" gap="md">
+                <CheckBox
+                  id={CUSTOM_CONNECTORS_CHECKBOX}
+                  checked={showCustomConnectors}
+                  onChange={(e) => setShowCustomConnectors(e.target.checked)}
+                />
+                {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+                <label htmlFor={CUSTOM_CONNECTORS_CHECKBOX} className={styles.checkboxLabel}>
+                  <Text size="sm">
+                    <FormattedMessage id="connector.checkboxFilter.custom" />
+                  </Text>
+                </label>
+              </FlexContainer>
+            )}
+          </FlexContainer>
+          <FlexContainer
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            className={styles.countAndSort}
+          >
+            <Text size="sm">
+              <FormattedMessage
+                id="connector.connectorCount"
+                values={{
+                  count: unifiedFilteredConnectors.length,
+                }}
+              />
+            </Text>
+            <FlexContainer direction="row" className={styles.sortHeader} gap="lg">
+              <SortableTableHeader
+                className={styles.sortButton}
+                activeClassName={styles.activeSortColumn}
+                onClick={() => handleSortClick("name")}
+                isActive={sortColumn === "name"}
+                isAscending={isSortAscending}
+                iconSize="sm"
+              >
+                <FormattedMessage id="connector.sort.name" />
+              </SortableTableHeader>
+            </FlexContainer>
+          </FlexContainer>
+        </FlexContainer>
+        <div className={classNames(styles.selectConnector__stickied, styles["selectConnector__gutter--right"])} />
+
+        <div className={styles.selectConnector__grid}>
+          <ConnectorList
+            sorting={{
+              column: sortColumn,
+              isAscending: isSortAscending,
+            }}
+            displayType="grid"
+            connectorDefinitions={unifiedFilteredConnectors}
+            suggestedConnectorDefinitionIds={searchTerm ? [] : suggestedConnectorDefinitionIds}
+            onConnectorButtonClick={handleConnectorButtonClick}
+            onOpenRequestConnectorModal={onOpenRequestConnectorModal}
+            showConnectorBuilderButton={connectorType === "source"}
+            noSearchResultsContent={
+              <Text size="sm" italicized color="grey400">
+                <FormattedMessage id="connector.noSearchResults.unified" />
+              </Text>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.selectConnector}>

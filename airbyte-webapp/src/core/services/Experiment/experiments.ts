@@ -21,6 +21,7 @@ export interface Experiments {
   "connector.allowSavingWithoutTesting": boolean;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
+  "connector.unifiedConnectorView": boolean;
   "connectorBuilder.aiAssist.enabled": boolean;
   "connectorBuilder.customComponents": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
@@ -71,6 +72,7 @@ export const defaultExperimentValues: Experiments = {
   "connector.allowSavingWithoutTesting": false,
   "connector.suggestedDestinationConnectors": "",
   "connector.suggestedSourceConnectors": "",
+  "connector.unifiedConnectorView": false,
   "connectorBuilder.aiAssist.enabled": false,
   "connectorBuilder.contributeEditsToMarketplace": true,
   "connectorBuilder.customComponents": false,
