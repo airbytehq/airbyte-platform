@@ -75,6 +75,7 @@ val DESTINATION_NAME_TO_DEFINITION_ID: Map<String, UUID> =
     Pair("local-json", UUID.fromString("a625d593-bba5-4a1c-a53d-2d246268a816")),
     Pair("selectdb", UUID.fromString("50a559a7-6323-4e33-8aa0-51dfd9dfadac")),
     Pair("e2e-test", UUID.fromString("2eb65e87-983a-4fd7-b3e3-9d9dc6eb8537")),
+    Pair("hubspot", UUID.fromString("c8ccd253-8525-4bbd-801c-f0b84ac71f61")),
   )
 
 val DEFINITION_ID_TO_DESTINATION_NAME: Map<UUID, String> =
@@ -141,6 +142,7 @@ val DEFINITION_ID_TO_DESTINATION_NAME: Map<UUID, String> =
     Pair(UUID.fromString("a625d593-bba5-4a1c-a53d-2d246268a816"), "local-json"),
     Pair(UUID.fromString("50a559a7-6323-4e33-8aa0-51dfd9dfadac"), "selectdb"),
     Pair(UUID.fromString("2eb65e87-983a-4fd7-b3e3-9d9dc6eb8537"), "e2e-test"),
+    Pair(UUID.fromString("c8ccd253-8525-4bbd-801c-f0b84ac71f61"), "hubspot"),
   )
 
 val SOURCE_NAME_TO_DEFINITION_ID: Map<String, UUID> =
