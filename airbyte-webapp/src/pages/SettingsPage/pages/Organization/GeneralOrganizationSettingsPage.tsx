@@ -25,7 +25,7 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
   const isDownloadDiagnosticsFlagEnabled = useExperiment("settings.downloadDiagnostics");
   const isDownloadDiagnosticsFeatureEnabled = useFeature(FeatureItem.DiagnosticsExport);
   const supportsRegionsTable = useFeature(FeatureItem.AllowChangeDataplanes);
-  const useNestedRegionsView = useExperiment("regions.nestedDataplaneView");
+  const useNestedRegionsView = useFeature(FeatureItem.SelfManagedRegions);
 
   // if EITHER flag OR feature is enabled, provide diagnostics
   // effectively: flag controls OSS+Cloud, feature controls SME
