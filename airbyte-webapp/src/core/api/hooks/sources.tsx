@@ -151,18 +151,13 @@ export const useCreateSource = () => {
     },
     {
       onSuccess: (_data, ctx) => {
-        analyticsService.track(
-          Namespace.SOURCE,
-          Action.CREATE,
-          {
-            actionDescription: "Source created",
-            connector_source_definition_id: ctx.sourceConnector.sourceDefinitionId,
-            connector_source: ctx.sourceConnector.name,
-            source_name: ctx.values.name,
-            setup_flow: ctx.values.setupFlow ?? "form",
-          },
-          { sendToPosthog: true }
-        );
+        analyticsService.track(Namespace.SOURCE, Action.CREATE, {
+          actionDescription: "Source created",
+          connector_source_definition_id: ctx.sourceConnector.sourceDefinitionId,
+          connector_source: ctx.sourceConnector.name,
+          source_name: ctx.values.name,
+          setup_flow: ctx.values.setupFlow ?? "form",
+        });
         queryClient.resetQueries(sourcesKeys.lists());
       },
       onError,

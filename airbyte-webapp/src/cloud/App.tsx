@@ -12,7 +12,6 @@ import { QueryProvider } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { AnalyticsProvider } from "core/services/analytics";
 import { HockeyStackAnalytics } from "core/services/analytics/HockeyStackAnalytics";
-import { PostHogAnalytics } from "core/services/analytics/PostHogAnalytics";
 import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { defaultCloudFeatures, FeatureService } from "core/services/features";
 import { FormChangeTrackerService } from "core/services/FormChangeTracker";
@@ -61,12 +60,10 @@ const App: React.FC = () => {
                 <DefaultErrorBoundary>
                   <AnalyticsProvider>
                     <HockeyStackAnalytics>
-                      <PostHogAnalytics>
-                        <Services>
-                          <DeployPreviewMessage />
-                          <Routing />
-                        </Services>
-                      </PostHogAnalytics>
+                      <Services>
+                        <DeployPreviewMessage />
+                        <Routing />
+                      </Services>
                     </HockeyStackAnalytics>
                   </AnalyticsProvider>
                 </DefaultErrorBoundary>

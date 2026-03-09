@@ -59,7 +59,6 @@ const IGNORED_PACKAGES = [];
  */
 const LICENSE_OVERWRITES = {
   // "package-name@version": "ACTUAL-LICENSE",
-  "posthog-js@1.336.4": "Apache-2.0", // package.json states "SEE LICENSE IN LICENSE", see https://github.com/PostHog/posthog-js?tab=License-1-ov-file#readme
 };
 
 const checkLicenses = promisify(checker.init);
