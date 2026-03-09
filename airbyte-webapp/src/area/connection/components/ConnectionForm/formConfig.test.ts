@@ -14,6 +14,11 @@ jest.mock("core/api", () => ({
   useGetDataplaneGroup: () => mockGetDataplaneGroup,
 }));
 
+jest.mock("core/services/features", () => ({
+  useFeature: () => false,
+  FeatureItem: {},
+}));
+
 describe("#useInitialFormValues", () => {
   it("should generate initial values w/ mode: readonly", () => {
     const { result } = renderHook(() => useInitialFormValues(mockConnection, "readonly"));

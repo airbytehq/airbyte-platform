@@ -19,6 +19,7 @@ import styles from "./ConnectionSettingsCard.module.scss";
 import { ConnectionTagsFormField } from "./ConnectionTagsFormField";
 import { DestinationNamespaceFormField } from "./DestinationNamespaceFormField";
 import { DestinationStreamPrefixNameFormField } from "./DestinationStreamPrefixNameFormField";
+import { RunOnDemandFormField } from "./RunOnDemandFormField";
 import { SchemaChangeNotificationFormField } from "./SchemaChangeNotificationFormField";
 import { SchemaChangesFormField } from "./SchemaChangesFormField";
 
@@ -41,6 +42,7 @@ export const ConnectionsSettingsCard: React.FC<ConnectionsSettingsCardProps> = (
 }) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataplanes);
+  const isOnDemandCapacityEnabled = useFeature(FeatureItem.OnDemandCapacity);
 
   return (
     <Card title={title}>
@@ -49,6 +51,7 @@ export const ConnectionsSettingsCard: React.FC<ConnectionsSettingsCardProps> = (
 
         <ConnectionTagsFormField />
         <ConnectionScheduleFormField disabled={isDeprecated} />
+        {isOnDemandCapacityEnabled && <RunOnDemandFormField disabled={isDeprecated} />}
         {isCreating && (
           <DestinationNamespaceFormField isCreating={isCreating} source={source} destination={destination} />
         )}

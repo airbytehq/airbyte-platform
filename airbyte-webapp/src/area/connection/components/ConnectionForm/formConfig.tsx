@@ -19,6 +19,7 @@ import {
   AirbyteStreamAndConfiguration,
   AirbyteStream,
 } from "core/api/types/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 
 import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
 import { pruneUnsupportedModes, replicateSourceModes } from "./preferredSyncModes";
@@ -55,6 +56,7 @@ export interface FormConnectionFormValues {
   notifySchemaChanges?: boolean;
   backfillPreference?: SchemaChangeBackfillPreference;
   tags?: Tag[];
+  runOnDemandEnabled?: boolean;
 }
 
 /**
@@ -122,6 +124,7 @@ export const useInitialFormValues = (
 
   const defaultNonBreakingChangesPreference = NonBreakingChangesPreference.propagate_columns;
   const { getDataplaneGroup } = useGetDataplaneGroup();
+  const isOnDemandCapacityEnabled = useFeature(FeatureItem.OnDemandCapacity);
 
   // Handle file-based streams selection and file inclusion based on destination file transfer support.
   if (destinationSupportsFileTransfer !== undefined) {
@@ -174,6 +177,7 @@ export const useInitialFormValues = (
           notificationSettings.sendOnConnectionUpdate.notificationType.length > 0),
       backfillPreference: connection.backfillPreference ?? SchemaChangeBackfillPreference.disabled,
       tags: connection.tags ?? [],
+      ...(isOnDemandCapacityEnabled && { runOnDemandEnabled: false }),
     };
 
     return initialValues;
@@ -198,5 +202,6 @@ export const useInitialFormValues = (
     schemaChange,
     notificationSettings?.sendOnConnectionUpdate,
     getDataplaneGroup,
+    isOnDemandCapacityEnabled,
   ]);
 };
