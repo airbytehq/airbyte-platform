@@ -19689,6 +19689,8 @@ components:
           type: string
         zendeskKey:
           type: string
+        fullstoryGuidesOrgId:
+          type: string
     StreamStatusReadList:
       type: object
       properties:

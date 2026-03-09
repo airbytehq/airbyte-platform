@@ -29,6 +29,7 @@ internal class AirbyteWebappConfigDefaultTest {
     assertEquals("", arbyteWebappConfig.sonarApiUrl)
     assertEquals("", arbyteWebappConfig.url)
     assertEquals("", arbyteWebappConfig.zendeskKey)
+    assertEquals("", arbyteWebappConfig.fullstoryGuidesOrgId)
   }
 }
 
@@ -51,5 +52,6 @@ internal class AirbyteWebappConfigOverridesTest {
     assertEquals("test-sonar-api-url", arbyteWebappConfig.sonarApiUrl)
     assertEquals("test-url", arbyteWebappConfig.url)
     assertEquals("test-zendesk-key", arbyteWebappConfig.zendeskKey)
+    assertEquals("test-fullstory-guides-org-id", arbyteWebappConfig.fullstoryGuidesOrgId)
   }
 }

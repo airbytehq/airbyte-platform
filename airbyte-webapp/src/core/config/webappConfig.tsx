@@ -28,6 +28,7 @@ export async function loadConfig() {
     osanoKey: config.osanoKey || process.env.REACT_APP_OSANO_KEY,
     segmentToken: config.segmentToken || process.env.REACT_APP_SEGMENT_TOKEN,
     zendeskKey: config.zendeskKey || process.env.REACT_APP_ZENDESK_KEY,
+    fullstoryGuidesOrgId: config.fullstoryGuidesOrgId || process.env.REACT_APP_FULLSTORY_GUIDES_ORG_ID,
   };
 }
 

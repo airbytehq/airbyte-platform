@@ -1126,6 +1126,7 @@ data class AirbyteWebappConfig(
   val segmentToken: String = "",
   val sonarApiUrl: String = "",
   val coralAgentsApiUrl: String = "",
+  val fullstoryGuidesOrgId: String = "",
   val url: String = "",
   val zendeskKey: String = "",
 )

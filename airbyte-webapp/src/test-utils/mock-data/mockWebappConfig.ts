@@ -14,4 +14,5 @@ export const mockWebappConfig: WebappConfigResponse = {
   osanoKey: "test-osano-key",
   segmentToken: "test-segment-token",
   zendeskKey: "test-zendesk-key",
+  fullstoryGuidesOrgId: "test-fullstory-guides-org-id",
 };

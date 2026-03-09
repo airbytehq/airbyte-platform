@@ -12,3 +12,4 @@ airbyte:
     segment-token: test-segment-token
     sonar-api-url: test-sonar-api-url
     zendesk-key: test-zendesk-key
+    fullstory-guides-org-id: test-fullstory-guides-org-id

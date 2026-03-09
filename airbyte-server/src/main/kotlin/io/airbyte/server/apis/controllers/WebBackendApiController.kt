@@ -197,5 +197,6 @@ open class WebBackendApiController(
       sonarApiUrl = airbyteWebappConfig.sonarApiUrl
       coralAgentsApiUrl = airbyteWebappConfig.coralAgentsApiUrl
       zendeskKey = airbyteWebappConfig.zendeskKey
+      fullstoryGuidesOrgId = airbyteWebappConfig.fullstoryGuidesOrgId
     }
 }
