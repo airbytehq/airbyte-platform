@@ -39,19 +39,21 @@ class BillingTrackingHelper(
 ) {
   fun trackGracePeriodStarted(
     organizationId: UUID,
-    paymentProviderId: String,
+    paymentProviderId: String?,
     gracePeriodEndAtSeconds: Long,
     reason: String,
   ) {
+    val metadata =
+      mutableMapOf(
+        METADATA_GRACE_PERIOD_END_AT_SECONDS to gracePeriodEndAtSeconds.toString(),
+        METADATA_REASON to reason,
+      )
+    paymentProviderId?.let { metadata[METADATA_PAYMENT_PROVIDER_ID] = it }
     trackingClient.track(
       organizationId,
       ScopeType.ORGANIZATION,
       ACTION_GRACE_PERIOD_STARTED,
-      mapOf(
-        METADATA_PAYMENT_PROVIDER_ID to paymentProviderId,
-        METADATA_GRACE_PERIOD_END_AT_SECONDS to gracePeriodEndAtSeconds.toString(),
-        METADATA_REASON to reason,
-      ),
+      metadata,
     )
   }
 
@@ -69,33 +71,31 @@ class BillingTrackingHelper(
 
   fun trackGracePeriodUpdated(
     organizationId: UUID,
-    paymentProviderId: String,
+    paymentProviderId: String?,
     gracePeriodEndAtSeconds: Long,
   ) {
+    val metadata = mutableMapOf(METADATA_GRACE_PERIOD_END_AT_SECONDS to gracePeriodEndAtSeconds.toString())
+    paymentProviderId?.let { metadata[METADATA_PAYMENT_PROVIDER_ID] = it }
     trackingClient.track(
       organizationId,
       ScopeType.ORGANIZATION,
       ACTION_GRACE_PERIOD_UPDATED,
-      mapOf(
-        METADATA_PAYMENT_PROVIDER_ID to paymentProviderId,
-        METADATA_GRACE_PERIOD_END_AT_SECONDS to gracePeriodEndAtSeconds.toString(),
-      ),
+      metadata,
     )
   }
 
   fun trackGracePeriodCanceled(
     organizationId: UUID,
-    paymentProviderId: String,
+    paymentProviderId: String?,
     reason: String,
   ) {
+    val metadata = mutableMapOf(METADATA_REASON to reason)
+    paymentProviderId?.let { metadata[METADATA_PAYMENT_PROVIDER_ID] = it }
     trackingClient.track(
       organizationId,
       ScopeType.ORGANIZATION,
       ACTION_GRACE_PERIOD_CANCELED,
-      mapOf(
-        METADATA_PAYMENT_PROVIDER_ID to paymentProviderId,
-        METADATA_REASON to reason,
-      ),
+      metadata,
     )
   }
 
