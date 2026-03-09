@@ -5,6 +5,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Separator } from "components/ui/Separator";
 
+import { SetupBillingAlertsLink } from "area/organization/components/SetupBillingAlertsLink";
 import { NotificationSettingsForm } from "area/settings/components/NotificationSettingsForm";
 import { WorkspaceEmailForm } from "area/workspace/components/WorkspaceEmailForm";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
@@ -17,7 +18,10 @@ export const NotificationPage: React.FC = () => {
 
   return (
     <FlexContainer direction="column" gap="xl">
-      <Heading as="h1">{formatMessage({ id: "settings.notificationSettings" })}</Heading>
+      <FlexContainer justifyContent="space-between" alignItems="center">
+        <Heading as="h1">{formatMessage({ id: "settings.notificationSettings" })}</Heading>
+        <SetupBillingAlertsLink />
+      </FlexContainer>
       {emailNotificationsFeatureEnabled && (
         <>
           <WorkspaceEmailForm />

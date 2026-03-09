@@ -5,19 +5,16 @@ import { useSearchParams } from "react-router-dom";
 import { BorderedTile, BorderedTiles } from "components/ui/BorderedTiles";
 import { Box } from "components/ui/Box";
 import { ORG_PLAN_IDS } from "components/ui/BrandingBadge/BrandingBadge";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
-import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { PageContainer } from "components/ui/PageContainer";
-import { Text } from "components/ui/Text";
 
+import { SetupBillingAlertsLink } from "area/organization/components/SetupBillingAlertsLink";
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
-import { useGetOrganizationSubscriptionInfo, useOrganization, useOrgInfo } from "core/api";
+import { useGetOrganizationSubscriptionInfo, useOrgInfo } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useModalService } from "core/services/Modal";
-import { links } from "core/utils/links";
 import { useFormatCredits } from "core/utils/numberHelper";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
@@ -41,7 +38,6 @@ export const OrganizationBillingPage: React.FC = () => {
 
   const organizationId = useCurrentOrganizationId();
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
-  const { email } = useOrganization(organizationId);
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
   const { data: subscriptionInfo } = useGetOrganizationSubscriptionInfo(
     organizationId,
@@ -78,23 +74,7 @@ export const OrganizationBillingPage: React.FC = () => {
           <Heading as="h1" size="md">
             <FormattedMessage id="settings.organization.billing.title" />
           </Heading>
-          {!showSubscribeCards && (
-            <FlexItem>
-              <Text size="sm">
-                <ExternalLink
-                  href={links.billingNotificationsForm
-                    .replace("{organizationId}", organizationId)
-                    .replace("{email}", email ?? "")}
-                  opensInNewTab
-                >
-                  <FlexContainer alignItems="center" gap="xs">
-                    <Icon type="bell" size="sm" />
-                    <FormattedMessage id="settings.organization.billing.setupNotifications" />
-                  </FlexContainer>
-                </ExternalLink>
-              </Text>
-            </FlexItem>
-          )}
+          {!showSubscribeCards && <SetupBillingAlertsLink />}
         </FlexContainer>
 
         {/* Show credits as a banner in case the user isn't on an active subscription and thus sees the susbcribe to airbyte cards. */}

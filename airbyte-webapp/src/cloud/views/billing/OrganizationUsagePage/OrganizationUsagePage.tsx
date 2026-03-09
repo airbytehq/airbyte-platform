@@ -6,6 +6,7 @@ import { ExternalLink } from "components/ui/Link";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { SetupBillingAlertsLink } from "area/organization/components/SetupBillingAlertsLink";
 import { DataWorkerUsage } from "area/organization/DataWorkerUsage";
 import { UsagePerDayGraph } from "cloud/area/billing/components/UsagePerDayGraph";
 import { ConsumptionTimeWindow } from "core/api/types/AirbyteClient";
@@ -23,10 +24,11 @@ export const OrganizationUsagePage: React.FC = () => {
 
   return (
     <FlexContainer direction="column" gap="xl">
-      <FlexContainer alignItems="center">
+      <FlexContainer justifyContent="space-between" alignItems="center">
         <Heading as="h1">
           <FormattedMessage id="settings.organization.usage.title" />
         </Heading>
+        <SetupBillingAlertsLink />
       </FlexContainer>
 
       {showDataWorkerUsage ? (

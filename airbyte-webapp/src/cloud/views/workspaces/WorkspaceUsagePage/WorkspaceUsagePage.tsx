@@ -5,6 +5,7 @@ import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { SetupBillingAlertsLink } from "area/organization/components/SetupBillingAlertsLink";
 import { UsagePerDayGraph } from "cloud/area/billing/components/UsagePerDayGraph";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
@@ -17,10 +18,11 @@ export const WorkspaceUsagePage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE_USAGE);
   return (
     <FlexContainer direction="column" gap="xl">
-      <FlexContainer alignItems="center">
+      <FlexContainer justifyContent="space-between" alignItems="center">
         <Heading as="h1">
           <FormattedMessage id="settings.workspace.usage.title" />
         </Heading>
+        <SetupBillingAlertsLink />
       </FlexContainer>
 
       <Text>
