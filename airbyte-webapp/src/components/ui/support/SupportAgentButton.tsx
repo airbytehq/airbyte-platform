@@ -25,7 +25,16 @@ export const SupportAgentButton: React.FC = () => {
   const supportEnabled = useFeature(FeatureItem.SupportAgentBot);
   const workspaceId = useCurrentWorkspaceId();
   const connectionId = useCurrentConnectionIdOptional();
-  const { isOpen, setIsOpen, isExpanded, setIsExpanded, hasBeenOpened, setHasBeenOpened } = useSupportChatPanelState();
+  const {
+    isOpen,
+    setIsOpen,
+    isExpanded,
+    setIsExpanded,
+    hasBeenOpened,
+    setHasBeenOpened,
+    conversationKey,
+    handleNewConversation,
+  } = useSupportChatPanelState();
 
   // Don't render if feature disabled or no workspace context
   if (!supportEnabled || !workspaceId) {
@@ -55,11 +64,13 @@ export const SupportAgentButton: React.FC = () => {
       {hasBeenOpened && (
         <SupportChatPanelPortal isOpen={isOpen}>
           <SupportChatPanel
+            key={conversationKey}
             workspaceId={workspaceId}
             connectionId={connectionId}
             isExpanded={isExpanded}
             setIsExpanded={setIsExpanded}
             onClose={() => setIsOpen(false)}
+            onNewConversation={handleNewConversation}
           />
         </SupportChatPanelPortal>
       )}

@@ -15,6 +15,7 @@ interface MessageListProps {
   isVisible?: boolean;
   onLinkClick?: (url: string, text: string) => void;
   autoScroll?: boolean;
+  isRestoredConversation?: boolean;
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -26,6 +27,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   isVisible,
   onLinkClick,
   autoScroll = true,
+  isRestoredConversation = false,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasStreamingAssistant = messages.some((m) => m.isStreaming);
@@ -51,10 +53,10 @@ export const MessageList: React.FC<MessageListProps> = ({
       <div className={styles.emptyState}>
         <div className={styles.emptyStateContent}>
           <h3 className={styles.emptyStateTitle}>
-            <FormattedMessage id="chat.empty.title" />
+            <FormattedMessage id={isRestoredConversation ? "chat.welcomeBack.title" : "chat.empty.title"} />
           </h3>
           <p className={styles.emptyStateText}>
-            <FormattedMessage id="chat.empty.subtitle" />
+            <FormattedMessage id={isRestoredConversation ? "chat.welcomeBack.subtitle" : "chat.empty.subtitle"} />
           </p>
         </div>
       </div>

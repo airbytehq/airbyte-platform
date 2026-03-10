@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import { useCallback, useRef, useEffect } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, matchPath } from "react-router-dom";
 
 import { Badge } from "components/ui/Badge";
@@ -41,12 +41,23 @@ export const SupportChatPanel: React.FC<{
   isExpanded: boolean;
   setIsExpanded: (value: boolean) => void;
   onClose: () => void;
-}> = ({ workspaceId, connectionId, isExpanded, setIsExpanded, onClose }) => {
+  onNewConversation: () => void;
+}> = ({ workspaceId, connectionId, isExpanded, setIsExpanded, onClose, onNewConversation }) => {
+  const { formatMessage } = useIntl();
   const user = useCurrentUser();
   const { pathname } = useLocation();
   const { trackChatLinkClicked, trackMessageSent, trackTicketCreated } = useAnalyticsTrackFunctions();
   const [autoScrollEnabled, setAutoScrollEnabled] = useLocalStorage("airbyte_support-chat-autoscroll", true);
+  const [threadId, setThreadId] = useLocalStorage("airbyte_support-chat-thread-id", "");
   const trackedTicketIdsRef = useRef<Set<string>>(new Set());
+
+  const handleThreadIdChange = useCallback(
+    (newThreadId: string) => {
+      setThreadId(newThreadId);
+    },
+    [setThreadId]
+  );
+
   const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
     endpoint: "/agents/support/chat",
     prompt: "Introduce yourself as an AI support agent and briefly outline your main functions using emojis.",
@@ -57,6 +68,8 @@ export const SupportChatPanel: React.FC<{
       ...(connectionId && { connection_id: connectionId }),
     },
     clientTools: {},
+    initialThreadId: threadId || undefined,
+    onThreadIdChange: handleThreadIdChange,
   });
 
   useEffect(() => {
@@ -95,6 +108,11 @@ export const SupportChatPanel: React.FC<{
     [trackChatLinkClicked]
   );
 
+  const handleNewConversationClick = useCallback(() => {
+    setThreadId("");
+    onNewConversation();
+  }, [setThreadId, onNewConversation]);
+
   return (
     <div className={isExpanded ? styles.panelExpanded : styles.panel}>
       <ChatInterfaceContainer className={styles.chatContainer}>
@@ -120,9 +138,23 @@ export const SupportChatPanel: React.FC<{
               <Button
                 variant="clear"
                 size="xs"
+                onClick={handleNewConversationClick}
+                icon="reset"
+                aria-label={formatMessage({ id: "chat.supportAgent.newConversation" })}
+                title={formatMessage({ id: "chat.supportAgent.newConversation" })}
+                className={styles.headerButton}
+              />
+              <Button
+                variant="clear"
+                size="xs"
                 onClick={() => setIsExpanded(!isExpanded)}
                 icon={isExpanded ? "shrink" : "expand"}
-                aria-label={isExpanded ? "Compact view" : "Expand view"}
+                aria-label={formatMessage({
+                  id: isExpanded ? "chat.supportAgent.compactView" : "chat.supportAgent.expandView",
+                })}
+                title={formatMessage({
+                  id: isExpanded ? "chat.supportAgent.compactView" : "chat.supportAgent.expandView",
+                })}
                 className={styles.headerButton}
               />
               <Button
@@ -130,7 +162,8 @@ export const SupportChatPanel: React.FC<{
                 size="xs"
                 onClick={onClose}
                 icon="cross"
-                aria-label="Close support chat"
+                aria-label={formatMessage({ id: "chat.supportAgent.close" })}
+                title={formatMessage({ id: "chat.supportAgent.close" })}
                 className={styles.headerButton}
               />
             </FlexContainer>
@@ -153,6 +186,7 @@ export const SupportChatPanel: React.FC<{
             isVisible
             onLinkClick={handleLinkClick}
             autoScroll={autoScrollEnabled}
+            isRestoredConversation={!!threadId}
           />
 
           <ChatTextInput onSendMessage={handleSendMessage} onStop={stopGenerating} isStreaming={isStreaming} />
@@ -167,7 +201,16 @@ export const SupportAgentWidget: React.FC = () => {
   const workspaceId = useCurrentWorkspaceId();
   const connectionId = useCurrentConnectionIdOptional();
   const { pathname } = useLocation();
-  const { isOpen, setIsOpen, isExpanded, setIsExpanded, hasBeenOpened, setHasBeenOpened } = useSupportChatPanelState();
+  const {
+    isOpen,
+    setIsOpen,
+    isExpanded,
+    setIsExpanded,
+    hasBeenOpened,
+    setHasBeenOpened,
+    conversationKey,
+    handleNewConversation,
+  } = useSupportChatPanelState();
 
   // Don't render if feature disabled
   if (!supportEnabled) {
@@ -198,11 +241,13 @@ export const SupportAgentWidget: React.FC = () => {
       {hasBeenOpened && (
         <SupportChatPanelPortal isOpen={isOpen}>
           <SupportChatPanel
+            key={conversationKey}
             workspaceId={workspaceId}
             connectionId={connectionId}
             isExpanded={isExpanded}
             setIsExpanded={setIsExpanded}
             onClose={() => setIsOpen(false)}
+            onNewConversation={handleNewConversation}
           />
         </SupportChatPanelPortal>
       )}

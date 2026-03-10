@@ -145,6 +145,7 @@ export interface UseChatMessagesParams {
   clientTools?: ClientTools;
   onThreadIdChange?: (threadId: string) => void;
   skipInitialRequest?: boolean;
+  initialThreadId?: string;
 }
 
 /**
@@ -172,14 +173,15 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
     clientTools = {},
     onThreadIdChange,
     skipInitialRequest = false,
+    initialThreadId,
   } = params;
   const [messages, dispatch] = useReducer(messageReducer, []);
   const [error, setError] = useState<string | null>(null);
   const [pendingDeferredTools, setPendingDeferredTools] = useState<Set<string>>(new Set());
 
   const { stream, stop, isStreaming } = useAgentStream();
-  const [threadId, setThreadId] = useState<string>();
-  const lastThreadIdRef = useRef<string>();
+  const [threadId, setThreadId] = useState<string | undefined>(initialThreadId);
+  const lastThreadIdRef = useRef<string | undefined>(initialThreadId);
   const streamingMessageIdRef = useRef<string | null>(null);
 
   const handleThreadIdReceived = useCallback((newThreadId: string) => {
@@ -416,8 +418,8 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
   // Send initial request with agentParams when component mounts
   const hasInitializedRef = useRef(false);
   useEffect(() => {
-    // Skip if explicitly requested
-    if (skipInitialRequest) {
+    // Skip if explicitly requested or if resuming an existing thread
+    if (skipInitialRequest || initialThreadId) {
       return;
     }
 
@@ -454,6 +456,7 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
     }
   }, [
     skipInitialRequest,
+    initialThreadId,
     agentParams,
     prompt,
     handleDeferredTool,
