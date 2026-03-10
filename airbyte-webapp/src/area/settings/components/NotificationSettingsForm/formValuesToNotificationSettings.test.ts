@@ -1,7 +1,9 @@
-import { NotificationItem, NotificationSettings } from "core/api/types/AirbyteClient";
+import { NotificationItem } from "core/api/types/AirbyteClient";
 
 import { formValuesToNotificationSettings } from "./formValuesToNotificationSettings";
 import { NotificationItemFieldValue, NotificationSettingsFormValues } from "./NotificationSettingsForm";
+// TODO(https://github.com/airbytehq/hydra-issues-internal/issues/109): When backend API is ready, use NotificationSettings from "core/api/types/AirbyteClient" instead
+import { ExtendedNotificationSettings } from "./types";
 
 const mockNotificationItemFieldValue: NotificationItemFieldValue = {
   slack: false,
@@ -22,8 +24,9 @@ const mockEmptyFormValues: NotificationSettingsFormValues = {
   sendOnSyncDisabledWarning: mockNotificationItemFieldValue,
   sendOnBreakingChangeWarning: mockNotificationItemFieldValue,
   sendOnBreakingChangeSyncsDisabled: mockNotificationItemFieldValue,
+  sendOnConnectionSyncQueued: mockNotificationItemFieldValue,
 };
-const mockEmptyNotificationSettings: NotificationSettings = {
+const mockEmptyNotificationSettings: ExtendedNotificationSettings = {
   sendOnFailure: mockNotificationItem,
   sendOnSuccess: mockNotificationItem,
   sendOnConnectionUpdate: mockNotificationItem,
@@ -32,6 +35,7 @@ const mockEmptyNotificationSettings: NotificationSettings = {
   sendOnSyncDisabledWarning: mockNotificationItem,
   sendOnBreakingChangeWarning: mockNotificationItem,
   sendOnBreakingChangeSyncsDisabled: mockNotificationItem,
+  sendOnConnectionSyncQueued: mockNotificationItem,
 };
 
 describe("formValuesToNotificationSettings", () => {
@@ -45,7 +49,7 @@ describe("formValuesToNotificationSettings", () => {
       sendOnFailure: { ...mockNotificationItemFieldValue, slack: true, slackWebhookLink: "www.airbyte.com" },
     };
 
-    const expectedNotificationSEttings: NotificationSettings = {
+    const expectedNotificationSettings: ExtendedNotificationSettings = {
       ...mockEmptyNotificationSettings,
       sendOnFailure: {
         ...mockNotificationItem,
@@ -54,7 +58,7 @@ describe("formValuesToNotificationSettings", () => {
       },
     };
 
-    expect(formValuesToNotificationSettings(formValues)).toEqual(expectedNotificationSEttings);
+    expect(formValuesToNotificationSettings(formValues)).toEqual(expectedNotificationSettings);
   });
 
   it("adds customerio and slack if specified", () => {
@@ -64,7 +68,7 @@ describe("formValuesToNotificationSettings", () => {
       sendOnSuccess: { customerio: true, slack: true, slackWebhookLink: "www.airbyte.io" },
     };
 
-    const expectedNotificationSEttings: NotificationSettings = {
+    const expectedNotificationSettings: ExtendedNotificationSettings = {
       ...mockEmptyNotificationSettings,
       sendOnFailure: {
         ...mockNotificationItem,
@@ -78,6 +82,6 @@ describe("formValuesToNotificationSettings", () => {
       },
     };
 
-    expect(formValuesToNotificationSettings(formValues)).toEqual(expectedNotificationSEttings);
+    expect(formValuesToNotificationSettings(formValues)).toEqual(expectedNotificationSettings);
   });
 });

@@ -60,6 +60,7 @@ describe(`${NotificationSettingsForm.name}`, () => {
       expect(mockUpdateNotificationSettings).toHaveBeenCalledWith({
         ...mockWorkspace.notificationSettings,
         sendOnConnectionUpdate: { notificationType: ["customerio"] },
+        sendOnConnectionSyncQueued: { notificationType: [] },
       })
     );
   });

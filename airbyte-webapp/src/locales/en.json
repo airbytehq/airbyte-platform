@@ -1533,6 +1533,8 @@
   "settings.notifications.sendOnBreakingChangeWarning.description": "A new connector version is available and requires manual upgrade",
   "settings.notifications.sendOnBreakingChangeSyncsDisabled": "Sync Disabled - Upgrade Required",
   "settings.notifications.sendOnBreakingChangeSyncsDisabled.description": "One or more connections were automatically disabled due to a connector upgrade deadline passing",
+  "settings.notifications.sendOnConnectionSyncQueued": "Queued syncs",
+  "settings.notifications.sendOnConnectionSyncQueued.description": "A sync from any of your connections is queued",
   "settings.notifications.testWebhookButtonLabel": "Test",
   "settings.notifications.requiredNotificationTooltip": "This notification cannot be disabled",
   "settings.notifications.successMessage": "Notification settings updated",
