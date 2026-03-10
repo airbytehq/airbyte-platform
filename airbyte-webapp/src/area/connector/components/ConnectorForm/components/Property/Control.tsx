@@ -100,7 +100,7 @@ export const Control: React.FC<ControlProps> = ({ property, name, disabled, erro
       <ListBox
         options={property.enum.map((dataItem) => ({
           label: dataItem?.toString() ?? "",
-          value: dataItem?.toString() ?? "",
+          value: dataItem,
         }))}
         onSelect={(selectedItem) => selectedItem && field.onChange(selectedItem)}
         selectedValue={fieldValue}
