@@ -213,11 +213,32 @@ interface AwsSecretsManagerClient {
         }
       }
     } catch (e: AWSSecretsManagerException) {
-      throw SecretCoordinateException(
-        "Failed to read secret ${coordinate.fullCoordinate}: ${e.errorMessage}",
-        "aws",
-        e,
-      )
+      // When IAM policies use tag-based conditions (ABAC), AWS returns AccessDeniedException instead of
+      // ResourceNotFoundException for non-existent secrets because it cannot evaluate tag conditions.
+      // In this case, we should attempt the same coordinateBase fallback as for ResourceNotFoundException.
+      if (e.errorCode == "AccessDeniedException" && e.errorMessage?.contains("assumed-role") == true &&
+        coordinate is AirbyteManagedSecretCoordinate
+      ) {
+        logger.warn { "AccessDeniedException for ${coordinate.fullCoordinate} with assumed-role - attempting coordinateBase fallback" }
+        try {
+          secretString = cache.getSecretString(coordinate.coordinateBase)
+        } catch (_: ResourceNotFoundException) {
+          logger.warn { "Secret ${coordinate.coordinateBase} not found" }
+        } catch (fallbackEx: AWSSecretsManagerException) {
+          // If the fallback also fails with an access error, wrap and throw
+          throw SecretCoordinateException(
+            "Failed to read secret ${coordinate.fullCoordinate}: ${fallbackEx.errorMessage}",
+            "aws",
+            fallbackEx,
+          )
+        }
+      } else {
+        throw SecretCoordinateException(
+          "Failed to read secret ${coordinate.fullCoordinate}: ${e.errorMessage}",
+          "aws",
+          e,
+        )
+      }
     }
 
     return secretString

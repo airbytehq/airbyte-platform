@@ -151,6 +151,56 @@ class AwsSecretManagerPersistenceTest {
   }
 
   @Test
+  fun `test reading secret with assumed-role AccessDeniedException falls back to coordinateBase`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val mockAwsCache: SecretCache = mockk()
+    val awsException = AWSSecretsManagerException("User: arn:aws:sts::123456:assumed-role/TestRole/airbyte is not authorized")
+    awsException.errorCode = "AccessDeniedException"
+    every { mockAwsCache.getSecretString(coordinate.fullCoordinate) } throws awsException
+    every { mockAwsCache.getSecretString(coordinate.coordinateBase) } returns secret
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getCache() } returns mockAwsCache
+
+    val result = spyAwsClient.getSecret(coordinate)
+    Assertions.assertEquals(secret, result)
+
+    verify(exactly = 1) {
+      mockAwsCache.getSecretString(coordinate.fullCoordinate)
+    }
+    verify(exactly = 1) {
+      mockAwsCache.getSecretString(coordinate.coordinateBase)
+    }
+  }
+
+  @Test
+  fun `test reading secret with assumed-role AccessDeniedException returns empty when coordinateBase also not found`() {
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val mockAwsCache: SecretCache = mockk()
+    val awsException = AWSSecretsManagerException("User: arn:aws:sts::123456:assumed-role/TestRole/airbyte is not authorized")
+    awsException.errorCode = "AccessDeniedException"
+    every { mockAwsCache.getSecretString(coordinate.fullCoordinate) } throws awsException
+    every { mockAwsCache.getSecretString(coordinate.coordinateBase) } throws ResourceNotFoundException("not found")
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getCache() } returns mockAwsCache
+
+    val result = spyAwsClient.getSecret(coordinate)
+    Assertions.assertEquals("", result)
+  }
+
+  @Test
   fun `test writing a new secret`() {
     val secret = "secret value"
     val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
