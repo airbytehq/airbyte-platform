@@ -42,7 +42,7 @@
   "proFeatures.modal.features.multipleWorkspaces": "Multiple workspaces",
   "proFeatures.modal.features.rbac": "Role-based access control (RBAC)",
   "proFeatures.modal.features.mappers": "Mappers (encryption, hashing, filtering, renaming)",
-  "proFeatures.modal.features.connectors": "Enterprise connectors, including Oracle, Netsuite, Salesforce Marketing Cloud",
+  "proFeatures.modal.features.connectors": "Enterprise connectors, including SAP HANA and IBM DB2",
   "proFeatures.modal.warningMessage": "Please note you will lose access to these features once your trial ends unless you upgrade to Pro. All syncs using these features will be disabled.",
   "proFeatures.modal.upgradeMessage": "Talk to our sales team about upgrading to Pro or Enterprise to unlock these features.",
   "proFeatures.modal.button.continue": "Continue",
