@@ -57,11 +57,15 @@ import io.airbyte.featureflag.FieldSelectionWorkspaces.ConnectorOAuthConsentDisa
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.Workspace
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DEFINITION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DEFINITION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToRootSpan
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.oauth.MoreOAuthParameters.flattenOAuthConfig
 import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier.Companion.hasOAuthConfigSpecification
@@ -93,6 +97,7 @@ open class OAuthHandler(
   private val secretReferenceService: SecretReferenceService,
   private val workspaceService: WorkspaceService,
   private val secretStorageService: SecretStorageService,
+  private val metricClient: MetricClient,
 ) {
   fun getSourceOAuthConsent(sourceOauthConsentRequest: SourceOauthConsentRequest): OAuthConsentRead {
     val traceTags =
@@ -198,6 +203,13 @@ open class OAuthHandler(
     } catch (e: Exception) {
       log.error(e) { ERROR_MESSAGE }
     }
+    metricClient.count(
+      OssMetricsRegistry.OAUTH_CONSENT_URL_REQUEST,
+      1L,
+      MetricAttribute(MetricTags.CONNECTOR_TYPE, "source"),
+      MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, sourceOauthConsentRequest.sourceDefinitionId.toString()),
+      MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+    )
     return result
   }
 
@@ -307,6 +319,13 @@ open class OAuthHandler(
     } catch (e: Exception) {
       log.error(e) { ERROR_MESSAGE }
     }
+    metricClient.count(
+      OssMetricsRegistry.OAUTH_CONSENT_URL_REQUEST,
+      1L,
+      MetricAttribute(MetricTags.CONNECTOR_TYPE, "destination"),
+      MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, destinationOauthConsentRequest.destinationDefinitionId.toString()),
+      MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+    )
     return result
   }
 
@@ -410,6 +429,13 @@ open class OAuthHandler(
     } catch (e: Exception) {
       log.error(e) { ERROR_MESSAGE }
     }
+    metricClient.count(
+      OssMetricsRegistry.OAUTH_COMPLETE_REQUEST,
+      1L,
+      MetricAttribute(MetricTags.CONNECTOR_TYPE, "source"),
+      MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, completeSourceOauthRequest.sourceDefinitionId.toString()),
+      MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+    )
     return mapToCompleteOAuthResponse(result)
   }
 
@@ -503,10 +529,25 @@ open class OAuthHandler(
     } catch (e: Exception) {
       log.error(e) { ERROR_MESSAGE }
     }
+    metricClient.count(
+      OssMetricsRegistry.OAUTH_COMPLETE_REQUEST,
+      1L,
+      MetricAttribute(MetricTags.CONNECTOR_TYPE, "destination"),
+      MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, completeDestinationOAuthRequest.destinationDefinitionId.toString()),
+      MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+    )
     return mapToCompleteOAuthResponse(result)
   }
 
   fun revokeSourceOauthTokens(revokeSourceOauthTokensRequest: RevokeSourceOauthTokensRequest) {
+    val traceTags =
+      mapOf<String?, Any?>(
+        WORKSPACE_ID_KEY to revokeSourceOauthTokensRequest.workspaceId,
+        SOURCE_DEFINITION_ID_KEY to revokeSourceOauthTokensRequest.sourceDefinitionId,
+      )
+    addTagsToTrace(traceTags)
+    addTagsToRootSpan(traceTags)
+
     val sourceDefinition =
       sourceService.getStandardSourceDefinition(revokeSourceOauthTokensRequest.sourceDefinitionId)
     val workspaceId = revokeSourceOauthTokensRequest.workspaceId
@@ -540,6 +581,23 @@ open class OAuthHandler(
       revokeSourceOauthTokensRequest.sourceDefinitionId,
       hydratedSourceConfig,
       sourceOAuthParamConfig,
+    )
+    try {
+      trackingClient.track(
+        revokeSourceOauthTokensRequest.workspaceId,
+        ScopeType.WORKSPACE,
+        "Revoke OAuth Token - Backend",
+        generateSourceDefinitionMetadata(sourceDefinition, sourceVersion),
+      )
+    } catch (e: Exception) {
+      log.error(e) { ERROR_MESSAGE }
+    }
+    metricClient.count(
+      OssMetricsRegistry.OAUTH_REVOKE_TOKEN_REQUEST,
+      1L,
+      MetricAttribute(MetricTags.CONNECTOR_TYPE, "source"),
+      MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, revokeSourceOauthTokensRequest.sourceDefinitionId.toString()),
+      MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
     )
   }
 

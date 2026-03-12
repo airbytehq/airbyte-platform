@@ -720,6 +720,22 @@ enum class OssMetricsRegistry(
     metricName = "domain_verification_duration",
     metricDescription = "duration of a run of the domain verification cron",
   ),
+  OAUTH_CONSENT_URL_REQUEST(
+    metricName = "oauth_consent_url_request",
+    metricDescription = "count of OAuth consent URL requests",
+  ),
+  OAUTH_COMPLETE_REQUEST(
+    metricName = "oauth_complete_request",
+    metricDescription = "count of OAuth complete flow requests",
+  ),
+  OAUTH_GET_SCOPES_REQUEST(
+    metricName = "oauth_get_scopes_request",
+    metricDescription = "count of OAuth get scopes requests",
+  ),
+  OAUTH_REVOKE_TOKEN_REQUEST(
+    metricName = "oauth_revoke_token_request",
+    metricDescription = "count of OAuth token revocation requests",
+  ),
   ;
 
   override fun getMetricName(): String = metricName

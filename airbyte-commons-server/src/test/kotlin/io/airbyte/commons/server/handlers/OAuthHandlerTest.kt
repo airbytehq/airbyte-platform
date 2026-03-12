@@ -62,7 +62,7 @@ internal class OAuthHandlerTest {
 
   @BeforeEach
   fun init() {
-    metricClient = mockk<MetricClient>()
+    metricClient = mockk<MetricClient>(relaxed = true)
     trackingClient = mockk<TrackingClient>()
     oauthImplementationFactory = mockk<OAuthImplementationFactory>()
     secretsRepositoryReader = mockk<SecretsRepositoryReader>()
@@ -90,6 +90,7 @@ internal class OAuthHandlerTest {
         secretReferenceService,
         workspaceService,
         secretStorageService,
+        metricClient,
       )
   }
 
