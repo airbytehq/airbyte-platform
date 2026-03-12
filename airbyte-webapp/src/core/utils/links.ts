@@ -46,6 +46,7 @@ export const links = {
   connectorSpecificationReference: `${BASE_DOCS_LINK}/connector-development/connector-specification-reference`,
   connectorSpecificationDocs: `${BASE_DOCS_LINK}/connector-development/connector-specification-reference/#airbyte-modifications-to-jsonschema`,
   schemaChangeManagement: `${BASE_DOCS_LINK}/using-airbyte/schema-change-management`,
+  agentEngineApp: "https://app.airbyte.ai",
   apiAccess: `${BASE_DOCS_LINK}/using-airbyte/configuring-api-access`,
   deployingViaHttp: `${BASE_DOCS_LINK}/using-airbyte/getting-started/oss-quickstart#running-over-http`,
   ossAuthentication: `${BASE_DOCS_LINK}/deploying-airbyte/integrations/authentication`,

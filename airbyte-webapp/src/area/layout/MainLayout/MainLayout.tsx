@@ -9,6 +9,7 @@ import { LicenseBanner } from "components/ui/LicenseBanner/LicenseBanner";
 import { SideBar } from "area/layout/SideBar";
 import { StatusBanner } from "cloud/area/billing/components/StatusBanner";
 import { useTrialEndedModal } from "cloud/area/billing/utils/useTrialEndedModal";
+import { AdpOrganizationBanner } from "cloud/components/AdpOrganizationBanner";
 import { usePrefetchOrganizationSummaries } from "core/api/";
 import { DefaultErrorBoundary, ForbiddenErrorBoundary } from "core/errors";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -28,6 +29,7 @@ const MainLayout: React.FC<React.PropsWithChildren> = () => {
       <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
         {checkEnterpriseLicense && <LicenseBanner />}
         {isCloudApp && <StatusBanner />}
+        {isCloudApp && <AdpOrganizationBanner />}
         <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
           <SideBar />
           <div className={styles.content}>

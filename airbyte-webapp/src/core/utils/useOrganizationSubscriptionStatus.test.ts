@@ -16,7 +16,7 @@ import { useOrganizationSubscriptionStatus } from "./useOrganizationSubscription
 jest.mock("core/api");
 jest.mock("core/utils/rbac");
 jest.mock("dayjs");
-jest.mock("components/ui/BrandingBadge/BrandingBadge", () => ({
+jest.mock("area/organization/utils", () => ({
   ORG_PLAN_IDS: {
     STANDARD: "plan-airbyte-standard",
     SME: "plan-airbyte-sme",

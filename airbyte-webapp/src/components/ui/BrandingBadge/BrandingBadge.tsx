@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { Badge } from "components/ui/Badge";
 import { FlexContainer } from "components/ui/Flex";
 
-import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentOrganizationId, ORG_PLAN_IDS, PlanId } from "area/organization/utils";
 import { useOrganizationTrialStatus, useCurrentOrganizationInfo } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
@@ -12,19 +12,7 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 type ProductBranding = "enterprise" | "cloudForTeams" | "cloudInTrial" | null;
 
-export const ORG_PLAN_IDS = {
-  CORE: "plan-airbyte-core",
-  STANDARD: "plan-airbyte-standard",
-  SME: "plan-airbyte-sme",
-  FLEX: "plan-airbyte-flex",
-  STANDARD_TRIAL: "plan-airbyte-standard-trial",
-  UNIFIED_TRIAL: "plan-airbyte-unified-trial",
-  PRO: "plan-airbyte-pro",
-} as const;
-
-type PlanId = (typeof ORG_PLAN_IDS)[keyof typeof ORG_PLAN_IDS];
-
-const planIdToBrandingMap: Record<PlanId, ProductBranding> = {
+const planIdToBrandingMap: Partial<Record<PlanId, ProductBranding>> = {
   [ORG_PLAN_IDS.CORE]: null,
   [ORG_PLAN_IDS.STANDARD]: null,
   [ORG_PLAN_IDS.SME]: "enterprise",

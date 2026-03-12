@@ -1,8 +1,7 @@
 import { useCallback, useMemo } from "react";
 
-import { ORG_PLAN_IDS } from "components/ui/BrandingBadge/BrandingBadge";
-
 import { ProFeaturesWarnModal } from "area/organization/components/ProFeaturesWarnModal";
+import { ORG_PLAN_IDS } from "area/organization/utils";
 import { useModalService } from "core/services/Modal";
 
 import { useLocalStorage } from "./useLocalStorage";

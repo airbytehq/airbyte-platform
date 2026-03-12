@@ -1,8 +1,7 @@
 import dayjs from "dayjs";
 import { useMemo } from "react";
 
-import { ORG_PLAN_IDS } from "components/ui/BrandingBadge/BrandingBadge";
-
+import { ORG_PLAN_IDS } from "area/organization/utils";
 import { useOrganizationTrialStatus, useOrgInfo, useCurrentOrganizationInfo } from "core/api";
 import {
   OrganizationTrialStatusReadTrialStatus,

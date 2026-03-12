@@ -2424,6 +2424,7 @@
   "workspace.adminWorkspaceWarningTooltip": "You are not a member of this workspace. Be careful when making changes!",
   "cloud.inTrial": "Trial",
   "cloud.cloudForTeams": "Pro",
+  "cloud.adpOrganization.banner": "This is an Agent Engine account. <lnk>Manage it on app.airbyte.ai</lnk>.",
   "enterprise.enterprise": "Enterprise",
   "userInvitations.accept.success": "Invitation accepted successfully",
   "userInvitations.accept.error": "Something went wrong accepting the invitation. Please check your link.",

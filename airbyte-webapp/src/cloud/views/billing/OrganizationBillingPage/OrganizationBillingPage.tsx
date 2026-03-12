@@ -4,14 +4,13 @@ import { useSearchParams } from "react-router-dom";
 
 import { BorderedTile, BorderedTiles } from "components/ui/BorderedTiles";
 import { Box } from "components/ui/Box";
-import { ORG_PLAN_IDS } from "components/ui/BrandingBadge/BrandingBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Message } from "components/ui/Message";
 import { PageContainer } from "components/ui/PageContainer";
 
 import { SetupBillingAlertsLink } from "area/organization/components/SetupBillingAlertsLink";
-import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useCurrentOrganizationId, ORG_PLAN_IDS } from "area/organization/utils";
 import { useGetOrganizationSubscriptionInfo, useOrgInfo } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useModalService } from "core/services/Modal";
