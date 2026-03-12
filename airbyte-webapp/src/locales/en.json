@@ -665,6 +665,7 @@
   "connector.connections.empty.destinationCTA": "To sync data to <b>{name}</b>, connect it with one of our {count, plural, =0 {} other {{count}+}}  sources.",
   "connector.connections.empty.button": "Create a connection",
   "connection.stream.syncMode": "{syncMode} - {destinationSyncMode}",
+  "connection.capacityReached.banner": "Maximum capacity currently reached, additional jobs will be queued until capacity is available",
   "destinationSyncMode.append": "Append",
   "destinationSyncMode.append_dedup": "Append + Deduped",
   "destinationSyncMode.overwrite": "Overwrite",

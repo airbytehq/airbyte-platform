@@ -11,6 +11,7 @@ import { PageGridContainer } from "components/ui/PageGridContainer";
 import { PageHeader } from "components/ui/PageHeader";
 import { ScrollParent } from "components/ui/ScrollParent";
 
+import { CapacityReachedMessage } from "area/connection/components/CapacityReachedMessage";
 import { ActiveConnectionLimitReachedModal } from "area/workspace/components/ActiveConnectionLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
 import { useConnectionList, useCurrentWorkspace, useFilters } from "core/api";
@@ -112,35 +113,38 @@ export const AllConnectionsPage: React.FC = () => {
         <HeadTitle titles={[{ id: "sidebar.connections" }]} />
         {hasAnyConnections ? (
           <PageGridContainer>
-            <PageHeader
-              className={styles.pageHeader}
-              leftComponent={
-                <FlexContainer direction="column">
-                  <FlexItem>
-                    <Heading as="h1" size="lg">
-                      <FormattedMessage id="sidebar.connections" />
-                    </Heading>
+            <FlexContainer direction="column">
+              <PageHeader
+                className={styles.pageHeader}
+                leftComponent={
+                  <FlexContainer direction="column">
+                    <FlexItem>
+                      <Heading as="h1" size="lg">
+                        <FormattedMessage id="sidebar.connections" />
+                      </Heading>
+                    </FlexItem>
+                    <FlexItem>
+                      <ConnectionsSummary />
+                    </FlexItem>
+                  </FlexContainer>
+                }
+                endComponent={
+                  <FlexItem className={styles.alignSelfStart}>
+                    <Button
+                      disabled={!canCreateConnection}
+                      icon="plus"
+                      variant="primary"
+                      size="sm"
+                      onClick={() => onCreateClick()}
+                      data-testid="new-connection-button"
+                    >
+                      <FormattedMessage id="connection.newConnection" />
+                    </Button>
                   </FlexItem>
-                  <FlexItem>
-                    <ConnectionsSummary />
-                  </FlexItem>
-                </FlexContainer>
-              }
-              endComponent={
-                <FlexItem className={styles.alignSelfStart}>
-                  <Button
-                    disabled={!canCreateConnection}
-                    icon="plus"
-                    variant="primary"
-                    size="sm"
-                    onClick={() => onCreateClick()}
-                    data-testid="new-connection-button"
-                  >
-                    <FormattedMessage id="connection.newConnection" />
-                  </Button>
-                </FlexItem>
-              }
-            />
+                }
+              />
+              <CapacityReachedMessage />
+            </FlexContainer>
             <ScrollParent props={{ className: styles.pageBody }}>
               <ConnectionsListCard
                 isLoading={connectionListQuery.isLoading}
