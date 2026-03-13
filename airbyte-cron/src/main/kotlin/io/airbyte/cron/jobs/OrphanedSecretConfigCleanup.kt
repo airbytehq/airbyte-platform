@@ -75,7 +75,7 @@ class OrphanedSecretConfigCleanup(
     val orphanedConfigs =
       secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(
         excludeCreatedBefore = oneHourAgo,
-        limit = 50,
+        limit = 100,
         storageIds = enabledStorageIds,
       )
 
@@ -108,14 +108,11 @@ class OrphanedSecretConfigCleanup(
           continue
         }
 
-        // DRY RUN: Log what would be deleted without actually deleting
         log.info {
-          "[DRY RUN] Would delete: ${coordinate.fullCoordinate} from storage ID ${secretConfig.secretStorageId} (persistence: ${secretPersistence::class.simpleName})"
+          "Deleting: ${coordinate.fullCoordinate} from storage ID ${secretConfig.secretStorageId} (persistence: ${secretPersistence::class.simpleName})"
         }
+        secretPersistence.delete(coordinate)
         deletedIds.add(secretConfig.id)
-
-        // TODO: Re-enable actual deletion after dry-run validation
-        // secretPersistence.delete(coordinate)
 
         metricClient.count(
           metric = OssMetricsRegistry.DELETE_SECRET,
@@ -123,7 +120,6 @@ class OrphanedSecretConfigCleanup(
             arrayOf(
               MetricAttribute(MetricTags.SUCCESS, "true"),
               MetricAttribute(MetricTags.SECRET_STORAGE_ID, secretConfig.secretStorageId.toString()),
-              MetricAttribute(MetricTags.DRY_RUN, "true"),
             ),
         )
       } catch (e: Exception) {
@@ -139,11 +135,7 @@ class OrphanedSecretConfigCleanup(
       }
     }
 
-    // DRY RUN: Log what would be deleted from the database without actually deleting
-    log.info { "[DRY RUN] Would clean up ${deletedIds.size} orphaned secret configs (IDs: ${deletedIds.map { it.value }})" }
-
-    // TODO: Re-enable actual deletion after dry-run validation
-    // secretConfigService.deleteByIds(deletedIds)
-    // log.info { "Cleaned up ${deletedIds.size} orphaned secret configs" }
+    secretConfigService.deleteByIds(deletedIds)
+    log.info { "Cleaned up ${deletedIds.size} orphaned secret configs" }
   }
 }
