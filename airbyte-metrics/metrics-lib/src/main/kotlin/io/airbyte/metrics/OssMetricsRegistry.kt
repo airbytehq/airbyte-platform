@@ -736,6 +736,14 @@ enum class OssMetricsRegistry(
     metricName = "oauth_revoke_token_request",
     metricDescription = "count of OAuth token revocation requests",
   ),
+  ORPHANED_SECRET_CONFIGS_FOUND(
+    metricName = "orphaned_secret_configs_found",
+    metricDescription = "number of orphaned secret configs found during cleanup cron run",
+  ),
+  ORPHANED_SECRET_CONFIGS_DELETED(
+    metricName = "orphaned_secret_configs_deleted",
+    metricDescription = "number of orphaned secret configs successfully deleted during cleanup cron run",
+  ),
   ;
 
   override fun getMetricName(): String = metricName

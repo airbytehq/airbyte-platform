@@ -15,6 +15,7 @@ import io.airbyte.featureflag.CleanupDanglingSecretConfigs
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.SecretStorage
 import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.just
@@ -213,6 +214,30 @@ class OrphanedSecretConfigCleanupTest {
 
     // Verify only storage1 configs are deleted from database
     verify { secretConfigService.deleteByIds(listOf(config1.id, config3.id)) }
+  }
+
+  @Test
+  fun `cleanup emits gauge metrics for orphaned configs found and deleted`() {
+    val storageId = UUID.randomUUID()
+    val orphanedConfig1 = createSecretConfig(secretStorageId = storageId)
+    val orphanedConfig2 = createSecretConfig(secretStorageId = storageId)
+    val orphanedConfig3 = createSecretConfig(secretStorageId = storageId)
+
+    every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
+    every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
+    every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns
+      listOf(orphanedConfig1, orphanedConfig2, orphanedConfig3)
+    every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
+    // First two succeed, third fails
+    every { secretPersistence.delete(any()) } just runs andThen {} andThenThrows RuntimeException("fail")
+    every { secretConfigService.deleteByIds(any()) } just runs
+
+    cleanup.cleanupOrphanedSecrets()
+
+    // Verify gauge for found orphaned configs reports 3
+    verify { metricClient.gauge(OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_FOUND, 3.0) }
+    // Verify gauge for deleted orphaned configs reports 2 (third deletion failed)
+    verify { metricClient.gauge(OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_DELETED, 2.0) }
   }
 
   @Test

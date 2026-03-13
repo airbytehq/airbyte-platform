@@ -86,6 +86,11 @@ class OrphanedSecretConfigCleanup(
 
     log.info { "Found ${orphanedConfigs.size} orphaned secret configs to cleanup" }
 
+    metricClient.gauge(
+      metric = OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_FOUND,
+      value = orphanedConfigs.size.toDouble(),
+    )
+
     val deletedIds = mutableListOf<SecretConfigId>()
     val secretPersistenceMap = mutableMapOf<UUID, SecretPersistence>()
 
@@ -136,6 +141,12 @@ class OrphanedSecretConfigCleanup(
     }
 
     secretConfigService.deleteByIds(deletedIds)
+
+    metricClient.gauge(
+      metric = OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_DELETED,
+      value = deletedIds.size.toDouble(),
+    )
+
     log.info { "Cleaned up ${deletedIds.size} orphaned secret configs" }
   }
 }
