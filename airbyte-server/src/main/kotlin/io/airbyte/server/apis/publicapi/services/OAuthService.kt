@@ -18,6 +18,8 @@ interface OAuthService {
     definitionId: @NotBlank UUID?,
     redirectUrl: @NotBlank String,
     oauthInputConfiguration: JsonNode,
+    requestedScopes: List<String>? = null,
+    requestedOptionalScopes: List<String>? = null,
   ): OAuthConsentRead
 
   fun completeSourceOAuthReturnSecret(
@@ -26,6 +28,8 @@ interface OAuthService {
     redirectUrl: @NotBlank String,
     queryParameters: @NotBlank Map<String, String>,
     oauthInputConfiguration: JsonNode,
+    requestedScopes: List<String>? = null,
+    requestedOptionalScopes: List<String>? = null,
   ): HttpResponse<CompleteOAuthResponse>
 
   fun setWorkspaceOverrideOAuthParams(

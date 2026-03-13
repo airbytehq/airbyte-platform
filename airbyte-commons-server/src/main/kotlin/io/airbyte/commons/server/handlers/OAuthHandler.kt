@@ -7,6 +7,8 @@ package io.airbyte.commons.server.handlers
 import com.amazonaws.util.json.Jackson
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.model.generated.ActorType
@@ -75,6 +77,7 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier.Companion.hasOAuth
 import io.airbyte.persistence.job.tracker.TrackingMetadata.generateDestinationDefinitionMetadata
 import io.airbyte.persistence.job.tracker.TrackingMetadata.generateSourceDefinitionMetadata
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
@@ -147,6 +150,12 @@ open class OAuthHandler(
     if (hasOAuthConfigSpecification(spec)) {
       val oauthConfigSpecification = spec.advancedAuth.oauthConfigSpecification
       updateOauthConfigToAcceptAdditionalUserInputProperties(oauthConfigSpecification)
+      val effectiveOauthConfigSpec =
+        applyRequestedScopes(
+          oauthConfigSpecification,
+          sourceOauthConsentRequest.requestedScopes,
+          sourceOauthConsentRequest.requestedOptionalScopes,
+        )
 
       val oAuthInputConfigurationForConsent: JsonNode
 
@@ -184,7 +193,7 @@ open class OAuthHandler(
             sourceOauthConsentRequest.sourceDefinitionId,
             sourceOauthConsentRequest.redirectUrl,
             oAuthInputConfigValues,
-            oauthConfigSpecification,
+            effectiveOauthConfigSpec,
             oAuthInputConfigValues,
           ),
         )
@@ -376,6 +385,12 @@ open class OAuthHandler(
     if (hasOAuthConfigSpecification(spec)) {
       val oauthConfigSpecification = spec.advancedAuth.oauthConfigSpecification
       updateOauthConfigToAcceptAdditionalUserInputProperties(oauthConfigSpecification)
+      val effectiveOauthConfigSpec =
+        applyRequestedScopes(
+          oauthConfigSpecification,
+          completeSourceOauthRequest.requestedScopes,
+          completeSourceOauthRequest.requestedOptionalScopes,
+        )
 
       val oAuthInputConfigurationForConsent: JsonNode
 
@@ -413,7 +428,7 @@ open class OAuthHandler(
           completeSourceOauthRequest.queryParams,
           completeSourceOauthRequest.redirectUrl,
           oAuthInputConfigValues,
-          oauthConfigSpecification,
+          effectiveOauthConfigSpec,
           oAuthInputConfigValues,
         )
     } else {
@@ -1147,6 +1162,83 @@ open class OAuthHandler(
       )
     val hydratedConfig = secretReferenceService.getHydratedConfiguration(configWithSecretRefs, WorkspaceId(workspaceId))
     return flattenOAuthConfig(hydratedConfig)
+  }
+
+  /**
+   * Overrides connector-default scopes with caller-requested scopes.
+   * requestedOptionalScopes is only applied when requestedScopes is provided.
+   *
+   * Note: optional_scopes is a non-standard extension (not part of RFC 6749) used by
+   * providers like HubSpot that accept a separate optional_scope consent URL parameter.
+   * Most connectors only use scopes.
+   *
+   * TODO: Consider supporting requestedOptionalScopes without requestedScopes if a use case
+   * arises where callers want to narrow optional scopes while keeping default required ones.
+   */
+  @InternalForTesting
+  fun applyRequestedScopes(
+    oauthConfigSpecification: OAuthConfigSpecification,
+    requestedScopes: List<String>?,
+    requestedOptionalScopes: List<String>? = null,
+  ): OAuthConfigSpecification {
+    if (requestedScopes.isNullOrEmpty()) return oauthConfigSpecification
+
+    log.info {
+      "Overriding OAuth scopes: requestedScopes=$requestedScopes" +
+        if (!requestedOptionalScopes.isNullOrEmpty()) ", requestedOptionalScopes=$requestedOptionalScopes" else ""
+    }
+
+    val inputSpec =
+      oauthConfigSpecification.oauthConnectorInputSpecification
+        ?: throw IllegalStateException("requestedScopes provided but connector has no oauthConnectorInputSpecification")
+    val specNode = if (inputSpec.has("properties")) inputSpec["properties"] else inputSpec
+
+    // Require the connector to define scopes as an array (not a legacy scope string)
+    val scopesNode = specNode.path("scopes")
+    if (!scopesNode.isArray || scopesNode.isEmpty) {
+      throw IllegalArgumentException(
+        "The connector specification does not support requesting specific OAuth scopes.",
+      )
+    }
+
+    // Deep copy to avoid mutating cached spec
+    val specCopy = Jsons.clone(oauthConfigSpecification)
+    val specNodeCopy =
+      (
+        if (specCopy.oauthConnectorInputSpecification.has("properties")) {
+          specCopy.oauthConnectorInputSpecification["properties"]
+        } else {
+          specCopy.oauthConnectorInputSpecification
+        }
+      ) as ObjectNode
+
+    // Override scopes
+    specNodeCopy.set<JsonNode>("scopes", buildScopesArray(requestedScopes))
+
+    // Override optional_scopes only if provided — but validate the connector supports it
+    if (!requestedOptionalScopes.isNullOrEmpty()) {
+      val optionalScopesNode = specNode.path("optional_scopes")
+      if (!optionalScopesNode.isArray || optionalScopesNode.isEmpty) {
+        throw IllegalArgumentException(
+          "requestedOptionalScopes was provided but the connector specification " +
+            "does not define optional_scopes. This field is only supported for connectors " +
+            "that use the optional_scopes array (e.g. HubSpot).",
+        )
+      }
+      specNodeCopy.set<JsonNode>("optional_scopes", buildScopesArray(requestedOptionalScopes))
+    }
+
+    return specCopy
+  }
+
+  private fun buildScopesArray(scopes: List<String>): ArrayNode {
+    val scopesArray = Jsons.arrayNode()
+    for (scope in scopes) {
+      val item = JsonNodeFactory.instance.objectNode()
+      item.put("scope", scope)
+      scopesArray.add(item)
+    }
+    return scopesArray
   }
 
   companion object {

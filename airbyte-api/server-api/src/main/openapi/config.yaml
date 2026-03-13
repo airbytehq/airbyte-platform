@@ -18682,6 +18682,20 @@ components:
           $ref: "#/components/schemas/OAuthInputConfiguration"
         sourceId:
           $ref: "#/components/schemas/SourceId"
+        requestedScopes:
+          type: array
+          description: >-
+            Optional OAuth scopes to request, overriding the connector's default scopes.
+            Only supported for connectors that define scopes as an array.
+          items:
+            type: string
+        requestedOptionalScopes:
+          type: array
+          description: >-
+            Optional OAuth optional_scopes to request, overriding the connector's default
+            optional_scopes. Only applied when requestedScopes is also provided.
+          items:
+            type: string
     BuilderProjectOauthConsentRequest:
       type: object
       required:
@@ -18765,6 +18779,20 @@ components:
           default: false
         sourceId:
           $ref: "#/components/schemas/SourceId"
+        requestedScopes:
+          type: array
+          description: >-
+            Optional OAuth scopes to request, overriding the connector's default scopes.
+            Only supported for connectors that define scopes as an array.
+          items:
+            type: string
+        requestedOptionalScopes:
+          type: array
+          description: >-
+            Optional OAuth optional_scopes to request, overriding the connector's default
+            optional_scopes. Only applied when requestedScopes is also provided.
+          items:
+            type: string
     RevokeSourceOauthTokensRequest:
       type: object
       required:
@@ -20766,6 +20794,20 @@ components:
         oAuthInputConfiguration:
           $ref: "#/components/schemas/OAuthInputConfiguration"
           description: Input configuration for OAuth required by some sources.
+        requestedScopes:
+          type: array
+          description: >-
+            Optional OAuth scopes to request, overriding the connector's default scopes.
+            Only supported for connectors that define scopes as an array.
+          items:
+            type: string
+        requestedOptionalScopes:
+          type: array
+          description: >-
+            Optional OAuth optional_scopes to request, overriding the connector's default
+            optional_scopes. Only applied when requestedScopes is also provided.
+          items:
+            type: string
       example:
         redirectUrl: "https://cloud.airbyte.io/v1/api/oauth/callback"
         workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e

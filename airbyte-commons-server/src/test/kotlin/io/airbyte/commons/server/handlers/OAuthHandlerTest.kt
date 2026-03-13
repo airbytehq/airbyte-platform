@@ -623,6 +623,199 @@ internal class OAuthHandlerTest {
     Assertions.assertEquals(listOf(OAuthScopeItem().scope("new_read"), OAuthScopeItem().scope("new_chat")), result.scopes)
   }
 
+  // --- applyRequestedScopes tests ---
+
+  private fun buildOAuthConfigSpec(oauthInputSpecJson: String): OAuthConfigSpecification =
+    OAuthConfigSpecification()
+      .withOauthConnectorInputSpecification(Jsons.deserialize(oauthInputSpecJson))
+
+  @Test
+  fun testApplyRequestedScopes_nullOrEmpty_returnsOriginal() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    Assertions.assertSame(spec, handler.applyRequestedScopes(spec, null))
+    Assertions.assertSame(spec, handler.applyRequestedScopes(spec, emptyList()))
+  }
+
+  @Test
+  fun testApplyRequestedScopes_replacesScopesArray() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    val result = handler.applyRequestedScopes(spec, listOf("read"))
+    val resultScopes = result.oauthConnectorInputSpecification["properties"]["scopes"]
+
+    Assertions.assertTrue(resultScopes.isArray)
+    Assertions.assertEquals(1, resultScopes.size())
+    Assertions.assertEquals("read", resultScopes[0]["scope"].asText())
+  }
+
+  @Test
+  fun testApplyRequestedScopes_withOptionalScopes() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}],
+            "optional_scopes": [{"scope": "admin:read"}, {"scope": "admin:write"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    val result = handler.applyRequestedScopes(spec, listOf("read"), listOf("admin:read"))
+    val resultScopes = result.oauthConnectorInputSpecification["properties"]["scopes"]
+    val resultOptionalScopes = result.oauthConnectorInputSpecification["properties"]["optional_scopes"]
+
+    Assertions.assertEquals(1, resultScopes.size())
+    Assertions.assertEquals("read", resultScopes[0]["scope"].asText())
+    Assertions.assertEquals(1, resultOptionalScopes.size())
+    Assertions.assertEquals("admin:read", resultOptionalScopes[0]["scope"].asText())
+  }
+
+  @Test
+  fun testApplyRequestedScopes_withoutOptionalScopes_keepsDefaults() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}],
+            "optional_scopes": [{"scope": "admin:read"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    val result = handler.applyRequestedScopes(spec, listOf("read"))
+    val resultOptionalScopes = result.oauthConnectorInputSpecification["properties"]["optional_scopes"]
+
+    // optional_scopes should remain unchanged
+    Assertions.assertEquals(1, resultOptionalScopes.size())
+    Assertions.assertEquals("admin:read", resultOptionalScopes[0]["scope"].asText())
+  }
+
+  @Test
+  fun testApplyRequestedScopes_onlyOptionalScopes_noOverride() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}],
+            "optional_scopes": [{"scope": "admin:read"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    // requestedScopes is null, so no override even with requestedOptionalScopes
+    val result = handler.applyRequestedScopes(spec, null, listOf("admin:write"))
+    Assertions.assertSame(spec, result)
+  }
+
+  @Test
+  fun testApplyRequestedScopes_throwsWhenOptionalScopesNotInSpec() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    Assertions.assertThrows(IllegalArgumentException::class.java) {
+      handler.applyRequestedScopes(spec, listOf("read"), listOf("admin:read"))
+    }
+  }
+
+  @Test
+  fun testApplyRequestedScopes_throwsWhenNoOauthConnectorInputSpec() {
+    val spec = OAuthConfigSpecification()
+
+    Assertions.assertThrows(IllegalStateException::class.java) {
+      handler.applyRequestedScopes(spec, listOf("read"))
+    }
+  }
+
+  @Test
+  fun testApplyRequestedScopes_throwsForLegacyScopeString() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scope": "read chat"
+          }
+        }
+        """.trimIndent(),
+      )
+
+    Assertions.assertThrows(IllegalArgumentException::class.java) {
+      handler.applyRequestedScopes(spec, listOf("read"))
+    }
+  }
+
+  @Test
+  fun testApplyRequestedScopes_doesNotMutateOriginal() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    val originalScopes = spec.oauthConnectorInputSpecification["properties"]["scopes"].toString()
+    handler.applyRequestedScopes(spec, listOf("write"))
+    val afterScopes = spec.oauthConnectorInputSpecification["properties"]["scopes"].toString()
+
+    Assertions.assertEquals(originalScopes, afterScopes)
+  }
+
+  @Test
+  fun testApplyRequestedScopes_specWithoutPropertiesWrapper() {
+    // Some specs don't wrap in "properties"
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "scopes": [{"scope": "read"}, {"scope": "chat"}]
+        }
+        """.trimIndent(),
+      )
+
+    val result = handler.applyRequestedScopes(spec, listOf("write"))
+    val resultScopes = result.oauthConnectorInputSpecification["scopes"]
+
+    Assertions.assertEquals(1, resultScopes.size())
+    Assertions.assertEquals("write", resultScopes[0]["scope"].asText())
+  }
+
   companion object {
     private const val CLIENT_ID = "123"
     private const val CLIENT_ID_KEY = "client_id"

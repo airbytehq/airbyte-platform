@@ -71466,6 +71466,20 @@ components:
           description: Input configuration for OAuth required by some sources.
         sourceType:
           $ref: "#/components/schemas/OAuthActorNames"
+        requestedScopes:
+          type: array
+          description: >-
+            Optional OAuth scopes to request, overriding the connector's default scopes.
+            Only supported for connectors that define scopes as an array.
+          items:
+            type: string
+        requestedOptionalScopes:
+          type: array
+          description: >-
+            Optional OAuth optional_scopes to request, overriding the connector's default
+            optional_scopes. Only applied when requestedScopes is also provided.
+          items:
+            type: string
     WorkspaceOAuthCredentialsRequest:
       title: "Root Type for WorkspaceOAuthCredentials"
       description: "POST body for creating/updating workspace level OAuth credentials"
