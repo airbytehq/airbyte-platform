@@ -3653,6 +3653,29 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/source_oauths/get_scopes:
+    post:
+      tags:
+        - source_oauth
+      summary: Given a source connector definition ID, return the default OAuth scopes.
+      operationId: getSourceOAuthScopes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceOAuthScopesRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceOAuthScopesRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/destination_oauths/get_consent_url:
     post:
       tags:
@@ -18755,6 +18778,45 @@ components:
           $ref: "#/components/schemas/SourceId"
         sourceDefinitionId:
           $ref: "#/components/schemas/SourceDefinitionId"
+    SourceOAuthScopesRequest:
+      type: object
+      required:
+        - sourceDefinitionId
+        - workspaceId
+      properties:
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    SourceOAuthScopesRead:
+      type: object
+      required:
+        - scopes
+        - optionalScopes
+        - scopeJoinStrategy
+      properties:
+        scopes:
+          type: array
+          items:
+            $ref: "#/components/schemas/OAuthScopeItem"
+        optionalScopes:
+          type: array
+          items:
+            $ref: "#/components/schemas/OAuthScopeItem"
+        scopeJoinStrategy:
+          type: string
+          enum:
+            - space
+            - comma
+            - plus
+          default: "space"
+    OAuthScopeItem:
+      type: object
+      required:
+        - scope
+      properties:
+        scope:
+          type: string
     CompleteDestinationOAuthRequest:
       type: object
       required:

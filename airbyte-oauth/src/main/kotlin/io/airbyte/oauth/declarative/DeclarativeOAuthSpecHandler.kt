@@ -10,6 +10,7 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.Jsons
 import io.airbyte.oauth.REFRESH_TOKEN_KEY
+import io.airbyte.oauth.SCOPES_KEY
 import java.io.IOException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -118,9 +119,32 @@ class DeclarativeOAuthSpecHandler {
       templateMap[key] = userConfig.path(key).asText(defaultValue)
     }
 
-    // process all other key:value from `userConfig`
+    // process all other key:value from `userConfig`, skipping array-typed scopes fields
     userConfig.fields().forEachRemaining { item: Map.Entry<String?, JsonNode> ->
-      templateMap[item.key] = item.value.asText()
+      if (item.key !in SCOPES_ARRAY_KEYS) {
+        templateMap[item.key] = item.value.asText()
+      }
+    }
+
+    // handle scopes array: extract scope from each object, join and set as the scope value
+    val scopesNode = userConfig.path(SCOPES_KEY)
+    if (scopesNode.isArray && scopesNode.size() > 0) {
+      val joinStrategy = userConfig.path(SCOPES_JOIN_STRATEGY_KEY).asText("space")
+      val separator = getJoinSeparator(joinStrategy)
+      val scopeNames = scopesNode.map { it.path("scope").asText() }.filter { it.isNotEmpty() }
+      val joinedScopes = scopeNames.joinToString(separator)
+      val scopeKeyName = templateMap[SCOPE_KEY] ?: SCOPE_VALUE
+      templateMap[scopeKeyName] = joinedScopes
+    }
+
+    // handle optional_scopes array
+    val optionalScopesNode = userConfig.path(OPTIONAL_SCOPES_KEY)
+    if (optionalScopesNode.isArray && optionalScopesNode.size() > 0) {
+      val joinStrategy = userConfig.path(SCOPES_JOIN_STRATEGY_KEY).asText("space")
+      val separator = getJoinSeparator(joinStrategy)
+      val optionalScopeNames = optionalScopesNode.map { it.path("scope").asText() }.filter { it.isNotEmpty() }
+      val joinedOptionalScopes = optionalScopeNames.joinToString(separator)
+      templateMap[OPTIONAL_SCOPES_KEY] = joinedOptionalScopes
     }
 
     return templateMap
@@ -187,6 +211,17 @@ class DeclarativeOAuthSpecHandler {
     addValueReference(templateValues, STATE_KEY, STATE_VALUE_KEY)
     addValueReference(templateValues, REDIRECT_URI_KEY, REDIRECT_URI_VALUE_KEY)
     addValueReference(templateValues, SCOPE_KEY, SCOPE_VALUE_KEY)
+
+    // mirror scope_param/scope_value as scopes_param/scopes_value for new template syntax
+    templateValues[SCOPES_PARAM] = templateValues[SCOPE_PARAM]
+    templateValues[SCOPES_VALUE_KEY] = templateValues[SCOPE_VALUE_KEY]
+
+    // optional_scopes references
+    if (templateValues.containsKey(OPTIONAL_SCOPES_KEY)) {
+      val optionalScopesValue = templateValues[OPTIONAL_SCOPES_KEY]
+      templateValues[OPTIONAL_SCOPES_PARAM] = makeParameter(OPTIONAL_SCOPES_KEY, urlEncode(optionalScopesValue))
+      templateValues[OPTIONAL_SCOPES_VALUE_KEY] = optionalScopesValue
+    }
 
     return templateValues
   }
@@ -481,6 +516,12 @@ class DeclarativeOAuthSpecHandler {
     const val SCOPE_PARAM: String = "scope_param"
     const val SCOPE_VALUE: String = io.airbyte.oauth.SCOPE_KEY
     const val SCOPE_VALUE_KEY: String = "scope_value"
+    const val SCOPES_PARAM: String = "scopes_param"
+    const val SCOPES_VALUE_KEY: String = "scopes_value"
+    const val OPTIONAL_SCOPES_KEY: String = "optional_scopes"
+    const val OPTIONAL_SCOPES_PARAM: String = "optional_scopes_param"
+    const val OPTIONAL_SCOPES_VALUE_KEY: String = "optional_scopes_value"
+    const val SCOPES_JOIN_STRATEGY_KEY: String = "scopes_join_strategy"
     const val STATE_KEY: String = "state_key"
     const val STATE_PARAM: String = "state_param"
     const val STATE_VALUE: String = io.airbyte.oauth.STATE_KEY
@@ -519,6 +560,15 @@ class DeclarativeOAuthSpecHandler {
         SCOPE_KEY to SCOPE_VALUE,
         STATE_KEY to STATE_VALUE,
       )
+
+    private val SCOPES_ARRAY_KEYS: Set<String> = setOf(SCOPES_KEY, OPTIONAL_SCOPES_KEY, SCOPES_JOIN_STRATEGY_KEY)
+
+    private fun getJoinSeparator(strategy: String?): String =
+      when (strategy) {
+        "comma" -> ","
+        "plus" -> "+"
+        else -> " "
+      }
 
     /**
      * Creates and returns a new instance of Jinjava with a custom filter registered. The custom filter

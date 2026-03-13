@@ -11,6 +11,8 @@ import io.airbyte.api.model.generated.EmbeddedSourceOauthConsentRequest
 import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.api.model.generated.RevokeSourceOauthTokensRequest
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody
+import io.airbyte.api.model.generated.SourceOAuthScopesRead
+import io.airbyte.api.model.generated.SourceOAuthScopesRequest
 import io.airbyte.api.model.generated.SourceOauthConsentRequest
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
@@ -59,6 +61,12 @@ class SourceOauthApiController(
       }
     return getSourceOAuthConsent(sourceOauthConsentRequest)!! // getSourceOAuthConsent returns a nullable for unknown reasons
   }
+
+  @Post("/get_scopes")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getSourceOAuthScopes(
+    @Body request: SourceOAuthScopesRequest,
+  ): SourceOAuthScopesRead? = execute { oAuthHandler.getSourceOAuthScopes(request) }
 
   @Post("/get_consent_url")
   @ExecuteOn(AirbyteTaskExecutors.IO)

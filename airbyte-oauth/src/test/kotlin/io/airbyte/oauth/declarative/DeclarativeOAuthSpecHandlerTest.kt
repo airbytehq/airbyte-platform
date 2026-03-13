@@ -173,6 +173,126 @@ internal class DeclarativeOAuthSpecHandlerTest {
     )
   }
 
+  @Test
+  fun testCreateDefaultTemplateMap_WithScopesArray() {
+    val userConfig =
+      Jsons.jsonNode(
+        mapOf(
+          "scopes" to listOf(mapOf("scope" to "read"), mapOf("scope" to "chat")),
+        ),
+      )
+    val templateMap = handler.createDefaultTemplateMap(userConfig)
+    Assertions.assertEquals("read chat", templateMap["scope"])
+  }
+
+  @Test
+  fun testCreateDefaultTemplateMap_WithScopesArray_CommaJoinStrategy() {
+    val userConfig =
+      Jsons.jsonNode(
+        mapOf(
+          "scopes" to listOf(mapOf("scope" to "read"), mapOf("scope" to "chat")),
+          "scopes_join_strategy" to "comma",
+        ),
+      )
+    val templateMap = handler.createDefaultTemplateMap(userConfig)
+    Assertions.assertEquals("read,chat", templateMap["scope"])
+  }
+
+  @Test
+  fun testCreateDefaultTemplateMap_WithScopesArray_PlusJoinStrategy() {
+    val userConfig =
+      Jsons.jsonNode(
+        mapOf(
+          "scopes" to listOf(mapOf("scope" to "read"), mapOf("scope" to "chat")),
+          "scopes_join_strategy" to "plus",
+        ),
+      )
+    val templateMap = handler.createDefaultTemplateMap(userConfig)
+    Assertions.assertEquals("read+chat", templateMap["scope"])
+  }
+
+  @Test
+  fun testCreateDefaultTemplateMap_ScopesOverridesScope() {
+    val userConfig =
+      Jsons.jsonNode(
+        mapOf(
+          "scope" to "old_scope",
+          "scopes" to listOf(mapOf("scope" to "new_scope_1"), mapOf("scope" to "new_scope_2")),
+        ),
+      )
+    val templateMap = handler.createDefaultTemplateMap(userConfig)
+    Assertions.assertEquals("new_scope_1 new_scope_2", templateMap["scope"])
+  }
+
+  @Test
+  fun testCreateDefaultTemplateMap_WithOptionalScopes() {
+    val userConfig =
+      Jsons.jsonNode(
+        mapOf(
+          "optional_scopes" to listOf(mapOf("scope" to "admin:read"), mapOf("scope" to "admin:write")),
+        ),
+      )
+    val templateMap = handler.createDefaultTemplateMap(userConfig)
+    Assertions.assertEquals("admin:read admin:write", templateMap["optional_scopes"])
+  }
+
+  @Test
+  fun testGetConsentUrlTemplateValues_ScopesParam() {
+    val userConfig =
+      Jsons.jsonNode(
+        mapOf(
+          "scopes" to listOf(mapOf("scope" to "read"), mapOf("scope" to "chat")),
+          DeclarativeOAuthSpecHandler.CONSENT_URL to "https://example.com/oauth?{{scope_param}}&{{scopes_param}}",
+        ),
+      )
+    val templateValues = handler.getConsentUrlTemplateValues(userConfig, TEST_CLIENT_ID, TEST_REDIRECT_URI, TEST_STATE)
+    Assertions.assertEquals(templateValues[DeclarativeOAuthSpecHandler.SCOPE_PARAM], templateValues[DeclarativeOAuthSpecHandler.SCOPES_PARAM])
+    Assertions.assertEquals(templateValues[DeclarativeOAuthSpecHandler.SCOPE_VALUE_KEY], templateValues[DeclarativeOAuthSpecHandler.SCOPES_VALUE_KEY])
+  }
+
+  @Test
+  fun testGetConsentUrlTemplateValues_OptionalScopesParam() {
+    val userConfig =
+      Jsons.jsonNode(
+        mapOf(
+          "optional_scopes" to listOf(mapOf("scope" to "admin:read"), mapOf("scope" to "admin:write")),
+          DeclarativeOAuthSpecHandler.CONSENT_URL to "https://example.com/oauth?{{optional_scopes_param}}",
+        ),
+      )
+    val templateValues = handler.getConsentUrlTemplateValues(userConfig, TEST_CLIENT_ID, TEST_REDIRECT_URI, TEST_STATE)
+    Assertions.assertNotNull(templateValues[DeclarativeOAuthSpecHandler.OPTIONAL_SCOPES_PARAM])
+    Assertions.assertEquals("admin:read admin:write", templateValues[DeclarativeOAuthSpecHandler.OPTIONAL_SCOPES_VALUE_KEY])
+  }
+
+  @Test
+  fun testConsentUrl_WithScopesArray_BackwardCompatible() {
+    val consentUrlTemplate =
+      "https://example.com/oauth?{{client_id_param}}&{{redirect_uri_param}}&{{scope_param}}&{{state_param}}"
+
+    val userConfigWithScope =
+      Jsons.jsonNode(
+        mapOf(
+          "scope" to "read chat",
+          DeclarativeOAuthSpecHandler.CONSENT_URL to consentUrlTemplate,
+        ),
+      )
+    val userConfigWithScopes =
+      Jsons.jsonNode(
+        mapOf(
+          "scopes" to listOf(mapOf("scope" to "read"), mapOf("scope" to "chat")),
+          DeclarativeOAuthSpecHandler.CONSENT_URL to consentUrlTemplate,
+        ),
+      )
+
+    val templateValuesScope = handler.getConsentUrlTemplateValues(userConfigWithScope, TEST_CLIENT_ID, TEST_REDIRECT_URI, TEST_STATE)
+    val templateValuesScopes = handler.getConsentUrlTemplateValues(userConfigWithScopes, TEST_CLIENT_ID, TEST_REDIRECT_URI, TEST_STATE)
+
+    val renderedScope = handler.renderStringTemplate(templateValuesScope, consentUrlTemplate)
+    val renderedScopes = handler.renderStringTemplate(templateValuesScopes, consentUrlTemplate)
+
+    Assertions.assertEquals(renderedScope, renderedScopes)
+  }
+
   companion object {
     private const val ACCESS_TOKEN_TEST_VALUE = "access_token_value"
     private const val REFRESH_TOKEN_TEST_VALUE = "refresh_token_value"

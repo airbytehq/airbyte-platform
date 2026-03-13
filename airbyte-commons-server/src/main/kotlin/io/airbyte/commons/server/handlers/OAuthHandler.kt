@@ -17,9 +17,12 @@ import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest
 import io.airbyte.api.model.generated.DestinationOauthConsentRequest
 import io.airbyte.api.model.generated.OAuthConsentRead
+import io.airbyte.api.model.generated.OAuthScopeItem
 import io.airbyte.api.model.generated.RevokeSourceOauthTokensRequest
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody
+import io.airbyte.api.model.generated.SourceOAuthScopesRead
+import io.airbyte.api.model.generated.SourceOAuthScopesRequest
 import io.airbyte.api.model.generated.SourceOauthConsentRequest
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.AirbyteSecretConstants
@@ -599,6 +602,58 @@ open class OAuthHandler(
       MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, revokeSourceOauthTokensRequest.sourceDefinitionId.toString()),
       MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
     )
+  }
+
+  fun getSourceOAuthScopes(request: SourceOAuthScopesRequest): SourceOAuthScopesRead {
+    val sourceDefinition = sourceService.getStandardSourceDefinition(request.sourceDefinitionId)
+    val sourceVersion =
+      actorDefinitionVersionHelper.getSourceVersion(
+        sourceDefinition,
+        request.workspaceId,
+        null,
+      )
+    val spec = sourceVersion.spec
+
+    if (!hasOAuthConfigSpecification(spec)) {
+      throw ConfigNotFoundException(
+        ConfigNotFoundType.SOURCE_OAUTH_PARAM,
+        "Source definition ${request.sourceDefinitionId} has no OAuth configuration.",
+      )
+    }
+
+    val oauthInputSpec = spec.advancedAuth.oauthConfigSpecification.oauthConnectorInputSpecification
+    val specNode = if (oauthInputSpec.has("properties")) oauthInputSpec["properties"] else oauthInputSpec
+
+    val scopesList = extractScopesList(specNode, "scopes")
+    if (scopesList.isEmpty()) {
+      throw ConfigNotFoundException(
+        ConfigNotFoundType.SOURCE_OAUTH_PARAM,
+        "Source definition ${request.sourceDefinitionId} has OAuth configuration but no structured scopes array.",
+      )
+    }
+
+    val optionalScopesList = extractScopesList(specNode, "optional_scopes")
+    val joinStrategyText = specNode.path("scopes_join_strategy").asText("space")
+    val joinStrategy = SourceOAuthScopesRead.ScopeJoinStrategyEnum.fromValue(joinStrategyText)
+
+    return SourceOAuthScopesRead().apply {
+      scopes = scopesList
+      optionalScopes = optionalScopesList
+      scopeJoinStrategy = joinStrategy
+    }
+  }
+
+  private fun extractScopesList(
+    specNode: JsonNode,
+    fieldName: String,
+  ): List<OAuthScopeItem> {
+    val node = specNode.path(fieldName)
+    if (!node.isArray || node.isEmpty) return emptyList()
+    return node
+      .mapNotNull { item ->
+        val text = item.path("scope").asText("")
+        if (text.isNotEmpty()) OAuthScopeItem().scope(text) else null
+      }
   }
 
   fun setSourceInstancewideOauthParams(requestBody: SetInstancewideSourceOauthParamsRequestBody) {
