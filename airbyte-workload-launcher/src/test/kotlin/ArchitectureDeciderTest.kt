@@ -117,7 +117,7 @@ class ArchitectureDeciderTest {
               serializations = listOf(Serialization.JSONL, Serialization.PROTOBUF),
               transports = listOf(Transport.SOCKET, Transport.STDIO),
             ),
-          cpuLimit = 1, // → min(cpu) * 2 = 2 sockets
+          cpuLimit = "1", // → min(cpu) * 2 = 2 sockets
         ),
       )
 
@@ -184,6 +184,29 @@ class ArchitectureDeciderTest {
   }
 
   @Test
+  fun `millicore CPU limit results in proportional socket count`() {
+    every { featureFlags.intVariation(SocketCount, any()) } returns 0
+
+    val env =
+      decider.computeEnvironmentVariables(
+        input(
+          srcIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          dstIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          cpuLimit = "4000m", // 4 cores
+        ),
+      )
+
+    // Should result in 4 cores * 2 = 8 sockets
+    Assertions.assertEquals(
+      8,
+      env.sourceEnvironmentVariables
+        .valueOf(DATA_CHANNEL_SOCKET_PATHS)
+        .split(',')
+        .size,
+    )
+  }
+
+  @Test
   fun `no common serialization format throws`() {
     Assertions.assertThrows(IllegalArgumentException::class.java) {
       decider.computeEnvironmentVariables(
@@ -220,7 +243,7 @@ class ArchitectureDeciderTest {
     dstIpc: JsonNode? = null,
     useFileTransfer: Boolean = false,
     isReset: Boolean = false,
-    cpuLimit: Int = 1,
+    cpuLimit: String = "1",
   ): ReplicationInput {
     val connectionRead =
       mockk<ConnectionRead> {
@@ -242,7 +265,7 @@ class ArchitectureDeciderTest {
     val domainRes: io.airbyte.config.ResourceRequirements =
       io.airbyte.config
         .ResourceRequirements()
-        .withCpuLimit(cpuLimit.toString())
+        .withCpuLimit(cpuLimit)
     val syncRes =
       mockk<io.airbyte.config.SyncResourceRequirements> {
         every { source } returns domainRes
