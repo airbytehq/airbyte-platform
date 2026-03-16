@@ -102,6 +102,7 @@ export const formatDataForChart = (data: ConnectionUptimeHistoryRead) => {
             case JobStatus.cancelled:
             case JobStatus.incomplete:
             case JobStatus.pending:
+            case JobStatus.queued:
               status = StreamStatusType.Pending;
               break;
             default:

@@ -4315,6 +4315,58 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/setJobQueued:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Set a job status to QUEUED when waiting for Data Worker capacity.
+      operationId: setJobQueued
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: SetJobQueuedRequest
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/cancelQueuedJob:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Cancel a job that is still queued while waiting for capacity.
+      operationId: cancelQueuedJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: CancelQueuedJobRequest
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
   /v1/jobs/getWebhookConfig:
     post:
       tags:
@@ -17734,6 +17786,7 @@ components:
       type: string
       enum:
         - pending
+        - queued
         - running
         - incomplete
         - failed

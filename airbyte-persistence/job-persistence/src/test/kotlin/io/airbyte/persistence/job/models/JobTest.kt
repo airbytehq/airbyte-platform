@@ -23,6 +23,7 @@ internal class JobTest {
   @Test
   fun testIsJobInTerminalState() {
     assertFalse(jobWithStatus(JobStatus.PENDING).isJobInTerminalState())
+    assertFalse(jobWithStatus(JobStatus.QUEUED).isJobInTerminalState())
     assertFalse(jobWithStatus(JobStatus.RUNNING).isJobInTerminalState())
     assertFalse(jobWithStatus(JobStatus.INCOMPLETE).isJobInTerminalState())
     assertTrue(jobWithStatus(JobStatus.FAILED).isJobInTerminalState())
@@ -81,6 +82,7 @@ internal class JobTest {
   @Test
   fun testValidateStatusTransitionFromPending() {
     val pendingJob: Job = jobWithStatus(JobStatus.PENDING)
+    assertDoesNotThrow({ pendingJob.validateStatusTransition(JobStatus.QUEUED) })
     assertDoesNotThrow({ pendingJob.validateStatusTransition(JobStatus.RUNNING) })
     assertDoesNotThrow({ pendingJob.validateStatusTransition(JobStatus.FAILED) })
     assertDoesNotThrow({ pendingJob.validateStatusTransition(JobStatus.CANCELLED) })
@@ -88,6 +90,26 @@ internal class JobTest {
     assertThrows(
       IllegalStateException::class.java,
       { pendingJob.validateStatusTransition(JobStatus.SUCCEEDED) },
+    )
+  }
+
+  @Test
+  fun testValidateStatusTransitionFromQueued() {
+    val queuedJob: Job = jobWithStatus(JobStatus.QUEUED)
+    assertDoesNotThrow({ queuedJob.validateStatusTransition(JobStatus.PENDING) })
+    assertDoesNotThrow({ queuedJob.validateStatusTransition(JobStatus.RUNNING) })
+    assertDoesNotThrow({ queuedJob.validateStatusTransition(JobStatus.CANCELLED) })
+    assertThrows(
+      IllegalStateException::class.java,
+      { queuedJob.validateStatusTransition(JobStatus.INCOMPLETE) },
+    )
+    assertThrows(
+      IllegalStateException::class.java,
+      { queuedJob.validateStatusTransition(JobStatus.FAILED) },
+    )
+    assertThrows(
+      IllegalStateException::class.java,
+      { queuedJob.validateStatusTransition(JobStatus.SUCCEEDED) },
     )
   }
 

@@ -1609,7 +1609,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       JobStatus.succeeded -> ConnectionJobStatus.HEALTHY
       JobStatus.failed, JobStatus.cancelled, JobStatus.incomplete -> ConnectionJobStatus.FAILED
       JobStatus.running -> ConnectionJobStatus.RUNNING
-      JobStatus.pending -> ConnectionJobStatus.RUNNING
+      JobStatus.pending, JobStatus.queued -> ConnectionJobStatus.RUNNING
     }
 
   private fun getSourceDefinitionId(sourceId: UUID?): UUID? {

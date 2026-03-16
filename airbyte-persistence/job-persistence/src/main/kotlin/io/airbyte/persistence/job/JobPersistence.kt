@@ -116,6 +116,24 @@ interface JobPersistence {
   fun failJob(jobId: Long)
 
   /**
+   * Set job status from PENDING to QUEUED. This is used when a job is waiting for
+   * Data Worker capacity. If not in PENDING status, no op.
+   *
+   * @param jobId job to queue
+   * @throws IOException exception due to interaction with persistence
+   */
+  fun queueJob(jobId: Long)
+
+  /**
+   * Set job status from QUEUED to CANCELLED. This is used when a job waiting for
+   * Data Worker capacity should be discarded before it starts. If not in QUEUED status, no op.
+   *
+   * @param jobId job to cancel
+   * @throws IOException exception due to interaction with persistence
+   */
+  fun cancelQueuedJob(jobId: Long)
+
+  /**
    * Create a new attempt for a job and return its attempt number. Throws
    * [IllegalStateException] if the job is already in a terminal state.
    *

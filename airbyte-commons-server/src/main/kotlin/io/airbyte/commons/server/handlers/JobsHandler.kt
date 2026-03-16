@@ -237,6 +237,22 @@ open class JobsHandler(
   }
 
   /**
+   * Set a job status to QUEUED when waiting for Data Worker capacity.
+   */
+  fun setJobQueued(jobId: Long): InternalOperationResult {
+    jobCreationAndStatusUpdateHelper.setJobQueued(jobId)
+    return InternalOperationResult().succeeded(true)
+  }
+
+  /**
+   * Cancel a job that is still queued while waiting for capacity.
+   */
+  fun cancelQueuedJob(jobId: Long): InternalOperationResult {
+    jobCreationAndStatusUpdateHelper.cancelQueuedJob(jobId)
+    return InternalOperationResult().succeeded(true)
+  }
+
+  /**
    * Did previous job succeed.
    *
    * @param connectionId - the connection id.

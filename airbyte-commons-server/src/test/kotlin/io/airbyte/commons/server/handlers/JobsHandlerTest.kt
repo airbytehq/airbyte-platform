@@ -273,6 +273,22 @@ class JobsHandlerTest {
     verify(helper).reportJobStart(5L)
   }
 
+  @Test
+  fun testSetJobQueued() {
+    val result = jobsHandler.setJobQueued(5L)
+
+    assertEquals(InternalOperationResult().succeeded(true), result)
+    verify(helper).setJobQueued(5L)
+  }
+
+  @Test
+  fun testCancelQueuedJob() {
+    val result = jobsHandler.cancelQueuedJob(5L)
+
+    assertEquals(InternalOperationResult().succeeded(true), result)
+    verify(helper).cancelQueuedJob(5L)
+  }
+
   companion object {
     @JvmStatic
     fun randomObjects() =

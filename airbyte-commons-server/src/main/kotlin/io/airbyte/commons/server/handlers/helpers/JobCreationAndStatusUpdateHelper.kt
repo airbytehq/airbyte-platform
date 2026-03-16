@@ -532,6 +532,20 @@ class JobCreationAndStatusUpdateHelper(
     jobTracker.trackSync(job, JobTracker.JobState.STARTED)
   }
 
+  /**
+   * Set a job status to QUEUED when waiting for Data Worker capacity.
+   */
+  fun setJobQueued(jobId: Long) {
+    jobPersistence.queueJob(jobId)
+  }
+
+  /**
+   * Cancel a job that is still queued while waiting for capacity.
+   */
+  fun cancelQueuedJob(jobId: Long) {
+    jobPersistence.cancelQueuedJob(jobId)
+  }
+
   companion object {
     private val log = KotlinLogging.logger {}
 

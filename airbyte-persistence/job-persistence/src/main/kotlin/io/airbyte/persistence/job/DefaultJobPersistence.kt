@@ -174,6 +174,20 @@ class DefaultJobPersistence
       }
     }
 
+    override fun queueJob(jobId: Long) {
+      jobDatabase.query<Any?> { ctx: DSLContext ->
+        updateJobStatusIfCurrentStatus(ctx, jobId, JobStatus.PENDING, JobStatus.QUEUED)
+        null
+      }
+    }
+
+    override fun cancelQueuedJob(jobId: Long) {
+      jobDatabase.query<Any?> { ctx: DSLContext ->
+        updateJobStatusIfCurrentStatus(ctx, jobId, JobStatus.QUEUED, JobStatus.CANCELLED)
+        null
+      }
+    }
+
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
     // returns the new updated_at time for the job
@@ -194,6 +208,26 @@ class DefaultJobPersistence
         toSqlName(newStatus),
         currentTime,
         jobId,
+      )
+      return now
+    }
+
+    // TODO: stop using LocalDateTime
+    // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
+    private fun updateJobStatusIfCurrentStatus(
+      ctx: DSLContext,
+      jobId: Long,
+      expectedCurrentStatus: JobStatus,
+      newStatus: JobStatus,
+    ): LocalDateTime {
+      val now = currentTime
+      getJob(ctx, jobId)
+      ctx.execute(
+        "UPDATE jobs SET status = CAST(? as JOB_STATUS), updated_at = ? WHERE id = ? AND status = CAST(? as JOB_STATUS)",
+        toSqlName(newStatus),
+        currentTime,
+        jobId,
+        toSqlName(expectedCurrentStatus),
       )
       return now
     }

@@ -1879,6 +1879,62 @@ internal class DefaultJobPersistenceTest {
   }
 
   @Nested
+  @DisplayName("When queueing job")
+  internal inner class QueueJob {
+    @Test
+    @DisplayName("Should queue a pending job")
+    fun testQueuePendingJob() {
+      val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+
+      every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
+      jobPersistence.queueJob(jobId)
+
+      val updated = jobPersistence.getJob(jobId)
+      assertEquals(JobStatus.QUEUED, updated.status)
+    }
+
+    @Test
+    @DisplayName("Should leave a running job unchanged")
+    fun testQueueRunningJobNoOp() {
+      val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+      jobPersistence.createAttempt(jobId, LOG_PATH)
+
+      jobPersistence.queueJob(jobId)
+
+      val updated = jobPersistence.getJob(jobId)
+      assertEquals(JobStatus.RUNNING, updated.status)
+    }
+  }
+
+  @Nested
+  @DisplayName("When cancelling queued job")
+  internal inner class CancelQueuedJob {
+    @Test
+    @DisplayName("Should cancel a queued job")
+    fun testCancelQueuedJob() {
+      val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+      jobPersistence.queueJob(jobId)
+
+      every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
+      jobPersistence.cancelQueuedJob(jobId)
+
+      val updated = jobPersistence.getJob(jobId)
+      assertEquals(JobStatus.CANCELLED, updated.status)
+    }
+
+    @Test
+    @DisplayName("Should leave a pending job unchanged")
+    fun testCancelQueuedJobNoOpForPendingJob() {
+      val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+
+      jobPersistence.cancelQueuedJob(jobId)
+
+      val updated = jobPersistence.getJob(jobId)
+      assertEquals(JobStatus.PENDING, updated.status)
+    }
+  }
+
+  @Nested
   @DisplayName("When creating attempt")
   internal inner class CreateAttempt {
     @Test

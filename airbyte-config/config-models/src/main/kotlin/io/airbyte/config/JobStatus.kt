@@ -9,6 +9,7 @@ package io.airbyte.config
  */
 enum class JobStatus {
   PENDING,
+  QUEUED,
   RUNNING,
   INCOMPLETE,
   FAILED,
@@ -23,7 +24,8 @@ enum class JobStatus {
 
     val VALID_STATUS_CHANGES: Map<JobStatus, Set<JobStatus>> =
       mapOf(
-        PENDING to setOf(RUNNING, FAILED, CANCELLED, INCOMPLETE),
+        PENDING to setOf(QUEUED, RUNNING, FAILED, CANCELLED, INCOMPLETE),
+        QUEUED to setOf(PENDING, RUNNING, CANCELLED),
         RUNNING to setOf(INCOMPLETE, SUCCEEDED, FAILED, CANCELLED),
         INCOMPLETE to setOf(PENDING, RUNNING, FAILED, CANCELLED, INCOMPLETE, SUCCEEDED),
         SUCCEEDED to emptySet(),

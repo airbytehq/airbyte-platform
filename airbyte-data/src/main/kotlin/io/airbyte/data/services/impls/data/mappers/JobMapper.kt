@@ -28,6 +28,7 @@ typealias ModelJobStatus = io.airbyte.config.JobStatus
 fun ModelJobStatus.toEntity(): EntityJobStatus =
   when (this) {
     ModelJobStatus.PENDING -> EntityJobStatus.pending
+    ModelJobStatus.QUEUED -> EntityJobStatus.queued
     ModelJobStatus.RUNNING -> EntityJobStatus.running
     ModelJobStatus.SUCCEEDED -> EntityJobStatus.succeeded
     ModelJobStatus.FAILED -> EntityJobStatus.failed
@@ -38,6 +39,7 @@ fun ModelJobStatus.toEntity(): EntityJobStatus =
 fun EntityJobStatus.toConfig(): ModelJobStatus =
   when (this) {
     EntityJobStatus.pending -> ModelJobStatus.PENDING
+    EntityJobStatus.queued -> ModelJobStatus.QUEUED
     EntityJobStatus.running -> ModelJobStatus.RUNNING
     EntityJobStatus.succeeded -> ModelJobStatus.SUCCEEDED
     EntityJobStatus.failed -> ModelJobStatus.FAILED

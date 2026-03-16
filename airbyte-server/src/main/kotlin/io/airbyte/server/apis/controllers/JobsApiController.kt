@@ -6,6 +6,7 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.JobsApi
 import io.airbyte.api.model.generated.BooleanRead
+import io.airbyte.api.model.generated.CancelQueuedJobRequest
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionJobRequestBody
 import io.airbyte.api.model.generated.DeleteStreamResetRecordsForJobRequest
@@ -26,6 +27,7 @@ import io.airbyte.api.model.generated.JobReadList
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest
 import io.airbyte.api.model.generated.PersistCancelJobRequestBody
 import io.airbyte.api.model.generated.ReportJobStartRequest
+import io.airbyte.api.model.generated.SetJobQueuedRequest
 import io.airbyte.api.model.generated.SyncInput
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.auth.generated.Intent
@@ -216,6 +218,20 @@ open class JobsApiController(
   override fun reportJobStart(
     @Body reportJobStartRequest: ReportJobStartRequest,
   ): InternalOperationResult? = execute { jobsHandler.reportJobStart(reportJobStartRequest.jobId) }
+
+  @Post("/setJobQueued")
+  @Secured(AuthRoleConstants.ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun setJobQueued(
+    @Body setJobQueuedRequest: SetJobQueuedRequest,
+  ): InternalOperationResult? = execute { jobsHandler.setJobQueued(setJobQueuedRequest.jobId) }
+
+  @Post("/cancelQueuedJob")
+  @Secured(AuthRoleConstants.ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun cancelQueuedJob(
+    @Body cancelQueuedJobRequest: CancelQueuedJobRequest,
+  ): InternalOperationResult? = execute { jobsHandler.cancelQueuedJob(cancelQueuedJobRequest.jobId) }
 
   @Post(uri = "/did_previous_job_succeed")
   @ExecuteOn(AirbyteTaskExecutors.IO)

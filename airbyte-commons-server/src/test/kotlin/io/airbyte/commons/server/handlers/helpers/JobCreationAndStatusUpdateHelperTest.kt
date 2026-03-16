@@ -186,6 +186,20 @@ internal class JobCreationAndStatusUpdateHelperTest {
   }
 
   @Test
+  fun testSetJobQueued() {
+    helper.setJobQueued(Fixtures.JOB_ID)
+
+    Mockito.verify(mJobPersistence).queueJob(Fixtures.JOB_ID)
+  }
+
+  @Test
+  fun testCancelQueuedJob() {
+    helper.cancelQueuedJob(Fixtures.JOB_ID)
+
+    Mockito.verify(mJobPersistence).cancelQueuedJob(Fixtures.JOB_ID)
+  }
+
+  @Test
   fun testReleaseStageOrdering() {
     val input = listOf(ReleaseStage.ALPHA, ReleaseStage.CUSTOM, ReleaseStage.BETA, ReleaseStage.GENERALLY_AVAILABLE)
     val expected = listOf(ReleaseStage.CUSTOM, ReleaseStage.ALPHA, ReleaseStage.BETA, ReleaseStage.GENERALLY_AVAILABLE)
