@@ -10,6 +10,7 @@ import dev.failsafe.RetryPolicy
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.Entitlements
+import io.airbyte.commons.entitlements.models.NumericEntitlementResult
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.BypassStiggEntitlementChecks
@@ -32,6 +33,7 @@ import io.stigg.api.operations.type.ProvisionSubscriptionInput
 import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEntitlementsRequest
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
+import io.stigg.sidecar.proto.v1.GetNumericEntitlementRequest
 import io.stigg.sidecar.sdk.Stigg
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -259,6 +261,64 @@ internal class StiggWrapper(
       entitlement.featureId,
       result.hasAccess,
       result.accessDeniedReason.name,
+    )
+  }
+
+  /**
+   * Get the numeric value of an entitlement for an organization.
+   *
+   * @param organizationId The organization to check
+   * @param entitlement The entitlement to get the value for
+   * @return NumericEntitlementResult containing the numeric value if available
+   */
+  fun getNumericEntitlement(
+    organizationId: OrganizationId,
+    entitlement: Entitlement,
+  ): NumericEntitlementResult {
+    logger.debug { "Getting numeric entitlement organizationId=$organizationId entitlement=$entitlement" }
+
+    if (featureFlagClient?.boolVariation(BypassStiggEntitlementChecks, Organization(organizationId.value)) == true) {
+      logger.info { "Bypassing Stigg numeric entitlement check for organizationId=$organizationId entitlement=${entitlement.featureId}" }
+      return NumericEntitlementResult(
+        featureId = entitlement.featureId,
+        hasAccess = false,
+        value = null,
+        reason = "BYPASSED_BY_FEATURE_FLAG",
+      )
+    }
+
+    val result =
+      withStiggTimeout("getNumericEntitlement(organizationId=$organizationId, entitlement=${entitlement.featureId})") {
+        stigg.getNumericEntitlement(
+          GetNumericEntitlementRequest
+            .newBuilder()
+            .setCustomerId(organizationId.value.toString())
+            .setFeatureId(entitlement.featureId)
+            .build(),
+        )
+      }
+
+    logger.debug {
+      "Got numeric entitlement organizationId=$organizationId entitlement=$entitlement " +
+        "hasAccess=${result.hasAccess} value=${result.entitlement.value} isFallback=${result.isFallback}"
+    }
+
+    if (result.isFallback) {
+      metricClient?.count(
+        OssMetricsRegistry.STIGG_FALLBACK,
+        attributes =
+          arrayOf(
+            MetricAttribute(MetricTags.ORGANIZATION_ID, organizationId.toString()),
+            MetricAttribute(MetricTags.FEATURE_ID, entitlement.featureId),
+          ),
+      )
+    }
+
+    return NumericEntitlementResult(
+      featureId = entitlement.featureId,
+      hasAccess = result.hasAccess,
+      value = if (result.hasAccess) result.entitlement.value.toLong() else null,
+      reason = result.accessDeniedReason.name,
     )
   }
 

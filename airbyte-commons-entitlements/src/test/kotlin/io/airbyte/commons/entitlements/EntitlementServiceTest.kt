@@ -11,6 +11,8 @@ import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationSalesforceEnterpriseConnector
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.FeatureEntitlement
+import io.airbyte.commons.entitlements.models.NumericEntitlementResult
 import io.airbyte.commons.entitlements.models.SourceOracleEnterpriseConnector
 import io.airbyte.commons.entitlements.models.SourceServicenowEnterpriseConnector
 import io.airbyte.commons.entitlements.models.SourceWorkdayEnterpriseConnector
@@ -49,6 +51,34 @@ class EntitlementServiceTest {
     val result = entitlementService.checkEntitlement(orgId, entitlement)
 
     assertEquals(expected, result)
+  }
+
+  @Test
+  fun `getNumericEntitlement delegates to entitlementClient`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val entitlement = FeatureEntitlement("feature-committed-data-workers")
+    val expected = NumericEntitlementResult("feature-committed-data-workers", true, 8L, null)
+
+    every { entitlementClient.getNumericEntitlement(orgId, entitlement) } returns expected
+
+    val result = entitlementService.getNumericEntitlement(orgId, entitlement)
+
+    assertEquals(expected, result)
+  }
+
+  @Test
+  fun `getNumericEntitlement returns fallback result when client throws`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val entitlement = FeatureEntitlement("feature-committed-data-workers")
+
+    every { entitlementClient.getNumericEntitlement(orgId, entitlement) } throws RuntimeException("Stigg API error")
+
+    val result = entitlementService.getNumericEntitlement(orgId, entitlement)
+
+    assertEquals("feature-committed-data-workers", result.featureId)
+    assertEquals(false, result.hasAccess)
+    assertNull(result.value)
+    assertEquals("Exception while getting numeric entitlement: Stigg API error", result.reason)
   }
 
   @Test

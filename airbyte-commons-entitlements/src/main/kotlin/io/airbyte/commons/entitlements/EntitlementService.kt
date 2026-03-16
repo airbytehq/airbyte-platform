@@ -13,6 +13,7 @@ import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlemen
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.Entitlements
+import io.airbyte.commons.entitlements.models.NumericEntitlementResult
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.config.ActorType
@@ -58,6 +59,21 @@ interface EntitlementService {
     organizationId: OrganizationId,
     entitlement: Entitlement,
   ): EntitlementResult
+
+  /**
+   * Get the numeric value of an entitlement for an organization.
+   *
+   * This method is used for entitlements that have a numeric value associated with them,
+   * such as the number of committed data workers.
+   *
+   * @param organizationId The organization to check
+   * @param entitlement The entitlement to get the value for
+   * @return NumericEntitlementResult containing the numeric value if available
+   */
+  fun getNumericEntitlement(
+    organizationId: OrganizationId,
+    entitlement: Entitlement,
+  ): NumericEntitlementResult
 
   /**
    * Verifies that an organization has access to a specific entitlement, throwing an exception if not.
@@ -142,6 +158,24 @@ internal class EntitlementServiceImpl(
         featureId = entitlement.featureId,
         isEntitled = false,
         reason = "Exception while checking entitlement: ${e.message}",
+      )
+    }
+
+  override fun getNumericEntitlement(
+    organizationId: OrganizationId,
+    entitlement: Entitlement,
+  ): NumericEntitlementResult =
+    try {
+      val result = entitlementClient.getNumericEntitlement(organizationId, entitlement)
+      sendCountMetric(OssMetricsRegistry.ENTITLEMENT_CHECK, organizationId, true)
+      result
+    } catch (e: Exception) {
+      sendCountMetric(OssMetricsRegistry.ENTITLEMENT_CHECK, organizationId, false)
+      NumericEntitlementResult(
+        featureId = entitlement.featureId,
+        hasAccess = false,
+        value = null,
+        reason = "Exception while getting numeric entitlement: ${e.message}",
       )
     }
 

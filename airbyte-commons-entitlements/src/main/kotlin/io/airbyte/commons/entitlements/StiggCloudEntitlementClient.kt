@@ -7,6 +7,7 @@ package io.airbyte.commons.entitlements
 import com.apollographql.apollo3.exception.ApolloException
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.NumericEntitlementResult
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
@@ -28,6 +29,11 @@ internal class StiggCloudEntitlementClient(
     organizationId: OrganizationId,
     entitlement: Entitlement,
   ): EntitlementResult = stigg.checkEntitlement(organizationId, entitlement)
+
+  override fun getNumericEntitlement(
+    organizationId: OrganizationId,
+    entitlement: Entitlement,
+  ): NumericEntitlementResult = stigg.getNumericEntitlement(organizationId, entitlement)
 
   override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> = stigg.getEntitlements(organizationId)
 

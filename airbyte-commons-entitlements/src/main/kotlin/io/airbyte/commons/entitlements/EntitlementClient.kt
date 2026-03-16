@@ -6,6 +6,7 @@ package io.airbyte.commons.entitlements
 
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.NumericEntitlementResult
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 
@@ -22,6 +23,11 @@ internal interface EntitlementClient {
     organizationId: OrganizationId,
     entitlement: Entitlement,
   ): EntitlementResult
+
+  fun getNumericEntitlement(
+    organizationId: OrganizationId,
+    entitlement: Entitlement,
+  ): NumericEntitlementResult
 
   fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult>
 

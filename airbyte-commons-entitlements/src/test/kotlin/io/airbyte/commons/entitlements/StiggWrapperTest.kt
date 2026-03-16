@@ -22,6 +22,9 @@ import io.stigg.api.operations.GetPaywallQuery
 import io.stigg.sidecar.proto.v1.EnumEntitlement
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementResponse
+import io.stigg.sidecar.proto.v1.GetNumericEntitlementRequest
+import io.stigg.sidecar.proto.v1.GetNumericEntitlementResponse
+import io.stigg.sidecar.proto.v1.NumericEntitlement
 import io.stigg.sidecar.sdk.Stigg
 import io.stigg.sidecar.sdk.offline.CustomerEntitlements
 import io.stigg.sidecar.sdk.offline.Entitlement
@@ -63,6 +66,32 @@ internal class StiggWrapperTest {
 
     assertEquals("missing-feature", result.featureId)
     assertEquals(false, result.isEntitled)
+  }
+
+  @Test
+  fun `getNumericEntitlement returns numeric value from stigg`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+    val entitlement = FeatureEntitlement("feature-committed-data-workers")
+    val response =
+      GetNumericEntitlementResponse
+        .newBuilder()
+        .setHasAccess(true)
+        .setEntitlement(
+          NumericEntitlement
+            .newBuilder()
+            .setValue(8)
+            .build(),
+        ).build()
+
+    every { stigg.getNumericEntitlement(any<GetNumericEntitlementRequest>()) } returns response
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+    val result = stiggWrapper.getNumericEntitlement(organizationId, entitlement)
+
+    assertEquals("feature-committed-data-workers", result.featureId)
+    assertEquals(true, result.hasAccess)
+    assertEquals(8L, result.value)
+    assertEquals("ACCESS_DENIED_REASON_UNSPECIFIED", result.reason)
   }
 
   @Test
@@ -271,6 +300,25 @@ internal class StiggWrapperTest {
 
     // Verify Stigg was never called
     verify(exactly = 0) { stigg.getBooleanEntitlement(any()) }
+  }
+
+  @Test
+  fun `getNumericEntitlement bypasses Stigg when feature flag is enabled`() {
+    val featureFlagClient = mockk<FeatureFlagClient>()
+    val stigg = mockk<Stigg>(relaxed = true)
+    val entitlement = FeatureEntitlement("feature-committed-data-workers")
+
+    every { featureFlagClient.boolVariation(BypassStiggEntitlementChecks, Organization(organizationId.value)) } returns true
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient, featureFlagClient)
+    val result = stiggWrapper.getNumericEntitlement(organizationId, entitlement)
+
+    assertEquals("feature-committed-data-workers", result.featureId)
+    assertEquals(false, result.hasAccess)
+    assertEquals(null, result.value)
+    assertEquals("BYPASSED_BY_FEATURE_FLAG", result.reason)
+
+    verify(exactly = 0) { stigg.getNumericEntitlement(any()) }
   }
 
   @Test

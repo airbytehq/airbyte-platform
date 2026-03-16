@@ -5,6 +5,8 @@
 package io.airbyte.commons.entitlements
 
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.FeatureEntitlement
+import io.airbyte.commons.entitlements.models.NumericEntitlementResult
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -19,6 +21,21 @@ class NoEntitlementClientTest {
   fun `getEntitlements returns empty list`() {
     val result = client.getEntitlements(organizationId)
     assertEquals(emptyList<EntitlementResult>(), result)
+  }
+
+  @Test
+  fun `getNumericEntitlement returns no access`() {
+    val result = client.getNumericEntitlement(organizationId, FeatureEntitlement("feature-committed-data-workers"))
+
+    assertEquals(
+      NumericEntitlementResult(
+        featureId = "feature-committed-data-workers",
+        hasAccess = false,
+        value = null,
+        reason = "NoEntitlementClient grants no entitlements",
+      ),
+      result,
+    )
   }
 
   @Test

@@ -7,6 +7,7 @@ package io.airbyte.commons.entitlements
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.NumericEntitlementResult
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.stigg.sidecar.sdk.Stigg
@@ -50,6 +51,11 @@ class StiggEnterpriseEntitlementClient(
     organizationId: OrganizationId,
     entitlement: Entitlement,
   ): EntitlementResult = stigg.checkEntitlement(smeOrgId, entitlement)
+
+  override fun getNumericEntitlement(
+    organizationId: OrganizationId,
+    entitlement: Entitlement,
+  ): NumericEntitlementResult = stigg.getNumericEntitlement(smeOrgId, entitlement)
 
   override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> = stigg.getEntitlements(smeOrgId)
 
