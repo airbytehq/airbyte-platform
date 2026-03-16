@@ -60,7 +60,8 @@ export const SupportChatPanel: React.FC<{
 
   const { messages, sendMessage, isLoading, error, stopGenerating, isStreaming } = useChatMessages({
     endpoint: "/agents/support/chat",
-    prompt: "Introduce yourself as an AI support agent and briefly outline your main functions using emojis.",
+    prompt:
+      "Introduce yourself as an AI support agent and briefly outline your main functions using emojis. Make sure to mention that you can help open a Zendesk ticket with the Airbyte Support team.",
     agentParams: {
       workspace_id: workspaceId,
       email: user.email,
