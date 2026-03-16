@@ -71,7 +71,7 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
     sourceCpuRequest: Double,
     destinationCpuRequest: Double,
     orchestratorCpuRequest: Double,
-  )
+  ): Int
 
   @Query(
     """
@@ -134,5 +134,5 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
     sourceCpuRequest: Double,
     destinationCpuRequest: Double,
     orchestratorCpuRequest: Double,
-  )
+  ): Int
 }

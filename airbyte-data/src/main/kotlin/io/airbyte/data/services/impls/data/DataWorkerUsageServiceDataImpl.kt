@@ -37,7 +37,7 @@ class DataWorkerUsageServiceDataImpl(
     )
   }
 
-  override fun incrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage) {
+  override fun incrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage): Int =
     repository.incrementExistingDataWorkerUsageBucket(
       dataWorkerUsage.organizationId,
       dataWorkerUsage.workspaceId,
@@ -47,9 +47,8 @@ class DataWorkerUsageServiceDataImpl(
       dataWorkerUsage.destinationCpuRequest,
       dataWorkerUsage.orchestratorCpuRequest,
     )
-  }
 
-  override fun decrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage) {
+  override fun decrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage): Int =
     repository.decrementExistingDataWorkerUsageBucket(
       dataWorkerUsage.organizationId,
       dataWorkerUsage.workspaceId,
@@ -59,7 +58,6 @@ class DataWorkerUsageServiceDataImpl(
       dataWorkerUsage.destinationCpuRequest,
       dataWorkerUsage.orchestratorCpuRequest,
     )
-  }
 
   /**
    * Returns data worker usage by inclusive range (ie. both the start date and end date

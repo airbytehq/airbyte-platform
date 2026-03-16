@@ -145,7 +145,30 @@ open class DataWorkerUsageService(
       // Otherwise we can update the existing bucket. Incrementing the current usage values
       // and calculating a new maximum will be handled by the SQL query in the repository,
       // so we just pass in the dataWorkerUsage object as is.
-      dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(dataWorkerUsage)
+      val rowsUpdated = dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(dataWorkerUsage)
+      if (rowsUpdated == 0) {
+        // The bucket that findMostRecentUsageBucket returned no longer matches the UPDATE's
+        // WHERE clause (which targets DATE_TRUNC('hour', bucketStart)). This can happen at
+        // hour boundaries when the SELECT and UPDATE resolve to different truncated hours.
+        // Fall back to creating a new bucket so the increment is not silently lost.
+        logger.warn {
+          "incrementExistingDataWorkerUsageBucket updated 0 rows for $dataWorkerUsage. " +
+            "Falling back to inserting a new bucket to prevent leaked CPU values."
+        }
+        val newSourceCpuRequest = mostRecentUsageBucket.sourceCpuRequest + dataWorkerUsage.sourceCpuRequest
+        val newDestCpuRequest = mostRecentUsageBucket.destinationCpuRequest + dataWorkerUsage.destinationCpuRequest
+        val newOrchCpuRequest = mostRecentUsageBucket.orchestratorCpuRequest + dataWorkerUsage.orchestratorCpuRequest
+        val usageWithNewCpuValues =
+          dataWorkerUsage.copy(
+            sourceCpuRequest = newSourceCpuRequest,
+            destinationCpuRequest = newDestCpuRequest,
+            orchestratorCpuRequest = newOrchCpuRequest,
+            maxSourceCpuRequest = newSourceCpuRequest,
+            maxDestinationCpuRequest = newDestCpuRequest,
+            maxOrchestratorCpuRequest = newOrchCpuRequest,
+          )
+        dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(usageWithNewCpuValues)
+      }
     }
   }
 
@@ -243,7 +266,30 @@ open class DataWorkerUsageService(
     } else {
       // In this case, we only need to decrement existing values, which is handled
       // by the SQL query in the repository. We can pass in the dataWorkerUsage object as is.
-      dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(dataWorkerUsage)
+      val rowsUpdated = dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(dataWorkerUsage)
+      if (rowsUpdated == 0) {
+        // The bucket that findMostRecentUsageBucket returned no longer matches the UPDATE's
+        // WHERE clause (which targets DATE_TRUNC('hour', bucketStart)). This can happen at
+        // hour boundaries when the SELECT and UPDATE resolve to different truncated hours.
+        // Fall back to creating a new bucket with the subtracted values so the decrement is not silently lost.
+        logger.warn {
+          "decrementExistingDataWorkerUsageBucket updated 0 rows for job $jobId with $dataWorkerUsage. " +
+            "Falling back to inserting a new bucket to prevent leaked CPU values."
+        }
+        val newSourceCpuRequest = (mostRecentUsageBucket.sourceCpuRequest - dataWorkerUsage.sourceCpuRequest).coerceAtLeast(0.0)
+        val newDestCpuRequest = (mostRecentUsageBucket.destinationCpuRequest - dataWorkerUsage.destinationCpuRequest).coerceAtLeast(0.0)
+        val newOrchCpuRequest = (mostRecentUsageBucket.orchestratorCpuRequest - dataWorkerUsage.orchestratorCpuRequest).coerceAtLeast(0.0)
+        val usageWithNewCpuValues =
+          dataWorkerUsage.copy(
+            sourceCpuRequest = newSourceCpuRequest,
+            destinationCpuRequest = newDestCpuRequest,
+            orchestratorCpuRequest = newOrchCpuRequest,
+            maxSourceCpuRequest = newSourceCpuRequest,
+            maxDestinationCpuRequest = newDestCpuRequest,
+            maxOrchestratorCpuRequest = newOrchCpuRequest,
+          )
+        dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(usageWithNewCpuValues)
+      }
     }
   }
 

@@ -149,7 +149,7 @@ class DataWorkerUsageServiceTest {
     every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
     every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
     every { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) } returns existingBucket
-    every { dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any()) } returns mockk()
+    every { dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any()) } returns 1
     every { featureFlagClient.boolVariation(any(), any()) } returns true
     every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PRO.id
 
@@ -399,7 +399,7 @@ class DataWorkerUsageServiceTest {
     every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
     every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
     every { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) } returns existingBucket
-    every { dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any()) } returns mockk()
+    every { dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any()) } returns 1
     every { featureFlagClient.boolVariation(any(), any()) } returns true
     every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PRO.id
 
@@ -712,6 +712,146 @@ class DataWorkerUsageServiceTest {
     assertEquals("Workspace 1", dp.workspaces[0].workspaceName)
     assertEquals(1, dp.workspaces[0].dataWorkers.size)
     assertEquals(0.75, dp.workspaces[0].dataWorkers[0].dataWorkers, 0.001)
+  }
+
+  @Test
+  fun `insertUsageForCreatedJob should fall back to new bucket when increment updates 0 rows`() {
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val jobId = 123L
+
+    val organization =
+      Organization()
+        .withOrganizationId(organizationId)
+        .withEmail("test@example.com")
+        .withName("Test Org")
+
+    val workspace =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId)
+        .withDataplaneGroupId(dataplaneGroupId)
+
+    val job = buildTestJob(jobId, workspaceId, "2.0", "3.0", "1.0")
+
+    val bucketStartTime = OffsetDateTime.now().minusMinutes(30)
+    val existingBucket =
+      DataWorkerUsage(
+        organizationId = organizationId,
+        workspaceId = workspaceId,
+        dataplaneGroupId = dataplaneGroupId,
+        sourceCpuRequest = 1.0,
+        destinationCpuRequest = 1.5,
+        orchestratorCpuRequest = 0.5,
+        bucketStart = bucketStartTime,
+        createdAt = OffsetDateTime.now(),
+        maxSourceCpuRequest = 1.0,
+        maxDestinationCpuRequest = 1.5,
+        maxOrchestratorCpuRequest = 0.5,
+      )
+
+    every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
+    every { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) } returns existingBucket
+    every { dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any()) } returns 0
+    every { dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any()) } returns mockk()
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+    every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PRO.id
+
+    service.insertUsageForCreatedJob(job)
+
+    // Should have attempted the increment first
+    verify(exactly = 1) {
+      dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any())
+    }
+
+    // Since 0 rows were updated, should fall back to inserting a new bucket
+    // with carried-forward values (existing + new job)
+    verify(exactly = 1) {
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(
+        match {
+          it.organizationId == organizationId &&
+            it.workspaceId == workspaceId &&
+            it.dataplaneGroupId == dataplaneGroupId &&
+            it.sourceCpuRequest == 3.0 && // 1.0 + 2.0
+            it.destinationCpuRequest == 4.5 && // 1.5 + 3.0
+            it.orchestratorCpuRequest == 1.5 && // 0.5 + 1.0
+            it.maxSourceCpuRequest == 3.0 &&
+            it.maxDestinationCpuRequest == 4.5 &&
+            it.maxOrchestratorCpuRequest == 1.5
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `subtractUsageForCompletedJob should fall back to new bucket when decrement updates 0 rows`() {
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val jobId = 123L
+
+    val organization =
+      Organization()
+        .withOrganizationId(organizationId)
+        .withEmail("test@example.com")
+        .withName("Test Org")
+
+    val workspace =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId)
+        .withDataplaneGroupId(dataplaneGroupId)
+
+    val job = buildTestJob(jobId, workspaceId, "2.0", "3.0", "1.0")
+
+    val bucketStartTime = OffsetDateTime.now().minusMinutes(30)
+    val existingBucket =
+      DataWorkerUsage(
+        organizationId = organizationId,
+        workspaceId = workspaceId,
+        dataplaneGroupId = dataplaneGroupId,
+        sourceCpuRequest = 5.0,
+        destinationCpuRequest = 6.0,
+        orchestratorCpuRequest = 3.0,
+        bucketStart = bucketStartTime,
+        createdAt = OffsetDateTime.now(),
+        maxSourceCpuRequest = 5.0,
+        maxDestinationCpuRequest = 6.0,
+        maxOrchestratorCpuRequest = 3.0,
+      )
+
+    every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
+    every { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) } returns existingBucket
+    every { dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any()) } returns 0
+    every { dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any()) } returns mockk()
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+    every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PRO.id
+
+    service.subtractUsageForCompletedJob(job)
+
+    // Should have attempted the decrement first
+    verify(exactly = 1) {
+      dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any())
+    }
+
+    // Since 0 rows were updated, should fall back to inserting a new bucket
+    // with subtracted values (existing - completed job)
+    verify(exactly = 1) {
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(
+        match {
+          it.organizationId == organizationId &&
+            it.workspaceId == workspaceId &&
+            it.dataplaneGroupId == dataplaneGroupId &&
+            it.sourceCpuRequest == 3.0 && // 5.0 - 2.0
+            it.destinationCpuRequest == 3.0 && // 6.0 - 3.0
+            it.orchestratorCpuRequest == 2.0 && // 3.0 - 1.0
+            it.maxSourceCpuRequest == 3.0 &&
+            it.maxDestinationCpuRequest == 3.0 &&
+            it.maxOrchestratorCpuRequest == 2.0
+        },
+      )
+    }
   }
 
   private fun buildTestJob(

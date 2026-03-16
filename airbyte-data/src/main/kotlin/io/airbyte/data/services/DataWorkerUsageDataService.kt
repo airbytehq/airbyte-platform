@@ -18,9 +18,9 @@ interface DataWorkerUsageDataService {
 
   fun insertNewDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage)
 
-  fun incrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage)
+  fun incrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage): Int
 
-  fun decrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage)
+  fun decrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage): Int
 
   fun getDataWorkerUsageByOrganizationAndTimeRange(
     organizationId: UUID,
