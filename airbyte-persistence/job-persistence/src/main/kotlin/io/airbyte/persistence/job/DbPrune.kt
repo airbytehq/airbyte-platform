@@ -8,6 +8,7 @@ import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.instance.jobs.jooq.generated.Tables
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.jooq.impl.DSL
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import io.airbyte.db.instance.configs.jooq.generated.Tables as ConfigTables
@@ -31,6 +32,8 @@ class DbPrune(
     private const val DEFAULT_BATCH_SIZE = 500
     private const val DEFAULT_JOBS_MAX_AGE_MONTHS = 6L
     private const val DEFAULT_EVENTS_MAX_AGE_MONTHS = 18L
+    private const val DATA_WORKER_USAGE_RESERVATION_TABLE = "data_worker_usage_reservation"
+    private val DATA_WORKER_USAGE_RESERVATION_JOB_ID = DSL.field(DSL.name("job_id"), Long::class.java)
   }
 
   /**
@@ -143,7 +146,18 @@ class DbPrune(
           .where(Tables.RETRY_STATES.JOB_ID.`in`(jobsToDelete))
           .execute()
 
-      // 8. Finally, delete the jobs themselves
+      // 8. Delete data worker usage reservations for pruned jobs if the config table is available.
+      val dataWorkerUsageReservationsDeleted =
+        if (ctx.meta().tables.any { it.name.equals(DATA_WORKER_USAGE_RESERVATION_TABLE, ignoreCase = true) }) {
+          ctx
+            .deleteFrom(DSL.table(DSL.name(DATA_WORKER_USAGE_RESERVATION_TABLE)))
+            .where(DATA_WORKER_USAGE_RESERVATION_JOB_ID.`in`(jobsToDelete))
+            .execute()
+        } else {
+          0
+        }
+
+      // 9. Finally, delete the jobs themselves
       val jobsDeleted =
         ctx
           .deleteFrom(Tables.JOBS)
@@ -160,6 +174,7 @@ class DbPrune(
           |  Normalization summaries: $normalizationSummariesDeleted
           |  Stream statuses: $streamStatusesDeleted
           |  Retry states: $retryStatesDeleted
+          |  Data worker usage reservations: $dataWorkerUsageReservationsDeleted
         """.trimMargin()
       }
 

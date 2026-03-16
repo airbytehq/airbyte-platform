@@ -318,6 +318,18 @@ create table "public"."data_worker_usage" (
   "max_orchestrator_cpu_request" real not null default 0.0,
   constraint "data_worker_usage_pkey" primary key ("organization_id", "bucket_start", "workspace_id", "dataplane_group_id")
 );
+create table "public"."data_worker_usage_reservation" (
+  "job_id" bigint not null,
+  "organization_id" uuid not null,
+  "workspace_id" uuid not null,
+  "dataplane_group_id" uuid not null,
+  "source_cpu_request" real not null,
+  "destination_cpu_request" real not null,
+  "orchestrator_cpu_request" real not null,
+  "used_on_demand_capacity" boolean not null default false,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "data_worker_usage_reservation_pkey" primary key ("job_id")
+);
 create table "public"."dataplane" (
   "id" uuid not null,
   "dataplane_group_id" uuid not null,
@@ -846,6 +858,7 @@ where ((job_id IS NOT NULL));
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create unique index "actor_definition_id_state_tag_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc, "tag" asc)
 where (((state)::text = ANY ((ARRAY['initialized'::character varying, 'in_progress'::character varying, 'paused'::character varying, 'workflow_started'::character varying, 'finalizing'::character varying, 'errored'::character varying])::text[])));
+create index "data_worker_usage_reservation_organization_id_idx" on "public"."data_worker_usage_reservation"("organization_id" asc);
 create index "idx_dataplane_heartbeat_log_created_at" on "public"."dataplane_heartbeat_log"("created_at" asc);
 create index "idx_dataplane_heartbeat_log_dataplane_created_at" on "public"."dataplane_heartbeat_log"("dataplane_id" asc, "created_at" desc);
 create index "group_organization_id_name_idx" on "public"."group"("organization_id" asc, "name" asc);

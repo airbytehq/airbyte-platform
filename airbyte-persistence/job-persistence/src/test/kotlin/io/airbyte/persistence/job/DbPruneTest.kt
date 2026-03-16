@@ -20,6 +20,7 @@ import io.airbyte.test.utils.Databases
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.SQLDialect
+import org.jooq.impl.DSL
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -111,6 +112,11 @@ class DbPruneTest {
       // Clear connection timeline events table
       try {
         ctx.truncateTable(ConfigTables.CONNECTION_TIMELINE_EVENT).cascade().execute()
+      } catch (e: Exception) {
+        // Table may not exist in test setup
+      }
+      try {
+        ctx.execute("DROP TABLE IF EXISTS data_worker_usage_reservation")
       } catch (e: Exception) {
         // Table may not exist in test setup
       }
@@ -239,6 +245,31 @@ class DbPruneTest {
     assertEquals(0, countNormalizationSummaries())
     assertEquals(0, countStreamStatuses())
     assertEquals(0, countRetryStates())
+  }
+
+  @Test
+  @DisplayName("Should delete old data worker usage reservations when jobs are pruned")
+  fun testDeleteDataWorkerUsageReservationsForPrunedJobs() {
+    ensureDataWorkerUsageReservationTableExists()
+
+    val connectionId = UUID.randomUUID()
+    val scope = connectionId.toString()
+    val now = Instant.now()
+    val sevenMonthsAgo = now.minusSeconds(7L * 30 * 24 * 60 * 60)
+
+    val oldJobId = createJob(scope, sevenMonthsAgo)
+    val attemptNumber = jobPersistence.createAttempt(oldJobId, LOG_PATH)
+    jobPersistence.succeedAttempt(oldJobId, attemptNumber)
+    createDataWorkerUsageReservation(oldJobId)
+
+    createJob(scope, now)
+
+    assertEquals(1, countDataWorkerUsageReservations())
+
+    val deletedCount = dbPrune.pruneJobs()
+
+    assertEquals(1, deletedCount)
+    assertEquals(0, countDataWorkerUsageReservations())
   }
 
   @Test
@@ -440,6 +471,8 @@ class DbPruneTest {
   private fun countStreamStatuses(): Int = countRecords(Tables.STREAM_STATUSES.name)
 
   private fun countRetryStates(): Int = countRecords(Tables.RETRY_STATES.name)
+
+  private fun countDataWorkerUsageReservations(): Int = countRecords("data_worker_usage_reservation")
 
   private fun countRecords(tableName: String): Int =
     jobDatabase.query { ctx: DSLContext ->
@@ -661,6 +694,54 @@ class DbPruneTest {
           .set(ConfigTables.CONNECTION.NON_BREAKING_CHANGE_PREFERENCE, NonBreakingChangePreferenceType.ignore)
           .execute()
       }
+    }
+  }
+
+  private fun ensureDataWorkerUsageReservationTableExists() {
+    jobDatabase.query { ctx: DSLContext ->
+      ctx.execute(
+        """
+        CREATE TABLE IF NOT EXISTS data_worker_usage_reservation(
+          job_id BIGINT PRIMARY KEY,
+          organization_id UUID NOT NULL,
+          workspace_id UUID NOT NULL,
+          dataplane_group_id UUID NOT NULL,
+          source_cpu_request REAL NOT NULL,
+          destination_cpu_request REAL NOT NULL,
+          orchestrator_cpu_request REAL NOT NULL,
+          used_on_demand_capacity BOOLEAN NOT NULL DEFAULT FALSE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """.trimIndent(),
+      )
+    }
+  }
+
+  private fun createDataWorkerUsageReservation(jobId: Long) {
+    jobDatabase.query { ctx: DSLContext ->
+      ctx
+        .insertInto(DSL.table(DSL.name("data_worker_usage_reservation")))
+        .columns(
+          DSL.field(DSL.name("job_id"), Long::class.java),
+          DSL.field(DSL.name("organization_id"), UUID::class.java),
+          DSL.field(DSL.name("workspace_id"), UUID::class.java),
+          DSL.field(DSL.name("dataplane_group_id"), UUID::class.java),
+          DSL.field(DSL.name("source_cpu_request"), Float::class.java),
+          DSL.field(DSL.name("destination_cpu_request"), Float::class.java),
+          DSL.field(DSL.name("orchestrator_cpu_request"), Float::class.java),
+          DSL.field(DSL.name("used_on_demand_capacity"), Boolean::class.java),
+          DSL.field(DSL.name("created_at"), OffsetDateTime::class.java),
+        ).values(
+          jobId,
+          UUID.randomUUID(),
+          UUID.randomUUID(),
+          UUID.randomUUID(),
+          1.0f,
+          1.0f,
+          1.0f,
+          false,
+          OffsetDateTime.now(ZoneOffset.UTC),
+        ).execute()
     }
   }
 
