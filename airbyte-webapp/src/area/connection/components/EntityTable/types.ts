@@ -7,6 +7,15 @@ import {
   WebBackendConnectionListItem,
 } from "core/api/types/AirbyteClient";
 
+/**
+ * Extended WebBackendConnectionListItem with onDemandEnabled field.
+ * TODO: Remove this extension once backend adds onDemandEnabled to the API response.
+ * See: https://github.com/airbytehq/hydra-issues-internal/issues/113
+ */
+export interface WebBackendConnectionListItemWithOnDemand extends WebBackendConnectionListItem {
+  onDemandEnabled?: boolean;
+}
+
 interface ConnectionTableDataItem {
   connectionId: string;
   name: string;
@@ -24,7 +33,7 @@ interface ConnectionTableDataItem {
   lastSyncStatus: string | null;
   connectorIcon?: string;
   entityIcon?: string;
-  connection: WebBackendConnectionListItem;
+  connection: WebBackendConnectionListItemWithOnDemand;
   tags?: Tag[];
 }
 

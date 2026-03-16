@@ -651,6 +651,12 @@ interface ConnectionListFilters {
   sourceDefinitionIds: string[];
   destinationDefinitionIds: string[];
   tagIds: string[];
+  /**
+   * Filter by on-demand enabled connections (Burst).
+   * TODO: Remove this field once backend adds onDemandEnabled filter support.
+   * See: https://github.com/airbytehq/hydra-issues-internal/issues/114
+   */
+  onDemandEnabled?: boolean | null;
 }
 
 export const useConnectionList = ({
@@ -675,6 +681,9 @@ export const useConnectionList = ({
     ...(filters?.sourceDefinitionIds?.length ? [`sourceDef-${filters.sourceDefinitionIds.join(",")}`] : []),
     ...(filters?.destinationDefinitionIds?.length ? [`destDef-${filters.destinationDefinitionIds.join(",")}`] : []),
     ...(filters?.tagIds?.length ? [`tags-${filters.tagIds.join(",")}`] : []),
+    ...(filters?.onDemandEnabled !== undefined && filters?.onDemandEnabled !== null
+      ? [`onDemand-${filters.onDemandEnabled}`]
+      : []),
     `sort-${sortKey}`,
     `pageSize-${pageSize}`,
   ]);
@@ -697,6 +706,9 @@ export const useConnectionList = ({
             statuses: filters.status ? [filters.status] : undefined,
             states: filters.state ? [filters.state] : undefined,
             tagIds: filters.tagIds,
+            // TODO: Remove type assertion once onDemandEnabled is added to WebBackendConnectionListFilters.
+            // See: https://github.com/airbytehq/hydra-issues-internal/issues/114
+            ...(filters.onDemandEnabled != null && { onDemandEnabled: filters.onDemandEnabled }),
           },
         },
         requestOptions

@@ -24,6 +24,8 @@ interface ConnectionsListCardProps {
   resetFilters: () => void;
   tagFilters: string[];
   setTagFilters: (tagFilters: string[]) => void;
+  burstFilter: boolean;
+  setBurstFilter: (value: boolean) => void;
   sortKey: WebBackendConnectionListSortKey;
   setSortKey: (sortState: WebBackendConnectionListSortKey) => void;
   isLoading?: boolean;
@@ -38,6 +40,8 @@ export const ConnectionsListCard: React.FC<ConnectionsListCardProps> = ({
   resetFilters,
   tagFilters,
   setTagFilters,
+  burstFilter,
+  setBurstFilter,
   sortKey,
   setSortKey,
   isLoading,
@@ -55,6 +59,8 @@ export const ConnectionsListCard: React.FC<ConnectionsListCardProps> = ({
           resetFilters={resetFilters}
           tagFilters={tagFilters}
           setTagFilters={setTagFilters}
+          burstFilter={burstFilter}
+          setBurstFilter={setBurstFilter}
         />
       </div>
       <Box px="lg">

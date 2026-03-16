@@ -12,6 +12,7 @@ import { PageHeader } from "components/ui/PageHeader";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { CapacityReachedMessage } from "area/connection/components/CapacityReachedMessage";
+import { WebBackendConnectionListItemWithOnDemand } from "area/connection/components/EntityTable/types";
 import { ActiveConnectionLimitReachedModal } from "area/workspace/components/ActiveConnectionLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
 import { useConnectionList, useCurrentWorkspace, useFilters } from "core/api";
@@ -51,6 +52,9 @@ export const AllConnectionsPage: React.FC = () => {
   // Tag filter state management
   const [tagFilters, setTagFilters] = React.useState<string[]>([]);
 
+  // Burst (on-demand) filter state management
+  const [burstFilter, setBurstFilter] = React.useState(false);
+
   // Sort state management
   const [sortKey, setSortKey] = React.useState<WebBackendConnectionListSortKey>("connectionName_asc");
 
@@ -66,12 +70,16 @@ export const AllConnectionsPage: React.FC = () => {
       sourceDefinitionIds: filterValues.source ? [filterValues.source] : [],
       destinationDefinitionIds: filterValues.destination ? [filterValues.destination] : [],
       tagIds: tagFilters.length > 0 ? tagFilters : [],
+      onDemandEnabled: burstFilter ? true : null,
     },
     sortKey,
   });
 
   const connections = useMemo(
-    () => connectionListQuery.data?.pages.flatMap((page) => page.connections) ?? [],
+    () =>
+      connectionListQuery.data?.pages.flatMap(
+        (page) => page.connections as WebBackendConnectionListItemWithOnDemand[]
+      ) ?? [],
     [connectionListQuery.data?.pages]
   );
 
@@ -156,9 +164,12 @@ export const AllConnectionsPage: React.FC = () => {
                 resetFilters={() => {
                   resetFilters();
                   setTagFilters([]);
+                  setBurstFilter(false);
                 }}
                 tagFilters={tagFilters}
                 setTagFilters={setTagFilters}
+                burstFilter={burstFilter}
+                setBurstFilter={setBurstFilter}
                 sortKey={sortKey}
                 setSortKey={setSortKey}
               />

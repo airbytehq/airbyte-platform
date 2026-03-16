@@ -923,6 +923,8 @@
   "connection.tags.create": "Create",
   "connection.tags.selectOrCreateTag": "{hasTags, select, true {Select an option or create one} other {Create a tag}}",
   "connection.tags.limitReached": "Maximum 10 tags can be added to a connection.",
+  "connection.tag.burst": "Burst",
+  "connection.tag.burst.tooltip": "This connection uses on-demand capacity for syncs",
   "connection.timeline": "Timeline",
   "connection.timeline.empty": "No events to display",
   "connection.timeline.error": "Error: ",

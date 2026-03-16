@@ -3,22 +3,20 @@ import { FormattedMessage } from "react-intl";
 import { Text } from "components/ui/Text";
 
 import { JobStatus } from "core/api";
-import {
-  ActorStatus,
-  ConnectionStatus,
-  DestinationSnippetRead,
-  SourceSnippetRead,
-  WebBackendConnectionListItem,
-} from "core/api/types/AirbyteClient";
+import { ActorStatus, ConnectionStatus, DestinationSnippetRead, SourceSnippetRead } from "core/api/types/AirbyteClient";
 
-import { ConnectionTableDataItem, Status as ConnectionSyncStatus } from "./types";
+import {
+  ConnectionTableDataItem,
+  Status as ConnectionSyncStatus,
+  WebBackendConnectionListItemWithOnDemand,
+} from "./types";
 
 const getConnectorTypeName = (connectorSpec: DestinationSnippetRead | SourceSnippetRead) => {
   return "sourceName" in connectorSpec ? connectorSpec.sourceName : connectorSpec.destinationName;
 };
 
 export const getConnectionTableData = (
-  connections: WebBackendConnectionListItem[],
+  connections: WebBackendConnectionListItemWithOnDemand[],
   type: "source" | "destination" | "connection"
 ): ConnectionTableDataItem[] => {
   const connectType = type === "source" ? "destination" : "source";
