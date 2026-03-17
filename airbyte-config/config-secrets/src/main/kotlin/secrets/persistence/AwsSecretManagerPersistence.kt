@@ -40,6 +40,17 @@ import kotlin.jvm.optionals.getOrElse
 
 private val logger = KotlinLogging.logger {}
 
+private const val ACCESS_DENIED_ERROR_CODE = "AccessDeniedException"
+private const val ASSUMED_ROLE_MARKER = "assumed-role"
+
+/**
+ * Returns true if this [AWSSecretsManagerException] is an AccessDeniedException whose message
+ * mentions an assumed-role, indicating tag-based IAM (ABAC) denied access because the secret
+ * does not exist (AWS cannot evaluate tag conditions on a non-existent resource).
+ */
+private fun AWSSecretsManagerException.isAssumedRoleAccessDenied(): Boolean =
+  errorCode == ACCESS_DENIED_ERROR_CODE && errorMessage?.contains(ASSUMED_ROLE_MARKER) == true
+
 enum class AwsAuthType(
   val value: String,
 ) {
@@ -78,6 +89,17 @@ class AwsSecretManagerPersistence(
     val existingSecret =
       try {
         read(coordinate)
+      } catch (e: SecretCoordinateException) {
+        // read() may wrap an AWSSecretsManagerException in a SecretCoordinateException.
+        // Apply the same assumed-role handling: if the underlying cause is an assumed-role
+        // AccessDeniedException, treat it as "secret not found" and proceed to create.
+        val cause = e.cause
+        if (cause is AWSSecretsManagerException && cause.isAssumedRoleAccessDenied()) {
+          logger.info { "SecretCoordinateException with assumed-role AccessDeniedException - Secret ${coordinate.fullCoordinate} not found" }
+          ""
+        } else {
+          throw e
+        }
       } catch (e: AWSSecretsManagerException) {
         // We use tags to control access to secrets.
         // The AWS SDK doesn't differentiate between role access exceptions and secret not found exceptions to prevent leaking information.
@@ -85,7 +107,7 @@ class AwsSecretManagerPersistence(
         // In theory, the secret should not exist, and we will go straight to attempting to create which is safe because:
         // 1. Update and create are distinct actions, and we can't create over an already existing secret, so we should get an error and no-op
         // 2. If the secret does exist, we will get an error and no-op
-        if (e.localizedMessage.contains("assumed-role")) {
+        if (e.isAssumedRoleAccessDenied()) {
           logger.info { "AWS exception caught - Secret ${coordinate.fullCoordinate} not found" }
           ""
         } else {
@@ -216,7 +238,7 @@ interface AwsSecretsManagerClient {
       // When IAM policies use tag-based conditions (ABAC), AWS returns AccessDeniedException instead of
       // ResourceNotFoundException for non-existent secrets because it cannot evaluate tag conditions.
       // In this case, we should attempt the same coordinateBase fallback as for ResourceNotFoundException.
-      if (e.errorCode == "AccessDeniedException" && e.errorMessage?.contains("assumed-role") == true &&
+      if (e.isAssumedRoleAccessDenied() &&
         coordinate is AirbyteManagedSecretCoordinate
       ) {
         logger.warn { "AccessDeniedException for ${coordinate.fullCoordinate} with assumed-role - attempting coordinateBase fallback" }
@@ -225,12 +247,18 @@ interface AwsSecretsManagerClient {
         } catch (_: ResourceNotFoundException) {
           logger.warn { "Secret ${coordinate.coordinateBase} not found" }
         } catch (fallbackEx: AWSSecretsManagerException) {
-          // If the fallback also fails with an access error, wrap and throw
-          throw SecretCoordinateException(
-            "Failed to read secret ${coordinate.fullCoordinate}: ${fallbackEx.errorMessage}",
-            "aws",
-            fallbackEx,
-          )
+          // If the fallback also fails with an assumed-role AccessDeniedException, the secret
+          // simply doesn't exist under either coordinate. Log and fall through to return empty string,
+          // same as the ResourceNotFoundException catch above.
+          if (fallbackEx.isAssumedRoleAccessDenied()) {
+            logger.warn { "AccessDeniedException for ${coordinate.coordinateBase} with assumed-role - secret does not exist" }
+          } else {
+            throw SecretCoordinateException(
+              "Failed to read secret ${coordinate.fullCoordinate}: ${fallbackEx.errorMessage}",
+              "aws",
+              fallbackEx,
+            )
+          }
         }
       } else {
         throw SecretCoordinateException(
