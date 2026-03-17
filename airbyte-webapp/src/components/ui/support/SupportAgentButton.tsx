@@ -3,13 +3,7 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentConnectionIdOptional } from "area/connection/utils";
-import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useFeature, FeatureItem } from "core/services/features";
-
-import { SupportChatPanel } from "./SupportAgentWidget";
-import { SupportChatPanelPortal } from "./SupportChatPanelPortal";
-import { useSupportChatPanelState } from "./useSupportChatPanelState";
+import { useSupportAgentService } from "cloud/services/supportAgent";
 
 /**
  * A reusable, icon-only button that invokes the Support Agent bot.
@@ -18,62 +12,18 @@ import { useSupportChatPanelState } from "./useSupportChatPanelState";
  * It includes a tooltip to clarify its purpose. The button can be reused across the UI
  * wherever support access is needed, providing a consistent way for users to get help.
  *
- * The button will only render if the SupportAgentBot feature is enabled and a valid
- * workspace context exists.
+ * NOTE: This component must only be rendered within `SupportAgentServiceProvider`.
+ * Parent components should check the `SupportAgentBot` feature flag before rendering.
  */
 export const SupportAgentButton: React.FC = () => {
-  const supportEnabled = useFeature(FeatureItem.SupportAgentBot);
-  const workspaceId = useCurrentWorkspaceId();
-  const connectionId = useCurrentConnectionIdOptional();
-  const {
-    isOpen,
-    setIsOpen,
-    isExpanded,
-    setIsExpanded,
-    hasBeenOpened,
-    setHasBeenOpened,
-    conversationKey,
-    handleNewConversation,
-  } = useSupportChatPanelState();
-
-  // Don't render if feature disabled or no workspace context
-  if (!supportEnabled || !workspaceId) {
-    return null;
-  }
+  const { openSupportBot } = useSupportAgentService();
 
   return (
-    <>
-      <Tooltip
-        placement="bottom"
-        control={
-          <Button
-            variant="magic"
-            size="xs"
-            icon="chat"
-            iconSize="md"
-            type="button"
-            onClick={() => {
-              setHasBeenOpened(true);
-              setIsOpen(true);
-            }}
-          />
-        }
-      >
-        <FormattedMessage id="connectorBuilder.supportAgent.tooltip" />
-      </Tooltip>
-      {hasBeenOpened && (
-        <SupportChatPanelPortal isOpen={isOpen}>
-          <SupportChatPanel
-            key={conversationKey}
-            workspaceId={workspaceId}
-            connectionId={connectionId}
-            isExpanded={isExpanded}
-            setIsExpanded={setIsExpanded}
-            onClose={() => setIsOpen(false)}
-            onNewConversation={handleNewConversation}
-          />
-        </SupportChatPanelPortal>
-      )}
-    </>
+    <Tooltip
+      placement="bottom"
+      control={<Button variant="magic" size="xs" icon="chat" iconSize="md" type="button" onClick={openSupportBot} />}
+    >
+      <FormattedMessage id="connectorBuilder.supportAgent.tooltip" />
+    </Tooltip>
   );
 };

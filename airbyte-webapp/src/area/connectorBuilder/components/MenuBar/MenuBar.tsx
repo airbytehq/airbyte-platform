@@ -13,6 +13,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import { HelpDropdown } from "area/layout/SideBar/components/HelpDropdown";
 import { CloudHelpDropdown } from "cloud/components/CloudHelpDropdown";
 import { useConnectorBuilderFormState } from "core/services/connectorBuilder/ConnectorBuilderStateService";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { RoutePaths } from "pages/routePaths";
@@ -31,6 +32,7 @@ export const MenuBar: React.FC = () => {
   } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
   const isCloudApp = useIsCloudApp();
+  const supportAgentEnabled = useFeature(FeatureItem.SupportAgentBot);
 
   // The browser default undo/redo behavior maintains a stack of all edited fields, and
   // as the user continues to undo/redo, it will continue to apply it to the next input
@@ -162,7 +164,7 @@ export const MenuBar: React.FC = () => {
         <AssistConfigButton />
       </FlexContainer>
       <FlexContainer direction="row" alignItems="center" className={styles.rightSide}>
-        <SupportAgentButton />
+        {supportAgentEnabled && <SupportAgentButton />}
         {isCloudApp ? (
           <CloudHelpDropdown className={styles.helpButton} hideLabel placement="bottom" />
         ) : (

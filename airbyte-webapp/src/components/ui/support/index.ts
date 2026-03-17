@@ -1,4 +1,3 @@
-export { SupportAgentWidget } from "./SupportAgentWidget";
+export { SupportAgentFloatingButton, SupportChatPanel } from "./SupportAgentFloatingButton";
 export { SupportAgentButton } from "./SupportAgentButton";
 export { SupportChatPanelPortal } from "./SupportChatPanelPortal";
-export { useSupportChatPanelState } from "./useSupportChatPanelState";

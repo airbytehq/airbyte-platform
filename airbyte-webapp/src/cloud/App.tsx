@@ -5,9 +5,10 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { DeployPreviewMessage } from "components/ui/DeployPreviewMessage";
 import { DevToolsToggle } from "components/ui/DevToolsToggle";
 import LoadingPage from "components/ui/LoadingPage";
-import { SupportAgentWidget } from "components/ui/support";
+import { SupportAgentFloatingButton } from "components/ui/support";
 
 import { Routing } from "cloud/cloudRoutes";
+import { SupportAgentServiceProvider } from "cloud/services/supportAgent";
 import { QueryProvider } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { AnalyticsProvider } from "core/services/analytics";
@@ -25,7 +26,6 @@ import { AirbyteThemeProvider } from "core/utils/useAirbyteTheme";
 
 import { CloudAuthService } from "./services/auth/CloudAuthService";
 import { FullStoryGuidesProvider } from "./services/thirdParty/fullstoryGuides/FullStoryGuidesProvider";
-import { ZendeskProvider } from "./services/thirdParty/zendesk";
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
   <NotificationService>
@@ -37,10 +37,10 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
               <DrawerContextProvider>
                 <HelmetProvider>
                   <FullStoryGuidesProvider>
-                    <ZendeskProvider>
+                    <SupportAgentServiceProvider>
                       {children}
-                      <SupportAgentWidget />
-                    </ZendeskProvider>
+                      <SupportAgentFloatingButton />
+                    </SupportAgentServiceProvider>
                   </FullStoryGuidesProvider>
                 </HelmetProvider>
               </DrawerContextProvider>

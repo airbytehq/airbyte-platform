@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import { useCallback, useRef, useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, matchPath } from "react-router-dom";
@@ -11,21 +10,18 @@ import { Icon } from "components/ui/Icon";
 import { ChatTextInput } from "components/ui/support/ChatTextInput";
 import { Text } from "components/ui/Text";
 
-import { useCurrentConnectionIdOptional } from "area/connection/utils";
 import { ChatInterfaceBody, ChatInterfaceContainer, ChatInterfaceHeader } from "area/connector/components/chat";
 import { useChatMessages } from "area/connector/components/chat/hooks/useChatMessages";
 import { MessageList } from "area/connector/components/chat/MessageList";
-import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useSupportAgentService } from "cloud/services/supportAgent";
 import { useCurrentUser } from "core/services/auth";
 import { useFeature, FeatureItem } from "core/services/features";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { RoutePaths, SourcePaths, DestinationPaths } from "pages/routePaths";
 
 import { AutoScrollToggle } from "./AutoScrollToggle";
-import styles from "./SupportAgentWidget.module.scss";
-import { SupportChatPanelPortal } from "./SupportChatPanelPortal";
+import styles from "./SupportAgentFloatingButton.module.scss";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
-import { useSupportChatPanelState } from "./useSupportChatPanelState";
 
 // Routes where support bot should be hidden to avoid conflict with setup bot or other assistant buttons
 const HIDDEN_SUPPORT_BOT_PATHS = [
@@ -34,9 +30,8 @@ const HIDDEN_SUPPORT_BOT_PATHS = [
   `${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.ConnectorBuilder}/edit/*`,
 ];
 
-// Inner component that uses the chat hook - only rendered when widget is open
 export const SupportChatPanel: React.FC<{
-  workspaceId: string;
+  workspaceId?: string;
   connectionId?: string;
   isExpanded: boolean;
   setIsExpanded: (value: boolean) => void;
@@ -63,9 +58,9 @@ export const SupportChatPanel: React.FC<{
     prompt:
       "Introduce yourself as an AI support agent and briefly outline your main functions using emojis. Make sure to mention that you can help open a Zendesk ticket with the Airbyte Support team.",
     agentParams: {
-      workspace_id: workspaceId,
       email: user.email,
       current_page_path: pathname,
+      ...(workspaceId && { workspace_id: workspaceId }),
       ...(connectionId && { connection_id: connectionId }),
     },
     clientTools: {},
@@ -91,7 +86,6 @@ export const SupportChatPanel: React.FC<{
     }
   }, [messages, trackTicketCreated]);
 
-  // Send message and track
   const handleSendMessage = useCallback(
     (content: string) => {
       const userMessageCount = messages.filter((msg) => msg.role === "user").length + 1;
@@ -117,7 +111,6 @@ export const SupportChatPanel: React.FC<{
   return (
     <div className={isExpanded ? styles.panelExpanded : styles.panel}>
       <ChatInterfaceContainer className={styles.chatContainer}>
-        {/* Custom Header */}
         <ChatInterfaceHeader className={styles.header}>
           <FlexContainer
             direction="row"
@@ -171,13 +164,13 @@ export const SupportChatPanel: React.FC<{
           </FlexContainer>
         </ChatInterfaceHeader>
 
-        {/* Workspace indicator */}
-        <div className={styles.workspaceIndicator}>
-          <Text size="xs" color="grey">
-            <FormattedMessage id="chat.supportAgent.workspace" values={{ workspaceId }} />
-          </Text>
-        </div>
-        {/* Chat Body */}
+        {workspaceId && (
+          <div className={styles.workspaceIndicator}>
+            <Text size="xs" color="grey">
+              <FormattedMessage id="chat.supportAgent.workspace" values={{ workspaceId }} />
+            </Text>
+          </div>
+        )}
         <ChatInterfaceBody>
           <MessageList
             messages={messages}
@@ -197,61 +190,26 @@ export const SupportChatPanel: React.FC<{
   );
 };
 
-export const SupportAgentWidget: React.FC = () => {
+export const SupportAgentFloatingButton: React.FC = () => {
   const supportEnabled = useFeature(FeatureItem.SupportAgentBot);
-  const workspaceId = useCurrentWorkspaceId();
-  const connectionId = useCurrentConnectionIdOptional();
   const { pathname } = useLocation();
-  const {
-    isOpen,
-    setIsOpen,
-    isExpanded,
-    setIsExpanded,
-    hasBeenOpened,
-    setHasBeenOpened,
-    conversationKey,
-    handleNewConversation,
-  } = useSupportChatPanelState();
+  const { openSupportBot } = useSupportAgentService();
 
-  // Don't render if feature disabled
-  if (!supportEnabled) {
-    return null;
-  }
-
-  // Hide if on connector creation routes or no workspace context
-  const shouldHide = !workspaceId || HIDDEN_SUPPORT_BOT_PATHS.some((path) => !!matchPath(path, pathname));
+  const shouldHide = !supportEnabled || HIDDEN_SUPPORT_BOT_PATHS.some((path) => !!matchPath(path, pathname));
 
   if (shouldHide) {
     return null;
   }
 
   return (
-    <>
-      <Button
-        variant="magic"
-        size="xs"
-        icon="chat"
-        iconSize="md"
-        type="button"
-        onClick={() => {
-          setHasBeenOpened(true);
-          setIsOpen(true);
-        }}
-        className={classNames(styles.button, { [styles.hidden]: isOpen })}
-      />
-      {hasBeenOpened && (
-        <SupportChatPanelPortal isOpen={isOpen}>
-          <SupportChatPanel
-            key={conversationKey}
-            workspaceId={workspaceId}
-            connectionId={connectionId}
-            isExpanded={isExpanded}
-            setIsExpanded={setIsExpanded}
-            onClose={() => setIsOpen(false)}
-            onNewConversation={handleNewConversation}
-          />
-        </SupportChatPanelPortal>
-      )}
-    </>
+    <Button
+      variant="magic"
+      size="xs"
+      icon="chat"
+      iconSize="md"
+      type="button"
+      onClick={openSupportBot}
+      className={styles.button}
+    />
   );
 };

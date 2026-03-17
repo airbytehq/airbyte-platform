@@ -5,13 +5,20 @@ import { Icon } from "components/ui/Icon";
 
 import { HelpDropdownProps } from "area/layout/SideBar/components/HelpDropdown";
 import { NavDropdown } from "area/layout/SideBar/components/NavDropdown";
-import { useZendesk } from "cloud/services/thirdParty/zendesk";
+import { useSupportAgentService } from "cloud/services/supportAgent";
+import { useFeature, FeatureItem } from "core/services/features";
 import { links } from "core/utils/links";
 
 export const CloudHelpDropdown: React.FC<HelpDropdownProps> = ({ className, hideLabel, placement }) => {
   const { formatMessage } = useIntl();
-  const { openZendesk } = useZendesk();
-  const handleChatUs = (data: DropdownMenuOptionType) => data.value === "inApp" && openZendesk();
+  const supportEnabled = useFeature(FeatureItem.SupportAgentBot);
+  const { openSupportBot } = useSupportAgentService();
+
+  const handleChatUs = (data: DropdownMenuOptionType) => {
+    if (data.value === "inApp") {
+      openSupportBot();
+    }
+  };
 
   return (
     <NavDropdown
@@ -23,12 +30,16 @@ export const CloudHelpDropdown: React.FC<HelpDropdownProps> = ({ className, hide
           icon: <Icon type="share" />,
           displayName: formatMessage({ id: "sidebar.supportPortal" }),
         },
-        {
-          as: "button",
-          value: "inApp",
-          icon: <Icon type="chat" />,
-          displayName: formatMessage({ id: "sidebar.inAppHelpCenter" }),
-        },
+        ...(supportEnabled
+          ? [
+              {
+                as: "button" as const,
+                value: "inApp",
+                icon: <Icon type="chat" />,
+                displayName: formatMessage({ id: "sidebar.inAppHelpCenter" }),
+              },
+            ]
+          : []),
         {
           as: "separator",
         },
