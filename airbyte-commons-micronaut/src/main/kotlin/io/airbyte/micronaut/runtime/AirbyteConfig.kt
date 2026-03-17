@@ -727,6 +727,7 @@ data class AirbyteKubernetesConfig(
 data class AirbyteLoggingConfig(
   val client: AirbyteLoggingClientConfig = AirbyteLoggingClientConfig(),
   val logLevel: LogLevel = LogLevel.INFO,
+  val platformLogFormat: String = "",
   val s3PathStyleAccess: String = "",
 ) {
   @ConfigurationProperties("client")

@@ -101,6 +101,7 @@ airbyte:
     resource-check-rate: ${WORKLOAD_LAUNCHER_POD_PENDING_RESOURCE_CHECK_RATE:PT30S}
   logging:
     log-level: ${LOG_LEVEL:}
+    platform-log-format: ${PLATFORM_LOG_FORMAT:}
     s3-path-style-access: ${S3_PATH_STYLE_ACCESS:}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}

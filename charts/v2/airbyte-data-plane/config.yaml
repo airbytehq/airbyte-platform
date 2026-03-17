@@ -155,6 +155,9 @@ logging:
     - env: LOG_LEVEL
       key: level
       defaultValue: INFO
+    - env: PLATFORM_LOG_FORMAT
+      key: platformLogFormat
+      defaultValue: json
 
 metrics:
   keyBasePath: metrics

@@ -63,6 +63,7 @@ enterprise:
 
 logging:
   level: info
+  platformLogFormat: "json"
   httpAccessLogsEnabled: false
   log4jConfigFile: ""
 

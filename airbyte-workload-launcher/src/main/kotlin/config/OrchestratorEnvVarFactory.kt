@@ -21,6 +21,7 @@ import io.airbyte.commons.envvar.EnvVar as AbEnvVar
 class OrchestratorEnvVarFactory(
   private val storageEnvironmentVariableProvider: StorageEnvironmentVariableProvider,
   @Named("workloadApiEnvMap") private val workloadApiEnvMap: Map<String, String>,
+  @Named("loggingEnvVars") private val loggingEnvMap: Map<String, String>,
   @Named("metricsEnvMap") private val metricsEnvMap: Map<String, String>,
   @Named("micronautEnvMap") private val micronautEnvMap: Map<String, String>,
   @Named("apiClientEnvMap") private val apiClientEnvMap: Map<String, String>,
@@ -41,7 +42,6 @@ class OrchestratorEnvVarFactory(
     // Build the map of additional environment variables to be passed to the container orchestrator
     val envMap: MutableMap<String, String> = HashMap()
 
-    envMap[AbEnvVar.CLOUD_STORAGE_APPENDER_THREADS.name] = "1"
     envMap[EnvVarConstants.DD_SERVICE_ENV_VAR] = "airbyte-container-orchestrator"
 
     // secret name used by orchestrator for assumed role look-ups
@@ -64,6 +64,9 @@ class OrchestratorEnvVarFactory(
 
     // Airbyte specific metadata
     envMap.putAll(airbyteMetadataEnvMap)
+
+    // Logging configuration
+    envMap.putAll(loggingEnvMap)
 
     // TODO: Don't do this. Be explicit about what env vars we pass.
     // Copy over all local values

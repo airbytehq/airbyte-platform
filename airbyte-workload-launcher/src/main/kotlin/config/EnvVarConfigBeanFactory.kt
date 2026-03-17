@@ -5,6 +5,7 @@
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.envvar.EnvVar.CLOUD_STORAGE_APPENDER_THREADS
+import io.airbyte.commons.envvar.EnvVar.PLATFORM_LOG_FORMAT
 import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.version.AirbyteVersion
@@ -167,13 +168,17 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("loggingEnvVars")
   fun loggingEnvVars(airbyteLoggingConfig: AirbyteLoggingConfig): Map<String, String> =
-    mapOf(
-      CLOUD_STORAGE_APPENDER_THREADS.name to "1",
+    buildMap {
+      put(CLOUD_STORAGE_APPENDER_THREADS.name, "1")
       // We specifically do not set the log level here anymore since this would prevent us from
       // overriding it later in RuntimeEnvVarFactory. We need to be able to set it there to ensure that
       // we are able to dynamically change the level based on a feature flag
-      S3_PATH_STYLE_ACCESS.name to airbyteLoggingConfig.s3PathStyleAccess,
-    )
+      put(S3_PATH_STYLE_ACCESS.name, airbyteLoggingConfig.s3PathStyleAccess)
+
+      if (airbyteLoggingConfig.platformLogFormat.isNotBlank()) {
+        put(PLATFORM_LOG_FORMAT.name, airbyteLoggingConfig.platformLogFormat)
+      }
+    }
 
   /**
    * The list of env vars to be passed to the connector container we are checking.
