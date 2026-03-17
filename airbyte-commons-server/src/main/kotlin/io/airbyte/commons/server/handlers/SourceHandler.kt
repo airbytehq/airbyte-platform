@@ -45,6 +45,7 @@ import io.airbyte.config.JobStatus
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
+import io.airbyte.config.secrets.ConfigWithProcessedSecrets
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretCoordinate.Companion.fromFullCoordinate
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.configWithTextualSecretPlaceholders
@@ -65,6 +66,7 @@ import io.airbyte.data.services.shared.buildFilters
 import io.airbyte.data.services.shared.parseSortKey
 import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.UserId
 import io.airbyte.domain.models.WorkspaceId
@@ -665,9 +667,10 @@ class SourceHandler
           .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
 
       var updatedConfig = persistConfigRawSecretValues(maskedConfig, secretStorageId, workspaceId, spec, sourceId)
+      var reprocessedConfig: ConfigWithProcessedSecrets? = null
 
       if (secretStorageId.isPresent) {
-        val reprocessedConfig =
+        reprocessedConfig =
           processConfigSecrets(
             updatedConfig,
             spec.connectionSpecification,
@@ -685,6 +688,10 @@ class SourceHandler
 
       newSourceConnection.configuration = updatedConfig
       sourceService.writeSourceConnectionNoSecrets(newSourceConnection)
+
+      if (reprocessedConfig != null) {
+        secretReferenceService.cleanupDanglingSecretReferences(ActorId(sourceId).value, SecretReferenceScopeType.ACTOR, reprocessedConfig)
+      }
     }
 
     /**

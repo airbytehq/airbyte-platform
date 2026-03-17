@@ -80,8 +80,6 @@ class SecretReferenceService(
         )
       createdSecretRefIdByPath[path] = secretRefId
     }
-    cleanupDanglingSecretReferences(scopeId, scopeType, config)
-
     return SecretReferenceHelpers.updateSecretNodesWithSecretReferenceIds(
       config.originalConfig,
       createdSecretRefIdByPath,
@@ -92,9 +90,12 @@ class SecretReferenceService(
    * Given an [actorConfig], create SecretConfig/SecretReference records for each secret
    * coordinate and replace them with their respective secret reference IDs in the returned config.
    *
-   * Note: This method also deletes any dangling secret references that are no longer referenced
-   * in the config. This cleans up any secret references that are no longer relevant after config
-   * updates.
+   * Note: This method does not clean up dangling secret references from prior config versions.
+   * Callers must call [cleanupDanglingSecretReferences] after the config has been successfully
+   * persisted. This ordering is important because the reference creation and config persistence
+   * use separate database transactions (Micronaut Data and Jooq respectively). Deleting old
+   * references before the config write would cause orphaned reference IDs in the config if the
+   * write fails, e.g. due to process termination during a Kubernetes pod rollout or crash.
    *
    * @return an updated [JsonNode] config with secret nodes replaced with objects that
    * contain a secretReferenceId and secretStorageId.
@@ -115,10 +116,18 @@ class SecretReferenceService(
     )
 
   /**
-   * For the given actorId, delete any secret references that are no longer referenced in its
-   * provided config.
+   * Deletes any secret reference rows for the given scope whose hydration paths are not in the
+   * provided config. This cleans up references from prior config versions, as well as any stale
+   * references left behind by a previously interrupted save.
+   *
+   * Must be called after the config has been successfully persisted. If old references are
+   * deleted before the config write and the write fails (e.g. process killed during a Kubernetes
+   * pod rollout), the config will still contain reference IDs that no longer exist in the
+   * database, causing 500 errors on read.
+   *
+   * See [createAndInsertSecretReferencesWithStorageId] for details.
    */
-  private fun cleanupDanglingSecretReferences(
+  fun cleanupDanglingSecretReferences(
     scopeId: UUID,
     scopeType: SecretReferenceScopeType,
     config: ConfigWithProcessedSecrets,
@@ -180,14 +189,16 @@ class SecretReferenceService(
     return secretRef.id
   }
 
-  private fun assertConfigReferenceIdsExist(
+  private fun warnOnOrphanedConfigReferenceIds(
     config: JsonNode,
     existingReferenceIds: Set<SecretReferenceId>,
+    scopeType: SecretReferenceScopeType,
+    scopeId: UUID,
   ) {
     val configReferenceIds = SecretReferenceHelpers.getSecretReferenceIdsFromConfig(config)
     for (id in configReferenceIds) {
       if (!existingReferenceIds.contains(SecretReferenceId(id))) {
-        throw IllegalArgumentException("Secret reference $id does not exist but is referenced in the config")
+        logger.warn { "Orphaned secret reference $id found in config for $scopeType $scopeId: reference row does not exist in DB" }
       }
     }
   }
@@ -242,7 +253,7 @@ class SecretReferenceService(
     ) {
       // Get all persisted secret refs
       val result = secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(scopeType, scopeId)
-      assertConfigReferenceIdsExist(config, result.map { it.secretReference.id }.toSet())
+      warnOnOrphanedConfigReferenceIds(config, result.map { it.secretReference.id }.toSet(), scopeType, scopeId)
       refsForScope = result
 
       // Gather all non-persisted secret refs separately from the persisted ones

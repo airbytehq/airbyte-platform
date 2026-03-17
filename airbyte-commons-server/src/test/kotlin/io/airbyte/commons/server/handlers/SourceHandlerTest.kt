@@ -47,6 +47,7 @@ import io.airbyte.config.SuggestedStreams
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus
+import io.airbyte.config.secrets.ConfigWithProcessedSecrets
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
@@ -65,6 +66,7 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.SourceConnectionWithCount
 import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination
 import io.airbyte.domain.models.ActorId
+import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.models.SecretStorage
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.WorkspaceId
@@ -1513,6 +1515,43 @@ internal class SourceHandlerTest {
     sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate)
     verify(exactly = 2) { sourceHandlerSpy.createSource(sourceCreate) }
     verify { sourceHandlerSpy.hydrateOAuthResponseSecret(any(), any()) }
+  }
+
+  @Test
+  fun testFailedConfigWriteDoesNotDeleteOldSecretReferences() {
+    val sourceCreate =
+      SourceCreate()
+        .name(sourceConnection.name)
+        .workspaceId(sourceConnection.workspaceId)
+        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
+        .connectionConfiguration(sourceConnection.configuration)
+
+    every { uuidGenerator.get() } returns sourceConnection.sourceId
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
+    every {
+      actorDefinitionVersionHelper.getSourceVersion(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+      )
+    } returns sourceDefinitionVersion
+
+    val secretStorage = mockk<SecretStorage>()
+    val secretStorageId = SecretStorageId(UUID.randomUUID())
+    every { secretStorage.id } returns secretStorageId
+    every { secretStorageService.getByWorkspaceId(WorkspaceId(sourceConnection.workspaceId)) } returns secretStorage
+    every { currentUserService.getCurrentUserIdIfExists() } returns Optional.of(UUID.randomUUID())
+
+    // simulate config write failure — e.g. process killed during pod rollout
+    every { sourceService.writeSourceConnectionNoSecrets(any()) } throws RuntimeException("connection lost")
+
+    Assertions.assertThrows(RuntimeException::class.java) {
+      sourceHandler.createSource(sourceCreate)
+    }
+
+    // old secret references must not be deleted if the config write failed
+    verify(exactly = 0) {
+      secretReferenceService.cleanupDanglingSecretReferences(any(), any<SecretReferenceScopeType>(), any<ConfigWithProcessedSecrets>())
+    }
   }
 
   companion object {

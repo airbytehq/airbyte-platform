@@ -126,6 +126,50 @@ class SecretReferenceServiceTest {
       assertEquals(expectedReferencedSecretsMap, actual.referencedSecrets)
     }
 
+    @Test
+    fun `does not throw on orphaned secret reference ids in config`() {
+      val actorId = UUID.randomUUID()
+      val workspaceId = UUID.randomUUID()
+      val storageId = UUID.randomUUID()
+
+      val validRefId = UUID.randomUUID()
+      val orphanedRefId = UUID.randomUUID()
+
+      val jsonConfig =
+        Jsons.jsonNode(
+          mapOf(
+            "username" to "bob",
+            "secretUrl" to mapOf("_secret_reference_id" to validRefId.toString()),
+            "auth" to
+              mapOf(
+                "apiKey" to mapOf("_secret_reference_id" to orphanedRefId.toString()),
+              ),
+          ),
+        )
+
+      val secretUrlRef = mockk<SecretReferenceWithConfig>()
+      every { secretUrlRef.secretReference.id } returns SecretReferenceId(validRefId)
+      every { secretUrlRef.secretReference.hydrationPath } returns "$.secretUrl"
+      every { secretUrlRef.secretConfig.secretStorageId } returns storageId
+      every { secretUrlRef.secretConfig.externalCoordinate } returns "url-coord"
+
+      every { workspaceHelper.getOrganizationForWorkspace(any()) } returns workspaceId
+      every { featureFlagClient.boolVariation(ReadSecretReferenceIdsInConfigs, any()) } returns true
+
+      // Only return the valid ref — orphanedRefId has no matching DB record
+      every { secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId) } returns
+        listOf(secretUrlRef)
+
+      val actual = secretReferenceService.getConfigWithSecretReferences(ActorId(actorId), jsonConfig, WorkspaceId(workspaceId))
+
+      // Should succeed without throwing, and only include the valid reference
+      val expectedReferencedSecretsMap =
+        mapOf(
+          "$.secretUrl" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("url-coord"), storageId, validRefId),
+        )
+      assertEquals(expectedReferencedSecretsMap, actual.referencedSecrets)
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     fun `applies non-persisted secret refs over persisted secret refs`(readSecretReferenceIdsInConfigs: Boolean) {
@@ -378,26 +422,6 @@ class SecretReferenceServiceTest {
           ),
         )
 
-      // mock existing secret references for paths that are no longer present in the config.
-      // these are expected to be deleted.
-      every {
-        secretReferenceRepository.listByScopeTypeAndScopeId(
-          SecretReferenceScopeType.ACTOR,
-          actorId.value,
-        )
-      } returns
-        listOf(
-          mockk<SecretReference> {
-            every { hydrationPath } returns "$.old.password"
-            every { id } returns SecretReferenceId(UUID.randomUUID())
-          },
-          mockk<SecretReference> {
-            every { hydrationPath } returns "$.old.auth.clientSecret"
-            every { id } returns SecretReferenceId(UUID.randomUUID())
-          },
-        )
-
-      every { secretReferenceRepository.deleteByScopeTypeAndScopeIdAndHydrationPath(any(), any(), any()) } returns Unit
       every { secretConfigRepository.findByStorageIdAndExternalCoordinate(secretStorageId, airbyteManagedPasswordCoordinate) } returns null
       every { secretConfigRepository.findByStorageIdAndExternalCoordinate(secretStorageId, externalClientSecretCoordinate) } returns null
 
@@ -444,20 +468,92 @@ class SecretReferenceServiceTest {
             "password" to mapOf("_secret_reference_id" to createdPasswordRef.id.value.toString(), "_secret" to airbyteManagedPasswordCoordinate),
           ),
         )
-      // any existing references that are no longer present in the config should be deleted
-      verify {
+    }
+  }
+
+  @Nested
+  inner class CleanupDanglingSecretReferences {
+    private val actorId = ActorId(UUID.randomUUID())
+
+    @Test
+    fun `deletes references whose paths are not in the current config`() {
+      every {
+        secretReferenceRepository.listByScopeTypeAndScopeId(
+          SecretReferenceScopeType.ACTOR,
+          actorId.value,
+        )
+      } returns
+        listOf(
+          mockk<SecretReference> {
+            every { hydrationPath } returns "$.password"
+            every { id } returns SecretReferenceId(UUID.randomUUID())
+          },
+          mockk<SecretReference> {
+            every { hydrationPath } returns "$.old.key"
+            every { id } returns SecretReferenceId(UUID.randomUUID())
+          },
+          mockk<SecretReference> {
+            every { hydrationPath } returns "$.auth.clientSecret"
+            every { id } returns SecretReferenceId(UUID.randomUUID())
+          },
+        )
+
+      every { secretReferenceRepository.deleteByScopeTypeAndScopeIdAndHydrationPath(any(), any(), any()) } returns Unit
+
+      val currentConfig =
+        ConfigWithProcessedSecrets(
+          Jsons.jsonNode(mapOf("password" to "secret", "auth" to mapOf("clientSecret" to "secret"))),
+          mapOf(
+            "$.password" to ProcessedSecretNode(SecretCoordinate.AirbyteManagedSecretCoordinate()),
+            "$.auth.clientSecret" to ProcessedSecretNode(SecretCoordinate.ExternalSecretCoordinate("ext-coord")),
+          ),
+        )
+
+      secretReferenceService.cleanupDanglingSecretReferences(
+        actorId.value,
+        SecretReferenceScopeType.ACTOR,
+        currentConfig,
+      )
+
+      // only the path not in the current config should be deleted
+      verify(exactly = 1) {
         secretReferenceRepository.deleteByScopeTypeAndScopeIdAndHydrationPath(
           SecretReferenceScopeType.ACTOR,
           actorId.value,
-          "$.old.password",
+          "$.old.key",
         )
       }
-      verify {
-        secretReferenceRepository.deleteByScopeTypeAndScopeIdAndHydrationPath(
+    }
+
+    @Test
+    fun `does nothing when all existing references match the current config`() {
+      every {
+        secretReferenceRepository.listByScopeTypeAndScopeId(
           SecretReferenceScopeType.ACTOR,
           actorId.value,
-          "$.old.auth.clientSecret",
         )
+      } returns
+        listOf(
+          mockk<SecretReference> {
+            every { hydrationPath } returns "$.password"
+            every { id } returns SecretReferenceId(UUID.randomUUID())
+          },
+        )
+
+      val currentConfig =
+        ConfigWithProcessedSecrets(
+          Jsons.jsonNode(mapOf("password" to "secret")),
+          mapOf("$.password" to ProcessedSecretNode(SecretCoordinate.AirbyteManagedSecretCoordinate())),
+        )
+
+      secretReferenceService.cleanupDanglingSecretReferences(
+        actorId.value,
+        SecretReferenceScopeType.ACTOR,
+        currentConfig,
+      )
+
+      verify(exactly = 0) {
+        secretReferenceRepository.deleteByScopeTypeAndScopeIdAndHydrationPath(any(), any(), any())
       }
     }
   }
