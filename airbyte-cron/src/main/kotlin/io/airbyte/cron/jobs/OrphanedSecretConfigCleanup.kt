@@ -12,6 +12,7 @@ import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.featureflag.CleanupDanglingSecretConfigs
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.OrphanedSecretCleanupLimit
 import io.airbyte.featureflag.SecretStorage
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
@@ -71,11 +72,14 @@ class OrphanedSecretConfigCleanup(
 
     log.info { "Found orphaned configs in ${orphanedStorageIds.size} storage(s), cleanup enabled for ${enabledStorageIds.size}" }
 
+    val cleanupLimit = featureFlagClient.intVariation(OrphanedSecretCleanupLimit, SecretStorage(enabledStorageIds.first().toString()))
+    log.info { "Orphaned secret cleanup limit: $cleanupLimit" }
+
     // Now fetch orphaned configs only for enabled storage IDs
     val orphanedConfigs =
       secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(
         excludeCreatedBefore = oneHourAgo,
-        limit = 100,
+        limit = cleanupLimit,
         storageIds = enabledStorageIds,
       )
 

@@ -210,6 +210,8 @@ object EnableDataObservability : Temporary<Boolean>(key = "platform.enable-data-
 
 object CleanupDanglingSecretConfigs : Temporary<Boolean>(key = "platform.cleanup-dangling-secret-configs", default = false)
 
+object OrphanedSecretCleanupLimit : Temporary<Int>(key = "platform.orphaned-secret-cleanup-limit", default = 100)
+
 object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)
 
 object DisableDbPrune : Temporary<Boolean>(key = "platform.disable-db-prune", default = false)

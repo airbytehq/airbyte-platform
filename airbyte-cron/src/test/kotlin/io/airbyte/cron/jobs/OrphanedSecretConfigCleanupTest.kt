@@ -13,6 +13,7 @@ import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.featureflag.CleanupDanglingSecretConfigs
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.OrphanedSecretCleanupLimit
 import io.airbyte.featureflag.SecretStorage
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -78,6 +79,7 @@ class OrphanedSecretConfigCleanupTest {
     // Mock external services
     every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
     every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns orphanedConfigs
     every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
     every { secretPersistence.delete(any()) } just runs
@@ -115,6 +117,7 @@ class OrphanedSecretConfigCleanupTest {
 
     every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
     every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns listOf(orphanedConfig)
     every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
     every { secretConfigService.deleteByIds(any()) } just runs
@@ -134,6 +137,7 @@ class OrphanedSecretConfigCleanupTest {
 
     every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
     every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns orphanedConfigs
     every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
     every { secretConfigService.deleteByIds(any()) } just runs
@@ -191,6 +195,7 @@ class OrphanedSecretConfigCleanupTest {
     // Feature flag enabled for storage1, disabled for storage2
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(storageId1.toString())) } returns true
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(storageId2.toString())) } returns false
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
 
     // Query should only be called with storageId1 (the enabled one)
     every {
@@ -225,6 +230,7 @@ class OrphanedSecretConfigCleanupTest {
 
     every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
     every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns
       listOf(orphanedConfig1, orphanedConfig2, orphanedConfig3)
     every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
@@ -249,6 +255,7 @@ class OrphanedSecretConfigCleanupTest {
 
     every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
     every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns
       listOf(config1, config2, config3)
     every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
