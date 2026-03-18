@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { FormattedDate, FormattedMessage } from "react-intl";
 import { z } from "zod";
 
-import { Badge } from "components/ui/Badge";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -33,9 +32,6 @@ export const AISyncFailureDrawerTitle = () => {
         <Heading as="h2">
           <FormattedMessage id="connection.llmSyncFailureExplanation.title" />
         </Heading>
-        <Badge variant="blue">
-          <FormattedMessage id="ui.badge.beta" />
-        </Badge>
       </FlexContainer>
     </Box>
   );

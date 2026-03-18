@@ -2,7 +2,6 @@ import { useCallback, useRef, useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, matchPath } from "react-router-dom";
 
-import { Badge } from "components/ui/Badge";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -123,9 +122,6 @@ export const SupportChatPanel: React.FC<{
               <Heading as="h3" size="sm">
                 <FormattedMessage id="chat.supportAgent.title" />
               </Heading>
-              <Badge variant="blue">
-                <FormattedMessage id="ui.badge.beta" />
-              </Badge>
             </FlexContainer>
             <FlexContainer direction="row" gap="xs" alignItems="center">
               <AutoScrollToggle checked={autoScrollEnabled} onChange={setAutoScrollEnabled} />
