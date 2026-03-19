@@ -7,6 +7,8 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.generated.JobsApi
 import io.airbyte.api.model.generated.BooleanRead
 import io.airbyte.api.model.generated.CancelQueuedJobRequest
+import io.airbyte.api.model.generated.CheckDataWorkerCapacityRead
+import io.airbyte.api.model.generated.CheckDataWorkerCapacityRequest
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionJobRequestBody
 import io.airbyte.api.model.generated.DeleteStreamResetRecordsForJobRequest
@@ -232,6 +234,20 @@ open class JobsApiController(
   override fun cancelQueuedJob(
     @Body cancelQueuedJobRequest: CancelQueuedJobRequest,
   ): InternalOperationResult? = execute { jobsHandler.cancelQueuedJob(cancelQueuedJobRequest.jobId) }
+
+  @Post("/checkDataWorkerCapacity")
+  @Secured(AuthRoleConstants.ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun checkDataWorkerCapacity(
+    @Body checkDataWorkerCapacityRequest: CheckDataWorkerCapacityRequest,
+  ): CheckDataWorkerCapacityRead? =
+    execute {
+      jobsHandler.checkDataWorkerCapacity(
+        checkDataWorkerCapacityRequest.jobId,
+        checkDataWorkerCapacityRequest.connectionId,
+        checkDataWorkerCapacityRequest.organizationId,
+      )
+    }
 
   @Post(uri = "/did_previous_job_succeed")
   @ExecuteOn(AirbyteTaskExecutors.IO)

@@ -136,6 +136,9 @@ internal class ConfigFetchActivityTest {
         Assertions
           .assertThat(output.timeToWait)
           .hasDays((100 * 365).toLong())
+        Assertions
+          .assertThat(output.scheduleType)
+          .isNull()
       }
 
       @Test
@@ -151,6 +154,9 @@ internal class ConfigFetchActivityTest {
         Assertions
           .assertThat(output.timeToWait)
           .hasDays((100 * 365).toLong())
+        Assertions
+          .assertThat(output.scheduleType)
+          .isNull()
       }
 
       @Test
@@ -182,6 +188,9 @@ internal class ConfigFetchActivityTest {
         Assertions
           .assertThat(output.timeToWait)
           .isZero()
+        Assertions
+          .assertThat(output.scheduleType)
+          .isEqualTo(ConnectionScheduleType.BASIC)
       }
 
       @Test

@@ -84,7 +84,7 @@ class ConfigFetchActivityImpl
         val timeToWait = getTimeToWaitFromScheduleType(connectionRead, input.connectionId!!, workspaceId)
         val timeToWaitWithSchedulingJitter =
           applyJitterRules(timeToWait, input.connectionId!!, connectionRead.scheduleType, workspaceId)
-        return ScheduleRetrieverOutput(timeToWaitWithSchedulingJitter)
+        return ScheduleRetrieverOutput(timeToWaitWithSchedulingJitter, connectionRead.scheduleType)
       } catch (e: ClientException) {
         if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
           throw e

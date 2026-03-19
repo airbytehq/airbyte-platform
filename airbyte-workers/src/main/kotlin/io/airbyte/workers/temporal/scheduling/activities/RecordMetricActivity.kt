@@ -23,6 +23,7 @@ interface RecordMetricActivity {
   enum class FailureCause {
     ACTIVITY,
     CANCELED,
+    CAPACITY_WAIT_EXCEEDED,
     CONNECTION,
     UNKNOWN,
     WORKFLOW,

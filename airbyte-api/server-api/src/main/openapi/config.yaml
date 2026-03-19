@@ -4367,6 +4367,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/checkDataWorkerCapacity:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Check and reserve Data Worker capacity for a queued job.
+      operationId: checkDataWorkerCapacity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: CheckDataWorkerCapacityRequest
+              type: object
+              required:
+                - jobId
+                - connectionId
+                - organizationId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                organizationId:
+                  $ref: "#/components/schemas/OrganizationId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckDataWorkerCapacityRead"
   /v1/jobs/getWebhookConfig:
     post:
       tags:
@@ -11582,10 +11614,8 @@ components:
       type: object
       properties:
         tierFilter:
-          type: object
           $ref: "#/components/schemas/ConnectorRolloutTierFilter"
         jobBypassFilter:
-          type: object
           $ref: "#/components/schemas/ConnectorRolloutJobBypassFilter"
 
     ConnectorRolloutTierFilter:
@@ -17970,6 +18000,16 @@ components:
       properties:
         job:
           $ref: "#/components/schemas/JobRead"
+    CheckDataWorkerCapacityRead:
+      type: object
+      required:
+        - capacityAvailable
+        - useOnDemandCapacity
+      properties:
+        capacityAvailable:
+          type: boolean
+        useOnDemandCapacity:
+          type: boolean
     JobOptionalRead:
       type: object
       properties:

@@ -5,6 +5,7 @@
 package io.airbyte.workers.temporal.scheduling.activities
 
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.CancelQueuedJobRequest
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionJobRequestBody
 import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest
@@ -16,6 +17,7 @@ import io.airbyte.api.client.model.generated.JobIdRequestBody
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest
 import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody
 import io.airbyte.api.client.model.generated.ReportJobStartRequest
+import io.airbyte.api.client.model.generated.SetJobQueuedRequest
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.config.State
@@ -31,6 +33,7 @@ import io.airbyte.workers.storage.activities.OutputStorageClient
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput
+import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.CancelJobInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCheckFailureInput
@@ -39,6 +42,7 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobFailureInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.ReportJobStartInput
+import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.SetJobQueuedInput
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpStatus
 import io.opentelemetry.instrumentation.annotations.WithSpan
@@ -221,6 +225,35 @@ class JobCreationAndStatusUpdateActivityImpl(
 
     try {
       airbyteApiClient.jobsApi.reportJobStart(ReportJobStartRequest(input.jobId!!, input.connectionId!!))
+    } catch (e: ClientException) {
+      if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
+        throw e
+      }
+      throw RetryableException(e)
+    } catch (e: IOException) {
+      throw RetryableException(e)
+    }
+  }
+
+  @WithSpan
+  override fun setJobQueued(input: SetJobQueuedInput) {
+    try {
+      airbyteApiClient.jobsApi.setJobQueued(SetJobQueuedRequest(input.jobId!!))
+    } catch (e: ClientException) {
+      if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
+        throw e
+      }
+      throw RetryableException(e)
+    } catch (e: IOException) {
+      throw RetryableException(e)
+    }
+  }
+
+  @WithSpan
+  override fun cancelJob(input: CancelJobInput) {
+    AttemptContext(input.connectionId, input.jobId, null).addTagsToTrace()
+    try {
+      airbyteApiClient.jobsApi.cancelQueuedJob(CancelQueuedJobRequest(input.jobId!!))
     } catch (e: ClientException) {
       if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
         throw e

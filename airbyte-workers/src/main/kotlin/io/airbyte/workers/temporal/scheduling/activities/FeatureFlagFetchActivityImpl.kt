@@ -7,7 +7,9 @@ package io.airbyte.workers.temporal.scheduling.activities
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.commons.temporal.exception.RetryableException
+import io.airbyte.featureflag.EnforceDataWorkerCapacity
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput
 import io.micronaut.http.HttpStatus
@@ -25,30 +27,46 @@ class FeatureFlagFetchActivityImpl(
   private val featureFlagClient: FeatureFlagClient,
 ) : FeatureFlagFetchActivity {
   /**
-   * Get workspace id for a connection id.
+   * Get organization id for a connection id.
    *
    * @param connectionId connection id
-   * @return workspace id
+   * @return organization id
    */
-  fun getWorkspaceId(connectionId: UUID): UUID {
+  private fun getOrganizationId(connectionId: UUID): UUID? {
     try {
       val workspace =
         airbyteApiClient.workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(connectionId))
-      return workspace.workspaceId
+      return workspace.organizationId
     } catch (e: ClientException) {
       if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
         throw e
       }
       throw RetryableException(e)
     } catch (e: IOException) {
-      throw RuntimeException("Unable to get workspace ID for connection", e)
+      throw RetryableException(e)
     }
   }
 
   override fun getFeatureFlags(input: FeatureFlagFetchInput): FeatureFlagFetchOutput {
-    // Left as a placeholder for when we have feature flags to read for the ConnectionManagerWorkflow
+    val connectionId = input.connectionId
+    if (connectionId == null) {
+      return FeatureFlagFetchOutput(mutableMapOf())
+    }
+
+    val organizationId = getOrganizationId(connectionId)
+    val enforcementEnabled =
+      if (organizationId == null) {
+        false
+      } else {
+        try {
+          featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId))
+        } catch (_: Exception) {
+          false
+        }
+      }
+
     return FeatureFlagFetchOutput(
-      mutableMapOf(),
+      mutableMapOf(EnforceDataWorkerCapacity.key to enforcementEnabled),
     )
   }
 }

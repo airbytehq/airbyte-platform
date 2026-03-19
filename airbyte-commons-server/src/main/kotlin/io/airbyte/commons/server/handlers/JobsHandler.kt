@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.BooleanRead
+import io.airbyte.api.model.generated.CheckDataWorkerCapacityRead
 import io.airbyte.api.model.generated.InternalOperationResult
 import io.airbyte.api.model.generated.JobFailureRequest
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest
@@ -18,6 +19,9 @@ import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobOutput
 import io.airbyte.config.StandardSyncOutput
+import io.airbyte.data.services.ConnectionService
+import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.services.dataworker.DataWorkerCapacityService
 import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
@@ -49,6 +53,8 @@ open class JobsHandler(
   private val featureFlagClient: FeatureFlagClient,
   private val metricClient: MetricClient,
   private val dataWorkerUsageService: DataWorkerUsageService,
+  private val connectionService: ConnectionService,
+  private val dataWorkerCapacityService: DataWorkerCapacityService,
 ) {
   /**
    * Mark job as failure.
@@ -104,7 +110,7 @@ open class JobsHandler(
       reportIfLastFailedAttempt(job, connectionId, jobContext)
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED)
       try {
-        dataWorkerUsageService.subtractUsageForCompletedJob(job)
+        dataWorkerUsageService.releaseReservedUsageForJob(job.id)
       } catch (e: Exception) {
         logger.error(e) { "Failed to update usage for job ${job.id}" }
       }
@@ -200,7 +206,7 @@ open class JobsHandler(
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED)
 
       try {
-        dataWorkerUsageService.subtractUsageForCompletedJob(job)
+        dataWorkerUsageService.releaseReservedUsageForJob(job.id)
       } catch (e: Exception) {
         logger.error(e) { "Failed to update usage for job ${job.id}" }
       }
@@ -250,6 +256,34 @@ open class JobsHandler(
   fun cancelQueuedJob(jobId: Long): InternalOperationResult {
     jobCreationAndStatusUpdateHelper.cancelQueuedJob(jobId)
     return InternalOperationResult().succeeded(true)
+  }
+
+  /**
+   * Check and reserve Data Worker capacity for a queued job.
+   */
+  fun checkDataWorkerCapacity(
+    jobId: Long,
+    connectionId: UUID,
+    organizationId: UUID,
+  ): CheckDataWorkerCapacityRead {
+    val job = jobPersistence.getJob(jobId)
+    val onDemandEnabled = connectionService.getStandardSync(connectionId).onDemandEnabled ?: false
+    val requiredDataWorkers = getRequiredDataWorkers(job)
+    val capacityResult =
+      dataWorkerCapacityService.checkCapacityAndReserve(
+        OrganizationId(organizationId),
+        job,
+        requiredDataWorkers,
+        onDemandEnabled,
+      )
+
+    if (capacityResult.usedOnDemandCapacity && job.configType == JobConfig.ConfigType.SYNC && job.config.sync?.usedOnDemandCapacity != true) {
+      jobPersistence.updateSyncJobOnDemandCapacity(job.id, true)
+    }
+
+    return CheckDataWorkerCapacityRead()
+      .capacityAvailable(capacityResult.hasAvailableCapacity)
+      .useOnDemandCapacity(capacityResult.usedOnDemandCapacity)
   }
 
   /**
@@ -316,7 +350,7 @@ open class JobsHandler(
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED)
 
       try {
-        dataWorkerUsageService.subtractUsageForCompletedJob(job)
+        dataWorkerUsageService.releaseReservedUsageForJob(job.id)
       } catch (e: Exception) {
         logger.error(e) { "Failed to update usage for job ${job.id}" }
       }
@@ -332,7 +366,34 @@ open class JobsHandler(
     }
   }
 
+  private fun getRequiredDataWorkers(job: Job): Double {
+    val syncResourceRequirements =
+      when (job.configType) {
+        JobConfig.ConfigType.SYNC -> job.config.sync?.syncResourceRequirements
+        JobConfig.ConfigType.REFRESH -> job.config.refresh?.syncResourceRequirements
+        JobConfig.ConfigType.RESET_CONNECTION -> job.config.resetConnection?.syncResourceRequirements
+        else -> null
+      }
+
+    val sourceCpu = syncResourceRequirements?.source?.cpuRequest.toCpuOrDefault(DEFAULT_SOURCE_CPU)
+    val destinationCpu = syncResourceRequirements?.destination?.cpuRequest.toCpuOrDefault(DEFAULT_DESTINATION_CPU)
+    val orchestratorCpu = syncResourceRequirements?.orchestrator?.cpuRequest.toCpuOrDefault(DEFAULT_ORCHESTRATOR_CPU)
+
+    return (sourceCpu + destinationCpu + orchestratorCpu) / DATA_WORKER_CPU_DIVISOR
+  }
+
+  private fun String?.toCpuOrDefault(defaultValue: Double): Double =
+    this
+      ?.takeIf { it.isNotBlank() }
+      ?.toDoubleOrNull()
+      ?: defaultValue
+
   companion object {
     private val log = KotlinLogging.logger {}
+
+    private const val DATA_WORKER_CPU_DIVISOR = 8.0
+    private const val DEFAULT_SOURCE_CPU = 1.0
+    private const val DEFAULT_DESTINATION_CPU = 1.0
+    private const val DEFAULT_ORCHESTRATOR_CPU = 0.5
   }
 }

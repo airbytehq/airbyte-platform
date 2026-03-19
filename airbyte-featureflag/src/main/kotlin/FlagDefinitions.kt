@@ -264,6 +264,8 @@ object BypassStiggEntitlementChecks : Permanent<Boolean>(key = "platform.bypass-
 
 object EnableDataWorkerUsage : Temporary<Boolean>(key = "platform.enable-data-worker-usage", default = false)
 
+object EnforceDataWorkerCapacity : Temporary<Boolean>(key = "platform.enforce-data-worker-capacity", default = false)
+
 object UseVerifiedDomainsForSsoActivate : Temporary<Boolean>(key = "platform.use-verified-domains-for-sso-activate", default = false)
 
 object AutoGrantOrgPermissionsOnSsoActivation : Temporary<Boolean>(key = "platform.auto-grant-org-permissions-on-sso-activation", default = false)

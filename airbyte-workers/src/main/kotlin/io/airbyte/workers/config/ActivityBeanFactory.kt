@@ -13,6 +13,7 @@ import io.airbyte.workers.temporal.activities.ActorDefinitionUpdateActivity
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity
+import io.airbyte.workers.temporal.scheduling.activities.CapacityCheckActivity
 import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity
@@ -60,6 +61,7 @@ class ActivityBeanFactory {
     checkRunProgressActivity: CheckRunProgressActivity,
     retryStatePersistenceActivity: RetryStatePersistenceActivity,
     appendToAttemptLogActivity: AppendToAttemptLogActivity,
+    capacityCheckActivity: CapacityCheckActivity,
   ): List<Any> =
     listOf(
       jobCreationAndStatusUpdateActivity,
@@ -72,6 +74,7 @@ class ActivityBeanFactory {
       checkRunProgressActivity,
       retryStatePersistenceActivity,
       appendToAttemptLogActivity,
+      capacityCheckActivity,
     )
 
   @Singleton

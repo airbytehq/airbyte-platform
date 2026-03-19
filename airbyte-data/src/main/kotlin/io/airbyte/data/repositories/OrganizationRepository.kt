@@ -15,6 +15,21 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface OrganizationRepository : PageableRepository<Organization, UUID> {
+  /**
+   * Locks the organization row for the duration of the surrounding transaction.
+   *
+   * This is used to serialize org-scoped Data Worker capacity admission so concurrent reservations
+   * cannot oversubscribe committed capacity.
+   */
+  @Query(
+    """
+    SELECT * FROM organization
+    WHERE id = :organizationId
+    FOR UPDATE
+    """,
+  )
+  fun findByIdForUpdate(organizationId: UUID): Optional<Organization>
+
   @Query(
     """
     SELECT organization.* from organization

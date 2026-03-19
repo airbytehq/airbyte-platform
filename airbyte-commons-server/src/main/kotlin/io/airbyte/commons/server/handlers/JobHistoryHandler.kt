@@ -512,9 +512,12 @@ class JobHistoryHandler(
     fun getJobInfoWithoutLogsStatic(
       jobPersistence: JobPersistence,
       jobId: Long,
-    ): JobInfoRead {
-      val job = jobPersistence.getJob(jobId)
+    ): JobInfoRead = getJobInfoWithoutLogsStatic(jobPersistence, jobPersistence.getJob(jobId))
 
+    fun getJobInfoWithoutLogsStatic(
+      jobPersistence: JobPersistence,
+      job: Job,
+    ): JobInfoRead {
       val jobWithAttemptsRead = getJobWithAttemptsRead(job)
       hydrateWithStats(listOf(jobWithAttemptsRead), listOf(job), true, jobPersistence)
 

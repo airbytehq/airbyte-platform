@@ -8,10 +8,12 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
+import io.airbyte.featureflag.EnforceDataWorkerCapacity
 import io.airbyte.featureflag.TestClient
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput
 import io.mockk.every
 import io.mockk.mockk
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -19,8 +21,8 @@ import java.util.UUID
 internal class FeatureFlagFetchActivityTest {
   private var mAirbyteApiClient: AirbyteApiClient? = null
   private var mWorkspaceApi: WorkspaceApi? = null
-  private var mTestClient: TestClient? = null
   private var featureFlagFetchActivity: FeatureFlagFetchActivity? = null
+  private val organizationId = UUID.randomUUID()
 
   @BeforeEach
   fun setUp() {
@@ -30,7 +32,7 @@ internal class FeatureFlagFetchActivityTest {
     every { mWorkspaceApi!!.getWorkspaceByConnectionId(any<ConnectionIdRequestBody>()) } returns
       WorkspaceRead(
         UUID.randomUUID(),
-        UUID.randomUUID(),
+        organizationId,
         "",
         "",
         false,
@@ -49,8 +51,11 @@ internal class FeatureFlagFetchActivityTest {
         null,
         null,
       )
-    mTestClient = mockk<TestClient>()
-    featureFlagFetchActivity = FeatureFlagFetchActivityImpl(mAirbyteApiClient!!, mTestClient!!)
+    featureFlagFetchActivity =
+      FeatureFlagFetchActivityImpl(
+        mAirbyteApiClient!!,
+        TestClient(mapOf(EnforceDataWorkerCapacity.key to true)),
+      )
   }
 
   @Test
@@ -60,8 +65,7 @@ internal class FeatureFlagFetchActivityTest {
     val featureFlagFetchOutput =
       featureFlagFetchActivity!!.getFeatureFlags(input)
 
-//    Left as a sample assertion for when we have a flag to add for the ConnectionManagerWorkflow
-//    Assertions.assertTrue(featureFlagFetchOutput.featureFlags!!.get(UseSyncV2.key)!!)
+    assertEquals(true, featureFlagFetchOutput.featureFlags!![EnforceDataWorkerCapacity.key])
   }
 
   companion object {

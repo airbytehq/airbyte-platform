@@ -62,7 +62,9 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.domain.services.dataworker.DataWorkerUsageService
+import io.airbyte.featureflag.EnforceDataWorkerCapacity
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -126,6 +128,7 @@ open class SchedulerHandler
         jobTracker,
         connectionTimelineEventHelper,
         metricClient,
+        dataWorkerUsageService,
       )
 
     fun checkSourceConnectionFromSourceId(sourceIdRequestBody: SourceIdRequestBody): CheckConnectionRead {
@@ -545,10 +548,12 @@ open class SchedulerHandler
         log.info { "New job created, with id: $jobId" }
         val job = jobPersistence.getJob(jobId)
         jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CREATED_BY_RELEASE_STAGE, job)
-        try {
-          dataWorkerUsageService.insertUsageForCreatedJob(job)
-        } catch (e: Exception) {
-          log.error(e) { "Failed to insert usage for job ${job.id}" }
+        if (shouldTrackUsagePassively(jobCreate.connectionId)) {
+          try {
+            dataWorkerUsageService.insertUsageForCreatedJob(job)
+          } catch (e: Exception) {
+            log.error(e) { "Failed to insert passive data worker usage for job ${job.id}" }
+          }
         }
 
         return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId))
@@ -591,6 +596,21 @@ open class SchedulerHandler
       // query same job ID again to get updated job info after cancellation
       return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId))
     }
+
+    private fun shouldTrackUsagePassively(connectionId: UUID): Boolean =
+      try {
+        val workspace = workspaceService.getStandardWorkspaceFromConnection(connectionId, false)
+        val organizationId = workspace.organizationId
+        if (organizationId == null) {
+          log.warn { "Workspace ${workspace.workspaceId} has no organization id; defaulting to passive data worker usage tracking." }
+          true
+        } else {
+          !featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId))
+        }
+      } catch (e: Exception) {
+        log.warn(e) { "Failed to resolve capacity enforcement for connection $connectionId; defaulting to passive data worker usage tracking." }
+        true
+      }
 
     private fun submitManualSyncToWorker(connectionId: UUID): JobInfoRead {
       // get standard sync to validate connection id before submitting sync to temporal

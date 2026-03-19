@@ -188,6 +188,28 @@ class DefaultJobPersistence
       }
     }
 
+    override fun updateSyncJobOnDemandCapacity(
+      jobId: Long,
+      usedOnDemandCapacity: Boolean,
+    ) {
+      val job = getJob(jobId)
+      if (job.configType != ConfigType.SYNC || job.config.sync == null) {
+        return
+      }
+
+      job.config.sync.withUsedOnDemandCapacity(usedOnDemandCapacity)
+
+      jobDatabase.query<Any?> { ctx: DSLContext ->
+        ctx.execute(
+          "UPDATE jobs SET config = CAST(? as JSONB), updated_at = ? WHERE id = ?",
+          Jsons.serialize(job.config),
+          currentTime,
+          jobId,
+        )
+        null
+      }
+    }
+
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
     // returns the new updated_at time for the job

@@ -16,6 +16,7 @@ import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.ReleaseStage
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
@@ -42,6 +43,7 @@ internal class JobCreationAndStatusUpdateHelperTest {
   lateinit var mJobPersistence: JobPersistence
 
   lateinit var mJobTracker: JobTracker
+  lateinit var dataWorkerUsageService: DataWorkerUsageService
 
   lateinit var helper: JobCreationAndStatusUpdateHelper
   lateinit var connectionTimelineEventHelper: ConnectionTimelineEventHelper
@@ -54,6 +56,7 @@ internal class JobCreationAndStatusUpdateHelperTest {
     mJobNotifier = Mockito.mock(JobNotifier::class.java)
     mJobPersistence = Mockito.mock(JobPersistence::class.java)
     mJobTracker = Mockito.mock(JobTracker::class.java)
+    dataWorkerUsageService = Mockito.mock(DataWorkerUsageService::class.java)
     connectionTimelineEventHelper = Mockito.mock(ConnectionTimelineEventHelper::class.java)
     metricClient = Mockito.mock(MetricClient::class.java)
 
@@ -66,6 +69,7 @@ internal class JobCreationAndStatusUpdateHelperTest {
         mJobTracker,
         connectionTimelineEventHelper,
         metricClient,
+        dataWorkerUsageService,
       )
   }
 
@@ -161,6 +165,8 @@ internal class JobCreationAndStatusUpdateHelperTest {
     )
     Mockito.verify(mJobPersistence).getJob(runningJob.id)
     Mockito.verify(mJobPersistence).getJob(pendingJob.id)
+    Mockito.verify(dataWorkerUsageService).releaseReservedUsageForJob(runningJob.id)
+    Mockito.verify(dataWorkerUsageService).releaseReservedUsageForJob(pendingJob.id)
     Mockito
       .verify(mJobNotifier)
       .failJob(eq(runningJob), anyOrNull())
@@ -172,7 +178,7 @@ internal class JobCreationAndStatusUpdateHelperTest {
     Mockito
       .verify(mJobPersistence)
       .listJobsForConnectionWithStatuses(Fixtures.CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES)
-    Mockito.verifyNoMoreInteractions(mJobPersistence, mJobNotifier, mJobTracker)
+    Mockito.verifyNoMoreInteractions(mJobPersistence, mJobNotifier, mJobTracker, dataWorkerUsageService)
   }
 
   @Test

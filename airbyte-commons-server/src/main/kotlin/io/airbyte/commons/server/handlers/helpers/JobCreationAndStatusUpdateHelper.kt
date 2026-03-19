@@ -20,6 +20,7 @@ import io.airbyte.config.Metadata
 import io.airbyte.config.ReleaseStage
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -54,6 +55,7 @@ class JobCreationAndStatusUpdateHelper(
   private val jobTracker: JobTracker,
   private val connectionTimelineEventHelper: ConnectionTimelineEventHelper,
   private val metricClient: MetricClient,
+  private val dataWorkerUsageService: DataWorkerUsageService,
 ) {
   fun findPreviousJob(
     jobs: List<Job>,
@@ -108,6 +110,11 @@ class JobCreationAndStatusUpdateHelper(
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.attemptNumber))
       }
       val failedJob = jobPersistence.getJob(jobId)
+      try {
+        dataWorkerUsageService.releaseReservedUsageForJob(jobId)
+      } catch (e: Exception) {
+        log.error(e) { "Failed to release reserved usage for job $jobId during non-terminal cleanup" }
+      }
       jobNotifier.failJob(failedJob, attemptStats)
       // log failure events in connection timeline
       connectionTimelineEventHelper.logJobFailureEventInConnectionTimeline(failedJob, connectionId, attemptStats)

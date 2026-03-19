@@ -134,6 +134,18 @@ interface JobPersistence {
   fun cancelQueuedJob(jobId: Long)
 
   /**
+   * Update the persisted sync job config to record whether the job used on-demand capacity.
+   *
+   * @param jobId sync job id
+   * @param usedOnDemandCapacity whether the job used on-demand capacity
+   * @throws IOException exception due to interaction with persistence
+   */
+  fun updateSyncJobOnDemandCapacity(
+    jobId: Long,
+    usedOnDemandCapacity: Boolean,
+  )
+
+  /**
    * Create a new attempt for a job and return its attempt number. Throws
    * [IllegalStateException] if the job is already in a terminal state.
    *

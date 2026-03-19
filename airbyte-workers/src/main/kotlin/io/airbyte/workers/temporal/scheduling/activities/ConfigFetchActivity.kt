@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.temporal.scheduling.activities
 
+import io.airbyte.api.client.model.generated.ConnectionScheduleType
 import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.workers.temporal.activities.GetConnectionContextInput
 import io.airbyte.workers.temporal.activities.GetConnectionContextOutput
@@ -59,10 +60,18 @@ interface ConfigFetchActivity {
     @JvmField
     var timeToWait: Duration? = null
 
+    @JvmField
+    var scheduleType: ConnectionScheduleType? = null
+
     constructor()
 
     constructor(timeToWait: Duration?) {
       this.timeToWait = timeToWait
+    }
+
+    constructor(timeToWait: Duration?, scheduleType: ConnectionScheduleType?) {
+      this.timeToWait = timeToWait
+      this.scheduleType = scheduleType
     }
 
     override fun equals(o: Any?): Boolean {
@@ -70,12 +79,12 @@ interface ConfigFetchActivity {
         return false
       }
       val that = o as ScheduleRetrieverOutput
-      return timeToWait == that.timeToWait
+      return timeToWait == that.timeToWait && scheduleType == that.scheduleType
     }
 
-    override fun hashCode(): Int = Objects.hashCode(timeToWait)
+    override fun hashCode(): Int = Objects.hash(timeToWait, scheduleType)
 
-    override fun toString(): String = "ScheduleRetrieverOutput{timeToWait=" + timeToWait + '}'
+    override fun toString(): String = "ScheduleRetrieverOutput{timeToWait=$timeToWait, scheduleType=$scheduleType}"
   }
 
   /**
