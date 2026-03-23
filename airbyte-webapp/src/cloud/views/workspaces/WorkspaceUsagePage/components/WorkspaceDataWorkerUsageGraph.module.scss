@@ -1,0 +1,17 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+:export {
+  tooltipZindex: z-indices.$tooltip;
+  gridLine: colors.$grey-100;
+  lineColor: colors.$blue-400;
+  tickColor: colors.$grey-500;
+}
+
+.graphContainer {
+  min-height: 250px;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-md;
+  padding: variables.$spacing-xl variables.$spacing-md variables.$spacing-md;
+}

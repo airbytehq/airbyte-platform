@@ -33,6 +33,7 @@ export interface Experiments {
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
   "platform.use-verified-domains-for-sso-activate": boolean;
+  "platform.workspace-dw-usage": boolean;
   productLimitsUI: boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.domainVerification": boolean;
@@ -83,6 +84,7 @@ export const defaultExperimentValues: Experiments = {
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,
   "platform.use-verified-domains-for-sso-activate": false,
+  "platform.workspace-dw-usage": false,
   productLimitsUI: false,
   "settings.breakingChangeNotifications": false,
   "settings.domainVerification": false,
