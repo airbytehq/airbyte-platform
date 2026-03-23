@@ -222,7 +222,7 @@ class OrphanedSecretConfigCleanupTest {
   }
 
   @Test
-  fun `cleanup emits gauge metrics for orphaned configs found and deleted`() {
+  fun `cleanup emits per-delete counter metrics for successes and failures`() {
     val storageId = UUID.randomUUID()
     val orphanedConfig1 = createSecretConfig(secretStorageId = storageId)
     val orphanedConfig2 = createSecretConfig(secretStorageId = storageId)
@@ -240,10 +240,10 @@ class OrphanedSecretConfigCleanupTest {
 
     cleanup.cleanupOrphanedSecrets()
 
-    // Verify gauge for found orphaned configs reports 3
-    verify { metricClient.gauge(OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_FOUND, 3.0) }
-    // Verify gauge for deleted orphaned configs reports 2 (third deletion failed)
-    verify { metricClient.gauge(OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_DELETED, 2.0) }
+    // Verify orphaned configs found counter emitted batch size of 3
+    verify { metricClient.count(OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_FOUND, 3L) }
+    // Verify per-delete counters fired for all 3 attempts (2 success + 1 failure via DELETE_SECRET)
+    verify(exactly = 3) { metricClient.count(eq(OssMetricsRegistry.DELETE_SECRET), any(), *anyVararg()) }
   }
 
   @Test

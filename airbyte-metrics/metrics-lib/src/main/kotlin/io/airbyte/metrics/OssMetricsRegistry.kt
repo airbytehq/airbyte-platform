@@ -738,11 +738,7 @@ enum class OssMetricsRegistry(
   ),
   ORPHANED_SECRET_CONFIGS_FOUND(
     metricName = "orphaned_secret_configs_found",
-    metricDescription = "number of orphaned secret configs found during cleanup cron run",
-  ),
-  ORPHANED_SECRET_CONFIGS_DELETED(
-    metricName = "orphaned_secret_configs_deleted",
-    metricDescription = "number of orphaned secret configs successfully deleted during cleanup cron run",
+    metricDescription = "count of orphaned secret configs found in cleanup batch",
   ),
   ;
 
