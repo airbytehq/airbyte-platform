@@ -439,6 +439,7 @@ val SOURCE_NAME_TO_DEFINITION_ID: Map<String, UUID> =
     Pair("flexport", UUID.fromString("f95337f1-2ad1-4baf-922f-2ca9152de630")),
     Pair("google-drive", UUID.fromString("9f8dda77-1048-4368-815b-269bf54ee9b8")),
     Pair("microsoft-sharepoint", UUID.fromString("59353119-f0f2-4e5a-a8ba-15d887bc34f6")),
+    Pair("datagen", UUID.fromString("f14d5125-dc0d-4f6c-abe5-acde821a2203")),
   )
 
 val DEFINITION_ID_TO_SOURCE_NAME: Map<UUID, String> =
@@ -735,4 +736,5 @@ val DEFINITION_ID_TO_SOURCE_NAME: Map<UUID, String> =
     Pair(UUID.fromString("f95337f1-2ad1-4baf-922f-2ca9152de630"), "flexport"),
     Pair(UUID.fromString("9f8dda77-1048-4368-815b-269bf54ee9b8"), "google-drive"),
     Pair(UUID.fromString("59353119-f0f2-4e5a-a8ba-15d887bc34f6"), "microsoft-sharepoint"),
+    Pair(UUID.fromString("f14d5125-dc0d-4f6c-abe5-acde821a2203"), "datagen"),
   )
