@@ -327,7 +327,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
         // This var is unused since no feature flags are currently required in this workflow.
         // Fetch workflow-scoped feature flags up front so activities do not need to resolve them.
-        val featureFlags = getFeatureFlags(connectionUpdaterInput.connectionId)
+        val featureFlags = getFeatureFlags(connectionUpdaterInput.connectionId, connectionContext?.organizationId)
 
         // Create the job first before checking capacity, so we have a job to cancel if needed
         workflowInternalState.jobId = getOrCreateJobId(connectionUpdaterInput)
@@ -1042,7 +1042,10 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     return jobCreationOutput.jobId
   }
 
-  private fun getFeatureFlags(connectionId: UUID?): MutableMap<String?, Boolean?> {
+  private fun getFeatureFlags(
+    connectionId: UUID?,
+    organizationId: UUID?,
+  ): MutableMap<String?, Boolean?> {
     val getFeatureFlagsVersion =
       Workflow.getVersion(GET_FEATURE_FLAGS_TAG, Workflow.DEFAULT_VERSION, GET_FEATURE_FLAGS_CURRENT_VERSION)
 
@@ -1053,7 +1056,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     val getFlagsOutput =
       runMandatoryActivityWithOutput<FeatureFlagFetchInput?, FeatureFlagFetchOutput>({ input: FeatureFlagFetchInput? ->
         featureFlagFetchActivity?.getFeatureFlags(input!!)
-      }, FeatureFlagFetchInput(connectionId))!!
+      }, FeatureFlagFetchInput(connectionId, organizationId))!!
     return getFlagsOutput.featureFlags!!
   }
 

@@ -48,21 +48,20 @@ class FeatureFlagFetchActivityImpl(
   }
 
   override fun getFeatureFlags(input: FeatureFlagFetchInput): FeatureFlagFetchOutput {
-    val connectionId = input.connectionId
-    if (connectionId == null) {
+    val organizationId =
+      input.organizationId ?: input.connectionId?.let { connectionId ->
+        getOrganizationId(connectionId)
+      }
+
+    if (organizationId == null) {
       return FeatureFlagFetchOutput(mutableMapOf())
     }
 
-    val organizationId = getOrganizationId(connectionId)
     val enforcementEnabled =
-      if (organizationId == null) {
+      try {
+        featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId))
+      } catch (_: Exception) {
         false
-      } else {
-        try {
-          featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId))
-        } catch (_: Exception) {
-          false
-        }
       }
 
     return FeatureFlagFetchOutput(

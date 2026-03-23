@@ -41,6 +41,7 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.Sch
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity
+import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivityImpl
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity
@@ -167,7 +168,7 @@ internal class ConnectionManagerWorkflowTest {
 
     every { mConfigFetchActivity.getConnectionContext(any()) } returns
       GetConnectionContextOutput(
-        ConnectionContext().withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID),
+        ConnectionContext().withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID).withOrganizationId(ORGANIZATION_ID),
       )
 
     every { mJobCreationAndStatusUpdateActivity.createNewJob(any()) } returns
@@ -306,6 +307,34 @@ internal class ConnectionManagerWorkflowTest {
               changedStateEvent.isValue
           },
         ).isEmpty()
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Feature flag lookup uses hydrated organization context")
+    fun featureFlagLookupUsesHydratedOrganizationContext() {
+      returnTrueForLastJobOrAttemptFailure()
+      every { mConfigFetchActivity.getTimeToWait(any()) } returns ScheduleRetrieverOutput(SCHEDULE_WAIT)
+
+      val input =
+        ConnectionUpdaterInput(
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = WorkflowState(UUID.randomUUID(), TestStateListener()),
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
+        )
+
+      startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() + 1))
+
+      verify(atLeast = 1) {
+        mFeatureFlagFetchActivity.getFeatureFlags(FeatureFlagFetchInput(input.connectionId, ORGANIZATION_ID))
+      }
     }
 
     @Test
@@ -2266,6 +2295,7 @@ internal class ConnectionManagerWorkflowTest {
     private const val ATTEMPT_ID = 1
     val SOURCE_ID: UUID = UUID.randomUUID()
     val DESTINATION_ID: UUID = UUID.randomUUID()
+    val ORGANIZATION_ID: UUID = UUID.randomUUID()
 
     private val SCHEDULE_WAIT: Duration = Duration.ofMinutes(20L)
     private const val WORKFLOW_ID = "workflow-id"

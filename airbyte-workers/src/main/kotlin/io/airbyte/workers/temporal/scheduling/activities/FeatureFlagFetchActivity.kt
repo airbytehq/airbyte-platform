@@ -21,10 +21,18 @@ interface FeatureFlagFetchActivity {
     @JvmField
     var connectionId: UUID? = null
 
+    @JvmField
+    var organizationId: UUID? = null
+
     constructor()
 
     constructor(connectionId: UUID?) {
       this.connectionId = connectionId
+    }
+
+    constructor(connectionId: UUID?, organizationId: UUID?) {
+      this.connectionId = connectionId
+      this.organizationId = organizationId
     }
 
     override fun equals(o: Any?): Boolean {
@@ -32,12 +40,12 @@ interface FeatureFlagFetchActivity {
         return false
       }
       val that = o as FeatureFlagFetchInput
-      return connectionId == that.connectionId
+      return connectionId == that.connectionId && organizationId == that.organizationId
     }
 
-    override fun hashCode(): Int = Objects.hashCode(connectionId)
+    override fun hashCode(): Int = Objects.hash(connectionId, organizationId)
 
-    override fun toString(): String = "FeatureFlagFetchInput{connectionId=" + connectionId + '}'
+    override fun toString(): String = "FeatureFlagFetchInput{connectionId=$connectionId, organizationId=$organizationId}"
   }
 
   /**

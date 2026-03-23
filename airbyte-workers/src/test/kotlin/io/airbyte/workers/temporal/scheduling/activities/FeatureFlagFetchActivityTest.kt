@@ -13,6 +13,7 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -28,6 +29,26 @@ internal class FeatureFlagFetchActivityTest {
   fun setUp() {
     mWorkspaceApi = mockk<WorkspaceApi>()
     mAirbyteApiClient = mockk<AirbyteApiClient>()
+    featureFlagFetchActivity =
+      FeatureFlagFetchActivityImpl(
+        mAirbyteApiClient!!,
+        TestClient(mapOf(EnforceDataWorkerCapacity.key to true)),
+      )
+  }
+
+  @Test
+  fun testGetFeatureFlagsUsesProvidedOrganizationId() {
+    val input = FeatureFlagFetchInput(CONNECTION_ID, organizationId)
+
+    val featureFlagFetchOutput =
+      featureFlagFetchActivity!!.getFeatureFlags(input)
+
+    assertEquals(true, featureFlagFetchOutput.featureFlags!![EnforceDataWorkerCapacity.key])
+    verify(exactly = 0) { mAirbyteApiClient!!.workspaceApi }
+  }
+
+  @Test
+  fun testGetFeatureFlagsFallsBackToWorkspaceLookup() {
     every { mAirbyteApiClient!!.workspaceApi } returns mWorkspaceApi!!
     every { mWorkspaceApi!!.getWorkspaceByConnectionId(any<ConnectionIdRequestBody>()) } returns
       WorkspaceRead(
@@ -51,21 +72,14 @@ internal class FeatureFlagFetchActivityTest {
         null,
         null,
       )
-    featureFlagFetchActivity =
-      FeatureFlagFetchActivityImpl(
-        mAirbyteApiClient!!,
-        TestClient(mapOf(EnforceDataWorkerCapacity.key to true)),
-      )
-  }
 
-  @Test
-  fun testGetFeatureFlags() {
     val input = FeatureFlagFetchInput(CONNECTION_ID)
 
     val featureFlagFetchOutput =
       featureFlagFetchActivity!!.getFeatureFlags(input)
 
     assertEquals(true, featureFlagFetchOutput.featureFlags!![EnforceDataWorkerCapacity.key])
+    verify(exactly = 1) { mWorkspaceApi!!.getWorkspaceByConnectionId(ConnectionIdRequestBody(CONNECTION_ID)) }
   }
 
   companion object {
