@@ -31,7 +31,7 @@ export const WorkspaceUsagePage: React.FC = () => {
         <Heading as="h1">
           <FormattedMessage id="settings.workspace.usage.title" />
         </Heading>
-        <SetupBillingAlertsLink />
+        {!showDataWorkerUsage && <SetupBillingAlertsLink />}
       </FlexContainer>
 
       {showDataWorkerUsage ? (

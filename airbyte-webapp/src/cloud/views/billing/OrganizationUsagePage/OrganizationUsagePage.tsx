@@ -28,7 +28,7 @@ export const OrganizationUsagePage: React.FC = () => {
         <Heading as="h1">
           <FormattedMessage id="settings.organization.usage.title" />
         </Heading>
-        <SetupBillingAlertsLink />
+        {!showDataWorkerUsage && <SetupBillingAlertsLink />}
       </FlexContainer>
 
       {showDataWorkerUsage ? (
