@@ -16,16 +16,6 @@ import { useOrganizationSubscriptionStatus } from "./useOrganizationSubscription
 jest.mock("core/api");
 jest.mock("core/utils/rbac");
 jest.mock("dayjs");
-jest.mock("area/organization/utils", () => ({
-  ORG_PLAN_IDS: {
-    STANDARD: "plan-airbyte-standard",
-    SME: "plan-airbyte-sme",
-    FLEX: "plan-airbyte-flex",
-    STANDARD_TRIAL: "plan-airbyte-standard-trial",
-    UNIFIED_TRIAL: "plan-airbyte-unified-trial",
-    PRO: "plan-airbyte-pro",
-  },
-}));
 
 const mockUseOrgInfo = useOrgInfo as jest.MockedFunction<typeof useOrgInfo>;
 const mockUseCurrentOrganizationInfo = useCurrentOrganizationInfo as jest.MockedFunction<

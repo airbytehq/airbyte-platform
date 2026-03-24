@@ -14,7 +14,7 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentOrganizationId, useOrganizationPlan } from "area/organization/utils";
 import {
   useListUsersInOrganization,
   useListWorkspacesInOrganization,
@@ -26,7 +26,6 @@ import { useWebappConfig } from "core/config";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import OrganizationWorkspaceItem from "./components/OrganizationWorkspaceItem";
 import { OrganizationWorkspacesCreateControl } from "./components/OrganizationWorkspacesCreateControl";
@@ -41,7 +40,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
 
   const organizationId = useCurrentOrganizationId();
   const organization = useOrgInfo(organizationId);
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
+  const { isUnifiedTrialPlan } = useOrganizationPlan();
   const canViewOrganizationDetails = useGeneratedIntent(Intent.ViewOrganizationDetails);
   const memberCount = useListUsersInOrganization(canViewOrganizationDetails ? organizationId : undefined).users.length;
 

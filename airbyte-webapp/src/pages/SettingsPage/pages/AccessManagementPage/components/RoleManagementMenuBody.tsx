@@ -4,8 +4,8 @@ import { Box } from "components/ui/Box";
 import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Text } from "components/ui/Text";
 
+import { useOrganizationPlan } from "area/organization/utils";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import { CancelInvitationMenuItem } from "./CancelInvitationMenuItem";
 import { ChangeRoleMenuItem } from "./ChangeRoleMenuItem";
@@ -24,7 +24,7 @@ interface RoleManagementMenuBodyProps {
   close: () => void;
 }
 export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ user, resourceType, close }) => {
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
+  const { isUnifiedTrialPlan } = useOrganizationPlan();
   const areAllRbacRolesEnabled = useFeature(FeatureItem.AllowAllRBACRoles);
   const rolesToAllow = !user.invitationStatus && areAllRbacRolesEnabled ? permissionsByResourceType[resourceType] : [];
 

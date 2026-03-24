@@ -27,11 +27,11 @@ import {
 } from "area/connection/components/ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
 import { useTrackConnectionFrequency } from "area/connection/components/ConnectionForm/ScheduleFormField/useTrackConnectionFrequency";
 import { useConnectionFormService } from "area/connection/utils/ConnectionForm/ConnectionFormService";
+import { useOrganizationPlan } from "area/organization/utils";
 import { useDescribeCronExpression } from "core/api";
 import { ConnectionScheduleDataBasicSchedule, ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { cronTimeZones, CRON_DEFAULT_VALUE } from "core/utils/cron";
 import { links } from "core/utils/links";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import styles from "./ConnectionScheduleFormField.module.scss";
 import { InputContainer } from "./InputContainer";
@@ -153,7 +153,7 @@ const BasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled })
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
   const { trackDropdownSelect } = useTrackConnectionFrequency(connection);
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
+  const { isUnifiedTrialPlan } = useOrganizationPlan();
   const frequencies: Array<Option<ConnectionScheduleDataBasicSchedule>> = useBasicFrequencyDropdownData(
     connection.scheduleData
   );

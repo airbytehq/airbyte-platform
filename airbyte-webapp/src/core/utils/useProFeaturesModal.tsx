@@ -1,11 +1,10 @@
 import { useCallback, useMemo } from "react";
 
 import { ProFeaturesWarnModal } from "area/organization/components/ProFeaturesWarnModal";
-import { ORG_PLAN_IDS } from "area/organization/utils";
+import { ORG_PLAN_IDS, useOrganizationPlan } from "area/organization/utils";
 import { useModalService } from "core/services/Modal";
 
 import { useLocalStorage } from "./useLocalStorage";
-import { useOrganizationSubscriptionStatus } from "./useOrganizationSubscriptionStatus";
 
 /**
  * Custom hook to manage ProFeaturesWarnModal display logic for unified trial users and standard plan users.
@@ -13,7 +12,7 @@ import { useOrganizationSubscriptionStatus } from "./useOrganizationSubscription
  * - Standard Plan: Shows modal every time for ANY pro feature
  */
 export const useProFeaturesModal = (featureId: string) => {
-  const { isUnifiedTrialPlan, isStandardPlan } = useOrganizationSubscriptionStatus();
+  const { isUnifiedTrialPlan, isStandardPlan } = useOrganizationPlan();
   const { openModal } = useModalService();
   const [shownFeatures, setShownFeatures] = useLocalStorage("airbyte_pro-features-shown", {});
 

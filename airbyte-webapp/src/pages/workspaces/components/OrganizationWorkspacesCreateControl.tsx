@@ -9,13 +9,12 @@ import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useCurrentOrganizationId, useOrganizationPlan } from "area/organization/utils";
 import { useCreateWorkspace, useListDataplaneGroups } from "core/api";
 import { DataplaneGroupRead } from "core/api/types/AirbyteClient";
 import { useModalService } from "core/services/Modal";
 import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 
 const OrganizationCreateWorkspaceFormValidationSchema = z.object({
@@ -31,7 +30,7 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
   secondary?: boolean;
   onCreated?: () => void;
 }> = ({ disabled = false, secondary = false, onCreated }) => {
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
+  const { isUnifiedTrialPlan } = useOrganizationPlan();
   const dataplaneGroups = useListDataplaneGroups();
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();

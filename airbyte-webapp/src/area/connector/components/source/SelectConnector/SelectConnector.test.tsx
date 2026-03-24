@@ -22,6 +22,7 @@ jest.mock("core/utils/useAirbyteTheme", () => ({
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
+  useCurrentOrganizationInfo: () => ({ organizationPlanId: undefined }),
   useFilters: (defaultFilters: unknown) => {
     return [defaultFilters, () => null];
   },

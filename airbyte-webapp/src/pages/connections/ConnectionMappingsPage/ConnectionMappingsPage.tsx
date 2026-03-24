@@ -12,10 +12,10 @@ import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { useIsDataActivationConnection } from "area/connection/utils/useIsDataActivationConnection";
+import { useOrganizationPlan } from "area/organization/utils";
 import { useNotificationService } from "core/services/Notification";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionMappingsList } from "./ConnectionMappingsList";
@@ -44,7 +44,7 @@ export const ConnectionMappingsRoute = () => {
 };
 
 const ConnectionMappingsPage = () => {
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
+  const { isUnifiedTrialPlan } = useOrganizationPlan();
   const { streamsWithMappings, clear, submitMappings, hasMappingsChanged, isMappingsFeatureEnabled } =
     useMappingContext();
   const { mode } = useFormMode();

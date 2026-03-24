@@ -10,13 +10,12 @@ import { Message } from "components/ui/Message";
 import { PageContainer } from "components/ui/PageContainer";
 
 import { SetupBillingAlertsLink } from "area/organization/components/SetupBillingAlertsLink";
-import { useCurrentOrganizationId, ORG_PLAN_IDS } from "area/organization/utils";
+import { useCurrentOrganizationId, ORG_PLAN_IDS, useOrganizationPlan } from "area/organization/utils";
 import { useGetOrganizationSubscriptionInfo, useOrgInfo } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useModalService } from "core/services/Modal";
 import { useFormatCredits } from "core/utils/numberHelper";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import { AccountBalance } from "./AccountBalance";
 import { BillingBanners } from "./BillingBanners";
@@ -33,7 +32,7 @@ export const OrganizationBillingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { openModal } = useModalService();
   const { formatCredits } = useFormatCredits();
-  const { isStandardPlan, isProPlan, isFlexPlan } = useOrganizationSubscriptionStatus();
+  const { isStandardPlan, isProPlan, isFlexPlan } = useOrganizationPlan();
 
   const organizationId = useCurrentOrganizationId();
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
