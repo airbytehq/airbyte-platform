@@ -63,5 +63,15 @@ interface SecretConfigRepository : PageableRepository<SecretConfig, UUID> {
     storageIds: List<UUID>,
   ): List<SecretConfig>
 
+  @Query(
+    """
+    SELECT COUNT(*) FROM secret_config sc
+    LEFT JOIN secret_reference sr ON sc.id = sr.secret_config_id
+    WHERE sr.secret_config_id IS NULL
+    AND sc.airbyte_managed = true
+  """,
+  )
+  fun countOrphanedAirbyteManagedConfigs(): Long
+
   fun deleteByIdIn(ids: List<UUID>)
 }

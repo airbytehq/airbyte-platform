@@ -48,6 +48,14 @@ class OrphanedSecretConfigCleanup(
       attributes = arrayOf(MetricAttribute(MetricTags.CRON_TYPE, "orphaned_secret_cleanup")),
     )
 
+    // Emit total orphan count every run for Datadog visibility
+    val totalOrphaned = secretConfigService.countOrphanedAirbyteManagedConfigs()
+    log.info { "Total orphaned secret configs across all storages: $totalOrphaned" }
+    metricClient.count(
+      metric = OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_TOTAL,
+      value = totalOrphaned,
+    )
+
     // Find orphaned configs that were created more than 1 hour ago
     // This gives a grace period for recently created configs that might not have references yet
     val oneHourAgo = OffsetDateTime.now().minusHours(1)

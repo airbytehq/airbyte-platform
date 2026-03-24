@@ -48,6 +48,7 @@ class OrphanedSecretConfigCleanupTest {
   @BeforeEach
   fun reset() {
     clearAllMocks()
+    every { secretConfigService.countOrphanedAirbyteManagedConfigs() } returns 1000L
   }
 
   private fun createSecretConfig(

@@ -740,6 +740,10 @@ enum class OssMetricsRegistry(
     metricName = "orphaned_secret_configs_found",
     metricDescription = "count of orphaned secret configs found in cleanup batch",
   ),
+  ORPHANED_SECRET_CONFIGS_TOTAL(
+    metricName = "orphaned_secret_configs_total",
+    metricDescription = "total orphaned secret configs across all storages, emitted as counter each cron run",
+  ),
   ;
 
   override fun getMetricName(): String = metricName

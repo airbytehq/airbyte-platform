@@ -34,5 +34,7 @@ interface SecretConfigService {
     storageIds: List<UUID>,
   ): List<SecretConfig>
 
+  fun countOrphanedAirbyteManagedConfigs(): Long
+
   fun deleteByIds(ids: List<SecretConfigId>)
 }

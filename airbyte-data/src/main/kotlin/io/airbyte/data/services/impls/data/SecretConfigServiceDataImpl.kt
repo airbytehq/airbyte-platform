@@ -50,6 +50,8 @@ class SecretConfigServiceDataImpl(
       .findAirbyteManagedConfigsWithoutReferencesByStorageIds(excludeCreatedBefore, limit, storageIds)
       .map { it.toConfigModel() }
 
+  override fun countOrphanedAirbyteManagedConfigs(): Long = secretConfigRepository.countOrphanedAirbyteManagedConfigs()
+
   override fun deleteByIds(ids: List<SecretConfigId>) {
     if (ids.isNotEmpty()) {
       secretConfigRepository.deleteByIdIn(ids.map { it.value })
