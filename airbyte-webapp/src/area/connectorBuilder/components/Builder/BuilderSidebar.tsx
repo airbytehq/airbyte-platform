@@ -353,6 +353,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
             onAddStream={(addedStreamNum) => handleViewSelect({ type: "stream", index: addedStreamNum })}
             disabled={permission === "readOnly"}
             data-testid="add-stream"
+            data-fs-element="Add Stream Button"
           />
         </FlexContainer>
 
@@ -394,6 +395,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
               onAddStream={(addedStreamNum) => handleViewSelect({ type: "dynamic_stream", index: addedStreamNum })}
               disabled={permission === "readOnly"}
               data-testid="add-dynamic-stream"
+              data-fs-element="Add Dynamic Stream Button"
             />
           </FlexContainer>
 

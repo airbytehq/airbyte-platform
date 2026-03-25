@@ -56,6 +56,7 @@ interface AddStreamButtonProps {
   onAddStream: (addedStreamNum: number) => void;
   streamType: "stream" | "dynamicStream";
   "data-testid"?: string;
+  "data-fs-element"?: string;
   modalTitle?: string;
   disabled?: boolean;
 }
@@ -64,6 +65,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   onAddStream,
   streamType,
   "data-testid": testId,
+  "data-fs-element": fsElement,
   modalTitle,
   disabled,
 }) => {
@@ -130,6 +132,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
           onClick={buttonClickHandler}
           icon="plus"
           data-testid={testId}
+          data-fs-element={fsElement}
           disabled={disabled}
         />
       </div>

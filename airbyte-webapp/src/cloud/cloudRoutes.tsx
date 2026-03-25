@@ -21,6 +21,7 @@ import { RoutePaths } from "pages/routePaths";
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
 import { EntitlementsLoader } from "./components/EntitlementsLoader";
+import { useFullStoryUserProperties } from "./services/thirdParty/fullstoryGuides/useFullStoryUserProperties";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
@@ -33,6 +34,7 @@ const AuthLayout = React.lazy(() => import("cloud/views/auth"));
 const DefaultView = React.lazy(() => import("pages/DefaultView"));
 
 const CloudMainViewRoutes = () => {
+  useFullStoryUserProperties();
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
 
   if (loginRedirect) {
@@ -106,6 +108,7 @@ export const Routing: React.FC = () => {
         ? {
             provider,
             email: user.email,
+            name: user.name,
             isCorporate: isCorporateEmail(user.email),
             currentWorkspaceId: workspaceId,
           }
