@@ -25,7 +25,7 @@ export function useFormOauthAdapter(connector: ConnectorDefinitionSpecificationR
   const { setValue, getValues: getRawValues, formState } = useFormContext<ConnectorFormValues>();
   const [hasRun, setHasRun] = useState(false);
 
-  const { getValues } = useConnectorForm();
+  const { castValues } = useConnectorForm();
   const { registerNotification } = useNotificationService();
 
   const OAUTH_SUCCESS_ID = "connectorForm.authenticate.succeeded";
@@ -90,7 +90,7 @@ export function useFormOauthAdapter(connector: ConnectorDefinitionSpecificationR
         }
       }
 
-      const preparedValues = getValues(getRawValues());
+      const preparedValues = castValues(getRawValues());
       const oauthInputParams = Object.entries(oauthInputProperties).reduce(
         (acc, property) => {
           acc[property[0]] = get(preparedValues, makeConnectionConfigurationPath(property[1].path_in_connector_config));

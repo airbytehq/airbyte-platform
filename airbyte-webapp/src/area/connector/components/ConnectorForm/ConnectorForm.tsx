@@ -91,7 +91,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
     >
       <ConnectorFormContextProvider
         formType={formType}
-        getValues={castValues}
+        castValues={castValues}
         selectedConnectorDefinition={selectedConnectorDefinition}
         selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
         isEditMode={isEditMode}

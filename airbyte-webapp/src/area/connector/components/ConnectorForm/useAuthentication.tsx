@@ -67,7 +67,7 @@ export const useAuthentication = (): AuthenticationHook => {
   } = useFormContext<ConnectorFormValues>();
   const values = watch();
   const {
-    getValues,
+    castValues,
     selectedConnectorDefinitionSpecification: connectorSpec,
     manualOAuthMode,
     toggleManualOAuthMode,
@@ -75,18 +75,18 @@ export const useAuthentication = (): AuthenticationHook => {
 
   const advancedAuth = connectorSpec?.advancedAuth;
 
-  const getValuesSafe = useCallback(
+  const castValuesSafe = useCallback(
     (values: ConnectorFormValues) => {
       try {
-        // We still see cases where calling `getValues` which will eventually use the yupSchema.cast method
+        // We still see cases where calling `castValues` which will eventually use the yupSchema.cast method
         // crashes based on the passed in values. To temporarily make sure we're not crashing the form, we're
         // falling back to `values` in case the cast fails. This is a temporary patch, and we need to investigate
         // all the failures happening here properly.
-        return getValues(values);
+        return castValues(values);
       } catch (e) {
-        console.error(`getValues in useAuthentication failed.`, e);
+        console.error(`castValues in useAuthentication failed.`, e);
         trackError(e, {
-          id: "useAuthentication.getValues",
+          id: "useAuthentication.castValues",
           connector:
             connectorSpec && !isSourceDefinitionSpecificationDraft(connectorSpec)
               ? ConnectorSpecification.id(connectorSpec)
@@ -95,10 +95,10 @@ export const useAuthentication = (): AuthenticationHook => {
         return values;
       }
     },
-    [connectorSpec, getValues]
+    [connectorSpec, castValues]
   );
 
-  const valuesWithDefaults = useMemo(() => getValuesSafe(values), [getValuesSafe, values]);
+  const valuesWithDefaults = useMemo(() => castValuesSafe(values), [castValuesSafe, values]);
 
   const isAuthButtonVisible = useMemo(
     () =>

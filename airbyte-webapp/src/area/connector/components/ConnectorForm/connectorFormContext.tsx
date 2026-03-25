@@ -12,7 +12,7 @@ import { ConnectorFormValues } from "./types";
 
 interface ConnectorFormContext {
   formType: "source" | "destination";
-  getValues: (values: ConnectorFormValues) => ConnectorFormValues;
+  castValues: (values: ConnectorFormValues) => ConnectorFormValues;
   resetConnectorForm: () => void;
   selectedConnectorDefinition: ConnectorDefinition;
   selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecificationRead | SourceDefinitionSpecificationDraft;
@@ -37,7 +37,7 @@ interface ConnectorFormContextProviderProps {
   selectedConnectorDefinition: ConnectorDefinition;
   formType: "source" | "destination";
   isEditMode?: boolean;
-  getValues: (values: ConnectorFormValues) => ConnectorFormValues;
+  castValues: (values: ConnectorFormValues) => ConnectorFormValues;
   selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecificationRead | SourceDefinitionSpecificationDraft;
   validationSchema: AnySchema;
   connectorId?: string;
@@ -47,7 +47,7 @@ export const ConnectorFormContextProvider: React.FC<React.PropsWithChildren<Conn
   selectedConnectorDefinition,
   children,
   selectedConnectorDefinitionSpecification,
-  getValues,
+  castValues,
   formType,
   validationSchema,
   isEditMode,
@@ -62,7 +62,7 @@ export const ConnectorFormContextProvider: React.FC<React.PropsWithChildren<Conn
 
   const ctx = useMemo<ConnectorFormContext>(() => {
     const context: ConnectorFormContext = {
-      getValues,
+      castValues,
       selectedConnectorDefinition,
       selectedConnectorDefinitionSpecification,
       formType,
@@ -77,7 +77,7 @@ export const ConnectorFormContextProvider: React.FC<React.PropsWithChildren<Conn
     };
     return context;
   }, [
-    getValues,
+    castValues,
     selectedConnectorDefinition,
     selectedConnectorDefinitionSpecification,
     formType,

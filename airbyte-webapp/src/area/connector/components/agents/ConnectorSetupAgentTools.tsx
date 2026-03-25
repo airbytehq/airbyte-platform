@@ -8,6 +8,7 @@ import { useSaveConfigurationTool } from "area/connector/components/agents/tools
 import { useSubmitConfigurationTool } from "area/connector/components/agents/tools/hooks/useSubmitConfigurationTool";
 import { TOOL_NAMES } from "area/connector/components/agents/tools/toolNames";
 import { type ClientTools } from "area/connector/components/chat/hooks/useChatMessages";
+import { useConnectorForm } from "area/connector/components/ConnectorForm/connectorFormContext";
 import { type ConnectorFormValues } from "area/connector/components/ConnectorForm/types";
 import { ActorType } from "core/api/types/AirbyteClient";
 
@@ -55,10 +56,11 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
   touchedSecretFieldsRef,
   addTouchedSecretField,
 }) => {
-  const { getValues } = useFormContext();
+  const { getValues: getRawValues } = useFormContext<ConnectorFormValues>();
+  const { castValues } = useConnectorForm();
 
-  // Create callback that returns form values with proper typing
-  const getFormValues = useCallback(() => getValues() as ConnectorFormValues, [getValues]);
+  // Create callback that returns cleaned form values (empty strings removed, schema-cast)
+  const getFormValues = useCallback(() => castValues(getRawValues()), [getRawValues, castValues]);
 
   // Setup client tools - form is single source of truth
   const submitTool = useSubmitConfigurationTool({
@@ -152,9 +154,9 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
   // Notify parent when form getValues is ready
   useEffect(() => {
     if (onFormValuesReady) {
-      onFormValuesReady(() => getValues());
+      onFormValuesReady(() => castValues(getRawValues()));
     }
-  }, [onFormValuesReady, getValues]);
+  }, [onFormValuesReady, castValues, getRawValues]);
 
   return null;
 };
