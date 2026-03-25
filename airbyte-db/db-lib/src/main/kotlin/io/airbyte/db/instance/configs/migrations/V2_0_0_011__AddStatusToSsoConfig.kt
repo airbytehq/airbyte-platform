@@ -22,7 +22,7 @@ private val log = KotlinLogging.logger {}
  * Add status column to sso_config table to support DRAFT/ACTIVE workflow for SSO configuration validation.
  */
 @Suppress("ktlint:standard:class-naming")
-class V1_8_1_006__AddStatusToSsoConfig : BaseJavaMigration() {
+class V2_0_0_011__AddStatusToSsoConfig : BaseJavaMigration() {
   override fun migrate(context: Context) {
     log.info { "Running migration: ${javaClass.simpleName}" }
     val ctx = DSL.using(context.connection)

@@ -18,20 +18,23 @@ import org.jooq.impl.SchemaImpl
 private val log = KotlinLogging.logger {}
 
 @Suppress("ktlint:standard:class-naming")
-class V1_6_0_024__CreateOrchestrationTaskTable : BaseJavaMigration() {
+class V2_0_0_003__CreateOrchestrationRunTable : BaseJavaMigration() {
   override fun migrate(context: Context) {
     log.info { "Running migration: ${javaClass.simpleName}" }
 
     val ctx: DSLContext = DSL.using(context.connection)
-    dropOrchestrationDefinition(ctx)
-    createOrchestrationTaskTypeEnumType(ctx)
-    createOrchestrationTaskTable(ctx)
+    createRunStatusTypeEnumType(ctx)
+    createOrchestrationRunTableAndIndexes(ctx)
   }
 
-  enum class OrchestrationTaskType(
+  enum class OrchestrationRunStatus(
     private val literal: String,
   ) : EnumType {
-    SYNC("sync"),
+    PENDING("pending"),
+    RUNNING("running"),
+    FAILED("failed"),
+    SUCCEEDED("succeeded"),
+    CANCELLED("cancelled"),
     ;
 
     override fun getCatalog(): Catalog? = schema.catalog
@@ -43,55 +46,50 @@ class V1_6_0_024__CreateOrchestrationTaskTable : BaseJavaMigration() {
     override fun getLiteral(): String = literal
 
     companion object {
-      const val NAME = "orchestration_task_type"
+      const val NAME = "orchestration_run_status"
     }
   }
 
   companion object {
-    private const val ORCHESTRATION_TABLE = "orchestration"
-    private const val ORCHESTRATION_TASK_TABLE = "orchestration_task"
+    private const val ORCHESTRATION_RUN_TABLE = "orchestration_run"
 
-    fun dropOrchestrationDefinition(ctx: DSLContext) {
+    fun createRunStatusTypeEnumType(ctx: DSLContext) {
       ctx
-        .alterTable(ORCHESTRATION_TABLE)
-        .dropColumnIfExists("orchestration_definition")
+        .createType(OrchestrationRunStatus.NAME)
+        .asEnum(*OrchestrationRunStatus.entries.map { it.literal }.toTypedArray())
         .execute()
     }
 
-    fun createOrchestrationTaskTypeEnumType(ctx: DSLContext) {
-      ctx
-        .createType(OrchestrationTaskType.NAME)
-        .asEnum(*OrchestrationTaskType.entries.map { it.literal }.toTypedArray())
-        .execute()
-    }
-
-    fun createOrchestrationTaskTable(ctx: DSLContext) {
+    fun createOrchestrationRunTableAndIndexes(ctx: DSLContext) {
       val id = DSL.field("id", SQLDataType.UUID.nullable(false))
       val orchestrationId = DSL.field("orchestration_id", SQLDataType.UUID.nullable(false))
       val orchestrationVersionId = DSL.field("orchestration_version_id", SQLDataType.UUID.nullable(false))
-      val taskType = DSL.field("type", SQLDataType.VARCHAR.nullable(false))
-      val taskDefinitionId = DSL.field("task_definition_id", SQLDataType.UUID.nullable(false))
-      val dependsOn = DSL.field("depends_on", SQLDataType.UUID.arrayDataType.nullable(false))
+      val status = DSL.field("orchestration_run_status", SQLDataType.VARCHAR.asEnumDataType(OrchestrationRunStatus::class.java).nullable(false))
       val createdAt = DSL.field("created_at", SQLDataType.TIMESTAMPWITHTIMEZONE.nullable(false).defaultValue(DSL.currentOffsetDateTime()))
+      val updatedAt = DSL.field("updated_at", SQLDataType.TIMESTAMPWITHTIMEZONE.nullable(false).defaultValue(DSL.currentOffsetDateTime()))
 
       ctx
-        .createTableIfNotExists(ORCHESTRATION_TASK_TABLE)
+        .createTableIfNotExists(ORCHESTRATION_RUN_TABLE)
         .columns(
           id,
           orchestrationId,
           orchestrationVersionId,
-          taskType,
-          taskDefinitionId,
-          dependsOn,
+          status,
           createdAt,
+          updatedAt,
         ).constraints(
           DSL.primaryKey(id),
           DSL.foreignKey(orchestrationId, orchestrationVersionId).references("orchestration", "id", "version_id").onDeleteCascade(),
         ).execute()
 
       ctx
-        .createIndexIfNotExists("orchestration_task_orchestration_id_idx")
-        .on(ORCHESTRATION_TASK_TABLE, orchestrationId.name)
+        .createIndexIfNotExists("orchestration_run_orchestration_id_idx")
+        .on(ORCHESTRATION_RUN_TABLE, orchestrationId.name)
+        .execute()
+
+      ctx
+        .createIndexIfNotExists("orchestration_run_status_idx")
+        .on(ORCHESTRATION_RUN_TABLE, status.name)
         .execute()
     }
   }

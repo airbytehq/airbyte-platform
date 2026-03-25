@@ -23,13 +23,13 @@ class V2_1_0_001__AddDataObservabilityStreamStatsAdditionalStatsTest : AbstractC
     val flyway =
       create(
         dataSource,
-        "V1_8_1_006__AddStatusToSsoConfig",
+        "V2_0_0_011__AddStatusToSsoConfig",
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
     val configsDatabaseMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
-    val previousMigration: BaseJavaMigration = V1_8_1_006__AddStatusToSsoConfig()
+    val previousMigration: BaseJavaMigration = V2_0_0_011__AddStatusToSsoConfig()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDatabaseMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
   }

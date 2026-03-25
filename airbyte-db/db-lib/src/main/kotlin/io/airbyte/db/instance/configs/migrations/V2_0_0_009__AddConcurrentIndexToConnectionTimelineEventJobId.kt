@@ -13,7 +13,7 @@ import org.jooq.impl.DSL
 private val log = KotlinLogging.logger {}
 
 @Suppress("ktlint:standard:class-naming")
-class V1_8_1_004__AddConcurrentIndexToConnectionTimelineEventJobId : BaseJavaMigration() {
+class V2_0_0_009__AddConcurrentIndexToConnectionTimelineEventJobId : BaseJavaMigration() {
   override fun migrate(context: Context) {
     log.info { "Running migration: ${javaClass.simpleName}" }
 
@@ -38,7 +38,7 @@ class V1_8_1_004__AddConcurrentIndexToConnectionTimelineEventJobId : BaseJavaMig
         .query(
           """
           CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_connection_timeline_event_job_id
-          ON connection_timeline_event (job_id) 
+          ON connection_timeline_event (job_id)
           WHERE job_id IS NOT NULL
           """.trimIndent(),
         ).execute()

@@ -18,7 +18,7 @@ import org.jooq.impl.SchemaImpl
 private val log = KotlinLogging.logger {}
 
 @Suppress("ktlint:standard:class-naming")
-class V1_6_0_025__CreateOrchestrationTaskRunTable : BaseJavaMigration() {
+class V2_0_0_006__CreateOrchestrationTaskRunTable : BaseJavaMigration() {
   override fun migrate(context: Context) {
     log.info { "Running migration: ${javaClass.simpleName}" }
 

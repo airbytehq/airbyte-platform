@@ -14,7 +14,7 @@ import org.jooq.impl.SQLDataType
 private val log = KotlinLogging.logger {}
 
 @Suppress("ktlint:standard:class-naming")
-class V1_6_0_021__CreateOrchestrationsTable : BaseJavaMigration() {
+class V2_0_0_002__CreateOrchestrationsTable : BaseJavaMigration() {
   override fun migrate(context: Context) {
     log.info { "Running migration: ${javaClass.simpleName}" }
 

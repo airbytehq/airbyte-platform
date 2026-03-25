@@ -15,7 +15,7 @@ import org.jooq.impl.SQLDataType
 private val log = KotlinLogging.logger {}
 
 @Suppress("ktlint:standard:class-naming")
-class V1_6_0_023__AddObservabilityTables : BaseJavaMigration() {
+class V2_0_0_004__AddObservabilityTables : BaseJavaMigration() {
   companion object {
     private const val OBSERVABILITY_JOBS_STATS_TABLE = "observability_jobs_stats"
     private const val ORGANIZATION_ID = "organization_id"

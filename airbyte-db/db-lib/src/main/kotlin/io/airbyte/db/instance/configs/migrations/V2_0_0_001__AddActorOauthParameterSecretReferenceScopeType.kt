@@ -9,12 +9,15 @@ import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
-import org.jooq.impl.SQLDataType
 
 private val log = KotlinLogging.logger {}
 
 @Suppress("ktlint:standard:class-naming")
-class V1_8_1_003__AddJobIdToConnectionTimelineEvent : BaseJavaMigration() {
+class V2_0_0_001__AddActorOauthParameterSecretReferenceScopeType : BaseJavaMigration() {
+  private val secretReferenceScopeType = "secret_reference_scope_type"
+
+  private val actorOauthParameterTable = "actor_oauth_parameter"
+
   override fun migrate(context: Context) {
     log.info { "Running migration: ${javaClass.simpleName}" }
 
@@ -23,23 +26,6 @@ class V1_8_1_003__AddJobIdToConnectionTimelineEvent : BaseJavaMigration() {
     // old migration may not compile if there is any generated code.
     val ctx: DSLContext = DSL.using(context.connection)
 
-    // Add nullable job_id column as int8/long
-    addJobIdColumn(ctx)
-
-    // Note: Concurrent index creation will be done in a separate migration
-    // since it cannot run inside a transaction while column addition requires one
-  }
-
-  companion object {
-    private const val TABLE_NAME: String = "connection_timeline_event"
-    private val jobIdField = DSL.field("job_id", SQLDataType.BIGINT.nullable(true))
-
-    @JvmStatic
-    fun addJobIdColumn(ctx: DSLContext) {
-      ctx
-        .alterTable(TABLE_NAME)
-        .addColumnIfNotExists(jobIdField)
-        .execute()
-    }
+    ctx.alterType(secretReferenceScopeType).addValue(actorOauthParameterTable).execute()
   }
 }

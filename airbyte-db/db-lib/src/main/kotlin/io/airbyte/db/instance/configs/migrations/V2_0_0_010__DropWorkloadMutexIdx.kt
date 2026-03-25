@@ -12,7 +12,7 @@ import org.jooq.impl.DSL
 private val log = KotlinLogging.logger {}
 
 @Suppress("ktlint:standard:class-naming")
-class V1_8_1_005__DropWorkloadMutexIdx : BaseJavaMigration() {
+class V2_0_0_010__DropWorkloadMutexIdx : BaseJavaMigration() {
   override fun migrate(context: Context) {
     log.info { "Running migration: ${javaClass.simpleName}" }
     val ctx = DSL.using(context.connection)

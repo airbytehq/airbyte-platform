@@ -18,7 +18,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
-class V1_8_1_003__AddJobIdToConnectionTimelineEventTest : AbstractConfigsDatabaseTest() {
+class V2_0_0_008__AddJobIdToConnectionTimelineEventTest : AbstractConfigsDatabaseTest() {
   companion object {
     private const val CONNECTION_TIMELINE_EVENT_TABLE = "connection_timeline_event"
     private const val JOB_ID_COLUMN = "job_id"
@@ -29,13 +29,13 @@ class V1_8_1_003__AddJobIdToConnectionTimelineEventTest : AbstractConfigsDatabas
     val flyway =
       create(
         dataSource,
-        "V1_8_1_003__AddJobIdToConnectionTimelineEventTest",
+        "V2_0_0_008__AddJobIdToConnectionTimelineEventTest",
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
     val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
-    val previousMigration: BaseJavaMigration = V1_8_1_002__AddNameToOrchestrationTask()
+    val previousMigration: BaseJavaMigration = V2_0_0_007__AddNameToOrchestrationTask()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
   }
@@ -66,7 +66,7 @@ class V1_8_1_003__AddJobIdToConnectionTimelineEventTest : AbstractConfigsDatabas
       ).execute()
 
     // Run the migration to add job_id column
-    V1_8_1_003__AddJobIdToConnectionTimelineEvent.addJobIdColumn(ctx)
+    V2_0_0_008__AddJobIdToConnectionTimelineEvent.addJobIdColumn(ctx)
 
     // Verify existing row has null value for job_id
     val existingRow =
