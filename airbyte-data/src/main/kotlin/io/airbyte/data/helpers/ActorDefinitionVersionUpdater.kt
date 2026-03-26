@@ -539,6 +539,11 @@ class ActorDefinitionVersionUpdater(
             logger.warn { "Skipping non-semver version tag '${adv.dockerImageTag}' for actor definition $actorDefinitionId" }
             null
           }
+        }.filter { (adv, _) ->
+          // Exclude preview versions (e.g., "4.3.0-preview.7e48e9b").
+          // Only stable versions should be used for breaking change pins.
+          // NOTE: This is brittle — the "-preview" suffix must match the value used by the preview/dev publish pipeline.
+          !adv.dockerImageTag.contains("-preview")
         }.filter { (_, version) -> version.lessThan(firstBreakingChange.version) }
         .sortedWith { (_, v1), (_, v2) -> v1.versionCompareTo(v2) }
         .lastOrNull()
