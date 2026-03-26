@@ -885,6 +885,199 @@ internal class ActorDefinitionVersionUpdaterTest {
     }
   }
 
+  @Test
+  fun `test createBreakingChangePinIfNeeded returns false when no breaking changes`() {
+    val actorId = UUID.randomUUID()
+    val currentVersionId = UUID.randomUUID()
+
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns Optional.of(DEFAULT_VERSION)
+    every { actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID) } returns emptyList()
+
+    val result = actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(ACTOR_DEFINITION_ID, currentVersionId, actorId)
+
+    assertEquals(false, result)
+    verify(exactly = 0) { scopedConfigurationService.upsertScopedConfigurations(any()) }
+  }
+
+  @Test
+  fun `test createBreakingChangePinIfNeeded creates pin when breaking change exists`() {
+    val actorId = UUID.randomUUID()
+    val currentVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("0.5.0")
+
+    val safeVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("0.9.0")
+
+    val breakingChange = MockData.actorDefinitionBreakingChange("1.0.0")!!.withActorDefinitionId(ACTOR_DEFINITION_ID)
+
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns
+      Optional.of(
+        ActorDefinitionVersion()
+          .withVersionId(UUID.randomUUID())
+          .withActorDefinitionId(ACTOR_DEFINITION_ID)
+          .withDockerImageTag("2.0.0"),
+      )
+    every { actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID) } returns listOf(breakingChange)
+    every { actorDefinitionService.getActorDefinitionVersion(currentVersion.versionId) } returns currentVersion
+    every { actorDefinitionService.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID) } returns
+      listOf(currentVersion, safeVersion)
+    every { scopedConfigurationService.upsertScopedConfigurations(any()) } just Runs
+
+    val result = actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(ACTOR_DEFINITION_ID, currentVersion.versionId, actorId)
+
+    assertEquals(true, result)
+    verify { scopedConfigurationService.upsertScopedConfigurations(any()) }
+  }
+
+  @Test
+  fun `test createBreakingChangePinsForScopeIfNeeded creates pins for unprotected actors`() {
+    val workspaceId = UUID.randomUUID()
+    val actorId1 = UUID.randomUUID()
+    val actorId2 = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
+    val currentVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("0.5.0")
+
+    val safeVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("0.9.0")
+
+    val breakingChange = MockData.actorDefinitionBreakingChange("1.0.0")!!.withActorDefinitionId(ACTOR_DEFINITION_ID)
+
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns
+      Optional.of(
+        ActorDefinitionVersion()
+          .withVersionId(UUID.randomUUID())
+          .withActorDefinitionId(ACTOR_DEFINITION_ID)
+          .withDockerImageTag("2.0.0"),
+      )
+    every { actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID) } returns listOf(breakingChange)
+    every { actorDefinitionService.getActorDefinitionVersion(currentVersion.versionId) } returns currentVersion
+    every { actorDefinitionService.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID) } returns
+      listOf(currentVersion, safeVersion)
+    every { actorDefinitionService.getActorIdsForDefinition(ACTOR_DEFINITION_ID) } returns
+      listOf(
+        ActorWorkspaceOrganizationIds(actorId1, workspaceId, orgId),
+        ActorWorkspaceOrganizationIds(actorId2, workspaceId, orgId),
+      )
+    // Actor 1 already has a pin, Actor 2 does not
+    every {
+      scopedConfigurationService.getScopedConfigurations(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        any(),
+      )
+    } returns mapOf(actorId1 to ScopedConfiguration().withId(UUID.randomUUID()))
+    every { scopedConfigurationService.upsertScopedConfigurations(any()) } just Runs
+
+    val result =
+      actorDefinitionVersionUpdater.createBreakingChangePinsForScopeIfNeeded(
+        ACTOR_DEFINITION_ID,
+        currentVersion.versionId,
+        ConfigScopeType.WORKSPACE,
+        workspaceId,
+      )
+
+    assertEquals(true, result)
+
+    val configsSlot = slot<List<ScopedConfiguration>>()
+    verify { scopedConfigurationService.upsertScopedConfigurations(capture(configsSlot)) }
+    // Only actor 2 should get a pin since actor 1 already has one
+    assertEquals(1, configsSlot.captured.size)
+    assertEquals(actorId2, configsSlot.captured[0].scopeId)
+  }
+
+  @Test
+  fun `test createBreakingChangePinsForScopeIfNeeded returns false when no actors in scope`() {
+    val workspaceId = UUID.randomUUID()
+    val currentVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("0.5.0")
+
+    val breakingChange = MockData.actorDefinitionBreakingChange("1.0.0")!!.withActorDefinitionId(ACTOR_DEFINITION_ID)
+
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns
+      Optional.of(
+        ActorDefinitionVersion()
+          .withVersionId(UUID.randomUUID())
+          .withActorDefinitionId(ACTOR_DEFINITION_ID)
+          .withDockerImageTag("2.0.0"),
+      )
+    every { actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID) } returns listOf(breakingChange)
+    every { actorDefinitionService.getActorDefinitionVersion(currentVersion.versionId) } returns currentVersion
+    every { actorDefinitionService.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID) } returns listOf(currentVersion)
+    every { actorDefinitionService.getActorIdsForDefinition(ACTOR_DEFINITION_ID) } returns emptyList()
+
+    val result =
+      actorDefinitionVersionUpdater.createBreakingChangePinsForScopeIfNeeded(
+        ACTOR_DEFINITION_ID,
+        currentVersion.versionId,
+        ConfigScopeType.WORKSPACE,
+        workspaceId,
+      )
+
+    assertEquals(false, result)
+    verify(exactly = 0) { scopedConfigurationService.upsertScopedConfigurations(any()) }
+  }
+
+  @Test
+  fun `test findSafeVersionBeforeBreakingChange returns null when no default version`() {
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns Optional.empty()
+
+    val result = actorDefinitionVersionUpdater.findSafeVersionBeforeBreakingChange(ACTOR_DEFINITION_ID, UUID.randomUUID())
+
+    assertEquals(null, result)
+  }
+
+  @Test
+  fun `test findSafeVersionBeforeBreakingChange returns safe version and breaking change`() {
+    val currentVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("0.5.0")
+
+    val safeVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("0.9.0")
+
+    val breakingChange = MockData.actorDefinitionBreakingChange("1.0.0")!!.withActorDefinitionId(ACTOR_DEFINITION_ID)
+
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns
+      Optional.of(
+        ActorDefinitionVersion()
+          .withVersionId(UUID.randomUUID())
+          .withActorDefinitionId(ACTOR_DEFINITION_ID)
+          .withDockerImageTag("2.0.0"),
+      )
+    every { actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID) } returns listOf(breakingChange)
+    every { actorDefinitionService.getActorDefinitionVersion(currentVersion.versionId) } returns currentVersion
+    every { actorDefinitionService.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID) } returns
+      listOf(currentVersion, safeVersion)
+
+    val result = actorDefinitionVersionUpdater.findSafeVersionBeforeBreakingChange(ACTOR_DEFINITION_ID, currentVersion.versionId)
+
+    assertNotNull(result)
+    assertEquals(safeVersion, result!!.first)
+    assertEquals(breakingChange, result.second)
+  }
+
   private fun buildBreakingChangeScopedConfig(
     actorId: UUID,
     breakingChange: ActorDefinitionBreakingChange,

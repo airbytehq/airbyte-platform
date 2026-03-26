@@ -215,13 +215,36 @@ class ScopedConfigurationServiceDataImpl(
     return repository.save(scopedConfiguration.toEntity()).toConfigModel()
   }
 
-  override fun insertScopedConfigurations(scopedConfigurations: List<ScopedConfiguration>): List<ScopedConfiguration> =
-    repository
+  override fun insertScopedConfigurations(scopedConfigurations: List<ScopedConfiguration>): List<ScopedConfiguration> {
+    if (scopedConfigurations.isEmpty()) return emptyList()
+    return repository
       .saveAll(
         scopedConfigurations.map {
           it.toEntity()
         },
       ).map { it.toConfigModel() }
+  }
+
+  override fun upsertScopedConfigurations(scopedConfigurations: List<ScopedConfiguration>) {
+    if (scopedConfigurations.isEmpty()) return
+    scopedConfigurations.forEach { config ->
+      val entity = config.toEntity()
+      repository.upsertByNaturalKey(
+        id = entity.id,
+        key = entity.key,
+        value = entity.value,
+        scopeType = entity.scopeType,
+        scopeId = entity.scopeId,
+        resourceType = entity.resourceType,
+        resourceId = entity.resourceId,
+        originType = entity.originType,
+        origin = entity.origin,
+        description = entity.description,
+        referenceUrl = entity.referenceUrl,
+        expiresAt = entity.expiresAt,
+      )
+    }
+  }
 
   override fun listScopedConfigurations(): List<ScopedConfiguration> = repository.findAll().map { it.toConfigModel() }.toList()
 

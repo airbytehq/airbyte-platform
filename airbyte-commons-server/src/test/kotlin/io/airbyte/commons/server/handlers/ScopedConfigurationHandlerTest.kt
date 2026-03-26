@@ -23,6 +23,7 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.User
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OrganizationService
@@ -55,6 +56,32 @@ internal class ScopedConfigurationHandlerTest {
   private val userPersistence = mockk<UserPersistence>()
   private val uuidGenerator = mockk<Supplier<UUID>>()
   private val scopedConfigurationRelationshipResolver = mockk<ScopedConfigurationRelationshipResolver>()
+  private val actorDefinitionVersionUpdater = mockk<ActorDefinitionVersionUpdater>()
+
+  private val configId = UUID.fromString("00000000-0000-0000-0000-000000000001")
+  private val actorId = UUID.fromString("00000000-0000-0000-0000-000000000002")
+  private val actorDefinitionId = UUID.fromString("00000000-0000-0000-0000-000000000003")
+  private val versionId = UUID.fromString("00000000-0000-0000-0000-000000000004")
+  private val scopeId = UUID.fromString("00000000-0000-0000-0000-000000000005")
+
+  private fun baseVersionPinConfig(
+    scopeType: ConfigScopeType = ConfigScopeType.ACTOR,
+    scopeId: UUID = this.actorId,
+    originType: ConfigOriginType = ConfigOriginType.USER,
+    origin: String = "test-origin",
+    value: String = versionId.toString(),
+  ): ScopedConfiguration =
+    ScopedConfiguration()
+      .withId(configId)
+      .withKey(ConnectorVersionKey.key)
+      .withValue(value)
+      .withScopeType(scopeType)
+      .withScopeId(scopeId)
+      .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+      .withResourceId(actorDefinitionId)
+      .withOriginType(originType)
+      .withOrigin(origin)
+
   private val scopedConfigurationHandler =
     ScopedConfigurationHandler(
       scopedConfigurationService,
@@ -66,6 +93,7 @@ internal class ScopedConfigurationHandlerTest {
       userPersistence,
       uuidGenerator,
       scopedConfigurationRelationshipResolver,
+      actorDefinitionVersionUpdater,
     )
 
   @BeforeEach
@@ -449,14 +477,143 @@ internal class ScopedConfigurationHandlerTest {
   }
 
   @Test
-  fun `test deleteScopedConfiguration`() {
-    val testId = UUID.randomUUID()
+  fun `test deleteScopedConfiguration non-version pin`() {
+    val config = baseVersionPinConfig().withKey("some_other_key").withValue("some_value")
 
-    justRun { scopedConfigurationService.deleteScopedConfiguration(testId) }
+    every { scopedConfigurationService.getScopedConfiguration(configId) } returns config
+    justRun { scopedConfigurationService.deleteScopedConfiguration(configId) }
 
-    scopedConfigurationHandler.deleteScopedConfiguration(testId)
+    scopedConfigurationHandler.deleteScopedConfiguration(configId)
 
-    verify { scopedConfigurationService.deleteScopedConfiguration(testId) }
+    verify { scopedConfigurationService.deleteScopedConfiguration(configId) }
+    verify(exactly = 0) { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(any(), any(), any()) }
+  }
+
+  @Test
+  fun `test deleteScopedConfiguration connector version pin with breaking change converts pin`() {
+    val config = baseVersionPinConfig(originType = ConfigOriginType.CONNECTOR_ROLLOUT)
+
+    every { scopedConfigurationService.getScopedConfiguration(configId) } returns config
+    // Protection is needed — the pin was converted to BREAKING_CHANGE via upsert
+    every { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(actorDefinitionId, versionId, actorId) } returns true
+
+    scopedConfigurationHandler.deleteScopedConfiguration(configId)
+
+    verify { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(actorDefinitionId, versionId, actorId) }
+    // The pin should NOT be deleted since it was converted to a BREAKING_CHANGE pin
+    verify(exactly = 0) { scopedConfigurationService.deleteScopedConfiguration(any()) }
+  }
+
+  @Test
+  fun `test deleteScopedConfiguration connector version pin without breaking change deletes pin`() {
+    val config = baseVersionPinConfig(originType = ConfigOriginType.CONNECTOR_ROLLOUT)
+
+    every { scopedConfigurationService.getScopedConfiguration(configId) } returns config
+    // No protection needed — no breaking change would be crossed
+    every { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(actorDefinitionId, versionId, actorId) } returns false
+    justRun { scopedConfigurationService.deleteScopedConfiguration(configId) }
+
+    scopedConfigurationHandler.deleteScopedConfiguration(configId)
+
+    verify { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(actorDefinitionId, versionId, actorId) }
+    // The pin should be deleted since no protection was needed
+    verify { scopedConfigurationService.deleteScopedConfiguration(configId) }
+  }
+
+  @Test
+  fun `test deleteScopedConfiguration breaking change pin with no subsequent breaking changes deletes pin`() {
+    val bcVersionId = UUID.randomUUID()
+    val bcVersion = ActorDefinitionVersion().withVersionId(bcVersionId).withDockerImageTag("5.0.0")
+    val config = baseVersionPinConfig(originType = ConfigOriginType.BREAKING_CHANGE, origin = "5.0.0")
+
+    every { scopedConfigurationService.getScopedConfiguration(configId) } returns config
+    every { actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, "5.0.0") } returns Optional.of(bcVersion)
+    // No subsequent breaking changes — no protection needed
+    every { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(actorDefinitionId, bcVersionId, actorId) } returns false
+    justRun { scopedConfigurationService.deleteScopedConfiguration(configId) }
+
+    scopedConfigurationHandler.deleteScopedConfiguration(configId)
+
+    // Protection check should use the BC version ID (not the safe version ID)
+    verify { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(actorDefinitionId, bcVersionId, actorId) }
+    verify { scopedConfigurationService.deleteScopedConfiguration(configId) }
+  }
+
+  @Test
+  fun `test deleteScopedConfiguration breaking change pin with subsequent breaking changes creates new pin`() {
+    val bcVersionId = UUID.randomUUID()
+    val bcVersion = ActorDefinitionVersion().withVersionId(bcVersionId).withDockerImageTag("1.0.0")
+    val config = baseVersionPinConfig(originType = ConfigOriginType.BREAKING_CHANGE, origin = "1.0.0")
+
+    every { scopedConfigurationService.getScopedConfiguration(configId) } returns config
+    every { actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, "1.0.0") } returns Optional.of(bcVersion)
+    // Subsequent breaking change exists (e.g., 2.0.0) — protection needed, pin converted in-place
+    every { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(actorDefinitionId, bcVersionId, actorId) } returns true
+
+    scopedConfigurationHandler.deleteScopedConfiguration(configId)
+
+    // Protection check should use the BC version ID (checking from 1.0.0 forward)
+    verify { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(actorDefinitionId, bcVersionId, actorId) }
+    // Pin should NOT be deleted — it was converted to the next BREAKING_CHANGE pin
+    verify(exactly = 0) { scopedConfigurationService.deleteScopedConfiguration(any()) }
+  }
+
+  @Test
+  fun `test deleteScopedConfiguration workspace scope pin triggers scope protection and deletes`() {
+    val config = baseVersionPinConfig(scopeType = ConfigScopeType.WORKSPACE, scopeId = scopeId)
+
+    every { scopedConfigurationService.getScopedConfiguration(configId) } returns config
+    every {
+      actorDefinitionVersionUpdater.createBreakingChangePinsForScopeIfNeeded(
+        actorDefinitionId,
+        versionId,
+        ConfigScopeType.WORKSPACE,
+        scopeId,
+      )
+    } returns true
+    justRun { scopedConfigurationService.deleteScopedConfiguration(configId) }
+
+    scopedConfigurationHandler.deleteScopedConfiguration(configId)
+
+    verify {
+      actorDefinitionVersionUpdater.createBreakingChangePinsForScopeIfNeeded(
+        actorDefinitionId,
+        versionId,
+        ConfigScopeType.WORKSPACE,
+        scopeId,
+      )
+    }
+    verify { scopedConfigurationService.deleteScopedConfiguration(configId) }
+    verify(exactly = 0) { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(any(), any(), any()) }
+  }
+
+  @Test
+  fun `test deleteScopedConfiguration organization scope pin triggers scope protection and deletes`() {
+    val config = baseVersionPinConfig(scopeType = ConfigScopeType.ORGANIZATION, scopeId = scopeId)
+
+    every { scopedConfigurationService.getScopedConfiguration(configId) } returns config
+    every {
+      actorDefinitionVersionUpdater.createBreakingChangePinsForScopeIfNeeded(
+        actorDefinitionId,
+        versionId,
+        ConfigScopeType.ORGANIZATION,
+        scopeId,
+      )
+    } returns true
+    justRun { scopedConfigurationService.deleteScopedConfiguration(configId) }
+
+    scopedConfigurationHandler.deleteScopedConfiguration(configId)
+
+    verify {
+      actorDefinitionVersionUpdater.createBreakingChangePinsForScopeIfNeeded(
+        actorDefinitionId,
+        versionId,
+        ConfigScopeType.ORGANIZATION,
+        scopeId,
+      )
+    }
+    verify { scopedConfigurationService.deleteScopedConfiguration(configId) }
+    verify(exactly = 0) { actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(any(), any(), any()) }
   }
 
   @Test

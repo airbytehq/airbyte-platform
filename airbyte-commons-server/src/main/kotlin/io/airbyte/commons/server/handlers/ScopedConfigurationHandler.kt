@@ -17,6 +17,7 @@ import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OrganizationService
@@ -26,6 +27,7 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.airbyte.data.services.shared.ScopedConfigurationKeys
 import io.micronaut.cache.annotation.Cacheable
+import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.time.Instant
@@ -57,6 +59,7 @@ open class ScopedConfigurationHandler
     private val userPersistence: UserPersistence,
     private val uuidGenerator: Supplier<UUID>,
     private val scopeRelationshipResolver: ScopedConfigurationRelationshipResolver,
+    private val actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater,
   ) {
     @Cacheable("config-value-name")
     open fun getValueName(
@@ -221,8 +224,79 @@ open class ScopedConfigurationHandler
       return buildScopedConfigurationRead(updatedScopedConfiguration)
     }
 
-    fun deleteScopedConfiguration(id: UUID) {
-      scopedConfigurationService.deleteScopedConfiguration(id)
+    @Transactional("config")
+    open fun deleteScopedConfiguration(id: UUID) {
+      val config = scopedConfigurationService.getScopedConfiguration(id)
+
+      // When removing a connector version pin, check if the actor(s) would be upgraded across
+      // a breaking change boundary when advancing to the default version. If so, create a
+      // BREAKING_CHANGE pin to prevent the silent upgrade. This applies to all unpin scenarios:
+      // - Manual unpin by support (USER pins via Retool)
+      // - User accepting a breaking change (BREAKING_CHANGE pins — check for subsequent BCs)
+      //
+      // For BREAKING_CHANGE pins, the user is accepting one specific BC (e.g., 1.0.0), but there
+      // may be additional BCs between that version and the default (e.g., 2.0.0, 3.0.0). We use
+      // the accepted BC version as the starting point for the check instead of the pinned version.
+      //
+      // Note: only upgrade-direction breaking changes are checked. Downgrades across a BC boundary
+      // are not protected (pre-existing platform behavior).
+      if (config.key != ConnectorVersionKey.key ||
+        config.resourceType != ConfigResourceType.ACTOR_DEFINITION
+      ) {
+        scopedConfigurationService.deleteScopedConfiguration(id)
+        return
+      }
+
+      // The version to check from when looking for subsequent breaking changes.
+      // For BREAKING_CHANGE pin removal: the breaking version explicitly accepted by the user.
+      // For other pin removals (CONNECTOR_ROLLOUT, USER): the pinned version itself.
+      val versionToCheckFrom =
+        if (config.originType == ConfigOriginType.BREAKING_CHANGE) {
+          // Look up the version ID for the accepted BC version tag stored in config.origin.
+          val bcVersionOpt =
+            actorDefinitionService.getActorDefinitionVersion(
+              config.resourceId,
+              config.origin,
+            )
+          bcVersionOpt.orElse(null)?.versionId
+        } else {
+          UUID.fromString(config.value)
+        }
+
+      if (versionToCheckFrom == null) {
+        scopedConfigurationService.deleteScopedConfiguration(id)
+        return
+      }
+
+      when (config.scopeType) {
+        // Actor scope: check if the actor would cross a breaking change when advancing
+        // to the default version. If so, convert the pin to BREAKING_CHANGE in-place
+        // (via upsert) and skip deletion. Otherwise, delete the pin normally.
+        ConfigScopeType.ACTOR -> {
+          val wasConvertedToBreakingChangePin =
+            actorDefinitionVersionUpdater.createBreakingChangePinIfNeeded(
+              actorDefinitionId = config.resourceId,
+              currentVersionId = versionToCheckFrom,
+              actorId = config.scopeId,
+            )
+          if (!wasConvertedToBreakingChangePin) {
+            scopedConfigurationService.deleteScopedConfiguration(id)
+          }
+        }
+        // Workspace/Organization scope: find all actors under this scope that don't have
+        // their own actor-level pin, and create BREAKING_CHANGE pins for those that would
+        // cross a breaking change when advancing to the next level or global default.
+        // The scope-level pin itself is always deleted.
+        ConfigScopeType.WORKSPACE, ConfigScopeType.ORGANIZATION -> {
+          actorDefinitionVersionUpdater.createBreakingChangePinsForScopeIfNeeded(
+            actorDefinitionId = config.resourceId,
+            currentVersionId = versionToCheckFrom,
+            scopeType = config.scopeType,
+            scopeId = config.scopeId,
+          )
+          scopedConfigurationService.deleteScopedConfiguration(id)
+        }
+      }
     }
 
     fun getScopedConfigurationContext(contextRequestBody: ScopedConfigurationContextRequestBody): ScopedConfigurationContextResponse {

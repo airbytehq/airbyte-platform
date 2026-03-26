@@ -776,6 +776,137 @@ internal class ScopedConfigurationServiceDataImplTest {
   }
 
   @Test
+  fun `test bulk insert empty list returns empty`() {
+    val res = scopedConfigurationService.insertScopedConfigurations(emptyList())
+    assert(res.isEmpty())
+
+    verify(exactly = 0) { scopedConfigurationRepository.saveAll(any<List<ScopedConfiguration>>()) }
+  }
+
+  @Test
+  fun `test upsert scoped configurations calls upsertByNaturalKey for each config`() {
+    val resourceId = UUID.randomUUID()
+    val scopeId1 = UUID.randomUUID()
+    val scopeId2 = UUID.randomUUID()
+    val id1 = UUID.randomUUID()
+    val id2 = UUID.randomUUID()
+
+    val config1 =
+      ScopedConfiguration(
+        id = id1,
+        key = "key",
+        value = "value1",
+        scopeType = EntityConfigScopeType.actor,
+        scopeId = scopeId1,
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.breaking_change,
+        origin = "1.0.0",
+      )
+
+    val config2 =
+      ScopedConfiguration(
+        id = id2,
+        key = "key",
+        value = "value2",
+        scopeType = EntityConfigScopeType.actor,
+        scopeId = scopeId2,
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.breaking_change,
+        origin = "1.0.0",
+      )
+
+    every {
+      scopedConfigurationRepository.upsertByNaturalKey(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    } just io.mockk.Runs
+
+    scopedConfigurationService.upsertScopedConfigurations(listOf(config1.toConfigModel(), config2.toConfigModel()))
+
+    verify(exactly = 2) {
+      scopedConfigurationRepository.upsertByNaturalKey(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    }
+    verify {
+      scopedConfigurationRepository.upsertByNaturalKey(
+        id = id1,
+        key = "key",
+        value = "value1",
+        scopeType = EntityConfigScopeType.actor,
+        scopeId = scopeId1,
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.breaking_change,
+        origin = "1.0.0",
+        description = null,
+        referenceUrl = null,
+        expiresAt = null,
+      )
+      scopedConfigurationRepository.upsertByNaturalKey(
+        id = id2,
+        key = "key",
+        value = "value2",
+        scopeType = EntityConfigScopeType.actor,
+        scopeId = scopeId2,
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.breaking_change,
+        origin = "1.0.0",
+        description = null,
+        referenceUrl = null,
+        expiresAt = null,
+      )
+    }
+  }
+
+  @Test
+  fun `test upsert scoped configurations with empty list does nothing`() {
+    scopedConfigurationService.upsertScopedConfigurations(emptyList())
+
+    verify(exactly = 0) {
+      scopedConfigurationRepository.upsertByNaturalKey(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    }
+  }
+
+  @Test
   fun `test list configurations`() {
     val resourceId = UUID.randomUUID()
 

@@ -372,6 +372,186 @@ class ActorDefinitionVersionUpdater(
     }
   }
 
+  /**
+   * When removing a version pin for an actor, check if the actor would cross a breaking change
+   * when falling back to the default version. If so, create a BREAKING_CHANGE pin to the latest
+   * safe version before the breaking change.
+   *
+   * This is a generic method that can be used by any code path that removes version pins
+   * (e.g., manual unpin via API/Retool, etc.).
+   *
+   * @param actorDefinitionId the actor definition ID
+   * @param currentVersionId the version ID the actor is currently pinned to
+   * @param actorId the actor ID being unpinned
+   */
+  fun createBreakingChangePinIfNeeded(
+    actorDefinitionId: UUID,
+    currentVersionId: UUID,
+    actorId: UUID,
+  ): Boolean {
+    val result = findSafeVersionBeforeBreakingChange(actorDefinitionId, currentVersionId) ?: return false
+    val (safeVersion, firstBreakingChange) = result
+
+    logger.info {
+      "Creating BREAKING_CHANGE pin for actor $actorId on actor definition $actorDefinitionId " +
+        "to version ${safeVersion.dockerImageTag} (breaking change: ${firstBreakingChange.version.serialize()})"
+    }
+    upsertBreakingChangePinsForActors(setOf(actorId), safeVersion, firstBreakingChange)
+    return true
+  }
+
+  /**
+   * When removing a workspace-scope or organization-scope version pin, all actors under that scope
+   * for the given actor definition that don't have their own actor-level pin would fall back to the
+   * next level in the resolution hierarchy (or the global default). If that fallback crosses a
+   * breaking change, those actors need actor-level BREAKING_CHANGE pins to prevent them from
+   * silently jumping over the breaking change.
+   *
+   * @param actorDefinitionId the actor definition ID
+   * @param currentVersionId the version ID the scope was pinned to
+   * @param scopeType the scope type being deleted (WORKSPACE or ORGANIZATION)
+   * @param scopeId the scope ID being deleted (workspace ID or organization ID)
+   * @return true if any actors were protected with BREAKING_CHANGE pins
+   */
+  fun createBreakingChangePinsForScopeIfNeeded(
+    actorDefinitionId: UUID,
+    currentVersionId: UUID,
+    scopeType: ConfigScopeType,
+    scopeId: UUID,
+  ): Boolean {
+    val result = findSafeVersionBeforeBreakingChange(actorDefinitionId, currentVersionId) ?: return false
+    val (safeVersion, firstBreakingChange) = result
+
+    // Find all actors for this definition, filtered to the relevant scope
+    val allActors = actorDefinitionService.getActorIdsForDefinition(actorDefinitionId)
+    val actorsInScope =
+      when (scopeType) {
+        ConfigScopeType.WORKSPACE -> allActors.filter { it.workspaceId == scopeId }
+        ConfigScopeType.ORGANIZATION -> allActors.filter { it.organizationId == scopeId }
+        else -> return false
+      }
+
+    if (actorsInScope.isEmpty()) return false
+
+    // Filter out actors that already have their own actor-level version pin —
+    // those actors are already protected and won't fall back to the scope being deleted.
+    val actorIds = actorsInScope.map { it.actorId }.toSet()
+    val configScopeMaps =
+      actorsInScope.map {
+        ConfigScopeMapWithId(
+          it.actorId,
+          mapOf(ConfigScopeType.ACTOR to it.actorId),
+        )
+      }
+    val existingActorPins =
+      scopedConfigurationService.getScopedConfigurations(
+        ConnectorVersionKey,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        configScopeMaps,
+      )
+    val actorsWithoutPins = actorIds - existingActorPins.keys
+
+    if (actorsWithoutPins.isEmpty()) return false
+
+    logger.info {
+      "Creating BREAKING_CHANGE pins for ${actorsWithoutPins.size} actors (out of ${actorIds.size} in $scopeType $scopeId) " +
+        "on actor definition $actorDefinitionId to version ${safeVersion.dockerImageTag} " +
+        "(breaking change: ${firstBreakingChange.version.serialize()})"
+    }
+    upsertBreakingChangePinsForActors(actorsWithoutPins, safeVersion, firstBreakingChange)
+    return true
+  }
+
+  /**
+   * Upsert BREAKING_CHANGE pins for actors, handling the case where the actors may already have
+   * an existing pin (e.g., a CONNECTOR_ROLLOUT or USER pin). Uses ON CONFLICT to atomically
+   * update the existing pin's value, origin_type, and origin instead of failing with a
+   * unique constraint violation.
+   *
+   * This should be used instead of [createBreakingChangePinsForActors] when the actors being
+   * pinned may already have an existing scoped configuration for the same natural key.
+   */
+  @InternalForTesting
+  internal fun upsertBreakingChangePinsForActors(
+    actorIds: Set<UUID>,
+    currentVersion: ActorDefinitionVersion,
+    breakingChange: ActorDefinitionBreakingChange,
+  ) {
+    val scopedConfigurationsToUpsert =
+      actorIds
+        .map { actorId ->
+          ScopedConfiguration()
+            .withId(UUID.randomUUID())
+            .withKey(ConnectorVersionKey.key)
+            .withValue(currentVersion.versionId.toString())
+            .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+            .withResourceId(currentVersion.actorDefinitionId)
+            .withScopeType(ConfigScopeType.ACTOR)
+            .withScopeId(actorId)
+            .withOriginType(ConfigOriginType.BREAKING_CHANGE)
+            .withOrigin(breakingChange.version.serialize())
+        }.toList()
+    scopedConfigurationService.upsertScopedConfigurations(scopedConfigurationsToUpsert)
+  }
+
+  /**
+   * Given an actor definition and a current version, determine if falling back to the default version
+   * would cross any breaking changes. If so, return the latest safe version before the first breaking
+   * change and the breaking change itself.
+   *
+   * @param actorDefinitionId the actor definition ID
+   * @param currentVersionId the version ID the actor(s) are currently on
+   * @return a pair of (safe version, first breaking change) or null if no protection is needed
+   */
+  @InternalForTesting
+  internal fun findSafeVersionBeforeBreakingChange(
+    actorDefinitionId: UUID,
+    currentVersionId: UUID,
+  ): Pair<ActorDefinitionVersion, ActorDefinitionBreakingChange>? {
+    val defaultVersionOpt = actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId)
+    if (defaultVersionOpt.isEmpty) return null
+
+    val defaultVersion = defaultVersionOpt.get()
+    val breakingChangesForDef = actorDefinitionService.listBreakingChangesForActorDefinition(actorDefinitionId)
+    if (breakingChangesForDef.isEmpty()) return null
+
+    val currentVersion = actorDefinitionService.getActorDefinitionVersion(currentVersionId)
+
+    val breakingChangesForUpgrade =
+      getBreakingChangesForUpgrade(
+        currentVersion.dockerImageTag,
+        defaultVersion.dockerImageTag,
+        breakingChangesForDef,
+      )
+
+    if (breakingChangesForUpgrade.isEmpty()) return null
+
+    val firstBreakingChange = breakingChangesForUpgrade.first()
+
+    val allVersions = actorDefinitionService.listActorDefinitionVersionsForDefinition(actorDefinitionId)
+    val safeVersion =
+      allVersions
+        .mapNotNull { adv ->
+          try {
+            Pair(adv, Version(adv.dockerImageTag))
+          } catch (e: IllegalArgumentException) {
+            logger.warn { "Skipping non-semver version tag '${adv.dockerImageTag}' for actor definition $actorDefinitionId" }
+            null
+          }
+        }.filter { (_, version) -> version.lessThan(firstBreakingChange.version) }
+        .sortedWith { (_, v1), (_, v2) -> v1.versionCompareTo(v2) }
+        .lastOrNull()
+        ?.first
+
+    if (safeVersion == null) {
+      logger.warn { "Could not find a safe version before breaking change ${firstBreakingChange.version} for actor definition $actorDefinitionId" }
+      return null
+    }
+
+    return Pair(safeVersion, firstBreakingChange)
+  }
+
   @InternalForTesting
   fun getActorsAffectedByBreakingChange(
     actorIds: Set<UUID>,
