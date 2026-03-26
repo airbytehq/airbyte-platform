@@ -174,6 +174,7 @@ interface ConnectionService {
 
   data class ConnectionStatusCounts(
     val running: Int,
+    val queued: Int,
     val healthy: Int,
     val failed: Int,
     val paused: Int,

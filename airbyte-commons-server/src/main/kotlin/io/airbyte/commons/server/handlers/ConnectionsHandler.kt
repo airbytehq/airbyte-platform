@@ -1502,7 +1502,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
               job.status,
             )
           }
-        val isRunning = activeJob.isPresent
+        val activeJobStatus = activeJob.map { job: Job -> job.status }.orElse(null)
 
         val lastSucceededOrFailedJob =
           jobs.stream().filter { job: Job -> JobStatus.TERMINAL_STATUSES.contains(job.status) && job.status != JobStatus.CANCELLED }.findFirst()
@@ -1573,8 +1573,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           connectionStatus.lastSyncJobCreatedAt = job.createdAt
         }
 
-        if (isRunning) {
+        if (activeJobStatus == JobStatus.RUNNING) {
           connectionStatus.connectionSyncStatus = ConnectionSyncStatus.RUNNING
+        } else if (activeJobStatus == JobStatus.QUEUED) {
+          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.QUEUED
+        } else if (activeJobStatus != null) {
+          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.PENDING
         } else if (hasBreakingSchemaChange || hasConfigError) {
           connectionStatus.connectionSyncStatus = ConnectionSyncStatus.FAILED
         } else if (connectionRead.status != ConnectionStatus.ACTIVE) {

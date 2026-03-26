@@ -12731,6 +12731,7 @@ components:
       type: object
       required:
         - running
+        - queued
         - healthy
         - failed
         - paused
@@ -12739,6 +12740,9 @@ components:
         running:
           type: integer
           description: Number of connections currently running/syncing
+        queued:
+          type: integer
+          description: Number of connections currently queued and waiting to start
         healthy:
           type: integer
           description: Number of connections with last sync succeeded
@@ -15792,6 +15796,7 @@ components:
       description: >
         The first of the following that matches for a given connection:
           * `RUNNING` - a job is currently running
+          * `QUEUED` - a job is currently queued and waiting to start
           * `FAILED` - user action is required due to a breaking change or config error
           * `PAUSED` - connection is not active (inactive or deprecated)
           * `PENDING` - there is no previous sync job or the last completed job was a reset
@@ -15800,6 +15805,7 @@ components:
       type: string
       enum:
         - running
+        - queued
         - failed
         - paused
         - pending
@@ -19204,6 +19210,9 @@ components:
         searchTerm:
           type: string
           description: Search term to filter connections by name, source name, destination name, etc.
+        onDemandEnabled:
+          type: boolean
+          description: Filter connections by whether on-demand capacity fallback is enabled
     WebBackendConnectionListItem:
       type: object
       description: Information about a connection that shows up in the connection list view.
@@ -19218,6 +19227,7 @@ components:
         - sourceActorDefinitionVersion
         - destinationActorDefinitionVersion
         - tags
+        - onDemandEnabled
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -19249,6 +19259,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          description: Whether this connection will use on-demand capacity if committed capacity is exhausted
     WebBackendConnectionRead:
       type: object
       required:

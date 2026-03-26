@@ -12,7 +12,6 @@ import { PageHeader } from "components/ui/PageHeader";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { CapacityReachedMessage } from "area/connection/components/CapacityReachedMessage";
-import { WebBackendConnectionListItemWithOnDemand } from "area/connection/components/EntityTable/types";
 import { ActiveConnectionLimitReachedModal } from "area/workspace/components/ActiveConnectionLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
 import { useConnectionList, useCurrentWorkspace, useFilters } from "core/api";
@@ -76,10 +75,7 @@ export const AllConnectionsPage: React.FC = () => {
   });
 
   const connections = useMemo(
-    () =>
-      connectionListQuery.data?.pages.flatMap(
-        (page) => page.connections as WebBackendConnectionListItemWithOnDemand[]
-      ) ?? [],
+    () => connectionListQuery.data?.pages.flatMap((page) => page.connections) ?? [],
     [connectionListQuery.data?.pages]
   );
 

@@ -674,6 +674,33 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
+  fun testWebBackendGetConnectionStatusCounts() {
+    every { connectionService.getConnectionStatusCounts(sourceRead.workspaceId) } returns
+      ConnectionService.ConnectionStatusCounts(
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+      )
+
+    val requestBody =
+      io.airbyte.api.model.generated.WorkspaceIdRequestBody().apply {
+        workspaceId = sourceRead.workspaceId
+      }
+
+    val result = wbHandler.webBackendGetConnectionStatusCounts(requestBody)
+
+    Assertions.assertEquals(1, result.running)
+    Assertions.assertEquals(2, result.queued)
+    Assertions.assertEquals(3, result.healthy)
+    Assertions.assertEquals(4, result.failed)
+    Assertions.assertEquals(5, result.paused)
+    Assertions.assertEquals(6, result.notSynced)
+  }
+
+  @Test
   fun testWebBackendGetConnection() {
     val connectionIdRequestBody = ConnectionIdRequestBody()
     connectionIdRequestBody.connectionId = connectionRead.connectionId
@@ -1730,6 +1757,7 @@ internal class WebBackendConnectionsHandlerTest {
 
     Assertions.assertNotNull(result)
     Assertions.assertNull(result!!.searchTerm)
+    Assertions.assertNull(result.onDemandEnabled)
 
     // Empty lists are returned instead of null for collection fields
     Assertions.assertTrue(result.sourceDefinitionIds!!.isEmpty())
@@ -1760,6 +1788,15 @@ internal class WebBackendConnectionsHandlerTest {
     Assertions.assertEquals(expectedStatuses, result.statuses!!.size)
     Assertions.assertEquals(expectedStates, result.states!!.size)
     Assertions.assertEquals(expectedTagIds, result.tagIds!!.size)
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun testBuildConnectionFiltersWithOnDemandEnabled(onDemandEnabled: Boolean) {
+    val result = buildFilters(WebBackendConnectionListFilters().onDemandEnabled(onDemandEnabled))
+
+    Assertions.assertNotNull(result)
+    Assertions.assertEquals(onDemandEnabled, result!!.onDemandEnabled)
   }
 
   companion object {

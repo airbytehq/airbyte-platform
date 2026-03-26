@@ -773,7 +773,7 @@ class ConnectionServiceJooqImpl
 
             ConnectionJobStatus.RUNNING -> {
               condition.or(
-                statusField.eq(JobStatus.running),
+                statusField.`in`(JobStatus.running, JobStatus.queued),
               )
             }
 
@@ -875,6 +875,12 @@ class ConnectionServiceJooqImpl
                 DSL.noCondition()
               } else {
                 Tables.CONNECTION_TAG.TAG_ID.`in`(filters.tagIds)
+              },
+            ).and(
+              if (filters.onDemandEnabled == null) {
+                DSL.noCondition()
+              } else {
+                Tables.CONNECTION.ON_DEMAND_ENABLED.eq(filters.onDemandEnabled)
               },
             )
       }
@@ -2550,6 +2556,7 @@ class ConnectionServiceJooqImpl
         """
         SELECT
           COALESCE(SUM(CASE WHEN c.status != 'inactive' AND lj.latest_status = 'running' THEN 1 ELSE 0 END), 0) AS running,
+          COALESCE(SUM(CASE WHEN c.status != 'inactive' AND lj.latest_status = 'queued' THEN 1 ELSE 0 END), 0) AS queued,
           COALESCE(SUM(CASE WHEN c.status != 'inactive' AND lj.latest_status = 'succeeded' THEN 1 ELSE 0 END), 0) AS healthy,
           COALESCE(SUM(CASE WHEN c.status != 'inactive' AND lj.latest_status IN ('failed', 'cancelled', 'incomplete') THEN 1 ELSE 0 END), 0) AS failed,
           COALESCE(SUM(CASE WHEN c.status = 'inactive' THEN 1 ELSE 0 END), 0) AS paused,
@@ -2573,6 +2580,7 @@ class ConnectionServiceJooqImpl
         val result = ctx.fetch(sql, workspaceId)[0]
         ConnectionService.ConnectionStatusCounts(
           result.get("running", Int::class.java),
+          result.get("queued", Int::class.java),
           result.get("healthy", Int::class.java),
           result.get("failed", Int::class.java),
           result.get("paused", Int::class.java),

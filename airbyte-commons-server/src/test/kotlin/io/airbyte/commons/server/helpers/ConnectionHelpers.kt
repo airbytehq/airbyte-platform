@@ -332,6 +332,7 @@ object ConnectionHelpers {
         .scheduleType(apiPojoConverters.toApiConnectionScheduleType(standardSync))
         .scheduleData(apiPojoConverters.toApiConnectionScheduleData(standardSync))
         .schemaChange(schemaChange)
+        .onDemandEnabled(standardSync.getOnDemandEnabled() ?: false)
         .tags(mutableListOf())
         .sourceActorDefinitionVersion(ActorDefinitionVersionRead())
         .destinationActorDefinitionVersion(ActorDefinitionVersionRead())

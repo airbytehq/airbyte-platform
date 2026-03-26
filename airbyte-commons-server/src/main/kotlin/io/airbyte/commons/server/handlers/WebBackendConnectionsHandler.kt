@@ -130,6 +130,7 @@ class WebBackendConnectionsHandler(
     val statusCounts = connectionService.getConnectionStatusCounts(workspaceIdRequestBody.workspaceId)
     return WebBackendConnectionStatusCounts()
       .running(statusCounts.running)
+      .queued(statusCounts.queued)
       .healthy(statusCounts.healthy)
       .failed(statusCounts.failed)
       .paused(statusCounts.paused)
@@ -316,6 +317,7 @@ class WebBackendConnectionsHandler(
         ).schemaChange(schemaChange)
         .sourceActorDefinitionVersion(sourceActorDefinitionVersionRead)
         .destinationActorDefinitionVersion(destinationActorDefinitionVersionRead)
+        .onDemandEnabled(connectionWithJobInfo.connection().onDemandEnabled ?: false)
         .tags(
           connectionWithJobInfo
             .connection()

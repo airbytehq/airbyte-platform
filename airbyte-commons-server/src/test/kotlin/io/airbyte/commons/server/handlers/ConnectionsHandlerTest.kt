@@ -4407,6 +4407,78 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
+    fun testConnectionStatus_queued() {
+      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+
+      val connectionId = standardSync.connectionId
+      val jobs =
+        listOf(
+          Job(
+            0L,
+            ConfigType.SYNC,
+            connectionId.toString(),
+            JobConfig(),
+            mutableListOf(),
+            JobStatus.QUEUED,
+            1001L,
+            1000L,
+            1002L,
+            true,
+          ),
+        )
+      whenever(
+        jobPersistence.listJobsLight(
+          Job.REPLICATION_TYPES,
+          connectionId.toString(),
+          10,
+        ),
+      ).thenReturn(jobs)
+      val req = ConnectionStatusesRequestBody().connectionIds(listOf(connectionId))
+      val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
+      val connectionStatus = status[0]
+      assertEquals(
+        ConnectionSyncStatus.QUEUED.convertTo<ConnectionSyncStatus>(),
+        connectionStatus.connectionSyncStatus,
+      )
+    }
+
+    @Test
+    fun testConnectionStatus_pendingWhenJobIsPending() {
+      whenever(connectionService.getStandardSync(standardSync.connectionId)).thenReturn(standardSync)
+
+      val connectionId = standardSync.connectionId
+      val jobs =
+        listOf(
+          Job(
+            0L,
+            ConfigType.SYNC,
+            connectionId.toString(),
+            JobConfig(),
+            mutableListOf(),
+            JobStatus.PENDING,
+            1001L,
+            1000L,
+            1002L,
+            true,
+          ),
+        )
+      whenever(
+        jobPersistence.listJobsLight(
+          Job.REPLICATION_TYPES,
+          connectionId.toString(),
+          10,
+        ),
+      ).thenReturn(jobs)
+      val req = ConnectionStatusesRequestBody().connectionIds(listOf(connectionId))
+      val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
+      val connectionStatus = status[0]
+      assertEquals(
+        ConnectionSyncStatus.PENDING.convertTo<ConnectionSyncStatus>(),
+        connectionStatus.connectionSyncStatus,
+      )
+    }
+
+    @Test
     fun testConnectionStatus_failed_breakingSchemaChange() {
       val standardSyncWithBreakingSchemaChange = clone(standardSync).withBreakingChange(true)
       whenever(connectionService.getStandardSync(standardSync.connectionId))
