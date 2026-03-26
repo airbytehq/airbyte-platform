@@ -378,7 +378,8 @@ class SlackNotificationClient : NotificationClient {
   }
 
   private fun notify(message: String): Boolean {
-    val node = MAPPER.createObjectNode()
+    val mapper = ObjectMapper()
+    val node = mapper.createObjectNode()
     node.put("text", message)
     return notifyJson(node, null)
   }
@@ -390,7 +391,7 @@ class SlackNotificationClient : NotificationClient {
     if (StringUtils.isEmpty(config.webhook)) {
       return false
     }
-    val sanitizedNode = sanitizePayloadForWebhook(node, config.webhook)
+    val mapper = ObjectMapper()
     val httpClient =
       HttpClient
         .newBuilder()
@@ -399,7 +400,7 @@ class SlackNotificationClient : NotificationClient {
     val request =
       HttpRequest
         .newBuilder()
-        .POST(HttpRequest.BodyPublishers.ofByteArray(MAPPER.writeValueAsBytes(sanitizedNode)))
+        .POST(HttpRequest.BodyPublishers.ofByteArray(mapper.writeValueAsBytes(node)))
         .uri(URI.create(config.webhook))
         .header("Content-Type", "application/json")
         .build()
@@ -420,7 +421,7 @@ class SlackNotificationClient : NotificationClient {
           workspaceId,
           response.statusCode(),
           response.body(),
-          sanitizedNode.toString(),
+          node.toString(),
         )
       throw IOException(errorMessage)
     }
@@ -450,35 +451,6 @@ class SlackNotificationClient : NotificationClient {
   companion object {
     private const val SLACK_CLIENT = "slack"
     private const val MRKDOWN_TYPE_LABEL = "mrkdwn"
-    private val MAPPER = ObjectMapper()
-    private val SLACK_WEBHOOK_HOSTS = setOf("hooks.slack.com", "hooks.slack-gov.com")
-
-    @InternalForTesting
-    fun sanitizePayloadForWebhook(
-      node: JsonNode,
-      webhookUrl: String?,
-    ): JsonNode {
-      if (isSlackWebhook(webhookUrl) || !node.has("text")) {
-        return node
-      }
-
-      val sanitizedNode = MAPPER.createObjectNode()
-      sanitizedNode.set<JsonNode>("text", node["text"])
-      return sanitizedNode
-    }
-
-    @InternalForTesting
-    fun isSlackWebhook(webhookUrl: String?): Boolean {
-      if (webhookUrl.isNullOrBlank()) {
-        return false
-      }
-
-      return try {
-        URI.create(webhookUrl).host?.lowercase() in SLACK_WEBHOOK_HOSTS
-      } catch (_: IllegalArgumentException) {
-        false
-      }
-    }
 
     fun buildJobCompletedNotification(
       summary: SyncSummary,
