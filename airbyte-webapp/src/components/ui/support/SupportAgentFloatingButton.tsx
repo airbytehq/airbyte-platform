@@ -13,7 +13,7 @@ import { ChatInterfaceBody, ChatInterfaceContainer, ChatInterfaceHeader } from "
 import { useChatMessages } from "area/connector/components/chat/hooks/useChatMessages";
 import { MessageList } from "area/connector/components/chat/MessageList";
 import { useSupportAgentService } from "cloud/services/supportAgent";
-import { useCurrentUser } from "core/services/auth";
+import { useAuthService, useCurrentUser } from "core/services/auth";
 import { useFeature, FeatureItem } from "core/services/features";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { RoutePaths, SourcePaths, DestinationPaths } from "pages/routePaths";
@@ -188,10 +188,11 @@ export const SupportChatPanel: React.FC<{
 
 export const SupportAgentFloatingButton: React.FC = () => {
   const supportEnabled = useFeature(FeatureItem.SupportAgentBot);
+  const { user } = useAuthService();
   const { pathname } = useLocation();
   const { openSupportBot } = useSupportAgentService();
 
-  const shouldHide = !supportEnabled || HIDDEN_SUPPORT_BOT_PATHS.some((path) => !!matchPath(path, pathname));
+  const shouldHide = !supportEnabled || !user || HIDDEN_SUPPORT_BOT_PATHS.some((path) => !!matchPath(path, pathname));
 
   if (shouldHide) {
     return null;
