@@ -2,11 +2,11 @@ import { FormattedMessage } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
-import { JobStatus } from "core/api";
 import {
   ActorStatus,
   ConnectionStatus,
   DestinationSnippetRead,
+  JobStatus,
   SourceSnippetRead,
   WebBackendConnectionListItem,
 } from "core/api/types/AirbyteClient";

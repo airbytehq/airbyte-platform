@@ -1,7 +1,13 @@
 import dayjs from "dayjs";
 
-import { ConnectionSyncStatus, useGetConnectionSyncProgress, useListConnectionsStatuses } from "core/api";
-import { ConnectionStatusesRead, FailureOrigin, FailureReason, FailureType } from "core/api/types/AirbyteClient";
+import { useGetConnectionSyncProgress, useListConnectionsStatuses } from "core/api";
+import {
+  ConnectionStatusesRead,
+  ConnectionSyncStatus,
+  FailureOrigin,
+  FailureReason,
+  FailureType,
+} from "core/api/types/AirbyteClient";
 import { moveTimeToFutureByPeriod } from "core/utils/time";
 
 export interface UIConnectionStatus {

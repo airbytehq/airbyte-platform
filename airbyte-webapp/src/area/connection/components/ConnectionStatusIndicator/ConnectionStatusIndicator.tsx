@@ -4,7 +4,7 @@ import React, { cloneElement } from "react";
 import { Icon, IconProps } from "components/ui/Icon";
 import { CircleLoader } from "components/ui/StatusIcon/CircleLoader";
 
-import { ConnectionSyncStatus } from "core/api";
+import { ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 
 import styles from "./ConnectionStatusIndicator.module.scss";
 

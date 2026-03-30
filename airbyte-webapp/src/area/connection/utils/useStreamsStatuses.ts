@@ -2,8 +2,8 @@ import { useConnectionStatus } from "area/connection/components/ConnectionStatus
 import { StreamWithStatus } from "area/connection/components/StreamStatus/streamStatusUtils";
 import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import { useSchemaChanges } from "area/connection/utils/useSchemaChanges";
-import { ConnectionSyncStatus, useListStreamsStatuses, useGetConnection } from "core/api";
-import { StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
+import { useListStreamsStatuses, useGetConnection } from "core/api";
+import { ConnectionSyncStatus, StreamStatusJobType, StreamStatusRead } from "core/api/types/AirbyteClient";
 import { useExperiment } from "core/services/Experiment";
 import { assertNever } from "core/utils/asserts";
 

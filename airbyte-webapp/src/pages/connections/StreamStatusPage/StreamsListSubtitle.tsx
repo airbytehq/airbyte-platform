@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Text } from "components/ui/Text";
 
-import { ConnectionSyncStatus } from "core/api";
+import { ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 
 interface StreamsListSubtitleProps {
   connectionStatus: ConnectionSyncStatus;
