@@ -751,6 +751,7 @@ class WebBackendConnectionsHandler(
         .nonBreakingChangesPreference(connectionRead.nonBreakingChangesPreference)
         .backfillPreference(connectionRead.backfillPreference)
         .tags(connectionRead.tags)
+        .onDemandEnabled(connectionRead.onDemandEnabled ?: false)
 
     @InternalForTesting
     protected fun toOperationCreate(operationCreateOrUpdate: WebBackendOperationCreateOrUpdate): OperationCreate {

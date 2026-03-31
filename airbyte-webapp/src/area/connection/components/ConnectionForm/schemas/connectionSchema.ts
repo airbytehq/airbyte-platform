@@ -111,7 +111,7 @@ export const useConnectionValidationZodSchema = () => {
           notifySchemaChanges: z.boolean().optional(),
           backfillPreference: z.nativeEnum(SchemaChangeBackfillPreference).optional(),
           tags: z.array(tagSchema).optional(),
-          runOnDemandEnabled: z.boolean().optional(),
+          onDemandEnabled: z.boolean().optional(),
         })
         .and(scheduleDataSchema)
         .and(namespaceFormatSchema),

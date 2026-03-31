@@ -56,7 +56,7 @@ export interface FormConnectionFormValues {
   notifySchemaChanges?: boolean;
   backfillPreference?: SchemaChangeBackfillPreference;
   tags?: Tag[];
-  runOnDemandEnabled?: boolean;
+  onDemandEnabled?: boolean;
 }
 
 /**
@@ -177,7 +177,7 @@ export const useInitialFormValues = (
           notificationSettings.sendOnConnectionUpdate.notificationType.length > 0),
       backfillPreference: connection.backfillPreference ?? SchemaChangeBackfillPreference.disabled,
       tags: connection.tags ?? [],
-      ...(isOnDemandCapacityEnabled && { runOnDemandEnabled: false }),
+      ...(isOnDemandCapacityEnabled && { onDemandEnabled: connection.onDemandEnabled ?? false }),
     };
 
     return initialValues;
@@ -195,6 +195,7 @@ export const useInitialFormValues = (
     connection.notifySchemaChanges,
     connection.backfillPreference,
     connection.tags,
+    connection.onDemandEnabled,
     defaultNonBreakingChangesPreference,
     workspace.dataplaneGroupId,
     syncCatalog,

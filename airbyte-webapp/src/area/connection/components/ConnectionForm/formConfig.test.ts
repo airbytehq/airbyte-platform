@@ -6,6 +6,8 @@ import { mockGetDataplaneGroup } from "test-utils/mock-data/mockDataplaneGroups"
 import { mockDestinationDefinitionSpecification } from "test-utils/mock-data/mockDestination";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
+import { useFeature } from "core/services/features";
+
 import { useInitialFormValues } from "./formConfig";
 
 jest.mock("core/api", () => ({
@@ -15,11 +17,17 @@ jest.mock("core/api", () => ({
 }));
 
 jest.mock("core/services/features", () => ({
-  useFeature: () => false,
+  useFeature: jest.fn(() => false),
   FeatureItem: {},
 }));
 
+const mockUseFeature = jest.mocked(useFeature);
+
 describe("#useInitialFormValues", () => {
+  beforeEach(() => {
+    mockUseFeature.mockReturnValue(false);
+  });
+
   it("should generate initial values w/ mode: readonly", () => {
     const { result } = renderHook(() => useInitialFormValues(mockConnection, "readonly"));
     expect(result.current).toMatchSnapshot();
@@ -142,5 +150,15 @@ describe("#useInitialFormValues", () => {
     // When destinationSupportsFileTransfer is undefined, file-based streams should remain unchanged
     expect(result.current.syncCatalog.streams[0].config?.selected).toBe(true);
     expect(result.current.syncCatalog.streams[0].config?.includeFiles).toBe(false);
+  });
+
+  it("should hydrate onDemandEnabled when the feature flag is enabled", () => {
+    const connection = cloneDeep(mockConnection);
+    connection.onDemandEnabled = true;
+    mockUseFeature.mockReturnValue(true);
+
+    const { result } = renderHook(() => useInitialFormValues(connection, "edit"));
+
+    expect(result.current.onDemandEnabled).toBe(true);
   });
 });

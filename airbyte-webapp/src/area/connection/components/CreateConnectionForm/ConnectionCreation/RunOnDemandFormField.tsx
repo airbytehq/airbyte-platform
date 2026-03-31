@@ -17,7 +17,7 @@ export const RunOnDemandFormField: React.FC<{ disabled?: boolean }> = ({ disable
 
   return (
     <Controller
-      name="runOnDemandEnabled"
+      name="onDemandEnabled"
       control={control}
       render={({ field }) => (
         <FormFieldLayout alignItems="flex-start" nextSizing>

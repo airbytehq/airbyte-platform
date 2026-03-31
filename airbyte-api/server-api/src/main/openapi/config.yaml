@@ -19281,6 +19281,7 @@ components:
         - sourceActorDefinitionVersion
         - destinationActorDefinitionVersion
         - tags
+        - onDemandEnabled
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -19366,6 +19367,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          description: Whether this connection will use on-demand capacity if committed capacity is exhausted
     WebBackendDescribeCronExpressionRequestBody:
       type: object
       required:

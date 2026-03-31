@@ -618,6 +618,7 @@ internal class WebBackendConnectionsHandlerTest {
           .memoryLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.memoryLimit),
       ).notifySchemaChanges(false)
       .notifySchemaChangesByEmail(true)
+      .onDemandEnabled(connectionRead.onDemandEnabled ?: false)
       .sourceActorDefinitionVersion(ActorDefinitionVersionRead())
       .destinationActorDefinitionVersion(ActorDefinitionVersionRead())
 
@@ -717,6 +718,32 @@ internal class WebBackendConnectionsHandlerTest {
 
     Assertions.assertEquals(expectedListItem.source.icon, ICON_URL)
     Assertions.assertEquals(expectedListItem.destination.icon, ICON_URL)
+  }
+
+  @Test
+  fun testWebBackendGetConnectionIncludesOnDemandEnabled() {
+    val onDemandConnectionRead = clone(connectionRead).onDemandEnabled(true)
+    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(onDemandConnectionRead.connectionId)
+    val webBackendConnectionRequestBody = WebBackendConnectionRequestBody().connectionId(onDemandConnectionRead.connectionId)
+    val expectedConnectionRead =
+      expectedWebBackendConnectionReadObject(
+        onDemandConnectionRead,
+        sourceRead,
+        expected.destination,
+        operationReadList,
+        SchemaChange.NO_CHANGE,
+        Instant.ofEpochSecond(expected.latestSyncJobCreatedAt),
+        onDemandConnectionRead.syncCatalog,
+        onDemandConnectionRead.sourceCatalogId,
+      )
+
+    every { connectionsHandler.getConnection(onDemandConnectionRead.connectionId) } returns onDemandConnectionRead
+    every { operationsHandler.listOperationsForConnection(connectionIdRequestBody) } returns operationReadList
+
+    val webBackendConnectionRead = wbHandler.webBackendGetConnection(webBackendConnectionRequestBody)
+
+    Assertions.assertTrue(webBackendConnectionRead.onDemandEnabled)
+    Assertions.assertEquals(expectedConnectionRead, webBackendConnectionRead)
   }
 
   fun testWebBackendGetConnection(

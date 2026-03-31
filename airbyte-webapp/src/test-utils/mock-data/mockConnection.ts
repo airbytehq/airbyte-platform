@@ -924,4 +924,5 @@ export const mockConnection: WebBackendConnectionRead = {
   sourceActorDefinitionVersion: mockSourceDefinitionVersion,
   destinationActorDefinitionVersion: mockDestinationDefinitionVersion,
   tags: [],
+  onDemandEnabled: false,
 };
