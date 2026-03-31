@@ -19,6 +19,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.config.SlackNotificationConfiguration
 import io.airbyte.notification.SlackNotificationClient.Companion.buildSummary
+import io.airbyte.notification.SlackNotificationClient.Companion.sanitizePayloadForWebhook
 import io.airbyte.notification.messages.ConnectionInfo
 import io.airbyte.notification.messages.DestinationInfo
 import io.airbyte.notification.messages.SchemaUpdateNotification
@@ -158,6 +159,56 @@ internal class SlackNotificationClientTest {
     val client =
       SlackNotificationClient(SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.address.port + TEST_PATH))
     Assertions.assertTrue(client.notifyJobSuccess(summary, ""))
+  }
+
+  @Test
+  fun testNotifyJobSuccessToGenericWebhookPreservesRichPayload() {
+    server.createContext(TEST_PATH, RichPayloadHandler(EXPECTED_SUCCESS_MESSAGE))
+    val summary =
+      SyncSummary(
+        WorkspaceInfo(null, null, null),
+        ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        false,
+        null,
+        null,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        JOB_DESCRIPTION,
+        null,
+        null,
+      )
+    val client =
+      SlackNotificationClient(SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.address.port + TEST_PATH))
+    Assertions.assertTrue(client.notifyJobSuccess(summary, ""))
+  }
+
+  @Test
+  fun testSanitizePayloadForGoogleChatWebhookUsesTextOnlyPayload() {
+    val payload = Jsons.deserialize("""{"text":"hello","blocks":[{"type":"section"}],"data":{"jobId":1}}""")
+
+    val sanitized = sanitizePayloadForWebhook(payload, "https://chat.googleapis.com/v1/spaces/test/messages?key=abc&token=def")
+
+    Assertions.assertEquals("hello", sanitized["text"].asText())
+    Assertions.assertFalse(sanitized.has("blocks"))
+    Assertions.assertFalse(sanitized.has("data"))
+  }
+
+  @Test
+  fun testSanitizePayloadForGenericWebhookPreservesRichPayload() {
+    val payload = Jsons.deserialize("""{"text":"hello","blocks":[{"type":"section"}],"data":{"jobId":1}}""")
+
+    val sanitized = sanitizePayloadForWebhook(payload, "https://example.com/webhooks/custom")
+
+    Assertions.assertEquals("hello", sanitized["text"].asText())
+    Assertions.assertTrue(sanitized.has("blocks"))
+    Assertions.assertTrue(sanitized.has("data"))
   }
 
   @Test
@@ -605,6 +656,44 @@ internal class SlackNotificationClientTest {
         response = String.format("Wrong notification message: %s", message["text"].asText())
         t.sendResponseHeaders(500, response.length.toLong())
       }
+      val os = t.responseBody
+      os.write(response.toByteArray(StandardCharsets.UTF_8))
+      os.close()
+    }
+  }
+
+  internal class RichPayloadHandler(
+    private val expectedMessage: String,
+  ) : HttpHandler {
+    override fun handle(t: HttpExchange) {
+      val body = String(t.requestBody.readAllBytes())
+      log.info { "Received: '$body'" }
+      val message =
+        try {
+          Jsons.deserialize(body)
+        } catch (e: RuntimeException) {
+          log.error(e) { "Failed to parse JSON from body $body" }
+          null
+        }
+
+      val response: String
+      if (message == null || !message.has("text")) {
+        response = "No notification message or message missing `text` node"
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else if (message["text"].asText() != expectedMessage) {
+        response = String.format("Wrong notification message: %s", message["text"].asText())
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else if (!message.has("blocks")) {
+        response = "Expected webhook payload to preserve `blocks`"
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else if (!message.has("data")) {
+        response = "Expected webhook payload to preserve `data`"
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else {
+        response = "Notification acknowledged!"
+        t.sendResponseHeaders(200, response.length.toLong())
+      }
+
       val os = t.responseBody
       os.write(response.toByteArray(StandardCharsets.UTF_8))
       os.close()
