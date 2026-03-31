@@ -91,11 +91,10 @@ class HubspotOAuthFlow : BaseOAuth2Flow {
         "crm.schemas.custom.read",
         "crm.schemas.deals.read",
         "crm.objects.leads.read",
-        "oauth",
       )
 
   private val requiredScopes: String
-    get() = "crm.schemas.contacts.read+crm.objects.contacts.read"
+    get() = "crm.schemas.contacts.read+crm.objects.contacts.read+oauth"
 
   /**
    * Returns the URL where to retrieve the access token from.
