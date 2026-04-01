@@ -433,6 +433,7 @@ airbyte:
     segment_token: ${WEBAPP_SEGMENT_TOKEN:}
     sonar_api_url: ${WEBAPP_SONAR_API_URL:}
     coral_agents_api_url: ${WEBAPP_CORAL_AGENTS_API_URL:}
+    fullstory_guides_org_id: ${WEBAPP_FULLSTORY_GUIDES_ORG_ID:}
     zendesk_key: ${WEBAPP_ZENDESK_KEY:}
 
   workspace-root: ${WORKSPACE_ROOT}
