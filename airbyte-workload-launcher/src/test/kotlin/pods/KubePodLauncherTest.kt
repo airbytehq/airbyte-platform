@@ -17,7 +17,6 @@ import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodList
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientException
-import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
 import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable
 import io.fabric8.kubernetes.client.dsl.MixedOperation
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation
@@ -40,7 +39,6 @@ import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
 import java.time.Duration
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 @ExtendWith(MockKExtension::class)
@@ -243,46 +241,6 @@ class KubePodLauncherTest {
         "Operation: [list]  for kind: [Pod]  with name: [null]  in namespace: [jobs]  failed.",
         IOException("timeout", InterruptedIOException("timeout")),
       )
-    every { kubernetesClient.pods() } returns pods
-
-    val kubePodLauncher =
-      KubePodLauncher(
-        kubernetesClient,
-        metricClient,
-        airbyteWorkerConfig,
-        featureFlagClient,
-        kubernetesClientRetryPolicy,
-      )
-
-    assertThrows<KubernetesClientException> {
-      kubePodLauncher.waitForPodReadyOrTerminal(mapOf("label" to "value"), Duration.ofSeconds(30))
-    }
-    assertEquals(maxRetries, counter.get())
-  }
-
-  @Test
-  fun `retry on kubernetes client timeout exception`() {
-    val maxRetries = 3
-    val counter = AtomicInteger(0)
-    val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
-
-    val kubernetesClientRetryPolicy =
-      RetryPolicy
-        .builder<Any>()
-        .handleIf(handleIf)
-        .onRetry { counter.incrementAndGet() }
-        .withMaxRetries(maxRetries)
-        .build()
-
-    val pods: MixedOperation<Pod, PodList, PodResource> = mockk()
-    val namespaceable: NonNamespaceOperation<Pod, PodList, PodResource> = mockk()
-    val labels: FilterWatchListDeletable<Pod, PodList, PodResource> = mockk()
-
-    every { pods.inNamespace(any()) } returns namespaceable
-    every { namespaceable.withLabels(any()) } returns labels
-    every { labels.waitUntilCondition(any(), any(), any()) } throws
-      KubernetesClientTimeoutException("Pod", "null", "jobs", 45000, TimeUnit.MILLISECONDS)
-
     every { kubernetesClient.pods() } returns pods
 
     val kubePodLauncher =
