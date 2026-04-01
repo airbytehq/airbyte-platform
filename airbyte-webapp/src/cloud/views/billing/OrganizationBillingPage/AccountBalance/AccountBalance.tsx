@@ -10,8 +10,9 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
-import { Tooltip } from "components/ui/Tooltip";
+import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
+import { useOrganizationPlan } from "area/organization/utils";
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useGetOrganizationSubscriptionInfo } from "core/api";
 import { CreditBlockRead } from "core/api/types/AirbyteClient";
@@ -25,6 +26,7 @@ export const AccountBalance = () => {
     isError: balanceError,
   } = useGetOrganizationSubscriptionInfo(organizationId);
   const { formatCredits } = useFormatCredits();
+  const { isStandardPlan } = useOrganizationPlan();
 
   const hasPositiveCreditBalance = !!subscriptionInfo?.credits?.balance && subscriptionInfo.credits.balance > 0;
 
@@ -34,9 +36,16 @@ export const AccountBalance = () => {
 
   return (
     <BorderedTile>
-      <Heading as="h2" size="sm">
-        <FormattedMessage id="settings.organization.billing.accountBalance" />
-      </Heading>
+      <FlexContainer alignItems="center" gap="xs">
+        <Heading as="h2" size="sm">
+          <FormattedMessage id="settings.organization.billing.accountBalance" />
+        </Heading>
+        {isStandardPlan && (
+          <InfoTooltip>
+            <FormattedMessage id="settings.organization.billing.accountBalance.standardPlanTooltip" />
+          </InfoTooltip>
+        )}
+      </FlexContainer>
       <Box pt="xl">
         {balanceIsLoading && (
           <FlexContainer direction="column" gap="sm">

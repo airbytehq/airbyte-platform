@@ -1355,6 +1355,7 @@
   "settings.organization.billing.subscriptionError": "Error loading subscription information",
   "settings.organization.billing.subscriptionCancelDate": "Subscription ends on",
   "settings.organization.billing.accountBalance": "Account balance",
+  "settings.organization.billing.accountBalance.standardPlanTooltip": "You will be automatically charged if your upcoming invoice amount reaches $2,000 (USD).",
   "settings.organization.billing.accountBalanceError": "Error loading account balance",
   "settings.organization.billing.remainingCreditsBanner": "You have {amount} remaining credits.",
   "settings.organization.billing.remainingCredits": "Remaining credits",
