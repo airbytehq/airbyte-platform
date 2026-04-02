@@ -213,7 +213,7 @@ open class CustomerIoEmailNotificationSender(
           MetricAttribute(MetricTags.SUCCESS, "true"),
         ),
     )
-    log.info { "Successful notification for workspaceId $workspaceId (${response.code}): ${response.body!!.string()}" }
+    log.info { "Successful notification for workspaceId $workspaceId (${response.code}): ${response.body.string()}" }
   }
 
   private fun handleSendFailure(
@@ -230,7 +230,7 @@ open class CustomerIoEmailNotificationSender(
     )
 
     throw IOException(
-      String.format("Failed to send notification for workspaceId {}: code(%s), body(%s)", workspaceId, response.code, response.body!!.string()),
+      String.format("Failed to send notification for workspaceId {}: code(%s), body(%s)", workspaceId, response.code, response.body.string()),
     )
   }
 

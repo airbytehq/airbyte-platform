@@ -84,6 +84,24 @@ Construct semi-colon delimited list of comma separated key/value pairs from arra
 {{- end -}}
 
 {{/*
+Returns a comma-delimited string of imagePullSecret names.
+Extracts .name from each LocalObjectReference in the secrets list,
+then appends any extra plain-string entries.
+Usage:
+  {{ include "airbyte-data-plane.imagePullSecretNames" (dict "secrets" .Values.imagePullSecrets "extra" (list "foo")) }}
+*/}}
+{{- define "airbyte-data-plane.imagePullSecretNames" -}}
+  {{- $secrets := default list .secrets }}
+  {{- $extra := default list .extra }}
+  {{- $names := list }}
+  {{- range $secrets }}
+    {{- $names = append $names .name }}
+  {{- end }}
+  {{- $all := concat $names $extra }}
+  {{- join "," $all }}
+{{- end }}
+
+{{/*
 Convert tags to a comma-separated list of key=value pairs.
 */}}
 {{- define "airbyte-data-plane.tagsToString" -}}
@@ -98,3 +116,17 @@ Convert tags to a comma-separated list of key=value pairs.
 {{- end -}}
 {{- join "," $result -}}
 {{- end -}}
+
+{{/*
+Construct JAVA_OPTS env var for the data plane.
+*/}}
+{{- define "airbyte-data-plane.java_opts.envs" }}
+{{- $opts := .Values.java.opts }}
+
+{{- if .Values.workloadLauncher.debug.enabled }}
+{{- $opts = append $opts "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:5005,server=y,suspend=n" }}
+{{- end }}
+
+- name: JAVA_OPTS
+  value: "-XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=75.0 -XX:FlightRecorderOptions=stackdepth=256 {{ join " " $opts }}"
+{{- end }}

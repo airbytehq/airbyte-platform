@@ -1,0 +1,7 @@
+package dataplanetests
+
+import (
+	helmtests "github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests"
+)
+
+var chartPath string = helmtests.DetermineChartPath("/v2/airbyte-data-plane")
