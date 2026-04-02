@@ -91,6 +91,7 @@ class HubspotOAuthFlow : BaseOAuth2Flow {
         "crm.schemas.custom.read",
         "crm.schemas.deals.read",
         "crm.objects.leads.read",
+        "crm.objects.users.read",
       )
 
   private val requiredScopes: String
