@@ -60,7 +60,6 @@ import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
-import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.SourceConnectionWithCount
@@ -113,8 +112,6 @@ internal class SourceHandlerTest {
   lateinit var oAuthConfigSupplier: OAuthConfigSupplier
   lateinit var actorDefinitionVersionHelper: ActorDefinitionVersionHelper
   lateinit var actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater
-  lateinit var partialUserConfigService: PartialUserConfigService
-
   lateinit var sourceService: SourceService
   lateinit var workspaceService: WorkspaceService
   lateinit var workspaceHelper: WorkspaceHelper
@@ -156,8 +153,6 @@ internal class SourceHandlerTest {
     secretReferenceService = mockk(relaxed = true)
     currentUserService = mockk(relaxed = true)
     secretPersistence = mockk(relaxed = true)
-    partialUserConfigService = mockk(relaxed = true)
-
     every {
       licenseEntitlementChecker.checkEntitlement(
         any(),
@@ -227,7 +222,6 @@ internal class SourceHandlerTest {
         secretStorageService = secretStorageService,
         secretReferenceService = secretReferenceService,
         currentUserService = currentUserService,
-        partialUserConfigService = partialUserConfigService,
       )
   }
 
@@ -478,7 +472,6 @@ internal class SourceHandlerTest {
         secretStorageService,
         secretReferenceService,
         currentUserService,
-        partialUserConfigService,
       )
 
     val sourceCreate =
@@ -813,7 +806,6 @@ internal class SourceHandlerTest {
         secretStorageService,
         secretReferenceService,
         currentUserService,
-        partialUserConfigService,
       )
 
     val updatedSourceName = "my updated source name"
