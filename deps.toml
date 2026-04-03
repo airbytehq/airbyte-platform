@@ -10,50 +10,50 @@ fasterxml_version = "2.19.2"
 failsafe = "3.3.2"
 flyway = "10.22.0"
 grpc_version = "1.69.1"
-hikaricp = "6.3.3"
+hikaricp = "7.0.2"
 jax-rs = "3.1.0"
 jna = "5.18.1"
 jmh = "1.37"
 jooq = "3.19.18"
-junit-jupiter = "6.0.1"
+junit-jupiter = "6.0.3"
 keycloak-client = "26.2.2" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 keycloak-admin-client = "26.0.5" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 kotest = "5.9.1"
-kotlin-logging = "7.0.6"
+kotlin-logging = "7.0.14"
 kotlinx-coroutine = "1.10.2"
-kubernetes-client = "7.3.1"
-logback = "1.5.19"
+kubernetes-client = "7.6.1"
+logback = "1.5.32"
 micrometer = "1.15.1"
-micronaut = "4.10.2"
+micronaut = "4.10.10"
 micronaut-cache = "5.3.0"
-micronaut-core = "4.10.8"
-micronaut-data = "4.14.1"
-micronaut-email = "2.10.0"
+micronaut-core = "4.10.18"
+micronaut-data = "4.14.3"
+micronaut-email = "2.11.0"
 micronaut-jaxrs = "4.10.0"
-micronaut-jdbc = "6.3.1"
+micronaut-jdbc = "7.0.0"
 micronaut-kotlin = "4.7.0"
-micronaut-kubernetes = "7.1.1"
-micronaut-micrometer = "5.13.1"
+micronaut-kubernetes = "7.2.1"
+micronaut-micrometer = "5.13.2"
 micronaut-openapi = "6.19.2"
-micronaut-security = "4.15.0"
-micronaut-test = "4.10.2"
+micronaut-security = "4.17.1"
+micronaut-test = "4.10.3"
 micronaut-tracing = "7.2.0"
 moshi = "1.15.0"
-mockito = "5.18.0"
-mockito-kotlin = "5.2.1"
-okhttp3 = "4.12.0"
+mockito = "5.23.0"
+mockito-kotlin = "5.4.0"
+okhttp3 = "5.3.2"
 otel-api = "1.56.0"
 picocli = "4.7.6"
-platform-testcontainers = "1.19.4"
+platform-testcontainers = "1.21.4"
 pmd = "7.6.0"
 postgresql = "42.7.7"
-reactor = "3.7.12"
+reactor = "3.7.17"
 retrofit = "3.0.0"
 segment = "2.1.1"
 sentry = "6.14.0"
 slf4j = "2.0.17"
 swagger = "1.6.2"
-temporal = "1.29.0"
+temporal = "1.33.0"
 v3-swagger = "2.2.21"
 
 [libraries]
@@ -63,7 +63,7 @@ apache-mime4j-core = { module = "org.apache.james:apache-mime4j-core", version =
 apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }
 apollo-api-jvm = { module = "com.apollographql.apollo3:apollo-api-jvm", version.ref = "apollo" }
 apollo-adapters-jvm = { module = "com.apollographql.apollo3:apollo-adapters-jvm", version.ref = "apollo" }
-assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
+assertj-core = { module = "org.assertj:assertj-core", version = "3.27.7" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.782" }
 aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.782"}
 aws-secretsmanager-caching-java = { module = "com.amazonaws.secretsmanager:aws-secretsmanager-caching-java", version = "1.0.2" }
@@ -72,7 +72,7 @@ azure-identity = { module = "com.azure:azure-identity", version.ref = "azure-ide
 azure-storage = { module = "com.azure:azure-storage-blob", version.ref = "azure-storage" }
 bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
-byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.14.10" }
+byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.18.7" }
 cron-utils = { module = "com.cronutils:cron-utils", version = "9.2.1" }
 datadog-statsd-client = { module = "com.datadoghq:java-dogstatsd-client", version = "4.0.0" }
 docker-java = { module = "com.github.docker-java:docker-java", version.ref = "docker-java" }
@@ -157,7 +157,7 @@ mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 mockito-inline = { module = "org.mockito:mockito-inline", version = "5.2.0" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
-mockk = { module = "io.mockk:mockk", version = "1.14.6" }
+mockk = { module = "io.mockk:mockk", version = "1.14.9" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
 okhttp-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp3" }
@@ -180,8 +180,8 @@ pmd-java = { module = "net.sourceforge.pmd:pmd-java", version.ref = "pmd" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 quartz-scheduler = { module = "org.quartz-scheduler:quartz", version = "2.3.2" }
 reactor-core = { module = "io.projectreactor:reactor-core", version.ref = "reactor" }
-reactor-core-micrometer = { module = "io.projectreactor:reactor-core-micrometer", version = "1.2.4" }
-reactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions", version = "1.2.2" }
+reactor-core-micrometer = { module = "io.projectreactor:reactor-core-micrometer", version = "1.2.17" }
+reactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions", version = "1.2.5" }
 reactor-test = { module = "io.projectreactor:reactor-test", version.ref = "reactor" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 retrofit-jackson = { module = "com.squareup.retrofit2:converter-jackson", version.ref = "retrofit" }

@@ -59,12 +59,12 @@ class RemoteDeclarativeManifestImageVersionsProvider(
     while (nextUrl != null) {
       val request = Request.Builder().url(nextUrl).build()
       okHttpClient.newCall(request).execute().use { response ->
-        if (!response.isSuccessful || response.body == null) {
+        if (!response.isSuccessful) {
           throw IOException(
             "Unexpected response from DockerHub API: ${response.code} ${response.message}",
           )
         }
-        val body = Jsons.deserialize(response.body!!.string())
+        val body = Jsons.deserialize(response.body.string())
         body.get("results").elements().forEach { result ->
           val tag = result.get("name").asText()
           val sha = result.get("digest").asText()

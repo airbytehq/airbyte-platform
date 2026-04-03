@@ -200,8 +200,8 @@ open class RemoteDefinitionsProvider(
 
     try {
       okHttpClient.newCall(request).execute().use { response ->
-        if (response.isSuccessful && response.body != null) {
-          val responseBody = response.body!!.string()
+        if (response.isSuccessful) {
+          val responseBody = response.body.string()
           log.info { "Fetched latest remote definitions (${responseBody.hashCode()})" }
           return Jsons.deserialize(responseBody, ConnectorRegistry::class.java)
         } else {
@@ -230,10 +230,10 @@ open class RemoteDefinitionsProvider(
       okHttpClient.newCall(request).execute().use { response ->
         return if (response.code == NOT_FOUND) {
           Optional.empty()
-        } else if (response.isSuccessful && response.body != null) {
+        } else if (response.isSuccessful) {
           Optional.of(
             Jsons.deserialize(
-              response.body!!.string(),
+              response.body.string(),
             ),
           )
         } else {
@@ -290,9 +290,9 @@ open class RemoteDefinitionsProvider(
         return if (response.code == NOT_FOUND) {
           log.debug { "Live documentation not found at $githubDocUrl" }
           Optional.empty()
-        } else if (response.isSuccessful && response.body != null) {
+        } else if (response.isSuccessful) {
           log.info { "Successfully fetched live documentation from $githubDocUrl" }
-          Optional.of(response.body!!.string())
+          Optional.of(response.body.string())
         } else {
           log.warn { "Failed to fetch live documentation from $githubDocUrl: ${response.code} ${response.message}" }
           Optional.empty()
@@ -325,8 +325,8 @@ open class RemoteDefinitionsProvider(
       okHttpClient.newCall(request).execute().use { response ->
         return if (response.code == NOT_FOUND) {
           Optional.empty()
-        } else if (response.isSuccessful && response.body != null) {
-          Optional.of(response.body!!.string())
+        } else if (response.isSuccessful) {
+          Optional.of(response.body.string())
         } else {
           throw IOException(formatStatusCodeException("getConnectorDocumentation", response))
         }
@@ -360,8 +360,8 @@ open class RemoteDefinitionsProvider(
       okHttpClient.newCall(request).execute().use { response ->
         if (response.code == NOT_FOUND) {
           return Optional.empty()
-        } else if (response.isSuccessful && response.body != null) {
-          val manifestYamlContent = response.body!!.string()
+        } else if (response.isSuccessful) {
+          val manifestYamlContent = response.body.string()
           return Optional.of(Yamls.deserialize(manifestYamlContent))
         } else {
           throw IOException(formatStatusCodeException("getConnectorManifest", response))
@@ -396,8 +396,8 @@ open class RemoteDefinitionsProvider(
       okHttpClient.newCall(request).execute().use { response ->
         return if (response.code == NOT_FOUND) {
           Optional.empty()
-        } else if (response.isSuccessful && response.body != null) {
-          extractFileContentFromZip(response.body!!.bytes(), CUSTOM_COMPONENTS_FILE_NAME)
+        } else if (response.isSuccessful) {
+          extractFileContentFromZip(response.body.bytes(), CUSTOM_COMPONENTS_FILE_NAME)
         } else {
           throw IOException(formatStatusCodeException("getConnectorCustomComponents", response))
         }

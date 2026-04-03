@@ -91,7 +91,7 @@ jobs:
 
     - env: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
       key: kube.mainContainerImagePullSecret
-      valueExp: join "," (ternary (concat .Values.imagePullSecrets (list .Values.jobs.kube.mainContainerImagePullSecret)) .Values.imagePullSecrets (empty .Values.jobs.kube.mainContainerImagePullSecret))
+      valueExp: include "airbyte-data-plane.imagePullSecretNames" (dict "secrets" .Values.imagePullSecrets "extra" (ternary (list .Values.jobs.kube.mainContainerImagePullSecret) list (not (empty .Values.jobs.kube.mainContainerImagePullSecret))))
 
     - env: JOB_KUBE_ANNOTATIONS
       key: kube.annotations

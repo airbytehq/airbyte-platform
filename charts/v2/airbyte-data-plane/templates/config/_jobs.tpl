@@ -85,7 +85,7 @@ Renders the jobs.kube.mainContainerImagePullPolicy environment variable
 Renders the jobs.kube.mainContainerImagePullSecret value
 */}}
 {{- define "airbyte-data-plane.jobs.kube.mainContainerImagePullSecret" }}
-    {{- join "," (ternary (concat .Values.imagePullSecrets (list .Values.jobs.kube.mainContainerImagePullSecret)) .Values.imagePullSecrets (empty .Values.jobs.kube.mainContainerImagePullSecret)) }}
+    {{- include "airbyte-data-plane.imagePullSecretNames" (dict "secrets" .Values.imagePullSecrets "extra" (ternary (list .Values.jobs.kube.mainContainerImagePullSecret) list (not (empty .Values.jobs.kube.mainContainerImagePullSecret)))) }}
 {{- end }}
 
 {{/*

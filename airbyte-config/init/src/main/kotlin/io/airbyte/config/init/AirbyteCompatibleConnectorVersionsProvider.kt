@@ -46,8 +46,8 @@ open class AirbyteCompatibleConnectorVersionsProvider(
     try {
       val responseSupplier = { okHttpClient.newCall(request).execute() }
       failsafe.get(responseSupplier).use { response ->
-        if (response.isSuccessful && response.body != null) {
-          val responseBody = response.body!!.string()
+        if (response.isSuccessful) {
+          val responseBody = response.body.string()
           val compatibleConnectorVersionsMatrix = Jsons.deserialize(responseBody, AirbyteCompatibleConnectorVersionsMatrix::class.java)
           return compatibleConnectorVersionsMatrix?.convertToMap() ?: emptyMap()
         } else {

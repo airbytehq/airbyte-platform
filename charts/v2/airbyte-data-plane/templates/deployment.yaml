@@ -37,7 +37,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            {{- include "airbyte.java_opts.envs" (list .Values.workloadLauncher $) | nindent 12 }}
+            {{- include "airbyte-data-plane.java_opts.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.common.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.dataPlane.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.jobs.envs" . | nindent 12 }}

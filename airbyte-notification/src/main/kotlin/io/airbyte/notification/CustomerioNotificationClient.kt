@@ -423,7 +423,7 @@ class CustomerioNotificationClient(
     workspaceId: UUID?,
     response: Response,
   ): String {
-    val body = if (response.body != null) response.body!!.string() else ""
+    val body = response.body.string()
     val errorMessage = String.format("Failed to deliver notification (%s): %s", response.code, body)
     log.info { "Error sending notification workspaceId $workspaceId (${response.code}): $errorMessage" }
     metricClient?.count(
