@@ -4,6 +4,7 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.BasicSchedule
 import io.airbyte.config.ConnectionTemplate
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 class ConnectionTemplateTest {
+  private val objectMapper = ObjectMapper()
   private val organizationId = OrganizationId(UUID.randomUUID())
   private val destinationName = "destination_name"
   private val destinationDefinitionId = ActorDefinitionId(UUID.randomUUID())
