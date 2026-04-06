@@ -189,3 +189,10 @@ intents:
     roles:
       - ORGANIZATION_ADMIN
       - ADMIN
+  ManageConnectionOnDemandCapacity:
+    name: Manage connection on-demand capacity
+    description: Enable or disable on-demand capacity for a connection
+    roles:
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_ADMIN
+      - ADMIN
