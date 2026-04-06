@@ -34,33 +34,6 @@ paths:
       security: []
       x-speakeasy-alias: getHealthCheck
       x-speakeasy-group: Health
-  /config_templates/connections:
-    post:
-      description: Create a connection template for an organization. This endpoint
-        is only available when Airbyte Embedded is enabled.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConnectionTemplateCreateRequestBody'
-        required: true
-      tags:
-      - public_connection_templates
-      - public
-      - ConnectionTemplates
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectionTemplateCreateResponse'
-          description: Created a connection template.
-        '403':
-          description: Not allowed
-      operationId: createConnectionTemplate
-      summary: Create connection template
-      x-speakeasy-alias: createConnectionTemplate
-      x-speakeasy-group: ConnectionTemplates
   /applications:
     get:
       tags:
@@ -5303,54 +5276,6 @@ components:
       properties:
         token:
           type: string
-      x-speakeasy-component: true
-    ConnectionTemplateCreateRequestBody:
-      type: object
-      required:
-      - destinationConfiguration
-      - organizationId
-      - destinationName
-      - destinationActorDefinitionId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-        destinationName:
-          type: string
-        destinationConfiguration:
-          $ref: '#/components/schemas/DestinationConfiguration'
-        destinationActorDefinitionId:
-          $ref: '#/components/schemas/ActorDefinitionId'
-        namespaceDefinitionType:
-          $ref: '#/components/schemas/NamespaceDefinitionType'
-          description: The namespace definition type for the connection. This is used
-            to determine how the namespace is defined for the connection. If none
-            is provided, the namespace will be set to ${WORKSPACE_NAME}.
-        namespaceFormat:
-          type: string
-          default: null
-        prefix:
-          type: string
-        schedule:
-          $ref: '#/components/schemas/AirbyteApiConnectionSchedule'
-          description: The schedule for connections. If none is provided, syncs will
-            run every hour.
-        resourceRequirements:
-          $ref: '#/components/schemas/ResourceRequirements'
-        nonBreakingChangesPreference:
-          $ref: '#/components/schemas/NonBreakingChangesPreference'
-        syncOnCreate:
-          type: boolean
-          default: true
-      x-speakeasy-component: true
-    ConnectionTemplateCreateResponse:
-      type: object
-      required:
-      - id
-      properties:
-        id:
-          type: string
-          format: uuid
       x-speakeasy-component: true
     EmbeddedOrganizationsList:
       required:

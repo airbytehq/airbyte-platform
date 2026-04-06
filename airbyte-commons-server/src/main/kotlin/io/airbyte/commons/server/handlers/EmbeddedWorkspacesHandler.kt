@@ -4,10 +4,8 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.DestinationCreate
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.data.repositories.ConnectionTemplateRepository
 import io.airbyte.data.repositories.WorkspaceRepository
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.domain.models.OrganizationId
@@ -19,8 +17,6 @@ import java.util.UUID
 class EmbeddedWorkspacesHandler(
   private val workspacesHandler: WorkspacesHandler,
   private val workspaceRepository: WorkspaceRepository,
-  private val destinationHandler: DestinationHandler,
-  private val connectionTemplateRepository: ConnectionTemplateRepository,
   private val dataplaneGroupService: DataplaneGroupService,
 ) {
   fun getOrCreate(
@@ -51,28 +47,7 @@ class EmbeddedWorkspacesHandler(
         workspaceCreateRequest.dataplaneGroupId(dataplaneGroupIdForEU.id)
       }
       val workspaceRead = workspacesHandler.createWorkspace(workspaceCreateRequest)
-      val workspaceId = WorkspaceId(workspaceRead.workspaceId)
-
-      createDestinationsFromConnectionTemplates(organizationId, workspaceId)
-
-      return workspaceId
-    }
-  }
-
-  private fun createDestinationsFromConnectionTemplates(
-    organizationId: OrganizationId,
-    workspaceId: WorkspaceId,
-  ) {
-    val connectionTemplates = connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId.value)
-    for (connectionTemplate in connectionTemplates) {
-      destinationHandler.createDestination(
-        DestinationCreate()
-          .name(connectionTemplate.destinationName)
-          .workspaceId(workspaceId.value)
-          .destinationDefinitionId(connectionTemplate.destinationDefinitionId)
-          .connectionConfiguration(connectionTemplate.destinationConfig),
-        // FIXME .resourceAllocation() We don't support scoped resource allocations yet. https://github.com/airbytehq/airbyte-internal-issues/issues/12792
-      )
+      return WorkspaceId(workspaceRead.workspaceId)
     }
   }
 

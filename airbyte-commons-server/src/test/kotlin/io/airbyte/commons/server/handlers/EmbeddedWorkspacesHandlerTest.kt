@@ -3,20 +3,14 @@
  */
 
 package io.airbyte.commons.server.handlers
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.airbyte.api.model.generated.DestinationRead
+
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.server.handlers.EmbeddedWorkspacesHandler.Companion.embeddedEUOrganizations
 import io.airbyte.config.DataplaneGroup
-import io.airbyte.data.repositories.ConnectionTemplateRepository
 import io.airbyte.data.repositories.WorkspaceRepository
-import io.airbyte.data.repositories.entities.ConnectionTemplate
 import io.airbyte.data.repositories.entities.Workspace
 import io.airbyte.data.services.DataplaneGroupService
-import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType
-import io.airbyte.db.instance.configs.jooq.generated.enums.NonBreakingChangePreferenceType
-import io.airbyte.db.instance.configs.jooq.generated.enums.ScheduleType
 import io.airbyte.domain.models.OrganizationId
 import io.mockk.every
 import io.mockk.mockk
@@ -41,8 +35,6 @@ class EmbeddedWorkspacesHandlerTest {
 
   private val workspacesHandler = mockk<WorkspacesHandler>()
   private val workspaceRepository = mockk<WorkspaceRepository>()
-  private val destinationHandler = mockk<DestinationHandler>()
-  private val connectionTemplateRepository = mockk<ConnectionTemplateRepository>()
   private val dataplaneGroupService = mockk<DataplaneGroupService>()
 
   private val existingWorkspace =
@@ -69,36 +61,12 @@ class EmbeddedWorkspacesHandlerTest {
       dataplaneGroupId = UUID.randomUUID(),
       organizationId = organizationId,
     )
-  private val connectionTemplate =
-    ConnectionTemplate(
-      UUID.randomUUID(),
-      organizationId,
-      "destinationName",
-      UUID.randomUUID(),
-      jacksonObjectMapper().readTree("{}"),
-      NamespaceDefinitionType.destination,
-      null,
-      null,
-      ScheduleType.manual,
-      null,
-      null,
-      NonBreakingChangePreferenceType.disable,
-    )
-
-  private val destinationRead =
-    DestinationRead()
-      .destinationId(UUID.randomUUID())
-      .workspaceId(workspaceId)
-      .destinationDefinitionId(connectionTemplate.destinationDefinitionId)
-      .connectionConfiguration(connectionTemplate.destinationConfig)
-      .name(connectionTemplate.destinationName)
 
   lateinit var handler: EmbeddedWorkspacesHandler
 
   @BeforeEach
   fun setup() {
-    handler =
-      EmbeddedWorkspacesHandler(workspacesHandler, workspaceRepository, destinationHandler, connectionTemplateRepository, dataplaneGroupService)
+    handler = EmbeddedWorkspacesHandler(workspacesHandler, workspaceRepository, dataplaneGroupService)
   }
 
   @Test
@@ -110,21 +78,6 @@ class EmbeddedWorkspacesHandlerTest {
     every {
       workspacesHandler.createWorkspace(expectedCreateWorkspaceRequest)
     } returns workspaceRead
-
-    every {
-      connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId)
-    } returns listOf(connectionTemplate)
-
-    every {
-      destinationHandler.createDestination(
-        io.airbyte.api.model.generated
-          .DestinationCreate()
-          .name(connectionTemplate.destinationName)
-          .workspaceId(workspaceId)
-          .destinationDefinitionId(connectionTemplate.destinationDefinitionId)
-          .connectionConfiguration(connectionTemplate.destinationConfig),
-      )
-    } returns destinationRead
 
     val returnedWorkspaceId = handler.getOrCreate(OrganizationId(organizationId), externalUserId)
 
@@ -150,6 +103,7 @@ class EmbeddedWorkspacesHandlerTest {
         .name(externalUserId)
         .organizationId(orgId)
         .dataplaneGroupId(dataplaneGroupIdEU)
+
     every {
       workspaceRepository.findByNameAndOrganizationIdAndTombstoneFalse(externalUserId, orgId)
     } returns emptyList()
@@ -157,21 +111,6 @@ class EmbeddedWorkspacesHandlerTest {
     every {
       workspacesHandler.createWorkspace(expectedCreateWorkspaceRequestInEU)
     } returns workspaceRead
-
-    every {
-      connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(orgId)
-    } returns listOf(connectionTemplate)
-
-    every {
-      destinationHandler.createDestination(
-        io.airbyte.api.model.generated
-          .DestinationCreate()
-          .name(connectionTemplate.destinationName)
-          .workspaceId(workspaceId)
-          .destinationDefinitionId(connectionTemplate.destinationDefinitionId)
-          .connectionConfiguration(connectionTemplate.destinationConfig),
-      )
-    } returns destinationRead
 
     val returnedWorkspaceId = handler.getOrCreate(OrganizationId(orgId), externalUserId)
 
