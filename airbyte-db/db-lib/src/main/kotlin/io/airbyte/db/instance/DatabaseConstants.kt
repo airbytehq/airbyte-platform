@@ -80,4 +80,8 @@ object DatabaseConstants {
   const val SSO_CONFIG_TABLE: String = "sso_config"
 
   const val ORGANIZATION_PAYMENT_CONFIG_TABLE: String = "organization_payment_config"
+
+  const val PRIVATE_LINK_TABLE: String = "private_link"
+
+  const val DATAPLANE_NETWORK_CONFIG_TABLE: String = "dataplane_network_config"
 }

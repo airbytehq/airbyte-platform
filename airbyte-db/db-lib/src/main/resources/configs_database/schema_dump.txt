@@ -370,6 +370,16 @@ create table "public"."dataplane_heartbeat_log" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "dataplane_heartbeat_log_pkey" primary key ("id")
 );
+create table "public"."dataplane_network_config" (
+  "id" uuid not null,
+  "dataplane_group_id" uuid not null,
+  "provider" "public"."cloud_provider" not null,
+  "config" jsonb not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "dataplane_network_config_pkey" primary key ("id"),
+  constraint "dataplane_network_config_dataplane_group_id_key" unique ("dataplane_group_id")
+);
 create table "public"."declarative_manifest" (
   "actor_definition_id" uuid not null,
   "description" varchar(256) not null,
@@ -576,6 +586,22 @@ create table "public"."permission" (
   constraint "permission_pkey" primary key ("id"),
   constraint "permission_unique_user_organization" unique ("user_id", "organization_id"),
   constraint "permission_unique_user_workspace" unique ("user_id", "workspace_id")
+);
+create table "public"."private_link" (
+  "id" uuid not null,
+  "workspace_id" uuid not null,
+  "dataplane_group_id" uuid not null,
+  "name" varchar(63) not null,
+  "status" "public"."private_link_status" not null default cast('creating' as private_link_status),
+  "service_region" varchar(64) not null,
+  "service_name" varchar(512) not null,
+  "endpoint_id" varchar(512),
+  "dns_name" varchar(512),
+  "scoped_configuration_id" uuid,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "private_link_pkey" primary key ("id"),
+  constraint "private_link_workspace_id_name_key" unique ("workspace_id", "name")
 );
 create table "public"."schema_management" (
   "id" uuid not null,
@@ -894,6 +920,7 @@ create index "permission_organization_id_idx" on "public"."permission"("organiza
 create index "permission_service_account_id_index" on "public"."permission"("service_account_id" asc);
 create index "permission_user_id_idx" on "public"."permission"("user_id" asc);
 create index "permission_workspace_id_idx" on "public"."permission"("workspace_id" asc);
+create index "idx_private_link_workspace_id" on "public"."private_link"("workspace_id" asc);
 create index "connection_idx" on "public"."schema_management"("connection_id" asc);
 create index "scoped_configuration_origin_idx" on "public"."scoped_configuration"("origin" asc);
 create unique index "secret_reference_scope_type_scope_id_hydration_path_idx" on "public"."secret_reference"(
@@ -966,6 +993,7 @@ alter table "public"."dataplane" add constraint "dataplane_service_account_id_fk
 alter table "public"."dataplane_client_credentials" add constraint "dataplane_client_credentials_dataplane_id_fkey" foreign key ("dataplane_id") references "public"."dataplane" ("id");
 alter table "public"."dataplane_group" add constraint "dataplane_group_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."dataplane_heartbeat_log" add constraint "dataplane_heartbeat_log_dataplane_id_fkey" foreign key ("dataplane_id") references "public"."dataplane" ("id");
+alter table "public"."dataplane_network_config" add constraint "dataplane_network_config_dataplane_group_id_fkey" foreign key ("dataplane_group_id") references "public"."dataplane_group" ("id");
 alter table "public"."group" add constraint "group_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."group_member" add constraint "group_member_group_id_fkey" foreign key ("group_id") references "public"."group" ("id");
 alter table "public"."group_member" add constraint "group_member_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
@@ -987,6 +1015,9 @@ alter table "public"."permission" add constraint "permission_organization_id_fke
 alter table "public"."permission" add constraint "permission_service_account_id_fkey" foreign key ("service_account_id") references "public"."service_accounts" ("id");
 alter table "public"."permission" add constraint "permission_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."permission" add constraint "permission_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
+alter table "public"."private_link" add constraint "private_link_dataplane_group_id_fkey" foreign key ("dataplane_group_id") references "public"."dataplane_group" ("id");
+alter table "public"."private_link" add constraint "private_link_scoped_configuration_id_fkey" foreign key ("scoped_configuration_id") references "public"."scoped_configuration" ("id");
+alter table "public"."private_link" add constraint "private_link_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."schema_management" add constraint "schema_management_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."secret_config" add constraint "secret_config_secret_storage_id_fkey" foreign key ("secret_storage_id") references "public"."secret_storage" ("id");
 alter table "public"."secret_reference" add constraint "secret_reference_secret_config_id_fkey" foreign key ("secret_config_id") references "public"."secret_config" ("id");
