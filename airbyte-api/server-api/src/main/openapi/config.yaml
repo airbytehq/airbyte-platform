@@ -460,6 +460,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/get_data_worker_availability:
+    post:
+      tags:
+        - workspace
+        - cloud-only
+      summary: Get Data Worker availability for a workspace
+      operationId: getWorkspaceDataWorkerAvailability
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceDataWorkerAvailabilityRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceDataWorkerAvailabilityRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/tag_feedback_status_as_done:
     post:
       tags:
@@ -12338,6 +12361,44 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectionUsageRead"
+    WorkspaceDataWorkerAvailabilityRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - organizationId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+    WorkspaceDataWorkerAvailabilityRead:
+      type: object
+      required:
+        - workspaceId
+        - organizationId
+        - outOfDataWorkers
+        - enforcementEnabled
+        - currentDataWorkers
+        - committedDataWorkers
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+        outOfDataWorkers:
+          type: boolean
+          description: Whether the workspace's organization has exhausted committed Data Worker capacity.
+        enforcementEnabled:
+          type: boolean
+          description: Whether Data Worker capacity enforcement is enabled for the workspace's organization.
+        currentDataWorkers:
+          type: number
+          format: double
+          description: The current Data Worker usage reserved by the workspace's organization.
+        committedDataWorkers:
+          type: integer
+          format: int32
+          description: The committed Data Worker capacity for the workspace's organization.
     ConnectionUsageRead:
       type: object
       required:

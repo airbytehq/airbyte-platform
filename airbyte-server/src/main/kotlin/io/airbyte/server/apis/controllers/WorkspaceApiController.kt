@@ -16,6 +16,8 @@ import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.SlugRequestBody
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
+import io.airbyte.api.model.generated.WorkspaceDataWorkerAvailabilityRead
+import io.airbyte.api.model.generated.WorkspaceDataWorkerAvailabilityRequestBody
 import io.airbyte.api.model.generated.WorkspaceGetDbtJobsRequest
 import io.airbyte.api.model.generated.WorkspaceGetDbtJobsResponse
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback
@@ -160,6 +162,13 @@ open class WorkspaceApiController(
   override fun getWorkspaceUsage(
     @Body workspaceUsageRequestBody: WorkspaceUsageRequestBody?,
   ): WorkspaceUsageRead = throw ApiNotImplementedInOssProblem("Not implemented in this edition of Airbyte", null)
+
+  @Post("/get_data_worker_availability")
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getWorkspaceDataWorkerAvailability(
+    @Body workspaceDataWorkerAvailabilityRequestBody: WorkspaceDataWorkerAvailabilityRequestBody,
+  ): WorkspaceDataWorkerAvailabilityRead = throw ApiNotImplementedInOssProblem("Not implemented in this edition of Airbyte", null)
 
   @Post(uri = "/list_paginated")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)

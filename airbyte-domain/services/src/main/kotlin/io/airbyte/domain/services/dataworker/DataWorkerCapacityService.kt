@@ -48,6 +48,17 @@ data class CapacityCheckResult(
 )
 
 /**
+ * Snapshot of an organization's current Data Worker capacity.
+ */
+data class DataWorkerCapacityStatus(
+  val currentDataWorkers: Double,
+  val committedDataWorkers: Int,
+) {
+  val hasAvailableDataWorkers: Boolean
+    get() = currentDataWorkers < committedDataWorkers
+}
+
+/**
  * Service for checking Data Worker capacity for an organization.
  *
  * This service determines whether an organization has available committed capacity
@@ -62,6 +73,15 @@ open class DataWorkerCapacityService(
   private val dataWorkerUsageService: DataWorkerUsageService,
   @param:Named("config") private val configTransactionOperations: TransactionOperations<Connection>,
 ) {
+  /**
+   * Get the current Data Worker capacity status for an organization.
+   */
+  open fun getCapacityStatus(organizationId: OrganizationId): DataWorkerCapacityStatus =
+    DataWorkerCapacityStatus(
+      currentDataWorkers = getCurrentDataWorkersInUse(organizationId),
+      committedDataWorkers = getCommittedDataWorkers(organizationId),
+    )
+
   /**
    * Check if an organization has capacity for a job and reserve that capacity atomically.
    *

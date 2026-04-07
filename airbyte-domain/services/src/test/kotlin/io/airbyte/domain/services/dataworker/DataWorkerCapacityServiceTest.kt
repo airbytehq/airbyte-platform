@@ -59,6 +59,20 @@ internal class DataWorkerCapacityServiceTest {
   }
 
   @Test
+  fun `getCapacityStatus returns the current and committed data worker counts`() {
+    val organizationId = UUID.randomUUID()
+
+    stubCommittedCapacity(organizationId, 5)
+    every { dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId) } returns 20.0
+
+    val result = service.getCapacityStatus(OrganizationId(organizationId))
+
+    assertEquals(2.5, result.currentDataWorkers)
+    assertEquals(5, result.committedDataWorkers)
+    assertTrue(result.hasAvailableDataWorkers)
+  }
+
+  @Test
   fun `checkCapacityAndReserve is idempotent when reservation already exists`() {
     val organizationId = UUID.randomUUID()
     val job = buildJob(42L)
