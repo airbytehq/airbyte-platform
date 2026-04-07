@@ -180,17 +180,6 @@ create table "public"."commands" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "commands_pkey" primary key ("id")
 );
-create table "public"."config_template" (
-  "id" uuid not null,
-  "organization_id" uuid,
-  "actor_definition_id" uuid not null,
-  "partial_default_config" jsonb not null,
-  "user_config_spec" jsonb not null,
-  "tombstone" boolean not null default false,
-  "created_at" timestamp(6) with time zone not null default current_timestamp,
-  "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  constraint "config_template_pkey" primary key ("id")
-);
 create table "public"."connection" (
   "id" uuid not null,
   "namespace_definition" "public"."namespace_definition_type" not null,
@@ -233,25 +222,6 @@ create table "public"."connection_tag" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "connection_tag_pkey" primary key ("id"),
   constraint "connection_tag_tag_id_connection_id_key" unique ("tag_id", "connection_id")
-);
-create table "public"."connection_template" (
-  "id" uuid not null,
-  "organization_id" uuid not null,
-  "destination_name" varchar(2147483647) not null,
-  "destination_definition_id" uuid not null,
-  "destination_config" jsonb not null,
-  "namespace_definition" "public"."namespace_definition_type" not null,
-  "namespace_format" varchar(2147483647),
-  "prefix" varchar(2147483647),
-  "schedule_type" "public"."schedule_type" not null,
-  "schedule_data" jsonb,
-  "resource_requirements" jsonb,
-  "non_breaking_changes_preference" non_breaking_change_preference_type not null,
-  "tombstone" boolean not null default false,
-  "created_at" timestamp(6) with time zone not null default current_timestamp,
-  "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "sync_on_create" boolean not null default true,
-  constraint "connection_template_pkey" primary key ("id")
 );
 create table "public"."connection_timeline_event" (
   "id" uuid not null,
@@ -563,16 +533,6 @@ create table "public"."organization_payment_config" (
   constraint "organization_payment_config_pkey" primary key ("organization_id"),
   constraint "organization_payment_config_payment_provider_id_key" unique ("payment_provider_id")
 );
-create table "public"."partial_user_config" (
-  "id" uuid not null,
-  "workspace_id" uuid not null,
-  "config_template_id" uuid,
-  "tombstone" boolean not null default false,
-  "created_at" timestamp(6) with time zone not null default current_timestamp,
-  "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "actor_id" uuid,
-  constraint "partial_user_config_pkey" primary key ("id")
-);
 create table "public"."permission" (
   "id" uuid not null,
   "user_id" uuid,
@@ -877,7 +837,6 @@ create index "connection_source_id_idx" on "public"."connection"("source_id" asc
 create index "connection_status_idx" on "public"."connection"("status" asc);
 create index "connection_operation_connection_id_idx" on "public"."connection_operation"("connection_id" asc);
 create index "connection_tag_connection_id_idx" on "public"."connection_tag"("connection_id" asc);
-create index "connection_template_organization_id_idx" on "public"."connection_template"("organization_id" asc);
 create index "idx_connection_timeline_connection_id" on "public"."connection_timeline_event"("connection_id" asc, "created_at" desc, "event_type" asc);
 create index "idx_connection_timeline_event_job_id" on "public"."connection_timeline_event"("job_id" asc)
 where ((job_id IS NOT NULL));
@@ -969,8 +928,6 @@ alter table "public"."auth_user" add constraint "auth_user_user_id_fkey" foreign
 alter table "public"."commands" add constraint "commands_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."commands" add constraint "commands_workload_id_fkey" foreign key ("workload_id") references "public"."workload" ("id");
 alter table "public"."commands" add constraint "commands_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
-alter table "public"."config_template" add constraint "config_template_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
-alter table "public"."config_template" add constraint "config_template_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."connection" add constraint "connection_actor_catalog_id_fk" foreign key ("source_catalog_id") references "public"."actor_catalog" ("id");
 alter table "public"."connection" add constraint "connection_destination_catalog_id_fkey" foreign key ("destination_catalog_id") references "public"."actor_catalog" ("id");
 alter table "public"."connection" add constraint "connection_destination_id_fkey" foreign key ("destination_id") references "public"."actor" ("id");
@@ -979,8 +936,6 @@ alter table "public"."connection_operation" add constraint "connection_operation
 alter table "public"."connection_operation" add constraint "connection_operation_operation_id_fkey" foreign key ("operation_id") references "public"."operation" ("id");
 alter table "public"."connection_tag" add constraint "connection_tag_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."connection_tag" add constraint "connection_tag_tag_id_fkey" foreign key ("tag_id") references "public"."tag" ("id");
-alter table "public"."connection_template" add constraint "connection_template_destination_definition_id_fkey" foreign key ("destination_definition_id") references "public"."actor_definition" ("id");
-alter table "public"."connection_template" add constraint "connection_template_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."connection_timeline_event" add constraint "connection_timeline_event_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."connection_timeline_event" add constraint "connection_timeline_event_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."connector_builder_project" add constraint "connector_builder_project_base_adv_id_fkey" foreign key ("base_actor_definition_version_id") references "public"."actor_definition_version" ("id");
@@ -1007,9 +962,6 @@ alter table "public"."organization_domain_verification" add constraint "organiza
 alter table "public"."organization_domain_verification" add constraint "organization_domain_verification_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."organization_email_domain" add constraint "organization_email_domain_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."organization_payment_config" add constraint "organization_payment_config_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
-alter table "public"."partial_user_config" add constraint "partial_user_config_actor_id_fkey" foreign key ("actor_id") references "public"."actor" ("id");
-alter table "public"."partial_user_config" add constraint "partial_user_config_template_id_fkey" foreign key ("config_template_id") references "public"."config_template" ("id");
-alter table "public"."partial_user_config" add constraint "partial_user_config_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."permission" add constraint "permission_group_id_fkey" foreign key ("group_id") references "public"."group" ("id");
 alter table "public"."permission" add constraint "permission_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."permission" add constraint "permission_service_account_id_fkey" foreign key ("service_account_id") references "public"."service_accounts" ("id");
