@@ -468,7 +468,7 @@
   "connectionForm.backfillColumns.description": "Backfill values for new or renamed columns. May incur increased destination costs.",
   "connectionForm.backfillColumns.descriptionCloud": "Backfill values for new or renamed columns for free. May incur increased destination costs.",
   "connectionForm.runOnDemand.title": "Use on-demand capacity",
-  "connectionForm.runOnDemand.description": "Enable connection to use credits to always run syncs on demand. Syncs for this connection will never be queued, and only consume credits if no capacity is available.",
+  "connectionForm.runOnDemand.description": "Enable on demand capacity for this connection. Syncs for this connection will never be queued. Syncs that run when committed data worker is exhausted will be charged a premium rate.",
   "connectionForm.runOnDemand.adminOnly.tooltip": "Only admins can enable or disable on-demand capacity",
   "connectionForm.runOnDemand.modal.title": "Authorize On-Demand Capacity Usage",
   "connectionForm.runOnDemand.modal.body": "By proceeding, you acknowledge that this is an additional paid service and will incur charges. You confirm that you are authorized to approve this expense on behalf of your organization, and that your organization agrees to pay all associated fees in full in accordance with our billing terms.",
