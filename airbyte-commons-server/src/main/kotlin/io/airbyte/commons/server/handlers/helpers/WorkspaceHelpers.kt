@@ -87,6 +87,7 @@ fun validateWorkspace(
     validateNotificationItem(settings.sendOnConnectionUpdateActionRequired, "connectionUpdateActionRequired")
     validateNotificationItem(settings.sendOnSyncDisabled, "syncDisabled")
     validateNotificationItem(settings.sendOnSyncDisabledWarning, "syncDisabledWarning")
+    validateNotificationItem(settings.sendOnConnectionSyncQueued, "connectionSyncQueued")
 
     // email notifications for connectionUpdateActionRequired and syncDisabled can't be disabled.
     // this rule only applies to Airbyte Cloud, because OSS doesn't support email notifications.

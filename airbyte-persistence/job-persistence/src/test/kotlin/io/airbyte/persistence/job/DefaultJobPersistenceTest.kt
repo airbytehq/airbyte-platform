@@ -1887,9 +1887,10 @@ internal class DefaultJobPersistenceTest {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
 
       every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
-      jobPersistence.queueJob(jobId)
+      val queued = jobPersistence.queueJob(jobId)
 
       val updated = jobPersistence.getJob(jobId)
+      assertTrue(queued)
       assertEquals(JobStatus.QUEUED, updated.status)
     }
 
@@ -1899,9 +1900,10 @@ internal class DefaultJobPersistenceTest {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.createAttempt(jobId, LOG_PATH)
 
-      jobPersistence.queueJob(jobId)
+      val queued = jobPersistence.queueJob(jobId)
 
       val updated = jobPersistence.getJob(jobId)
+      assertFalse(queued)
       assertEquals(JobStatus.RUNNING, updated.status)
     }
   }

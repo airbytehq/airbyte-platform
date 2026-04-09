@@ -25,6 +25,11 @@ abstract class NotificationClient {
     receiverEmail: String?,
   ): Boolean
 
+  abstract fun notifyJobQueued(
+    summary: SyncSummary,
+    receiverEmail: String?,
+  ): Boolean
+
   abstract fun notifyConnectionDisabled(
     summary: SyncSummary,
     receiverEmail: String?,

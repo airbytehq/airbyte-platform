@@ -1,0 +1,6 @@
+Your sync for connection '%s' is queued and waiting for Data Worker capacity.
+
+Source: %s
+Destination: %s
+Connection URL: %s
+Job ID: %s

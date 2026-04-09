@@ -211,6 +211,45 @@ internal class CustomerioNotificationClientTest {
   }
 
   @Test
+  fun testNotifyJobQueued() {
+    mockWebServer.enqueue(MockResponse())
+
+    val summary =
+      SyncSummary(
+        WorkspaceInfo(WORKSPACE_ID, "workspace", "http://workspace"),
+        ConnectionInfo(CONNECTION_ID, "connection", "http://connection"),
+        SourceInfo(SOURCE_ID, "source", "http://source"),
+        DestinationInfo(DESTINATION_ID, "destination", "http://destination"),
+        10L,
+        false,
+        null,
+        null,
+        0L,
+        0L,
+        0,
+        0,
+        0L,
+        0L,
+        null,
+        null,
+        null,
+      )
+
+    val result = customerioNotificationClient.notifyJobQueued(summary, WORKSPACE.email)
+
+    Assertions.assertTrue(result)
+
+    val recordedRequest = mockWebServer.takeRequest()
+    Assertions.assertEquals("/v1/send/email", recordedRequest.path)
+    val reqBody = Jsons.deserialize(recordedRequest.body.readUtf8())
+    Assertions.assertEquals("6", reqBody["transactional_message_id"].asText())
+    Assertions.assertEquals("Sync queued - waiting for capacity", reqBody["subject"].asText())
+    Assertions.assertEquals("Sync queued - waiting for capacity", reqBody["message_data"]["email_title"].asText())
+    Assertions.assertTrue(reqBody["message_data"]["email_body"].asText().contains("Job ID: 10"))
+    Assertions.assertTrue(reqBody["message_data"]["email_body"].asText().contains("Connection URL: http://connection"))
+  }
+
+  @Test
   fun testBuildSchemaNotificationMessageData() {
     val workspaceId = UUID.randomUUID()
     val workspaceName = "test_workspace"

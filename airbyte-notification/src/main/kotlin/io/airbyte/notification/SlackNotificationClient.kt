@@ -134,6 +134,53 @@ class SlackNotificationClient : NotificationClient {
     }
   }
 
+  override fun notifyJobQueued(
+    summary: SyncSummary,
+    receiverEmail: String?,
+  ): Boolean {
+    val legacyMessage: String
+    try {
+      legacyMessage =
+        renderTemplate(
+          "slack/queued_sync_slack_notification_template.txt",
+          summary.connection.name,
+          summary.source.name,
+          summary.destination.name,
+          summary.connection.url,
+          summary.jobId.toString(),
+        )
+    } catch (e: IOException) {
+      log.error(e) {
+        "Error rendering slack notification template, queued sync notification not sent for workspaceId ${summary.workspace.id} jobId ${summary.jobId}"
+      }
+      return false
+    }
+    val message =
+      """
+      This sync is queued because your organization is currently using all committed Data Worker capacity.
+      Airbyte will start it automatically when capacity becomes available.
+
+      """.trimIndent()
+    val notification =
+      buildJobQueuedNotification(
+        summary,
+        "Sync queued",
+        legacyMessage,
+        Optional.of(message),
+        tag,
+      )
+    notification.setData(summary)
+    return try {
+      notifyJson(
+        notification.toJsonNode(),
+        summary.workspace.id,
+      )
+    } catch (e: IOException) {
+      log.error(e) { "Error sending queued sync Slack notification for workspaceId ${summary.workspace.id} jobId ${summary.jobId}" }
+      false
+    }
+  }
+
   override fun notifyConnectionDisabled(
     summary: SyncSummary,
     receiverEmail: String?,
@@ -481,12 +528,13 @@ class SlackNotificationClient : NotificationClient {
       }
     }
 
-    fun buildJobCompletedNotification(
+    private fun buildBaseJobNotification(
       summary: SyncSummary,
       titleText: String?,
       legacyText: String?,
       topContent: Optional<String>,
       tag: String?,
+      includeDuration: Boolean,
     ): Notification {
       val notification = Notification()
       notification.setText(legacyText)
@@ -516,7 +564,7 @@ class SlackNotificationClient : NotificationClient {
       destinationValue.setType(MRKDOWN_TYPE_LABEL)
       destinationValue.setText(Notification.createLink(summary.destination.name, summary.destination.url))
 
-      if (summary.startedAt != null && summary.finishedAt != null) {
+      if (includeDuration && summary.startedAt != null && summary.finishedAt != null) {
         val durationLabel = description.addField()
         durationLabel.setType(MRKDOWN_TYPE_LABEL)
         durationLabel.setText("*Duration:*")
@@ -524,6 +572,26 @@ class SlackNotificationClient : NotificationClient {
         durationValue.setType(MRKDOWN_TYPE_LABEL)
         durationValue.setText(summary.getDurationFormatted())
       }
+
+      return notification
+    }
+
+    fun buildJobCompletedNotification(
+      summary: SyncSummary,
+      titleText: String?,
+      legacyText: String?,
+      topContent: Optional<String>,
+      tag: String?,
+    ): Notification {
+      val notification =
+        buildBaseJobNotification(
+          summary,
+          titleText,
+          legacyText,
+          topContent,
+          tag,
+          includeDuration = true,
+        )
 
       if (!summary.isSuccess && summary.errorMessage != null) {
         val failureSection = notification.addSection()
@@ -558,6 +626,27 @@ class SlackNotificationClient : NotificationClient {
         ),
       )
 
+      return notification
+    }
+
+    private fun buildJobQueuedNotification(
+      summary: SyncSummary,
+      titleText: String?,
+      legacyText: String?,
+      topContent: Optional<String>,
+      tag: String?,
+    ): Notification {
+      val notification =
+        buildBaseJobNotification(
+          summary,
+          titleText,
+          legacyText,
+          topContent,
+          tag,
+          includeDuration = false,
+        )
+      val jobIdSection = notification.addSection()
+      jobIdSection.setText("*Job ID:* ${summary.jobId}")
       return notification
     }
 

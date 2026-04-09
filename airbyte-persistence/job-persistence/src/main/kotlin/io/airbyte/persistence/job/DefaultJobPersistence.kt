@@ -174,12 +174,24 @@ class DefaultJobPersistence
       }
     }
 
-    override fun queueJob(jobId: Long) {
-      jobDatabase.query<Any?> { ctx: DSLContext ->
-        updateJobStatusIfCurrentStatus(ctx, jobId, JobStatus.PENDING, JobStatus.QUEUED)
-        null
+    override fun queueJob(jobId: Long): Boolean =
+      jobDatabase.query<Boolean> { ctx: DSLContext ->
+        val updatedRows =
+          ctx.execute(
+            "UPDATE jobs SET status = CAST(? as JOB_STATUS), updated_at = ? WHERE id = ? AND status = CAST(? as JOB_STATUS)",
+            toSqlName(JobStatus.QUEUED),
+            currentTime,
+            jobId,
+            toSqlName(JobStatus.PENDING),
+          )
+
+        if (updatedRows > 0) {
+          true
+        } else {
+          getJob(ctx, jobId)
+          false
+        }
       }
-    }
 
     override fun cancelQueuedJob(jobId: Long) {
       jobDatabase.query<Any?> { ctx: DSLContext ->

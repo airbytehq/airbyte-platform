@@ -193,9 +193,26 @@ internal class JobCreationAndStatusUpdateHelperTest {
 
   @Test
   fun testSetJobQueued() {
+    val queuedJob = Fixtures.job(Fixtures.JOB_ID, mutableListOf(), JobStatus.QUEUED)
+    Mockito.`when`(mJobPersistence.queueJob(Fixtures.JOB_ID)).thenReturn(true)
+    Mockito.`when`(mJobPersistence.getJob(Fixtures.JOB_ID)).thenReturn(queuedJob)
+
     helper.setJobQueued(Fixtures.JOB_ID)
 
     Mockito.verify(mJobPersistence).queueJob(Fixtures.JOB_ID)
+    Mockito.verify(mJobPersistence).getJob(Fixtures.JOB_ID)
+    Mockito.verify(mJobNotifier).queuedJob(queuedJob)
+  }
+
+  @Test
+  fun testSetJobQueuedSkipsNotificationForExistingQueuedJob() {
+    Mockito.`when`(mJobPersistence.queueJob(Fixtures.JOB_ID)).thenReturn(false)
+
+    helper.setJobQueued(Fixtures.JOB_ID)
+
+    Mockito.verify(mJobPersistence).queueJob(Fixtures.JOB_ID)
+    Mockito.verify(mJobPersistence, Mockito.never()).getJob(Fixtures.JOB_ID)
+    Mockito.verify(mJobNotifier, Mockito.never()).queuedJob(anyOrNull())
   }
 
   @Test

@@ -123,7 +123,10 @@ internal class JobNotifierTest {
     every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns workspace
     every { workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.id) } returns WORKSPACE_ID
     every { notificationClient.notifyJobFailure(any(), any<String>()) } returns true
+    every { notificationClient.notifyJobQueued(any(), any<String>()) } returns true
+    every { customerIoNotificationClient.notifyJobQueued(any(), any<String>()) } returns true
     every { notificationClient.getNotificationClientType() } returns "client"
+    every { customerIoNotificationClient.getNotificationClientType() } returns "customerio"
     every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID) } returns actorDefinitionVersion
     every {
       actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID)
@@ -181,6 +184,14 @@ internal class JobNotifierTest {
   }
 
   @Test
+  fun testQueuedJobSendNotification() {
+    jobNotifier.queuedJob(job)
+
+    verify { notificationClient.notifyJobQueued(any(), any()) }
+    verify { customerIoNotificationClient.notifyJobQueued(any(), any()) }
+  }
+
+  @Test
   fun testSendOnSyncDisabledWarning() {
     val attemptStats: List<JobPersistence.AttemptStats> = ArrayList()
     jobNotifier.autoDisableConnectionWarning(job, attemptStats)
@@ -235,7 +246,8 @@ internal class JobNotifierTest {
               .withSendOnConnectionUpdate(noNotificationItem())
               .withSendOnSyncDisabled(customerioAndSlackNotificationItem())
               .withSendOnSyncDisabledWarning(customerioNotificationItem())
-              .withSendOnConnectionUpdateActionRequired(noNotificationItem()),
+              .withSendOnConnectionUpdateActionRequired(noNotificationItem())
+              .withSendOnConnectionSyncQueued(customerioAndSlackNotificationItem()),
           )
 
     private fun slackNotificationItem(): NotificationItem =

@@ -543,7 +543,9 @@ class JobCreationAndStatusUpdateHelper(
    * Set a job status to QUEUED when waiting for Data Worker capacity.
    */
   fun setJobQueued(jobId: Long) {
-    jobPersistence.queueJob(jobId)
+    if (jobPersistence.queueJob(jobId)) {
+      jobNotifier.queuedJob(jobPersistence.getJob(jobId))
+    }
   }
 
   /**

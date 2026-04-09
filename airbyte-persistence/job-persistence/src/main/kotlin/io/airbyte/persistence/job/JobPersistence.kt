@@ -120,9 +120,10 @@ interface JobPersistence {
    * Data Worker capacity. If not in PENDING status, no op.
    *
    * @param jobId job to queue
+   * @return true if the status transitioned from PENDING to QUEUED, otherwise false
    * @throws IOException exception due to interaction with persistence
    */
-  fun queueJob(jobId: Long)
+  fun queueJob(jobId: Long): Boolean
 
   /**
    * Set job status from QUEUED to CANCELLED. This is used when a job waiting for

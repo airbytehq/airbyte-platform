@@ -180,6 +180,8 @@ open class NotificationsHandler {
           "Hello World! This is a test from Airbyte to try slack notification settings for your sync is about to be disabled.",
         NotificationTrigger.CONNECTION_UPDATE_ACTION_REQUIRED to
           "Hello World! This is a test from Airbyte to try slack notification settings about your connection has been updated and action is required.",
+        NotificationTrigger.CONNECTION_SYNC_QUEUED to
+          "Hello World! This is a test from Airbyte to try slack notification settings for queued syncs.",
       )
   }
 }

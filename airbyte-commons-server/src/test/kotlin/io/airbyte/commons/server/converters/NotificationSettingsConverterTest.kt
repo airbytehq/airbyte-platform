@@ -33,6 +33,7 @@ internal class NotificationSettingsConverterTest {
     Assertions.assertEquals("", api.getSendOnSyncDisabled().getSlackConfiguration().getWebhook())
     Assertions.assertEquals("", api.getSendOnSyncDisabledWarning().getSlackConfiguration().getWebhook())
     Assertions.assertEquals("", api.getSendOnConnectionUpdateActionRequired().getSlackConfiguration().getWebhook())
+    Assertions.assertEquals("", api.getSendOnConnectionSyncQueued().getSlackConfiguration().getWebhook())
   }
 
   @Test
@@ -56,6 +57,7 @@ internal class NotificationSettingsConverterTest {
       api.sendOnConnectionUpdateActionRequired,
     )
     Assertions.assertEquals(notificationSettings.getSendOnSyncDisabledWarning(), api.sendOnSyncDisabledWarning)
+    Assertions.assertEquals(notificationSettings.getSendOnConnectionSyncQueued(), api.sendOnConnectionSyncQueued)
   }
 
   companion object {
@@ -70,6 +72,9 @@ internal class NotificationSettingsConverterTest {
           NotificationItem()
             .addNotificationTypeItem(NotificationType.SLACK)
             .slackConfiguration(SlackNotificationConfiguration().webhook("webhook2")),
+        ).sendOnConnectionSyncQueued(
+          NotificationItem()
+            .addNotificationTypeItem(NotificationType.CUSTOMERIO),
         )
 
     private val PROTOCOL_NOTIFICATION_SETTINGS: io.airbyte.config.NotificationSettings? =
@@ -94,6 +99,10 @@ internal class NotificationSettingsConverterTest {
                 .SlackNotificationConfiguration()
                 .withWebhook("webhook2"),
             ),
+        ).withSendOnConnectionSyncQueued(
+          io.airbyte.config
+            .NotificationItem()
+            .withNotificationType(listOf(Notification.NotificationType.CUSTOMERIO)),
         )
 
     private val EMPTY_API_NOTIFICATION_SETTINGS: NotificationSettings? =
@@ -113,6 +122,8 @@ internal class NotificationSettingsConverterTest {
             SlackNotificationConfiguration(),
           ),
         ).sendOnConnectionUpdateActionRequired(
+          NotificationItem().notificationType(mutableListOf<NotificationType?>()).slackConfiguration(SlackNotificationConfiguration()),
+        ).sendOnConnectionSyncQueued(
           NotificationItem().notificationType(mutableListOf<NotificationType?>()).slackConfiguration(SlackNotificationConfiguration()),
         )
 
@@ -145,6 +156,11 @@ internal class NotificationSettingsConverterTest {
             .withNotificationType(mutableListOf<Notification.NotificationType?>())
             .withSlackConfiguration(io.airbyte.config.SlackNotificationConfiguration()),
         ).withSendOnConnectionUpdateActionRequired(
+          io.airbyte.config
+            .NotificationItem()
+            .withNotificationType(mutableListOf<Notification.NotificationType?>())
+            .withSlackConfiguration(io.airbyte.config.SlackNotificationConfiguration()),
+        ).withSendOnConnectionSyncQueued(
           io.airbyte.config
             .NotificationItem()
             .withNotificationType(mutableListOf<Notification.NotificationType?>())

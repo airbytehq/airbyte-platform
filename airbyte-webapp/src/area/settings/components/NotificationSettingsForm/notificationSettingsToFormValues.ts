@@ -1,14 +1,12 @@
-import { NotificationItem } from "core/api/types/AirbyteClient";
+import { NotificationItem, NotificationSettings } from "core/api/types/AirbyteClient";
 
 import { NotificationSettingsFormValues, notificationKeys } from "./NotificationSettingsForm";
-// TODO(https://github.com/airbytehq/hydra-issues-internal/issues/109): When backend API is ready, use NotificationSettings from "core/api/types/AirbyteClient" instead
-import { ExtendedNotificationSettings } from "./types";
 
 export function notificationSettingsToFormValues(
-  notificationSettings?: ExtendedNotificationSettings
+  notificationSettings?: NotificationSettings
 ): NotificationSettingsFormValues {
   const formValues: NotificationSettingsFormValues = (
-    Object.entries(notificationSettings ?? {}) as Array<[keyof ExtendedNotificationSettings, NotificationItem]>
+    Object.entries(notificationSettings ?? {}) as Array<[keyof NotificationSettings, NotificationItem]>
   ).reduce((acc, [key, value]) => {
     acc[key] = {
       slack: value?.notificationType?.includes("slack") ?? false,

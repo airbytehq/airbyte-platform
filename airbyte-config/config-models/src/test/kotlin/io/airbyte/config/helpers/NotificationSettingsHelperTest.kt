@@ -32,6 +32,7 @@ class NotificationSettingsHelperTest {
     assertEquals(emailOnly, n.sendOnConnectionUpdateActionRequired.notificationType)
     assertEquals(emailOnly, n.sendOnBreakingChangeWarning.notificationType)
     assertEquals(emailOnly, n.sendOnBreakingChangeSyncsDisabled.notificationType)
+    assertEquals(emptyList<Notification.NotificationType>(), n.sendOnConnectionSyncQueued.notificationType)
 
     n =
       patchNotificationSettingsWithDefaultValue(
@@ -43,7 +44,8 @@ class NotificationSettingsHelperTest {
           .withSendOnConnectionUpdate(slack())
           .withSendOnConnectionUpdateActionRequired(slack())
           .withSendOnBreakingChangeWarning(slack())
-          .withSendOnBreakingChangeSyncsDisabled(slack()),
+          .withSendOnBreakingChangeSyncsDisabled(slack())
+          .withSendOnConnectionSyncQueued(slack()),
       )
 
     assertEquals(slackOnly, n.sendOnSuccess.notificationType)
@@ -54,5 +56,6 @@ class NotificationSettingsHelperTest {
     assertEquals(slackOnly, n.sendOnConnectionUpdateActionRequired.notificationType)
     assertEquals(slackOnly, n.sendOnBreakingChangeWarning.notificationType)
     assertEquals(slackOnly, n.sendOnBreakingChangeSyncsDisabled.notificationType)
+    assertEquals(slackOnly, n.sendOnConnectionSyncQueued.notificationType)
   }
 }

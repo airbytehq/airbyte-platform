@@ -130,6 +130,30 @@ class CustomerioNotificationClient(
     }
   }
 
+  override fun notifyJobQueued(
+    summary: SyncSummary,
+    receiverEmail: String?,
+  ): Boolean {
+    if (receiverEmail == null) {
+      return false
+    }
+    val node =
+      buildDefaultEmailJson(
+        receiverEmail,
+        DEFAULT_NOTIFICATION_MESSAGE_ID,
+        "Sync queued - waiting for capacity",
+        "Sync queued - waiting for capacity",
+        buildQueuedSyncEmailBody(summary),
+      )
+    val payload = Jsons.serialize(node)
+    return try {
+      notifyByEmail(payload, summary.workspace.id)
+    } catch (e: IOException) {
+      log.error(e) { "Error sending queued sync email notification for workspaceId ${summary.workspace.id}" }
+      false
+    }
+  }
+
   // Once the configs are editable through the UI, the reciever email should be stored in
   // airbyte-config/models/src/main/resources/types/CustomerioNotificationConfiguration.yaml
   // instead of being passed in
@@ -454,6 +478,7 @@ class CustomerioNotificationClient(
     private const val BREAKING_CHANGE_SYNCS_DISABLED_BROADCAST_ID = "33"
     private const val BREAKING_CHANGE_SYNCS_UPCOMING_UPGRADE_BROADCAST_ID = "48"
     private const val BREAKING_CHANGE_SYNCS_UPGRADED_BROADCAST_ID = "47"
+    private const val DEFAULT_NOTIFICATION_MESSAGE_ID = "6"
     private const val SCHEMA_CHANGE_TRANSACTION_ID = "25"
     private const val SCHEMA_BREAKING_CHANGE_TRANSACTION_ID = "24"
     private const val SCHEMA_CHANGE_DETECTED_TRANSACTION_ID = "31"
@@ -498,6 +523,49 @@ class CustomerioNotificationClient(
 
       return node
     }
+
+    @JvmStatic
+    fun buildDefaultEmailJson(
+      recipient: String,
+      transactionMessageId: String,
+      subject: String,
+      emailTitle: String,
+      emailBody: String,
+    ): ObjectNode {
+      val node = MAPPER.createObjectNode()
+      node.put("transactional_message_id", transactionMessageId)
+      node.put("to", recipient)
+
+      val identifiersNode = MAPPER.createObjectNode()
+      identifiersNode.put("email", recipient)
+      node.set<JsonNode>("identifiers", identifiersNode)
+
+      node.put("subject", subject)
+      val messageDataNode = MAPPER.createObjectNode()
+      messageDataNode.put("email_title", emailTitle)
+      messageDataNode.put("email_body", emailBody.replace("\n", "<br>"))
+      node.set<JsonNode>("message_data", messageDataNode)
+
+      node.put("disable_message_retention", false)
+      node.put("send_to_unsubscribed", true)
+      node.put("tracked", true)
+      node.put("queue_draft", false)
+      node.put("disable_css_preprocessing", true)
+
+      return node
+    }
+
+    private fun buildQueuedSyncEmailBody(summary: SyncSummary): String =
+      """
+      This sync is queued because your organization is currently using all committed Data Worker capacity.
+      Airbyte will start it automatically when capacity becomes available.
+
+      Connection: ${summary.connection.name}
+      Source: ${summary.source.name}
+      Destination: ${summary.destination.name}
+      Job ID: ${summary.jobId}
+      Connection URL: ${summary.connection.url}
+      """.trimIndent()
 
     @JvmStatic
     @InternalForTesting

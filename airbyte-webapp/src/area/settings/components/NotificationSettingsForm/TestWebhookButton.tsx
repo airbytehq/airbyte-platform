@@ -4,17 +4,15 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Button } from "components/ui/Button";
 
 import { useTryNotificationWebhook } from "core/api";
-import { NotificationReadStatus, NotificationTrigger } from "core/api/types/AirbyteClient";
+import { NotificationReadStatus, NotificationSettings } from "core/api/types/AirbyteClient";
 import { useNotificationService } from "core/services/Notification";
 
 import { notificationTriggerMap } from "./NotificationSettingsForm";
-// TODO(https://github.com/airbytehq/hydra-issues-internal/issues/109): When backend API is ready, use NotificationSettings from "core/api/types/AirbyteClient" instead
-import { ExtendedNotificationSettings } from "./types";
 
 interface TestWebhookButtonProps {
   webhookUrl: string;
   disabled: boolean;
-  notificationTrigger: keyof ExtendedNotificationSettings;
+  notificationTrigger: keyof NotificationSettings;
 }
 
 export const TestWebhookButton: React.FC<TestWebhookButtonProps> = ({ webhookUrl, disabled, notificationTrigger }) => {
@@ -27,8 +25,7 @@ export const TestWebhookButton: React.FC<TestWebhookButtonProps> = ({ webhookUrl
     setIsLoading(true);
     unregisterAllNotifications();
     const notificationTest = await testWebhook({
-      // TODO(https://github.com/airbytehq/hydra-issues-internal/issues/109): Remove type assertion when backend API is ready and ExtendedNotificationTrigger is merged into NotificationTrigger
-      notificationTrigger: notificationTriggerMap[notificationTrigger] as NotificationTrigger,
+      notificationTrigger: notificationTriggerMap[notificationTrigger],
       slackConfiguration: { webhook: webhookUrl },
     }).catch(() => {
       return { status: NotificationReadStatus.failed };

@@ -12,7 +12,7 @@ import { Text } from "components/ui/Text";
 
 import { useUpdateNotificationSettings } from "area/workspace/utils/useWorkspace";
 import { useCurrentWorkspace, useTryNotificationWebhook } from "core/api";
-import { NotificationReadStatus, NotificationTrigger } from "core/api/types/AirbyteClient";
+import { NotificationReadStatus, NotificationSettings, NotificationTrigger } from "core/api/types/AirbyteClient";
 import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useNotificationService } from "core/services/Notification";
@@ -24,8 +24,6 @@ import { formValuesToNotificationSettings } from "./formValuesToNotificationSett
 import { NotificationItemField } from "./NotificationItemField";
 import styles from "./NotificationSettingsForm.module.scss";
 import { notificationSettingsToFormValues } from "./notificationSettingsToFormValues";
-// TODO(https://github.com/airbytehq/hydra-issues-internal/issues/109): When backend API is ready, remove this import and use NotificationSettings, NotificationTrigger from "core/api/types/AirbyteClient"
-import { ExtendedNotificationSettings, ExtendedNotificationTrigger, ExtendedNotificationTriggerType } from "./types";
 
 export const NotificationSettingsForm: React.FC = () => {
   const emailNotificationsFeatureEnabled = useFeature(FeatureItem.EmailNotifications);
@@ -65,8 +63,7 @@ export const NotificationSettingsForm: React.FC = () => {
 
           // For all other webhook URLs, we need to validate them via our API
           const webhookValidation = await testWebhook({
-            // TODO(https://github.com/airbytehq/hydra-issues-internal/issues/109): Remove type assertion when backend API is ready and ExtendedNotificationTrigger is merged into NotificationTrigger
-            notificationTrigger: notificationTriggerMap[key] as NotificationTrigger,
+            notificationTrigger: notificationTriggerMap[key],
             slackConfiguration: { webhook: notification.slackWebhookLink },
           }).catch(() => ({ status: NotificationReadStatus.failed }));
           return webhookValidation.status === NotificationReadStatus.succeeded
@@ -220,7 +217,7 @@ const validationSchema = z.object({
 
 export type NotificationSettingsFormValues = z.infer<typeof validationSchema>;
 
-export const notificationKeys: Array<keyof ExtendedNotificationSettings> = [
+export const notificationKeys: Array<keyof NotificationSettings> = [
   "sendOnFailure",
   "sendOnSuccess",
   "sendOnConnectionUpdate",
@@ -232,7 +229,7 @@ export const notificationKeys: Array<keyof ExtendedNotificationSettings> = [
   "sendOnConnectionSyncQueued",
 ];
 
-export const notificationTriggerMap: Record<keyof ExtendedNotificationSettings, ExtendedNotificationTriggerType> = {
+export const notificationTriggerMap: Record<keyof NotificationSettings, NotificationTrigger> = {
   sendOnFailure: NotificationTrigger.sync_failure,
   sendOnSuccess: NotificationTrigger.sync_success,
   sendOnConnectionUpdate: NotificationTrigger.connection_update,
@@ -241,5 +238,5 @@ export const notificationTriggerMap: Record<keyof ExtendedNotificationSettings, 
   sendOnSyncDisabledWarning: NotificationTrigger.sync_disabled_warning,
   sendOnBreakingChangeWarning: NotificationTrigger.breaking_change_warning,
   sendOnBreakingChangeSyncsDisabled: NotificationTrigger.breaking_change_syncs_disabled,
-  sendOnConnectionSyncQueued: ExtendedNotificationTrigger.connection_sync_queued,
+  sendOnConnectionSyncQueued: NotificationTrigger.connection_sync_queued,
 };

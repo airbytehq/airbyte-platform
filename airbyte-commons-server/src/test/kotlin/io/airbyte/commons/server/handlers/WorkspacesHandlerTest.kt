@@ -263,6 +263,10 @@ internal class WorkspacesHandlerTest {
         io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
           NotificationType.CUSTOMERIO,
         ),
+      ).sendOnConnectionSyncQueued(
+        io.airbyte.api.model.generated
+          .NotificationItem()
+          .notificationType(mutableListOf<NotificationType?>()),
       )
 
   private fun generateDefaultApiNotificationSettings(): io.airbyte.api.model.generated.NotificationSettings? =
@@ -300,6 +304,10 @@ internal class WorkspacesHandlerTest {
         io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
           NotificationType.CUSTOMERIO,
         ),
+      ).sendOnConnectionSyncQueued(
+        io.airbyte.api.model.generated
+          .NotificationItem()
+          .notificationType(mutableListOf<NotificationType?>()),
       )
 
   @ParameterizedTest

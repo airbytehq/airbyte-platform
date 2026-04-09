@@ -1,9 +1,7 @@
-import { NotificationItem } from "core/api/types/AirbyteClient";
+import { NotificationItem, NotificationSettings } from "core/api/types/AirbyteClient";
 
 import { formValuesToNotificationSettings } from "./formValuesToNotificationSettings";
 import { NotificationItemFieldValue, NotificationSettingsFormValues } from "./NotificationSettingsForm";
-// TODO(https://github.com/airbytehq/hydra-issues-internal/issues/109): When backend API is ready, use NotificationSettings from "core/api/types/AirbyteClient" instead
-import { ExtendedNotificationSettings } from "./types";
 
 const mockNotificationItemFieldValue: NotificationItemFieldValue = {
   slack: false,
@@ -26,7 +24,7 @@ const mockEmptyFormValues: NotificationSettingsFormValues = {
   sendOnBreakingChangeSyncsDisabled: mockNotificationItemFieldValue,
   sendOnConnectionSyncQueued: mockNotificationItemFieldValue,
 };
-const mockEmptyNotificationSettings: ExtendedNotificationSettings = {
+const mockEmptyNotificationSettings: NotificationSettings = {
   sendOnFailure: mockNotificationItem,
   sendOnSuccess: mockNotificationItem,
   sendOnConnectionUpdate: mockNotificationItem,
@@ -49,7 +47,7 @@ describe("formValuesToNotificationSettings", () => {
       sendOnFailure: { ...mockNotificationItemFieldValue, slack: true, slackWebhookLink: "www.airbyte.com" },
     };
 
-    const expectedNotificationSettings: ExtendedNotificationSettings = {
+    const expectedNotificationSettings: NotificationSettings = {
       ...mockEmptyNotificationSettings,
       sendOnFailure: {
         ...mockNotificationItem,
@@ -68,7 +66,7 @@ describe("formValuesToNotificationSettings", () => {
       sendOnSuccess: { customerio: true, slack: true, slackWebhookLink: "www.airbyte.io" },
     };
 
-    const expectedNotificationSettings: ExtendedNotificationSettings = {
+    const expectedNotificationSettings: NotificationSettings = {
       ...mockEmptyNotificationSettings,
       sendOnFailure: {
         ...mockNotificationItem,

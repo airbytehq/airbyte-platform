@@ -1,13 +1,9 @@
-import { NotificationItem } from "core/api/types/AirbyteClient";
+import { NotificationItem, NotificationSettings } from "core/api/types/AirbyteClient";
 
 import { NotificationSettingsFormValues, notificationKeys } from "./NotificationSettingsForm";
-// TODO(https://github.com/airbytehq/hydra-issues-internal/issues/109): When backend API is ready, use NotificationSettings from "core/api/types/AirbyteClient" instead
-import { ExtendedNotificationSettings } from "./types";
 
-export function formValuesToNotificationSettings(
-  formValues: NotificationSettingsFormValues
-): ExtendedNotificationSettings {
-  const notificationSettings: ExtendedNotificationSettings = {};
+export function formValuesToNotificationSettings(formValues: NotificationSettingsFormValues): NotificationSettings {
+  const notificationSettings: NotificationSettings = {};
 
   notificationKeys.forEach((notificationKey) => {
     const valueFromForm = formValues[notificationKey];

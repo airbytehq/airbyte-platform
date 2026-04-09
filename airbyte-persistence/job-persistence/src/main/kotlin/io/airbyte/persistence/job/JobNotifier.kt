@@ -219,6 +219,10 @@ class JobNotifier(
     notifyJob(SUCCESS_NOTIFICATION, job, attemptStats)
   }
 
+  fun queuedJob(job: Job) {
+    notifyJob(QUEUED_NOTIFICATION, job, emptyList())
+  }
+
   fun autoDisableConnection(
     job: Job,
     attemptStats: List<JobPersistence.AttemptStats>,
@@ -354,6 +358,14 @@ class JobNotifier(
           { notificationClient: NotificationClient -> notificationClient.notifyJobSuccess(summary, workspace.email) },
           workspace.workspaceId,
         )
+      } else if (QUEUED_NOTIFICATION.equals(action, ignoreCase = true)) {
+        notificationItem = notificationSettings.sendOnConnectionSyncQueued
+        sendNotification(
+          notificationItem,
+          QUEUED_NOTIFICATION,
+          { notificationClient: NotificationClient -> notificationClient.notifyJobQueued(summary, workspace.email) },
+          workspace.workspaceId,
+        )
       } else if (CONNECTION_DISABLED_NOTIFICATION.equals(action, ignoreCase = true)) {
         notificationItem = notificationSettings.sendOnSyncDisabled
         sendNotification(
@@ -383,6 +395,7 @@ class JobNotifier(
 
     const val FAILURE_NOTIFICATION: String = "Failure Notification"
     const val SUCCESS_NOTIFICATION: String = "Success Notification"
+    const val QUEUED_NOTIFICATION: String = "Queued Notification"
     const val CONNECTION_DISABLED_WARNING_NOTIFICATION: String = "Connection Disabled Warning Notification"
     const val CONNECTION_DISABLED_NOTIFICATION: String = "Connection Disabled Notification"
   }

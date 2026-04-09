@@ -20,5 +20,6 @@ fun patchNotificationSettingsWithDefaultValue(notificationSettings: Notification
   ns.sendOnConnectionUpdateActionRequired = ns.sendOnConnectionUpdateActionRequired ?: emailNotificationItem()
   ns.sendOnBreakingChangeWarning = ns.sendOnBreakingChangeWarning ?: emailNotificationItem()
   ns.sendOnBreakingChangeSyncsDisabled = ns.sendOnBreakingChangeSyncsDisabled ?: emailNotificationItem()
+  ns.sendOnConnectionSyncQueued = ns.sendOnConnectionSyncQueued ?: NotificationItem()
   return ns
 }
