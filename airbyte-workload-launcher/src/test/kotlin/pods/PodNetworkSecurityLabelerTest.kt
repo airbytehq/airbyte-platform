@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.pods
 
+import io.airbyte.commons.constants.NetworkPolicyConstants
 import io.airbyte.workers.hashing.TestHasher
 import io.fabric8.kubernetes.api.model.LabelSelector
 import io.fabric8.kubernetes.api.model.networking.v1.NetworkPolicy
@@ -25,7 +26,7 @@ internal class PodNetworkSecurityLabelerTest {
   private lateinit var mNetworkPolicyFetcher: NetworkPolicyFetcher
   private lateinit var mCacheManager: CacheManager<Any>
   private lateinit var mCache: SyncCache<Any>
-  private val tokenHashKey = "airbyte/networkSecurityTokenHash"
+  private val tokenHashKey = NetworkPolicyConstants.TOKEN_HASH_LABEL_KEY
 
   @BeforeEach
   fun setup() {

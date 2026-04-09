@@ -1078,6 +1078,7 @@ data class AirbyteTemporalConfig(
     val billing: AirbyteTemporalBillingConfig = AirbyteTemporalBillingConfig(),
     val client: AirbyteTemporalCloudClientConfig = AirbyteTemporalCloudClientConfig(),
     val connectorRollout: AirbyteTemporalCloudConnectorRolloutConfig = AirbyteTemporalCloudConnectorRolloutConfig(),
+    val infra: AirbyteTemporalCloudInfraConfig = AirbyteTemporalCloudInfraConfig(),
     val enabled: Boolean = false,
     val host: String = "",
     val namespace: String = "",
@@ -1096,6 +1097,12 @@ data class AirbyteTemporalConfig(
 
     @ConfigurationProperties("connector-rollout")
     data class AirbyteTemporalCloudConnectorRolloutConfig(
+      val host: String = "",
+      val namespace: String = "",
+    )
+
+    @ConfigurationProperties("infra")
+    data class AirbyteTemporalCloudInfraConfig(
       val host: String = "",
       val namespace: String = "",
     )
