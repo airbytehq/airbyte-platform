@@ -20,6 +20,7 @@ import styles from "./ConnectionHeaderControls.module.scss";
 import { FormattedScheduleDataMessage } from "./FormattedScheduleDataMessage";
 import { useConnectionStatus } from "../ConnectionStatus/useConnectionStatus";
 import { useConnectionSyncContext } from "../ConnectionSync/ConnectionSyncContext";
+import { useSyncWithCapacityCheck } from "../ConnectionSync/useSyncWithCapacityCheck";
 import { FreeHistoricalSyncIndicator } from "../EnabledControl/FreeHistoricalSyncIndicator";
 
 export const ConnectionHeaderControls: React.FC = () => {
@@ -43,6 +44,7 @@ export const ConnectionHeaderControls: React.FC = () => {
     clearStarting,
     refreshStarting,
   } = useConnectionSyncContext();
+  const { syncWithCapacityCheck, isCheckingCapacity } = useSyncWithCapacityCheck(syncConnection);
 
   const onScheduleBtnClick = () => {
     navigate(`${ConnectionRoutePaths.Settings}`, {
@@ -57,6 +59,7 @@ export const ConnectionHeaderControls: React.FC = () => {
     !isSyncConnectionAvailable ||
     schemaRefreshing ||
     connectionUpdating ||
+    isCheckingCapacity ||
     connection.source.isEntitled === false ||
     connection.destination.isEntitled === false;
 
@@ -99,11 +102,11 @@ export const ConnectionHeaderControls: React.FC = () => {
       </Tooltip>
       {connectionStatus.status !== ConnectionSyncStatus.running && (
         <Button
-          onClick={syncConnection}
+          onClick={syncWithCapacityCheck}
           variant="clear"
           data-testid="manual-sync-button"
           disabled={isSyncActionsDisabled}
-          icon={syncStarting || clearStarting || refreshStarting ? "loading" : "sync"}
+          icon={syncStarting || clearStarting || refreshStarting || isCheckingCapacity ? "loading" : "sync"}
           iconSize="sm"
           className={styles.clearPrimaryButton}
         >

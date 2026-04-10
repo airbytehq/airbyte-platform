@@ -12,6 +12,7 @@ export * from "./connectorDocumentation";
 export * from "./connectorOAuth";
 export * from "./connectorUpdates";
 export * from "./cron";
+export * from "./dataWorkerCapacity";
 export * from "./dataplaneGroups";
 export * from "./dataplaneHealth";
 export * from "./destinations";
