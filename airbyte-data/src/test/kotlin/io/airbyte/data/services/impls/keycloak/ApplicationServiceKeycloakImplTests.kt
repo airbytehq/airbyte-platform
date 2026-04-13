@@ -11,13 +11,17 @@ import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.spyk
+import io.mockk.unmockkStatic
 import jakarta.ws.rs.BadRequestException
+import jakarta.ws.rs.NotAuthorizedException
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.keycloak.admin.client.Keycloak
+import org.keycloak.admin.client.KeycloakBuilder
 import org.keycloak.admin.client.resource.ClientsResource
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.admin.client.resource.UsersResource
@@ -167,6 +171,32 @@ internal class ApplicationServiceKeycloakImplTests {
         user,
       )
     assert(apiKeys.size == 2)
+  }
+
+  @Test
+  fun testGetTokenThrowsInvalidClientCredentialsOnKeycloak401() {
+    val builder = mockk<KeycloakBuilder>()
+    val userKeycloakClient = mockk<Keycloak>(relaxed = true)
+
+    every { builder.serverUrl(any()) } returns builder
+    every { builder.realm(any()) } returns builder
+    every { builder.grantType(any()) } returns builder
+    every { builder.clientId(any()) } returns builder
+    every { builder.clientSecret(any()) } returns builder
+    every { builder.build() } returns userKeycloakClient
+    every { userKeycloakClient.tokenManager().accessTokenString } throws
+      NotAuthorizedException(Response.status(Response.Status.UNAUTHORIZED).build())
+
+    mockkStatic(KeycloakBuilder::class)
+    every { KeycloakBuilder.builder() } returns builder
+
+    try {
+      Assertions.assertThrows(
+        InvalidClientCredentialsException::class.java,
+      ) { apiKeyServiceKeycloakImpl!!.getToken("bad-client-id", "bad-client-secret") }
+    } finally {
+      unmockkStatic(KeycloakBuilder::class)
+    }
   }
 
   private fun buildClientRepresentation(

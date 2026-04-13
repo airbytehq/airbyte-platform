@@ -15,6 +15,7 @@ import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import jakarta.ws.rs.BadRequestException
+import jakarta.ws.rs.NotAuthorizedException
 import jakarta.ws.rs.core.Response
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.admin.client.KeycloakBuilder
@@ -176,20 +177,25 @@ class ApplicationServiceKeycloakImpl(
   override fun getToken(
     clientId: String,
     clientSecret: String,
-  ): String =
-    KeycloakBuilder
-      .builder()
-      .serverUrl(keycloakConfiguration.getServerUrl())
-      .realm(keycloakConfiguration.clientRealm)
-      .grantType("client_credentials")
-      .clientId(clientId)
-      .clientSecret(clientSecret)
-      .build()
-      .use {
-        return it
-          .tokenManager()
-          .accessTokenString
-      }
+  ): String {
+    try {
+      KeycloakBuilder
+        .builder()
+        .serverUrl(keycloakConfiguration.getServerUrl())
+        .realm(keycloakConfiguration.clientRealm)
+        .grantType("client_credentials")
+        .clientId(clientId)
+        .clientSecret(clientSecret)
+        .build()
+        .use {
+          return it
+            .tokenManager()
+            .accessTokenString
+        }
+    } catch (e: NotAuthorizedException) {
+      throw InvalidClientCredentialsException("Invalid client_id or client_secret", e)
+    }
+  }
 
   /**
    * Build a client representation for a user.
