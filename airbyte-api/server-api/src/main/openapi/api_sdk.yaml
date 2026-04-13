@@ -4918,7 +4918,7 @@ components:
           maximum: 50
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -4975,7 +4975,7 @@ components:
           maximum: 50
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -15503,7 +15503,7 @@ components:
           maximum: 20
           minimum: 1
           order: 5
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         slice_range:
           default: 365
@@ -15596,7 +15596,7 @@ components:
           maximum: 20
           minimum: 1
           order: 5
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         slice_range:
           default: 365
@@ -21027,7 +21027,7 @@ components:
           maximum: 40
           minimum: 1
           order: 6
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         projects:
           description: "List of Jira project keys to replicate data for, or leave\
@@ -21117,7 +21117,7 @@ components:
           maximum: 40
           minimum: 1
           order: 6
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         projects:
           description: "List of Jira project keys to replicate data for, or leave\
@@ -21351,7 +21351,7 @@ components:
           - 3
           maximum: 40
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -21460,7 +21460,7 @@ components:
           - 3
           maximum: 40
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -21838,7 +21838,7 @@ components:
           maximum: 50
           minimum: 1
           order: 4
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         product_catalog:
           default: "2.0"
@@ -21906,7 +21906,7 @@ components:
           maximum: 50
           minimum: 1
           order: 4
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         product_catalog:
           default: "2.0"
@@ -23583,7 +23583,7 @@ components:
           - 3
           maximum: 20
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         report_ids:
           description: "Report IDs can be found by clicking the three dots on the\
@@ -23652,7 +23652,7 @@ components:
           - 3
           maximum: 20
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         report_ids:
           description: "Report IDs can be found by clicking the three dots on the\
@@ -24988,7 +24988,7 @@ components:
           maximum: 10
           minimum: 2
           order: 9
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         profiles:
           description: "Profile IDs you want to fetch data for. The Amazon Ads source\
@@ -25100,7 +25100,7 @@ components:
           maximum: 10
           minimum: 2
           order: 9
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         profiles:
           description: "Profile IDs you want to fetch data for. The Amazon Ads source\
@@ -37616,7 +37616,7 @@ components:
           maximum: 20
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         sourceType:
           title: "recurly"
@@ -37684,7 +37684,7 @@ components:
           maximum: 20
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
       required:
       - "api_key"
@@ -41820,7 +41820,7 @@ components:
           maximum: 40
           minimum: 1
           order: 5
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2020-10-01T00:00:00Z. Any\
@@ -41880,7 +41880,7 @@ components:
           maximum: 40
           minimum: 1
           order: 5
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2020-10-01T00:00:00Z. Any\
@@ -42443,7 +42443,7 @@ components:
           maximum: 100
           minimum: 2
           order: 7
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         site_urls:
           description: "The URLs of the website property attached to your GSC account.\
@@ -42648,7 +42648,7 @@ components:
           maximum: 100
           minimum: 2
           order: 7
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         site_urls:
           description: "The URLs of the website property attached to your GSC account.\
@@ -44218,7 +44218,7 @@ components:
           - 3
           maximum: 40
           minimum: 2
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "The date from which you'd like to replicate data for User\
@@ -44272,7 +44272,7 @@ components:
           - 3
           maximum: 40
           minimum: 2
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "The date from which you'd like to replicate data for User\
@@ -50704,7 +50704,7 @@ components:
           maximum: 10
           minimum: 2
           order: 7
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -50846,7 +50846,7 @@ components:
           maximum: 10
           minimum: 2
           order: 7
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -52248,7 +52248,7 @@ components:
           - 3
           maximum: 25
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         organization_export_ids:
           description: "Globally unique identifiers for the organization exports"
@@ -52329,7 +52329,7 @@ components:
           - 3
           maximum: 25
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         organization_export_ids:
           description: "Globally unique identifiers for the organization exports"
@@ -55030,7 +55030,7 @@ components:
           maximum: 25
           minimum: 1
           order: 11
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         page_size:
           default: 1000
@@ -55204,7 +55204,7 @@ components:
           maximum: 25
           minimum: 1
           order: 11
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         page_size:
           default: 1000
@@ -55521,7 +55521,7 @@ components:
           maximum: 40
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "The UTC date and time from which you'd like to replicate data,\
@@ -55633,7 +55633,7 @@ components:
           maximum: 40
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "The UTC date and time from which you'd like to replicate data,\
@@ -67045,7 +67045,7 @@ components:
           - 3
           maximum: 50
           minimum: 2
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         sourceType:
           title: "monday"
@@ -67134,7 +67134,7 @@ components:
           - 3
           maximum: 50
           minimum: 2
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
       required: []
       title: "Monday Spec"
@@ -68734,7 +68734,7 @@ components:
           - 3
           maximum: 50
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "Rows after this date will be synced, default 2 years ago."
@@ -68794,7 +68794,7 @@ components:
           - 3
           maximum: 50
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "Rows after this date will be synced, default 2 years ago."
