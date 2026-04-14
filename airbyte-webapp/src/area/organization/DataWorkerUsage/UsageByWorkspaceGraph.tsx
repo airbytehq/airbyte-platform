@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, TooltipProps, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  TooltipProps,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
@@ -18,12 +28,14 @@ import { getWorkspaceColorByIndex } from "./utils";
 interface UsageByWorkspaceGraphProps {
   selectedRegionId: string;
   dateRange: [string, string];
+  committedDataWorkers?: number | null;
 }
 
 interface ColorMap {
   gridLine: string;
   otherColor: string;
   barHover: string;
+  committedLine: string;
 }
 
 const tooltipConfig: TooltipProps<number, string> = {
@@ -35,7 +47,11 @@ const tooltipConfig: TooltipProps<number, string> = {
 
 const BASE_CHART_HEIGHT = 250;
 
-export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWorkspaceGraphProps) => {
+export const UsageByWorkspaceGraph = ({
+  selectedRegionId,
+  dateRange,
+  committedDataWorkers,
+}: UsageByWorkspaceGraphProps) => {
   const { formatMessage } = useIntl();
   const allUsage = useOrganizationWorkerUsage({
     startDate: dateRange[0],
@@ -49,6 +65,7 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
     gridLine: "",
     otherColor: "",
     barHover: "",
+    committedLine: "",
   });
   const { colorValues } = useAirbyteTheme();
 
@@ -57,6 +74,7 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
       gridLine: colorValues[styles.gridLine],
       otherColor: colorValues[styles.otherColor],
       barHover: colorValues[styles.barHover],
+      committedLine: colorValues[styles.committedLine],
     };
     setColorMap(colorMap);
   }, [colorValues]);
@@ -173,6 +191,21 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
             {...tooltipConfig}
           />
           <CartesianGrid stroke={colorMap.gridLine} vertical={false} />
+          {committedDataWorkers != null && committedDataWorkers > 0 && (
+            <ReferenceLine
+              y={committedDataWorkers}
+              stroke={colorMap.committedLine}
+              strokeDasharray="6 4"
+              strokeWidth={1.5}
+              ifOverflow="extendDomain"
+              label={{
+                value: formatMessage({ id: "settings.organization.usage.graph.committedCapacity" }),
+                position: "insideTopRight",
+                fontSize: 10,
+                fill: colorMap.committedLine,
+              }}
+            />
+          )}
           {stackedWorkspaceSections.map((day, index) => (
             <Bar
               stackId="a"

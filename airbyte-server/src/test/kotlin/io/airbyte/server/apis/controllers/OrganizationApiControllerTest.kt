@@ -11,6 +11,7 @@ import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.server.handlers.OrganizationsHandler
+import io.airbyte.domain.services.dataworker.DataWorkerCapacityService
 import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.mockk.every
@@ -27,6 +28,7 @@ class OrganizationApiControllerTest {
   private lateinit var organizationsHandler: OrganizationsHandler
   private lateinit var organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper
   private lateinit var dataWorkerUsageService: DataWorkerUsageService
+  private lateinit var dataWorkerCapacityService: DataWorkerCapacityService
 
   private lateinit var organizationApiController: OrganizationApiController
 
@@ -42,7 +44,9 @@ class OrganizationApiControllerTest {
     organizationsHandler = mockk()
     organizationAccessAuthorizationHelper = mockk(relaxed = true)
     dataWorkerUsageService = mockk()
-    organizationApiController = OrganizationApiController(organizationsHandler, organizationAccessAuthorizationHelper, dataWorkerUsageService)
+    dataWorkerCapacityService = mockk()
+    organizationApiController =
+      OrganizationApiController(organizationsHandler, organizationAccessAuthorizationHelper, dataWorkerUsageService, dataWorkerCapacityService)
 
     // Default behavior: organizationsHandler returns organization info
     every { organizationsHandler.getOrganizationInfo(organizationId) } returns organizationInfoRead

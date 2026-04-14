@@ -318,6 +318,7 @@ internal class StiggWrapper(
       featureId = entitlement.featureId,
       hasAccess = result.hasAccess,
       value = if (result.hasAccess) result.entitlement.value.toLong() else null,
+      isUnlimited = result.entitlement.isUnlimited,
       reason = result.accessDeniedReason.name,
     )
   }

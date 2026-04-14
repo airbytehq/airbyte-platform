@@ -16618,6 +16618,9 @@ components:
       properties:
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+        committedDataWorkers:
+          type: integer
+          description: The number of contracted/committed data workers for the organization. Null if not set or unlimited.
         regions:
           type: array
           items:

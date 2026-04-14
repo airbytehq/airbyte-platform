@@ -169,6 +169,58 @@ internal class DataWorkerCapacityServiceTest {
   }
 
   @Test
+  fun `getCommittedDataWorkersOrNull returns value for finite entitlement`() {
+    val organizationId = UUID.randomUUID()
+    every {
+      entitlementService.getNumericEntitlement(OrganizationId(organizationId), CommittedDataWorkersEntitlement)
+    } returns
+      NumericEntitlementResult(
+        featureId = CommittedDataWorkersEntitlement.featureId,
+        hasAccess = true,
+        value = 10L,
+      )
+
+    val result = service.getCommittedDataWorkersOrNull(OrganizationId(organizationId))
+
+    assertEquals(10, result)
+  }
+
+  @Test
+  fun `getCommittedDataWorkersOrNull returns null for unlimited entitlement`() {
+    val organizationId = UUID.randomUUID()
+    every {
+      entitlementService.getNumericEntitlement(OrganizationId(organizationId), CommittedDataWorkersEntitlement)
+    } returns
+      NumericEntitlementResult(
+        featureId = CommittedDataWorkersEntitlement.featureId,
+        hasAccess = true,
+        value = 999L,
+        isUnlimited = true,
+      )
+
+    val result = service.getCommittedDataWorkersOrNull(OrganizationId(organizationId))
+
+    assertEquals(null, result)
+  }
+
+  @Test
+  fun `getCommittedDataWorkersOrNull returns null when no access`() {
+    val organizationId = UUID.randomUUID()
+    every {
+      entitlementService.getNumericEntitlement(OrganizationId(organizationId), CommittedDataWorkersEntitlement)
+    } returns
+      NumericEntitlementResult(
+        featureId = CommittedDataWorkersEntitlement.featureId,
+        hasAccess = false,
+        value = null,
+      )
+
+    val result = service.getCommittedDataWorkersOrNull(OrganizationId(organizationId))
+
+    assertEquals(null, result)
+  }
+
+  @Test
   fun `checkCapacityAndReserve fails when usage cannot be prepared`() {
     val organizationId = UUID.randomUUID()
     val job = buildJob(210L)

@@ -8,5 +8,6 @@ data class NumericEntitlementResult(
   val featureId: String,
   val hasAccess: Boolean,
   val value: Long?,
+  val isUnlimited: Boolean = false,
   val reason: String? = null,
 )

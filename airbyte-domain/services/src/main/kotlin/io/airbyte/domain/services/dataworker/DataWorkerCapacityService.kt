@@ -221,30 +221,36 @@ open class DataWorkerCapacityService(
   }
 
   /**
-   * Get the number of committed data workers for an organization from entitlements.
+   * Get the number of committed data workers for an organization from entitlements,
+   * or null if the org has no finite committed capacity.
    *
    * Returns the numeric value from the CommittedDataWorkersEntitlement.
-   * Returns DEFAULT_COMMITTED_DATA_WORKERS if the entitlement is not found or on error.
+   * Returns null if the entitlement is not found, the value is unlimited, or on error.
    */
-  private fun getCommittedDataWorkers(organizationId: OrganizationId): Int {
+  fun getCommittedDataWorkersOrNull(organizationId: OrganizationId): Int? {
     try {
       val result = entitlementService.getNumericEntitlement(organizationId, CommittedDataWorkersEntitlement)
       val value = result.value
 
-      return if (result.hasAccess && value != null) {
-        // Use the numeric value from Stigg entitlement
+      return if (result.hasAccess && value != null && !result.isUnlimited) {
         value.toInt().coerceAtLeast(MIN_COMMITTED_DATA_WORKERS)
       } else {
-        // If not entitled to committed data workers or no value set, they get the minimum
-        logger.debug { "No committed data workers value found for org ${organizationId.value}, using minimum" }
-        MIN_COMMITTED_DATA_WORKERS
+        null
       }
     } catch (e: Exception) {
       logger.error(e) { "Error getting committed data workers for organization ${organizationId.value}" }
-      // Return default on error to avoid blocking jobs
-      return DEFAULT_COMMITTED_DATA_WORKERS
+      return null
     }
   }
+
+  /**
+   * Get the number of committed data workers for an organization from entitlements.
+   *
+   * Delegates to [getCommittedDataWorkersOrNull] and falls back to [DEFAULT_COMMITTED_DATA_WORKERS]
+   * when no finite capacity is configured, so that capacity checks never block jobs.
+   */
+  private fun getCommittedDataWorkers(organizationId: OrganizationId): Int =
+    getCommittedDataWorkersOrNull(organizationId) ?: DEFAULT_COMMITTED_DATA_WORKERS
 
   companion object {
     private const val DATA_WORKER_CPU_DIVISOR = 8.0

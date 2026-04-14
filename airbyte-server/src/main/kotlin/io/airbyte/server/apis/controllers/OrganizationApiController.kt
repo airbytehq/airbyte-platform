@@ -29,6 +29,8 @@ import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.services.dataworker.DataWorkerCapacityService
 import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.server.apis.execute
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
@@ -45,6 +47,7 @@ open class OrganizationApiController(
   val organizationsHandler: OrganizationsHandler,
   val organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper,
   val dataWorkerUsageService: DataWorkerUsageService,
+  val dataWorkerCapacityService: DataWorkerCapacityService,
 ) : OrganizationApi {
   @Post("/get")
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
@@ -125,8 +128,14 @@ open class OrganizationApiController(
           organizationDataWorkerUsageRequestBody.endDate,
         )
 
+      val committedDataWorkers =
+        dataWorkerCapacityService.getCommittedDataWorkersOrNull(
+          OrganizationId(organizationDataWorkerUsageRequestBody.organizationId),
+        )
+
       OrganizationDataWorkerUsageRead()
         .organizationId(organizationDataWorkerUsageRequestBody.organizationId)
+        .committedDataWorkers(committedDataWorkers)
         .regions(
           dataWorkerUsage.dataplaneGroups.map { usageByDataplaneGroup ->
             RegionDataWorkerUsage()

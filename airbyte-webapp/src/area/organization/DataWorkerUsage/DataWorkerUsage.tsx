@@ -147,7 +147,11 @@ export const DataWorkerUsage: React.FC = () => {
                     </FlexContainer>
                   }
                 >
-                  <UsageByWorkspaceGraph selectedRegionId={selectedRegion} dateRange={selectedDateRange} />
+                  <UsageByWorkspaceGraph
+                    selectedRegionId={selectedRegion}
+                    dateRange={selectedDateRange}
+                    committedDataWorkers={allUsage?.committedDataWorkers}
+                  />
                 </Suspense>
               )}
             </FlexContainer>

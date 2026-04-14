@@ -57,7 +57,7 @@ class EntitlementServiceTest {
   fun `getNumericEntitlement delegates to entitlementClient`() {
     val orgId = OrganizationId(UUID.randomUUID())
     val entitlement = FeatureEntitlement("feature-committed-data-workers")
-    val expected = NumericEntitlementResult("feature-committed-data-workers", true, 8L, null)
+    val expected = NumericEntitlementResult("feature-committed-data-workers", true, 8L)
 
     every { entitlementClient.getNumericEntitlement(orgId, entitlement) } returns expected
 
