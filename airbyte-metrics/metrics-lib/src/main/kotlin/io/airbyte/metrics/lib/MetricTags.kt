@@ -86,6 +86,7 @@ object MetricTags {
   const val SKIPPED = "skipped"
   const val STATUS: String = "status"
   const val SUCCESS: String = "success"
+  const val WEBHOOK_DOMAIN: String = "webhook_domain"
   const val WILL_RETRY: String = "will_retry"
   const val WORKSPACE_ID: String = "workspace_id"
   const val WORKFLOW_TYPE: String = "workflow_type"

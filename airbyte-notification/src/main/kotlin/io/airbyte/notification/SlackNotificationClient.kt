@@ -33,6 +33,9 @@ import java.util.UUID
 private val log = KotlinLogging.logger { }
 
 /**
+ * ATTENTION: Despite the name, this client handles ALL webhook notifications -- Slack, Google Chat,
+ * and custom URLs (e.g., Airbyte Embedded). The name is a legacy artifact.
+ *
  * Notification client that uses Slack API for Incoming Webhook to send messages. This class also
  * reads a resource YAML file that defines the template message to send. It is stored as a YAML so
  * that we can easily change the structure of the JSON data expected by the API that we are posting
