@@ -30,6 +30,10 @@ object PrivateLinkEntitlement : FeatureEntitlement(
   featureId = "feature-privatelink",
 )
 
+object PrivateLinkLimitEntitlement : FeatureEntitlement(
+  featureId = "feature-privatelink-limit",
+)
+
 object AiCopilotEntitlement : FeatureEntitlement(
   featureId = "feature-ai-copilot",
 )
@@ -133,6 +137,7 @@ object Entitlements {
       OrchestrationEntitlement,
       SelfManagedRegionsEntitlement,
       PrivateLinkEntitlement,
+      PrivateLinkLimitEntitlement,
       AiCopilotEntitlement,
       MultipleWorkspacesEntitlement,
       MappersEntitlement,

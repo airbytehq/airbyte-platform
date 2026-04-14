@@ -11025,6 +11025,66 @@ paths:
       tags:
         - domain_verifications
       operationId: resetDomainVerification
+  /v1/private_link/create:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+      summary: Create a private link for a workspace
+      operationId: createPrivateLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkCreateRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateLinkRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/private_link/list:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+      summary: List private links for a workspace
+      operationId: listPrivateLinksForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkListRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateLinkReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/private_link/delete:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+      summary: Delete a private link
+      operationId: deletePrivateLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
 
 components:
   securitySchemes:
@@ -11033,6 +11093,102 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    # Private Link
+    PrivateLinkStatus:
+      type: string
+      enum:
+        - creating
+        - pending_acceptance
+        - configuring
+        - available
+        - create_failed
+        - deleting
+        - delete_failed
+    PrivateLinkCreateRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - name
+        - serviceRegion
+        - serviceName
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: string
+          pattern: "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+          maxLength: 63
+        serviceRegion:
+          type: string
+        serviceName:
+          type: string
+    PrivateLinkListRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    PrivateLinkIdRequestBody:
+      type: object
+      required:
+        - privateLinkId
+        - workspaceId
+      properties:
+        privateLinkId:
+          type: string
+          format: uuid
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    PrivateLinkRead:
+      type: object
+      required:
+        - id
+        - workspaceId
+        - dataplaneGroupId
+        - name
+        - status
+        - serviceRegion
+        - serviceName
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        dataplaneGroupId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          $ref: "#/components/schemas/PrivateLinkStatus"
+        serviceRegion:
+          type: string
+        serviceName:
+          type: string
+        endpointId:
+          type: string
+        dnsName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PrivateLinkReadList:
+      type: object
+      required:
+        - privateLinks
+      properties:
+        privateLinks:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrivateLinkRead"
+
     # Scoped Configuration
     ScopedConfigurationRead:
       type: object

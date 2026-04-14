@@ -1214,6 +1214,16 @@ temporal.cloud.connectorRollout:
     - env: TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT
       key: namespace
 
+temporal.cloud.infra:
+  keyBasePath: global.temporal.cloud.infra
+  secretNamePath: global.temporal.secretName
+  config:
+    - env: TEMPORAL_CLOUD_INFRA_HOST
+      key: host
+
+    - env: TEMPORAL_CLOUD_INFRA_NAMESPACE
+      key: namespace
+
 temporal.database:
   keyBasePath: temporal.database
   config:
