@@ -13,6 +13,7 @@ import { CloudSettingsRoutePaths } from "./routePaths";
 export const CloudSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
+  const supportsPrivateLinks = useFeature(FeatureItem.PrivateLinks);
 
   return (
     <SettingsLayout>
@@ -43,6 +44,13 @@ export const CloudSettingsPage: React.FC = () => {
               iconType="integrations"
               name={formatMessage({ id: "settings.integrationSettings" })}
               to={CloudSettingsRoutePaths.DbtCloud}
+            />
+          )}
+          {supportsPrivateLinks && (
+            <SettingsLink
+              iconType="lock"
+              name={formatMessage({ id: "settings.privateLinks" })}
+              to={CloudSettingsRoutePaths.PrivateLinks}
             />
           )}
           <SettingsLink

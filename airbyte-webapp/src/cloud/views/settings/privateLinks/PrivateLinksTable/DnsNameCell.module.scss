@@ -1,0 +1,10 @@
+.dnsCell {
+  min-width: 0;
+}
+
+.dnsText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}

@@ -7,6 +7,7 @@ import OrganizationBillingPage from "cloud/views/billing/OrganizationBillingPage
 import OrganizationUsagePage from "cloud/views/billing/OrganizationUsagePage";
 import { CloudSettingsPage } from "cloud/views/settings/CloudSettingsPage";
 import { DbtCloudSettingsView } from "cloud/views/settings/integrations/DbtCloudSettingsView";
+import { PrivateLinksSettingsPage } from "cloud/views/settings/privateLinks/PrivateLinksSettingsPage";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { WorkspaceSettingsView } from "cloud/views/workspaces/WorkspaceSettingsView";
 import WorkspaceUsagePage from "cloud/views/workspaces/WorkspaceUsagePage";
@@ -68,6 +69,7 @@ export const WorkspacesRoutes: React.FC = () => {
   useAnalyticsRegisterValues(analyticsContext);
 
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
+  const supportsPrivateLinks = useFeature(FeatureItem.PrivateLinks);
 
   return (
     <Routes>
@@ -104,6 +106,9 @@ export const WorkspacesRoutes: React.FC = () => {
         <Route path={CloudSettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
         <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
         <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
+        {supportsPrivateLinks && (
+          <Route path={CloudSettingsRoutePaths.PrivateLinks} element={<PrivateLinksSettingsPage />} />
+        )}
         <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
         {supportsCloudDbtIntegration && (
           <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />

@@ -32,6 +32,7 @@ export enum FeatureItem {
   CreateMultipleWorkspaces = "CREATE_MULTIPLE_WORKSPACES_V2", // corresponds to the feature-multiple-workspaces entitlement
   OnDemandCapacity = "ON_DEMAND_CAPACITY", // corresponds to the feature-on-demand-capacity-enabled entitlement
   OrganizationUI = "ORGANIZATION_UI",
+  PrivateLinks = "PRIVATE_LINKS", // corresponds to the feature-privatelink entitlement
   OrganizationConnectorSettings = "ORGANIZATION_CONNECTOR_SETTINGS", // show sources and destinations in organization settings
   RBAC = "RBAC",
   RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",

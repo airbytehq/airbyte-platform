@@ -14,5 +14,6 @@ export const CloudSettingsRoutePaths = {
   Organization: SettingsRoutePaths.Organization,
   OrganizationMembers: SettingsRoutePaths.OrganizationMembers,
   DbtCloud: "dbt-cloud",
+  PrivateLinks: "private-links",
   Applications: SettingsRoutePaths.Applications,
 } as const;

@@ -34,6 +34,7 @@ const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
   "feature-data-worker-capacity": FeatureItem.AllowDataWorkerCapacity,
   "feature-on-demand-capacity-enabled": FeatureItem.OnDemandCapacity,
   "feature-self-managed-regions": FeatureItem.SelfManagedRegions,
+  "feature-privatelink": FeatureItem.PrivateLinks,
 };
 
 /**
