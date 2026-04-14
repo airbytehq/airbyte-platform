@@ -21,7 +21,7 @@ internal class VaultSecretPersistenceTest {
 
   @BeforeEach
   fun setUp() {
-    vaultContainer = VaultContainer("hashicorp/vault").withVaultToken("vault-dev-token-id")
+    vaultContainer = VaultContainer("hashicorp/vault:1.21.4").withVaultToken("vault-dev-token-id")
     vaultContainer.start()
     val vaultAddress = "http://${vaultContainer.host}:${vaultContainer.firstMappedPort}"
     vaultClient =
