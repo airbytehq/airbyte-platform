@@ -2559,7 +2559,7 @@ manifestServer:
 
   image:
     repository: airbyte/manifest-server
-    tag: 7.10.0
+    tag: 7.17.1
     pullPolicy: IfNotPresent
 
   datadog:
