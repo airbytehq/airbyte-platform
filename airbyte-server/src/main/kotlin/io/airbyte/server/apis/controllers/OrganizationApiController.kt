@@ -50,11 +50,16 @@ open class OrganizationApiController(
   val dataWorkerCapacityService: DataWorkerCapacityService,
 ) : OrganizationApi {
   @Post("/get")
-  @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganization(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): OrganizationRead? = execute { organizationsHandler.getOrganization(organizationIdRequestBody) }
+  ): OrganizationRead? =
+    execute {
+      organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationIdRequestBody.organizationId)
+
+      organizationsHandler.getOrganization(organizationIdRequestBody)
+    }
 
   @Post("/update")
   @Secured(AuthRoleConstants.ORGANIZATION_EDITOR)

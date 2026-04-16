@@ -53,10 +53,33 @@ class OrganizationApiControllerTest {
   }
 
   @Test
-  fun testGetOrganization() {
-    every { organizationsHandler.getOrganization(any()) } returns OrganizationRead()
-    val body = OrganizationIdRequestBody().organizationId(UUID.randomUUID())
-    assertNotNull(organizationApiController.getOrganization(body))
+  fun `getOrganization succeeds when validation passes`() {
+    val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
+    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } returns Unit
+    every { organizationsHandler.getOrganization(requestBody) } returns OrganizationRead()
+
+    val result = organizationApiController.getOrganization(requestBody)
+
+    assertNotNull(result)
+    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
+    verify(exactly = 1) { organizationsHandler.getOrganization(requestBody) }
+  }
+
+  @Test
+  fun `getOrganization fails when validation fails`() {
+    val forbiddenException = ForbiddenProblem()
+    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } throws forbiddenException
+
+    val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
+
+    val exception =
+      assertThrows<ForbiddenProblem> {
+        organizationApiController.getOrganization(requestBody)
+      }
+
+    assertEquals(forbiddenException, exception)
+    verify(exactly = 0) { organizationsHandler.getOrganization(any()) }
+    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
   }
 
   @Test
