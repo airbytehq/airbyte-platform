@@ -218,7 +218,7 @@ open class ProfilerService(
     private const val ARCH_X86_64 = "x86_64"
     private const val ARCH_AMD_64 = "amd64"
     private const val LINUX = "linux"
-    private const val ASYNC_PROFILER_VERSION = "4.0"
+    private const val ASYNC_PROFILER_VERSION = "4.3"
     private const val ASYNC_PROFILER_FILE_PREFIX = "async-profiler-"
     private const val BASE_URL = "https://github.com/async-profiler/async-profiler/releases/download/v$ASYNC_PROFILER_VERSION/"
     private const val SECONDS_IN_24_HRS = "86400"
