@@ -2,8 +2,10 @@
  * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.support
+package io.airbyte.commons.server.metrics
 
+import io.airbyte.commons.server.support.AuthenticationHeaderResolver
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -22,7 +24,6 @@ import io.micronaut.http.filter.ServerFilterPhase
 import org.reactivestreams.Publisher
 import kotlin.jvm.optionals.getOrNull
 
-private val logger = KotlinLogging.logger {}
 private const val TRACE_ATTR = "io.airbyte.trace"
 
 /**
@@ -41,6 +42,8 @@ class TracingServerFilter(
   val authenticationHeaderResolver: AuthenticationHeaderResolver,
   val metricClient: MetricClient,
 ) : HttpServerFilter {
+  private val logger = KotlinLogging.logger {}
+
   override fun getOrder(): Int = ServerFilterPhase.TRACING.after()
 
   fun traceRequest(req: HttpRequest<*>) {
