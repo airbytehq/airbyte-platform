@@ -15,6 +15,8 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Application
 import io.airbyte.data.services.ApplicationService
+import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.micronaut.annotations.RequestTimeout
 import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Requires
@@ -48,6 +50,7 @@ open class ApplicationsController(
   override fun applicationTokenRequest(
     @Body applicationTokenRequest: ApplicationTokenRequest,
   ): AccessToken {
+    ApmTraceUtils.addTagsToTrace(mapOf(MetricTags.CLIENT_ID to applicationTokenRequest.clientId))
     val token =
       applicationService.getToken(
         applicationTokenRequest.clientId,
