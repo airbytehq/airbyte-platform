@@ -47,7 +47,11 @@ class PrivateLinkService(
     return entity.toDomainModel()
   }
 
-  fun listByWorkspaceId(workspaceId: UUID): List<PrivateLink> = repository.findByWorkspaceId(workspaceId).map { it.toDomainModel() }
+  fun listByWorkspaceId(workspaceId: UUID): List<PrivateLink> =
+    repository
+      .findByWorkspaceId(workspaceId)
+      .map { it.toDomainModel() }
+      .filter { it.status != PrivateLinkStatus.DELETED }
 
   fun updatePrivateLink(
     id: UUID,
@@ -68,10 +72,5 @@ class PrivateLinkService(
     val entity = repository.findById(id).orElseThrow { NoSuchElementException("Private link $id not found") }
     entity.scopedConfigurationId = null
     return repository.update(entity).toDomainModel()
-  }
-
-  fun deletePrivateLink(id: UUID) {
-    repository.deleteById(id)
-    logger.info { "Deleted private link $id" }
   }
 }

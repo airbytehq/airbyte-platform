@@ -19,6 +19,7 @@ enum class PrivateLinkStatus {
   CREATE_FAILED,
   DELETING,
   DELETE_FAILED,
+  DELETED,
 }
 
 data class PrivateLink(

@@ -11104,6 +11104,7 @@ components:
         - create_failed
         - deleting
         - delete_failed
+        - deleted
     PrivateLinkCreateRequestBody:
       type: object
       required:

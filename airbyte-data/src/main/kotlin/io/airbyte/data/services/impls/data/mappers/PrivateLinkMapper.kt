@@ -50,6 +50,7 @@ fun EntityPrivateLinkStatus.toDomainEnum(): DomainPrivateLinkStatus =
     EntityPrivateLinkStatus.create_failed -> DomainPrivateLinkStatus.CREATE_FAILED
     EntityPrivateLinkStatus.deleting -> DomainPrivateLinkStatus.DELETING
     EntityPrivateLinkStatus.delete_failed -> DomainPrivateLinkStatus.DELETE_FAILED
+    EntityPrivateLinkStatus.deleted -> DomainPrivateLinkStatus.DELETED
   }
 
 fun DomainPrivateLinkStatus.toEntityEnum(): EntityPrivateLinkStatus =
@@ -61,4 +62,5 @@ fun DomainPrivateLinkStatus.toEntityEnum(): EntityPrivateLinkStatus =
     DomainPrivateLinkStatus.CREATE_FAILED -> EntityPrivateLinkStatus.create_failed
     DomainPrivateLinkStatus.DELETING -> EntityPrivateLinkStatus.deleting
     DomainPrivateLinkStatus.DELETE_FAILED -> EntityPrivateLinkStatus.delete_failed
+    DomainPrivateLinkStatus.DELETED -> EntityPrivateLinkStatus.deleted
   }
