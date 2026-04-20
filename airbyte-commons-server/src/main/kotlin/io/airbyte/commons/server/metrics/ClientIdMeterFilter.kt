@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.metrics
 
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.config.METRIC_PREFIX
 import io.airbyte.metrics.lib.MetricTags
 import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.Tag
@@ -19,7 +20,7 @@ private const val CLIENT_ID_HEADER = "X-Airbyte-Client-ID"
 private const val SONAR_CLIENT_ID_PREFIX = "sonar-"
 
 // Match on the renamed metric name (see AirbyteMetricMeterFilter).
-private val HTTP_REQUEST_METRIC_NAME = OssMetricsRegistry.API_REQUESTS.getMetricName()
+private val HTTP_REQUEST_METRIC_NAME = "${METRIC_PREFIX}${OssMetricsRegistry.API_REQUESTS.getMetricName()}"
 
 /**
  * Adds a [MetricTags.CLIENT_ID] tag to the HTTP server request metric
