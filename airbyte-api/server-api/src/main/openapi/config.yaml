@@ -11085,6 +11085,52 @@ paths:
           description: The resource was deleted successfully.
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/private_link/get:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+        - internal
+      summary: Get a private link by id (internal — admin only)
+      operationId: getPrivateLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkInternalIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateLinkRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/private_link/update:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+        - internal
+      summary: Partially update a private link (internal — admin only)
+      operationId: updatePrivateLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateLinkRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
 
 components:
   securitySchemes:
@@ -11141,6 +11187,38 @@ components:
           format: uuid
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    PrivateLinkInternalIdRequestBody:
+      description: Internal-only — admin-authenticated lookups by private link id (e.g. infra-worker).
+      type: object
+      required:
+        - privateLinkId
+      properties:
+        privateLinkId:
+          type: string
+          format: uuid
+    PrivateLinkUpdateRequestBody:
+      description: |
+        Internal-only — partial update used by infra-worker activities. Only the supplied fields are written.
+        Set `clearScopedConfigurationId: true` to null out the existing scoped configuration reference
+        (mutually exclusive with `scopedConfigurationId`).
+      type: object
+      required:
+        - privateLinkId
+      properties:
+        privateLinkId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/PrivateLinkStatus"
+        endpointId:
+          type: string
+        dnsName:
+          type: string
+        scopedConfigurationId:
+          type: string
+          format: uuid
+        clearScopedConfigurationId:
+          type: boolean
     PrivateLinkRead:
       type: object
       required:
@@ -11174,6 +11252,9 @@ components:
           type: string
         dnsName:
           type: string
+        scopedConfigurationId:
+          type: string
+          format: uuid
         createdAt:
           type: string
           format: date-time

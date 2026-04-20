@@ -7,9 +7,11 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.generated.PrivateLinkApi
 import io.airbyte.api.model.generated.PrivateLinkCreateRequestBody
 import io.airbyte.api.model.generated.PrivateLinkIdRequestBody
+import io.airbyte.api.model.generated.PrivateLinkInternalIdRequestBody
 import io.airbyte.api.model.generated.PrivateLinkListRequestBody
 import io.airbyte.api.model.generated.PrivateLinkRead
 import io.airbyte.api.model.generated.PrivateLinkReadList
+import io.airbyte.api.model.generated.PrivateLinkUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -43,4 +45,18 @@ open class PrivateLinkController : PrivateLinkApi {
   override fun deletePrivateLink(
     @Body privateLinkIdRequestBody: PrivateLinkIdRequestBody,
   ): Unit = throw ApiNotImplementedInOssProblem()
+
+  @Secured(AuthRoleConstants.ADMIN)
+  @Post("/get")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getPrivateLink(
+    @Body privateLinkInternalIdRequestBody: PrivateLinkInternalIdRequestBody,
+  ): PrivateLinkRead = throw ApiNotImplementedInOssProblem()
+
+  @Secured(AuthRoleConstants.ADMIN)
+  @Post("/update")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun updatePrivateLink(
+    @Body privateLinkUpdateRequestBody: PrivateLinkUpdateRequestBody,
+  ): PrivateLinkRead = throw ApiNotImplementedInOssProblem()
 }
