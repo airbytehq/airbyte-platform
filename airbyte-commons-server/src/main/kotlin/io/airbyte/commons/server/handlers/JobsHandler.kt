@@ -267,6 +267,13 @@ open class JobsHandler(
     organizationId: UUID,
   ): CheckDataWorkerCapacityRead {
     val job = jobPersistence.getJob(jobId)
+    // Data worker enforcement only applies to sync jobs. Other job types bypass capacity gating.
+    if (job.configType != JobConfig.ConfigType.SYNC) {
+      return CheckDataWorkerCapacityRead()
+        .capacityAvailable(true)
+        .useOnDemandCapacity(false)
+    }
+
     val onDemandEnabled = connectionService.getStandardSync(connectionId).onDemandEnabled ?: false
     val requiredDataWorkers = getRequiredDataWorkers(job)
     val capacityResult =
@@ -277,7 +284,7 @@ open class JobsHandler(
         onDemandEnabled,
       )
 
-    if (capacityResult.usedOnDemandCapacity && job.configType == JobConfig.ConfigType.SYNC && job.config.sync?.usedOnDemandCapacity != true) {
+    if (capacityResult.usedOnDemandCapacity && job.config.sync?.usedOnDemandCapacity != true) {
       jobPersistence.updateSyncJobOnDemandCapacity(job.id, true)
     }
 
@@ -367,14 +374,7 @@ open class JobsHandler(
   }
 
   private fun getRequiredDataWorkers(job: Job): Double {
-    val syncResourceRequirements =
-      when (job.configType) {
-        JobConfig.ConfigType.SYNC -> job.config.sync?.syncResourceRequirements
-        JobConfig.ConfigType.REFRESH -> job.config.refresh?.syncResourceRequirements
-        JobConfig.ConfigType.RESET_CONNECTION -> job.config.resetConnection?.syncResourceRequirements
-        else -> null
-      }
-
+    val syncResourceRequirements = job.config.sync?.syncResourceRequirements
     val sourceCpu = syncResourceRequirements?.source?.cpuRequest.toCpuOrDefault(DEFAULT_SOURCE_CPU)
     val destinationCpu = syncResourceRequirements?.destination?.cpuRequest.toCpuOrDefault(DEFAULT_DESTINATION_CPU)
     val orchestratorCpu = syncResourceRequirements?.orchestrator?.cpuRequest.toCpuOrDefault(DEFAULT_ORCHESTRATOR_CPU)

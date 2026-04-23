@@ -303,22 +303,16 @@ class JobsHandlerTest {
     verify(jobPersistence).updateSyncJobOnDemandCapacity(jobId, true)
   }
 
-  @Test
-  fun checkDataWorkerCapacityUsesRefreshResourceRequirements() {
+  @ParameterizedTest
+  @MethodSource("nonSyncJobConfigs")
+  fun checkDataWorkerCapacitySkipsNonSyncJobs(nonSyncJobConfig: JobConfig) {
     val organizationId = UUID.randomUUID()
-    val refreshJob =
+    val nonSyncJob =
       Job(
         jobId,
-        JobConfig.ConfigType.REFRESH,
+        nonSyncJobConfig.configType,
         connectionId.toString(),
-        JobConfig().withConfigType(JobConfig.ConfigType.REFRESH).withRefresh(
-          RefreshConfig().withSyncResourceRequirements(
-            SyncResourceRequirements()
-              .withSource(ResourceRequirements().withCpuRequest("4.0"))
-              .withDestination(ResourceRequirements().withCpuRequest("2.0"))
-              .withOrchestrator(ResourceRequirements().withCpuRequest("2.0")),
-          ),
-        ),
+        nonSyncJobConfig,
         listOf(),
         JobStatus.PENDING,
         null,
@@ -326,34 +320,13 @@ class JobsHandlerTest {
         0,
         false,
       )
-    whenever(jobPersistence.getJob(jobId)).thenReturn(refreshJob)
-    whenever(connectionService.getStandardSync(connectionId)).thenReturn(StandardSync().withOnDemandEnabled(false))
-    whenever(
-      dataWorkerCapacityService.checkCapacityAndReserve(
-        OrganizationId(organizationId),
-        refreshJob,
-        1.0,
-        false,
-      ),
-    ).thenReturn(
-      CapacityCheckResult(
-        hasAvailableCapacity = false,
-        currentDataWorkers = 10.0,
-        committedDataWorkers = 5,
-        requiredDataWorkers = 1.0,
-        usedOnDemandCapacity = false,
-      ),
-    )
+    whenever(jobPersistence.getJob(jobId)).thenReturn(nonSyncJob)
 
     val result = jobsHandler.checkDataWorkerCapacity(jobId, connectionId, organizationId)
 
-    assertEquals(CheckDataWorkerCapacityRead().capacityAvailable(false).useOnDemandCapacity(false), result)
-    verify(dataWorkerCapacityService).checkCapacityAndReserve(
-      OrganizationId(organizationId),
-      refreshJob,
-      1.0,
-      false,
-    )
+    assertEquals(CheckDataWorkerCapacityRead().capacityAvailable(true).useOnDemandCapacity(false), result)
+    verify(connectionService, never()).getStandardSync(any())
+    verify(dataWorkerCapacityService, never()).checkCapacityAndReserve(any(), any(), any(), any())
     verify(jobPersistence, never()).updateSyncJobOnDemandCapacity(any(), any())
   }
 
@@ -423,6 +396,24 @@ class JobsHandlerTest {
         Arguments.of(listOf("123", "123")),
         Arguments.of("a string"),
         Arguments.of(543.0),
+      )
+
+    @JvmStatic
+    fun nonSyncJobConfigs() =
+      listOf(
+        Arguments.of(
+          JobConfig()
+            .withConfigType(JobConfig.ConfigType.REFRESH)
+            .withRefresh(RefreshConfig()),
+        ),
+        Arguments.of(
+          JobConfig()
+            .withConfigType(JobConfig.ConfigType.RESET_CONNECTION),
+        ),
+        Arguments.of(
+          JobConfig()
+            .withConfigType(JobConfig.ConfigType.CLEAR),
+        ),
       )
   }
 }
