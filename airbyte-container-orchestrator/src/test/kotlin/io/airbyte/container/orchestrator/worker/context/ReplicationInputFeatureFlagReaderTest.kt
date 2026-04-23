@@ -4,7 +4,7 @@
 
 package io.airbyte.container.orchestrator.worker.context
 
-import io.airbyte.featureflag.DestinationTimeoutEnabled
+import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.mockk.every
 import io.mockk.mockk
@@ -14,13 +14,13 @@ import org.junit.jupiter.api.Test
 internal class ReplicationInputFeatureFlagReaderTest {
   @Test
   fun testReadFromReplicationInput() {
-    val featureFlagMap = mapOf(DestinationTimeoutEnabled.key to true)
+    val featureFlagMap = mapOf(ShouldFailSyncOnDestinationTimeout.key to true)
     val replicationInput =
       mockk<ReplicationInput> {
         every { featureFlags } returns featureFlagMap
       }
     val reader = ReplicationInputFeatureFlagReader(replicationInput)
-    Assertions.assertEquals(true, reader.read(DestinationTimeoutEnabled))
+    Assertions.assertEquals(true, reader.read(ShouldFailSyncOnDestinationTimeout))
   }
 
   @Test
@@ -31,6 +31,6 @@ internal class ReplicationInputFeatureFlagReaderTest {
         every { featureFlags } returns featureFlagMap
       }
     val reader = ReplicationInputFeatureFlagReader(replicationInput)
-    Assertions.assertEquals(DestinationTimeoutEnabled.default, reader.read(DestinationTimeoutEnabled))
+    Assertions.assertEquals(ShouldFailSyncOnDestinationTimeout.default, reader.read(ShouldFailSyncOnDestinationTimeout))
   }
 }

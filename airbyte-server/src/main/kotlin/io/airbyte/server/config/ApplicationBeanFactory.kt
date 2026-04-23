@@ -32,7 +32,6 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.featureflag.DestinationTimeoutEnabled
 import io.airbyte.featureflag.DestinationTimeoutSeconds
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
 import io.airbyte.featureflag.FeatureFlagClient
@@ -240,7 +239,6 @@ class ApplicationBeanFactory {
   fun replicationFeatureFlags(): ReplicationFeatureFlags {
     val featureFlags =
       listOf<Flag<*>>(
-        DestinationTimeoutEnabled,
         DestinationTimeoutSeconds,
         FailSyncOnInvalidChecksum,
         HeartbeatDiagnosticLogsEnabled,

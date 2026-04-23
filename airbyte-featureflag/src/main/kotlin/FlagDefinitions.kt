@@ -36,8 +36,6 @@ object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.fa
  */
 object HeartbeatDiagnosticLogsEnabled : Temporary<Boolean>(key = "heartbeat.diagnostic-logs-enabled", default = false)
 
-object DestinationTimeoutEnabled : Permanent<Boolean>(key = "destination-timeout-enabled", default = true)
-
 object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destination-timeout.failSync", default = true)
 
 object DestinationTimeoutSeconds : Permanent<Int>(key = "destination-timeout.seconds", default = 7200)
