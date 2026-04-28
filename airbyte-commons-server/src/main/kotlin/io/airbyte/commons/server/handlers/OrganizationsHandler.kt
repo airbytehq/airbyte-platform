@@ -55,18 +55,25 @@ open class OrganizationsHandler(
   private val featureFlagClient: FeatureFlagClient,
 ) {
   companion object {
-    private fun buildOrganizationRead(organization: Organization): OrganizationRead =
-      OrganizationRead()
-        .organizationId(organization.organizationId)
-        .organizationName(organization.name)
-        .email(organization.email)
-        .ssoRealm(organization.ssoRealm)
+    private fun buildOrganizationRead(organization: Organization): OrganizationRead {
+      val read =
+        OrganizationRead()
+          .organizationId(organization.organizationId)
+          .organizationName(organization.name)
+          .email(organization.email)
+          .ssoRealm(organization.ssoRealm)
+      if (organization.isAgentic) {
+        read.isAgentic(true)
+      }
+      return read
+    }
   }
 
   fun createOrganization(request: OrganizationCreateRequestBody): OrganizationRead {
     val organizationName = request.organizationName
     val email = request.email
     val userId = request.userId
+    val isAgentic = request.isAgentic ?: false
     val orgId = uuidGenerator.get()
 
     try {
@@ -96,6 +103,7 @@ open class OrganizationsHandler(
         .withName(organizationName)
         .withEmail(email)
         .withUserId(userId)
+        .withIsAgentic(isAgentic)
     organizationService.writeOrganization(organization)
 
     // Also create an OrgAdmin permission.

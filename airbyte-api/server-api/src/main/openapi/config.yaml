@@ -16522,6 +16522,9 @@ components:
           type: string
         email:
           type: string
+        isAgentic:
+          type: boolean
+          default: false
     OrganizationRead:
       type: object
       required:
@@ -16538,6 +16541,8 @@ components:
           type: string
         ssoRealm:
           type: string
+        isAgentic:
+          type: boolean
         organizationLimits:
           $ref: "#/components/schemas/OrganizationLimits"
     OrganizationInfoRead:
