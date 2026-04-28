@@ -18,6 +18,7 @@ data class OrganizationWithSsoRealm(
   val userId: UUID?,
   val email: String,
   val tombstone: Boolean,
+  val isAgentic: Boolean = false,
   val createdAt: java.time.OffsetDateTime?,
   val updatedAt: java.time.OffsetDateTime?,
   val keycloakRealm: String?,

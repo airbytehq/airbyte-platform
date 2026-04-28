@@ -15,6 +15,7 @@ fun EntityOrganization.toConfigModel(): ModelOrganization =
     .withName(this.name)
     .withUserId(this.userId)
     .withEmail(this.email)
+    .withIsAgentic(this.isAgentic)
 
 fun OrganizationWithSsoRealm.toConfigModel(): ModelOrganization =
   ModelOrganization()
@@ -22,6 +23,7 @@ fun OrganizationWithSsoRealm.toConfigModel(): ModelOrganization =
     .withName(this.name)
     .withUserId(this.userId)
     .withEmail(this.email)
+    .withIsAgentic(this.isAgentic)
     .withSsoRealm(this.keycloakRealm)
 
 fun ModelOrganization.toEntity(): EntityOrganization =
@@ -30,4 +32,5 @@ fun ModelOrganization.toEntity(): EntityOrganization =
     name = this.name,
     userId = this.userId,
     email = this.email,
+    isAgentic = this.isAgentic,
   )

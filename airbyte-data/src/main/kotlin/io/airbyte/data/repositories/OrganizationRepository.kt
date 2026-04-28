@@ -76,6 +76,7 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
       organization.user_id,
       organization.email,
       organization.tombstone,
+      organization.is_agentic,
       organization.created_at,
       organization.updated_at,
       sso_config.keycloak_realm
@@ -118,6 +119,7 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
       organization.user_id,
       organization.email,
       organization.tombstone,
+      organization.is_agentic,
       organization.created_at,
       organization.updated_at,
       sso_config.keycloak_realm
@@ -163,6 +165,7 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
       organization.user_id,
       organization.email,
       organization.tombstone,
+      organization.is_agentic,
       organization.created_at,
       organization.updated_at,
       sso_config.keycloak_realm
@@ -190,6 +193,7 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
       organization.user_id,
       organization.email,
       organization.tombstone,
+      organization.is_agentic,
       organization.created_at,
       organization.updated_at,
       sso_config.keycloak_realm
