@@ -55,6 +55,7 @@ fun EntityConfigOriginType.toConfigModel(): ModelConfigOriginType =
     EntityConfigOriginType.user -> ModelConfigOriginType.USER
     EntityConfigOriginType.breaking_change -> ModelConfigOriginType.BREAKING_CHANGE
     EntityConfigOriginType.connector_rollout -> ModelConfigOriginType.CONNECTOR_ROLLOUT
+    EntityConfigOriginType.private_link -> ModelConfigOriginType.PRIVATE_LINK
   }
 
 fun ModelConfigOriginType.toEntity(): EntityConfigOriginType =
@@ -62,6 +63,7 @@ fun ModelConfigOriginType.toEntity(): EntityConfigOriginType =
     ModelConfigOriginType.USER -> EntityConfigOriginType.user
     ModelConfigOriginType.BREAKING_CHANGE -> EntityConfigOriginType.breaking_change
     ModelConfigOriginType.CONNECTOR_ROLLOUT -> EntityConfigOriginType.connector_rollout
+    ModelConfigOriginType.PRIVATE_LINK -> EntityConfigOriginType.private_link
   }
 
 fun EntityScopedConfiguration.toConfigModel(): ModelScopedConfiguration =
