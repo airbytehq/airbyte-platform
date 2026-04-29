@@ -96,6 +96,8 @@ class OAuthImplementationFactory(
         "airbyte/source-google-search-console" to GoogleSearchConsoleOAuthFlow(httpClient),
         "airbyte/source-google-sheets" to GoogleSheetsOAuthFlow(httpClient),
         "airbyte/source-google-drive" to GoogleDriveOAuthFlow(httpClient),
+        "airbyte/source-gmail" to DeclarativeOAuthFlow(httpClient),
+        "airbyte/source-google-calendar" to DeclarativeOAuthFlow(httpClient),
         "airbyte/source-harvest" to HarvestOAuthFlow(httpClient),
         "airbyte/source-hubspot" to HubspotOAuthFlow(httpClient),
         "airbyte/source-intercom" to IntercomOAuthFlow(httpClient),

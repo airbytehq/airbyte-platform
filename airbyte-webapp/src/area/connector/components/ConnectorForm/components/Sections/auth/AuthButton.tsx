@@ -26,6 +26,8 @@ function isGoogleConnector(connectorDefinitionId: string): boolean {
       ConnectorIds.Sources.GoogleWorkspaceAdminReports,
       ConnectorIds.Sources.YouTubeAnalytics,
       ConnectorIds.Destinations.GoogleSheets,
+      ConnectorIds.Sources.Gmail,
+      ConnectorIds.Sources.GoogleCalendar,
       // TODO: revert me
       ConnectorIds.Sources.YouTubeAnalyticsBusiness,
       //
