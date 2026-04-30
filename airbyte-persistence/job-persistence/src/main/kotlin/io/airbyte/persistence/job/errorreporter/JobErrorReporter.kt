@@ -17,6 +17,7 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.metrics.MetricAttribute
@@ -35,6 +36,7 @@ class JobErrorReporter(
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
   private val workspaceService: WorkspaceService,
+  private val organizationService: OrganizationService,
   private val airbyteEdition: AirbyteEdition,
   private val airbyteVersion: String,
   private val webUrlHelper: WebUrlHelper,
@@ -357,7 +359,12 @@ class JobErrorReporter(
         workspace?.let {
           val maybeOrganizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspace.workspaceId)
           if (maybeOrganizationId.isPresent) {
-            put(ORGANIZATION_ID_META_KEY, maybeOrganizationId.get().toString())
+            val organizationId = maybeOrganizationId.get()
+            put(ORGANIZATION_ID_META_KEY, organizationId.toString())
+            val maybeOrganization = organizationService.getOrganization(organizationId)
+            if (maybeOrganization.isPresent && maybeOrganization.get().isAgentic) {
+              put(IS_AGENTIC_META_KEY, "true")
+            }
           }
           putAll(getWorkspaceMetadata(workspace.workspaceId))
         }
@@ -407,6 +414,7 @@ class JobErrorReporter(
     const val JOB_ID_KEY: String = "job_id"
     const val SOURCE_TYPE_META_KEY: String = "source_type"
     const val ORGANIZATION_ID_META_KEY = "organization_id"
+    const val IS_AGENTIC_META_KEY = "is_agentic"
 
     private val UNSUPPORTED_FAILURETYPES: Set<FailureReason.FailureType> =
       setOf(

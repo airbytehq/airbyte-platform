@@ -12,6 +12,7 @@ import io.airbyte.config.AttemptFailureSummary
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Metadata
+import io.airbyte.config.Organization
 import io.airbyte.config.ReleaseStage
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
@@ -19,6 +20,7 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.State
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.metrics.MetricClient
@@ -37,6 +39,7 @@ internal class JobErrorReporterTest {
   private lateinit var sourceService: SourceService
   private lateinit var destinationService: DestinationService
   private lateinit var workspaceService: WorkspaceService
+  private lateinit var organizationService: OrganizationService
   private lateinit var jobErrorReportingClient: JobErrorReportingClient
   private lateinit var webUrlHelper: WebUrlHelper
   private lateinit var jobErrorReporter: JobErrorReporter
@@ -47,6 +50,7 @@ internal class JobErrorReporterTest {
     sourceService = mockk<SourceService>()
     destinationService = mockk<DestinationService>()
     workspaceService = mockk<WorkspaceService>()
+    organizationService = mockk<OrganizationService>()
     jobErrorReportingClient = mockk<JobErrorReportingClient>(relaxed = true)
     webUrlHelper = mockk<WebUrlHelper>()
     jobErrorReporter =
@@ -55,6 +59,7 @@ internal class JobErrorReporterTest {
         sourceService,
         destinationService,
         workspaceService,
+        organizationService,
         AIRBYTE_EDITION,
         AIRBYTE_VERSION,
         webUrlHelper,
@@ -139,6 +144,7 @@ internal class JobErrorReporterTest {
     every { mWorkspace.workspaceId } returns WORKSPACE_ID
     every { workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, true) } returns mWorkspace
     every { workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID) } returns Optional.of(ORGANIZATION_ID)
+    every { organizationService.getOrganization(ORGANIZATION_ID) } returns Optional.of(Organization().withIsAgentic(false))
 
     jobErrorReporter.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobReportingContext, attemptConfig)
 
@@ -195,6 +201,85 @@ internal class JobErrorReporterTest {
         destinationFailureReason,
         DESTINATION_DOCKER_IMAGE,
         expectedDestinationMetadata,
+        attemptConfig,
+      )
+    }
+  }
+
+  @Test
+  fun testReportSyncJobFailureIncludesIsAgenticTrue() {
+    val mFailureSummary = mockk<AttemptFailureSummary>()
+
+    val sourceFailureReason =
+      FailureReason()
+        .withMetadata(
+          Metadata()
+            .withAdditionalProperty(FROM_TRACE_MESSAGE, true)
+            .withAdditionalProperty(CONNECTOR_COMMAND_KEY, READ_COMMAND),
+        ).withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
+        .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+
+    every { mFailureSummary.failures } returns listOf<FailureReason?>(sourceFailureReason)
+
+    val syncJobId = 1L
+    val jobReportingContext =
+      SyncJobReportingContext(
+        syncJobId,
+        SOURCE_DEFINITION_VERSION_ID,
+        DESTINATION_DEFINITION_VERSION_ID,
+      )
+
+    val objectMapper = ObjectMapper()
+    val attemptConfig =
+      AttemptConfigReportingContext(objectMapper.createObjectNode(), objectMapper.createObjectNode(), State())
+
+    every { sourceService.getSourceDefinitionFromConnection(CONNECTION_ID) } returns
+      StandardSourceDefinition()
+        .withSourceDefinitionId(SOURCE_DEFINITION_ID)
+        .withName(SOURCE_DEFINITION_NAME)
+
+    every { actorDefinitionService.getActorDefinitionVersion(SOURCE_DEFINITION_VERSION_ID) } returns
+      ActorDefinitionVersion()
+        .withDockerRepository(SOURCE_DOCKER_REPOSITORY)
+        .withDockerImageTag(DOCKER_IMAGE_TAG)
+        .withReleaseStage(SOURCE_RELEASE_STAGE)
+        .withInternalSupportLevel(SOURCE_INTERNAL_SUPPORT_LEVEL)
+
+    val mWorkspace = mockk<StandardWorkspace>()
+    every { mWorkspace.workspaceId } returns WORKSPACE_ID
+    every { workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, true) } returns mWorkspace
+    every { workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID) } returns Optional.of(ORGANIZATION_ID)
+    every { organizationService.getOrganization(ORGANIZATION_ID) } returns Optional.of(Organization().withIsAgentic(true))
+
+    jobErrorReporter.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobReportingContext, attemptConfig)
+
+    val expectedSourceMetadata =
+      mapOf<String?, String?>(
+        JOB_ID_KEY to syncJobId.toString(),
+        WORKSPACE_ID_KEY to WORKSPACE_ID.toString(),
+        WORKSPACE_URL_KEY to WORKSPACE_URL,
+        CONNECTION_ID_KEY to CONNECTION_ID.toString(),
+        CONNECTION_URL_KEY to CONNECTION_URL,
+        AIRBYTE_EDITION_KEY to AIRBYTE_EDITION.name,
+        AIRBYTE_VERSION_KEY to AIRBYTE_VERSION,
+        FAILURE_ORIGIN_KEY to SOURCE,
+        FAILURE_TYPE_KEY to SYSTEM_ERROR,
+        CONNECTOR_COMMAND_KEY to READ_COMMAND,
+        CONNECTOR_DEFINITION_ID_KEY to SOURCE_DEFINITION_ID.toString(),
+        CONNECTOR_REPOSITORY_KEY to SOURCE_DOCKER_REPOSITORY,
+        CONNECTOR_NAME_KEY to SOURCE_DEFINITION_NAME,
+        CONNECTOR_RELEASE_STAGE_KEY to SOURCE_RELEASE_STAGE.toString(),
+        CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY to SOURCE_INTERNAL_SUPPORT_LEVEL.toString(),
+        ORGANIZATION_ID_META_KEY to ORGANIZATION_ID.toString(),
+        IS_AGENTIC_KEY to "true",
+      )
+
+    verify(exactly = 1) {
+      jobErrorReportingClient.reportJobFailureReason(
+        mWorkspace,
+        sourceFailureReason,
+        SOURCE_DOCKER_IMAGE,
+        expectedSourceMetadata,
         attemptConfig,
       )
     }
@@ -346,6 +431,7 @@ internal class JobErrorReporterTest {
     every { mWorkspace.workspaceId } returns WORKSPACE_ID
     every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns mWorkspace
     every { workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID) } returns Optional.of(ORGANIZATION_ID)
+    every { organizationService.getOrganization(ORGANIZATION_ID) } returns Optional.of(Organization().withIsAgentic(false))
 
     jobErrorReporter.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext)
 
@@ -455,6 +541,7 @@ internal class JobErrorReporterTest {
     every { mWorkspace.workspaceId } returns WORKSPACE_ID
     every { workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true) } returns mWorkspace
     every { workspaceService.getOrganizationIdFromWorkspaceId(WORKSPACE_ID) } returns Optional.of(ORGANIZATION_ID)
+    every { organizationService.getOrganization(ORGANIZATION_ID) } returns Optional.of(Organization().withIsAgentic(false))
 
     jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext)
 
@@ -679,5 +766,6 @@ internal class JobErrorReporterTest {
     private const val READ_COMMAND = "read"
     private const val WRITE_COMMAND = "write"
     private const val ORGANIZATION_ID_META_KEY = "organization_id"
+    private const val IS_AGENTIC_KEY = "is_agentic"
   }
 }

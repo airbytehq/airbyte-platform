@@ -7,6 +7,7 @@ package io.airbyte.server.config
 import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.metrics.MetricClient
@@ -48,6 +49,7 @@ class JobErrorReportingBeanFactory {
     sourceService: SourceService,
     destinationService: DestinationService,
     workspaceService: WorkspaceService,
+    organizationService: OrganizationService,
     @Named("jobErrorReportingClient") jobErrorReportingClient: Optional<JobErrorReportingClient>,
     webUrlHelper: WebUrlHelper,
     metricClient: MetricClient,
@@ -57,6 +59,7 @@ class JobErrorReportingBeanFactory {
       sourceService,
       destinationService,
       workspaceService,
+      organizationService,
       airbyteConfig.edition,
       airbyteConfig.version,
       webUrlHelper,
