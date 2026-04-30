@@ -561,8 +561,7 @@ create table "public"."private_link" (
   "scoped_configuration_id" uuid,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  constraint "private_link_pkey" primary key ("id"),
-  constraint "private_link_workspace_id_name_key" unique ("workspace_id", "name")
+  constraint "private_link_pkey" primary key ("id")
 );
 create table "public"."schema_management" (
   "id" uuid not null,
@@ -881,6 +880,8 @@ create index "permission_service_account_id_index" on "public"."permission"("ser
 create index "permission_user_id_idx" on "public"."permission"("user_id" asc);
 create index "permission_workspace_id_idx" on "public"."permission"("workspace_id" asc);
 create index "idx_private_link_workspace_id" on "public"."private_link"("workspace_id" asc);
+create unique index "private_link_workspace_id_name_key" on "public"."private_link"("workspace_id" asc, "name" asc)
+where ((status <> 'deleted'::private_link_status));
 create index "connection_idx" on "public"."schema_management"("connection_id" asc);
 create index "scoped_configuration_origin_idx" on "public"."scoped_configuration"("origin" asc);
 create unique index "secret_reference_scope_type_scope_id_hydration_path_idx" on "public"."secret_reference"(
