@@ -277,8 +277,8 @@ class ArchitectureDecider(
 
     return res.limits
       ?.get(CPU_RESOURCE_KEY)
-      ?.amount
-      ?.toIntOrNull()
+      ?.numericalAmount
+      ?.toInt()
       ?.takeIf { it > 0 } ?: 1
   }
 }
