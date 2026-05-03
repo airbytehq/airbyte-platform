@@ -22,7 +22,7 @@ const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunc
 const mockOrganizationId = "test-org-123";
 
 const messages = {
-  "cloud.adpOrganization.banner": "This is an Agent Engine organization. <lnk>Manage it on app.airbyte.ai</lnk>.",
+  "cloud.adpOrganization.banner": "This is an Airbyte Agents organization. <lnk>Manage it on app.airbyte.ai</lnk>.",
 };
 
 const renderWithIntl = (component: React.ReactElement) => {
@@ -45,7 +45,7 @@ describe("AdpOrganizationBanner", () => {
     renderWithIntl(<AdpOrganizationBanner />);
 
     expect(screen.getByTestId("adp-organization-banner")).toBeInTheDocument();
-    expect(screen.getByText(/This is an Agent Engine organization/)).toBeInTheDocument();
+    expect(screen.getByText(/This is an Airbyte Agents organization/)).toBeInTheDocument();
   });
 
   it("should not render banner when organization is not ADP", () => {
