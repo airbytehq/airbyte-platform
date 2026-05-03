@@ -156,7 +156,7 @@
             </div>
 
             <div class="${properties.kcFormGroupClass!} ab-terms-of-service">By signing up for Airbyte Cloud and continuing, you agree to our Cloud <a target="_blank" href="https://airbyte.com/company/terms">Terms of Service</a> and <a target="_blank" href="https://airbyte.com/company/privacy-policy">Privacy Policy</a>.</div>
-            <div class="${properties.kcFormGroupClass!} ab-terms-of-service">By signing up for Agent Engine and continuing, you agree to our Agent Engine <a target="_blank" href="https://airbyte.com/company/terms-agent-engine">Terms of Service</a> and <a target="_blank" href="https://airbyte.com/company/privacy-policy">Privacy Policy</a>.</div>
+            <div class="${properties.kcFormGroupClass!} ab-terms-of-service">By signing up for Airbyte Agents and continuing, you agree to our Airbyte Agents <a target="_blank" href="https://airbyte.com/company/terms-agent-engine">Terms of Service</a> and <a target="_blank" href="https://airbyte.com/company/privacy-policy">Privacy Policy</a>.</div>
         </form>
         <script type="module" src="${url.resourcesPath}/js/passwordVisibility.js"></script>
     </#if>
