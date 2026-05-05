@@ -156,6 +156,33 @@ internal class ScopedConfigurationHandlerTest {
   }
 
   @Test
+  fun `test getScopedConfiguration with null resourceType and resourceId (PrivateLink)`() {
+    val testId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val scopedConfiguration =
+      ScopedConfiguration()
+        .withId(testId)
+        .withValue("token")
+        .withKey("network_security_token")
+        .withScopeId(workspaceId)
+        .withScopeType(ConfigScopeType.WORKSPACE)
+        .withOrigin(UUID.randomUUID().toString())
+        .withOriginType(ConfigOriginType.PRIVATE_LINK)
+
+    every { scopedConfigurationService.getScopedConfiguration(testId) } returns scopedConfiguration
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) } returns StandardWorkspace().withName("workspace name")
+
+    val scopedConfigurationRead = scopedConfigurationHandler.getScopedConfiguration(testId)
+
+    assertEquals(null, scopedConfigurationRead.resourceType)
+    assertEquals(null, scopedConfigurationRead.resourceId)
+    assertEquals(null, scopedConfigurationRead.resourceName)
+    assertEquals(scopedConfiguration.scopeId.toString(), scopedConfigurationRead.scopeId)
+    verify(exactly = 0) { sourceService.getStandardSourceDefinition(any()) }
+    verify(exactly = 0) { destinationService.getStandardDestinationDefinition(any()) }
+  }
+
+  @Test
   fun `test listScopedConfigurationsWithOriginType`() {
     val scopedConfigurations =
       listOf(
@@ -645,6 +672,29 @@ internal class ScopedConfigurationHandlerTest {
       userPersistence.getUser(any())
       actorDefinitionService.getActorDefinitionVersion(any())
     }
+  }
+
+  @Test
+  fun `test assertCreateRelatedRecordsExist skips resource lookup when resourceType and resourceId are null`() {
+    val scopedConfigurationCreate =
+      ScopedConfigurationCreateRequestBody()
+        .value(UUID.randomUUID().toString())
+        .configKey("network_security_token")
+        .scopeId(UUID.randomUUID().toString())
+        .scopeType(ConfigScopeType.WORKSPACE.toString())
+        .origin(UUID.randomUUID().toString())
+        .originType(ConfigOriginType.PRIVATE_LINK.toString())
+
+    every { workspaceService.getStandardWorkspaceNoSecrets(any(), any()) } returns
+      io.airbyte.config
+        .StandardWorkspace()
+        .withName("workspace name")
+
+    scopedConfigurationHandler.assertCreateRelatedRecordsExist(scopedConfigurationCreate)
+
+    verify(exactly = 0) { sourceService.getStandardSourceDefinition(any()) }
+    verify(exactly = 0) { destinationService.getStandardDestinationDefinition(any()) }
+    verify(exactly = 0) { actorDefinitionService.getActorDefinitionVersion(any()) }
   }
 
   @Test

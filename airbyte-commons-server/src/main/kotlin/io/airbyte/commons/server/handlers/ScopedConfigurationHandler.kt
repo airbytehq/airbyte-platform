@@ -128,7 +128,12 @@ open class ScopedConfigurationHandler
     @InternalForTesting
     fun assertCreateRelatedRecordsExist(scopedConfigurationCreate: ScopedConfigurationCreateRequestBody) {
       try {
-        getResourceName(ConfigResourceType.fromValue(scopedConfigurationCreate.resourceType), UUID.fromString(scopedConfigurationCreate.resourceId))
+        if (scopedConfigurationCreate.resourceType != null && scopedConfigurationCreate.resourceId != null) {
+          getResourceName(
+            ConfigResourceType.fromValue(scopedConfigurationCreate.resourceType),
+            UUID.fromString(scopedConfigurationCreate.resourceId),
+          )
+        }
         getScopeName(ConfigScopeType.fromValue(scopedConfigurationCreate.scopeType), UUID.fromString(scopedConfigurationCreate.scopeId))
         getOriginName(ConfigOriginType.fromValue(scopedConfigurationCreate.originType), scopedConfigurationCreate.origin)
         getValueName(scopedConfigurationCreate.configKey, scopedConfigurationCreate.value)
@@ -153,10 +158,15 @@ open class ScopedConfigurationHandler
         .valueName(getValueName(scopedConfiguration.key, scopedConfiguration.value))
         .description(scopedConfiguration.description)
         .referenceUrl(scopedConfiguration.referenceUrl)
-        .resourceType(scopedConfiguration.resourceType.toString())
-        .resourceId(scopedConfiguration.resourceId.toString())
-        .resourceName(getResourceName(scopedConfiguration.resourceType, scopedConfiguration.resourceId))
-        .scopeType(scopedConfiguration.scopeType.toString())
+        .resourceType(scopedConfiguration.resourceType?.toString())
+        .resourceId(scopedConfiguration.resourceId?.toString())
+        .resourceName(
+          if (scopedConfiguration.resourceType != null && scopedConfiguration.resourceId != null) {
+            getResourceName(scopedConfiguration.resourceType, scopedConfiguration.resourceId)
+          } else {
+            null
+          },
+        ).scopeType(scopedConfiguration.scopeType.toString())
         .scopeId(scopedConfiguration.scopeId.toString())
         .scopeName(getScopeName(scopedConfiguration.scopeType, scopedConfiguration.scopeId))
         .originType(scopedConfiguration.originType.toString())
