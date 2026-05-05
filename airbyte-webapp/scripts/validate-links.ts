@@ -8,6 +8,9 @@ const IGNORED_LINKS = [
   // Cloudflare in front prevents us from checking this without a real browser.
   // We assume that the URL won't change really, so it should be fine not validating it.
   "supportPortal",
+  // slack.airbyte.com redirects to a Slack-hosted join page that returns 403 to
+  // non-browser User-Agents. The URL itself is stable, so we skip validation.
+  "slackLink",
 ];
 
 let retries = 0;
