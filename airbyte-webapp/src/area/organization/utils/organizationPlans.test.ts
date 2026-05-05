@@ -18,14 +18,17 @@ describe("organizationPlans", () => {
   });
 
   describe("ADP_PLAN_IDS", () => {
-    it("should contain 3 ADP plan IDs", () => {
-      expect(Object.keys(ADP_PLAN_IDS)).toHaveLength(3);
+    it("should contain 6 ADP plan IDs", () => {
+      expect(Object.keys(ADP_PLAN_IDS)).toHaveLength(6);
     });
 
     it("should have correct ADP plan ID values", () => {
       expect(ADP_PLAN_IDS.EMBEDDED_PAYG).toBe("plan-airbyte-embedded-payg");
       expect(ADP_PLAN_IDS.EMBEDDED_ANNUAL_COMMITMENT).toBe("plan-airbyte-embedded-annual-commitment");
       expect(ADP_PLAN_IDS.AGENT_ENGINE_PAYG).toBe("plan-airbyte-agent-engine-payg");
+      expect(ADP_PLAN_IDS.AIRBYTE_AGENTS_FREE).toBe("plan-airbyte-airbyte-agents-free");
+      expect(ADP_PLAN_IDS.AIRBYTE_AGENTS_INDIVIDUAL).toBe("plan-airbyte-airbyte-agents-individual");
+      expect(ADP_PLAN_IDS.AIRBYTE_AGENTS_TEAM).toBe("plan-airbyte-airbyte-agents-team");
     });
   });
 
@@ -50,6 +53,9 @@ describe("organizationPlans", () => {
       expect(ORG_PLAN_IDS.EMBEDDED_PAYG).toBe(ADP_PLAN_IDS.EMBEDDED_PAYG);
       expect(ORG_PLAN_IDS.EMBEDDED_ANNUAL_COMMITMENT).toBe(ADP_PLAN_IDS.EMBEDDED_ANNUAL_COMMITMENT);
       expect(ORG_PLAN_IDS.AGENT_ENGINE_PAYG).toBe(ADP_PLAN_IDS.AGENT_ENGINE_PAYG);
+      expect(ORG_PLAN_IDS.AIRBYTE_AGENTS_FREE).toBe(ADP_PLAN_IDS.AIRBYTE_AGENTS_FREE);
+      expect(ORG_PLAN_IDS.AIRBYTE_AGENTS_INDIVIDUAL).toBe(ADP_PLAN_IDS.AIRBYTE_AGENTS_INDIVIDUAL);
+      expect(ORG_PLAN_IDS.AIRBYTE_AGENTS_TEAM).toBe(ADP_PLAN_IDS.AIRBYTE_AGENTS_TEAM);
     });
   });
 });

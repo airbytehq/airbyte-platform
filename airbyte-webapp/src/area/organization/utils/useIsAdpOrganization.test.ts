@@ -30,6 +30,9 @@ describe("useIsAdpOrganization", () => {
       ["EMBEDDED_PAYG", ADP_PLAN_IDS.EMBEDDED_PAYG],
       ["EMBEDDED_ANNUAL_COMMITMENT", ADP_PLAN_IDS.EMBEDDED_ANNUAL_COMMITMENT],
       ["AGENT_ENGINE_PAYG", ADP_PLAN_IDS.AGENT_ENGINE_PAYG],
+      ["AIRBYTE_AGENTS_FREE", ADP_PLAN_IDS.AIRBYTE_AGENTS_FREE],
+      ["AIRBYTE_AGENTS_INDIVIDUAL", ADP_PLAN_IDS.AIRBYTE_AGENTS_INDIVIDUAL],
+      ["AIRBYTE_AGENTS_TEAM", ADP_PLAN_IDS.AIRBYTE_AGENTS_TEAM],
     ])("should return true for %s plan", (_planName, planId) => {
       mockUseCurrentOrganizationInfo.mockReturnValue(createMockOrgInfo(planId));
 

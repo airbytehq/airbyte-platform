@@ -15,6 +15,9 @@ export const ADP_PLAN_IDS = {
   EMBEDDED_PAYG: "plan-airbyte-embedded-payg",
   EMBEDDED_ANNUAL_COMMITMENT: "plan-airbyte-embedded-annual-commitment",
   AGENT_ENGINE_PAYG: "plan-airbyte-agent-engine-payg",
+  AIRBYTE_AGENTS_FREE: "plan-airbyte-airbyte-agents-free",
+  AIRBYTE_AGENTS_INDIVIDUAL: "plan-airbyte-airbyte-agents-individual",
+  AIRBYTE_AGENTS_TEAM: "plan-airbyte-airbyte-agents-team",
 } as const;
 
 // Combined for backward compatibility with existing code
