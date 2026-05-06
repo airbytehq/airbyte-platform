@@ -1,75 +1,49 @@
 import { renderHook } from "@testing-library/react";
 
-import { useCurrentOrganizationInfo } from "core/api";
+import { useOrganization } from "core/api";
 
-import { ADP_PLAN_IDS, ORG_PLAN_IDS } from "./organizationPlans";
+import { useCurrentOrganizationId } from "./useCurrentOrganizationId";
 import { useIsAdpOrganization } from "./useIsAdpOrganization";
 
 jest.mock("core/api");
+jest.mock("./useCurrentOrganizationId");
 
-const mockUseCurrentOrganizationInfo = useCurrentOrganizationInfo as jest.MockedFunction<
-  typeof useCurrentOrganizationInfo
->;
+const mockUseOrganization = useOrganization as jest.MockedFunction<typeof useOrganization>;
+const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunction<typeof useCurrentOrganizationId>;
 
 const mockOrganizationId = "test-org-id";
 
-const createMockOrgInfo = (organizationPlanId?: string) => ({
+const createMockOrganization = (isAgentic?: boolean) => ({
   organizationId: mockOrganizationId,
   organizationName: "Test Organization",
-  organizationPlanId,
-  sso: false,
+  email: "test@example.com",
+  isAgentic,
 });
 
 describe("useIsAdpOrganization", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseCurrentOrganizationId.mockReturnValue(mockOrganizationId);
   });
 
-  describe("returns true for ADP plan IDs", () => {
-    it.each([
-      ["EMBEDDED_PAYG", ADP_PLAN_IDS.EMBEDDED_PAYG],
-      ["EMBEDDED_ANNUAL_COMMITMENT", ADP_PLAN_IDS.EMBEDDED_ANNUAL_COMMITMENT],
-      ["AGENT_ENGINE_PAYG", ADP_PLAN_IDS.AGENT_ENGINE_PAYG],
-      ["AIRBYTE_AGENTS_FREE", ADP_PLAN_IDS.AIRBYTE_AGENTS_FREE],
-      ["AIRBYTE_AGENTS_INDIVIDUAL", ADP_PLAN_IDS.AIRBYTE_AGENTS_INDIVIDUAL],
-      ["AIRBYTE_AGENTS_TEAM", ADP_PLAN_IDS.AIRBYTE_AGENTS_TEAM],
-    ])("should return true for %s plan", (_planName, planId) => {
-      mockUseCurrentOrganizationInfo.mockReturnValue(createMockOrgInfo(planId));
+  it("returns true when organization.isAgentic is true", () => {
+    mockUseOrganization.mockReturnValue(createMockOrganization(true));
 
-      const { result } = renderHook(() => useIsAdpOrganization());
+    const { result } = renderHook(() => useIsAdpOrganization());
 
-      expect(result.current).toBe(true);
-    });
+    expect(result.current).toBe(true);
   });
 
-  describe("returns false for non-ADP plan IDs", () => {
-    it.each([
-      ["CORE", ORG_PLAN_IDS.CORE],
-      ["STANDARD", ORG_PLAN_IDS.STANDARD],
-      ["SME", ORG_PLAN_IDS.SME],
-      ["FLEX", ORG_PLAN_IDS.FLEX],
-      ["PRO", ORG_PLAN_IDS.PRO],
-      ["STANDARD_TRIAL", ORG_PLAN_IDS.STANDARD_TRIAL],
-      ["UNIFIED_TRIAL", ORG_PLAN_IDS.UNIFIED_TRIAL],
-    ])("should return false for %s plan", (_planName, planId) => {
-      mockUseCurrentOrganizationInfo.mockReturnValue(createMockOrgInfo(planId));
-
-      const { result } = renderHook(() => useIsAdpOrganization());
-
-      expect(result.current).toBe(false);
-    });
-  });
-
-  it("should return false when organizationPlanId is undefined", () => {
-    mockUseCurrentOrganizationInfo.mockReturnValue(createMockOrgInfo(undefined));
+  it("returns false when organization.isAgentic is false", () => {
+    mockUseOrganization.mockReturnValue(createMockOrganization(false));
 
     const { result } = renderHook(() => useIsAdpOrganization());
 
     expect(result.current).toBe(false);
   });
 
-  it("should return false for unknown plan IDs", () => {
-    mockUseCurrentOrganizationInfo.mockReturnValue(createMockOrgInfo("plan-unknown"));
+  it("returns false when organization.isAgentic is undefined", () => {
+    mockUseOrganization.mockReturnValue(createMockOrganization(undefined));
 
     const { result } = renderHook(() => useIsAdpOrganization());
 

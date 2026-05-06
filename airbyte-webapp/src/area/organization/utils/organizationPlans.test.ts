@@ -1,4 +1,4 @@
-import { AIRBYTE_PLAN_IDS, ADP_PLAN_IDS, ORG_PLAN_IDS } from "./organizationPlans";
+import { AIRBYTE_PLAN_IDS, ORG_PLAN_IDS } from "./organizationPlans";
 
 describe("organizationPlans", () => {
   describe("AIRBYTE_PLAN_IDS", () => {
@@ -17,26 +17,9 @@ describe("organizationPlans", () => {
     });
   });
 
-  describe("ADP_PLAN_IDS", () => {
-    it("should contain 6 ADP plan IDs", () => {
-      expect(Object.keys(ADP_PLAN_IDS)).toHaveLength(6);
-    });
-
-    it("should have correct ADP plan ID values", () => {
-      expect(ADP_PLAN_IDS.EMBEDDED_PAYG).toBe("plan-airbyte-embedded-payg");
-      expect(ADP_PLAN_IDS.EMBEDDED_ANNUAL_COMMITMENT).toBe("plan-airbyte-embedded-annual-commitment");
-      expect(ADP_PLAN_IDS.AGENT_ENGINE_PAYG).toBe("plan-airbyte-agent-engine-payg");
-      expect(ADP_PLAN_IDS.AIRBYTE_AGENTS_FREE).toBe("plan-airbyte-airbyte-agents-free");
-      expect(ADP_PLAN_IDS.AIRBYTE_AGENTS_INDIVIDUAL).toBe("plan-airbyte-airbyte-agents-individual");
-      expect(ADP_PLAN_IDS.AIRBYTE_AGENTS_TEAM).toBe("plan-airbyte-airbyte-agents-team");
-    });
-  });
-
   describe("ORG_PLAN_IDS", () => {
-    it("should contain all plans from AIRBYTE_PLAN_IDS and ADP_PLAN_IDS", () => {
-      const airbytePlanCount = Object.keys(AIRBYTE_PLAN_IDS).length;
-      const adpPlanCount = Object.keys(ADP_PLAN_IDS).length;
-      expect(Object.keys(ORG_PLAN_IDS)).toHaveLength(airbytePlanCount + adpPlanCount);
+    it("should mirror AIRBYTE_PLAN_IDS", () => {
+      expect(Object.keys(ORG_PLAN_IDS)).toHaveLength(Object.keys(AIRBYTE_PLAN_IDS).length);
     });
 
     it("should include all Airbyte plans", () => {
@@ -47,15 +30,6 @@ describe("organizationPlans", () => {
       expect(ORG_PLAN_IDS.PRO).toBe(AIRBYTE_PLAN_IDS.PRO);
       expect(ORG_PLAN_IDS.STANDARD_TRIAL).toBe(AIRBYTE_PLAN_IDS.STANDARD_TRIAL);
       expect(ORG_PLAN_IDS.UNIFIED_TRIAL).toBe(AIRBYTE_PLAN_IDS.UNIFIED_TRIAL);
-    });
-
-    it("should include all ADP plans", () => {
-      expect(ORG_PLAN_IDS.EMBEDDED_PAYG).toBe(ADP_PLAN_IDS.EMBEDDED_PAYG);
-      expect(ORG_PLAN_IDS.EMBEDDED_ANNUAL_COMMITMENT).toBe(ADP_PLAN_IDS.EMBEDDED_ANNUAL_COMMITMENT);
-      expect(ORG_PLAN_IDS.AGENT_ENGINE_PAYG).toBe(ADP_PLAN_IDS.AGENT_ENGINE_PAYG);
-      expect(ORG_PLAN_IDS.AIRBYTE_AGENTS_FREE).toBe(ADP_PLAN_IDS.AIRBYTE_AGENTS_FREE);
-      expect(ORG_PLAN_IDS.AIRBYTE_AGENTS_INDIVIDUAL).toBe(ADP_PLAN_IDS.AIRBYTE_AGENTS_INDIVIDUAL);
-      expect(ORG_PLAN_IDS.AIRBYTE_AGENTS_TEAM).toBe(ADP_PLAN_IDS.AIRBYTE_AGENTS_TEAM);
     });
   });
 });
