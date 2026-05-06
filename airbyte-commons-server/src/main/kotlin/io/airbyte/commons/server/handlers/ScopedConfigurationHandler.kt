@@ -127,8 +127,13 @@ open class ScopedConfigurationHandler
 
     @InternalForTesting
     fun assertCreateRelatedRecordsExist(scopedConfigurationCreate: ScopedConfigurationCreateRequestBody) {
+      val hasResourceType = scopedConfigurationCreate.resourceType != null
+      val hasResourceId = scopedConfigurationCreate.resourceId != null
+      if (hasResourceType != hasResourceId) {
+        throw BadRequestException("resourceType and resourceId must either both be set or both be null")
+      }
       try {
-        if (scopedConfigurationCreate.resourceType != null && scopedConfigurationCreate.resourceId != null) {
+        if (hasResourceType && hasResourceId) {
           getResourceName(
             ConfigResourceType.fromValue(scopedConfigurationCreate.resourceType),
             UUID.fromString(scopedConfigurationCreate.resourceId),

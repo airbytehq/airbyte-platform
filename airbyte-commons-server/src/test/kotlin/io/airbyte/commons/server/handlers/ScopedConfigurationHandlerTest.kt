@@ -698,6 +698,48 @@ internal class ScopedConfigurationHandlerTest {
   }
 
   @Test
+  fun `test assertCreateRelatedRecordsExist rejects partial resource (resourceType set, resourceId null)`() {
+    val scopedConfigurationCreate =
+      ScopedConfigurationCreateRequestBody()
+        .value(UUID.randomUUID().toString())
+        .configKey("network_security_token")
+        .resourceType(ConfigResourceType.ACTOR_DEFINITION.toString())
+        .scopeId(UUID.randomUUID().toString())
+        .scopeType(ConfigScopeType.WORKSPACE.toString())
+        .origin(UUID.randomUUID().toString())
+        .originType(ConfigOriginType.PRIVATE_LINK.toString())
+
+    assertThrows<BadRequestException> {
+      scopedConfigurationHandler.assertCreateRelatedRecordsExist(scopedConfigurationCreate)
+    }
+
+    verify(exactly = 0) { sourceService.getStandardSourceDefinition(any()) }
+    verify(exactly = 0) { destinationService.getStandardDestinationDefinition(any()) }
+    verify(exactly = 0) { workspaceService.getStandardWorkspaceNoSecrets(any(), any()) }
+  }
+
+  @Test
+  fun `test assertCreateRelatedRecordsExist rejects partial resource (resourceId set, resourceType null)`() {
+    val scopedConfigurationCreate =
+      ScopedConfigurationCreateRequestBody()
+        .value(UUID.randomUUID().toString())
+        .configKey("network_security_token")
+        .resourceId(UUID.randomUUID().toString())
+        .scopeId(UUID.randomUUID().toString())
+        .scopeType(ConfigScopeType.WORKSPACE.toString())
+        .origin(UUID.randomUUID().toString())
+        .originType(ConfigOriginType.PRIVATE_LINK.toString())
+
+    assertThrows<BadRequestException> {
+      scopedConfigurationHandler.assertCreateRelatedRecordsExist(scopedConfigurationCreate)
+    }
+
+    verify(exactly = 0) { sourceService.getStandardSourceDefinition(any()) }
+    verify(exactly = 0) { destinationService.getStandardDestinationDefinition(any()) }
+    verify(exactly = 0) { workspaceService.getStandardWorkspaceNoSecrets(any(), any()) }
+  }
+
+  @Test
   fun `test assertCreateRelatedRecordsExist with missing resource`() {
     val scopedConfigurationCreate =
       ScopedConfigurationCreateRequestBody()
