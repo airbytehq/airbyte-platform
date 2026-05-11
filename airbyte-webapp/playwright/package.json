@@ -1,6 +1,7 @@
 {
   "name": "playwright",
   "version": "1.0.0",
+  "packageManager": "pnpm@8.6.12",
   "description": "",
   "main": "index.js",
   "scripts": {
