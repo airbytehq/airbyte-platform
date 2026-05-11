@@ -62,7 +62,7 @@ describe("AdpOrganizationBanner", () => {
     renderWithIntl(<AdpOrganizationBanner />);
 
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", `https://app.airbyte.ai/organizations/${mockOrganizationId}`);
+    expect(link).toHaveAttribute("href", `https://app.airbyte.ai/organizations/${mockOrganizationId}/get-started`);
   });
 
   it("should have correct data-testid attribute", () => {

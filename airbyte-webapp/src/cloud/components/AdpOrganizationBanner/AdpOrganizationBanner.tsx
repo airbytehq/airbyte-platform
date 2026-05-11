@@ -15,7 +15,7 @@ const AdpOrganizationBannerContent: React.FC = () => {
     return null;
   }
 
-  const adpUrl = `${links.agentEngineApp}/organizations/${organizationId}`;
+  const adpUrl = `${links.agentEngineApp}/organizations/${organizationId}/get-started`;
 
   return (
     <AlertBanner
