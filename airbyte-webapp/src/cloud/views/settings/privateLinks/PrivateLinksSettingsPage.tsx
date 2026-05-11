@@ -7,6 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Form, FormControl } from "components/ui/forms";
 import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
 import { Heading } from "components/ui/Heading";
+import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { HttpError, useCreatePrivateLink, useDeletePrivateLink, useListPrivateLinks } from "core/api";
@@ -16,6 +17,7 @@ import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { useModalService } from "core/services/Modal";
 import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
+import { links } from "core/utils/links";
 
 import { PrivateLinkDetailModal } from "./PrivateLinkDetailModal";
 import { PrivateLinksTable } from "./PrivateLinksTable";
@@ -110,7 +112,14 @@ export const PrivateLinksSettingsPage: React.FC = () => {
   return (
     <FlexContainer direction="column" gap="xl">
       <Heading as="h1">{formatMessage({ id: "settings.privateLinks.title" })}</Heading>
-      <Text>{formatMessage({ id: "settings.privateLinks.description" })}</Text>
+      <Text>
+        <FormattedMessage
+          id="settings.privateLinks.description"
+          values={{
+            lnk: (node: React.ReactNode) => <ExternalLink href={links.privateLinkDocs}>{node}</ExternalLink>,
+          }}
+        />
+      </Text>
 
       <Card>
         <Form<PrivateLinkFormValues>

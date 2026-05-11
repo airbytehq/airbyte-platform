@@ -1568,7 +1568,7 @@
   "settings.notifications": "Notifications",
   "settings.privateLinks": "Private Links",
   "settings.privateLinks.title": "Private Links",
-  "settings.privateLinks.description": "Connect to your cloud services over a private network instead of the public internet.",
+  "settings.privateLinks.description": "Private Links lets Airbyte securely connect over your cloud provider’s private network, eliminating public internet exposure and supporting strict network isolation requirements. <lnk>Learn more</lnk>",
   "settings.privateLinks.form.name": "Name",
   "settings.privateLinks.form.name.placeholder": "my-production-link",
   "settings.privateLinks.form.name.invalid": "Lowercase letters, numbers, and hyphens only (max 63 characters)",
