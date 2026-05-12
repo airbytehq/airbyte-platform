@@ -108,4 +108,56 @@ class ShopifyOAuthFlowTest {
     // .airbyte.dev is treated as internal (like .airbyte.com)
     Assertions.assertEquals("https://apps.shopify.com/airbyte", url)
   }
+
+  // ==================== Public API Callback → Preflight URL with apiCallback ====================
+
+  @Test
+  fun testFormatConsentUrl_publicApiCallback_returnsPreflightWithApiCallback() {
+    val apiCallbackUrl = "https://api.airbyte.com/v1/oauth/callback"
+    val url = callFormatConsentUrl(apiCallbackUrl)
+
+    // Should return the preflight URL, NOT the App Store URL
+    Assertions.assertTrue(
+      url.startsWith("https://cloud.airbyte.com/partner/v1/shopify/oauth/preflight"),
+      "Expected preflight URL but got: $url",
+    )
+    // Should contain apiCallback parameter pointing to the public API callback
+    Assertions.assertTrue(
+      url.contains("apiCallback="),
+      "Expected apiCallback parameter in URL: $url",
+    )
+    // Should contain the encoded API callback URL
+    Assertions.assertTrue(
+      url.contains("api.airbyte.com"),
+      "Expected api.airbyte.com in apiCallback: $url",
+    )
+    // Should NOT be the App Store URL
+    Assertions.assertFalse(
+      url.contains("apps.shopify.com"),
+      "Should NOT return App Store URL for public API callback: $url",
+    )
+  }
+
+  @Test
+  fun testFormatConsentUrl_publicApiCallback_stagingApi() {
+    val url = callFormatConsentUrl("https://api.staging.airbyte.com/v1/oauth/callback")
+
+    // Should also trigger public API flow (contains /v1/oauth/callback)
+    Assertions.assertTrue(
+      url.startsWith("https://cloud.airbyte.com/partner/v1/shopify/oauth/preflight"),
+      "Expected preflight URL for staging API but got: $url",
+    )
+    Assertions.assertTrue(url.contains("apiCallback="))
+  }
+
+  @Test
+  fun testFormatConsentUrl_publicApiCallback_originIsCloudAirbyte() {
+    val url = callFormatConsentUrl("https://api.airbyte.com/v1/oauth/callback")
+
+    // origin should be cloud.airbyte.com (for Shopify host matching)
+    Assertions.assertTrue(
+      url.contains("origin=https"),
+      "Expected origin parameter in URL: $url",
+    )
+  }
 }

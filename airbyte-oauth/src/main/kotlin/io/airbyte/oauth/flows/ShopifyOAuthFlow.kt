@@ -36,6 +36,18 @@ class ShopifyOAuthFlow(
       val redirectUri = URI.create(redirectUrl)
       val redirectHost = redirectUri.host?.lowercase() ?: ""
 
+      if (isPublicApiCallback(redirectUrl)) {
+        val builder =
+          URIBuilder()
+            .setScheme("https")
+            .setHost("cloud.airbyte.com")
+            .setPath("partner/v1/shopify/oauth/preflight")
+            .addParameter("origin", "https://cloud.airbyte.com")
+            .addParameter("apiCallback", redirectUrl)
+
+        return builder.build().toString()
+      }
+
       if (isExternalOrigin(redirectHost)) {
         val origin = "${redirectUri.scheme}://${redirectUri.host}"
         val builder =
@@ -59,6 +71,8 @@ class ShopifyOAuthFlow(
       throw IOException("Failed to format Consent URL for OAuth flow", e)
     }
   }
+
+  private fun isPublicApiCallback(redirectUrl: String): Boolean = redirectUrl.contains("/v1/oauth/callback")
 
   private fun isExternalOrigin(host: String): Boolean =
     host != "cloud.airbyte.com" &&

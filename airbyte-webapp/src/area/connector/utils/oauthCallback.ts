@@ -22,7 +22,11 @@ const customerRedirectUrl = extractCustomerRedirectUrl(query.state || null);
 // If there's a customer redirect URL, redirect to it with the OAuth params
 // This handles cross-origin OAuth flows (e.g., Shopify OAuth)
 if (customerRedirectUrl) {
-  const redirectUrl = new URL("/auth_flow", customerRedirectUrl);
+  // If the redirect URL has a specific path (e.g., /v1/oauth/callback for the public API),
+  // use it directly. Otherwise (cross-origin host like app.airbyte.ai), append /auth_flow.
+  const parsed = new URL(customerRedirectUrl);
+  const redirectUrl =
+    parsed.pathname !== "/" ? new URL(customerRedirectUrl) : new URL("/auth_flow", customerRedirectUrl);
   // Forward all query params except state (we'll send a cleaned state)
   for (const [key, value] of Object.entries(query)) {
     if (key === "state") {
