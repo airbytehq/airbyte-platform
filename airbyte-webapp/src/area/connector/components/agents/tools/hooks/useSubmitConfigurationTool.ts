@@ -23,14 +23,16 @@ export const useSubmitConfigurationTool = ({
   return useMemo(
     () => ({
       toolName: TOOL_NAMES.SUBMIT_CONFIGURATION,
-      execute: (_args: unknown) => {
-        // Get the current form values at execution time
+      execute: (args: unknown) => {
+        const { name: agentName } = (args ?? {}) as { name?: string };
         const formValues = getFormValues();
 
         if (formValues.connectionConfiguration && onSubmitSourceStep) {
-          // Use form values directly - they contain actual secrets
+          // Prefer the name supplied by the agent so the user's chosen name
+          // from the chat is applied. Fall back to the form value if the agent
+          // did not provide one.
           const sourceValues = {
-            name: formValues.name,
+            name: agentName?.trim() || formValues.name,
             serviceType: actorDefinitionId!,
             connectionConfiguration: formValues.connectionConfiguration as Record<string, unknown>,
           };
