@@ -22,6 +22,32 @@ enum class PrivateLinkStatus {
   DELETED,
 }
 
+enum class PrivateLinkServiceType {
+  ENDPOINT,
+  STORAGE,
+}
+
+sealed interface PrivateLinkServiceConfig {
+  val serviceType: PrivateLinkServiceType
+  val name: String
+  val region: String
+
+  data class Endpoint(
+    override val name: String,
+    override val region: String,
+  ) : PrivateLinkServiceConfig {
+    override val serviceType = PrivateLinkServiceType.ENDPOINT
+  }
+
+  data class Storage(
+    override val region: String,
+    val bucket: String? = null,
+  ) : PrivateLinkServiceConfig {
+    override val serviceType = PrivateLinkServiceType.STORAGE
+    override val name: String = "com.amazonaws.$region.s3"
+  }
+}
+
 data class PrivateLink(
   val id: UUID? = null,
   val workspaceId: UUID,
@@ -30,6 +56,8 @@ data class PrivateLink(
   val status: PrivateLinkStatus,
   val serviceRegion: String,
   val serviceName: String,
+  val serviceType: PrivateLinkServiceType,
+  val serviceConfig: PrivateLinkServiceConfig,
   val endpointId: String? = null,
   val dnsName: String? = null,
   val scopedConfigurationId: UUID? = null,

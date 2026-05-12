@@ -4,6 +4,7 @@
 
 package io.airbyte.data.repositories.entities
 
+import io.airbyte.db.instance.configs.jooq.generated.enums.PrivateLinkServiceType
 import io.airbyte.db.instance.configs.jooq.generated.enums.PrivateLinkStatus
 import io.micronaut.data.annotation.AutoPopulated
 import io.micronaut.data.annotation.DateCreated
@@ -27,6 +28,10 @@ data class PrivateLink(
   var status: PrivateLinkStatus,
   var serviceRegion: String,
   var serviceName: String,
+  @field:TypeDef(type = DataType.OBJECT)
+  var serviceType: PrivateLinkServiceType = PrivateLinkServiceType.endpoint,
+  @field:TypeDef(type = DataType.JSON)
+  var serviceConfig: String = "{}",
   var endpointId: String? = null,
   var dnsName: String? = null,
   var scopedConfigurationId: UUID? = null,

@@ -9,6 +9,7 @@ import io.airbyte.data.services.impls.data.mappers.toDomainModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.data.services.impls.data.mappers.toEntityEnum
 import io.airbyte.domain.models.PrivateLink
+import io.airbyte.domain.models.PrivateLinkServiceConfig
 import io.airbyte.domain.models.PrivateLinkStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -24,8 +25,7 @@ class PrivateLinkService(
     workspaceId: UUID,
     dataplaneGroupId: UUID,
     name: String,
-    serviceRegion: String,
-    serviceName: String,
+    serviceConfig: PrivateLinkServiceConfig,
   ): PrivateLink {
     val privateLink =
       PrivateLink(
@@ -33,8 +33,10 @@ class PrivateLinkService(
         dataplaneGroupId = dataplaneGroupId,
         name = name,
         status = PrivateLinkStatus.CREATING,
-        serviceRegion = serviceRegion,
-        serviceName = serviceName,
+        serviceRegion = serviceConfig.region,
+        serviceName = serviceConfig.name,
+        serviceType = serviceConfig.serviceType,
+        serviceConfig = serviceConfig,
       )
 
     val savedEntity = repository.save(privateLink.toEntity())
