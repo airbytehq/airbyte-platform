@@ -122,9 +122,9 @@ class AccessTokenInterceptor(
     }
     val resp = chain.proceed(builder.build())
 
-    // If the request failed with http 403 forbidden, then the current token is invalid
-    // and should be cleared. The caller is expected to retry.
-    if (resp.code == 403) {
+    // If the request failed with HTTP 401 Unauthorized or 403 Forbidden, the current token is
+    // invalid and should be cleared. The caller is expected to retry.
+    if (resp.code == 401 || resp.code == 403) {
       synchronized(this) {
         this.cachedToken = null
       }
