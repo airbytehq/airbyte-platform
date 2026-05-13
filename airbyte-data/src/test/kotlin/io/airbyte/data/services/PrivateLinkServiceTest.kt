@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test
 import java.util.Optional
 import java.util.UUID
 import io.airbyte.data.repositories.entities.PrivateLink as EntityPrivateLink
-import io.airbyte.db.instance.configs.jooq.generated.enums.PrivateLinkServiceType as EntityPrivateLinkServiceType
 import io.airbyte.db.instance.configs.jooq.generated.enums.PrivateLinkStatus as EntityPrivateLinkStatus
 
 class PrivateLinkServiceTest {
@@ -35,8 +34,7 @@ class PrivateLinkServiceTest {
     status = status,
     serviceRegion = "us-east-1",
     serviceName = "com.amazonaws.vpce.us-east-1.vpce-svc-test",
-    serviceType = EntityPrivateLinkServiceType.endpoint,
-    serviceConfig = """{"version":1,"name":"com.amazonaws.vpce.us-east-1.vpce-svc-test","region":"us-east-1"}""",
+    serviceConfig = """{"type":"endpoint","name":"com.amazonaws.vpce.us-east-1.vpce-svc-test","region":"us-east-1"}""",
   )
 
   @Test

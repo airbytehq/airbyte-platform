@@ -4,6 +4,9 @@
 
 package io.airbyte.domain.models
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -27,8 +30,24 @@ enum class PrivateLinkServiceType {
   STORAGE,
 }
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes(
+  JsonSubTypes.Type(value = PrivateLinkServiceConfig.Endpoint::class, name = "endpoint"),
+  JsonSubTypes.Type(value = PrivateLinkServiceConfig.Storage::class, name = "storage"),
+)
 sealed interface PrivateLinkServiceConfig {
-  val serviceType: PrivateLinkServiceType
+  // Kotlin-side mirror of the JSONB `type` discriminator. Jackson writes the
+  // discriminator via the @JsonTypeInfo annotation; this property is JsonIgnored
+  // so it isn't also serialized as a regular field.
+  @get:JsonIgnore
+  val type: PrivateLinkServiceType
+
+  // Shape generation stamp. Matches V2_1_0_024__AddServiceTypeAndServiceConfigToPrivateLink's
+  // backfill: every JSONB blob carries `version`, letting readers tell shape generations apart
+  // (rolling deploys, DB restores). Bump when the JSONB schema changes incompatibly.
+  val version: Int
+    get() = 1
+
   val name: String
   val region: String
 
@@ -36,14 +55,16 @@ sealed interface PrivateLinkServiceConfig {
     override val name: String,
     override val region: String,
   ) : PrivateLinkServiceConfig {
-    override val serviceType = PrivateLinkServiceType.ENDPOINT
+    @get:JsonIgnore
+    override val type = PrivateLinkServiceType.ENDPOINT
   }
 
   data class Storage(
     override val region: String,
     val bucket: String? = null,
   ) : PrivateLinkServiceConfig {
-    override val serviceType = PrivateLinkServiceType.STORAGE
+    @get:JsonIgnore
+    override val type = PrivateLinkServiceType.STORAGE
     override val name: String = "com.amazonaws.$region.s3"
   }
 }

@@ -35,7 +35,7 @@ class PrivateLinkService(
         status = PrivateLinkStatus.CREATING,
         serviceRegion = serviceConfig.region,
         serviceName = serviceConfig.name,
-        serviceType = serviceConfig.serviceType,
+        serviceType = serviceConfig.type,
         serviceConfig = serviceConfig,
       )
 
