@@ -9,6 +9,7 @@ import { LicenseBanner } from "components/ui/LicenseBanner/LicenseBanner";
 import { SideBar } from "area/layout/SideBar";
 import { StatusBanner } from "cloud/area/billing/components/StatusBanner";
 import { useTrialEndedModal } from "cloud/area/billing/utils/useTrialEndedModal";
+import { AdpOrganizationAccessGuard } from "cloud/components/AdpOrganizationAccessGuard";
 import { AdpOrganizationBanner } from "cloud/components/AdpOrganizationBanner";
 import { usePrefetchOrganizationSummaries } from "core/api/";
 import { DefaultErrorBoundary, ForbiddenErrorBoundary } from "core/errors";
@@ -35,7 +36,13 @@ const MainLayout: React.FC<React.PropsWithChildren> = () => {
           <div className={styles.content}>
             <DefaultErrorBoundary>
               <React.Suspense fallback={<LoadingPage />}>
-                <Outlet />
+                {isCloudApp ? (
+                  <AdpOrganizationAccessGuard>
+                    <Outlet />
+                  </AdpOrganizationAccessGuard>
+                ) : (
+                  <Outlet />
+                )}
               </React.Suspense>
             </DefaultErrorBoundary>
           </div>
