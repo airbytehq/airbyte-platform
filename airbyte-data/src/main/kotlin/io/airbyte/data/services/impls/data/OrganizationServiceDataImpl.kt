@@ -64,11 +64,9 @@ class OrganizationServiceDataImpl(
           includeDeleted,
         ).map { it.toConfigModel() }
     } else {
-      // For regular users, use the existing logic with permission checks. Agentic
-      // (ADP-managed) organizations are excluded at the SQL layer so they stay hidden
-      // from Data Replication.
+      // For regular users, use the existing logic with permission checks
       organizationRepository
-        .findNonAgenticByUserIdWithSsoRealm(
+        .findByUserIdWithSsoRealm(
           userId,
           keyword.orElse(null),
           includeDeleted,
@@ -89,11 +87,9 @@ class OrganizationServiceDataImpl(
           query.rowOffset,
         ).map { it.toConfigModel() }
     } else {
-      // For regular users, use the existing logic with permission checks. Agentic
-      // (ADP-managed) organizations are excluded at the SQL layer so LIMIT/OFFSET
-      // pagination stays accurate for infinite-scroll consumers.
+      // For regular users, use the existing logic with permission checks
       organizationRepository
-        .findNonAgenticByUserIdPaginatedWithSsoRealm(
+        .findByUserIdPaginatedWithSsoRealm(
           query.userId,
           keyword.orElse(null),
           query.includeDeleted,

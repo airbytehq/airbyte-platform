@@ -248,7 +248,7 @@ class OrganizationServiceDataImplTest {
       )
 
     every { permissionRepository.isInstanceAdmin(USER_ID) } returns false
-    every { organizationRepository.findNonAgenticByUserIdWithSsoRealm(USER_ID, "test", includeDeleted) } returns listOf(organizationWithSsoRealm)
+    every { organizationRepository.findByUserIdWithSsoRealm(USER_ID, "test", includeDeleted) } returns listOf(organizationWithSsoRealm)
 
     val result = organizationServiceDataImpl.listOrganizationsByUserId(USER_ID, keyword, includeDeleted)
 
@@ -263,7 +263,7 @@ class OrganizationServiceDataImplTest {
     val includeDeleted = false
 
     every { permissionRepository.isInstanceAdmin(USER_ID) } returns false
-    every { organizationRepository.findNonAgenticByUserIdWithSsoRealm(USER_ID, null, includeDeleted) } returns emptyList()
+    every { organizationRepository.findByUserIdWithSsoRealm(USER_ID, null, includeDeleted) } returns emptyList()
 
     val result = organizationServiceDataImpl.listOrganizationsByUserId(USER_ID, keyword, includeDeleted)
 
@@ -287,8 +287,7 @@ class OrganizationServiceDataImplTest {
       )
 
     every { permissionRepository.isInstanceAdmin(USER_ID) } returns false
-    every { organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(USER_ID, "test", false, 10, 0) } returns
-      listOf(organizationWithSsoRealm)
+    every { organizationRepository.findByUserIdPaginatedWithSsoRealm(USER_ID, "test", false, 10, 0) } returns listOf(organizationWithSsoRealm)
 
     val result = organizationServiceDataImpl.listOrganizationsByUserIdPaginated(query, keyword)
 
@@ -303,7 +302,7 @@ class OrganizationServiceDataImplTest {
     val keyword = Optional.empty<String>()
 
     every { permissionRepository.isInstanceAdmin(USER_ID) } returns false
-    every { organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(USER_ID, null, true, 5, 10) } returns emptyList()
+    every { organizationRepository.findByUserIdPaginatedWithSsoRealm(USER_ID, null, true, 5, 10) } returns emptyList()
 
     val result = organizationServiceDataImpl.listOrganizationsByUserIdPaginated(query, keyword)
 
@@ -334,7 +333,7 @@ class OrganizationServiceDataImplTest {
     assertEquals(1, result.size)
     assertEquals(ORGANIZATION_WITH_ID.name, result[0].name)
     assertEquals(SSO_REALM, result[0].ssoRealm)
-    verify(exactly = 0) { organizationRepository.findNonAgenticByUserIdWithSsoRealm(any(), any(), any()) }
+    verify(exactly = 0) { organizationRepository.findByUserIdWithSsoRealm(any(), any(), any()) }
   }
 
   @Test
@@ -361,6 +360,6 @@ class OrganizationServiceDataImplTest {
     assertEquals(1, result.size)
     assertEquals(ORGANIZATION_WITH_ID.name, result[0].name)
     assertEquals(SSO_REALM, result[0].ssoRealm)
-    verify(exactly = 0) { organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(any(), any(), any(), any(), any()) }
+    verify(exactly = 0) { organizationRepository.findByUserIdPaginatedWithSsoRealm(any(), any(), any(), any(), any()) }
   }
 }

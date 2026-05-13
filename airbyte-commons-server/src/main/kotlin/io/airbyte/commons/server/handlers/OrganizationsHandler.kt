@@ -230,21 +230,8 @@ open class OrganizationsHandler(
         .map { it.organizationId }
         .toSet()
 
-    // The workspace fallback can pull in agentic (ADP-managed) orgs that the initial
-    // listOrganizationsByUser call deliberately filtered out. Skip them here for non-instance-admins
-    // so they never re-enter orgListResp — keeps the SQL-level page-size contract intact, since
-    // post-fetch filtering would shrink page sizes below pageSize and break the infinite-scroll
-    // end-of-list heuristic.
-    val isInstanceAdmin =
-      permissionService
-        .getPermissionsForUser(request.userId)
-        .any { it.permissionType == Permission.PermissionType.INSTANCE_ADMIN }
-
     for (orgId in orgIdsToRetrieve) {
       val retrieved = this.getOrganization(OrganizationIdRequestBody().organizationId(orgId))
-      if (retrieved.isAgentic == true && !isInstanceAdmin) {
-        continue
-      }
       orgListResp.addOrganizationsItem(retrieved)
     }
 
