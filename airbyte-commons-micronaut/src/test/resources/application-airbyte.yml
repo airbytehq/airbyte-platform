@@ -1,6 +1,7 @@
 airbyte:
   acceptance-test-enabled: true
   airbyte-url: "http://some-url"
+  airbyte-agents-url: "http://some-agents-url"
   deployment-environment: "test"
   license-key: "test-license-key"
   edition: "enterprise"

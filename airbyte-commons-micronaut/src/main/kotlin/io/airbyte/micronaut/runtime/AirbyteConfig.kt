@@ -380,6 +380,7 @@ data class AirbyteCloudPubSubConfig(
 data class AirbyteConfig(
   val acceptanceTestEnabled: Boolean = false,
   val airbyteUrl: String = "",
+  val airbyteAgentsUrl: String = "",
   val deploymentEnvironment: String = DEFAULT_AIRBYTE_DEPLOYMENT_ENVIRONMENT,
   val installationId: UUID? = null, // Used to track abctl installations and defined/set by abctl
   val licenseKey: String = "",
@@ -752,7 +753,18 @@ data class AirbyteNotificationConfig(
   @ConfigurationProperties("customerio")
   data class AirbyteNotificationCustomerIoConfig(
     val apiKey: String = "",
-  )
+    val transactional: AirbyteNotificationCustomerIoTransactionalConfig = AirbyteNotificationCustomerIoTransactionalConfig(),
+  ) {
+    /**
+     * Optional Customer.io transactional message IDs used when sending invitations for agentic
+     * organizations (Airbyte Agents). When empty, [CustomerIoEmailNotificationSender] falls back
+     * to the non-agentic (Cloud) template IDs so existing behavior is unchanged.
+     */
+    @ConfigurationProperties("transactional")
+    data class AirbyteNotificationCustomerIoTransactionalConfig(
+      val inviteUserAgenticId: String = "",
+    )
+  }
 }
 
 @ConfigurationProperties(OPENAI_PREFIX)

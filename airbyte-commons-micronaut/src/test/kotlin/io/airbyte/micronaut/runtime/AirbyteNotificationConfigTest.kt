@@ -18,6 +18,7 @@ internal class AirbyteNotificationConfigDefaultTest {
   @Test
   fun testLoadingValuesFromConfig() {
     assertEquals("", arbyteNotificationConfig.customerIo.apiKey)
+    assertEquals("", arbyteNotificationConfig.customerIo.transactional.inviteUserAgenticId)
   }
 }
 
@@ -29,5 +30,6 @@ internal class AirbyteNotificationrConfigOverridesTest {
   @Test
   fun testLoadingValuesFromConfig() {
     assertEquals("test-api-key", arbyteNotificationConfig.customerIo.apiKey)
+    assertEquals("test-invite-user-agentic-id", arbyteNotificationConfig.customerIo.transactional.inviteUserAgenticId)
   }
 }

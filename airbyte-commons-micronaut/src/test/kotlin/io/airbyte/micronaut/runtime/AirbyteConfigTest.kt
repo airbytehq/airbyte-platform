@@ -20,6 +20,7 @@ internal class AirbyteConfigDefaultTest {
   fun testLoadingValuesFromConfig() {
     assertEquals(false, airbyteConfig.acceptanceTestEnabled)
     assertEquals("", airbyteConfig.airbyteUrl)
+    assertEquals("", airbyteConfig.airbyteAgentsUrl)
     assertEquals(DEFAULT_AIRBYTE_DEPLOYMENT_ENVIRONMENT, airbyteConfig.deploymentEnvironment)
     assertEquals("", airbyteConfig.licenseKey)
     assertEquals(Configs.AirbyteEdition.COMMUNITY, airbyteConfig.edition)
@@ -39,6 +40,7 @@ internal class AirbyteConfigTest {
   fun testLoadingValuesFromConfig() {
     assertEquals(true, airbyteConfig.acceptanceTestEnabled)
     assertEquals("http://some-url", airbyteConfig.airbyteUrl)
+    assertEquals("http://some-agents-url", airbyteConfig.airbyteAgentsUrl)
     assertEquals("test", airbyteConfig.deploymentEnvironment)
     assertEquals("test-license-key", airbyteConfig.licenseKey)
     assertEquals(Configs.AirbyteEdition.ENTERPRISE, airbyteConfig.edition)

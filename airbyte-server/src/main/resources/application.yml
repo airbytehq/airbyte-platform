@@ -139,6 +139,7 @@ micronaut:
 
 airbyte:
   airbyte-url: ${AIRBYTE_URL:}
+  airbyte-agents-url: ${AIRBYTE_AGENTS_URL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   license-key: ${AIRBYTE_LICENSE_KEY:}
   shutdown:
@@ -146,6 +147,10 @@ airbyte:
   notification:
     customerio:
       api-key: ${CUSTOMERIO_API_KEY:}
+      transactional:
+        # Cloned Customer.io transactional message ID for agentic-org (Airbyte Agents)
+        # new-user invites. Leave unset to fall back to the hardcoded agentic template (36).
+        invite-user-agentic-id: ${CUSTOMERIO_INVITE_USER_AGENTIC_ID:}
   auth:
     token-expiration:
       application-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_APPLICATION:15}

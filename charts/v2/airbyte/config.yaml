@@ -19,6 +19,14 @@ common:
       key: airbyteUrl
       defaultValue: http://localhost:8080
 
+    # Webapp host for agentic-org invitations (e.g. https://app.airbyte.ai).
+    # Intentionally NOT defaulted: when empty, WebUrlHelper falls back to airbyteUrl so
+    # OSS and local dev don't accidentally route agentic invite links to the prod
+    # Agents webapp. Real value is set per-cluster in deploy/envs/*/values.yaml.
+    - env: AIRBYTE_AGENTS_URL
+      key: airbyteAgentsUrl
+      defaultValue: ""
+
     - env: AIRBYTE_API_HOST
       key: api.host
       defaultValueExp: (ternary (printf "http://localhost:%d/api/public" (int .Values.server.service.port)) (printf "%s/api/public" .Values.global.airbyteUrl) (eq .Values.global.edition "community"))

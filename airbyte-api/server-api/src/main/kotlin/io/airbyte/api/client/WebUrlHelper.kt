@@ -24,6 +24,16 @@ class WebUrlHelper(
   val baseUrl: String = airbyteConfig.airbyteUrl.trimEnd('/')
 
   /**
+   * Base URL for agentic-organization-facing surfaces (e.g. Airbyte Agents at app.airbyte.ai).
+   * Falls back to [baseUrl] when [AirbyteConfig.airbyteAgentsUrl] is unset so that OSS and local
+   * deployments keep working without an extra env var.
+   */
+  val agentsBaseUrl: String =
+    airbyteConfig.airbyteAgentsUrl
+      .trimEnd('/')
+      .ifEmpty { baseUrl }
+
+  /**
    * Get the url for a workspace.
    *
    * @param workspaceId workspace id

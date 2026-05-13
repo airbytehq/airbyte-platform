@@ -31,6 +31,10 @@ global:
   # -- The URL where Airbyte will be reached; This should match your Ingress host
   airbyteUrl: ""
 
+  # -- Optional URL for the Airbyte Agents web app (e.g. https://app.airbyte.ai). Used to build
+  # accept-invite links for organizations flagged isAgentic. Falls back to airbyteUrl when empty.
+  airbyteAgentsUrl: ""
+
   # Docker image config that will apply to all images.
   image:
     # Docker registry to pull platform images from, e.g. http://my-registry:8000/

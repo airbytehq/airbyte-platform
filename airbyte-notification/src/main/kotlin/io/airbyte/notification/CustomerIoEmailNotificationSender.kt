@@ -88,15 +88,25 @@ open class CustomerIoEmailNotificationSender(
     config: CustomerIoEmailConfig,
     inviterUserName: String?,
     inviteUrl: String?,
+    organizationName: String?,
+    isAgentic: Boolean = false,
   ) {
+    val transactionalMessageId =
+      if (isAgentic) {
+        airbyteNotificationConfig.customerIo.transactional.inviteUserAgenticId
+          .ifEmpty { INVITE_USER_AGENTIC_TRANSACTION_MESSAGE_ID }
+      } else {
+        INVITE_USER_TRANSACTION_MESSAGE_ID
+      }
     val costumerIoPayload =
       renderTemplate(
         INVITE_USER_TEMPLATE,
-        INVITE_USER_TRANSACTION_MESSAGE_ID, // to_email=
+        transactionalMessageId, // to_email=
         config.to, // identifier_email=
         config.to, // name=
         inviterUserName!!, // invite_url=
-        inviteUrl!!,
+        inviteUrl!!, // organization_name=
+        organizationName.orEmpty(),
       )
     callCustomerIoSendNotification(costumerIoPayload, null)
   }
@@ -248,5 +258,9 @@ open class CustomerIoEmailNotificationSender(
     private const val INVITATION_EXISTING_USER_TRANSACTION_MESSAGE_ID = "12"
     private const val INVITATION_RESEND_TRANSACTION_MESSAGE_ID = "17"
     private const val INVITE_USER_TRANSACTION_MESSAGE_ID = "28"
+
+    // Agentic clone of INVITE_USER_TRANSACTION_MESSAGE_ID used for Airbyte Agents organizations
+    // (Organization.isAgentic = true). Overridable via CUSTOMERIO_INVITE_USER_AGENTIC_ID.
+    private const val INVITE_USER_AGENTIC_TRANSACTION_MESSAGE_ID = "36"
   }
 }
