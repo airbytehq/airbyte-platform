@@ -554,8 +554,6 @@ create table "public"."private_link" (
   "dataplane_group_id" uuid not null,
   "name" varchar(63) not null,
   "status" "public"."private_link_status" not null default cast('creating' as private_link_status),
-  "service_region" varchar(64) not null,
-  "service_name" varchar(512) not null,
   "endpoint_id" varchar(512),
   "dns_name" varchar(512),
   "scoped_configuration_id" uuid,

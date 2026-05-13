@@ -75,8 +75,6 @@ data class PrivateLink(
   val dataplaneGroupId: UUID,
   val name: String,
   val status: PrivateLinkStatus,
-  val serviceRegion: String,
-  val serviceName: String,
   val serviceType: PrivateLinkServiceType,
   val serviceConfig: PrivateLinkServiceConfig,
   val endpointId: String? = null,

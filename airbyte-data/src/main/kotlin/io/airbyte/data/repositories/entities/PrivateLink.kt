@@ -25,8 +25,6 @@ data class PrivateLink(
   var name: String,
   @field:TypeDef(type = DataType.OBJECT)
   var status: PrivateLinkStatus,
-  var serviceRegion: String,
-  var serviceName: String,
   @field:TypeDef(type = DataType.JSON)
   var serviceConfig: String = "{}",
   var endpointId: String? = null,

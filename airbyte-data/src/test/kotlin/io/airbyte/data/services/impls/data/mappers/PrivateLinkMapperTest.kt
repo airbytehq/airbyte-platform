@@ -28,8 +28,6 @@ class PrivateLinkMapperTest {
         dataplaneGroupId = dataplaneGroupId,
         name = "endpoint-link",
         status = PrivateLinkStatus.AVAILABLE,
-        serviceRegion = "us-east-1",
-        serviceName = "com.amazonaws.vpce.us-east-1.vpce-svc-abc",
         serviceType = PrivateLinkServiceType.ENDPOINT,
         serviceConfig =
           PrivateLinkServiceConfig.Endpoint(
@@ -51,8 +49,6 @@ class PrivateLinkMapperTest {
         dataplaneGroupId = dataplaneGroupId,
         name = "storage-link",
         status = PrivateLinkStatus.CREATING,
-        serviceRegion = "us-east-1",
-        serviceName = "ignored-for-storage",
         serviceType = PrivateLinkServiceType.STORAGE,
         serviceConfig =
           PrivateLinkServiceConfig.Storage(
@@ -75,8 +71,6 @@ class PrivateLinkMapperTest {
         dataplaneGroupId = dataplaneGroupId,
         name = "storage-link",
         status = PrivateLinkStatus.CREATING,
-        serviceRegion = "us-east-1",
-        serviceName = "ignored-for-storage",
         serviceType = PrivateLinkServiceType.STORAGE,
         serviceConfig = PrivateLinkServiceConfig.Storage(region = "us-east-2", bucket = null),
       )
@@ -95,8 +89,6 @@ class PrivateLinkMapperTest {
         dataplaneGroupId = dataplaneGroupId,
         name = "endpoint-link",
         status = EntityPrivateLinkStatus.available,
-        serviceRegion = "us-east-1",
-        serviceName = "com.amazonaws.vpce.us-east-1.vpce-svc-legacy",
         serviceConfig =
           """{"type":"endpoint","name":"com.amazonaws.vpce.us-east-1.vpce-svc-legacy","region":"us-east-1"}""",
       )
@@ -117,8 +109,6 @@ class PrivateLinkMapperTest {
         dataplaneGroupId = dataplaneGroupId,
         name = "storage-link",
         status = EntityPrivateLinkStatus.available,
-        serviceRegion = "us-east-2",
-        serviceName = "com.amazonaws.us-east-2.s3",
         serviceConfig =
           """{"type":"storage","region":"us-east-2","bucket":"my-bucket"}""",
       )
@@ -139,8 +129,6 @@ class PrivateLinkMapperTest {
         dataplaneGroupId = dataplaneGroupId,
         name = "backfilled-link",
         status = EntityPrivateLinkStatus.available,
-        serviceRegion = "us-east-1",
-        serviceName = "com.amazonaws.vpce.us-east-1.vpce-svc-legacy",
         serviceConfig =
           """{"type":"endpoint","version":1,"name":"com.amazonaws.vpce.us-east-1.vpce-svc-legacy","region":"us-east-1"}""",
       )
@@ -160,8 +148,6 @@ class PrivateLinkMapperTest {
         dataplaneGroupId = dataplaneGroupId,
         name = "endpoint-link",
         status = PrivateLinkStatus.CREATING,
-        serviceRegion = "us-west-2",
-        serviceName = "com.amazonaws.vpce.us-west-2.vpce-svc-xyz",
         serviceType = PrivateLinkServiceType.ENDPOINT,
         serviceConfig =
           PrivateLinkServiceConfig.Endpoint(
@@ -186,8 +172,6 @@ class PrivateLinkMapperTest {
         dataplaneGroupId = dataplaneGroupId,
         name = "storage-link",
         status = PrivateLinkStatus.CREATING,
-        serviceRegion = "us-east-1",
-        serviceName = "ignored",
         serviceType = PrivateLinkServiceType.STORAGE,
         serviceConfig = PrivateLinkServiceConfig.Storage(region = "us-east-2", bucket = "my-bucket"),
       )

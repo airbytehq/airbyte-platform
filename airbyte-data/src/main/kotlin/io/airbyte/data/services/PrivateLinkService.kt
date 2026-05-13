@@ -33,8 +33,6 @@ class PrivateLinkService(
         dataplaneGroupId = dataplaneGroupId,
         name = name,
         status = PrivateLinkStatus.CREATING,
-        serviceRegion = serviceConfig.region,
-        serviceName = serviceConfig.name,
         serviceType = serviceConfig.type,
         serviceConfig = serviceConfig,
       )

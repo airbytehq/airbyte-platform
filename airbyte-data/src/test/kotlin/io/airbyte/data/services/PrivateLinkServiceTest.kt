@@ -32,9 +32,7 @@ class PrivateLinkServiceTest {
     dataplaneGroupId = dataplaneGroupId,
     name = name,
     status = status,
-    serviceRegion = "us-east-1",
-    serviceName = "com.amazonaws.vpce.us-east-1.vpce-svc-test",
-    serviceConfig = """{"type":"endpoint","name":"com.amazonaws.vpce.us-east-1.vpce-svc-test","region":"us-east-1"}""",
+    serviceConfig = """{"type":"endpoint","version":1,"name":"com.amazonaws.vpce.us-east-1.vpce-svc-test","region":"us-east-1"}""",
   )
 
   @Test

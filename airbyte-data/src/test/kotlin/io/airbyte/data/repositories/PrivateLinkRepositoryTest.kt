@@ -57,7 +57,6 @@ class PrivateLinkRepositoryTest : AbstractConfigRepositoryTest() {
   private fun createPrivateLink(
     workspaceId: UUID = UUID.randomUUID(),
     name: String = "test-link",
-    serviceName: String = "com.amazonaws.vpce.us-east-1.vpce-svc-test",
   ): PrivateLink =
     privateLinkRepository.save(
       PrivateLink(
@@ -65,8 +64,6 @@ class PrivateLinkRepositoryTest : AbstractConfigRepositoryTest() {
         dataplaneGroupId = dataplaneGroupId,
         name = name,
         status = PrivateLinkStatus.creating,
-        serviceRegion = "us-east-1",
-        serviceName = serviceName,
       ),
     )
 
@@ -82,7 +79,6 @@ class PrivateLinkRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(dataplaneGroupId, retrieved.dataplaneGroupId)
     assertEquals("test-link", retrieved.name)
     assertEquals(PrivateLinkStatus.creating, retrieved.status)
-    assertEquals("us-east-1", retrieved.serviceRegion)
   }
 
   @Test
@@ -98,8 +94,8 @@ class PrivateLinkRepositoryTest : AbstractConfigRepositoryTest() {
     val workspaceId = UUID.randomUUID()
     val otherWorkspaceId = UUID.randomUUID()
 
-    createPrivateLink(workspaceId = workspaceId, name = "test-link-1", serviceName = "com.amazonaws.vpce.us-east-1.vpce-svc-1")
-    createPrivateLink(workspaceId = workspaceId, name = "test-link-2", serviceName = "com.amazonaws.vpce.us-east-1.vpce-svc-2")
+    createPrivateLink(workspaceId = workspaceId, name = "test-link-1")
+    createPrivateLink(workspaceId = workspaceId, name = "test-link-2")
     createPrivateLink(workspaceId = otherWorkspaceId)
 
     val results = privateLinkRepository.findByWorkspaceId(workspaceId)
