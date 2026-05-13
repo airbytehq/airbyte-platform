@@ -65,7 +65,7 @@ class EmbeddedControllerTest {
         organizationsHandler =
           mockk {
             every {
-              listOrganizationsByUser(ListOrganizationsByUserRequestBody())
+              listAllOrganizationsByUser(ListOrganizationsByUserRequestBody())
             } returns
               OrganizationReadList().organizations(
                 mutableListOf(
@@ -174,7 +174,7 @@ class EmbeddedControllerTest {
         organizationsHandler =
           mockk {
             every {
-              listOrganizationsByUser(ListOrganizationsByUserRequestBody())
+              listAllOrganizationsByUser(ListOrganizationsByUserRequestBody())
             } returns
               OrganizationReadList().organizations(
                 mutableListOf(
@@ -576,7 +576,7 @@ class EmbeddedControllerTest {
       },
       mockk {
         every {
-          listOrganizationsByUser(
+          listAllOrganizationsByUser(
             match<ListOrganizationsByUserRequestBody> { it.userId == userId },
           )
         } returns OrganizationReadList().organizations(organizations)

@@ -25,13 +25,45 @@ interface OrganizationService {
 
   fun getOrganizationBySsoConfigRealm(ssoConfigRealm: String): Optional<Organization>
 
+  /**
+   * List organizations accessible to a user, excluding agentic (ADP-managed) organizations
+   * for non-instance-admins. Used by Data Replication org-list paths in the Airbyte Cloud
+   * webapp where ADP-managed orgs must stay hidden.
+   *
+   * Public-API / Embedded-API callers must use [listAllOrganizationsByUserId] instead so
+   * that ADP customers (Sonar etc.) can still see their own agentic orgs.
+   */
   fun listOrganizationsByUserId(
     userId: UUID,
     keyword: Optional<String>,
     includeDeleted: Boolean = false,
   ): List<Organization>
 
+  /**
+   * Paginated variant of [listOrganizationsByUserId]. Same agentic-filter semantics.
+   */
   fun listOrganizationsByUserIdPaginated(
+    query: ResourcesByUserQueryPaginated,
+    keyword: Optional<String>,
+  ): List<Organization>
+
+  /**
+   * List every organization accessible to a user, including agentic (ADP-managed) ones.
+   * Used by the public API and Embedded API paths, where the caller (e.g. Sonar) is itself
+   * the ADP product and must continue to see its own agentic orgs.
+   *
+   * Internal Data Replication callers must use [listOrganizationsByUserId] instead.
+   */
+  fun listAllOrganizationsByUserId(
+    userId: UUID,
+    keyword: Optional<String>,
+    includeDeleted: Boolean = false,
+  ): List<Organization>
+
+  /**
+   * Paginated variant of [listAllOrganizationsByUserId]. Same unfiltered semantics.
+   */
+  fun listAllOrganizationsByUserIdPaginated(
     query: ResourcesByUserQueryPaginated,
     keyword: Optional<String>,
   ): List<Organization>

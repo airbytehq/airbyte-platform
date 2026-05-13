@@ -248,7 +248,7 @@ class OrganizationServiceDataImplTest {
       )
 
     every { permissionRepository.isInstanceAdmin(USER_ID) } returns false
-    every { organizationRepository.findByUserIdWithSsoRealm(USER_ID, "test", includeDeleted) } returns listOf(organizationWithSsoRealm)
+    every { organizationRepository.findNonAgenticByUserIdWithSsoRealm(USER_ID, "test", includeDeleted) } returns listOf(organizationWithSsoRealm)
 
     val result = organizationServiceDataImpl.listOrganizationsByUserId(USER_ID, keyword, includeDeleted)
 
@@ -263,7 +263,7 @@ class OrganizationServiceDataImplTest {
     val includeDeleted = false
 
     every { permissionRepository.isInstanceAdmin(USER_ID) } returns false
-    every { organizationRepository.findByUserIdWithSsoRealm(USER_ID, null, includeDeleted) } returns emptyList()
+    every { organizationRepository.findNonAgenticByUserIdWithSsoRealm(USER_ID, null, includeDeleted) } returns emptyList()
 
     val result = organizationServiceDataImpl.listOrganizationsByUserId(USER_ID, keyword, includeDeleted)
 
@@ -287,7 +287,8 @@ class OrganizationServiceDataImplTest {
       )
 
     every { permissionRepository.isInstanceAdmin(USER_ID) } returns false
-    every { organizationRepository.findByUserIdPaginatedWithSsoRealm(USER_ID, "test", false, 10, 0) } returns listOf(organizationWithSsoRealm)
+    every { organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(USER_ID, "test", false, 10, 0) } returns
+      listOf(organizationWithSsoRealm)
 
     val result = organizationServiceDataImpl.listOrganizationsByUserIdPaginated(query, keyword)
 
@@ -302,7 +303,7 @@ class OrganizationServiceDataImplTest {
     val keyword = Optional.empty<String>()
 
     every { permissionRepository.isInstanceAdmin(USER_ID) } returns false
-    every { organizationRepository.findByUserIdPaginatedWithSsoRealm(USER_ID, null, true, 5, 10) } returns emptyList()
+    every { organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(USER_ID, null, true, 5, 10) } returns emptyList()
 
     val result = organizationServiceDataImpl.listOrganizationsByUserIdPaginated(query, keyword)
 
@@ -333,7 +334,7 @@ class OrganizationServiceDataImplTest {
     assertEquals(1, result.size)
     assertEquals(ORGANIZATION_WITH_ID.name, result[0].name)
     assertEquals(SSO_REALM, result[0].ssoRealm)
-    verify(exactly = 0) { organizationRepository.findByUserIdWithSsoRealm(any(), any(), any()) }
+    verify(exactly = 0) { organizationRepository.findNonAgenticByUserIdWithSsoRealm(any(), any(), any()) }
   }
 
   @Test
@@ -360,6 +361,110 @@ class OrganizationServiceDataImplTest {
     assertEquals(1, result.size)
     assertEquals(ORGANIZATION_WITH_ID.name, result[0].name)
     assertEquals(SSO_REALM, result[0].ssoRealm)
+    verify(exactly = 0) { organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `listAllOrganizationsByUserId returns unfiltered organizations for non-admin`() {
+    val keyword = Optional.of("test")
+    val includeDeleted = false
+    val organizationWithSsoRealm =
+      OrganizationWithSsoRealm(
+        id = ORGANIZATION_ID,
+        name = ORGANIZATION_WITH_ID.name,
+        userId = BASE_ORGANIZATION.userId,
+        email = BASE_ORGANIZATION.email,
+        tombstone = false,
+        createdAt = null,
+        updatedAt = null,
+        keycloakRealm = SSO_REALM,
+      )
+
+    every { permissionRepository.isInstanceAdmin(USER_ID) } returns false
+    every { organizationRepository.findByUserIdWithSsoRealm(USER_ID, "test", includeDeleted) } returns listOf(organizationWithSsoRealm)
+
+    val result = organizationServiceDataImpl.listAllOrganizationsByUserId(USER_ID, keyword, includeDeleted)
+
+    assertEquals(1, result.size)
+    assertEquals(ORGANIZATION_WITH_ID.name, result[0].name)
+    assertEquals(SSO_REALM, result[0].ssoRealm)
+    verify(exactly = 0) { organizationRepository.findNonAgenticByUserIdWithSsoRealm(any(), any(), any()) }
+  }
+
+  @Test
+  fun `listAllOrganizationsByUserId uses optimized query for instance admin`() {
+    val keyword = Optional.empty<String>()
+    val includeDeleted = false
+    val organizationWithSsoRealm =
+      OrganizationWithSsoRealm(
+        id = ORGANIZATION_ID,
+        name = ORGANIZATION_WITH_ID.name,
+        userId = BASE_ORGANIZATION.userId,
+        email = BASE_ORGANIZATION.email,
+        tombstone = false,
+        createdAt = null,
+        updatedAt = null,
+        keycloakRealm = SSO_REALM,
+      )
+
+    every { permissionRepository.isInstanceAdmin(USER_ID) } returns true
+    every { organizationRepository.findAllWithSsoRealm(null, includeDeleted) } returns listOf(organizationWithSsoRealm)
+
+    val result = organizationServiceDataImpl.listAllOrganizationsByUserId(USER_ID, keyword, includeDeleted)
+
+    assertEquals(1, result.size)
+    verify(exactly = 0) { organizationRepository.findByUserIdWithSsoRealm(any(), any(), any()) }
+    verify(exactly = 0) { organizationRepository.findNonAgenticByUserIdWithSsoRealm(any(), any(), any()) }
+  }
+
+  @Test
+  fun `listAllOrganizationsByUserIdPaginated returns unfiltered paginated organizations for non-admin`() {
+    val query = ResourcesByUserQueryPaginated(USER_ID, false, 10, 0)
+    val keyword = Optional.of("test")
+    val organizationWithSsoRealm =
+      OrganizationWithSsoRealm(
+        id = ORGANIZATION_ID,
+        name = ORGANIZATION_WITH_ID.name,
+        userId = BASE_ORGANIZATION.userId,
+        email = BASE_ORGANIZATION.email,
+        tombstone = false,
+        createdAt = null,
+        updatedAt = null,
+        keycloakRealm = SSO_REALM,
+      )
+
+    every { permissionRepository.isInstanceAdmin(USER_ID) } returns false
+    every { organizationRepository.findByUserIdPaginatedWithSsoRealm(USER_ID, "test", false, 10, 0) } returns listOf(organizationWithSsoRealm)
+
+    val result = organizationServiceDataImpl.listAllOrganizationsByUserIdPaginated(query, keyword)
+
+    assertEquals(1, result.size)
+    verify(exactly = 0) { organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `listAllOrganizationsByUserIdPaginated uses optimized query for instance admin`() {
+    val query = ResourcesByUserQueryPaginated(USER_ID, true, 5, 10)
+    val keyword = Optional.empty<String>()
+    val organizationWithSsoRealm =
+      OrganizationWithSsoRealm(
+        id = ORGANIZATION_ID,
+        name = ORGANIZATION_WITH_ID.name,
+        userId = BASE_ORGANIZATION.userId,
+        email = BASE_ORGANIZATION.email,
+        tombstone = false,
+        createdAt = null,
+        updatedAt = null,
+        keycloakRealm = SSO_REALM,
+      )
+
+    every { permissionRepository.isInstanceAdmin(USER_ID) } returns true
+    every { organizationRepository.findAllPaginatedWithSsoRealm(null, true, 5, 10) } returns listOf(organizationWithSsoRealm)
+
+    val result = organizationServiceDataImpl.listAllOrganizationsByUserIdPaginated(query, keyword)
+
+    assertEquals(1, result.size)
     verify(exactly = 0) { organizationRepository.findByUserIdPaginatedWithSsoRealm(any(), any(), any(), any(), any()) }
+    verify(exactly = 0) { organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(any(), any(), any(), any(), any()) }
   }
 }

@@ -64,9 +64,11 @@ class OrganizationServiceDataImpl(
           includeDeleted,
         ).map { it.toConfigModel() }
     } else {
-      // For regular users, use the existing logic with permission checks
+      // For regular users, use the existing logic with permission checks. Agentic
+      // (ADP-managed) organizations are excluded at the SQL layer so they stay hidden
+      // from Data Replication.
       organizationRepository
-        .findByUserIdWithSsoRealm(
+        .findNonAgenticByUserIdWithSsoRealm(
           userId,
           keyword.orElse(null),
           includeDeleted,
@@ -87,7 +89,52 @@ class OrganizationServiceDataImpl(
           query.rowOffset,
         ).map { it.toConfigModel() }
     } else {
-      // For regular users, use the existing logic with permission checks
+      // For regular users, use the existing logic with permission checks. Agentic
+      // (ADP-managed) organizations are excluded at the SQL layer so LIMIT/OFFSET
+      // pagination stays accurate for infinite-scroll consumers.
+      organizationRepository
+        .findNonAgenticByUserIdPaginatedWithSsoRealm(
+          query.userId,
+          keyword.orElse(null),
+          query.includeDeleted,
+          query.pageSize,
+          query.rowOffset,
+        ).map { it.toConfigModel() }
+    }
+
+  override fun listAllOrganizationsByUserId(
+    userId: UUID,
+    keyword: Optional<String>,
+    includeDeleted: Boolean,
+  ): List<Organization> =
+    if (permissionRepository.isInstanceAdmin(userId)) {
+      organizationRepository
+        .findAllWithSsoRealm(
+          keyword.orElse(null),
+          includeDeleted,
+        ).map { it.toConfigModel() }
+    } else {
+      organizationRepository
+        .findByUserIdWithSsoRealm(
+          userId,
+          keyword.orElse(null),
+          includeDeleted,
+        ).map { it.toConfigModel() }
+    }
+
+  override fun listAllOrganizationsByUserIdPaginated(
+    query: ResourcesByUserQueryPaginated,
+    keyword: Optional<String>,
+  ): List<Organization> =
+    if (permissionRepository.isInstanceAdmin(query.userId)) {
+      organizationRepository
+        .findAllPaginatedWithSsoRealm(
+          keyword.orElse(null),
+          query.includeDeleted,
+          query.pageSize,
+          query.rowOffset,
+        ).map { it.toConfigModel() }
+    } else {
       organizationRepository
         .findByUserIdPaginatedWithSsoRealm(
           query.userId,

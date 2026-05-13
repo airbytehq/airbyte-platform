@@ -53,7 +53,7 @@ open class OrganizationServiceImpl(
     val result =
       kotlin
         .runCatching {
-          organizationsHandler.listOrganizationsByUser(ListOrganizationsByUserRequestBody().userId(userId))
+          organizationsHandler.listAllOrganizationsByUser(ListOrganizationsByUserRequestBody().userId(userId))
         }.onFailure {
           log.error(it) { "Error for getOrganizationsByUser" }
           ConfigClientErrorHandler.handleError(it)

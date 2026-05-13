@@ -60,6 +60,7 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
     name: String,
     email: String = "$name@example.com",
     tombstone: Boolean = false,
+    isAgentic: Boolean = false,
   ): Organization =
     organizationRepository.save(
       Organization(
@@ -67,6 +68,7 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         email = email,
         userId = UUID.randomUUID(),
         tombstone = tombstone,
+        isAgentic = isAgentic,
       ),
     )
 
@@ -509,5 +511,101 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
 
     assertEquals(1, result.size)
     assertEquals("Active Organization", result[0].name)
+  }
+
+  @Test
+  fun `findByUserIdWithSsoRealm includes isAgentic orgs (general method is unfiltered)`() {
+    // The general method must stay unfiltered so non-DR callers continue to see every org
+    // the user has access to. The agentic filter is applied only by the dedicated
+    // findNonAgenticByUserId* variants used on the Data Replication list path.
+    val userId = UUID.randomUUID()
+    val regularOrg = createOrganization("Regular")
+    val agenticOrg = createOrganization("Agentic", isAgentic = true)
+
+    grantOrganizationPermission(userId, regularOrg.id!!, PermissionType.organization_member)
+    grantOrganizationPermission(userId, agenticOrg.id!!, PermissionType.organization_admin)
+
+    val result = organizationRepository.findByUserIdWithSsoRealm(userId, null, false)
+
+    assertEquals(setOf("Regular", "Agentic"), result.map { it.name }.toSet())
+  }
+
+  @Test
+  fun `findNonAgenticByUserIdWithSsoRealm hides isAgentic org from non-admin user`() {
+    val userId = UUID.randomUUID()
+    val regularOrg = createOrganization("Regular")
+    val agenticOrg = createOrganization("Agentic", isAgentic = true)
+
+    grantOrganizationPermission(userId, regularOrg.id!!, PermissionType.organization_member)
+    grantOrganizationPermission(userId, agenticOrg.id!!, PermissionType.organization_member)
+
+    val result = organizationRepository.findNonAgenticByUserIdWithSsoRealm(userId, null, false)
+
+    assertEquals(listOf("Regular"), result.map { it.name })
+  }
+
+  @Test
+  fun `findNonAgenticByUserIdWithSsoRealm hides isAgentic org from organization_admin`() {
+    // Per ADP policy, organization_admins of an agentic org must NOT see it in Data Replication.
+    // Only instance_admins are exempt, and they take a different repo path (findAllWithSsoRealm).
+    val userId = UUID.randomUUID()
+    val agenticOrg = createOrganization("Agentic", isAgentic = true)
+
+    grantOrganizationPermission(userId, agenticOrg.id!!, PermissionType.organization_admin)
+
+    val result = organizationRepository.findNonAgenticByUserIdWithSsoRealm(userId, null, false)
+
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun `findNonAgenticByUserIdWithSsoRealm hides isAgentic org accessed only via workspace permission`() {
+    // A workspace-level permission inside an ADP org must not surface the org via Data Replication.
+    val userId = UUID.randomUUID()
+    val agenticOrg = createOrganization("Agentic", isAgentic = true)
+    val workspace =
+      workspaceRepository.save(
+        Workspace(
+          name = "ws",
+          slug = "ws-${UUID.randomUUID()}",
+          organizationId = agenticOrg.id!!,
+          dataplaneGroupId = UUID.randomUUID(),
+        ),
+      )
+    grantWorkspacePermission(userId, workspace.id!!)
+
+    val result = organizationRepository.findNonAgenticByUserIdWithSsoRealm(userId, null, false)
+
+    assertTrue(result.isEmpty())
+  }
+
+  @Test
+  fun `findNonAgenticByUserIdPaginatedWithSsoRealm correctly paginates with isAgentic filter`() {
+    // Regression: the filter must run in SQL so LIMIT/OFFSET keeps a stable contract for
+    // infinite-scroll consumers that rely on returned page size to detect end-of-list.
+    val userId = UUID.randomUUID()
+    val a = createOrganization("a-regular")
+    val b = createOrganization("b-agentic", isAgentic = true)
+    val c = createOrganization("c-regular")
+    val d = createOrganization("d-agentic", isAgentic = true)
+    val e = createOrganization("e-regular")
+    listOf(a, b, c, d, e).forEach { grantOrganizationPermission(userId, it.id!!, PermissionType.organization_member) }
+
+    val page1 = organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(userId, null, false, 2, 0)
+    val page2 = organizationRepository.findNonAgenticByUserIdPaginatedWithSsoRealm(userId, null, false, 2, 2)
+
+    assertEquals(listOf("a-regular", "c-regular"), page1.map { it.name })
+    assertEquals(listOf("e-regular"), page2.map { it.name })
+  }
+
+  @Test
+  fun `findAllWithSsoRealm includes isAgentic orgs`() {
+    // The instance-admin path must not filter agentic orgs.
+    createOrganization("regular")
+    createOrganization("agentic", isAgentic = true)
+
+    val result = organizationRepository.findAllWithSsoRealm(null, false)
+
+    assertEquals(setOf("regular", "agentic"), result.map { it.name }.toSet())
   }
 }

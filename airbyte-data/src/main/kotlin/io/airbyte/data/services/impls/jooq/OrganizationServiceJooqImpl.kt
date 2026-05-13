@@ -135,6 +135,19 @@ class OrganizationServiceJooqImpl(
     keyword: Optional<String>,
   ): List<Organization> = throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")
 
+  @Throws(IOException::class)
+  override fun listAllOrganizationsByUserId(
+    userId: UUID,
+    keyword: Optional<String>,
+    includeDeleted: Boolean,
+  ): List<Organization> = throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")
+
+  @Throws(IOException::class)
+  override fun listAllOrganizationsByUserIdPaginated(
+    query: ResourcesByUserQueryPaginated,
+    keyword: Optional<String>,
+  ): List<Organization> = throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")
+
   override fun isMember(
     userId: UUID,
     organizationId: UUID,

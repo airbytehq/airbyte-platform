@@ -61,7 +61,7 @@ class EmbeddedController(
     val currentUserId = currentUserService.getCurrentUser().userId
     val organizations =
       organizationsHandler
-        .listOrganizationsByUser(
+        .listAllOrganizationsByUser(
           ListOrganizationsByUserRequestBody().userId(currentUserId),
         )
 

@@ -154,7 +154,29 @@ open class OrganizationsHandler(
     return buildOrganizationRead(organization)
   }
 
-  fun listOrganizationsByUser(request: ListOrganizationsByUserRequestBody): OrganizationReadList {
+  /**
+   * List organizations accessible to a user, excluding agentic (ADP-managed) orgs for
+   * non-instance-admins. Used by the Airbyte Cloud / Data Replication webapp paths.
+   *
+   * Public-API and Embedded-API callers must use [listAllOrganizationsByUser] instead so
+   * ADP customers can still see their own agentic orgs.
+   */
+  fun listOrganizationsByUser(request: ListOrganizationsByUserRequestBody): OrganizationReadList =
+    doListOrganizationsByUser(request, includeAgentic = false)
+
+  /**
+   * List every organization accessible to a user, including agentic (ADP-managed) ones.
+   * Used by the public API ([io.airbyte.server.apis.publicapi.services.OrganizationService.getOrganizationsByUser])
+   * and the Embedded API ([io.airbyte.server.apis.publicapi.controllers.EmbeddedController.listEmbeddedOrganizationsByUser]),
+   * where the caller (e.g. Sonar) is itself the ADP product and needs its agentic orgs visible.
+   */
+  fun listAllOrganizationsByUser(request: ListOrganizationsByUserRequestBody): OrganizationReadList =
+    doListOrganizationsByUser(request, includeAgentic = true)
+
+  private fun doListOrganizationsByUser(
+    request: ListOrganizationsByUserRequestBody,
+    includeAgentic: Boolean,
+  ): OrganizationReadList {
     val nameContains =
       if (StringUtils.isBlank(request.nameContains)) {
         Optional.empty<String>()
@@ -164,20 +186,24 @@ open class OrganizationsHandler(
 
     val organizationReadList =
       if (request.pagination != null) {
-        organizationService
-          .listOrganizationsByUserIdPaginated(
-            ResourcesByUserQueryPaginated(
-              request.userId,
-              false,
-              request.pagination.pageSize,
-              request.pagination.rowOffset,
-            ),
-            nameContains,
-          ).map { buildOrganizationRead(it) }
+        val query =
+          ResourcesByUserQueryPaginated(
+            request.userId,
+            false,
+            request.pagination.pageSize,
+            request.pagination.rowOffset,
+          )
+        if (includeAgentic) {
+          organizationService.listAllOrganizationsByUserIdPaginated(query, nameContains)
+        } else {
+          organizationService.listOrganizationsByUserIdPaginated(query, nameContains)
+        }.map { buildOrganizationRead(it) }
       } else {
-        organizationService
-          .listOrganizationsByUserId(request.userId, nameContains)
-          .map { buildOrganizationRead(it) }
+        if (includeAgentic) {
+          organizationService.listAllOrganizationsByUserId(request.userId, nameContains)
+        } else {
+          organizationService.listOrganizationsByUserId(request.userId, nameContains)
+        }.map { buildOrganizationRead(it) }
       }
 
     return OrganizationReadList().organizations(organizationReadList)
@@ -230,8 +256,21 @@ open class OrganizationsHandler(
         .map { it.organizationId }
         .toSet()
 
+    // The workspace fallback can pull in agentic (ADP-managed) orgs that the initial
+    // listOrganizationsByUser call deliberately filtered out. Skip them here for non-instance-admins
+    // so they never re-enter orgListResp — keeps the SQL-level page-size contract intact, since
+    // post-fetch filtering would shrink page sizes below pageSize and break the infinite-scroll
+    // end-of-list heuristic.
+    val isInstanceAdmin =
+      permissionService
+        .getPermissionsForUser(request.userId)
+        .any { it.permissionType == Permission.PermissionType.INSTANCE_ADMIN }
+
     for (orgId in orgIdsToRetrieve) {
       val retrieved = this.getOrganization(OrganizationIdRequestBody().organizationId(orgId))
+      if (retrieved.isAgentic == true && !isInstanceAdmin) {
+        continue
+      }
       orgListResp.addOrganizationsItem(retrieved)
     }
 
