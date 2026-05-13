@@ -10,6 +10,7 @@ import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.util.Optional
 import java.util.UUID
 import io.airbyte.data.repositories.entities.PrivateLink as EntityPrivateLink
 import io.airbyte.db.instance.configs.jooq.generated.enums.PrivateLinkServiceType as EntityPrivateLinkServiceType
@@ -65,5 +66,17 @@ class PrivateLinkServiceTest {
     val result = service.listByWorkspaceId(workspaceId)
 
     assertEquals(0, result.size)
+  }
+
+  @Test
+  fun `updatePrivateLink allows deleting from available`() {
+    val id = UUID.randomUUID()
+    val existing = entity(id = id, name = "ready", status = EntityPrivateLinkStatus.available)
+    every { repository.findById(id) } returns Optional.of(existing)
+    every { repository.update(any()) } answers { firstArg() }
+
+    val result = service.updatePrivateLink(id, status = PrivateLinkStatus.DELETING)
+
+    assertEquals(PrivateLinkStatus.DELETING, result.status)
   }
 }

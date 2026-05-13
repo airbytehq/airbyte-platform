@@ -634,6 +634,7 @@ data class AirbyteInternalApiClientConfig(
   val connectorBuilderApiHost: String = "",
   val connectTimeoutSeconds: Long = 30,
   val readTimeoutSeconds: Long = 600,
+  val callTimeoutSeconds: Long = 0,
   val throwsOn5xx: Boolean = true,
   val retries: RetryConfig = RetryConfig(),
   val auth: AuthConfig = AuthConfig(),

@@ -11131,6 +11131,8 @@ paths:
                 $ref: "#/components/schemas/PrivateLinkRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: Private link status cannot move backward
 
 components:
   securitySchemes:

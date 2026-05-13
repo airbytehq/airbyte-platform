@@ -39,6 +39,7 @@ class ApiClientSupportFactory(
         httpClient =
           OkHttpClient
             .Builder()
+            .callTimeout(config.callTimeoutSeconds, TimeUnit.SECONDS)
             .readTimeout(config.readTimeoutSeconds, TimeUnit.SECONDS)
             .connectTimeout(config.connectTimeoutSeconds, TimeUnit.SECONDS)
             .build(),
@@ -72,6 +73,7 @@ class ApiClientSupportFactory(
 
           addInterceptor(UserAgentInterceptor(micronautApplicationConfiguration.name.get()))
           addInterceptor(AirbyteVersionInterceptor(airbyteConfig.version))
+          callTimeout(config.callTimeoutSeconds, TimeUnit.SECONDS)
           readTimeout(config.readTimeoutSeconds, TimeUnit.SECONDS)
           connectTimeout(config.connectTimeoutSeconds, TimeUnit.SECONDS)
         }.build()
