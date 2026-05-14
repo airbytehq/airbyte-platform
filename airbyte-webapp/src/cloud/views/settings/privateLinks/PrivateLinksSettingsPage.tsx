@@ -1,13 +1,16 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { z } from "zod";
 
+import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Form, FormControl } from "components/ui/forms";
 import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
 import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
+import { ButtonTab, Tabs } from "components/ui/Tabs";
 import { Text } from "components/ui/Text";
 
 import { HttpError, useCreatePrivateLink, useDeletePrivateLink, useListPrivateLinks } from "core/api";
@@ -21,25 +24,63 @@ import { links } from "core/utils/links";
 
 import { PrivateLinkDetailModal } from "./PrivateLinkDetailModal";
 import { PrivateLinksTable } from "./PrivateLinksTable";
+import { ALL_VARIANTS, endpointAwsVariant, storageAwsVariant } from "./variants";
+import { BasePrivateLinkSchema, BASE_DEFAULTS, PrivateLinkVariant } from "./variants/types";
 
-const AWS_SERVICE_NAME_REGEX = /^com\.amazonaws\.vpce\.([a-z0-9-]+)\.vpce-svc-[a-z0-9]+$/;
-
-const PRIVATE_LINK_NAME_REGEX = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
-
-const PrivateLinkFormSchema = z.object({
-  privateLinkName: z
-    .string()
-    .trim()
-    .nonempty("form.empty.error")
-    .regex(PRIVATE_LINK_NAME_REGEX, "settings.privateLinks.form.name.invalid"),
-  serviceName: z
-    .string()
-    .trim()
-    .nonempty("form.empty.error")
-    .regex(AWS_SERVICE_NAME_REGEX, "settings.privateLinks.form.serviceName.invalid"),
-});
+const PrivateLinkFormSchema = z.discriminatedUnion("variantId", [
+  endpointAwsVariant.schema.merge(BasePrivateLinkSchema),
+  storageAwsVariant.schema.merge(BasePrivateLinkSchema),
+]);
 
 type PrivateLinkFormValues = z.infer<typeof PrivateLinkFormSchema>;
+
+const findVariant = (variantId: string): PrivateLinkVariant => {
+  const v = ALL_VARIANTS.find((entry) => entry.variantId === variantId);
+  if (!v) {
+    throw new Error(`No PrivateLink variant registered for id "${variantId}"`);
+  }
+  return v;
+};
+
+const VariantFields: React.FC = () => {
+  const { control } = useFormContext<PrivateLinkFormValues>();
+  const variantId = useWatch({ control, name: "variantId" });
+  const VariantComponent = findVariant(variantId).Fields;
+  return <VariantComponent />;
+};
+
+const VariantTabs: React.FC = () => {
+  const { formatMessage } = useIntl();
+  const { control, getValues, reset } = useFormContext<PrivateLinkFormValues>();
+  const variantId = useWatch({ control, name: "variantId" });
+
+  const onSelect = (newId: string) => {
+    if (newId === variantId) {
+      return;
+    }
+    const variant = findVariant(newId);
+    // Swap the variant slice while preserving fields owned by the base schema.
+    reset({
+      ...BASE_DEFAULTS,
+      privateLinkName: getValues("privateLinkName"),
+      ...variant.defaultValues,
+    } as PrivateLinkFormValues);
+  };
+
+  return (
+    <Tabs>
+      {ALL_VARIANTS.map((v) => (
+        <ButtonTab
+          key={v.variantId}
+          id={v.variantId}
+          name={formatMessage({ id: v.labelKey })}
+          isActive={v.variantId === variantId}
+          onSelect={onSelect}
+        />
+      ))}
+    </Tabs>
+  );
+};
 
 export const PrivateLinksSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -51,20 +92,23 @@ export const PrivateLinksSettingsPage: React.FC = () => {
   const { mutateAsync: deletePrivateLink } = useDeletePrivateLink();
   const { privateLinks } = useListPrivateLinks();
 
+  const defaultValues = useMemo<PrivateLinkFormValues>(
+    () => ({ ...BASE_DEFAULTS, ...ALL_VARIANTS[0].defaultValues }) as PrivateLinkFormValues,
+    []
+  );
+
   const onSubmit = async (values: PrivateLinkFormValues) => {
     const existingNames = new Set(privateLinks.map((l) => l.name));
     if (existingNames.has(values.privateLinkName)) {
       throw new Error(formatMessage({ id: "settings.privateLinks.form.name.duplicate" }));
     }
-
-    // Safe to assert — zod already validated the regex
-    const serviceRegion = values.serviceName.match(AWS_SERVICE_NAME_REGEX)![1];
-    await createPrivateLink({
-      name: values.privateLinkName,
-      serviceRegion,
-      serviceName: values.serviceName,
-    });
-    return { resetValues: { privateLinkName: "", serviceName: "" } };
+    const variant = findVariant(values.variantId);
+    const body = variant.toCreateRequest(values);
+    await createPrivateLink(body);
+    // Stay on the variant the user was using; reset only the fields back to that variant's defaults.
+    return {
+      resetValues: { ...BASE_DEFAULTS, ...variant.defaultValues } as PrivateLinkFormValues,
+    };
   };
 
   const onError = (e: Error) => {
@@ -123,23 +167,21 @@ export const PrivateLinksSettingsPage: React.FC = () => {
 
       <Card>
         <Form<PrivateLinkFormValues>
-          defaultValues={{ privateLinkName: "", serviceName: "" }}
+          defaultValues={defaultValues}
           onSubmit={onSubmit}
           onError={onError}
           zodSchema={PrivateLinkFormSchema}
         >
+          <Box mb="xl">
+            <VariantTabs />
+          </Box>
           <FormControl
             name="privateLinkName"
             fieldType="input"
             label={formatMessage({ id: "settings.privateLinks.form.name" })}
             placeholder={formatMessage({ id: "settings.privateLinks.form.name.placeholder" })}
           />
-          <FormControl
-            name="serviceName"
-            fieldType="input"
-            label={formatMessage({ id: "settings.privateLinks.form.serviceName" })}
-            placeholder={formatMessage({ id: "settings.privateLinks.form.serviceName.placeholder" })}
-          />
+          <VariantFields />
           <FormSubmissionButtons
             noCancel
             justify="flex-start"

@@ -1,0 +1,6 @@
+{{! Override of kotlin-server/data_class_opt_var.mustache to add `override` }}
+{{! prefix when this property is inherited from a parent (allOf inheritance). }}
+{{#description}}
+    /* {{{.}}} */
+{{/description}}
+    {{#isInherited}}override {{/isInherited}}{{>modelMutable}} {{{name}}}: {{#isEnum}}{{{classname}}}.{{{nameInPascalCase}}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{/isEnum}}? = {{{defaultValue}}}{{^defaultValue}}null{{/defaultValue}}

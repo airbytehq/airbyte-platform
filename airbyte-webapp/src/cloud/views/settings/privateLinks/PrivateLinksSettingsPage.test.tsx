@@ -51,8 +51,11 @@ const buildPrivateLink = (overrides: Partial<PrivateLinkRead> = {}): PrivateLink
   dataplaneGroupId: "dp-1",
   name: "test-link",
   status: PrivateLinkStatus.available,
-  serviceRegion: "us-east-1",
-  serviceName: "com.amazonaws.vpce.us-east-1.vpce-svc-abc123",
+  serviceConfig: {
+    type: "endpoint",
+    name: "com.amazonaws.vpce.us-east-1.vpce-svc-abc123",
+    region: "us-east-1",
+  } as PrivateLinkRead["serviceConfig"],
   endpointId: "vpce-123",
   dnsName: "vpce-123.us-east-1.vpce.amazonaws.com",
   createdAt: "2026-01-01T00:00:00Z",
@@ -66,6 +69,18 @@ const getSubmitButton = () =>
 const fillForm = async (name: string, serviceName: string) => {
   await userEvent.type(screen.getByLabelText("Name"), name);
   await userEvent.type(screen.getByLabelText(/Endpoint Service Name/i), serviceName);
+  const submitButton = getSubmitButton();
+  await waitFor(() => expect(submitButton).toBeEnabled());
+  await userEvent.click(submitButton);
+};
+
+const fillStorageForm = async (name: string, region: string, bucket?: string) => {
+  await userEvent.click(screen.getByRole("button", { name: /^Storage$/i }));
+  await userEvent.type(screen.getByLabelText("Name"), name);
+  await userEvent.type(screen.getByLabelText(/^Region$/i), region);
+  if (bucket !== undefined) {
+    await userEvent.type(screen.getByLabelText(/Bucket/i), bucket);
+  }
   const submitButton = getSubmitButton();
   await waitFor(() => expect(submitButton).toBeEnabled());
   await userEvent.click(submitButton);
@@ -121,10 +136,49 @@ describe("PrivateLinksSettingsPage", () => {
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalledWith({
         name: "my-link",
-        serviceRegion: "eu-west-1",
-        serviceName: "com.amazonaws.vpce.eu-west-1.vpce-svc-xyz789",
+        serviceConfig: {
+          type: "endpoint",
+          name: "com.amazonaws.vpce.eu-west-1.vpce-svc-xyz789",
+          region: "eu-west-1",
+        },
       });
     });
+  });
+
+  it("submits the storage variant with region and bucket", async () => {
+    mockUseListPrivateLinks.mockReturnValue({ privateLinks: [] } as unknown as ReturnType<typeof useListPrivateLinks>);
+    mockCreate.mockResolvedValue(buildPrivateLink());
+
+    await render(<PrivateLinksSettingsPage />);
+
+    await fillStorageForm("my-storage-link", "us-east-2", "my-bucket");
+
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalledWith({
+        name: "my-storage-link",
+        serviceConfig: {
+          type: "storage",
+          region: "us-east-2",
+          bucket: "my-bucket",
+        },
+      });
+    });
+  });
+
+  it("blocks submit when storage bucket name is invalid", async () => {
+    mockUseListPrivateLinks.mockReturnValue({ privateLinks: [] } as unknown as ReturnType<typeof useListPrivateLinks>);
+
+    await render(<PrivateLinksSettingsPage />);
+
+    await userEvent.click(screen.getByRole("button", { name: /^Storage$/i }));
+    await userEvent.type(screen.getByLabelText("Name"), "my-storage-link");
+    await userEvent.type(screen.getByLabelText(/^Region$/i), "us-east-2");
+    // Uppercase letters are invalid per AWS S3 bucket naming rules.
+    await userEvent.type(screen.getByLabelText(/Bucket/i), "INVALID_BUCKET");
+
+    const submitButton = getSubmitButton();
+    await waitFor(() => expect(submitButton).toBeDisabled());
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it("rejects duplicate names in the workspace", async () => {

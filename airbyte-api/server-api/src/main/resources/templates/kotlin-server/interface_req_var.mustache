@@ -1,0 +1,9 @@
+{{! Workaround for openapi-generator-7.10.0 kotlin-server. When a model uses an }}
+{{! OpenAPI discriminator the dispatcher template references this partial via }}
+{{! the include syntax, but the generator never ships one. Plain val declaration }}
+{{! on the parent interface, no override modifier. }}
+{{#description}}
+    /* {{{.}}} */
+{{/description}}
+    {{! Note that required properties may be nullable according to the OpenAPI specification. }}
+    {{>modelMutable}} {{{name}}}: {{#isEnum}}{{{classname}}}.{{{nameInPascalCase}}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{/isEnum}}{{#isNullable}}?{{/isNullable}}{{#defaultValue}} = {{^isNumber}}{{{defaultValue}}}{{/isNumber}}{{#isNumber}}{{{dataType}}}("{{{defaultValue}}}"){{/isNumber}}{{/defaultValue}}
