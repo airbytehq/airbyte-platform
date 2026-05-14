@@ -32,9 +32,9 @@ class VerifyDefaultVersionActivityImpl(
     logger.info { "Verifying default version is ready ${input.dockerRepository}:${input.dockerImageTag}" }
     val client: ActorDefinitionVersionApi = airbyteApiClient.actorDefinitionVersionApi
     val body = GetActorDefinitionVersionDefaultRequestBody(input.actorDefinitionId)
-    // Extract the prefix before any "-rc"
-    val releaseCandidateTagPrefix = input.dockerImageTag.split("-")[0]
-    val originalVersionTag = input.previousVersionDockerImageTag
+    // Extract the prefix before any pre-release suffix, e.g. "1.2.3-rc.1" or "1.2.3-beta.1" -> "1.2.3".
+    // For tags without a hyphen, split returns a single-element list.
+    val terminalRolloutVersionTag = input.dockerImageTag.split("-")[0]
     var isReleased = false
 
     // retry until we hit the time limit
@@ -42,18 +42,18 @@ class VerifyDefaultVersionActivityImpl(
     while (System.currentTimeMillis() - startTime < input.limit) {
       logger.info {
         "Trying to verify default version for ${input.dockerRepository}. " +
-          "releaseCandidateVersionTag=${input.dockerImageTag} originalVersionTag=$originalVersionTag"
+          "rolloutVersionTag=${input.dockerImageTag} terminalRolloutVersionTag=$terminalRolloutVersionTag previousVersionDockerImageTag=${input.previousVersionDockerImageTag}"
       }
       try {
         val response: ActorDefinitionVersionRead = client.getActorDefinitionVersionDefault(body)
         logger.info { "GetActorDefinitionVersionDefaultResponse = ${response.dockerImageTag}" }
-        if (response.dockerImageTag != originalVersionTag) {
-          if (response.dockerImageTag == releaseCandidateTagPrefix) {
+        if (response.dockerImageTag != input.previousVersionDockerImageTag) {
+          if (response.dockerImageTag == terminalRolloutVersionTag) {
             isReleased = true
           }
           logger.info {
             "Found new default version for ${input.dockerRepository}. " +
-              "releaseCandidateVersionTag=${input.dockerImageTag} originalVersionTag=$originalVersionTag newVersionTag=${response.dockerImageTag}"
+              "rolloutVersionTag=${input.dockerImageTag} previousVersionDockerImageTag=${input.previousVersionDockerImageTag} newVersionTag=${response.dockerImageTag}"
           }
           return ConnectorRolloutActivityOutputVerifyDefaultVersion(isReleased = isReleased)
         }
