@@ -11153,17 +11153,13 @@ components:
         - deleting
         - delete_failed
         - deleted
-    PrivateLinkServiceType:
-      type: string
-      enum:
-        - endpoint
-        - storage
     PrivateLinkCreateRequestBody:
       type: object
       required:
         - workspaceId
         - name
-        - serviceConfig
+        - serviceRegion
+        - serviceName
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
@@ -11171,8 +11167,10 @@ components:
           type: string
           pattern: "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
           maxLength: 63
-        serviceConfig:
-          $ref: "#/components/schemas/PrivateLinkServiceConfig"
+        serviceRegion:
+          type: string
+        serviceName:
+          type: string
     PrivateLinkListRequestBody:
       type: object
       required:
@@ -11231,7 +11229,8 @@ components:
         - dataplaneGroupId
         - name
         - status
-        - serviceConfig
+        - serviceRegion
+        - serviceName
         - createdAt
         - updatedAt
       properties:
@@ -11247,8 +11246,10 @@ components:
           type: string
         status:
           $ref: "#/components/schemas/PrivateLinkStatus"
-        serviceConfig:
-          $ref: "#/components/schemas/PrivateLinkServiceConfig"
+        serviceRegion:
+          type: string
+        serviceName:
+          type: string
         endpointId:
           type: string
         dnsName:
@@ -11262,51 +11263,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-    PrivateLinkServiceConfig:
-      type: object
-      required:
-        - type
-      properties:
-        type:
-          $ref: "#/components/schemas/PrivateLinkServiceType"
-      discriminator:
-        propertyName: type
-        mapping:
-          endpoint: "#/components/schemas/EndpointPrivateLinkServiceConfig"
-          storage: "#/components/schemas/StoragePrivateLinkServiceConfig"
-    EndpointPrivateLinkServiceConfig:
-      allOf:
-        - $ref: "#/components/schemas/PrivateLinkServiceConfig"
-        - type: object
-          required:
-            - name
-            - region
-          properties:
-            name:
-              type: string
-              maxLength: 255
-              pattern: "^com\\.amazonaws\\.vpce\\.[a-z0-9-]+\\.vpce-svc-[a-z0-9]+$"
-            region:
-              type: string
-              maxLength: 30
-              pattern: "^[a-z]{2,3}-[a-z]+(-[a-z]+)?-\\d+$"
-    StoragePrivateLinkServiceConfig:
-      allOf:
-        - $ref: "#/components/schemas/PrivateLinkServiceConfig"
-        - type: object
-          required:
-            - region
-            - bucket
-          properties:
-            region:
-              type: string
-              maxLength: 30
-              pattern: "^[a-z]{2,3}-[a-z]+(-[a-z]+)?-\\d+$"
-            bucket:
-              type: string
-              minLength: 3
-              maxLength: 63
-              pattern: "^(?!.*\\.\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"
     PrivateLinkReadList:
       type: object
       required:

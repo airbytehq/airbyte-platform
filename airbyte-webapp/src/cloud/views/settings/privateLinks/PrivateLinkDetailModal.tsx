@@ -6,18 +6,9 @@ import { FlexContainer } from "components/ui/Flex";
 import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
-import {
-  EndpointPrivateLinkServiceConfig,
-  PrivateLinkRead,
-  PrivateLinkServiceConfig,
-  StoragePrivateLinkServiceConfig,
-} from "core/api/types/AirbyteClient";
+import { PrivateLinkRead } from "core/api/types/AirbyteClient";
 
 import styles from "./PrivateLinkDetailModal.module.scss";
-
-const isEndpointConfig = (c: PrivateLinkServiceConfig): c is EndpointPrivateLinkServiceConfig => c.type === "endpoint";
-
-const isStorageConfig = (c: PrivateLinkServiceConfig): c is StoragePrivateLinkServiceConfig => c.type === "storage";
 
 interface DetailRowProps {
   label: string;
@@ -59,29 +50,13 @@ export const PrivateLinkDetailModal: React.FC<PrivateLinkDetailModalProps> = ({ 
           <Text size="sm">{formatMessage({ id: `settings.privateLinks.status.${link.status}` })}</Text>
         </DetailRow>
 
-        {isEndpointConfig(link.serviceConfig) && (
-          <>
-            <DetailRow label="settings.privateLinks.details.serviceName" copyable={link.serviceConfig.name}>
-              <Text size="sm">{link.serviceConfig.name}</Text>
-            </DetailRow>
+        <DetailRow label="settings.privateLinks.details.serviceName" copyable={link.serviceName}>
+          <Text size="sm">{link.serviceName}</Text>
+        </DetailRow>
 
-            <DetailRow label="settings.privateLinks.details.serviceRegion">
-              <Text size="sm">{link.serviceConfig.region}</Text>
-            </DetailRow>
-          </>
-        )}
-
-        {isStorageConfig(link.serviceConfig) && (
-          <>
-            <DetailRow label="settings.privateLinks.details.serviceRegion">
-              <Text size="sm">{link.serviceConfig.region}</Text>
-            </DetailRow>
-
-            <DetailRow label="settings.privateLinks.details.bucket" copyable={link.serviceConfig.bucket}>
-              <Text size="sm">{link.serviceConfig.bucket}</Text>
-            </DetailRow>
-          </>
-        )}
+        <DetailRow label="settings.privateLinks.details.serviceRegion">
+          <Text size="sm">{link.serviceRegion}</Text>
+        </DetailRow>
 
         <DetailRow label="settings.privateLinks.details.endpointId" copyable={link.endpointId}>
           <Text size="sm">{link.endpointId ?? "—"}</Text>

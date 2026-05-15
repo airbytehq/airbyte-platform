@@ -61,7 +61,7 @@ sealed interface PrivateLinkServiceConfig {
 
   data class Storage(
     override val region: String,
-    val bucket: String,
+    val bucket: String? = null,
   ) : PrivateLinkServiceConfig {
     @get:JsonIgnore
     override val type = PrivateLinkServiceType.STORAGE
