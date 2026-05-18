@@ -8,7 +8,7 @@ export enum FeatureItem {
   AllowAllRBACRoles = "ALLOW_ALL_RBAC_ROLES", // corresponds to the feature-rbac-roles entitlement
   AllowDataWorkerCapacity = "ALLOW_DATA_WORKER_CAPACITY", // corresponds to the feature-committed-data-workers entitlement (legacy: feature-data-worker-capacity)
   AllowAutoDetectSchema = "ALLOW_AUTO_DETECT_SCHEMA",
-  AllowSyncFrequencyUnderOneHour = "ALLOW_SYNC_FREQUENCY_UNDER_ONE_HOUR", // corresponds to the feature-faster-sync-frequency entitlement
+  AllowSyncFrequencyUnderOneHour = "ALLOW_SYNC_FREQUENCY_UNDER_ONE_HOUR", // corresponds to the sync-frequency entitlements (legacy: feature-faster-sync-frequency, Plus: feature-15-minute-sync-frequency)
   AllowUploadCustomImage = "ALLOW_UPLOAD_CUSTOM_IMAGE",
   AllowUpdateSSOConfig = "ALLOW_UPDATE_SSO_CONFIG", // corresponds to the feature-sso entitlement
   AllowUpdateConnectors = "ALLOW_UPDATE_CONNECTORS",

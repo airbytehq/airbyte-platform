@@ -14,6 +14,10 @@ object FasterSyncFrequencyEntitlement : FeatureEntitlement(
   featureId = "feature-faster-sync-frequency",
 )
 
+object FifteenMinuteSyncFrequencyEntitlement : FeatureEntitlement(
+  featureId = "feature-15-minute-sync-frequency",
+)
+
 object SsoEntitlement : FeatureEntitlement(
   featureId = "feature-sso",
 )
@@ -132,6 +136,7 @@ object Entitlements {
   private val ALL: List<Entitlement> =
     listOf(
       FasterSyncFrequencyEntitlement,
+      FifteenMinuteSyncFrequencyEntitlement,
       DestinationObjectStorageEntitlement,
       SsoEntitlement,
       OrchestrationEntitlement,

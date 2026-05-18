@@ -31,6 +31,7 @@ const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
   "feature-multiple-workspaces": FeatureItem.CreateMultipleWorkspaces,
   "feature-ai-copilot": FeatureItem.AICopilot,
   "feature-faster-sync-frequency": FeatureItem.AllowSyncFrequencyUnderOneHour,
+  "feature-15-minute-sync-frequency": FeatureItem.AllowSyncFrequencyUnderOneHour,
   "feature-committed-data-workers": FeatureItem.AllowDataWorkerCapacity,
   "feature-data-worker-capacity": FeatureItem.AllowDataWorkerCapacity, // legacy fallback
   "feature-on-demand-capacity-enabled": FeatureItem.OnDemandCapacity,

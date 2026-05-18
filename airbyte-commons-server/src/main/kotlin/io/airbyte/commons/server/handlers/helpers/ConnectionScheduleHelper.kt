@@ -19,6 +19,7 @@ import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProb
 import io.airbyte.api.problems.throwable.generated.CronValidationUnderOneHourNotAllowedProblem
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.config.BasicSchedule
 import io.airbyte.config.Schedule
@@ -38,6 +39,7 @@ import org.joda.time.DateTimeZone
 import org.quartz.CronExpression
 import java.text.ParseException
 import java.util.Locale
+import java.util.UUID
 
 /**
  * Helper class to handle connection schedules, including validation and translating between API and
@@ -51,6 +53,10 @@ class ConnectionScheduleHelper(
   private val entitlementService: EntitlementService,
   private val workspaceHelper: WorkspaceHelper,
 ) {
+  companion object {
+    private const val FIFTEEN_MINUTE_SYNC_FLOOR_MINUTES = 15L
+  }
+
   /**
    * Populate schedule data into a standard sync. Mutates the input object!
    *
@@ -87,23 +93,7 @@ class ConnectionScheduleHelper(
         if (isSubHourSchedule) {
           val workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.sourceId)
           val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
-          val canSyncUnderOneHour =
-            featureFlagClient.boolVariation(
-              SubOneHourSyncSchedules,
-              Multi(
-                listOf(Organization(organizationId), Workspace(workspaceId)),
-              ),
-            ) ||
-              entitlementService.checkEntitlement(OrganizationId(organizationId), FasterSyncFrequencyEntitlement).isEntitled
-
-          if (!canSyncUnderOneHour) {
-            throw BasicScheduleValidationUnderOneHourNotAllowedProblem(
-              ProblemBasicScheduleData()
-                .timeUnit(scheduleData.basicSchedule.timeUnit.toString())
-                .units(scheduleData.basicSchedule.units.toInt())
-                .validationErrorMessage("Basic schedules must be at least 1 hour apart"),
-            )
-          }
+          validateBasicSubHourSchedule(scheduleData.basicSchedule, workspaceId, organizationId)
         }
 
         standardSync
@@ -144,16 +134,7 @@ class ConnectionScheduleHelper(
 
         val workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.sourceId)
         val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
-        val canSyncUnderOneHour =
-          featureFlagClient.boolVariation(
-            SubOneHourSyncSchedules,
-            Multi(
-              listOf(Organization(organizationId), Workspace(workspaceId)),
-            ),
-          ) ||
-            entitlementService.checkEntitlement(OrganizationId(organizationId), FasterSyncFrequencyEntitlement).isEntitled
-
-        validateCronFrequency(cronExpression, canSyncUnderOneHour)
+        validateCronFrequency(cronExpression, minimumAllowedSubHourIntervalMinutes(workspaceId, organizationId))
 
         validateCronExpressionAndTimezone(cronTimeZone, cronExpression, connectionId)
 
@@ -209,7 +190,7 @@ class ConnectionScheduleHelper(
 
   private fun validateCronFrequency(
     cronExpression: String,
-    canSyncUnderOneHour: Boolean,
+    minimumAllowedSubHourIntervalMinutes: Long?,
   ) {
     val cronUtilsModel: Cron
 
@@ -223,8 +204,15 @@ class ConnectionScheduleHelper(
     }
 
     try {
-      if (!canSyncUnderOneHour) {
-        cronExpressionHelper.checkDoesNotExecuteMoreThanOncePerHour(cronUtilsModel)
+      when (minimumAllowedSubHourIntervalMinutes) {
+        null -> cronExpressionHelper.checkDoesNotExecuteMoreThanOncePerHour(cronUtilsModel)
+        1L -> Unit
+        else ->
+          cronExpressionHelper.checkDoesNotExecuteMoreThanOncePerInterval(
+            cronUtilsModel,
+            minimumAllowedSubHourIntervalMinutes * 60,
+            "$minimumAllowedSubHourIntervalMinutes minutes",
+          )
       }
     } catch (e: IllegalArgumentException) {
       throw CronValidationUnderOneHourNotAllowedProblem(
@@ -233,5 +221,53 @@ class ConnectionScheduleHelper(
           .validationErrorMessage(e.message),
       )
     }
+  }
+
+  private fun validateBasicSubHourSchedule(
+    basicSchedule: io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule,
+    workspaceId: UUID,
+    organizationId: UUID,
+  ) {
+    val minimumAllowedSubHourIntervalMinutes = minimumAllowedSubHourIntervalMinutes(workspaceId, organizationId)
+    val validationErrorMessage =
+      when {
+        minimumAllowedSubHourIntervalMinutes == null -> "Basic schedules must be at least 1 hour apart"
+        basicSchedule.units < minimumAllowedSubHourIntervalMinutes ->
+          "Basic schedules must be at least $minimumAllowedSubHourIntervalMinutes minutes apart"
+        else -> null
+      }
+
+    if (validationErrorMessage != null) {
+      throw BasicScheduleValidationUnderOneHourNotAllowedProblem(
+        ProblemBasicScheduleData()
+          .timeUnit(basicSchedule.timeUnit.toString())
+          .units(basicSchedule.units.toInt())
+          .validationErrorMessage(validationErrorMessage),
+      )
+    }
+  }
+
+  private fun minimumAllowedSubHourIntervalMinutes(
+    workspaceId: UUID,
+    organizationId: UUID,
+  ): Long? {
+    val context =
+      Multi(
+        listOf(Organization(organizationId), Workspace(workspaceId)),
+      )
+    if (featureFlagClient.boolVariation(SubOneHourSyncSchedules, context)) {
+      return 1
+    }
+
+    val orgId = OrganizationId(organizationId)
+    if (entitlementService.checkEntitlement(orgId, FasterSyncFrequencyEntitlement).isEntitled) {
+      return 1
+    }
+
+    if (entitlementService.checkEntitlement(orgId, FifteenMinuteSyncFrequencyEntitlement).isEntitled) {
+      return FIFTEEN_MINUTE_SYNC_FLOOR_MINUTES
+    }
+
+    return null
   }
 }

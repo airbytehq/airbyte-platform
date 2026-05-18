@@ -16,6 +16,7 @@ import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProb
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper
@@ -35,7 +36,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
+import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.whenever
 import java.util.UUID
 
 internal class ConnectionSchedulerHelperTest {
@@ -50,6 +53,7 @@ internal class ConnectionSchedulerHelperTest {
     Mockito.`when`(workspaceHelper.getWorkspaceForSourceId(anyOrNull())).thenReturn(WORKSPACE_ID)
     Mockito.`when`(workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID)).thenReturn(ORGANIZATION_ID)
     val featureFlagClient: FeatureFlagClient = Mockito.mock(TestClient::class.java)
+    whenever(entitlementService.checkEntitlement(any(), any())).thenReturn(EntitlementResult("unknown-feature", false, null))
     connectionScheduleHelper =
       ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, entitlementService, workspaceHelper)
   }
@@ -877,6 +881,69 @@ internal class ConnectionSchedulerHelperTest {
         ),
     )
     Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual3.getScheduleType())
+  }
+
+  @Test
+  fun testBasicScheduleSubHourWithFifteenMinuteEntitlement() {
+    Mockito
+      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement))
+      .thenReturn(EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null))
+
+    val actual = StandardSync().withSourceId(UUID.randomUUID())
+    connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
+      actual,
+      ConnectionScheduleType.BASIC,
+      ConnectionScheduleData()
+        .basicSchedule(
+          ConnectionScheduleDataBasicSchedule()
+            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES)
+            .units(15L),
+        ),
+    )
+
+    Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual.getScheduleType())
+  }
+
+  @Test
+  fun testBasicScheduleBelowFifteenMinutesWithFifteenMinuteEntitlement() {
+    Mockito
+      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement))
+      .thenReturn(EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null))
+
+    val actual = StandardSync().withSourceId(UUID.randomUUID())
+    Assertions.assertThrows(BasicScheduleValidationUnderOneHourNotAllowedProblem::class.java) {
+      connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
+        actual,
+        ConnectionScheduleType.BASIC,
+        ConnectionScheduleData()
+          .basicSchedule(
+            ConnectionScheduleDataBasicSchedule()
+              .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES)
+              .units(10L),
+          ),
+      )
+    }
+  }
+
+  @Test
+  fun testCronScheduleBelowFifteenMinutesWithFifteenMinuteEntitlementFails() {
+    Mockito
+      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FifteenMinuteSyncFrequencyEntitlement))
+      .thenReturn(EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true, null))
+
+    val actual = StandardSync().withSourceId(UUID.randomUUID())
+    Assertions.assertThrows(io.airbyte.api.problems.throwable.generated.CronValidationUnderOneHourNotAllowedProblem::class.java) {
+      connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
+        actual,
+        ConnectionScheduleType.CRON,
+        ConnectionScheduleData()
+          .cron(
+            ConnectionScheduleDataCron()
+              .cronTimeZone(EXPECTED_CRON_TIMEZONE)
+              .cronExpression("0 */10 * * * ?"),
+          ),
+      )
+    }
   }
 
   companion object {

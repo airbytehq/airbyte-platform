@@ -15,6 +15,8 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
 const val EVERY_HOUR = "0 0 * * * ?"
+const val EVERY_FIFTEEN_MINUTES = "0 */15 * * * ?"
+const val EVERY_TEN_MINUTES = "0 */10 * * * ?"
 const val EVERY_MINUTE = "0 * * * * ?"
 const val EVERY_SECOND = "* * * * * ?"
 const val EVERY_HALF_MINUTE = "*/2 * * * * ?"
@@ -67,6 +69,24 @@ class CronExpressionHelperTest {
     val cron = CronParser(cronDefinition).parse(cronExpression)
     assertDoesNotThrow {
       cronExpressionHelper.checkDoesNotExecuteMoreThanOncePerHour(cron)
+    }
+  }
+
+  @Test
+  fun testCheckDoesNotExecuteMoreThanOncePerFifteenMinutesThrows() {
+    val cron = CronParser(cronDefinition).parse(EVERY_TEN_MINUTES)
+
+    assertThrows<IllegalArgumentException> {
+      cronExpressionHelper.checkDoesNotExecuteMoreThanOncePerFifteenMinutes(cron)
+    }
+  }
+
+  @Test
+  fun testCheckDoesNotExecuteMoreThanOncePerFifteenMinutesPasses() {
+    val cron = CronParser(cronDefinition).parse(EVERY_FIFTEEN_MINUTES)
+
+    assertDoesNotThrow {
+      cronExpressionHelper.checkDoesNotExecuteMoreThanOncePerFifteenMinutes(cron)
     }
   }
 }

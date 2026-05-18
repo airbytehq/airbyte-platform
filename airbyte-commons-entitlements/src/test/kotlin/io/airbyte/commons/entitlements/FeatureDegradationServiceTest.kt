@@ -7,6 +7,7 @@ package io.airbyte.commons.entitlements
 import io.airbyte.commons.entitlements.models.DestinationSalesforceEnterpriseConnector
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.commons.entitlements.models.RbacRolesEntitlement
 import io.airbyte.commons.entitlements.models.SourceNetsuiteEnterpriseConnector
@@ -61,7 +62,7 @@ class FeatureDegradationServiceTest {
   private val cronTimezoneUtc = "UTC"
 
   @Test
-  fun `downgradeFeaturesIfRequired only executes downgrades when going from UNIFIED_TRIAL to STANDARD`() {
+  fun `downgradeFeaturesIfRequired executes downgrades when going from UNIFIED_TRIAL to STANDARD`() {
     val orgId = OrganizationId(UUID.randomUUID())
     val connectionId = UUID.randomUUID()
 
@@ -97,7 +98,7 @@ class FeatureDegradationServiceTest {
 
     featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.STANDARD)
 
-    // Verify downgrade RBAC function is called only when going from UNIFIED_TRIAL to STANDARD
+    // Verify downgrade side effects are applied for UNIFIED_TRIAL to STANDARD.
     verify { featureDegradationServiceStubbed.downgradeRBAC(orgId) }
     verify { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) }
     verify {
@@ -135,7 +136,7 @@ class FeatureDegradationServiceTest {
 
     featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.PRO, EntitlementPlan.STANDARD)
 
-    // Verify downgrade RBAC function is not called if not going from UNIFIED_TRIAL to STANDARD
+    // Verify downgrade RBAC function is not called if degradation is not supported.
     verify(exactly = 0) { featureDegradationServiceStubbed.downgradeRBAC(orgId) }
     verify { connectionService wasNot Called }
   }
@@ -186,6 +187,58 @@ class FeatureDegradationServiceTest {
     verify {
       connectionService.lockConnectionsById(
         match { it.containsAll(connectionIds.slice(0..4)) },
+        StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value,
+      )
+    }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired locks sub-hour connections for fifteen-minute entitlement downgrade`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val connectionId = UUID.randomUUID()
+
+    every { entitlementClient.getEntitlements(orgId) } returns
+      listOf(
+        EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true),
+      )
+    every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
+    every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(connectionId)
+    every { connectionService.lockConnectionsById(any(), any()) } returns setOf(connectionId)
+
+    featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.STANDARD)
+
+    verify { connectionEntitlementHelper.findSubHourSyncIds(orgId) }
+    verify {
+      connectionService.lockConnectionsById(
+        match { it.contains(connectionId) },
+        StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value,
+      )
+    }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired locks Plus-only connections when going from PLUS to STANDARD`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val mapperConnectionId = UUID.randomUUID()
+    val subHourConnectionId = UUID.randomUUID()
+
+    every { entitlementClient.getEntitlements(orgId) } returns
+      listOf(
+        EntitlementResult(MappersEntitlement.featureId, true),
+        EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true),
+      )
+    every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
+    every { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) } returns listOf(mapperConnectionId)
+    every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(subHourConnectionId)
+    every { connectionService.lockConnectionsById(any(), any()) } returns setOf(mapperConnectionId, subHourConnectionId)
+
+    featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.PLUS, EntitlementPlan.STANDARD)
+
+    verify { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) }
+    verify { connectionEntitlementHelper.findSubHourSyncIds(orgId) }
+    verify {
+      connectionService.lockConnectionsById(
+        match { it.containsAll(listOf(mapperConnectionId, subHourConnectionId)) },
         StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value,
       )
     }

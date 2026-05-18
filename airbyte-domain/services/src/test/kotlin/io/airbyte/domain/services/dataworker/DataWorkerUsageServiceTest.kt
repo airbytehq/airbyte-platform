@@ -308,7 +308,7 @@ class DataWorkerUsageServiceTest {
   }
 
   @Test
-  fun `insertUsageForCompletedJob should not insert usage when organization plan is not pro, flex, plus, or sme`() {
+  fun `insertUsageForCompletedJob should not insert usage when organization plan is plus`() {
     val workspaceId = UUID.randomUUID()
     val organizationId = UUID.randomUUID()
     val dataplaneGroupId = UUID.randomUUID()
@@ -330,7 +330,7 @@ class DataWorkerUsageServiceTest {
     every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
     every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
     every { featureFlagClient.boolVariation(any(), any()) } returns true
-    every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.CORE.id
+    every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PLUS.id
 
     service.insertUsageForCreatedJob(job)
 

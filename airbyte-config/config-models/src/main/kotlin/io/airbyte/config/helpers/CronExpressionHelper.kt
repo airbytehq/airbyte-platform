@@ -20,6 +20,12 @@ import java.util.Locale
  */
 @Singleton
 class CronExpressionHelper {
+  companion object {
+    private const val ONE_MINUTE_IN_SECONDS = 60L
+    private const val FIFTEEN_MINUTES_IN_SECONDS = 15 * ONE_MINUTE_IN_SECONDS
+    private const val ONE_HOUR_IN_SECONDS = 60 * ONE_MINUTE_IN_SECONDS
+  }
+
   fun validateCronExpression(cronExpression: String): Cron {
     val cronDefinition = CronDefinitionBuilder.instanceDefinitionFor(CronType.QUARTZ)
     val cron = CronParser(cronDefinition).parse(cronExpression)
@@ -60,12 +66,27 @@ class CronExpressionHelper {
 
   fun executesMoreThanOncePerHour(cronExpression: String): Boolean = executesMoreThanOncePerHour(validateCronExpression(cronExpression))
 
-  fun executesMoreThanOncePerHour(cron: Cron): Boolean {
+  fun executesMoreThanOncePerHour(cron: Cron): Boolean = executesMoreThanOncePerInterval(cron, ONE_HOUR_IN_SECONDS)
+
+  fun executesMoreThanOncePerFifteenMinutes(cronExpression: String): Boolean =
+    executesMoreThanOncePerFifteenMinutes(validateCronExpression(cronExpression))
+
+  fun executesMoreThanOncePerFifteenMinutes(cron: Cron): Boolean = executesMoreThanOncePerInterval(cron, FIFTEEN_MINUTES_IN_SECONDS)
+
+  fun executesMoreThanOncePerInterval(
+    cronExpression: String,
+    minimumIntervalInSeconds: Long,
+  ): Boolean = executesMoreThanOncePerInterval(validateCronExpression(cronExpression), minimumIntervalInSeconds)
+
+  fun executesMoreThanOncePerInterval(
+    cron: Cron,
+    minimumIntervalInSeconds: Long,
+  ): Boolean {
     val nextExecutions = getNextExecutions(cron, 3)
-    // Make sure the time difference between the next 3 executions does not exceed 1 hour
+    // Make sure the time difference between the next 3 executions does not exceed the minimum interval.
 
     nextExecutions.zipWithNext { prev, next ->
-      if (next - prev < 3600) {
+      if (next - prev < minimumIntervalInSeconds) {
         return true
       }
     }
@@ -73,23 +94,24 @@ class CronExpressionHelper {
   }
 
   fun checkDoesNotExecuteMoreThanOncePerHour(cron: Cron) {
-    if (executesMoreThanOncePerHour(cron)) {
-      throw IllegalArgumentException(
-        "Cron executions must be more than 1 hour apart",
-      )
-    }
+    checkDoesNotExecuteMoreThanOncePerInterval(cron, ONE_HOUR_IN_SECONDS, "1 hour")
+  }
+
+  fun checkDoesNotExecuteMoreThanOncePerFifteenMinutes(cron: Cron) {
+    checkDoesNotExecuteMoreThanOncePerInterval(cron, FIFTEEN_MINUTES_IN_SECONDS, "15 minutes")
   }
 
   fun checkDoesNotExecuteMoreThanOncePerMinute(cron: Cron) {
-    val nextExecutions = getNextExecutions(cron, 3)
-    // Make sure the time difference between the next 3 executions does not exceed 1 minute
+    checkDoesNotExecuteMoreThanOncePerInterval(cron, ONE_MINUTE_IN_SECONDS, "1 minute")
+  }
 
-    nextExecutions.zipWithNext { prev, next ->
-      if (next - prev < 60) {
-        throw IllegalArgumentException(
-          "Cron executions must be more than 1 minute apart",
-        )
-      }
+  fun checkDoesNotExecuteMoreThanOncePerInterval(
+    cron: Cron,
+    minimumIntervalInSeconds: Long,
+    minimumIntervalDescription: String,
+  ) {
+    if (executesMoreThanOncePerInterval(cron, minimumIntervalInSeconds)) {
+      throw IllegalArgumentException("Cron executions must be at least $minimumIntervalDescription apart")
     }
   }
 }

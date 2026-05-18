@@ -9,6 +9,7 @@ import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.config.StandardSync
 import io.airbyte.config.helpers.CronExpressionHelper
@@ -34,6 +35,7 @@ class ConnectionEntitlementHelper(
 ) {
   companion object {
     private val logger = KotlinLogging.logger {}
+    private const val FIFTEEN_MINUTE_SYNC_FLOOR_MINUTES = 15L
   }
 
   /**
@@ -54,10 +56,8 @@ class ConnectionEntitlementHelper(
     val sourceIsEntitled = isEntitledToConnector(sourceDefinitionId, organizationId)
     val destinationIsEntitled = isEntitledToConnector(destinationDefinitionId, organizationId)
 
-    if (subHourSyncIds.contains(connection.connectionId)) {
-      if (!entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement).isEntitled) {
-        return false
-      }
+    if (!hasRequiredSyncFrequencyEntitlement(connection, subHourSyncIds, organizationId)) {
+      return false
     }
 
     if (connection.catalog.streams.any { it.mappers.isNotEmpty() }) {
@@ -67,6 +67,57 @@ class ConnectionEntitlementHelper(
     }
 
     return sourceIsEntitled && destinationIsEntitled
+  }
+
+  private fun hasRequiredSyncFrequencyEntitlement(
+    connection: StandardSync,
+    subHourSyncIds: Collection<UUID>,
+    organizationId: OrganizationId,
+  ): Boolean {
+    if (!subHourSyncIds.contains(connection.connectionId)) {
+      return true
+    }
+
+    if (entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement).isEntitled) {
+      return true
+    }
+
+    if (!entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement).isEntitled) {
+      return false
+    }
+
+    return !requiresLegacyFasterSyncEntitlement(connection)
+  }
+
+  private fun requiresLegacyFasterSyncEntitlement(connection: StandardSync): Boolean {
+    val basicSchedule = connection.scheduleData?.basicSchedule
+    if (basicSchedule != null) {
+      return basicSchedule.timeUnit == io.airbyte.config.BasicSchedule.TimeUnit.MINUTES &&
+        basicSchedule.units < FIFTEEN_MINUTE_SYNC_FLOOR_MINUTES
+    }
+
+    val cronSchedule = connection.scheduleData?.cron
+    if (cronSchedule != null) {
+      return try {
+        cronExpressionHelper.executesMoreThanOncePerFifteenMinutes(cronSchedule.cronExpression)
+      } catch (e: IllegalArgumentException) {
+        logger.warn(e) {
+          "Invalid cron expression while validating connection ${connection.connectionId} for 15-minute sync entitlement"
+        }
+        true
+      }
+    }
+
+    val legacySchedule = connection.schedule
+    if (legacySchedule != null) {
+      return legacySchedule.timeUnit == io.airbyte.config.Schedule.TimeUnit.MINUTES &&
+        legacySchedule.units < FIFTEEN_MINUTE_SYNC_FLOOR_MINUTES
+    }
+
+    logger.warn {
+      "Unable to determine sub-hour sync cadence for connection ${connection.connectionId}; requiring legacy faster-sync entitlement to unlock it"
+    }
+    return true
   }
 
   private fun isEntitledToConnector(

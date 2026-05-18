@@ -12,6 +12,7 @@ import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.commons.entitlements.models.SourceWorkdayEnterpriseConnector
 import io.airbyte.commons.server.helpers.ConnectionHelpers
@@ -64,6 +65,13 @@ class ConnectionEntitlementHelperTest {
     destinationService = mock()
     cronExpressionHelper = CronExpressionHelper()
     entitlementHelper = mock()
+    whenever(entitlementService.checkEntitlement(any(), any())).thenReturn(
+      EntitlementResult(
+        featureId = "unknown-feature",
+        isEntitled = false,
+        reason = null,
+      ),
+    )
     connectionEntitlementHelper =
       ConnectionEntitlementHelper(connectionService, cronExpressionHelper, entitlementService, sourceService, destinationService, entitlementHelper)
   }
@@ -330,6 +338,54 @@ class ConnectionEntitlementHelperTest {
         featureId = FasterSyncFrequencyEntitlement.featureId,
         isEntitled = false,
         reason = "Not entitled to faster sync frequency",
+      ),
+    )
+
+    val result =
+      connectionEntitlementHelper.isEntitledToConnection(
+        connection = connection,
+        subHourSyncIds = listOf(connectionId),
+        sourceDefinitionId = UUID.randomUUID(),
+        destinationDefinitionId = UUID.randomUUID(),
+        organizationId = organizationId,
+      )
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isEntitledToConnection returns true when fifteen-minute entitlement covers sub-hour sync`() {
+    val connection = createMockConnection(cronExpression = "0 */30 * * * ?")
+
+    whenever(entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = FifteenMinuteSyncFrequencyEntitlement.featureId,
+        isEntitled = true,
+        reason = null,
+      ),
+    )
+
+    val result =
+      connectionEntitlementHelper.isEntitledToConnection(
+        connection = connection,
+        subHourSyncIds = listOf(connectionId),
+        sourceDefinitionId = UUID.randomUUID(),
+        destinationDefinitionId = UUID.randomUUID(),
+        organizationId = organizationId,
+      )
+
+    assertTrue(result)
+  }
+
+  @Test
+  fun `isEntitledToConnection returns false when sync is faster than fifteen minutes and only plus entitlement exists`() {
+    val connection = createMockConnection(cronExpression = "0 */5 * * * ?")
+
+    whenever(entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = FifteenMinuteSyncFrequencyEntitlement.featureId,
+        isEntitled = true,
+        reason = null,
       ),
     )
 

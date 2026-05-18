@@ -16044,6 +16044,13 @@ components:
             - payment_method
             - setup
           default: portal
+        plan:
+          type: string
+          description: Requested self-serve plan when initiating setup checkout. Defaults to standard for backwards compatibility.
+          enum:
+            - standard
+            - plus
+          default: standard
     CustomerPortalRead:
       type: object
       required:

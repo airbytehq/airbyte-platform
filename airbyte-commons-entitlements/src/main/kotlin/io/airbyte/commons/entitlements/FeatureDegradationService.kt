@@ -6,6 +6,7 @@ package io.airbyte.commons.entitlements
 
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.commons.entitlements.models.RbacRolesEntitlement
 import io.airbyte.config.ActorType
@@ -26,6 +27,7 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.UserInvitationService
 import io.airbyte.domain.models.EntitlementPlan
+import io.airbyte.domain.models.EntitlementPlan.PLUS
 import io.airbyte.domain.models.EntitlementPlan.STANDARD
 import io.airbyte.domain.models.EntitlementPlan.UNIFIED_TRIAL
 import io.airbyte.domain.models.OrganizationId
@@ -51,7 +53,7 @@ internal class FeatureDegradationService(
   ) {
     logger.info { "Checking for feature downgrades. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
 
-    if (!(fromPlan == UNIFIED_TRIAL && toPlan == STANDARD)) {
+    if (!isSupportedFeatureDegradation(fromPlan, toPlan)) {
       logger.info { "Downgrade not supported from plan $fromPlan to $toPlan. Skipping downgrade." }
       return
     }
@@ -91,6 +93,8 @@ internal class FeatureDegradationService(
             connectionsToDowngrade.addAll(connectionService.listConnectionIdsForOrganizationWithMappers(organizationId.value))
           FasterSyncFrequencyEntitlement.featureId ->
             connectionsToDowngrade.addAll(entitlementHelper.findSubHourSyncIds(organizationId))
+          FifteenMinuteSyncFrequencyEntitlement.featureId ->
+            connectionsToDowngrade.addAll(entitlementHelper.findSubHourSyncIds(organizationId))
           else -> logger.debug { "No downgrade flow defined for $entitlementToDowngrade" }
         }
       }
@@ -127,6 +131,11 @@ internal class FeatureDegradationService(
       // Don't fail the plan update if we can't check for downgrades
     }
   }
+
+  private fun isSupportedFeatureDegradation(
+    fromPlan: EntitlementPlan,
+    toPlan: EntitlementPlan,
+  ): Boolean = toPlan == STANDARD && fromPlan in setOf(UNIFIED_TRIAL, PLUS)
 
   fun downgradeRBAC(
     organizationId: OrganizationId,
