@@ -27,6 +27,15 @@ export const PrivateLinksTable: React.FC<PrivateLinksTableProps> = ({ privateLin
         header: () => <FormattedMessage id="settings.privateLinks.table.name" />,
         cell: (props) => <Text size="sm">{props.getValue()}</Text>,
       }),
+      columnHelper.accessor((row) => row.serviceConfig.type, {
+        id: "serviceType",
+        header: () => <FormattedMessage id="settings.privateLinks.table.type" />,
+        cell: (props) => (
+          <Text size="sm">
+            <FormattedMessage id={`settings.privateLinks.form.serviceType.${props.getValue()}`} />
+          </Text>
+        ),
+      }),
       columnHelper.accessor("status", {
         header: () => <FormattedMessage id="settings.privateLinks.table.status" />,
         cell: (props) => <StatusCell status={props.getValue()} />,

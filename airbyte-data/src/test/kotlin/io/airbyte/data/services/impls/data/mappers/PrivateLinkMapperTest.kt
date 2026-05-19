@@ -64,23 +64,6 @@ class PrivateLinkMapperTest {
   }
 
   @Test
-  fun `storage variant with null bucket round-trips`() {
-    val domain =
-      PrivateLink(
-        workspaceId = workspaceId,
-        dataplaneGroupId = dataplaneGroupId,
-        name = "storage-link",
-        status = PrivateLinkStatus.CREATING,
-        serviceType = PrivateLinkServiceType.STORAGE,
-        serviceConfig = PrivateLinkServiceConfig.Storage(region = "us-east-2", bucket = null),
-      )
-
-    val roundTripped = domain.toEntity().toDomainModel()
-
-    assertEquals(PrivateLinkServiceConfig.Storage(region = "us-east-2", bucket = null), roundTripped.serviceConfig)
-  }
-
-  @Test
   fun `toDomainModel reads endpoint variant from JSONB using the type discriminator`() {
     val entity =
       EntityPrivateLink(

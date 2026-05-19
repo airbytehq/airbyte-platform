@@ -91,6 +91,10 @@ val genApiServer =
         "StateBlob" to "com.fasterxml.jackson.databind.JsonNode",
         "FieldSchema" to "com.fasterxml.jackson.databind.JsonNode",
         "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        // Polymorphic on `type`; generated as opaque JsonNode and parsed into the
+        // domain sealed class via Jackson @JsonTypeInfo. See config.yaml note —
+        // an OpenAPI discriminator here breaks kotlin-server/jaxrs-spec codegen.
+        "PrivateLinkServiceConfig" to "com.fasterxml.jackson.databind.JsonNode",
         "DeclarativeManifest" to "com.fasterxml.jackson.databind.JsonNode",
         "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
@@ -167,6 +171,10 @@ val genApiServer2 =
         "StateBlob" to "com.fasterxml.jackson.databind.JsonNode",
         "FieldSchema" to "com.fasterxml.jackson.databind.JsonNode",
         "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        // Polymorphic on `type`; generated as opaque JsonNode and parsed into the
+        // domain sealed class via Jackson @JsonTypeInfo. See config.yaml note —
+        // an OpenAPI discriminator here breaks kotlin-server/jaxrs-spec codegen.
+        "PrivateLinkServiceConfig" to "com.fasterxml.jackson.databind.JsonNode",
         "DeclarativeManifest" to "com.fasterxml.jackson.databind.JsonNode",
         "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
@@ -201,6 +209,10 @@ val genApiClient =
         "StateBlob" to "com.fasterxml.jackson.databind.JsonNode",
         "FieldSchema" to "com.fasterxml.jackson.databind.JsonNode",
         "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        // Polymorphic on `type`; generated as opaque JsonNode and parsed into the
+        // domain sealed class via Jackson @JsonTypeInfo. See config.yaml note —
+        // an OpenAPI discriminator here breaks kotlin-server/jaxrs-spec codegen.
+        "PrivateLinkServiceConfig" to "com.fasterxml.jackson.databind.JsonNode",
         "DeclarativeManifest" to "com.fasterxml.jackson.databind.JsonNode",
         "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
@@ -249,6 +261,10 @@ val genApiDocs =
         "StateBlob" to "com.fasterxml.jackson.databind.JsonNode",
         "FieldSchema" to "com.fasterxml.jackson.databind.JsonNode",
         "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        // Polymorphic on `type`; generated as opaque JsonNode and parsed into the
+        // domain sealed class via Jackson @JsonTypeInfo. See config.yaml note —
+        // an OpenAPI discriminator here breaks kotlin-server/jaxrs-spec codegen.
+        "PrivateLinkServiceConfig" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
         "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorIPCOptions" to "com.fasterxml.jackson.databind.JsonNode",
