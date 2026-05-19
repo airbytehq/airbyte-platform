@@ -442,6 +442,7 @@ val SOURCE_NAME_TO_DEFINITION_ID: Map<String, UUID> =
     Pair("datagen", UUID.fromString("f14d5125-dc0d-4f6c-abe5-acde821a2203")),
     Pair("gmail", UUID.fromString("f7833dac-fc18-4feb-a2a9-94b22001edc6")),
     Pair("google-calendar", UUID.fromString("c01b6259-bdf4-45ff-bcd5-66424cd2f18b")),
+    Pair("linear", UUID.fromString("1c5d8316-ed42-4473-8fbc-2626f03f070c")),
   )
 
 val DEFINITION_ID_TO_SOURCE_NAME: Map<UUID, String> =
@@ -741,4 +742,5 @@ val DEFINITION_ID_TO_SOURCE_NAME: Map<UUID, String> =
     Pair(UUID.fromString("f14d5125-dc0d-4f6c-abe5-acde821a2203"), "datagen"),
     Pair(UUID.fromString("f7833dac-fc18-4feb-a2a9-94b22001edc6"), "gmail"),
     Pair(UUID.fromString("c01b6259-bdf4-45ff-bcd5-66424cd2f18b"), "google-calendar"),
+    Pair(UUID.fromString("1c5d8316-ed42-4473-8fbc-2626f03f070c"), "linear"),
   )
