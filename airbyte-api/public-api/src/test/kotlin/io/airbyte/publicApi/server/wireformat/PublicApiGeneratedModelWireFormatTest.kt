@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.airbyte.publicApi.server.generated.models.ApplicationTokenRequestWithGrant
+import io.airbyte.publicApi.server.generated.models.JobStatusEnum
 import io.airbyte.publicApi.server.generated.models.PublicAccessTokenResponse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -84,6 +85,11 @@ internal class PublicApiGeneratedModelWireFormatTest {
     val roundTrip = objectMapper.readValue<PublicAccessTokenResponse>(json)
 
     assertEquals(response, roundTrip)
+  }
+
+  @Test
+  fun `job status enum accepts queued status`() {
+    assertEquals("queued", JobStatusEnum.decode("queued")?.toString())
   }
 
   private fun assertContainsField(
