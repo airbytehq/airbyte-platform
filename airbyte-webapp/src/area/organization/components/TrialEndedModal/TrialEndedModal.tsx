@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
+import { useNavigate } from "react-router-dom";
 
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
@@ -9,7 +10,9 @@ import { Icon } from "components/ui/Icon";
 import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
+import { useLinkToPlanPage } from "cloud/area/billing/utils/useLinkToPlanPage";
 import { useRedirectToCustomerPortal } from "cloud/area/billing/utils/useRedirectToCustomerPortal";
+import { useExperiment } from "core/services/Experiment";
 import { ModalContentProps } from "core/services/Modal/types";
 import { links } from "core/utils/links";
 
@@ -20,10 +23,19 @@ interface TrialEndedModalResult {
 }
 
 export const TrialEndedModal: React.FC<ModalContentProps<TrialEndedModalResult>> = ({ onComplete }) => {
+  const navigate = useNavigate();
+  const planPagePath = useLinkToPlanPage();
   const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal("setup");
+  const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
   const [isProRedirecting, setIsProRedirecting] = useState(false);
 
   const handleStandardPlanClick = async () => {
+    if (isSelfServePlusPlanEnabled) {
+      navigate(planPagePath);
+      onComplete({ action: "standard" });
+      return;
+    }
+
     await goToCustomerPortal();
     onComplete({ action: "standard" });
   };

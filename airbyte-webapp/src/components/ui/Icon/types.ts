@@ -29,6 +29,7 @@ export type IconType =
   | "collapseAll"
   | "contract"
   | "copy"
+  | "creditCard"
   | "credits"
   | "cross"
   | "cursor"

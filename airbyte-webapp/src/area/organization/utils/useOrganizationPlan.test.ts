@@ -43,6 +43,7 @@ describe("useOrganizationPlan", () => {
     ["isUnifiedTrialPlan", "plan-airbyte-unified-trial"],
     ["isStandardTrialPlan", "plan-airbyte-standard-trial"],
     ["isStandardPlan", "plan-airbyte-standard"],
+    ["isPlusPlan", "plan-airbyte-plus"],
     ["isSmePlan", "plan-airbyte-sme"],
     ["isFlexPlan", "plan-airbyte-flex"],
     ["isProPlan", "plan-airbyte-pro"],

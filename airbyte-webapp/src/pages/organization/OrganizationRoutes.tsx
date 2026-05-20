@@ -5,7 +5,7 @@ import OrganizationSettingsLayout from "area/organization/OrganizationSettingsLa
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
-import { useExperimentContext } from "core/services/Experiment";
+import { useExperiment, useExperimentContext } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { OrganizationSettingsPage } from "pages/SettingsPage/OrganizationSettingsPage";
@@ -19,6 +19,7 @@ import { RoutePaths, SettingsRoutePaths } from "../routePaths";
 
 const OrganizationWorkspacesPage = React.lazy(() => import("pages/workspaces/OrganizationWorkspacesPage"));
 const OrganizationBillingPage = React.lazy(() => import("cloud/views/billing/OrganizationBillingPage"));
+const OrganizationPlanPage = React.lazy(() => import("cloud/views/billing/OrganizationPlanPage"));
 const OrganizationUsagePage = React.lazy(() => import("cloud/views/billing/OrganizationUsagePage"));
 
 export const OrganizationRoutes: React.FC = () => {
@@ -28,6 +29,7 @@ export const OrganizationRoutes: React.FC = () => {
   const canViewOrgSettings = useGeneratedIntent(Intent.ViewOrganizationSettings, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
+  const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
 
   useExperimentContext("organization", organizationId);
 
@@ -48,6 +50,9 @@ export const OrganizationRoutes: React.FC = () => {
           {licenseUi && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}
           {canManageOrganizationBilling && (
             <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
+          )}
+          {canManageOrganizationBilling && isSelfServePlusPlanEnabled && (
+            <Route path={CloudSettingsRoutePaths.Plan} element={<OrganizationPlanPage />} />
           )}
           {canViewOrganizationUsage && (
             <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />

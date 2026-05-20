@@ -33,6 +33,7 @@ import CommunityIcon from "./icons/communityIcon.svg?react";
 import ConnectionIcon from "./icons/connectionIcon.svg?react";
 import ContractIcon from "./icons/contractIcon.svg?react";
 import CopyIcon from "./icons/copyIcon.svg?react";
+import CreditCardIcon from "./icons/creditCardIcon.svg?react";
 import CreditsIcon from "./icons/creditsIcon.svg?react";
 import CrossIcon from "./icons/crossIcon.svg?react";
 import CursorIcon from "./icons/cursorIcon.svg?react";
@@ -205,6 +206,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   contract: ContractIcon,
   collapseAll: CollapseAllIcon,
   copy: CopyIcon,
+  creditCard: CreditCardIcon,
   credits: CreditsIcon,
   cross: CrossIcon,
   cursor: CursorIcon,

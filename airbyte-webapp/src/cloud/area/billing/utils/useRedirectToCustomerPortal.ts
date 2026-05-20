@@ -3,16 +3,24 @@ import { useIntl } from "react-intl";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useGetCustomerPortalUrl } from "core/api";
-import { CustomerPortalRequestBodyFlow } from "core/api/types/AirbyteClient";
+import { CustomerPortalRequestBodyFlow, CustomerPortalRequestBodyPlan } from "core/api/types/AirbyteClient";
+import { useExperiment } from "core/services/Experiment";
 import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
 
 import { useLinkToBillingPage } from "./useLinkToBillingPage";
+import { useLinkToPlanPage } from "./useLinkToPlanPage";
 
-export const useRedirectToCustomerPortal = (flow: CustomerPortalRequestBodyFlow) => {
+export const useRedirectToCustomerPortal = (
+  flow: CustomerPortalRequestBodyFlow,
+  plan?: CustomerPortalRequestBodyPlan
+) => {
   const [redirecting, setRedirecting] = useState(false);
   const organizationId = useCurrentOrganizationId();
   const pathToBilling = useLinkToBillingPage();
+  const pathToPlan = useLinkToPlanPage();
+  const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
+  const returnPath = flow === "setup" && isSelfServePlusPlanEnabled ? pathToPlan : pathToBilling;
 
   const { mutateAsync: getCustomerPortalUrl, isLoading: isCustomerPortalUrlLoading } = useGetCustomerPortalUrl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
@@ -25,8 +33,9 @@ export const useRedirectToCustomerPortal = (flow: CustomerPortalRequestBodyFlow)
     try {
       const { url } = await getCustomerPortalUrl({
         flow,
+        plan,
         organizationId,
-        returnUrl: `${window.location.origin}${pathToBilling}`,
+        returnUrl: `${window.location.origin}${returnPath}`,
       });
       window.location.assign(url);
     } catch (e) {
@@ -40,10 +49,11 @@ export const useRedirectToCustomerPortal = (flow: CustomerPortalRequestBodyFlow)
     }
   }, [
     flow,
+    plan,
     formatMessage,
     getCustomerPortalUrl,
     organizationId,
-    pathToBilling,
+    returnPath,
     registerNotification,
     unregisterNotificationById,
   ]);

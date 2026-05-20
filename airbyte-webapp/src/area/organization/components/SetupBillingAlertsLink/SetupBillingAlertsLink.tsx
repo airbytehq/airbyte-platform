@@ -6,6 +6,7 @@ import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { isOrganizationSubscribed } from "area/organization/utils/isOrganizationSubscribed";
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useOrganization, useOrgInfo } from "core/api";
 import { links } from "core/utils/links";
@@ -17,10 +18,7 @@ export const SetupBillingAlertsLink: React.FC = () => {
   const { email } = useOrganization(organizationId);
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
 
-  const isSubscribedWithPayment =
-    billing?.subscriptionStatus === "subscribed" && billing.paymentStatus !== "uninitialized";
-
-  if (!isSubscribedWithPayment) {
+  if (!isOrganizationSubscribed(billing)) {
     return null;
   }
 

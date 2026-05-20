@@ -1,0 +1,27 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.planCard {
+  flex: 1 1 0;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-sm;
+
+  ul {
+    padding-inline-start: variables.$spacing-xl;
+    line-height: 1.5;
+  }
+
+  &--primary {
+    border-color: colors.$blue-400;
+    background-color: colors.$blue-30;
+  }
+
+  &--purple {
+    border-color: colors.$purple-400;
+    background-color: colors.$purple-30;
+  }
+}
+
+.planCardText {
+  font-weight: 400;
+}

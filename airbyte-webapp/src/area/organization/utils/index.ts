@@ -1,3 +1,4 @@
+export * from "./isOrganizationSubscribed";
 export * from "./organizationPlans";
 export * from "./useCurrentOrganizationId";
 export * from "./useIsAdpOrganization";

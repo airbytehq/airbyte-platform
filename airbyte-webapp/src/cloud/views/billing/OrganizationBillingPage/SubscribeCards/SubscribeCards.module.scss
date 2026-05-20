@@ -13,24 +13,4 @@ $min-width-card-row: 650px;
       flex-direction: column;
     }
   }
-
-  &__card {
-    flex: 1 1 0;
-    border: variables.$border-thin solid colors.$grey-100;
-    border-radius: variables.$border-radius-sm;
-
-    ul {
-      padding-inline-start: variables.$spacing-xl;
-      line-height: 1.5;
-    }
-
-    &--primary {
-      border-color: colors.$blue-400;
-      background-color: colors.$blue-30;
-    }
-  }
-
-  &__cardText {
-    font-weight: 400;
-  }
 }

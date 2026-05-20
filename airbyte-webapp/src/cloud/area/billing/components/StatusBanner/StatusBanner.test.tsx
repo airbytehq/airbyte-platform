@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 
 import { mocked, render } from "test-utils";
+import { mockExperiments } from "test-utils/mockExperiments";
 
 import {
   ISO8601DateTime,
@@ -25,6 +26,8 @@ jest.mock("core/utils/useOrganizationSubscriptionStatus", () => ({
 jest.mock("area/organization/utils", () => ({
   useCurrentOrganizationId: jest.fn().mockReturnValue("test-organization-id"),
 }));
+
+jest.mock("core/api", () => ({}));
 
 const mockSubscriptionStatus = (
   options: {
@@ -68,6 +71,10 @@ const mockSubscriptionStatus = (
 };
 
 describe("StatusBanner", () => {
+  beforeEach(() => {
+    mockExperiments({ "billing.selfServePlusPlan": false });
+  });
+
   it("should render nothing with paymentStatus=OKAY and not in trial", async () => {
     mockSubscriptionStatus({
       paymentStatus: "okay",
@@ -263,6 +270,32 @@ describe("StatusBanner", () => {
     const wrapper = await render(<StatusBanner />);
     expect(wrapper.container.textContent).toContain("Subscribe to Airbyte");
     expect(wrapper.queryByRole("link")).toBeInTheDocument();
+  });
+
+  it("should link trial CTAs to the Plan page when self-serve Plus is enabled", async () => {
+    mockExperiments({ "billing.selfServePlusPlan": true });
+    mockSubscriptionStatus({
+      paymentStatus: "uninitialized",
+      subscriptionStatus: "subscribed",
+      trialStatus: "post_trial",
+    });
+
+    const wrapper = await render(<StatusBanner />);
+
+    expect(wrapper.getByRole("link")).toHaveAttribute("href", "/organization/test-organization-id/settings/plan");
+  });
+
+  it("should keep payment issue CTAs linked to Billing when self-serve Plus is enabled", async () => {
+    mockExperiments({ "billing.selfServePlusPlan": true });
+    mockSubscriptionStatus({
+      paymentStatus: "disabled",
+      subscriptionStatus: "subscribed",
+      trialStatus: "post_trial",
+    });
+
+    const wrapper = await render(<StatusBanner />);
+
+    expect(wrapper.getByRole("link")).toHaveAttribute("href", "/organization/test-organization-id/settings/billing");
   });
 
   it("should render in-trial banner w/ payment method", async () => {

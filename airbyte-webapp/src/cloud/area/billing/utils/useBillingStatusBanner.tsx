@@ -4,10 +4,12 @@ import { FormattedTime, useIntl } from "react-intl";
 
 import { ExternalLink, Link } from "components/ui/Link";
 
+import { useExperiment } from "core/services/Experiment";
 import { links } from "core/utils/links";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import { useLinkToBillingPage } from "./useLinkToBillingPage";
+import { useLinkToPlanPage } from "./useLinkToPlanPage";
 
 interface BillingStatusBanner {
   content: React.ReactNode;
@@ -31,6 +33,9 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     isStandardTrialPlan,
   } = useOrganizationSubscriptionStatus();
   const linkToBilling = useLinkToBillingPage();
+  const linkToPlan = useLinkToPlanPage();
+  const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
+  const linkToSubscribe = isSelfServePlusPlanEnabled ? linkToPlan : linkToBilling;
 
   if (!paymentStatus || !subscriptionStatus) {
     return undefined;
@@ -129,7 +134,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
             isTrialEndingWithin24Hours,
             exactTime: trialEndsAt ? <FormattedTime value={trialEndsAt} /> : undefined,
             days: trialDaysLeft,
-            lnk: (node: React.ReactNode) => <Link to={linkToBilling}>{node}</Link>,
+            lnk: (node: React.ReactNode) => <Link to={linkToSubscribe}>{node}</Link>,
           }
         ),
       };
@@ -164,7 +169,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
           },
           {
             days: trialDaysLeft,
-            lnk: (node: React.ReactNode) => <Link to={linkToBilling}>{node}</Link>,
+            lnk: (node: React.ReactNode) => <Link to={linkToSubscribe}>{node}</Link>,
           }
         ),
       };
@@ -182,7 +187,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
               : "billing.banners.postTrial",
         },
         {
-          lnk: (node: React.ReactNode) => <Link to={linkToBilling}>{node}</Link>,
+          lnk: (node: React.ReactNode) => <Link to={linkToSubscribe}>{node}</Link>,
         }
       ),
     };

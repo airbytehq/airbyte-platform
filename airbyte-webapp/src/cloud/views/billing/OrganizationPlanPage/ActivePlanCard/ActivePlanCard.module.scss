@@ -1,0 +1,24 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.activePlanCard {
+  padding: variables.$spacing-lg variables.$spacing-xl;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-sm;
+  background-color: colors.$foreground;
+
+  &--standard {
+    border-color: colors.$blue-400;
+    background-color: colors.$blue-30;
+  }
+
+  &--plus {
+    border-color: colors.$purple-400;
+    background-color: colors.$purple-30;
+  }
+
+  &--pro {
+    border-color: colors.$grey-100;
+    background-color: colors.$foreground;
+  }
+}

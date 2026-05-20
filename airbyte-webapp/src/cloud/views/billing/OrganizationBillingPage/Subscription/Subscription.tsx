@@ -5,13 +5,15 @@ import { Box } from "components/ui/Box";
 import { DataLoadingError } from "components/ui/DataLoadingError";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { ExternalLink } from "components/ui/Link";
+import { ExternalLink, Link } from "components/ui/Link";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useLinkToPlanPage } from "cloud/area/billing/utils/useLinkToPlanPage";
 import { useGetOrganizationSubscriptionInfo } from "core/api";
+import { useExperiment } from "core/services/Experiment";
 import { links } from "core/utils/links";
 
 import { CancelSubscription } from "./CancelSubscription";
@@ -20,6 +22,8 @@ import styles from "./Subscription.module.scss";
 export const Subscription: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const { data: subscription, isLoading, isError } = useGetOrganizationSubscriptionInfo(organizationId);
+  const planPagePath = useLinkToPlanPage();
+  const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
 
   return (
     <BorderedTile>
@@ -27,29 +31,40 @@ export const Subscription: React.FC = () => {
         <Heading as="h2" size="sm">
           <FormattedMessage id="settings.organization.billing.subscription" />
         </Heading>
-        {subscription && (
-          <div className={styles.subscription__changePlan}>
-            {subscription.selfServeSubscription ? (
-              <CancelSubscription subscription={subscription} disabled={false} />
-            ) : (
-              <Tooltip control={<CancelSubscription subscription={subscription} disabled />}>
-                <FormattedMessage
-                  id="settings.organization.billing.noSelfServePlan"
-                  values={{
-                    lnk: (node: React.ReactNode) => (
-                      <ExternalLink opensInNewTab href={links.contactSales} variant="primary">
-                        {node}
-                      </ExternalLink>
-                    ),
-                  }}
-                />
-              </Tooltip>
+        <div className={styles.subscription__changePlan}>
+          <FlexContainer gap="sm" alignItems="center">
+            {isSelfServePlusPlanEnabled && (
+              <Link to={planPagePath} variant="button">
+                <FormattedMessage id="settings.organization.billing.subscription.changePlan" />
+              </Link>
             )}
-          </div>
-        )}
+            {subscription &&
+              (subscription.selfServeSubscription ? (
+                <CancelSubscription subscription={subscription} disabled={false} />
+              ) : (
+                <Tooltip control={<CancelSubscription subscription={subscription} disabled />}>
+                  <FormattedMessage
+                    id="settings.organization.billing.noSelfServePlan"
+                    values={{
+                      lnk: (node: React.ReactNode) => (
+                        <ExternalLink opensInNewTab href={links.contactSales} variant="primary">
+                          {node}
+                        </ExternalLink>
+                      ),
+                    }}
+                  />
+                </Tooltip>
+              ))}
+          </FlexContainer>
+        </div>
       </FlexContainer>
       <Box pt="xl">
         {isLoading && <LoadingSkeleton />}
+        {!isLoading && !isError && !subscription && (
+          <Text size="lg" color="grey400">
+            <FormattedMessage id="settings.organization.billing.subscription.noActivePlan" />
+          </Text>
+        )}
         {subscription && (
           <FlexContainer justifyContent="space-between" gap="lg" direction="column">
             {/* If the Stigg entitlement plan is set, use it instead of the Orb plan name */}

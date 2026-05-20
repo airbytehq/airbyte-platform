@@ -10,6 +10,7 @@ export interface Experiments {
   asyncSchemaDiscovery: boolean;
   "authPage.rightSideUrl": string | undefined;
   "billing.early-sync-enabled": boolean;
+  "billing.selfServePlusPlan": boolean;
   "connection.allowToSupportAllSyncModes": boolean;
   "connection.columnSelection": boolean;
   "connection.onboarding.destinations": string;
@@ -46,6 +47,7 @@ export const defaultExperimentValues: Experiments = {
   asyncSchemaDiscovery: true,
   "authPage.rightSideUrl": undefined,
   "billing.early-sync-enabled": false,
+  "billing.selfServePlusPlan": false,
   "connection.allowToSupportAllSyncModes": false,
   "connection.columnSelection": true,
   "connection.onboarding.destinations": "",
