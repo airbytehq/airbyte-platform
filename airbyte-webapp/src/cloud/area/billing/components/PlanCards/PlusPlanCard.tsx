@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -8,6 +8,7 @@ import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { useRedirectToCustomerPortal } from "cloud/area/billing/utils/useRedirectToCustomerPortal";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { links } from "core/utils/links";
 
 import { PlanCard } from "./PlanCard";
@@ -19,10 +20,32 @@ interface PlusPlanCardProps {
 }
 
 export const PlusPlanCard: React.FC<PlusPlanCardProps> = ({ disabled = false, isPaidPlan = false }) => {
-  const { goToCustomerPortal } = useRedirectToCustomerPortal("setup", "plus");
-  const [isLoading, setIsLoading] = useState(false);
+  const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal("setup", "plus");
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const ctaMessageId = isPaidPlan ? "plans.plus.upgrade" : "plans.plus.get";
+
+  const onClick = () => {
+    if (!isPaidPlan) {
+      goToCustomerPortal();
+      return;
+    }
+
+    openConfirmationModal({
+      title: <FormattedMessage id="plans.plus.upgrade.confirmTitle" />,
+      text: (
+        <Text>
+          <FormattedMessage id="plans.plus.upgrade.confirmText" />
+        </Text>
+      ),
+      submitButtonText: "plans.plus.upgrade.confirmSubmit",
+      cancelButtonText: "plans.plus.upgrade.confirmCancel",
+      onSubmit: () => {
+        closeConfirmationModal();
+        goToCustomerPortal();
+      },
+    });
+  };
 
   return (
     <PlanCard variant="purple">
@@ -34,16 +57,7 @@ export const PlusPlanCard: React.FC<PlusPlanCardProps> = ({ disabled = false, is
           <Text size="lg" bold>
             <FormattedMessage id="plans.plus.price" />
           </Text>
-          <Button
-            isLoading={isLoading}
-            disabled={disabled}
-            variant="primary"
-            onClick={async () => {
-              setIsLoading(true);
-              await goToCustomerPortal();
-              setIsLoading(false);
-            }}
-          >
+          <Button isLoading={redirecting} disabled={disabled} variant="primary" onClick={onClick}>
             <FormattedMessage id={ctaMessageId} />
           </Button>
         </FlexContainer>

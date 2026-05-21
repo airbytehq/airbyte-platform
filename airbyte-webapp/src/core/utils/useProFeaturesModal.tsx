@@ -70,7 +70,7 @@ export const useProFeaturesModal = (featureId: string) => {
     await openModal({
       title: null,
       content: ({ onComplete }) => (
-        <ProFeaturesWarnModal onContinue={() => onComplete("success")} variant={modalVariant} />
+        <ProFeaturesWarnModal onContinue={() => onComplete("success")} variant={modalVariant} featureId={featureId} />
       ),
       preventCancel: true,
       size: "xl",

@@ -27,7 +27,12 @@ export const Subscription: React.FC = () => {
 
   return (
     <BorderedTile>
-      <FlexContainer justifyContent="space-between" className={styles.subscription__header}>
+      <FlexContainer
+        justifyContent="space-between"
+        alignItems="center"
+        wrap="wrap"
+        className={styles.subscription__header}
+      >
         <Heading as="h2" size="sm">
           <FormattedMessage id="settings.organization.billing.subscription" />
         </Heading>

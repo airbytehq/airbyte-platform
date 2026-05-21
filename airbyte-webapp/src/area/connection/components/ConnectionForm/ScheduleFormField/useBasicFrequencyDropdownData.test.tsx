@@ -7,22 +7,27 @@ import { ConnectionScheduleTimeUnit } from "core/api/types/AirbyteClient";
 import { useBasicFrequencyDropdownData, frequencyConfig } from "./useBasicFrequencyDropdownData";
 
 const mockUseFeature = jest.fn();
-const mockUseOrganizationSubscriptionStatus = jest.fn();
+const mockUseOrganizationPlan = jest.fn();
 
 jest.mock("core/services/features", () => ({
   ...jest.requireActual("core/services/features"),
   useFeature: (...args: unknown[]) => mockUseFeature(...args),
 }));
 
-jest.mock("core/utils/useOrganizationSubscriptionStatus", () => ({
-  useOrganizationSubscriptionStatus: () => mockUseOrganizationSubscriptionStatus(),
+jest.mock("area/organization/utils", () => ({
+  ...jest.requireActual("area/organization/utils"),
+  useOrganizationPlan: () => mockUseOrganizationPlan(),
 }));
 
 describe("#useBasicFrequencyDropdownData", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseFeature.mockReturnValue(false);
-    mockUseOrganizationSubscriptionStatus.mockReturnValue({ isUnifiedTrialPlan: false });
+    mockUseOrganizationPlan.mockReturnValue({
+      isUnifiedTrialPlan: false,
+      isStandardTrialPlan: false,
+      isStandardPlan: false,
+    });
   });
 
   it("should return only default frequencies when no additional frequency is provided", () => {
@@ -72,5 +77,37 @@ describe("#useBasicFrequencyDropdownData", () => {
     // First two should be 15 and 30 minute options
     expect(result.current[0].value).toEqual({ units: 15, timeUnit: "minutes" });
     expect(result.current[1].value).toEqual({ units: 30, timeUnit: "minutes" });
+  });
+
+  it("marks minute options as available in Plus and Pro for trial plans", () => {
+    mockUseFeature.mockReturnValue(true);
+    mockUseOrganizationPlan.mockReturnValue({
+      isUnifiedTrialPlan: true,
+      isStandardTrialPlan: false,
+      isStandardPlan: false,
+    });
+
+    const { result } = renderHook(() => useBasicFrequencyDropdownData(undefined), { wrapper });
+
+    expect(result.current[0]).toEqual(expect.objectContaining({ availableInPlans: ["plus", "pro"] }));
+    expect(result.current[1]).toEqual(expect.objectContaining({ availableInPlans: ["plus", "pro"] }));
+  });
+
+  it("marks an existing minute option as available in Plus and Pro for standard plans", () => {
+    mockUseOrganizationPlan.mockReturnValue({
+      isUnifiedTrialPlan: false,
+      isStandardTrialPlan: false,
+      isStandardPlan: true,
+    });
+    const additionalFrequency = {
+      basicSchedule: {
+        units: 15,
+        timeUnit: ConnectionScheduleTimeUnit.minutes,
+      },
+    };
+
+    const { result } = renderHook(() => useBasicFrequencyDropdownData(additionalFrequency), { wrapper });
+
+    expect(result.current.at(-1)).toEqual(expect.objectContaining({ availableInPlans: ["plus", "pro"] }));
   });
 });

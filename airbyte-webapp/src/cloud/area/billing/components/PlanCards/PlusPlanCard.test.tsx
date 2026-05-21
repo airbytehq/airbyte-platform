@@ -6,7 +6,7 @@ import { mocked, render } from "test-utils";
 import { useRedirectToCustomerPortal } from "cloud/area/billing/utils/useRedirectToCustomerPortal";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 
-import { StandardPlanCard } from "./StandardPlanCard";
+import { PlusPlanCard } from "./PlusPlanCard";
 
 jest.mock("cloud/area/billing/utils/useRedirectToCustomerPortal", () => ({
   useRedirectToCustomerPortal: jest.fn(),
@@ -33,16 +33,15 @@ beforeEach(() => {
   });
 });
 
-describe("StandardPlanCard", () => {
-  it("renders the Subscribe label and uses the setup flow by default", async () => {
-    await render(<StandardPlanCard disabled={false} />);
+describe("PlusPlanCard", () => {
+  it("uses the plus setup flow", async () => {
+    await render(<PlusPlanCard />);
 
-    expect(useRedirectToCustomerPortal).toHaveBeenCalledWith("setup", undefined);
-    expect(screen.getByRole("button", { name: /Subscribe/i })).toBeInTheDocument();
+    expect(useRedirectToCustomerPortal).toHaveBeenCalledWith("setup", "plus");
   });
 
-  it("invokes goToCustomerPortal directly in subscribe mode (no confirmation modal)", async () => {
-    await render(<StandardPlanCard disabled={false} />);
+  it("starts setup directly when getting Plus without an active paid plan", async () => {
+    await render(<PlusPlanCard />);
 
     await userEvent.click(screen.getByRole("button", { name: /Subscribe/i }));
 
@@ -50,35 +49,22 @@ describe("StandardPlanCard", () => {
     expect(goToCustomerPortal).toHaveBeenCalledTimes(1);
   });
 
-  it("renders the Downgrade label and uses the standard setup flow in downgrade mode", async () => {
-    await render(<StandardPlanCard disabled={false} mode="downgrade" />);
+  it("opens a proration confirmation before upgrading an active paid plan to Plus", async () => {
+    await render(<PlusPlanCard isPaidPlan />);
 
-    expect(useRedirectToCustomerPortal).toHaveBeenCalledWith("setup", "standard");
-    expect(screen.getByRole("button", { name: /Downgrade/i })).toBeInTheDocument();
-  });
-
-  it("opens a confirmation modal before redirecting on downgrade click", async () => {
-    await render(<StandardPlanCard disabled={false} mode="downgrade" />);
-
-    await userEvent.click(screen.getByRole("button", { name: /Downgrade/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Upgrade/i }));
 
     expect(openConfirmationModal).toHaveBeenCalledTimes(1);
     expect(goToCustomerPortal).not.toHaveBeenCalled();
 
     const modalOptions = openConfirmationModal.mock.calls[0][0];
-    expect(modalOptions.submitButtonText).toBe("plans.standard.downgrade.confirmSubmit");
-    expect(modalOptions.cancelButtonText).toBe("plans.standard.downgrade.confirmCancel");
+    expect(modalOptions.submitButtonText).toBe("plans.plus.upgrade.confirmSubmit");
+    expect(modalOptions.cancelButtonText).toBe("plans.plus.upgrade.confirmCancel");
 
     await act(async () => {
       await modalOptions.onSubmit();
     });
     expect(closeConfirmationModal).toHaveBeenCalledTimes(1);
     expect(goToCustomerPortal).toHaveBeenCalledTimes(1);
-  });
-
-  it("disables the action button when disabled is true", async () => {
-    await render(<StandardPlanCard disabled mode="downgrade" />);
-
-    expect(screen.getByRole("button", { name: /Downgrade/i })).toBeDisabled();
   });
 });

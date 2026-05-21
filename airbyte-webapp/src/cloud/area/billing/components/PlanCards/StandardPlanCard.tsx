@@ -23,7 +23,10 @@ interface StandardPlanCardProps {
 
 export const StandardPlanCard: React.FC<StandardPlanCardProps> = ({ disabled, mode = "subscribe" }) => {
   const isDowngrade = mode === "downgrade";
-  const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal(isDowngrade ? "portal" : "setup");
+  const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal(
+    "setup",
+    isDowngrade ? "standard" : undefined
+  );
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const onClick = () => {

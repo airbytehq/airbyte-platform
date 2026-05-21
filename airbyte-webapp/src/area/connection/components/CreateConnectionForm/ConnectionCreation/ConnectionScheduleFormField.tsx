@@ -6,7 +6,6 @@ import { Controller, useFormContext, useFormState, useWatch } from "react-hook-f
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
-import { BrandingBadge } from "components/ui/BrandingBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { FormControlFooter, FormControlFooterInfo, FormControlErrorMessage } from "components/ui/forms/FormControl";
 import { Input } from "components/ui/Input";
@@ -23,11 +22,12 @@ import { FormConnectionFormValues } from "area/connection/components/ConnectionF
 import { FormFieldLayout } from "area/connection/components/ConnectionForm/FormFieldLayout";
 import {
   BASIC_FREQUENCY_DEFAULT_VALUE,
+  BasicFrequencyOption,
   useBasicFrequencyDropdownData,
 } from "area/connection/components/ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
 import { useTrackConnectionFrequency } from "area/connection/components/ConnectionForm/ScheduleFormField/useTrackConnectionFrequency";
 import { useConnectionFormService } from "area/connection/utils/ConnectionForm/ConnectionFormService";
-import { useOrganizationPlan } from "area/organization/utils";
+import { PlanAvailabilityBadges } from "cloud/area/billing/components/PlanAvailabilityBadges";
 import { useDescribeCronExpression } from "core/api";
 import { ConnectionScheduleDataBasicSchedule, ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { cronTimeZones, CRON_DEFAULT_VALUE } from "core/utils/cron";
@@ -153,10 +153,7 @@ const BasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled })
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
   const { trackDropdownSelect } = useTrackConnectionFrequency(connection);
-  const { isUnifiedTrialPlan } = useOrganizationPlan();
-  const frequencies: Array<Option<ConnectionScheduleDataBasicSchedule>> = useBasicFrequencyDropdownData(
-    connection.scheduleData
-  );
+  const frequencies: BasicFrequencyOption[] = useBasicFrequencyDropdownData(connection.scheduleData);
 
   const onBasicScheduleSelect = (value: ConnectionScheduleDataBasicSchedule): void => {
     trackDropdownSelect(value);
@@ -198,6 +195,9 @@ const BasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled })
                         <Text as="span" size="lg" {...(disabled && { color: "grey300" })}>
                           {selectedOption.label}
                         </Text>
+                        {selectedOption.availableInPlans && (
+                          <PlanAvailabilityBadges plans={selectedOption.availableInPlans} />
+                        )}
                       </FlexContainer>
                     ) : (
                       <Text as="span" size="lg" color="grey">
@@ -220,9 +220,7 @@ const BasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ disabled })
                             <Text as="span" size="md">
                               {option.label}
                             </Text>
-                            {option.value.timeUnit === "minutes" && isUnifiedTrialPlan && (
-                              <BrandingBadge product="cloudForTeams" />
-                            )}
+                            {option.availableInPlans && <PlanAvailabilityBadges plans={option.availableInPlans} />}
                           </FlexContainer>
                         </Box>
                       </ListboxOption>

@@ -1,13 +1,9 @@
-.subscription {
-  &__header {
-    position: relative;
-  }
+@use "scss/variables";
 
-  // Pull out the plan change button of the flex box to not extend
-  // the flexbox's height, but still center it vertically with the title
-  &__changePlan {
-    position: absolute;
-    right: 0;
-    align-self: center;
-  }
+.subscription__header {
+  row-gap: variables.$spacing-sm;
+}
+
+.subscription__changePlan {
+  margin-left: auto;
 }
