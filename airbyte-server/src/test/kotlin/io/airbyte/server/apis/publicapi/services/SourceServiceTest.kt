@@ -62,11 +62,12 @@ class SourceServiceTest {
         this.createdAt = 1L
       }
 
-    every { sourceHandler.updateSourceWithOptionalSecret(capture(partialSourceUpdateSlot)) } returns sourceRead
+    every { sourceHandler.updateSourceWithOptionalSecret(capture(partialSourceUpdateSlot), allowInlineOAuthServerOutputSecrets = true) } returns
+      sourceRead
 
     sourceService.partialUpdateSource(sourceId, sourcePatchRequest)
 
-    verify(exactly = 1) { sourceHandler.updateSourceWithOptionalSecret(any()) }
+    verify(exactly = 1) { sourceHandler.updateSourceWithOptionalSecret(any(), allowInlineOAuthServerOutputSecrets = true) }
     verify(exactly = 0) { sourceHandler.partialUpdateSource(any<PartialSourceUpdate>()) }
 
     val captured = partialSourceUpdateSlot.captured
@@ -77,12 +78,14 @@ class SourceServiceTest {
 
   @Test
   fun `partialUpdateSource without secretId still calls updateSourceWithOptionalSecret`() {
+    val inlineOAuthConfiguration = Jsons.jsonNode(mapOf(LWA_APP_ID_FIELD to "lwa-app-id"))
     val sourcePatchRequest =
       SourcePatchRequest(
-        configuration = Jsons.deserialize("{}"),
+        configuration = inlineOAuthConfiguration,
         name = "updated-source",
       )
 
+    val partialSourceUpdateSlot = slot<PartialSourceUpdate>()
     val sourceRead =
       SourceRead().apply {
         this.sourceId = this@SourceServiceTest.sourceId
@@ -93,11 +96,19 @@ class SourceServiceTest {
         this.createdAt = 1L
       }
 
-    every { sourceHandler.updateSourceWithOptionalSecret(any()) } returns sourceRead
+    every { sourceHandler.updateSourceWithOptionalSecret(capture(partialSourceUpdateSlot), allowInlineOAuthServerOutputSecrets = true) } returns
+      sourceRead
 
     sourceService.partialUpdateSource(sourceId, sourcePatchRequest)
 
-    verify(exactly = 1) { sourceHandler.updateSourceWithOptionalSecret(any()) }
+    verify(exactly = 1) { sourceHandler.updateSourceWithOptionalSecret(any(), allowInlineOAuthServerOutputSecrets = true) }
     verify(exactly = 0) { sourceHandler.partialUpdateSource(any<PartialSourceUpdate>()) }
+
+    val captured = partialSourceUpdateSlot.captured
+    assert(captured.connectionConfiguration == inlineOAuthConfiguration)
+  }
+
+  private companion object {
+    private const val LWA_APP_ID_FIELD = "lwa_app_id"
   }
 }

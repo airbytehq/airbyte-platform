@@ -136,39 +136,48 @@ class SourceHandler
     }
 
     @WithSpan
-    fun updateSourceWithOptionalSecret(partialSourceUpdate: PartialSourceUpdate): SourceRead {
+    fun updateSourceWithOptionalSecret(
+      partialSourceUpdate: PartialSourceUpdate,
+      /**
+       * Allows inline values for OAuth-managed fields returned by the connector's OAuth server output spec.
+       * This only skips that OAuth-managed field validation; `secretId` hydration still runs whenever present.
+       */
+      allowInlineOAuthServerOutputSecrets: Boolean = false,
+    ): SourceRead {
       val spec = getSourceVersionForSourceId(partialSourceUpdate.sourceId).spec
       addTagsToTrace(
         mapOf(
           SOURCE_ID to partialSourceUpdate.sourceId.toString(),
         ),
       )
-      if (partialSourceUpdate.secretId != null && !partialSourceUpdate.secretId.isBlank()) {
-        val sourceConnection: SourceConnection
-        try {
-          sourceConnection = sourceService.getSourceConnection(partialSourceUpdate.sourceId)
-        } catch (e: ConfigNotFoundException) {
-          throw ConfigNotFoundException(e.type, e.configId)
-        }
-        val hydratedSecret = hydrateOAuthResponseSecret(partialSourceUpdate.secretId, sourceConnection.workspaceId)
-        // add OAuth Response data to connection configuration
-        partialSourceUpdate.connectionConfiguration =
-          setSecretsInConnectionConfiguration(
-            spec,
-            hydratedSecret,
-            Optional
-              .ofNullable(partialSourceUpdate.connectionConfiguration)
-              .orElse(Jsons.emptyObject()),
+
+      val secretId = partialSourceUpdate.secretId
+
+      when {
+        !secretId.isNullOrBlank() -> {
+          val sourceConnection =
+            try {
+              sourceService.getSourceConnection(partialSourceUpdate.sourceId)
+            } catch (e: ConfigNotFoundException) {
+              throw ConfigNotFoundException(e.type, e.configId)
+            }
+          val hydratedSecret = hydrateOAuthResponseSecret(secretId, sourceConnection.workspaceId)
+          // add OAuth Response data to connection configuration
+          partialSourceUpdate.connectionConfiguration =
+            setSecretsInConnectionConfiguration(
+              spec,
+              hydratedSecret,
+              Optional.ofNullable(partialSourceUpdate.connectionConfiguration).orElse(Jsons.emptyObject()),
+            )
+          addTagsToTrace(
+            mapOf(
+              "oauth_secret" to true,
+            ),
           )
-        addTagsToTrace(
-          mapOf(
-            "oauth_secret" to true,
-          ),
-        )
-      } else {
-        // We aren't using a secret to update the source so no server provided credentials should have been
-        // passed in.
-        validateNoSecretsInConfiguration(spec, partialSourceUpdate.connectionConfiguration)
+        }
+        !allowInlineOAuthServerOutputSecrets -> {
+          validateNoSecretsInConfiguration(spec, partialSourceUpdate.connectionConfiguration)
+        }
       }
       return partialUpdateSource(partialSourceUpdate)
     }

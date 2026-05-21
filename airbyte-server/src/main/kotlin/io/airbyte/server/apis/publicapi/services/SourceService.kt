@@ -152,7 +152,7 @@ open class SourceServiceImpl(
 
     val result =
       kotlin
-        .runCatching { sourceHandler.updateSourceWithOptionalSecret(sourceUpdate) }
+        .runCatching { sourceHandler.updateSourceWithOptionalSecret(sourceUpdate, allowInlineOAuthServerOutputSecrets = true) }
         .onFailure {
           log.error(it) { "Error for partialUpdateSource" }
           ConfigClientErrorHandler.handleError(it)
