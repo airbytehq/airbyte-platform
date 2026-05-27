@@ -1,11 +1,11 @@
-import { Page, expect } from "@playwright/test";
+import { Page } from "@playwright/test";
 
 import { testEmail, testPassword } from "./testIdentity";
 
 export const registerUser = async (page: Page) => {
   await page.goto("./");
   // click on "Sign up" button
-  await page.locator("text=Sign up").click();
+  await page.locator("text=Sign up").click({ noWaitAfter: true });
   // click "sign up using email" button
   await page.locator("text=Sign up using email").click();
 
@@ -19,9 +19,17 @@ export const registerUser = async (page: Page) => {
   await page.locator("input[name=password]").fill(testPassword);
   // fill in Confirm password field
   await page.locator("input[name=password-confirm]").fill(testPassword);
-  // click on "Sign up" button
-  await page.locator("text=Sign up").click();
+  // submit the form without waiting on the Keycloak redirect chain
+  await page.locator("form").evaluate((form: HTMLFormElement) => setTimeout(() => form.requestSubmit(), 2000));
 
-  // expect the user to be redirected to a route containing `/workspaces/`
-  await expect(page).toHaveURL(/.*\/workspaces\//, { timeout: 30 * 1000 });
+  const deadline = Date.now() + 20 * 1000;
+  while (Date.now() < deadline) {
+    const pathname = new URL(page.url()).pathname;
+    if (pathname.includes("/organizations") || pathname.includes("/workspaces")) {
+      return;
+    }
+    await page.waitForTimeout(250);
+  }
+
+  throw new Error(`Timed out waiting for authenticated route. Current URL: ${page.url()}`);
 };

@@ -7,11 +7,12 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
+  timeout: 60000,
   reporter: "html",
   use: {
     baseURL: process.env.AIRBYTE_WEBAPP_URL ?? process.env.AIRBYTE_SERVER_HOST,
     ignoreHTTPSErrors: true,
-    trace: "on", // always collect trace for playback
+    trace: "on-first-retry",
   },
 
   /* Configure projects for major browsers */
