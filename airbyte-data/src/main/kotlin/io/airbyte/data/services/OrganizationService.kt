@@ -70,6 +70,11 @@ interface OrganizationService {
 
   fun writeOrganization(organization: Organization)
 
+  fun setOrganizationAgenticStatus(
+    organizationId: UUID,
+    isAgentic: Boolean,
+  ): Optional<Organization>
+
   /**
    * Check if a user is a member of an organization.
    *

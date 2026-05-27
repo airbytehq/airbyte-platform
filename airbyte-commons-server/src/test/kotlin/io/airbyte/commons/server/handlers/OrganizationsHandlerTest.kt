@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
+import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.model.generated.OrganizationRead
@@ -168,6 +169,44 @@ class OrganizationsHandlerTest {
     assertEquals(organizationId1, result.organizationId)
     assertEquals(newName, result.organizationName)
     assertEquals(newEmail, result.email)
+  }
+
+  @Test
+  fun testSetOrganizationAgenticStatus() {
+    every {
+      organizationService.setOrganizationAgenticStatus(organizationId1, true)
+    } returns Optional.of(organization.withIsAgentic(true))
+
+    val result =
+      organizationsHandler.setOrganizationAgenticStatus(
+        OrganizationAgenticStatusUpdateRequestBody()
+          .organizationId(organizationId1)
+          .isAgentic(true),
+      )
+
+    assertEquals(organizationId1, result.organizationId)
+    assertEquals(organizationName, result.organizationName)
+    assertEquals(organizationEmail, result.email)
+    assertEquals(true, result.isAgentic)
+  }
+
+  @Test
+  fun testSetOrganizationAgenticStatusFalse() {
+    every {
+      organizationService.setOrganizationAgenticStatus(organizationId1, false)
+    } returns Optional.of(organization.withIsAgentic(false))
+
+    val result =
+      organizationsHandler.setOrganizationAgenticStatus(
+        OrganizationAgenticStatusUpdateRequestBody()
+          .organizationId(organizationId1)
+          .isAgentic(false),
+      )
+
+    assertEquals(organizationId1, result.organizationId)
+    assertEquals(organizationName, result.organizationName)
+    assertEquals(organizationEmail, result.email)
+    assertEquals(false, result.isAgentic)
   }
 
   @Test

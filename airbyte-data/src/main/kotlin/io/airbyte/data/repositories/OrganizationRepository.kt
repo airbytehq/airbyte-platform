@@ -32,6 +32,18 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
 
   @Query(
     """
+    UPDATE organization
+    SET is_agentic = :isAgentic, updated_at = NOW()
+    WHERE id = :organizationId AND tombstone = false
+    """,
+  )
+  fun updateAgenticStatusById(
+    organizationId: UUID,
+    isAgentic: Boolean,
+  ): Long
+
+  @Query(
+    """
     SELECT organization.* from organization
     INNER JOIN workspace
     ON organization.id = workspace.organization_id

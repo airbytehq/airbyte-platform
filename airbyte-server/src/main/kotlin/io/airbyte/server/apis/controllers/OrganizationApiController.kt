@@ -9,6 +9,7 @@ import io.airbyte.api.model.generated.DataWorkerUsage
 import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
 import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
+import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationDataWorkerUsageRead
 import io.airbyte.api.model.generated.OrganizationDataWorkerUsageRequestBody
@@ -67,6 +68,13 @@ open class OrganizationApiController(
   override fun updateOrganization(
     @Body organizationUpdateRequestBody: OrganizationUpdateRequestBody,
   ): OrganizationRead? = execute { organizationsHandler.updateOrganization(organizationUpdateRequestBody) }
+
+  @Post("/agentic_status")
+  @Secured(AuthRoleConstants.ADMIN)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  override fun setOrganizationAgenticStatus(
+    @Body organizationAgenticStatusUpdateRequestBody: OrganizationAgenticStatusUpdateRequestBody,
+  ): OrganizationRead? = execute { organizationsHandler.setOrganizationAgenticStatus(organizationAgenticStatusUpdateRequestBody) }
 
   @Post("/create")
   @Secured(AuthRoleConstants.ADMIN) // instance admin only

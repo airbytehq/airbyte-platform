@@ -194,6 +194,32 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `updateAgenticStatusById updates only non-tombstoned organization agentic status`() {
+    val organization = createOrganization(name = "agentic-status-test", isAgentic = false)
+
+    val updatedRows = organizationRepository.updateAgenticStatusById(organization.id!!, true)
+
+    val updatedOrganization = organizationRepository.findById(organization.id!!)
+    assertEquals(1, updatedRows)
+    assertTrue(updatedOrganization.isPresent)
+    assertEquals(true, updatedOrganization.get().isAgentic)
+    assertEquals(organization.name, updatedOrganization.get().name)
+    assertEquals(organization.email, updatedOrganization.get().email)
+  }
+
+  @Test
+  fun `updateAgenticStatusById skips tombstoned organization`() {
+    val organization = createOrganization(name = "agentic-status-tombstoned-test", tombstone = true, isAgentic = false)
+
+    val updatedRows = organizationRepository.updateAgenticStatusById(organization.id!!, true)
+
+    val updatedOrganization = organizationRepository.findById(organization.id!!)
+    assertEquals(0, updatedRows)
+    assertTrue(updatedOrganization.isPresent)
+    assertEquals(false, updatedOrganization.get().isAgentic)
+  }
+
+  @Test
   fun `delete organization`() {
     val organization =
       Organization(

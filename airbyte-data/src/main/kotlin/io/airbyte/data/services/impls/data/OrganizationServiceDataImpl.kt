@@ -153,6 +153,17 @@ class OrganizationServiceDataImpl(
     }
   }
 
+  override fun setOrganizationAgenticStatus(
+    organizationId: UUID,
+    isAgentic: Boolean,
+  ): Optional<Organization> {
+    val updatedRows = organizationRepository.updateAgenticStatusById(organizationId, isAgentic)
+    if (updatedRows == 0L) {
+      return Optional.empty()
+    }
+    return getOrganization(organizationId)
+  }
+
   override fun isMember(
     userId: UUID,
     organizationId: UUID,

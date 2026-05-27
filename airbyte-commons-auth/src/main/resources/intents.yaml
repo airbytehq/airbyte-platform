@@ -92,7 +92,6 @@ intents:
     # POST request bodies, thus our authentication logic might not find the organizationId in the request.
     roles:
       - ADMIN
-
   ManageDomainVerification:
     name: Manage domain verification
     description: Manage domain verification request for an organization

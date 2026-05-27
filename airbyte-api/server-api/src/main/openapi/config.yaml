@@ -5791,6 +5791,28 @@ paths:
                 $ref: "#/components/schemas/OrganizationRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/agentic_status:
+    post:
+      summary: Set whether an organization is agentic
+      tags:
+        - organization
+        - cloud-only
+        - admin-api
+      operationId: setOrganizationAgenticStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationAgenticStatusUpdateRequestBody"
+      responses:
+        "200":
+          description: Successfully updated organization agentic status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/organizations/delete:
     post:
       summary: Delete an organization
@@ -16570,6 +16592,17 @@ components:
           type: string
         email:
           type: string
+    OrganizationAgenticStatusUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+        - isAgentic
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        isAgentic:
+          type: boolean
     OrganizationCreateRequestBody:
       type: object
       required:

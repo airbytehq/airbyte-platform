@@ -52,6 +52,18 @@ private val ENTITY_ORGANIZATION =
     email = BASE_ORGANIZATION.email,
   )
 
+private fun entityOrganization(
+  tombstone: Boolean = false,
+  isAgentic: Boolean = false,
+) = EntityOrganization(
+  id = ORGANIZATION_ID,
+  userId = BASE_ORGANIZATION.userId!!,
+  name = BASE_ORGANIZATION.name,
+  email = BASE_ORGANIZATION.email,
+  tombstone = tombstone,
+  isAgentic = isAgentic,
+)
+
 private val SSO_CONFIG =
   SsoConfig(
     id = UUID.randomUUID(),
@@ -152,6 +164,39 @@ class OrganizationServiceDataImplTest {
         },
       )
     }
+  }
+
+  @Test
+  fun `setOrganizationAgenticStatus updates non-tombstoned organization`() {
+    every { organizationRepository.updateAgenticStatusById(ORGANIZATION_ID, true) } returns 1
+    every { organizationRepository.findById(ORGANIZATION_ID) } returns Optional.of(entityOrganization(isAgentic = true))
+    every { ssoConfigRepository.findByOrganizationId(ORGANIZATION_ID) } returns null
+
+    val result = organizationServiceDataImpl.setOrganizationAgenticStatus(ORGANIZATION_ID, true)
+
+    assertTrue(result.isPresent)
+    assertEquals(true, result.get().isAgentic)
+    verify { organizationRepository.updateAgenticStatusById(ORGANIZATION_ID, true) }
+  }
+
+  @Test
+  fun `setOrganizationAgenticStatus returns empty for missing organization`() {
+    every { organizationRepository.updateAgenticStatusById(ORGANIZATION_ID, true) } returns 0
+
+    val result = organizationServiceDataImpl.setOrganizationAgenticStatus(ORGANIZATION_ID, true)
+
+    assertTrue(result.isEmpty)
+    verify(exactly = 0) { organizationRepository.findById(any()) }
+  }
+
+  @Test
+  fun `setOrganizationAgenticStatus returns empty for tombstoned organization`() {
+    every { organizationRepository.updateAgenticStatusById(ORGANIZATION_ID, true) } returns 0
+
+    val result = organizationServiceDataImpl.setOrganizationAgenticStatus(ORGANIZATION_ID, true)
+
+    assertTrue(result.isEmpty)
+    verify(exactly = 0) { organizationRepository.findById(any()) }
   }
 
   @Test

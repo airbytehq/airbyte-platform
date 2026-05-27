@@ -112,6 +112,12 @@ class OrganizationServiceJooqImpl(
   }
 
   @Throws(IOException::class)
+  override fun setOrganizationAgenticStatus(
+    organizationId: UUID,
+    isAgentic: Boolean,
+  ): Optional<Organization> = throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")
+
+  @Throws(IOException::class)
   override fun getOrganizationForConnectionId(connectionId: UUID): Optional<Organization> =
     throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")
 

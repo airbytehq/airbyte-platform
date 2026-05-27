@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.model.generated.OrganizationInfoRead
@@ -86,6 +87,26 @@ class OrganizationApiControllerTest {
   fun testUpdateOrganization() {
     every { organizationsHandler.updateOrganization(any()) } returns OrganizationRead()
     assertNotNull(organizationApiController.updateOrganization(OrganizationUpdateRequestBody()))
+  }
+
+  @Test
+  fun testSetOrganizationAgenticStatus() {
+    val requestBody =
+      OrganizationAgenticStatusUpdateRequestBody()
+        .organizationId(organizationId)
+        .isAgentic(true)
+    every { organizationsHandler.setOrganizationAgenticStatus(requestBody) } returns OrganizationRead().isAgentic(true)
+    assertEquals(true, organizationApiController.setOrganizationAgenticStatus(requestBody)?.isAgentic)
+  }
+
+  @Test
+  fun testSetOrganizationAgenticStatusFalse() {
+    val requestBody =
+      OrganizationAgenticStatusUpdateRequestBody()
+        .organizationId(organizationId)
+        .isAgentic(false)
+    every { organizationsHandler.setOrganizationAgenticStatus(requestBody) } returns OrganizationRead().isAgentic(false)
+    assertEquals(false, organizationApiController.setOrganizationAgenticStatus(requestBody)?.isAgentic)
   }
 
   @Test

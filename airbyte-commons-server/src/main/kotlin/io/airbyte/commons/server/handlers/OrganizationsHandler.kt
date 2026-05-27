@@ -9,6 +9,7 @@ import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody
+import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.model.generated.OrganizationInfoRead
@@ -55,15 +56,18 @@ open class OrganizationsHandler(
   private val featureFlagClient: FeatureFlagClient,
 ) {
   companion object {
-    private fun buildOrganizationRead(organization: Organization): OrganizationRead {
+    private fun buildOrganizationRead(
+      organization: Organization,
+      serializeIsAgentic: Boolean = false,
+    ): OrganizationRead {
       val read =
         OrganizationRead()
           .organizationId(organization.organizationId)
           .organizationName(organization.name)
           .email(organization.email)
           .ssoRealm(organization.ssoRealm)
-      if (organization.isAgentic) {
-        read.isAgentic(true)
+      if (serializeIsAgentic || organization.isAgentic) {
+        read.isAgentic(organization.isAgentic)
       }
       return read
     }
@@ -142,6 +146,16 @@ open class OrganizationsHandler(
     }
 
     return buildOrganizationRead(organization)
+  }
+
+  fun setOrganizationAgenticStatus(request: OrganizationAgenticStatusUpdateRequestBody): OrganizationRead {
+    val organizationId = request.organizationId
+    val organization =
+      organizationService
+        .setOrganizationAgenticStatus(organizationId, request.isAgentic)
+        .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId) }
+
+    return buildOrganizationRead(organization, serializeIsAgentic = true)
   }
 
   fun getOrganization(request: OrganizationIdRequestBody): OrganizationRead {
