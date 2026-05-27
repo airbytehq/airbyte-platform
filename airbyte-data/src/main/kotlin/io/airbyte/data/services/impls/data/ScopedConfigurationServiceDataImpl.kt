@@ -156,8 +156,10 @@ class ScopedConfigurationServiceDataImpl(
           ).map { it.toConfigModel() }
           .toList()
 
-      // For each iteration, add or replace items to give a "sorted" values list
-      scopeConfigMap.putAll(scopedConfigs.associateBy({ it.resourceId }, { it }))
+      // For each iteration, add or replace items to give a "sorted" values list.
+      // Use the row's own id when resourceId is null so non-resource-scoped rows (e.g. workspace-wide
+      // tokens that allow multiple coexisting values) don't collapse on a shared null key.
+      scopeConfigMap.putAll(scopedConfigs.associateBy({ it.resourceId ?: it.id }, { it }))
     }
 
     // Return the values as they are now a list of scoped configs by precedence of supportedScopes.

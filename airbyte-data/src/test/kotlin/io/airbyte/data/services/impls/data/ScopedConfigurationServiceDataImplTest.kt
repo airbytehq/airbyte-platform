@@ -239,6 +239,55 @@ internal class ScopedConfigurationServiceDataImplTest {
   }
 
   @Test
+  fun `getScopedConfigurations returns every workspace-scope row when rows have null resourceId`() {
+    // Regression: when a workspace has multiple scoped configs at the same scope with no resource
+    // attached (e.g. network_security_token, one per privatelink endpoint), the service must
+    // return EVERY row. The buggy version dedupes by resourceId and collapses all null-resourceId
+    // rows to a single entry.
+    val configKey =
+      ScopedConfigurationKey(
+        key = "network_security_token",
+        supportedScopes = listOf(ModelConfigScopeType.WORKSPACE),
+      )
+
+    val workspaceId = UUID.randomUUID()
+
+    val rows =
+      listOf("token-1", "token-2", "token-3").map { tokenValue ->
+        ScopedConfiguration(
+          id = UUID.randomUUID(),
+          key = configKey.key,
+          value = tokenValue,
+          scopeType = EntityConfigScopeType.workspace,
+          scopeId = workspaceId,
+          resourceType = null,
+          resourceId = null,
+          originType = ConfigOriginType.user,
+          origin = "test-user",
+          description = "test",
+        )
+      }
+
+    every {
+      scopedConfigurationRepository.findByKeyAndScopeTypeAndScopeId(
+        configKey.key,
+        EntityConfigScopeType.workspace,
+        workspaceId,
+      )
+    } returns rows
+
+    val retrieved =
+      scopedConfigurationService.getScopedConfigurations(
+        configKey,
+        mapOf(ModelConfigScopeType.WORKSPACE to workspaceId),
+      )
+
+    val values = retrieved.map { it.value }.toSet()
+    assert(retrieved.size == 3) { "expected 3 rows, got ${retrieved.size} (values=$values)" }
+    assert(values == setOf("token-1", "token-2", "token-3")) { "expected all 3 token values, got $values" }
+  }
+
+  @Test
   fun `test get configurations by scope map and key object`() {
     val configKey =
       ScopedConfigurationKey(
