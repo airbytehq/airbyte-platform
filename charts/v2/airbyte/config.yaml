@@ -27,6 +27,14 @@ common:
       key: airbyteAgentsUrl
       defaultValue: ""
 
+    - env: AIRBYTE_AGENTS_VALID_REDIRECT_URIS
+      key: airbyteAgentsValidRedirectUris
+      valueExp: join "," .Values.global.airbyteAgentsValidRedirectUris
+
+    - env: AIRBYTE_AGENTS_WEB_ORIGINS
+      key: airbyteAgentsWebOrigins
+      valueExp: join "," .Values.global.airbyteAgentsWebOrigins
+
     - env: AIRBYTE_API_HOST
       key: api.host
       defaultValueExp: (ternary (printf "http://localhost:%d/api/public" (int .Values.server.service.port)) (printf "%s/api/public" .Values.global.airbyteUrl) (eq .Values.global.edition "community"))

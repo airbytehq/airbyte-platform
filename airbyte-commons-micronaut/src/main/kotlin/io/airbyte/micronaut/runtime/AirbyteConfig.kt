@@ -381,6 +381,8 @@ data class AirbyteConfig(
   val acceptanceTestEnabled: Boolean = false,
   val airbyteUrl: String = "",
   val airbyteAgentsUrl: String = "",
+  val airbyteAgentsValidRedirectUris: List<String> = emptyList(),
+  val airbyteAgentsWebOrigins: List<String> = emptyList(),
   val deploymentEnvironment: String = DEFAULT_AIRBYTE_DEPLOYMENT_ENVIRONMENT,
   val installationId: UUID? = null, // Used to track abctl installations and defined/set by abctl
   val licenseKey: String = "",

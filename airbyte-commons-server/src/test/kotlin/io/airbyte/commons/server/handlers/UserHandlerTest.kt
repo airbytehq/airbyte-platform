@@ -45,6 +45,7 @@ import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
 import io.airbyte.featureflag.TestClient
@@ -120,6 +121,10 @@ class UserHandlerTest {
     featureFlagClient = mock<TestClient>()
 
     whenever(featureFlagClient.boolVariation(eq(RestrictLoginsForSSODomains), any()))
+      .thenReturn(true)
+    // ConfigurableSsoDefaultRole defaults ON in tests so existing assertions exercise the configured
+    // role; prod default is OFF (dark launch). Flag-off behavior is covered explicitly below.
+    whenever(featureFlagClient.boolVariation(eq(ConfigurableSsoDefaultRole), any()))
       .thenReturn(true)
 
     userHandler =
@@ -859,6 +864,137 @@ class UserHandlerTest {
         verifyInstanceAdminPermissionCreation(initialUserEmail, initialUserPresent)
         verifyOrganizationPermissionCreation(authRealm, isFirstOrgUser)
         verifyDefaultWorkspaceCreation(isDefaultWorkspaceForOrgPresent, userPersistenceInOrder)
+      }
+
+      @ParameterizedTest
+      @CsvSource(
+        "ORGANIZATION_MEMBER,ORGANIZATION_MEMBER",
+        "ORGANIZATION_EDITOR,ORGANIZATION_EDITOR",
+        "ORGANIZATION_ADMIN,ORGANIZATION_ADMIN",
+      )
+      fun testNewSsoUserCreationUsesConfiguredDefaultRole(
+        configuredDefaultRole: Permission.PermissionType,
+        expectedPermissionType: Permission.PermissionType,
+      ) {
+        newAuthedUser!!.authProvider = AuthProvider.KEYCLOAK
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn("airbyte-realm")
+        whenever(organizationService.getOrganizationBySsoConfigRealm("airbyte-realm")).thenReturn(Optional.of(organization))
+        whenever(ssoConfigService.getSsoConfig(organization.organizationId)).thenReturn(
+          SsoConfig().withDefaultRole(configuredDefaultRole),
+        )
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId)).thenReturn(
+          listOf(
+            UserPermission()
+              .withUser(existingUser)
+              .withPermission(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)),
+          ),
+        )
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf<@Valid WorkspaceRead?>(defaultWorkspace)))
+        newUser!!.defaultWorkspaceId = defaultWorkspace!!.workspaceId
+
+        userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Mockito.verify(permissionHandler).createPermission(
+          Permission()
+            .withPermissionType(expectedPermissionType)
+            .withOrganizationId(organization.organizationId)
+            .withUserId(newUserId),
+        )
+      }
+
+      @Test
+      fun testNewSsoUserCreationFallsBackToMemberWhenConfigurableSsoDefaultRoleFlagOff() {
+        // Flag OFF (dark launch): the configured EDITOR role must be ignored and provisioning must
+        // fall back to ORGANIZATION_MEMBER, preserving pre-feature behavior.
+        whenever(featureFlagClient.boolVariation(eq(ConfigurableSsoDefaultRole), any())).thenReturn(false)
+        newAuthedUser!!.authProvider = AuthProvider.KEYCLOAK
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn("airbyte-realm")
+        whenever(organizationService.getOrganizationBySsoConfigRealm("airbyte-realm")).thenReturn(Optional.of(organization))
+        whenever(ssoConfigService.getSsoConfig(organization.organizationId)).thenReturn(
+          SsoConfig().withDefaultRole(Permission.PermissionType.ORGANIZATION_EDITOR),
+        )
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId)).thenReturn(
+          listOf(
+            UserPermission()
+              .withUser(existingUser)
+              .withPermission(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)),
+          ),
+        )
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf<@Valid WorkspaceRead?>(defaultWorkspace)))
+        newUser!!.defaultWorkspaceId = defaultWorkspace!!.workspaceId
+
+        userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Mockito.verify(permissionHandler).createPermission(
+          Permission()
+            .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+            .withOrganizationId(organization.organizationId)
+            .withUserId(newUserId),
+        )
+      }
+
+      @Test
+      fun testNewSsoUserCreationDefaultsToMemberWhenConfiguredDefaultRoleIsNull() {
+        newAuthedUser!!.authProvider = AuthProvider.KEYCLOAK
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn("airbyte-realm")
+        whenever(organizationService.getOrganizationBySsoConfigRealm("airbyte-realm")).thenReturn(Optional.of(organization))
+        whenever(ssoConfigService.getSsoConfig(organization.organizationId)).thenReturn(SsoConfig())
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId)).thenReturn(
+          listOf(
+            UserPermission()
+              .withUser(existingUser)
+              .withPermission(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)),
+          ),
+        )
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf<@Valid WorkspaceRead?>(defaultWorkspace)))
+        newUser!!.defaultWorkspaceId = defaultWorkspace!!.workspaceId
+
+        userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Mockito.verify(permissionHandler).createPermission(
+          Permission()
+            .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+            .withOrganizationId(organization.organizationId)
+            .withUserId(newUserId),
+        )
+      }
+
+      @Test
+      fun testFirstNewSsoUserCreationAlwaysGrantsAdmin() {
+        newAuthedUser!!.authProvider = AuthProvider.KEYCLOAK
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn("airbyte-realm")
+        whenever(organizationService.getOrganizationBySsoConfigRealm("airbyte-realm")).thenReturn(Optional.of(organization))
+        whenever(ssoConfigService.getSsoConfig(organization.organizationId)).thenReturn(
+          SsoConfig().withDefaultRole(Permission.PermissionType.ORGANIZATION_EDITOR),
+        )
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId)).thenReturn(mutableListOf())
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf<@Valid WorkspaceRead?>(defaultWorkspace)))
+        newUser!!.defaultWorkspaceId = defaultWorkspace!!.workspaceId
+
+        userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Mockito.verify(permissionHandler).createPermission(
+          Permission()
+            .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+            .withOrganizationId(organization.organizationId)
+            .withUserId(newUserId),
+        )
       }
 
       private fun verifyCreatedUser(

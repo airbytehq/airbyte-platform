@@ -10,4 +10,5 @@ data class SsoConfigRetrieval(
   val clientSecret: String,
   val emailDomains: List<String>,
   val status: SsoConfigStatus,
+  val defaultRole: SsoDefaultRole = DEFAULT_SSO_ROLE,
 )

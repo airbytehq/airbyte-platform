@@ -27,7 +27,9 @@ import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toDomain
+import io.airbyte.data.services.impls.data.mappers.toSsoDefaultRole
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
 import io.airbyte.data.services.impls.keycloak.CreateClientException
 import io.airbyte.data.services.impls.keycloak.IdpCreationException
@@ -41,15 +43,22 @@ import io.airbyte.data.services.impls.keycloak.RealmCreationException
 import io.airbyte.data.services.impls.keycloak.RealmDeletionException
 import io.airbyte.data.services.impls.keycloak.RealmValuesExistException
 import io.airbyte.data.services.impls.keycloak.TokenExpiredException
+import io.airbyte.domain.models.DEFAULT_SSO_ROLE
 import io.airbyte.domain.models.DomainVerificationStatus
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigRetrieval
 import io.airbyte.domain.models.SsoConfigStatus
+import io.airbyte.domain.models.SsoDefaultRole
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.airbyte.featureflag.AutoGrantOrgPermissionsOnSsoActivation
+import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseVerifiedDomainsForSsoActivate
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
@@ -57,6 +66,11 @@ import java.net.URL
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
+
+// SSO_CONFIG_OPERATION metric "operation" tag values.
+private const val SSO_OP_CREATE_DRAFT = "create_draft"
+private const val SSO_OP_CREATE_ACTIVE = "create_active"
+private const val SSO_OP_ACTIVATE = "activate"
 
 @Singleton
 open class SsoConfigDomainService internal constructor(
@@ -68,6 +82,7 @@ open class SsoConfigDomainService internal constructor(
   private val organizationDomainVerificationService: OrganizationDomainVerificationService,
   private val featureFlagClient: FeatureFlagClient,
   private val permissionService: PermissionService,
+  private val metricClient: MetricClient,
 ) {
   fun retrieveSsoConfig(organizationId: UUID): SsoConfigRetrieval {
     val currentConfig =
@@ -98,6 +113,7 @@ open class SsoConfigDomainService internal constructor(
         clientSecret = keycloakData.clientSecret,
         emailDomains = domainData,
         status = currentConfig.status.toDomain(),
+        defaultRole = currentConfig.defaultRole?.toSsoDefaultRole() ?: DEFAULT_SSO_ROLE,
       )
     } catch (e: IdpNotFoundException) {
       logger.warn(
@@ -109,6 +125,7 @@ open class SsoConfigDomainService internal constructor(
         clientSecret = "",
         emailDomains = domainData,
         status = currentConfig.status.toDomain(),
+        defaultRole = currentConfig.defaultRole?.toSsoDefaultRole() ?: DEFAULT_SSO_ROLE,
       )
     } catch (e: Exception) {
       logger.error(e) { "Failed to retrieve SSO config data for organization $organizationId from Keycloak realm ${currentConfig.keycloakRealm}" }
@@ -137,8 +154,8 @@ open class SsoConfigDomainService internal constructor(
    */
   open fun createAndStoreSsoConfig(config: SsoConfig) {
     when (config.status) {
-      SsoConfigStatus.DRAFT -> createDraftSsoConfig(config)
-      SsoConfigStatus.ACTIVE -> createActiveSsoConfig(config)
+      SsoConfigStatus.DRAFT -> recordSsoConfigOperation(config.organizationId, SSO_OP_CREATE_DRAFT) { createDraftSsoConfig(config) }
+      SsoConfigStatus.ACTIVE -> recordSsoConfigOperation(config.organizationId, SSO_OP_CREATE_ACTIVE) { createActiveSsoConfig(config) }
     }
   }
 
@@ -181,6 +198,9 @@ open class SsoConfigDomainService internal constructor(
 
       airbyteKeycloakClient.realmExists(config.companyIdentifier) -> {
         updateExistingKeycloakRealmConfig(config)
+        // Only persist the role when the caller specified one. A null role means "unspecified",
+        // so leave the stored role untouched rather than silently downgrading it to the default.
+        config.defaultRole?.let { ssoConfigService.updateSsoConfigDefaultRole(config.organizationId, it) }
       }
 
       else -> {
@@ -278,7 +298,14 @@ open class SsoConfigDomainService internal constructor(
           .companyIdentifier(config.companyIdentifier)
           .errorMessage("An email domain is required when creating an active SSO configuration."),
       )
-    validateEmailDomainAndGrantPermissionsIfNeeded(config.organizationId, configEmailDomain, config.companyIdentifier)
+    // Read-only validation up front so we fail fast before creating any resources. The permission
+    // grant is deferred into createActiveSsoConfigWithEmailDomain so it commits or rolls back
+    // atomically with the SSO config and email domain, and only after the realm has been created.
+    validateEmailDomainForActivationGated(
+      organizationId = config.organizationId,
+      emailDomain = configEmailDomain,
+      companyIdentifier = config.companyIdentifier,
+    )
 
     val existingConfig = ssoConfigService.getSsoConfig(config.organizationId)
     if (existingConfig != null) {
@@ -295,22 +322,26 @@ open class SsoConfigDomainService internal constructor(
     try {
       createActiveSsoConfigWithEmailDomain(config)
     } catch (ex: Exception) {
+      var cleanupSucceeded = true
       try {
         airbyteKeycloakClient.deleteRealm(config.companyIdentifier)
       } catch (cleanupEx: Exception) {
+        cleanupSucceeded = false
         logger.error(cleanupEx) { "Failed to cleanup Keycloak realm after database failure" }
       }
+      recordSetupCompensation(config.organizationId, cleanupSucceeded)
       throw ex
     }
   }
 
   /**
-   * Creates an active SSO config and email domain within a single transaction to ensure atomicity.
+   * Creates an active SSO config, email domain, and any auto-granted permissions within a single
+   * transaction to ensure atomicity.
    *
-   * Transaction Boundary: This method IS marked @Transactional to ensure atomicity between
-   * creating the SSO config database record and the email domain record. Both must succeed or
-   * fail together. This is called after Keycloak resources are created, so we're only transacting
-   * database operations here.
+   * Transaction Boundary: This method IS marked @Transactional to ensure atomicity between creating
+   * the SSO config database record, the email domain record, and the permission grants. All must
+   * succeed or fail together. This is called after Keycloak resources are created, so we're only
+   * transacting database operations here; the realm is compensated by the caller if this fails.
    */
   @Transactional("config")
   internal open fun createActiveSsoConfigWithEmailDomain(config: SsoConfig) {
@@ -329,6 +360,13 @@ open class SsoConfigDomainService internal constructor(
         this.organizationId = config.organizationId
         this.emailDomain = configEmailDomain
       },
+    )
+    // Grant permissions within this transaction so they roll back together with the config and
+    // email-domain records on failure (no-op unless AutoGrantOrgPermissionsOnSsoActivation is on).
+    grantPermissionsIfAutoGrantEnabled(
+      organizationId = config.organizationId,
+      emailDomain = configEmailDomain,
+      defaultRole = config.defaultRole ?: DEFAULT_SSO_ROLE,
     )
   }
 
@@ -589,7 +627,7 @@ open class SsoConfigDomainService internal constructor(
   }
 
   /**
-   * Grant ORGANIZATION_MEMBER permission to a list of users for the specified organization.
+   * Grant the configured default SSO permission to a list of users for the specified organization.
    * This is used during SSO activation to grant access to existing users with the email domain.
    *
    * @param userIds list of user IDs to grant permissions to
@@ -598,10 +636,13 @@ open class SsoConfigDomainService internal constructor(
   fun grantOrgMembershipToUsers(
     userIds: List<UUID>,
     organizationId: UUID,
+    defaultRole: SsoDefaultRole = DEFAULT_SSO_ROLE,
   ) {
     if (userIds.isEmpty()) {
       return
     }
+
+    val permissionType = defaultRole.toConfigModel()
 
     // Note: This is N+1 (one createPermission call per user). If this becomes a performance
     // issue, consider adding a batch createPermissions method to PermissionService.
@@ -611,11 +652,11 @@ open class SsoConfigDomainService internal constructor(
           .withPermissionId(UUID.randomUUID())
           .withUserId(userId)
           .withOrganizationId(organizationId)
-          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+          .withPermissionType(permissionType)
       permissionService.createPermission(permission)
     }
 
-    logger.info { "Granted ORGANIZATION_MEMBER permission to ${userIds.size} users for organization $organizationId" }
+    logger.info { "Granted $permissionType permission to ${userIds.size} users for organization $organizationId" }
   }
 
   private fun validateDiscoveryUrl(config: SsoConfig) {
@@ -644,10 +685,31 @@ open class SsoConfigDomainService internal constructor(
   /**
    * Validates the email domain and grants permissions to users if the auto-grant flag is enabled.
    * When AutoGrantOrgPermissionsOnSsoActivation is ON, skips the blocking validation and instead
-   * grants ORGANIZATION_MEMBER permission to users with the email domain who don't have org access.
+   * grants the configured default SSO permission to users with the email domain who don't have org access.
    * When OFF, uses the old behavior that blocks activation if users exist outside the org.
+   *
+   * This is a convenience for callers that are already inside a transaction (e.g. activateSsoConfig).
+   * Callers that perform external (Keycloak) work first should instead run
+   * [validateEmailDomainForActivationGated] up front and defer [grantPermissionsIfAutoGrantEnabled]
+   * into their transaction, so a grant cannot be orphaned if a later step fails.
    */
   private fun validateEmailDomainAndGrantPermissionsIfNeeded(
+    organizationId: UUID,
+    emailDomain: String,
+    companyIdentifier: String,
+    defaultRole: SsoDefaultRole = DEFAULT_SSO_ROLE,
+  ) {
+    validateEmailDomainForActivationGated(organizationId, emailDomain, companyIdentifier)
+    grantPermissionsIfAutoGrantEnabled(organizationId, emailDomain, defaultRole)
+  }
+
+  /**
+   * Read-only email-domain validation for SSO activation, gated by AutoGrantOrgPermissionsOnSsoActivation.
+   * When the flag is ON we skip the blocking "users outside the org" check (those users are granted access
+   * instead, see [grantPermissionsIfAutoGrantEnabled]); when OFF we run the full blocking validation.
+   * Performs no writes, so callers can run it up front to fail fast before creating any resources.
+   */
+  private fun validateEmailDomainForActivationGated(
     organizationId: UUID,
     emailDomain: String,
     companyIdentifier: String,
@@ -659,24 +721,73 @@ open class SsoConfigDomainService internal constructor(
       validateEmailDomainMatchesOrganization(organizationId, emailDomain, companyIdentifier)
       validateEmailDomainNotExists(emailDomain, organizationId, companyIdentifier)
       // Note: validateNoExistingUsersOutsideOrganization is SKIPPED
-
-      // Find and grant permissions to users who need them
-      val usersNeedingPermission =
-        userPersistence.findUsersWithEmailDomainWithoutOrgPermission(
-          emailDomain,
-          organizationId,
-        )
-      grantOrgMembershipToUsers(usersNeedingPermission, organizationId)
     } else {
       // OLD BEHAVIOR: Full validation including blocking on outside-org users
       validateEmailDomainForActivation(organizationId, emailDomain, companyIdentifier)
     }
   }
 
-  @Transactional("config")
+  /**
+   * Grants the configured default role to users with the email domain who lack org access, but only when
+   * AutoGrantOrgPermissionsOnSsoActivation is ON (otherwise a no-op). This performs writes and must run
+   * inside the caller's transaction so the grants roll back with the rest of the SSO config persistence.
+   */
+  private fun grantPermissionsIfAutoGrantEnabled(
+    organizationId: UUID,
+    emailDomain: String,
+    defaultRole: SsoDefaultRole = DEFAULT_SSO_ROLE,
+  ) {
+    val autoGrantEnabled = featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, Organization(organizationId))
+    if (!autoGrantEnabled) {
+      return
+    }
+
+    // Find and grant permissions to users who need them
+    val usersNeedingPermission =
+      userPersistence.findUsersWithEmailDomainWithoutOrgPermission(
+        emailDomain,
+        organizationId,
+      )
+    val effectiveRole = effectiveDefaultRole(organizationId, defaultRole)
+    grantOrgMembershipToUsers(usersNeedingPermission, organizationId, effectiveRole)
+    recordPermissionGrant(organizationId, usersNeedingPermission.size, effectiveRole)
+  }
+
+  /**
+   * Resolves the SSO default role to apply during JIT provisioning, gated by
+   * [ConfigurableSsoDefaultRole] (temporary, default OFF). While the flag is off for an
+   * organization we ignore the configured role and fall back to [DEFAULT_SSO_ROLE], preserving
+   * pre-feature behavior so the code can be deployed dark and released separately. Remove this
+   * method and the flag once the configurable-default-role rollout completes.
+   */
+  private fun effectiveDefaultRole(
+    organizationId: UUID,
+    configured: SsoDefaultRole,
+  ): SsoDefaultRole =
+    if (featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, Organization(organizationId))) {
+      configured
+    } else {
+      DEFAULT_SSO_ROLE
+    }
+
   open fun activateSsoConfig(
     organizationId: UUID,
     emailDomain: String? = null,
+  ) {
+    // The transactional work lives in activateSsoConfigTransactional. Because that method is open and
+    // @Transactional, the Micronaut proxy commits (or rolls back) before it returns, so by the time
+    // this lambda returns the outcome is final and the success/failure metric reflects the real commit
+    // result. This mirrors the create path (createAndStoreSsoConfig wrapping the @Transactional
+    // createActiveSsoConfigWithEmailDomain), which keeps the metric outside the transaction boundary.
+    recordSsoConfigOperation(organizationId, SSO_OP_ACTIVATE) {
+      activateSsoConfigTransactional(organizationId, emailDomain)
+    }
+  }
+
+  @Transactional("config")
+  internal open fun activateSsoConfigTransactional(
+    organizationId: UUID,
+    emailDomain: String?,
   ) {
     val currentSsoConfig =
       ssoConfigService.getSsoConfig(organizationId) ?: throw SSOActivationProblem(
@@ -748,7 +859,12 @@ open class SsoConfigDomainService internal constructor(
         )
       }
 
-      validateEmailDomainAndGrantPermissionsIfNeeded(organizationId, emailDomain, currentSsoConfig.keycloakRealm)
+      validateEmailDomainAndGrantPermissionsIfNeeded(
+        organizationId,
+        emailDomain,
+        currentSsoConfig.keycloakRealm,
+        currentSsoConfig.defaultRole?.toSsoDefaultRole() ?: DEFAULT_SSO_ROLE,
+      )
 
       try {
         ssoConfigService.updateSsoConfigStatus(organizationId, SsoConfigStatus.ACTIVE)
@@ -768,6 +884,90 @@ open class SsoConfigDomainService internal constructor(
             .errorMessage("Failed to activate your SSO configuration. Please try again or contact support if the problem persists."),
         )
       }
+    }
+  }
+
+  /**
+   * Runs [block] and emits a single [OssMetricsRegistry.SSO_CONFIG_OPERATION] count tagged with the
+   * [operation] and its success/failure status. Re-throws so transactional rollback is unaffected.
+   */
+  private fun <T> recordSsoConfigOperation(
+    organizationId: UUID,
+    operation: String,
+    block: () -> T,
+  ): T =
+    try {
+      val result = block()
+      emitSsoConfigOperation(organizationId, operation, success = true)
+      result
+    } catch (ex: Exception) {
+      emitSsoConfigOperation(organizationId, operation, success = false)
+      throw ex
+    }
+
+  private fun emitSsoConfigOperation(
+    organizationId: UUID,
+    operation: String,
+    success: Boolean,
+  ) {
+    try {
+      metricClient.count(
+        OssMetricsRegistry.SSO_CONFIG_OPERATION,
+        attributes =
+          arrayOf(
+            MetricAttribute(MetricTags.ORGANIZATION_ID, organizationId.toString()),
+            MetricAttribute(MetricTags.SSO_OPERATION, operation),
+            MetricAttribute(MetricTags.STATUS, if (success) MetricTags.SUCCESS else MetricTags.FAILURE),
+          ),
+      )
+    } catch (e: Exception) {
+      logger.warn(e) { "Failed to emit SSO config operation metric for '$operation'" }
+    }
+  }
+
+  /**
+   * Emits [OssMetricsRegistry.SSO_SETUP_COMPENSATION] when an active-config setup fails and the
+   * Keycloak realm has to be compensated, tagging whether that realm cleanup succeeded.
+   */
+  private fun recordSetupCompensation(
+    organizationId: UUID,
+    cleanupSucceeded: Boolean,
+  ) {
+    try {
+      metricClient.count(
+        OssMetricsRegistry.SSO_SETUP_COMPENSATION,
+        attributes =
+          arrayOf(
+            MetricAttribute(MetricTags.ORGANIZATION_ID, organizationId.toString()),
+            MetricAttribute(MetricTags.STATUS, if (cleanupSucceeded) MetricTags.SUCCESS else MetricTags.FAILURE),
+          ),
+      )
+    } catch (e: Exception) {
+      logger.warn(e) { "Failed to emit SSO setup compensation metric" }
+    }
+  }
+
+  /**
+   * Emits [OssMetricsRegistry.SSO_PERMISSION_GRANTED] with the number of users auto-granted an org
+   * permission, tagged by the default role applied. No-op when nobody was granted.
+   */
+  private fun recordPermissionGrant(
+    organizationId: UUID,
+    grantedCount: Int,
+    defaultRole: SsoDefaultRole,
+  ) {
+    if (grantedCount <= 0) {
+      return
+    }
+    try {
+      metricClient.count(
+        OssMetricsRegistry.SSO_PERMISSION_GRANTED,
+        grantedCount.toLong(),
+        MetricAttribute(MetricTags.ORGANIZATION_ID, organizationId.toString()),
+        MetricAttribute(MetricTags.SSO_DEFAULT_ROLE, defaultRole.name),
+      )
+    } catch (e: Exception) {
+      logger.warn(e) { "Failed to emit SSO permission granted metric" }
     }
   }
 }

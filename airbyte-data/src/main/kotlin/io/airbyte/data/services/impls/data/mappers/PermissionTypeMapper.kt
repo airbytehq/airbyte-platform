@@ -6,6 +6,7 @@ package io.airbyte.data.services.impls.data.mappers
 
 typealias EntityPermissionType = io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 typealias ModelPermissionType = io.airbyte.config.Permission.PermissionType
+typealias DomainSsoDefaultRole = io.airbyte.domain.models.SsoDefaultRole
 
 fun EntityPermissionType.toConfigModel(): ModelPermissionType =
   when (this) {
@@ -36,4 +37,26 @@ fun ModelPermissionType.toEntity(): EntityPermissionType =
     ModelPermissionType.ORGANIZATION_MEMBER -> EntityPermissionType.organization_member
     ModelPermissionType.INSTANCE_ADMIN -> EntityPermissionType.instance_admin
     ModelPermissionType.DATAPLANE -> EntityPermissionType.dataplane
+  }
+
+fun DomainSsoDefaultRole.toEntity(): EntityPermissionType =
+  when (this) {
+    DomainSsoDefaultRole.ORGANIZATION_ADMIN -> EntityPermissionType.organization_admin
+    DomainSsoDefaultRole.ORGANIZATION_EDITOR -> EntityPermissionType.organization_editor
+    DomainSsoDefaultRole.ORGANIZATION_MEMBER -> EntityPermissionType.organization_member
+  }
+
+fun DomainSsoDefaultRole.toConfigModel(): ModelPermissionType =
+  when (this) {
+    DomainSsoDefaultRole.ORGANIZATION_ADMIN -> ModelPermissionType.ORGANIZATION_ADMIN
+    DomainSsoDefaultRole.ORGANIZATION_EDITOR -> ModelPermissionType.ORGANIZATION_EDITOR
+    DomainSsoDefaultRole.ORGANIZATION_MEMBER -> ModelPermissionType.ORGANIZATION_MEMBER
+  }
+
+fun ModelPermissionType.toSsoDefaultRole(): DomainSsoDefaultRole =
+  when (this) {
+    ModelPermissionType.ORGANIZATION_ADMIN -> DomainSsoDefaultRole.ORGANIZATION_ADMIN
+    ModelPermissionType.ORGANIZATION_EDITOR -> DomainSsoDefaultRole.ORGANIZATION_EDITOR
+    ModelPermissionType.ORGANIZATION_MEMBER -> DomainSsoDefaultRole.ORGANIZATION_MEMBER
+    else -> throw IllegalArgumentException("Permission type is not supported as an SSO default role.")
   }

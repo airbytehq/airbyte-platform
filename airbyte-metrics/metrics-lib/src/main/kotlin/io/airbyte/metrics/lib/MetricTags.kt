@@ -84,6 +84,8 @@ object MetricTags {
   const val SOURCE_IMAGE: String = "source_image"
   const val SOURCE_IMAGE_IS_DEFAULT: String = "source_image_is_default"
   const val SKIPPED = "skipped"
+  const val SSO_OPERATION: String = "sso_operation"
+  const val SSO_DEFAULT_ROLE: String = "sso_default_role"
   const val STATUS: String = "status"
   const val SUCCESS: String = "success"
   const val WEBHOOK_DOMAIN: String = "webhook_domain"

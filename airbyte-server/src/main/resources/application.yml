@@ -140,6 +140,8 @@ micronaut:
 airbyte:
   airbyte-url: ${AIRBYTE_URL:}
   airbyte-agents-url: ${AIRBYTE_AGENTS_URL:}
+  airbyte-agents-valid-redirect-uris: ${AIRBYTE_AGENTS_VALID_REDIRECT_URIS:}
+  airbyte-agents-web-origins: ${AIRBYTE_AGENTS_WEB_ORIGINS:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   license-key: ${AIRBYTE_LICENSE_KEY:}
   shutdown:

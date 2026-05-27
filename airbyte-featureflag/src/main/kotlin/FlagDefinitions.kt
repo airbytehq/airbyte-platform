@@ -268,6 +268,18 @@ object UseVerifiedDomainsForSsoActivate : Temporary<Boolean>(key = "platform.use
 
 object AutoGrantOrgPermissionsOnSsoActivation : Temporary<Boolean>(key = "platform.auto-grant-org-permissions-on-sso-activation", default = false)
 
+/**
+ * Gates the configurable-SSO-default-role rollout, which ships dark behind this flag. It serves two
+ * purposes for an organization:
+ *  1. SSO just-in-time provisioning grants each user the per-organization default role configured on
+ *     the SSO config (falling back to ORGANIZATION_MEMBER while disabled).
+ *  2. Registration of the Sonar webapp Keycloak client in newly created SSO realms (skipped while
+ *     disabled).
+ * Defaults off, preserving pre-feature behavior so the code can be released separately. Temporary —
+ * remove once the configurable-default-role rollout completes.
+ */
+object ConfigurableSsoDefaultRole : Temporary<Boolean>(key = "platform.configurable-sso-default-role", default = false)
+
 object UseOptimizedStreamStatusQuery : Temporary<Boolean>(key = "platform.use-optimized-stream-status-query", default = false)
 
 object UseReadReplicaForStreamStatus : Temporary<Boolean>(key = "platform.use-read-replica-for-stream-status", default = false)

@@ -129,6 +129,18 @@ enum class OssMetricsRegistry(
     metricName = "keycloak_token_invalid_realm",
     metricDescription = "increments when a keycloak auth token validation fails because of an invalid realm",
   ),
+  SSO_CONFIG_OPERATION(
+    metricName = "sso_config_operation",
+    metricDescription = "SSO config lifecycle operation result; operation (create_active|create_draft|activate) and status (success|failure) tags",
+  ),
+  SSO_SETUP_COMPENSATION(
+    metricName = "sso_setup_compensation",
+    metricDescription = "active SSO config persistence failed and the Keycloak realm was compensated; status tag = cleanup success|failure",
+  ),
+  SSO_PERMISSION_GRANTED(
+    metricName = "sso_permission_granted",
+    metricDescription = "users auto-granted an org permission during SSO setup/activation; tagged by the default role applied",
+  ),
   OIDC_TOKEN_VALIDATION(
     metricName = "oidc_token_validation",
     metricDescription = "increments when a oidc auth token validation occurs",

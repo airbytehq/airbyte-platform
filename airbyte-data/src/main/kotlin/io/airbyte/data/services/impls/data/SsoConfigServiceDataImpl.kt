@@ -9,8 +9,10 @@ import io.airbyte.data.repositories.SsoConfigRepository
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.domain.models.DEFAULT_SSO_ROLE
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigStatus
+import io.airbyte.domain.models.SsoDefaultRole
 import jakarta.inject.Singleton
 import java.util.UUID
 import io.airbyte.data.repositories.entities.SsoConfig as SsoConfigEntity
@@ -27,6 +29,8 @@ open class SsoConfigServiceDataImpl internal constructor(
           organizationId = config.organizationId,
           keycloakRealm = config.companyIdentifier,
           status = config.status.toEntity(),
+          // A new config with no caller-specified role falls back to the default.
+          defaultRole = (config.defaultRole ?: DEFAULT_SSO_ROLE).toEntity(),
         ),
       )
   }
@@ -52,6 +56,19 @@ open class SsoConfigServiceDataImpl internal constructor(
         organizationId.toString(),
       )
     entity.status = status.toEntity()
+    ssoConfigRepository.update(entity)
+  }
+
+  override fun updateSsoConfigDefaultRole(
+    organizationId: UUID,
+    defaultRole: SsoDefaultRole,
+  ) {
+    val entity =
+      ssoConfigRepository.findByOrganizationId(organizationId) ?: throw ConfigNotFoundException(
+        SsoConfig::class.toString(),
+        organizationId.toString(),
+      )
+    entity.defaultRole = defaultRole.toEntity()
     ssoConfigRepository.update(entity)
   }
 }

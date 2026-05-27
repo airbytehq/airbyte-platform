@@ -47,6 +47,7 @@ open class SSOConfigApiController(
       clientSecret = ssoConfig.clientSecret,
       emailDomains = ssoConfig.emailDomains,
       status = ssoConfig.status.toApi(),
+      defaultRole = ssoConfig.defaultRole.toApi(),
     )
   }
 
@@ -66,6 +67,9 @@ open class SSOConfigApiController(
           createSSOConfigRequestBody.discoveryUrl,
           createSSOConfigRequestBody.emailDomain,
           createSSOConfigRequestBody.status.toDomain(),
+          // Pass through null when the caller omits the role so the domain layer can tell
+          // "unspecified" (leave a stored role unchanged on update) from an explicit choice.
+          createSSOConfigRequestBody.defaultRole?.toDomain(),
         ),
       )
       null

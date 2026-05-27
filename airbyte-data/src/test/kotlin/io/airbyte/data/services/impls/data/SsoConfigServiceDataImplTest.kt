@@ -4,10 +4,12 @@
 
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.config.Permission
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.SsoConfigRepository
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigStatus
+import io.airbyte.domain.models.SsoDefaultRole
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 import io.airbyte.data.repositories.entities.SsoConfig as SsoConfigEntity
+import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType as JooqPermissionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SsoConfigStatus as JooqSsoConfigStatus
 
 class SsoConfigServiceDataImplTest {
@@ -43,6 +46,7 @@ class SsoConfigServiceDataImplTest {
         discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
         emailDomain = "airbyte.com",
         status = SsoConfigStatus.ACTIVE,
+        defaultRole = SsoDefaultRole.ORGANIZATION_EDITOR,
       )
 
     every { ssoConfigRepository.save(any()) } returns mockk()
@@ -54,6 +58,34 @@ class SsoConfigServiceDataImplTest {
         withArg {
           assertEquals(config.organizationId, it.organizationId)
           assertEquals(config.companyIdentifier, it.keycloakRealm)
+          assertEquals(JooqPermissionType.organization_editor, it.defaultRole)
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `createSsoConfig persists the default role when none is specified`() {
+    val config =
+      SsoConfig(
+        organizationId = UUID.randomUUID(),
+        companyIdentifier = "airbyte",
+        clientId = "client-id",
+        clientSecret = "client-secret",
+        discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+        emailDomain = "airbyte.com",
+        status = SsoConfigStatus.ACTIVE,
+        // defaultRole omitted -> null -> should fall back to ORGANIZATION_MEMBER on insert
+      )
+
+    every { ssoConfigRepository.save(any()) } returns mockk()
+
+    ssoConfigService.createSsoConfig(config)
+
+    verify(exactly = 1) {
+      ssoConfigRepository.save(
+        withArg {
+          assertEquals(JooqPermissionType.organization_member, it.defaultRole)
         },
       )
     }
@@ -111,6 +143,75 @@ class SsoConfigServiceDataImplTest {
   }
 
   @Test
+  fun `updateSsoConfigDefaultRole should update default role successfully`() {
+    val orgId = UUID.randomUUID()
+    val entity =
+      SsoConfigEntity(
+        id = UUID.randomUUID(),
+        organizationId = orgId,
+        keycloakRealm = "airbyte",
+        status = JooqSsoConfigStatus.draft,
+      )
+
+    every { ssoConfigRepository.findByOrganizationId(orgId) } returns entity
+    every { ssoConfigRepository.update(any()) } returns entity
+
+    ssoConfigService.updateSsoConfigDefaultRole(orgId, SsoDefaultRole.ORGANIZATION_EDITOR)
+
+    verify(exactly = 1) { ssoConfigRepository.findByOrganizationId(orgId) }
+    verify(exactly = 1) {
+      ssoConfigRepository.update(
+        withArg {
+          assertEquals(JooqPermissionType.organization_editor, it.defaultRole)
+          assertEquals(orgId, it.organizationId)
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `updateSsoConfigDefaultRole should update default role to member successfully`() {
+    val orgId = UUID.randomUUID()
+    val entity =
+      SsoConfigEntity(
+        id = UUID.randomUUID(),
+        organizationId = orgId,
+        keycloakRealm = "airbyte",
+        status = JooqSsoConfigStatus.draft,
+        defaultRole = JooqPermissionType.organization_editor,
+      )
+
+    every { ssoConfigRepository.findByOrganizationId(orgId) } returns entity
+    every { ssoConfigRepository.update(any()) } returns entity
+
+    ssoConfigService.updateSsoConfigDefaultRole(orgId, SsoDefaultRole.ORGANIZATION_MEMBER)
+
+    verify(exactly = 1) { ssoConfigRepository.findByOrganizationId(orgId) }
+    verify(exactly = 1) {
+      ssoConfigRepository.update(
+        withArg {
+          assertEquals(JooqPermissionType.organization_member, it.defaultRole)
+          assertEquals(orgId, it.organizationId)
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `updateSsoConfigDefaultRole throws when config not found`() {
+    val orgId = UUID.randomUUID()
+
+    every { ssoConfigRepository.findByOrganizationId(orgId) } returns null
+
+    assertThrows<ConfigNotFoundException> {
+      ssoConfigService.updateSsoConfigDefaultRole(orgId, SsoDefaultRole.ORGANIZATION_EDITOR)
+    }
+
+    verify(exactly = 1) { ssoConfigRepository.findByOrganizationId(orgId) }
+    verify(exactly = 0) { ssoConfigRepository.update(any()) }
+  }
+
+  @Test
   fun `getSsoConfigByCompanyIdentifier should return config when it exists`() {
     val orgId = UUID.randomUUID()
     val entity =
@@ -119,6 +220,7 @@ class SsoConfigServiceDataImplTest {
         organizationId = orgId,
         keycloakRealm = "airbyte",
         status = JooqSsoConfigStatus.active,
+        defaultRole = JooqPermissionType.organization_admin,
       )
 
     every { ssoConfigRepository.findByKeycloakRealm("airbyte") } returns entity
@@ -127,6 +229,7 @@ class SsoConfigServiceDataImplTest {
 
     assertEquals("airbyte", result?.keycloakRealm)
     assertEquals(orgId, result?.organizationId)
+    assertEquals(Permission.PermissionType.ORGANIZATION_ADMIN, result?.defaultRole)
     verify(exactly = 1) { ssoConfigRepository.findByKeycloakRealm("airbyte") }
   }
 

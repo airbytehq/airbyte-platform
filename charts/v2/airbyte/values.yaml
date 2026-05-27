@@ -35,6 +35,14 @@ global:
   # accept-invite links for organizations flagged isAgentic. Falls back to airbyteUrl when empty.
   airbyteAgentsUrl: ""
 
+  # -- Valid redirect URIs for the Airbyte Agents web app Keycloak client in newly created SSO realms.
+  # Set per deployment in deploy/envs/*/values.yaml.
+  airbyteAgentsValidRedirectUris: []
+
+  # -- Web origins for the Airbyte Agents web app Keycloak client in newly created SSO realms.
+  # Set per deployment in deploy/envs/*/values.yaml.
+  airbyteAgentsWebOrigins: []
+
   # Docker image config that will apply to all images.
   image:
     # Docker registry to pull platform images from, e.g. http://my-registry:8000/

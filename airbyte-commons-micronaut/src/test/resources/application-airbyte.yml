@@ -2,6 +2,8 @@ airbyte:
   acceptance-test-enabled: true
   airbyte-url: "http://some-url"
   airbyte-agents-url: "http://some-agents-url"
+  airbyte-agents-valid-redirect-uris: "http://some-agents-url/*,http://some-other-agents-url/*"
+  airbyte-agents-web-origins: "http://some-agents-url,http://some-other-agents-url"
   deployment-environment: "test"
   license-key: "test-license-key"
   edition: "enterprise"

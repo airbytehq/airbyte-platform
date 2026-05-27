@@ -58,6 +58,7 @@ import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.EmailAttribute
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
@@ -603,7 +604,7 @@ open class UserHandler
             .anyMatch { userPermission: UserPermission -> userPermission.user.userId == userId }
         // check to avoid creating duplicate permissions
         if (!hasOrgPermission) {
-          createPermissionForUserAndOrg(userId, organization.organizationId, Permission.PermissionType.ORGANIZATION_MEMBER)
+          createPermissionForUserAndOrg(userId, organization.organizationId, getSsoDefaultRole(organization.organizationId))
         }
       }
 
@@ -675,6 +676,16 @@ open class UserHandler
           .withUserId(userId)
           .withPermissionType(permissionType),
       )
+    }
+
+    private fun getSsoDefaultRole(organizationId: UUID): Permission.PermissionType {
+      // ConfigurableSsoDefaultRole (temporary, default OFF) dark-launches per-config SSO default roles.
+      // While the flag is off for the org, ignore the configured role and fall back to ORGANIZATION_MEMBER,
+      // matching pre-feature behavior so the deploy can be separated from the release.
+      if (!featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, io.airbyte.featureflag.Organization(organizationId))) {
+        return Permission.PermissionType.ORGANIZATION_MEMBER
+      }
+      return ssoConfigService.getSsoConfig(organizationId)?.defaultRole ?: Permission.PermissionType.ORGANIZATION_MEMBER
     }
 
     private fun createInstanceAdminPermissionIfInitialUser(createdUser: UserRead) {
