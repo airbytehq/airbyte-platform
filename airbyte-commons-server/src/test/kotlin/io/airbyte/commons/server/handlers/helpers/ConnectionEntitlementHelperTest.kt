@@ -16,8 +16,10 @@ import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlem
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.commons.entitlements.models.SourceWorkdayEnterpriseConnector
 import io.airbyte.commons.server.helpers.ConnectionHelpers
+import io.airbyte.config.BasicSchedule
 import io.airbyte.config.Cron
 import io.airbyte.config.MapperConfig
+import io.airbyte.config.Schedule
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
 import io.airbyte.config.helpers.CronExpressionHelper
@@ -437,6 +439,47 @@ class ConnectionEntitlementHelperTest {
   }
 
   @Test
+  fun `unlockEntitledConnectionsForOrganization skips sync frequency entitlement checks when no sub-hour syncs exist`() {
+    val lockedConnectionId = UUID.randomUUID()
+    val sourceId = UUID.randomUUID()
+    val destId = UUID.randomUUID()
+    val unknownSourceDefId = UUID.randomUUID()
+    val unknownDestDefId = UUID.randomUUID()
+
+    val lockedConnection =
+      createMockConnection(connectionId = lockedConnectionId)
+        .withSourceId(sourceId)
+        .withDestinationId(destId)
+        .withStatus(StandardSync.Status.LOCKED)
+
+    val sourceDefinition = mock<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition = mock<io.airbyte.config.StandardDestinationDefinition>()
+
+    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
+      .thenReturn(listOf(lockedConnectionId))
+    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(emptyList())
+    whenever(connectionService.getStandardSync(lockedConnectionId)).thenReturn(lockedConnection)
+    whenever(sourceService.getSourceDefinitionFromSource(sourceId)).thenReturn(sourceDefinition)
+    whenever(sourceDefinition.sourceDefinitionId).thenReturn(unknownSourceDefId)
+    whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
+    whenever(destDefinition.destinationDefinitionId).thenReturn(unknownDestDefId)
+
+    connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
+
+    org.mockito.kotlin
+      .verify(entitlementService, org.mockito.kotlin.never())
+      .checkEntitlement(organizationId, FasterSyncFrequencyEntitlement)
+    org.mockito.kotlin
+      .verify(entitlementService, org.mockito.kotlin.never())
+      .checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement)
+    org.mockito.kotlin.verify(connectionService).updateConnectionStatus(
+      lockedConnectionId,
+      StandardSync.Status.INACTIVE,
+      null,
+    )
+  }
+
+  @Test
   fun `unlockEntitledConnectionsForOrganization does not unlock non-entitled locked connection`() {
     val lockedConnectionId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
@@ -633,7 +676,7 @@ class ConnectionEntitlementHelperTest {
   }
 
   @Test
-  fun `unlockEntitledConnectionsForOrganization checks sub-hour sync entitlement`() {
+  fun `unlockEntitledConnectionsForOrganization does not unlock faster-than-fifteen locked connection with only fifteen-minute entitlement`() {
     val lockedConnectionId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val destId = UUID.randomUUID()
@@ -641,7 +684,7 @@ class ConnectionEntitlementHelperTest {
     val unknownDestDefId = UUID.randomUUID()
 
     val lockedConnection =
-      createMockConnection(connectionId = lockedConnectionId, cronExpression = "0 */30 * * * ?")
+      createMockConnection(connectionId = lockedConnectionId, cronExpression = "0 */5 * * * ?")
         .withSourceId(sourceId)
         .withDestinationId(destId)
         .withStatus(StandardSync.Status.LOCKED)
@@ -658,7 +701,6 @@ class ConnectionEntitlementHelperTest {
     whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
     whenever(destDefinition.destinationDefinitionId).thenReturn(unknownDestDefId)
 
-    // Not entitled to faster sync frequency
     whenever(entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement)).thenReturn(
       EntitlementResult(
         featureId = FasterSyncFrequencyEntitlement.featureId,
@@ -666,14 +708,63 @@ class ConnectionEntitlementHelperTest {
         reason = "Not entitled",
       ),
     )
+    whenever(entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = FifteenMinuteSyncFrequencyEntitlement.featureId,
+        isEntitled = true,
+        reason = null,
+      ),
+    )
 
     connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
 
-    // Should not unlock because not entitled to faster sync
+    org.mockito.kotlin
+      .verify(connectionService, org.mockito.kotlin.never())
+      .writeStandardSync(any())
     org.mockito.kotlin.verify(connectionService, org.mockito.kotlin.never()).updateConnectionStatus(
       any(),
       any(),
       any(),
+    )
+  }
+
+  @Test
+  fun `unlockEntitledConnectionsForOrganization downgrades frequency-only locked connection to hourly when no longer entitled`() {
+    val lockedConnectionId = UUID.randomUUID()
+    val sourceId = UUID.randomUUID()
+    val destId = UUID.randomUUID()
+    val unknownSourceDefId = UUID.randomUUID()
+    val unknownDestDefId = UUID.randomUUID()
+
+    val lockedConnection =
+      createBasicScheduleConnection(connectionId = lockedConnectionId, minutes = 30L)
+        .withSourceId(sourceId)
+        .withDestinationId(destId)
+        .withStatus(StandardSync.Status.LOCKED)
+
+    val sourceDefinition = mock<io.airbyte.config.StandardSourceDefinition>()
+    val destDefinition = mock<io.airbyte.config.StandardDestinationDefinition>()
+
+    whenever(connectionService.listConnectionIdsForOrganization(organizationId.value))
+      .thenReturn(listOf(lockedConnectionId))
+    whenever(entitlementHelper.findSubHourSyncIds(organizationId)).thenReturn(listOf(lockedConnectionId))
+    whenever(connectionService.getStandardSync(lockedConnectionId)).thenReturn(lockedConnection)
+    whenever(sourceService.getSourceDefinitionFromSource(sourceId)).thenReturn(sourceDefinition)
+    whenever(sourceDefinition.sourceDefinitionId).thenReturn(unknownSourceDefId)
+    whenever(destinationService.getDestinationDefinitionFromDestination(destId)).thenReturn(destDefinition)
+    whenever(destDefinition.destinationDefinitionId).thenReturn(unknownDestDefId)
+
+    connectionEntitlementHelper.unlockEntitledConnectionsForOrganization(organizationId)
+
+    org.mockito.kotlin.verify(connectionService).writeStandardSync(
+      org.mockito.kotlin.check {
+        assertHourlySchedule(it, lockedConnectionId)
+      },
+    )
+    org.mockito.kotlin.verify(connectionService).updateConnectionStatus(
+      lockedConnectionId,
+      StandardSync.Status.INACTIVE,
+      null,
     )
   }
 
@@ -765,5 +856,28 @@ class ConnectionEntitlementHelperTest {
       StandardSync.Status.INACTIVE,
       null,
     )
+  }
+
+  private fun createBasicScheduleConnection(
+    connectionId: UUID,
+    minutes: Long,
+  ): StandardSync =
+    createMockConnection(connectionId = connectionId)
+      .withScheduleType(StandardSync.ScheduleType.BASIC_SCHEDULE)
+      .withScheduleData(ScheduleData().withBasicSchedule(BasicSchedule().withTimeUnit(BasicSchedule.TimeUnit.MINUTES).withUnits(minutes)))
+      .withSchedule(Schedule().withTimeUnit(Schedule.TimeUnit.MINUTES).withUnits(minutes))
+      .withManual(false)
+
+  private fun assertHourlySchedule(
+    connection: StandardSync,
+    connectionId: UUID,
+  ) {
+    assertTrue(connection.connectionId == connectionId)
+    assertTrue(connection.scheduleType == StandardSync.ScheduleType.BASIC_SCHEDULE)
+    assertTrue(connection.scheduleData.basicSchedule.timeUnit == BasicSchedule.TimeUnit.HOURS)
+    assertTrue(connection.scheduleData.basicSchedule.units == 1L)
+    assertTrue(connection.schedule.timeUnit == Schedule.TimeUnit.HOURS)
+    assertTrue(connection.schedule.units == 1L)
+    assertFalse(connection.manual)
   }
 }

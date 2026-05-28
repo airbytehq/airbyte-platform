@@ -13,6 +13,7 @@ import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlem
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.config.StandardSync
 import io.airbyte.config.helpers.CronExpressionHelper
+import io.airbyte.config.helpers.ScheduleHelpers.setBasicHourlySchedule
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
@@ -132,6 +133,10 @@ class ConnectionEntitlementHelper(
     }
   }
 
+  private fun lacksSubHourSyncEntitlement(organizationId: OrganizationId): Boolean =
+    !entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement).isEntitled &&
+      !entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement).isEntitled
+
   /**
    * Unlocks all LOCKED connections for an organization that they are entitled to use.
    * For each entitled connection, updates the status to INACTIVE and removes the statusReason.
@@ -142,7 +147,8 @@ class ConnectionEntitlementHelper(
     logger.info { "Unlocking entitled connections for organization: $organizationId" }
 
     val connectionIds = connectionService.listConnectionIdsForOrganization(organizationId.value)
-    val subHourSyncIds = entitlementHelper.findSubHourSyncIds(organizationId)
+    val subHourSyncIds = entitlementHelper.findSubHourSyncIds(organizationId).toSet()
+    val shouldDowngradeSubHourSyncs = subHourSyncIds.isNotEmpty() && lacksSubHourSyncEntitlement(organizationId)
 
     logger.debug { "Found ${connectionIds.size} connections for organization $organizationId" }
 
@@ -153,13 +159,22 @@ class ConnectionEntitlementHelper(
         if (connection.status == StandardSync.Status.LOCKED) {
           logger.debug { "Checking entitlement for locked connection: $connectionId" }
 
+          val effectiveSubHourSyncIds =
+            if (shouldDowngradeSubHourSyncs && subHourSyncIds.contains(connectionId)) {
+              logger.info { "Downgrading locked sub-hour connection $connectionId to an hourly schedule before entitlement recheck" }
+              connectionService.writeStandardSync(setBasicHourlySchedule(connection))
+              subHourSyncIds - connectionId
+            } else {
+              subHourSyncIds
+            }
+
           val sourceDefinition = sourceService.getSourceDefinitionFromSource(connection.sourceId)
           val destinationDefinition = destinationService.getDestinationDefinitionFromDestination(connection.destinationId)
 
           val isEntitled =
             isEntitledToConnection(
               connection,
-              subHourSyncIds,
+              effectiveSubHourSyncIds,
               sourceDefinition.sourceDefinitionId,
               destinationDefinition.destinationDefinitionId,
               organizationId,

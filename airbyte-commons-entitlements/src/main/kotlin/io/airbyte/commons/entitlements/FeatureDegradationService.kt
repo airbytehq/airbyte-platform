@@ -22,6 +22,7 @@ import io.airbyte.config.Permission.PermissionType.WORKSPACE_RUNNER
 import io.airbyte.config.ScopeType
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.StatusReason
+import io.airbyte.config.helpers.ScheduleHelpers.setBasicHourlySchedule
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.PermissionService
@@ -72,6 +73,7 @@ internal class FeatureDegradationService(
       val allEntitlementsToDowngrade = currentFeatureIds - newFeatureIds
 
       val connectionsToDowngrade = mutableSetOf<UUID>()
+      var shouldDowngradeSubHourSyncs = false
 
       val (connectorEntitlementsToDowngrade, entitlementsToDowngrade) =
         allEntitlementsToDowngrade.partition { Entitlements.isEnterpriseConnectorEntitlementId(it) }
@@ -91,12 +93,14 @@ internal class FeatureDegradationService(
           RbacRolesEntitlement.featureId -> downgradeRBAC(organizationId)
           MappersEntitlement.featureId ->
             connectionsToDowngrade.addAll(connectionService.listConnectionIdsForOrganizationWithMappers(organizationId.value))
-          FasterSyncFrequencyEntitlement.featureId ->
-            connectionsToDowngrade.addAll(entitlementHelper.findSubHourSyncIds(organizationId))
-          FifteenMinuteSyncFrequencyEntitlement.featureId ->
-            connectionsToDowngrade.addAll(entitlementHelper.findSubHourSyncIds(organizationId))
+          FasterSyncFrequencyEntitlement.featureId -> shouldDowngradeSubHourSyncs = true
+          FifteenMinuteSyncFrequencyEntitlement.featureId -> shouldDowngradeSubHourSyncs = true
           else -> logger.debug { "No downgrade flow defined for $entitlementToDowngrade" }
         }
+      }
+
+      if (shouldDowngradeSubHourSyncs) {
+        connectionsToDowngrade.addAll(downgradeSubHourSyncSchedulesToHourly(organizationId))
       }
 
       logger.info {
@@ -130,6 +134,29 @@ internal class FeatureDegradationService(
       logger.error(e) { "Error checking for feature downgrades. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
       // Don't fail the plan update if we can't check for downgrades
     }
+  }
+
+  private fun downgradeSubHourSyncSchedulesToHourly(organizationId: OrganizationId): Set<UUID> {
+    val subHourSyncIds = entitlementHelper.findSubHourSyncIds(organizationId)
+    if (subHourSyncIds.isEmpty()) {
+      return emptySet()
+    }
+
+    logger.info {
+      "Downgrading ${subHourSyncIds.size} sub-hour connection schedules to hourly for organizationId=$organizationId"
+    }
+
+    val failedScheduleDowngrades = mutableSetOf<UUID>()
+    subHourSyncIds.forEach { connectionId ->
+      try {
+        val connection = connectionService.getStandardSync(connectionId)
+        connectionService.writeStandardSync(setBasicHourlySchedule(connection))
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to downgrade sub-hour connection schedule to hourly. organizationId=$organizationId connectionId=$connectionId" }
+        failedScheduleDowngrades.add(connectionId)
+      }
+    }
+    return failedScheduleDowngrades
   }
 
   private fun isSupportedFeatureDegradation(
