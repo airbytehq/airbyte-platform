@@ -85,6 +85,10 @@ class DbPrune(
    */
   private fun pruneJobBatch(now: OffsetDateTime): Int =
     database.transaction { ctx ->
+      // Override the global statement_timeout for prune queries which need to scan large tables.
+      // SET LOCAL scopes the override to this transaction only.
+      ctx.execute("SET LOCAL statement_timeout = '600s'")
+
       val cutoffDate = now.minusMonths(jobsMaxAgeMonths)
 
       val jobsToDelete =
@@ -321,6 +325,10 @@ class DbPrune(
     val cutoffDate = now.minusMonths(eventsMaxAgeMonths)
 
     return database.transaction { ctx ->
+      // Override the global statement_timeout for prune queries which need to scan large tables.
+      // SET LOCAL scopes the override to this transaction only.
+      ctx.execute("SET LOCAL statement_timeout = '600s'")
+
       val eventsDeleted =
         ctx
           .deleteFrom(ConfigTables.CONNECTION_TIMELINE_EVENT)
