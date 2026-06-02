@@ -160,6 +160,24 @@ class ConnectionManagerUtils(
     safeTerminateWorkflow(getConnectionManagerName(connectionId), reason)
   }
 
+  /**
+   * Terminate a connection-manager workflow and propagate failures to the caller.
+   */
+  fun terminateWorkflow(
+    workflowId: String,
+    reason: String,
+  ) {
+    log.info { "Terminating existing workflow for workflowId $workflowId." }
+    workflowClientWrapped.terminateWorkflow(workflowId, reason)
+  }
+
+  fun terminateWorkflow(
+    connectionId: UUID,
+    reason: String,
+  ) {
+    terminateWorkflow(getConnectionManagerName(connectionId), reason)
+  }
+
   // todo (cgardens) - what does no signal mean in this context?
 
   /**

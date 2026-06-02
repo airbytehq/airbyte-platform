@@ -17,6 +17,7 @@ import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.factory.DatabaseCheckFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.micronaut.runtime.AirbyteFlywayConfig
+import io.airbyte.persistence.job.DbPrune
 import io.airbyte.persistence.job.DefaultJobPersistence
 import io.airbyte.persistence.job.DefaultMetadataPersistence
 import io.airbyte.persistence.job.JobPersistence
@@ -168,6 +169,21 @@ class DatabaseBeanFactory {
   fun streamResetPersistence(
     @Named("configDatabase") configDatabase: Database?,
   ): StreamResetPersistence = StreamResetPersistence(configDatabase)
+
+  /**
+   * Provides a [DbPrune] bean for the GDPR / DSR deletion endpoints (`DsrDeletionService`).
+   *
+   * The cron service has its own [DbPrune] bean for age-based pruning; we instantiate a fresh one
+   * here so the server has access for `pruneJobsByScopes` calls. In airbyte-server the
+   * `configDatabase` bean actually points at both the config and the jobs schema (they are
+   * co-located in OSS / cloud deployments).
+   */
+  @Singleton
+  @Primary
+  @Named("dbPrune")
+  fun dbPrune(
+    @Named("configDatabase") jobsDatabase: Database,
+  ): DbPrune = DbPrune(jobsDatabase)
 
   @Singleton
   @Primary

@@ -2457,6 +2457,49 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
+  fun testListConnectionIdsForWorkspaceIncludesDestinationSideConnections() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
+
+    val destinationInWorkspace = jooqTestDbSetupHelper.destination!!
+
+    val org2 = jooqTestDbSetupHelper.createOrganization(UUID.randomUUID(), "org2", "org2@airbyte.io")
+    val dataplaneGroup2 = jooqTestDbSetupHelper.createDataplaneGroup(UUID.randomUUID(), org2.organizationId)
+    val workspace2 =
+      jooqTestDbSetupHelper.createWorkspace(
+        UUID.randomUUID(),
+        org2.organizationId,
+        dataplaneGroup2.id,
+        "workspace2",
+        "workspace2-slug",
+      )
+    val sourceInOtherWorkspace =
+      jooqTestDbSetupHelper.createActorForActorDefinition(
+        jooqTestDbSetupHelper.sourceDefinition!!,
+        workspaceId = workspace2.workspaceId,
+      )
+    val sync =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("cross-workspace destination connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(sourceInOtherWorkspace.sourceId)
+        .withDestinationId(destinationInWorkspace.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+    connectionServiceJooqImpl.writeStandardSync(sync)
+
+    assertEquals(
+      listOf(sync.connectionId),
+      connectionServiceJooqImpl.listConnectionIdsForWorkspace(destinationInWorkspace.workspaceId),
+    )
+  }
+
+  @Test
   fun testListConnectionIdsForOrganizationWithMappers() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setupForVersionUpgradeTest()

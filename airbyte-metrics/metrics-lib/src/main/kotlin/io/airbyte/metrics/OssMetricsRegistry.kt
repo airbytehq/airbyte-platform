@@ -756,6 +756,18 @@ enum class OssMetricsRegistry(
     metricName = "orphaned_secret_configs_total",
     metricDescription = "total orphaned secret configs across all storages, emitted as counter each cron run",
   ),
+  DSR_DELETION_PREPARED(
+    metricName = "dsr_deletion_prepared",
+    metricDescription = "Count of DSR / GDPR deletion requests that have been prepared (Phase 1, soft delete).",
+  ),
+  DSR_DELETION_COMPLETED(
+    metricName = "dsr_deletion_completed",
+    metricDescription = "Count of DSR / GDPR deletion requests that have been hard-deleted successfully (Phase 2).",
+  ),
+  DSR_DELETION_FAILED(
+    metricName = "dsr_deletion_failed",
+    metricDescription = "Count of DSR / GDPR deletion confirmations that finished with at least one error.",
+  ),
   ;
 
   override fun getMetricName(): String = metricName

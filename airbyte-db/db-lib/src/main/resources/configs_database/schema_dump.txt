@@ -274,6 +274,25 @@ create table "public"."connector_rollout" (
   "tag" varchar(256),
   constraint "pk_connector_rollout" primary key ("id")
 );
+create table "public"."data_subject_deletion_request" (
+  "id" uuid not null,
+  "email" varchar(512) not null,
+  "email_hash" varchar(64) not null,
+  "datagrail_id" varchar(255) not null,
+  "status" "public"."data_subject_deletion_status" not null default cast('previewed' as data_subject_deletion_status),
+  "user_id" uuid,
+  "requested_by" varchar(255) not null,
+  "oncall_issue_number" varchar(255) not null,
+  "confirmed_by" varchar(255),
+  "manifest" jsonb not null,
+  "prepare_warnings" jsonb,
+  "confirm_errors" jsonb,
+  "prepared_at" timestamp(6) with time zone not null default current_timestamp,
+  "confirmed_at" timestamp(6) with time zone,
+  "completed_at" timestamp(6) with time zone,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "data_subject_deletion_request_pkey" primary key ("id")
+);
 create table "public"."data_worker_usage" (
   "organization_id" uuid not null,
   "workspace_id" uuid not null,
@@ -843,6 +862,11 @@ where ((job_id IS NOT NULL));
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create unique index "actor_definition_id_state_tag_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc, "tag" asc)
 where (((state)::text = ANY ((ARRAY['initialized'::character varying, 'in_progress'::character varying, 'paused'::character varying, 'workflow_started'::character varying, 'finalizing'::character varying, 'errored'::character varying])::text[])));
+create unique index "idx_data_subject_deletion_request_email_active" on "public"."data_subject_deletion_request"("email_hash" asc)
+where ((status = ANY (ARRAY['previewed'::data_subject_deletion_status, 'running'::data_subject_deletion_status])));
+create index "idx_data_subject_deletion_request_email_hash" on "public"."data_subject_deletion_request"("email_hash" asc);
+create index "idx_data_subject_deletion_request_status" on "public"."data_subject_deletion_request"("status" asc);
+create index "idx_data_subject_deletion_request_user_id" on "public"."data_subject_deletion_request"("user_id" asc);
 create index "data_worker_usage_reservation_organization_id_idx" on "public"."data_worker_usage_reservation"("organization_id" asc);
 create index "idx_dataplane_heartbeat_log_created_at" on "public"."dataplane_heartbeat_log"("created_at" asc);
 create index "idx_dataplane_heartbeat_log_dataplane_created_at" on "public"."dataplane_heartbeat_log"("dataplane_id" asc, "created_at" desc);

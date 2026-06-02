@@ -30,6 +30,21 @@ interface OrganizationRepository : PageableRepository<Organization, UUID> {
   )
   fun findByIdForUpdate(organizationId: UUID): Optional<Organization>
 
+  /**
+   * Returns organizations whose `email` column matches (case-insensitively) the given email.
+   *
+   * The organization `email` field is populated at organization-creation time with the creator's
+   * email; the GDPR / DSR runbook uses this column to identify the orgs "owned by" a user. Used
+   * by `DsrDeletionService` to build the deletion manifest.
+   */
+  @Query(
+    """
+    SELECT * FROM organization
+    WHERE lower(email) = lower(:email)
+    """,
+  )
+  fun findByEmailIgnoreCase(email: String): List<Organization>
+
   @Query(
     """
     UPDATE organization

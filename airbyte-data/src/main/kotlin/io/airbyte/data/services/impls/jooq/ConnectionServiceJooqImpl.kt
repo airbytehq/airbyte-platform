@@ -1619,12 +1619,16 @@ class ConnectionServiceJooqImpl
 
     override fun listConnectionIdsForWorkspace(workspaceId: UUID): List<UUID> =
       database.query { ctx: DSLContext ->
+        val sourceActor = Tables.ACTOR.`as`("source_actor")
+        val destinationActor = Tables.ACTOR.`as`("destination_actor")
         ctx
-          .select(Tables.CONNECTION.ID)
+          .selectDistinct(Tables.CONNECTION.ID)
           .from(Tables.CONNECTION)
-          .join(Tables.ACTOR)
-          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
-          .where(Tables.ACTOR.WORKSPACE_ID.eq(workspaceId))
+          .leftJoin(sourceActor)
+          .on(sourceActor.ID.eq(Tables.CONNECTION.SOURCE_ID))
+          .leftJoin(destinationActor)
+          .on(destinationActor.ID.eq(Tables.CONNECTION.DESTINATION_ID))
+          .where(sourceActor.WORKSPACE_ID.eq(workspaceId).or(destinationActor.WORKSPACE_ID.eq(workspaceId)))
           .fetchInto(UUID::class.java)
       }
 

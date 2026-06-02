@@ -8,6 +8,7 @@ import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.instance.jobs.jooq.generated.Tables
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -26,6 +27,22 @@ class DbPrune(
   private val eventsMaxAgeMonths: Long = DEFAULT_EVENTS_MAX_AGE_MONTHS,
 ) {
   private val database = ExceptionWrappingDatabase(jobDatabase)
+
+  data class JobScopeCounts(
+    val jobCount: Long,
+    val attemptCount: Long,
+  )
+
+  data class JobDeletionCounts(
+    val deletedJobsCount: Int,
+    val deletedAttemptsCount: Int,
+  ) {
+    operator fun plus(other: JobDeletionCounts): JobDeletionCounts =
+      JobDeletionCounts(
+        deletedJobsCount = deletedJobsCount + other.deletedJobsCount,
+        deletedAttemptsCount = deletedAttemptsCount + other.deletedAttemptsCount,
+      )
+  }
 
   companion object {
     private val log = KotlinLogging.logger {}
@@ -66,8 +83,8 @@ class DbPrune(
    * @param now The reference timestamp to use for determining job age
    * @return Number of jobs deleted in this batch
    */
-  private fun pruneJobBatch(now: OffsetDateTime): Int {
-    return database.transaction { ctx ->
+  private fun pruneJobBatch(now: OffsetDateTime): Int =
+    database.transaction { ctx ->
       val cutoffDate = now.minusMonths(jobsMaxAgeMonths)
 
       val jobsToDelete =
@@ -79,107 +96,200 @@ class DbPrune(
           .fetch()
           .map { it.value1() }
 
-      if (jobsToDelete.isEmpty()) {
-        return@transaction 0
-      }
+      deleteJobsAndChildren(ctx, jobsToDelete).deletedJobsCount
+    }
 
-      log.debug { "Found ${jobsToDelete.size} jobs to delete" }
+  /**
+   * Hard-deletes a specific set of jobs (by scope) along with every dependent row.
+   *
+   * Used by GDPR / DSR deletion to scrub jobs for the connections owned by the user being deleted.
+   * Unlike the age-based [pruneJobs] path, this method targets only the supplied connection scopes
+   * (stringified connection IDs, matching `jobs.scope`) and is intended to be called once per DSR
+   * deletion. It batches internally to keep transactions short.
+   *
+   * @param connectionScopes The job scopes (stringified connection IDs) to purge.
+   * @return Total number of jobs deleted across all batches.
+   */
+  fun pruneJobsByScopes(connectionScopes: List<String>): Int = pruneJobsAndAttemptsByScopes(connectionScopes).deletedJobsCount
 
-      // Pre-fetch attempt IDs to avoid nested selects
-      val attemptIds =
-        ctx
-          .select(Tables.ATTEMPTS.ID)
-          .from(Tables.ATTEMPTS)
-          .where(Tables.ATTEMPTS.JOB_ID.`in`(jobsToDelete))
-          .fetch()
-          .map { it.value1() }
+  /**
+   * Hard-deletes a specific set of jobs by scope and returns both job and attempt deletion counts.
+   */
+  fun pruneJobsAndAttemptsByScopes(connectionScopes: List<String>): JobDeletionCounts {
+    if (connectionScopes.isEmpty()) {
+      return JobDeletionCounts(deletedJobsCount = 0, deletedAttemptsCount = 0)
+    }
 
-      // Delete in the correct order to respect foreign key constraints
-      // Order is important: delete child tables first, then parent tables
+    var totalDeleted = JobDeletionCounts(deletedJobsCount = 0, deletedAttemptsCount = 0)
+    var deletedInBatch: JobDeletionCounts
 
-      // 1. Delete sync_stats (references attempts)
-      val syncStatsDeleted =
-        ctx
-          .deleteFrom(Tables.SYNC_STATS)
-          .where(Tables.SYNC_STATS.ATTEMPT_ID.`in`(attemptIds))
-          .execute()
+    do {
+      deletedInBatch =
+        database.transaction { ctx ->
+          val jobsToDelete =
+            ctx
+              .select(Tables.JOBS.ID)
+              .from(Tables.JOBS)
+              .where(Tables.JOBS.SCOPE.`in`(connectionScopes))
+              .limit(batchSize)
+              .fetch()
+              .map { it.value1() }
 
-      // 2. Delete stream_stats (references attempts)
-      val streamStatsDeleted =
-        ctx
-          .deleteFrom(Tables.STREAM_STATS)
-          .where(Tables.STREAM_STATS.ATTEMPT_ID.`in`(attemptIds))
-          .execute()
-
-      // 3. Delete stream_attempt_metadata (references attempts)
-      val streamAttemptMetadataDeleted =
-        ctx
-          .deleteFrom(Tables.STREAM_ATTEMPT_METADATA)
-          .where(Tables.STREAM_ATTEMPT_METADATA.ATTEMPT_ID.`in`(attemptIds))
-          .execute()
-
-      // 4. Delete normalization_summaries (references attempts)
-      val normalizationSummariesDeleted =
-        ctx
-          .deleteFrom(Tables.NORMALIZATION_SUMMARIES)
-          .where(Tables.NORMALIZATION_SUMMARIES.ATTEMPT_ID.`in`(attemptIds))
-          .execute()
-
-      // 5. Delete attempts (references jobs)
-      val attemptsDeleted =
-        ctx
-          .deleteFrom(Tables.ATTEMPTS)
-          .where(Tables.ATTEMPTS.JOB_ID.`in`(jobsToDelete))
-          .execute()
-
-      // 6. Delete stream_statuses (references jobs)
-      val streamStatusesDeleted =
-        ctx
-          .deleteFrom(Tables.STREAM_STATUSES)
-          .where(Tables.STREAM_STATUSES.JOB_ID.`in`(jobsToDelete))
-          .execute()
-
-      // 7. Delete retry_states (references jobs)
-      val retryStatesDeleted =
-        ctx
-          .deleteFrom(Tables.RETRY_STATES)
-          .where(Tables.RETRY_STATES.JOB_ID.`in`(jobsToDelete))
-          .execute()
-
-      // 8. Delete data worker usage reservations for pruned jobs if the config table is available.
-      val dataWorkerUsageReservationsDeleted =
-        if (ctx.meta().tables.any { it.name.equals(DATA_WORKER_USAGE_RESERVATION_TABLE, ignoreCase = true) }) {
-          ctx
-            .deleteFrom(DSL.table(DSL.name(DATA_WORKER_USAGE_RESERVATION_TABLE)))
-            .where(DATA_WORKER_USAGE_RESERVATION_JOB_ID.`in`(jobsToDelete))
-            .execute()
-        } else {
-          0
+          deleteJobsAndChildren(ctx, jobsToDelete)
         }
 
-      // 9. Finally, delete the jobs themselves
-      val jobsDeleted =
-        ctx
-          .deleteFrom(Tables.JOBS)
-          .where(Tables.JOBS.ID.`in`(jobsToDelete))
-          .execute()
+      totalDeleted += deletedInBatch
+      if (deletedInBatch.deletedJobsCount > 0) {
+        log.info {
+          "Deleted ${deletedInBatch.deletedJobsCount} jobs and ${deletedInBatch.deletedAttemptsCount} attempts by scope in batch, " +
+            "running total: $totalDeleted"
+        }
+      }
+    } while (deletedInBatch.deletedJobsCount > 0)
 
-      log.debug {
-        """Batch deletion summary:
-          |  Jobs: $jobsDeleted
-          |  Attempts: $attemptsDeleted
-          |  Sync stats: $syncStatsDeleted
-          |  Stream stats: $streamStatsDeleted
-          |  Stream attempt metadata: $streamAttemptMetadataDeleted
-          |  Normalization summaries: $normalizationSummariesDeleted
-          |  Stream statuses: $streamStatusesDeleted
-          |  Retry states: $retryStatesDeleted
-          |  Data worker usage reservations: $dataWorkerUsageReservationsDeleted
-        """.trimMargin()
+    return totalDeleted
+  }
+
+  /**
+   * Counts jobs and attempts that would be deleted for the supplied connection scopes.
+   */
+  fun countJobsAndAttemptsByScopes(connectionScopes: List<String>): JobScopeCounts {
+    if (connectionScopes.isEmpty()) {
+      return JobScopeCounts(jobCount = 0L, attemptCount = 0L)
+    }
+
+    return database.query { ctx ->
+      val jobCount =
+        ctx
+          .selectCount()
+          .from(Tables.JOBS)
+          .where(Tables.JOBS.SCOPE.`in`(connectionScopes))
+          .fetchOne(0, Long::class.java) ?: 0L
+
+      val attemptCount =
+        ctx
+          .selectCount()
+          .from(Tables.ATTEMPTS)
+          .join(Tables.JOBS)
+          .on(Tables.ATTEMPTS.JOB_ID.eq(Tables.JOBS.ID))
+          .where(Tables.JOBS.SCOPE.`in`(connectionScopes))
+          .fetchOne(0, Long::class.java) ?: 0L
+
+      JobScopeCounts(jobCount = jobCount, attemptCount = attemptCount)
+    }
+  }
+
+  /**
+   * Shared batch-deletion logic used by both [pruneJobBatch] (age-based) and [pruneJobsByScopes]
+   * (scope-based, for GDPR / DSR). Deletes the supplied job IDs and every dependent row in the
+   * correct FK order.
+   *
+   * @return Number of `jobs` and `attempts` rows deleted.
+   */
+  private fun deleteJobsAndChildren(
+    ctx: DSLContext,
+    jobsToDelete: List<Long>,
+  ): JobDeletionCounts {
+    if (jobsToDelete.isEmpty()) {
+      return JobDeletionCounts(deletedJobsCount = 0, deletedAttemptsCount = 0)
+    }
+
+    log.debug { "Found ${jobsToDelete.size} jobs to delete" }
+
+    // Pre-fetch attempt IDs to avoid nested selects
+    val attemptIds =
+      ctx
+        .select(Tables.ATTEMPTS.ID)
+        .from(Tables.ATTEMPTS)
+        .where(Tables.ATTEMPTS.JOB_ID.`in`(jobsToDelete))
+        .fetch()
+        .map { it.value1() }
+
+    // Delete in the correct order to respect foreign key constraints
+    // Order is important: delete child tables first, then parent tables
+
+    // 1. Delete sync_stats (references attempts)
+    val syncStatsDeleted =
+      ctx
+        .deleteFrom(Tables.SYNC_STATS)
+        .where(Tables.SYNC_STATS.ATTEMPT_ID.`in`(attemptIds))
+        .execute()
+
+    // 2. Delete stream_stats (references attempts)
+    val streamStatsDeleted =
+      ctx
+        .deleteFrom(Tables.STREAM_STATS)
+        .where(Tables.STREAM_STATS.ATTEMPT_ID.`in`(attemptIds))
+        .execute()
+
+    // 3. Delete stream_attempt_metadata (references attempts)
+    val streamAttemptMetadataDeleted =
+      ctx
+        .deleteFrom(Tables.STREAM_ATTEMPT_METADATA)
+        .where(Tables.STREAM_ATTEMPT_METADATA.ATTEMPT_ID.`in`(attemptIds))
+        .execute()
+
+    // 4. Delete normalization_summaries (references attempts)
+    val normalizationSummariesDeleted =
+      ctx
+        .deleteFrom(Tables.NORMALIZATION_SUMMARIES)
+        .where(Tables.NORMALIZATION_SUMMARIES.ATTEMPT_ID.`in`(attemptIds))
+        .execute()
+
+    // 5. Delete attempts (references jobs)
+    val attemptsDeleted =
+      ctx
+        .deleteFrom(Tables.ATTEMPTS)
+        .where(Tables.ATTEMPTS.JOB_ID.`in`(jobsToDelete))
+        .execute()
+
+    // 6. Delete stream_statuses (references jobs)
+    val streamStatusesDeleted =
+      ctx
+        .deleteFrom(Tables.STREAM_STATUSES)
+        .where(Tables.STREAM_STATUSES.JOB_ID.`in`(jobsToDelete))
+        .execute()
+
+    // 7. Delete retry_states (references jobs)
+    val retryStatesDeleted =
+      ctx
+        .deleteFrom(Tables.RETRY_STATES)
+        .where(Tables.RETRY_STATES.JOB_ID.`in`(jobsToDelete))
+        .execute()
+
+    // 8. Delete data worker usage reservations for pruned jobs if the config table is available.
+    val dataWorkerUsageReservationsDeleted =
+      if (ctx.meta().tables.any { it.name.equals(DATA_WORKER_USAGE_RESERVATION_TABLE, ignoreCase = true) }) {
+        ctx
+          .deleteFrom(DSL.table(DSL.name(DATA_WORKER_USAGE_RESERVATION_TABLE)))
+          .where(DATA_WORKER_USAGE_RESERVATION_JOB_ID.`in`(jobsToDelete))
+          .execute()
+      } else {
+        0
       }
 
-      jobsDeleted
+    // 9. Finally, delete the jobs themselves
+    val jobsDeleted =
+      ctx
+        .deleteFrom(Tables.JOBS)
+        .where(Tables.JOBS.ID.`in`(jobsToDelete))
+        .execute()
+
+    log.debug {
+      """Batch deletion summary:
+        |  Jobs: $jobsDeleted
+        |  Attempts: $attemptsDeleted
+        |  Sync stats: $syncStatsDeleted
+        |  Stream stats: $streamStatsDeleted
+        |  Stream attempt metadata: $streamAttemptMetadataDeleted
+        |  Normalization summaries: $normalizationSummariesDeleted
+        |  Stream statuses: $streamStatusesDeleted
+        |  Retry states: $retryStatesDeleted
+        |  Data worker usage reservations: $dataWorkerUsageReservationsDeleted
+      """.trimMargin()
     }
+
+    return JobDeletionCounts(deletedJobsCount = jobsDeleted, deletedAttemptsCount = attemptsDeleted)
   }
 
   /**

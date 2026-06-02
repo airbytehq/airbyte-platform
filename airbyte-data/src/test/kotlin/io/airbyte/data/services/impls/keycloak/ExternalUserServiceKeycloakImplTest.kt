@@ -8,7 +8,11 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import jakarta.ws.rs.NotFoundException
+import jakarta.ws.rs.core.Response
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.admin.client.resource.RealmsResource
@@ -45,7 +49,12 @@ class ExternalUserServiceKeycloakImplTest {
     val realm1 = RealmRepresentation().apply { realm = "realm1" }
     val realm2 = RealmRepresentation().apply { realm = "realm2" }
     val realmToKeep = RealmRepresentation().apply { realm = "realm3" }
-    val userToDelete = UserRepresentation().apply { id = "userToDelete" }
+    val userToDelete =
+      UserRepresentation().apply {
+        id = "userToDelete"
+        this.email = email
+        username = email
+      }
 
     val usersResource1: UsersResource = mockk()
     val usersResource2: UsersResource = mockk()
@@ -71,7 +80,7 @@ class ExternalUserServiceKeycloakImplTest {
     every { usersResource1.search(email) } returns listOf(userToDelete)
     every { usersResource2.search(email) } throws NotFoundException() // keycloak throws NotFoundException if no user has the email
 
-    every { usersResource1.delete(any()) } returns mockk()
+    every { usersResource1.delete(any()) } returns Response.noContent().build()
 
     // call service method
     service.deleteUserByEmailOnOtherRealms(email, realmToKeep.realm)
@@ -83,6 +92,125 @@ class ExternalUserServiceKeycloakImplTest {
     verify(exactly = 1) { usersResource1.delete(userToDelete.id) }
     verify(exactly = 0) { usersResource2.delete(any()) }
     verify(exactly = 0) { usersResource3.delete(any()) }
+  }
+
+  @Test
+  fun `test findUsersByEmailInRealm only returns exact email or username matches`() {
+    val email = "email@airbyte.io"
+    val realm = "_airbyte-cloud-users"
+    val matchingByEmail =
+      UserRepresentation().apply {
+        id = "user-1"
+        this.email = email
+        username = "not-email"
+        isEnabled = true
+      }
+    val matchingByUsername =
+      UserRepresentation().apply {
+        id = "user-2"
+        this.email = "other@airbyte.io"
+        username = email
+        isEnabled = false
+      }
+    val fuzzyMatch =
+      UserRepresentation().apply {
+        id = "user-3"
+        this.email = "email+other@airbyte.io"
+        username = "email+other@airbyte.io"
+      }
+    val searchResultWithNullFields =
+      UserRepresentation().apply {
+        id = "user-4"
+      }
+
+    every { keycloakAdminClient.realm(realm) } returns realmResource
+    every { realmResource.users() } returns usersResource
+    every { usersResource.search(email) } returns listOf(matchingByEmail, matchingByUsername, fuzzyMatch, searchResultWithNullFields)
+
+    val users = service.findUsersByEmailInRealm(email, realm)
+
+    assertEquals(2, users.size)
+    assertEquals("user-1", users[0].authUserId)
+    assertEquals("user-2", users[1].authUserId)
+  }
+
+  @Test
+  fun `test deleteUsersByEmailInRealm deletes exact matches and returns count`() {
+    val email = "email@airbyte.io"
+    val realm = "_airbyte-cloud-users"
+    val userToDelete =
+      UserRepresentation().apply {
+        id = "userToDelete"
+        this.email = email
+        username = email
+      }
+
+    every { keycloakAdminClient.realm(realm) } returns realmResource
+    every { realmResource.users() } returns usersResource
+    every { usersResource.search(email) } returns listOf(userToDelete)
+    every { usersResource.delete(userToDelete.id) } returns Response.noContent().build()
+
+    assertEquals(1, service.deleteUsersByEmailInRealm(email, realm))
+    verify(exactly = 1) { usersResource.delete(userToDelete.id) }
+  }
+
+  @Test
+  fun `test deleteUsersByEmailInRealm attempts every matched user before surfacing failures`() {
+    val email = "email@airbyte.io"
+    val realm = "_airbyte-cloud-users"
+    val firstUser =
+      UserRepresentation().apply {
+        id = "user-1"
+        this.email = email
+        username = email
+      }
+    val secondUser =
+      UserRepresentation().apply {
+        id = "user-2"
+        this.email = email
+        username = email
+      }
+
+    every { keycloakAdminClient.realm(realm) } returns realmResource
+    every { realmResource.users() } returns usersResource
+    every { usersResource.search(email) } returns listOf(firstUser, secondUser)
+    every { usersResource.delete(firstUser.id) } throws RuntimeException("transient Keycloak failure")
+    every { usersResource.delete(secondUser.id) } returns Response.noContent().build()
+
+    val error =
+      assertThrows<IllegalStateException> {
+        service.deleteUsersByEmailInRealm(email, realm)
+      }
+
+    assertTrue(error.message!!.contains("Failed to delete 1 Keycloak user"))
+    verify(exactly = 1) { usersResource.delete(firstUser.id) }
+    verify(exactly = 1) { usersResource.delete(secondUser.id) }
+  }
+
+  @Test
+  fun `test deleteUsersByEmailInRealm treats non successful delete responses as failures`() {
+    val email = "email@airbyte.io"
+    val realm = "_airbyte-cloud-users"
+    val userToDelete =
+      UserRepresentation().apply {
+        id = "userToDelete"
+        this.email = email
+        username = email
+      }
+
+    every { keycloakAdminClient.realm(realm) } returns realmResource
+    every { realmResource.users() } returns usersResource
+    every { usersResource.search(email) } returns listOf(userToDelete)
+    every { usersResource.delete(userToDelete.id) } returns Response.status(Response.Status.INTERNAL_SERVER_ERROR).build()
+
+    val error =
+      assertThrows<IllegalStateException> {
+        service.deleteUsersByEmailInRealm(email, realm)
+      }
+
+    assertTrue(error.message!!.contains("Failed to delete 1 Keycloak user"))
+    assertTrue(error.message!!.contains("status 500"))
+    verify(exactly = 1) { usersResource.delete(userToDelete.id) }
   }
 
   @Test
