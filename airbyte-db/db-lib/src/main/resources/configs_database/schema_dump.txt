@@ -791,14 +791,6 @@ create table "public"."workload" (
   "labels" jsonb,
   constraint "workload_pkey" primary key ("id")
 );
-create table "public"."workload_label" (
-  "id" uuid not null,
-  "workload_id" varchar(256) not null,
-  "key" varchar(256) not null,
-  "value" varchar(256) not null,
-  constraint "workload_label_pkey" primary key ("id"),
-  constraint "workload_label_workload_id_key_key" unique ("workload_id", "key")
-);
 create table "public"."workload_queue" (
   "id" uuid not null,
   "dataplane_group" varchar(256) not null,
@@ -936,7 +928,6 @@ where ((status = ANY (ARRAY['pending'::workload_status, 'claimed'::workload_stat
 create index "workload_deadline_idx" on "public"."workload"("deadline" asc)
 where ((deadline IS NOT NULL));
 create index "workload_status_idx" on "public"."workload"("status" asc);
-create index "workload_label_workload_id_idx" on "public"."workload_label"("workload_id" asc);
 create index "dataplane_group_priority_poll_deadline_idx" on "public"."workload_queue"("dataplane_group" asc, "priority" asc, "poll_deadline" asc)
 where ((acked_at IS NULL));
 create index "workload_id_idx" on "public"."workload_queue"("workload_id" asc);
@@ -1007,7 +998,6 @@ alter table "public"."tag" add constraint "tag_workspace_id_fkey" foreign key ("
 alter table "public"."user" add constraint "user_default_workspace_id_fkey" foreign key ("default_workspace_id") references "public"."workspace" ("id");
 alter table "public"."user_invitation" add constraint "user_invitation_accepted_by_user_id_fkey" foreign key ("accepted_by_user_id") references "public"."user" ("id");
 alter table "public"."user_invitation" add constraint "user_invitation_inviter_user_id_fkey" foreign key ("inviter_user_id") references "public"."user" ("id");
-alter table "public"."workload_label" add constraint "workload_label_workload_id_fkey" foreign key ("workload_id") references "public"."workload" ("id");
 alter table "public"."workspace" add constraint "workspace_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."workspace_service_account" add constraint "workspace_service_account_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 comment on column "public"."actor_definition"."max_seconds_between_messages" is 'Define the number of seconds allowed between 2 messages emitted by the connector before timing out';

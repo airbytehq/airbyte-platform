@@ -885,7 +885,6 @@ open class DsrDeletionService(
         "organization_id" to organizationIds,
       ),
     )
-    deleteByStringField(ctx, "workload_label", "workload_id", workloadIds)
     deleteByStringField(ctx, "workload_queue", "workload_id", workloadIds)
     deleteByStringField(ctx, "workload", "id", workloadIds)
 
