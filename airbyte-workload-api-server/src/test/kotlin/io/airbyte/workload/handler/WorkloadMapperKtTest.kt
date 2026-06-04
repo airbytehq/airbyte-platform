@@ -5,7 +5,6 @@
 package io.airbyte.workload.handler
 
 import io.airbyte.config.WorkloadPriority
-import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -36,7 +35,7 @@ class WorkloadMapperKtTest {
         createdAt = createdAt,
         updatedAt = updatedAt,
         lastHeartbeatAt = lastHeartbeatAt,
-        workloadLabels = listOf(WorkloadLabel(id = UUID.randomUUID(), key = "key", value = "value")),
+        labels = mapOf("key" to "value"),
         inputPayload = "inputPayload",
         workspaceId = UUID.randomUUID(),
         organizationId = UUID.randomUUID(),
@@ -57,8 +56,8 @@ class WorkloadMapperKtTest {
     assertEquals(domainWorkload.id, apiWorkload.id)
     assertEquals(domainWorkload.dataplaneId, apiWorkload.dataplaneId)
     assertEquals(domainWorkload.status.toApi(), apiWorkload.status)
-    assertEquals(domainWorkload.workloadLabels!!.map { x -> x.key }, apiWorkload.labels.map { x -> x.key })
-    assertEquals(domainWorkload.workloadLabels!!.map { x -> x.value }, apiWorkload.labels.map { x -> x.value })
+    assertEquals(listOf("key"), apiWorkload.labels.map { it.key })
+    assertEquals(listOf("value"), apiWorkload.labels.map { it.value })
     assertEquals(domainWorkload.inputPayload, apiWorkload.inputPayload)
     assertEquals(domainWorkload.logPath, apiWorkload.logPath)
     assertEquals(domainWorkload.mutexKey, apiWorkload.mutexKey)
@@ -74,25 +73,13 @@ class WorkloadMapperKtTest {
   }
 
   @Test
-  fun `test from domain workload label to api workload label`() {
-    val domainWorkloadLabel = WorkloadLabel(id = UUID.randomUUID(), key = "key", value = "value")
-    val apiWorkloadLabel = domainWorkloadLabel.toApi()
-    assertEquals(domainWorkloadLabel.key, apiWorkloadLabel.key)
-    assertEquals(domainWorkloadLabel.value, apiWorkloadLabel.value)
-  }
-
-  @Test
-  fun `test labels fallback - prefers JSONB labels when present`() {
+  fun `test labels maps JSONB labels to api labels`() {
     val domainWorkload =
       DomainWorkload(
         id = "id",
         dataplaneId = null,
         status = WorkloadStatus.PENDING,
-        workloadLabels =
-          listOf(
-            WorkloadLabel(id = UUID.randomUUID(), key = "legacy_key", value = "legacy_value"),
-          ),
-        labels = mapOf("jsonb_key" to "jsonb_value"), // JSONB labels present
+        labels = mapOf("jsonb_key" to "jsonb_value"),
         inputPayload = "payload",
         workspaceId = UUID.randomUUID(),
         organizationId = UUID.randomUUID(),
@@ -105,80 +92,18 @@ class WorkloadMapperKtTest {
 
     val apiWorkload = domainWorkload.toApi()
 
-    // Should use JSONB labels, not workloadLabels
     assertEquals(1, apiWorkload.labels.size)
     assertEquals("jsonb_key", apiWorkload.labels[0].key)
     assertEquals("jsonb_value", apiWorkload.labels[0].value)
   }
 
   @Test
-  fun `test labels fallback - uses workloadLabels when JSONB is null`() {
+  fun `test labels returns empty list when labels is null`() {
     val domainWorkload =
       DomainWorkload(
         id = "id",
         dataplaneId = null,
         status = WorkloadStatus.PENDING,
-        workloadLabels =
-          listOf(
-            WorkloadLabel(id = UUID.randomUUID(), key = "legacy_key", value = "legacy_value"),
-          ),
-        labels = null, // JSONB labels not present
-        inputPayload = "payload",
-        workspaceId = UUID.randomUUID(),
-        organizationId = UUID.randomUUID(),
-        logPath = "/log",
-        mutexKey = null,
-        type = WorkloadType.SYNC,
-        autoId = UUID.randomUUID(),
-        signalInput = null,
-      )
-
-    val apiWorkload = domainWorkload.toApi()
-
-    // Should fall back to workloadLabels
-    assertEquals(1, apiWorkload.labels.size)
-    assertEquals("legacy_key", apiWorkload.labels[0].key)
-    assertEquals("legacy_value", apiWorkload.labels[0].value)
-  }
-
-  @Test
-  fun `test labels fallback - uses workloadLabels when JSONB is empty`() {
-    val domainWorkload =
-      DomainWorkload(
-        id = "id",
-        dataplaneId = null,
-        status = WorkloadStatus.PENDING,
-        workloadLabels =
-          listOf(
-            WorkloadLabel(id = UUID.randomUUID(), key = "legacy_key", value = "legacy_value"),
-          ),
-        labels = emptyMap(), // JSONB labels empty
-        inputPayload = "payload",
-        workspaceId = UUID.randomUUID(),
-        organizationId = UUID.randomUUID(),
-        logPath = "/log",
-        mutexKey = null,
-        type = WorkloadType.SYNC,
-        autoId = UUID.randomUUID(),
-        signalInput = null,
-      )
-
-    val apiWorkload = domainWorkload.toApi()
-
-    // Should fall back to workloadLabels when JSONB is empty
-    assertEquals(1, apiWorkload.labels.size)
-    assertEquals("legacy_key", apiWorkload.labels[0].key)
-    assertEquals("legacy_value", apiWorkload.labels[0].value)
-  }
-
-  @Test
-  fun `test labels fallback - returns empty list when both are null`() {
-    val domainWorkload =
-      DomainWorkload(
-        id = "id",
-        dataplaneId = null,
-        status = WorkloadStatus.PENDING,
-        workloadLabels = null,
         labels = null,
         inputPayload = "payload",
         workspaceId = UUID.randomUUID(),
@@ -192,7 +117,29 @@ class WorkloadMapperKtTest {
 
     val apiWorkload = domainWorkload.toApi()
 
-    // Should return empty list when both are null
+    assertEquals(0, apiWorkload.labels.size)
+  }
+
+  @Test
+  fun `test labels returns empty list when labels is empty`() {
+    val domainWorkload =
+      DomainWorkload(
+        id = "id",
+        dataplaneId = null,
+        status = WorkloadStatus.PENDING,
+        labels = emptyMap(),
+        inputPayload = "payload",
+        workspaceId = UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        logPath = "/log",
+        mutexKey = null,
+        type = WorkloadType.SYNC,
+        autoId = UUID.randomUUID(),
+        signalInput = null,
+      )
+
+    val apiWorkload = domainWorkload.toApi()
+
     assertEquals(0, apiWorkload.labels.size)
   }
 

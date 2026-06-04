@@ -44,7 +44,6 @@ class WorkloadOutputControllerTest {
         id = "workload 1",
         dataplaneId = null,
         status = WorkloadStatus.PENDING,
-        workloadLabels = null,
         inputPayload = "",
         workspaceId = null,
         organizationId = orgId,

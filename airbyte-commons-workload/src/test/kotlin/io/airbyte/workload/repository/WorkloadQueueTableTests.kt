@@ -8,7 +8,6 @@ import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.airbyte.workload.repository.domain.Workload
-import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micronaut.context.ApplicationContext
@@ -35,7 +34,6 @@ import javax.sql.DataSource
 class WorkloadQueueTableTests {
   @AfterEach
   fun cleanDb() {
-    workloadLabelRepo.deleteAll()
     workloadQueueRepo.deleteAll()
     workloadRepo.deleteAll()
   }
@@ -153,17 +151,14 @@ class WorkloadQueueTableTests {
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 0,
-            workloadLabels = Fixtures.labelList1(),
           ),
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 0,
-            workloadLabels = Fixtures.labelList2(),
           ),
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 0,
-            workloadLabels = Fixtures.labelList3(),
           ),
         ),
       ),
@@ -174,12 +169,10 @@ class WorkloadQueueTableTests {
           Fixtures.workload(
             dataplaneGroup = "group-2",
             priority = 1,
-            workloadLabels = Fixtures.labelList4(),
           ),
           Fixtures.workload(
             dataplaneGroup = "group-2",
             priority = 1,
-            workloadLabels = Fixtures.labelList2(),
           ),
         ),
       ),
@@ -190,7 +183,6 @@ class WorkloadQueueTableTests {
           Fixtures.workload(
             dataplaneGroup = "group-3",
             priority = 0,
-            workloadLabels = Fixtures.labelList3(),
           ),
         ),
       ),
@@ -201,12 +193,10 @@ class WorkloadQueueTableTests {
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 1,
-            workloadLabels = Fixtures.labelList1(),
           ),
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 1,
-            workloadLabels = Fixtures.labelList4(),
           ),
         ),
       ),
@@ -249,17 +239,14 @@ class WorkloadQueueTableTests {
         Fixtures.workload(
           dataplaneGroup = dataplaneGroup,
           priority = priority,
-          workloadLabels = Fixtures.labelList1(),
         ),
         Fixtures.workload(
           dataplaneGroup = dataplaneGroup,
           priority = priority,
-          workloadLabels = Fixtures.labelList2(),
         ),
         Fixtures.workload(
           dataplaneGroup = dataplaneGroup,
           priority = priority,
-          workloadLabels = Fixtures.labelList3(),
         ),
       )
     initialEntries.forEach {
@@ -281,17 +268,14 @@ class WorkloadQueueTableTests {
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 0,
-            workloadLabels = Fixtures.labelList1(),
           ),
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 0,
-            workloadLabels = Fixtures.labelList2(),
           ),
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 0,
-            workloadLabels = Fixtures.labelList3(),
           ),
         ),
       ),
@@ -301,12 +285,10 @@ class WorkloadQueueTableTests {
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 0,
-            workloadLabels = Fixtures.labelList4(),
           ),
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 0,
-            workloadLabels = Fixtures.labelList2(),
           ),
         ),
       ),
@@ -316,7 +298,6 @@ class WorkloadQueueTableTests {
           Fixtures.workload(
             dataplaneGroup = "group-1",
             priority = 0,
-            workloadLabels = Fixtures.labelList3(),
           ),
         ),
       ),
@@ -325,7 +306,6 @@ class WorkloadQueueTableTests {
   companion object {
     private lateinit var context: ApplicationContext
     lateinit var workloadRepo: WorkloadRepository
-    lateinit var workloadLabelRepo: WorkloadLabelRepository
     lateinit var workloadQueueRepo: WorkloadQueueRepository
     private lateinit var jooqDslContext: DSLContext
 
@@ -364,7 +344,6 @@ class WorkloadQueueTableTests {
       // this line is what runs the migrations
       databaseProviders.createNewConfigsDatabase()
       workloadRepo = context.getBean(WorkloadRepository::class.java)
-      workloadLabelRepo = context.getBean(WorkloadLabelRepository::class.java)
       workloadQueueRepo = context.getBean(WorkloadQueueRepository::class.java)
     }
 
@@ -393,7 +372,6 @@ class WorkloadQueueTableTests {
             it.createdAt = it.createdAt?.truncateToTestPrecision()
             it.updatedAt = it.updatedAt?.truncateToTestPrecision()
             it.deadline = it.deadline?.truncateToTestPrecision()
-            it.workloadLabels = it.workloadLabels ?: listOf()
             it
           }.sortedBy { it.id }
       val bGroomed =
@@ -402,7 +380,6 @@ class WorkloadQueueTableTests {
             it.createdAt = it.createdAt?.truncateToTestPrecision()
             it.updatedAt = it.updatedAt?.truncateToTestPrecision()
             it.deadline = it.deadline?.truncateToTestPrecision()
-            it.workloadLabels = it.workloadLabels ?: listOf()
             it
           }.sortedBy { it.id }
 
@@ -413,20 +390,10 @@ class WorkloadQueueTableTests {
   object Fixtures {
     fun newWorkloadId() = "${UUID.randomUUID()}_test"
 
-    val label1 = { WorkloadLabel(key = "key-1", value = "value-1") }
-    val label2 = { WorkloadLabel(key = "key-2", value = "value-2") }
-    val label3 = { WorkloadLabel(key = "key-3", value = "value-3") }
-
-    val labelList1 = { arrayListOf(label1(), label2()) }
-    val labelList2 = { arrayListOf(label1(), label2(), label3()) }
-    val labelList3 = { arrayListOf(label3()) }
-    val labelList4 = { arrayListOf(label3(), label2()) }
-
     fun workload(
       id: String = newWorkloadId(),
       dataplaneId: String? = null,
       status: WorkloadStatus = WorkloadStatus.PENDING,
-      workloadLabels: List<WorkloadLabel>? = null,
       inputPayload: String = "",
       workspaceId: UUID? = UUID.randomUUID(),
       organizationId: UUID? = UUID.randomUUID(),
@@ -442,7 +409,6 @@ class WorkloadQueueTableTests {
         id = id,
         dataplaneId = dataplaneId,
         status = status,
-        workloadLabels = workloadLabels,
         inputPayload = inputPayload,
         workspaceId = workspaceId,
         organizationId = organizationId,

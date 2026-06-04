@@ -13,7 +13,6 @@ import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
-import io.micronaut.data.annotation.Relation
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 import jakarta.inject.Singleton
@@ -35,13 +34,6 @@ data class Workload(
   var updatedAt: OffsetDateTime? = null,
   @Nullable
   var lastHeartbeatAt: OffsetDateTime? = null,
-  @Relation(
-    value = Relation.Kind.ONE_TO_MANY,
-    mappedBy = "workload",
-    cascade = [Relation.Cascade.ALL],
-  )
-  @Nullable
-  var workloadLabels: List<WorkloadLabel>?,
   @field:TypeDef(type = DataType.JSON)
   @Nullable
   var labels: Map<String, String>? = null,
@@ -75,7 +67,6 @@ data class Workload(
     id: String,
     dataplaneId: String?,
     status: WorkloadStatus,
-    workloadLabels: List<WorkloadLabel>?,
     inputPayload: String,
     workspaceId: UUID?,
     organizationId: UUID?,
@@ -87,8 +78,6 @@ data class Workload(
     id = id,
     dataplaneId = dataplaneId,
     status = status,
-    workloadLabels = workloadLabels,
-    labels = null, // Let the service layer handle dual-write
     inputPayload = inputPayload,
     workspaceId = workspaceId,
     organizationId = organizationId,

@@ -8,7 +8,6 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadQueueItem
 import io.airbyte.workload.repository.domain.WorkloadQueueStats
-import io.micronaut.data.annotation.Join
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -43,60 +42,7 @@ interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> 
    * Additionally, it joins on the `workload` table "hydrating" the workload queue items with the
    * backing workload.
    *
-   * The final select propagates all the workload information and joins on the workload labels.
-   * The `workload_labels_` field aliases are a micronaut-data specific format that in concert with
-   * the @Join annotation allow micronaut-data to properly hydrate the labels on the returned Workload
-   * domain objects.
-   */
-  @Join(value = "workloadLabels")
-  @Query(
-    """
-      WITH polled_q_ids AS MATERIALIZED (
-         SELECT id FROM workload_queue
-            WHERE
-              (:dataplaneGroup IS NULL OR dataplane_group = :dataplaneGroup)
-            AND
-              (:priority IS NULL OR priority = :priority)
-            AND
-              acked_at IS NULL
-            AND
-              now() > poll_deadline
-         ORDER BY created_at ASC
-         LIMIT :quantity
-         FOR UPDATE SKIP LOCKED
-      ),
-      workloads AS (
-        UPDATE workload_queue AS q
-           SET
-              poll_deadline = now() + (:redeliveryWindowSecs * interval '1 second'),
-              updated_at = now()
-        FROM workload w
-              WHERE q.id = ANY(SELECT id FROM polled_q_ids)
-              AND w.id = q.workload_id
-        RETURNING
-           w.*
-	    )
-    SELECT
-        workloads.*,
-        l.id AS workload_labels_id,
-        l.key AS workload_labels_key,
-        l.value AS workload_labels_value
-    FROM workloads
-        LEFT JOIN workload_label l
-            ON l.workload_id = workloads.id;
-    """,
-  )
-  fun pollWorkloadQueue(
-    dataplaneGroup: String?,
-    priority: Int?,
-    quantity: Int = 1,
-    redeliveryWindowSecs: Int = 300,
-  ): List<Workload>
-
-  /**
-   * Polls workload queue without joining on workload_label table.
-   * Uses only the labels JSONB column from the workload table for better performance.
-   * This is the optimized version that skips the expensive LEFT JOIN.
+   * The final select propagates all the workload information.
    */
   @Query(
     """
@@ -128,7 +74,7 @@ interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> 
     SELECT workloads.* FROM workloads;
     """,
   )
-  fun pollWorkloadQueueWithoutLegacyLabels(
+  fun pollWorkloadQueue(
     dataplaneGroup: String?,
     priority: Int?,
     quantity: Int = 1,

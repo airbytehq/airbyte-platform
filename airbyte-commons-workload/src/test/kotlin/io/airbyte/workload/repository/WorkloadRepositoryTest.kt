@@ -9,7 +9,6 @@ import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.defaultDeadline
 import io.airbyte.workload.repository.domain.Workload
-import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadSummaryDTO
 import io.airbyte.workload.repository.domain.WorkloadType
@@ -38,7 +37,6 @@ import javax.sql.DataSource
 class WorkloadRepositoryTest {
   @AfterEach
   fun cleanDb() {
-    workloadLabelRepo.deleteAll()
     workloadQueueRepo.deleteAll()
     workloadRepo.deleteAll()
   }
@@ -257,23 +255,7 @@ class WorkloadRepositoryTest {
   @Test
   fun `saving a workload writes all the expected fields`() {
     val workloadId = Fixtures.newWorkloadId()
-    val label1 =
-      WorkloadLabel(
-        id = null,
-        key = "key1",
-        value = "value1",
-        workload = null,
-      )
-    val label2 =
-      WorkloadLabel(
-        id = null,
-        key = "key2",
-        value = "value2",
-        workload = null,
-      )
-    val labels = ArrayList<WorkloadLabel>()
-    labels.add(label1)
-    labels.add(label2)
+    val labelsMap = mapOf("key1" to "value1", "key2" to "value2")
     val signalInput = "signalInput"
     val dataplaneGroup = "dataplane-group-1"
     val priority = 0
@@ -284,7 +266,7 @@ class WorkloadRepositoryTest {
         id = workloadId,
         dataplaneId = null,
         status = WorkloadStatus.PENDING,
-        workloadLabels = labels,
+        labels = labelsMap,
         workspaceId = workspaceId,
         organizationId = organizationId,
         deadline = defaultDeadline,
@@ -302,21 +284,12 @@ class WorkloadRepositoryTest {
     assertNull(persistedWorkload.get().lastHeartbeatAt)
     assertNotNull(persistedWorkload.get().deadline)
     assertEquals(defaultDeadline.toEpochSecond(), persistedWorkload.get().deadline!!.toEpochSecond())
-    assertEquals(2, persistedWorkload.get().workloadLabels!!.size)
     assertEquals(signalInput, persistedWorkload.get().signalInput)
     assertEquals(dataplaneGroup, persistedWorkload.get().dataplaneGroup)
     assertEquals(priority, persistedWorkload.get().priority)
     assertEquals(workspaceId, persistedWorkload.get().workspaceId)
     assertEquals(organizationId, persistedWorkload.get().organizationId)
-
-    val workloadLabels = persistedWorkload.get().workloadLabels!!.toMutableList()
-    workloadLabels.sortWith(Comparator.comparing(WorkloadLabel::key))
-    assertEquals("key1", workloadLabels[0].key)
-    assertEquals("value1", workloadLabels[0].value)
-    assertNotNull(workloadLabels[0].id)
-    assertEquals("key2", workloadLabels[1].key)
-    assertEquals("value2", workloadLabels[1].value)
-    assertNotNull(workloadLabels[1].id)
+    assertEquals(labelsMap, persistedWorkload.get().labels)
   }
 
   @Test
@@ -894,7 +867,6 @@ class WorkloadRepositoryTest {
       id: String = newWorkloadId(),
       dataplaneId: String? = null,
       status: WorkloadStatus = WorkloadStatus.PENDING,
-      workloadLabels: List<WorkloadLabel>? = null,
       labels: Map<String, String>? = null,
       inputPayload: String = "",
       workspaceId: UUID? = UUID.randomUUID(),
@@ -912,7 +884,6 @@ class WorkloadRepositoryTest {
         id = id,
         dataplaneId = dataplaneId,
         status = status,
-        workloadLabels = workloadLabels,
         labels = labels,
         inputPayload = inputPayload,
         workspaceId = workspaceId,
@@ -936,7 +907,6 @@ class WorkloadRepositoryTest {
   companion object {
     private lateinit var context: ApplicationContext
     lateinit var workloadRepo: WorkloadRepository
-    lateinit var workloadLabelRepo: WorkloadLabelRepository
     lateinit var workloadQueueRepo: WorkloadQueueRepository
     private lateinit var jooqDslContext: DSLContext
 
@@ -976,7 +946,6 @@ class WorkloadRepositoryTest {
       // this line is what runs the migrations
       databaseProviders.createNewConfigsDatabase()
       workloadRepo = context.getBean(WorkloadRepository::class.java)
-      workloadLabelRepo = context.getBean(WorkloadLabelRepository::class.java)
       workloadQueueRepo = context.getBean(WorkloadQueueRepository::class.java)
     }
 

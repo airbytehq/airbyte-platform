@@ -6,7 +6,6 @@ package io.airbyte.workload.handler
 
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.workload.repository.domain.Workload
-import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadSummaryDTO
 import io.airbyte.workload.repository.domain.WorkloadType
@@ -17,7 +16,6 @@ typealias DomainWorkload = Workload
 typealias ApiWorkload = io.airbyte.workload.api.domain.Workload
 typealias DomainWorkloadDTO = WorkloadSummaryDTO
 typealias ApiWorkloadSummary = io.airbyte.workload.api.domain.WorkloadSummary
-typealias DomainWorkloadLabel = WorkloadLabel
 typealias ApiWorkloadLabel = io.airbyte.workload.api.domain.WorkloadLabel
 typealias ApiWorkloadType = io.airbyte.config.WorkloadType
 typealias ApiWorkloadQueueStats = io.airbyte.workload.api.domain.WorkloadQueueStats
@@ -81,27 +79,11 @@ fun DomainWorkload.toApi(): ApiWorkload =
     priority = this.priority?.let { WorkloadPriority.fromInt(it) },
   )
 
-/**
- * Get labels with fallback logic: prefer labels JSONB column, fallback to workloadLabels table.
- * This supports the dual-write migration strategy where new workloads have labels in JSONB,
- * but old workloads still use the workload_label table.
- */
-private fun DomainWorkload.getLabels(): MutableList<ApiWorkloadLabel> {
-  // If labels JSONB field is present, use it (new approach)
-  this.labels?.let { labelsMap ->
-    if (labelsMap.isNotEmpty()) {
-      return labelsMap
-        .map { (key, value) -> ApiWorkloadLabel(key = key, value = value) }
-        .toMutableList()
-    }
-  }
-
-  // Otherwise, fallback to workloadLabels table (legacy approach)
-  return this.workloadLabels
-    ?.map { it.toApi() }
+private fun DomainWorkload.getLabels(): MutableList<ApiWorkloadLabel> =
+  this.labels
+    ?.map { (key, value) -> ApiWorkloadLabel(key = key, value = value) }
     ?.toMutableList()
     ?: mutableListOf()
-}
 
 fun DomainWorkloadDTO.toApi(): ApiWorkloadSummary =
   ApiWorkloadSummary(
@@ -109,18 +91,6 @@ fun DomainWorkloadDTO.toApi(): ApiWorkloadSummary =
     autoId = autoId.toString(),
     status = status.toApi(),
     deadline = deadline,
-  )
-
-fun DomainWorkloadLabel.toApi(): ApiWorkloadLabel =
-  ApiWorkloadLabel(
-    key = this.key,
-    value = this.value,
-  )
-
-fun ApiWorkloadLabel.toDomain(): DomainWorkloadLabel =
-  DomainWorkloadLabel(
-    key = this.key,
-    value = this.value,
   )
 
 fun DomainWorkloadQueueStats.toApi(): ApiWorkloadQueueStats =
