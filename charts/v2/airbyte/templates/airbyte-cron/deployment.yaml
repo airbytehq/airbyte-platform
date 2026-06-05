@@ -76,6 +76,7 @@ spec:
             {{- include "airbyte.auth.jwt.envs" . | nindent 12 }}
             {{- include "airbyte.common.envs" . | nindent 12 }}
             {{- include "airbyte.connector.envs" . | nindent 12 }}
+            {{- include "airbyte.customerio.envs" . | nindent 12 }}
             {{- include "airbyte.cron.envs" . | nindent 12 }}
             {{- include "airbyte.database.envs" . | nindent 12 }}
             {{- include "airbyte.database.migrations.envs" . | nindent 12 }}
