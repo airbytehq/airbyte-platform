@@ -1,0 +1,97 @@
+{{- if .Values.infraWorker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "airbyte-data-plane.fullname" . }}-infra-worker
+  labels:
+    {{- include "airbyte-data-plane.labels" . | nindent 4 }}
+    airbyte: infra-worker
+spec:
+  replicas: {{ .Values.infraWorker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte-data-plane.selectorLabels" . | nindent 6 }}
+      airbyte: infra-worker
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      {{- with .Values.infraWorker.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "airbyte-data-plane.labels" . | nindent 8 }}
+        airbyte: infra-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ .Values.infraWorker.serviceAccountName | default "infra-worker-sa" }}
+      containers:
+        - name: infra-worker
+          image: "{{ .Values.infraWorker.image.registry | default .Values.image.registry }}{{ if .Values.infraWorker.image.registry }}/{{ end }}{{ .Values.infraWorker.image.repository }}:{{ .Values.infraWorker.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.infraWorker.image.pullPolicy | default .Values.image.pullPolicy }}
+          env:
+            - name: AIRBYTE_INFRA_WORKER_MODE
+              value: DATAPLANE
+            - name: AIRBYTE_INTERNAL_API_AUTH_TYPE
+              value: DATAPLANE_ACCESS_TOKEN
+            - name: AIRBYTE_INTERNAL_API_AUTH_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "airbyte-data-plane.dataPlane.secretName" . }}
+                  key: {{ include "airbyte-data-plane.dataPlane.clientId.secretKey" . }}
+            - name: AIRBYTE_INTERNAL_API_AUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "airbyte-data-plane.dataPlane.secretName" . }}
+                  key: {{ include "airbyte-data-plane.dataPlane.clientSecret.secretKey" . }}
+            - name: AIRBYTE_INTERNAL_API_AUTH_TOKEN_ENDPOINT
+              value: {{ include "airbyte-data-plane.dataPlane.controlPlaneTokenEndpoint" . | quote }}
+            {{- include "airbyte-data-plane.java_opts.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.common.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.metrics.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.micronaut.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.temporal.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.tracking.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.aws.envs" . | nindent 12 }}
+
+            {{- if .Values.infraWorker.extraEnv }}
+            {{- toYaml .Values.infraWorker.extraEnv | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: server
+              containerPort: 9000
+              protocol: TCP
+            - name: management
+              containerPort: {{ .Values.infraWorker.management.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health/liveness
+              port: management
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: management
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.infraWorker.resources | nindent 12 }}
+      {{- with .Values.infraWorker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.infraWorker.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

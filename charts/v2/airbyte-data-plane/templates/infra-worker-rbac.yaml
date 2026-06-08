@@ -1,0 +1,32 @@
+{{- if .Values.infraWorker.enabled }}
+# Allow the dataplane infra-worker to CRUD NetworkPolicies in the jobs namespace
+# via Pulumi. Role + RoleBinding live in the target namespace; the bound SA lives
+# in the release namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "airbyte-data-plane.fullname" . }}-infra-worker-network-policy
+  namespace: {{ .Values.infraWorker.networkPolicyNamespace | default "jobs" }}
+  labels:
+    {{- include "airbyte-data-plane.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "airbyte-data-plane.fullname" . }}-infra-worker-network-policy
+  namespace: {{ .Values.infraWorker.networkPolicyNamespace | default "jobs" }}
+  labels:
+    {{- include "airbyte-data-plane.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "airbyte-data-plane.fullname" . }}-infra-worker-network-policy
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.infraWorker.serviceAccountName | default "infra-worker-sa" }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
