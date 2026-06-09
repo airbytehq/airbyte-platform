@@ -30,7 +30,7 @@ class PodNetworkSecurityLabeler(
   cacheManager: CacheManager<Any>,
   private val hasher: Hasher,
 ) {
-  private val cache = cacheManager.getCache("network-security-labels")
+  private val cache = cacheManager.getCache("network-policy-label-cache")
 
   fun getLabels(
     workspaceId: UUID?,
@@ -43,7 +43,8 @@ class PodNetworkSecurityLabeler(
           return emptyMap()
         }
         try {
-          val cachedLabels = cache.get(workspaceId, Map::class.java)
+          val cacheKey = "$workspaceId:${networkSecurityTokens.sorted()}"
+          val cachedLabels = cache.get(cacheKey, Map::class.java)
           if (cachedLabels.isPresent && cachedLabels.get().isNotEmpty()) {
             @Suppress("UNCHECKED_CAST")
             return cachedLabels.get() as Map<String, String>
@@ -51,7 +52,7 @@ class PodNetworkSecurityLabeler(
           val matchingNetworkPolicies = networkPolicyFetcher.matchingNetworkPolicies(workspaceId, networkSecurityTokens, hasher)
 
           val labels = flatten(matchingNetworkPolicies.map { it.spec.podSelector.matchLabels })
-          cache.put(workspaceId, labels)
+          cache.put(cacheKey, labels)
           return labels
         } catch (e: Exception) {
           logger.error(e) { "Failed to get network security labels for workspace $workspaceId" }
