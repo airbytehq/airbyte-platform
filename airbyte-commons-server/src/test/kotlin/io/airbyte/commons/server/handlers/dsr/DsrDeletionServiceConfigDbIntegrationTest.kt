@@ -86,7 +86,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   private lateinit var deletionRequestRepository: DataSubjectDeletionRequestRepository
   private lateinit var metricClient: MetricClient
   private lateinit var objectMapper: ObjectMapper
-  private lateinit var service: DsrDeletionService
+  private lateinit var service: TestDsrDeletionService
 
   private val email = "davin.integration@airbyte.io"
   private val datagrailId = "dg-integration-123"
@@ -113,6 +113,14 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   private val authUserRowId = UUID.randomUUID()
   private val applicationId = UUID.randomUUID()
   private val scopedConfigurationId = UUID.randomUUID()
+  private val legacySyncWorkloadId = "${connectionId}_123_0_sync"
+  private val orphanedSyncWorkloadId = "${connectionId}_999_0_sync"
+  private val actorCheckWorkloadId = "${sourceId}_456_0_check"
+  private val actorDefinitionDiscoverWorkloadId = "${sourceDefinitionId}_789_discover"
+  private val unrelatedActorDefinitionDiscoverWorkloadId = "${sourceDefinitionId}_999_discover"
+  private val commandId = "dsr-command-${UUID.randomUUID()}"
+  private val observabilityJobId = UUID.randomUUID().mostSignificantBits
+  private val dataWorkerUsageReservationJobId = UUID.randomUUID().mostSignificantBits
 
   private val unrelatedUserId = UUID.randomUUID()
   private val unrelatedOrganizationId = UUID.randomUUID()
@@ -121,6 +129,10 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   private val unrelatedActorId = UUID.randomUUID()
   private val unrelatedApplicationId = UUID.randomUUID()
   private val unrelatedScopedConfigurationId = UUID.randomUUID()
+  private val unrelatedWorkloadId = "${UUID.randomUUID()}_123_0_sync"
+  private val unrelatedCommandId = "unrelated-command-${UUID.randomUUID()}"
+  private val unrelatedObservabilityJobId = UUID.randomUUID().mostSignificantBits
+  private val unrelatedDataWorkerUsageReservationJobId = UUID.randomUUID().mostSignificantBits
 
   @BeforeEach
   fun setup() {
@@ -146,26 +158,35 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     seedConfigDatabase()
     stubManifestDependencies()
 
-    service =
-      DsrDeletionService(
-        userPersistence = userPersistence,
-        workspaceRepository = workspaceRepository,
-        organizationRepository = organizationRepository,
-        connectionService = connectionService,
-        sourceService = sourceService,
-        destinationService = destinationService,
-        connectorBuilderService = connectorBuilderService,
-        permissionRepository = permissionRepository,
-        externalUserService = externalUserService,
-        connectionManagerUtils = connectionManagerUtils,
-        sourceHandler = sourceHandler,
-        destinationHandler = destinationHandler,
-        dbPrune = dbPrune,
-        deletionRequestRepository = deletionRequestRepository,
-        objectMapper = objectMapper,
-        metricClient = metricClient,
-        configDatabase = database!!,
-      )
+    service = TestDsrDeletionService()
+  }
+
+  private inner class TestDsrDeletionService :
+    DsrDeletionService(
+      userPersistence = userPersistence,
+      workspaceRepository = workspaceRepository,
+      organizationRepository = organizationRepository,
+      connectionService = connectionService,
+      sourceService = sourceService,
+      destinationService = destinationService,
+      connectorBuilderService = connectorBuilderService,
+      permissionRepository = permissionRepository,
+      externalUserService = externalUserService,
+      connectionManagerUtils = connectionManagerUtils,
+      sourceHandler = sourceHandler,
+      destinationHandler = destinationHandler,
+      dbPrune = dbPrune,
+      deletionRequestRepository = deletionRequestRepository,
+      objectMapper = objectMapper,
+      metricClient = metricClient,
+      configDatabase = database!!,
+    ) {
+    fun hardDeleteConfigRowsForTest(
+      ctx: DSLContext,
+      manifest: DsrManifest,
+      datagrailId: String,
+      syncWorkloadIds: List<String>,
+    ): ConfigDeletionCounts = hardDeleteConfigRows(ctx, manifest, datagrailId, syncWorkloadIds)
   }
 
   @Test
@@ -193,6 +214,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     every { deletionRequestRepository.update(capture(finalRowSlot)) } answers { finalRowSlot.captured }
     every { sourceHandler.deleteSource(any<SourceIdRequestBody>()) } just Runs
     every { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) } just Runs
+    every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns listOf(legacySyncWorkloadId)
     every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
       DbPrune.JobDeletionCounts(deletedJobsCount = 3, deletedAttemptsCount = 4)
     every { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns 1
@@ -223,6 +245,19 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     assertDeleted("state", stateId)
     assertDeleted("actor_catalog_fetch_event", actorCatalogFetchEventId)
     assertDeleted("scoped_configuration", scopedConfigurationId)
+    assertDeletedLong("observability_jobs_stats", "job_id", observabilityJobId)
+    assertDeletedLong("observability_stream_stats", "job_id", observabilityJobId)
+    assertDeletedUuidField("data_worker_usage", "organization_id", organizationId)
+    assertDeletedLong("data_worker_usage_reservation", "job_id", dataWorkerUsageReservationJobId)
+    assertDeletedString("workload", "id", legacySyncWorkloadId)
+    assertDeletedString("workload_queue", "workload_id", legacySyncWorkloadId)
+    assertDeletedString("workload", "id", orphanedSyncWorkloadId)
+    assertDeletedString("workload_queue", "workload_id", orphanedSyncWorkloadId)
+    assertDeletedString("workload", "id", actorCheckWorkloadId)
+    assertDeletedString("workload_queue", "workload_id", actorCheckWorkloadId)
+    assertDeletedString("workload", "id", actorDefinitionDiscoverWorkloadId)
+    assertDeletedString("workload_queue", "workload_id", actorDefinitionDiscoverWorkloadId)
+    assertDeletedString("commands", "id", commandId)
     assertDeleted("workspace", workspaceId)
     assertDeleted("organization", organizationId)
 
@@ -234,6 +269,14 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     assertPresent("actor", unrelatedActorId)
     assertPresent("application", unrelatedApplicationId)
     assertPresent("scoped_configuration", unrelatedScopedConfigurationId)
+    assertPresentLong("observability_jobs_stats", "job_id", unrelatedObservabilityJobId)
+    assertPresentLong("observability_stream_stats", "job_id", unrelatedObservabilityJobId)
+    assertPresentUuidField("data_worker_usage", "organization_id", unrelatedOrganizationId)
+    assertPresentLong("data_worker_usage_reservation", "job_id", unrelatedDataWorkerUsageReservationJobId)
+    assertPresentString("workload", "id", unrelatedWorkloadId)
+    assertPresentString("workload", "id", unrelatedActorDefinitionDiscoverWorkloadId)
+    assertPresentString("workload_queue", "workload_id", unrelatedActorDefinitionDiscoverWorkloadId)
+    assertPresentString("commands", "id", unrelatedCommandId)
 
     val userRow =
       database!!.query { ctx: DSLContext ->
@@ -272,6 +315,96 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     verify(exactly = 1) { sourceHandler.deleteSource(any<SourceIdRequestBody>()) }
     verify(exactly = 1) { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) }
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
+  }
+
+  @Test
+  fun `workload prefix range only deletes underscore-prefixed workload ids at the C collation boundary`() {
+    val matchingWorkloadId = "${connectionId}_boundary_0_sync"
+    val lowerNeighborWorkloadId = "$connectionId^boundary_0_sync"
+    val upperNeighborWorkloadId = "$connectionId`boundary_0_sync"
+    val boundaryManifest =
+      emptyManifestForUser(userId).copy(
+        workspaceIds = listOf(workspaceId),
+        workspaceRefs = listOf(DsrManifest.ManifestWorkspace(workspaceId, "dsr-workspace")),
+        organizationIds = listOf(organizationId),
+        organizationRefs = listOf(DsrManifest.ManifestOrganization(organizationId, "dsr-org")),
+        connectionIds = listOf(connectionId),
+      )
+
+    database!!.query { ctx: DSLContext ->
+      insertWorkload(ctx, matchingWorkloadId, workspaceId, organizationId, "sync")
+      insertWorkloadQueue(ctx, matchingWorkloadId, dataplaneGroupId)
+      insertWorkload(ctx, lowerNeighborWorkloadId, workspaceId, organizationId, "sync")
+      insertWorkloadQueue(ctx, lowerNeighborWorkloadId, dataplaneGroupId)
+      insertWorkload(ctx, upperNeighborWorkloadId, workspaceId, organizationId, "sync")
+      insertWorkloadQueue(ctx, upperNeighborWorkloadId, dataplaneGroupId)
+    }
+
+    database!!.transaction { ctx: DSLContext ->
+      service.hardDeleteConfigRowsForTest(ctx, boundaryManifest, datagrailId, emptyList())
+    }
+
+    assertDeletedString("workload", "id", matchingWorkloadId)
+    assertDeletedString("workload_queue", "workload_id", matchingWorkloadId)
+    assertPresentString("workload", "id", lowerNeighborWorkloadId)
+    assertPresentString("workload_queue", "workload_id", lowerNeighborWorkloadId)
+    assertPresentString("workload", "id", upperNeighborWorkloadId)
+    assertPresentString("workload_queue", "workload_id", upperNeighborWorkloadId)
+  }
+
+  @Test
+  fun `hard delete removes data worker usage for workspace scope when organization is not in scope`() {
+    val workspaceOnlyOrganizationId = UUID.randomUUID()
+    val workspaceOnlyDataplaneGroupId = UUID.randomUUID()
+    val workspaceOnlyId = UUID.randomUUID()
+    val sameOrgOtherWorkspaceId = UUID.randomUUID()
+    val workspaceOnlyReservationJobId = UUID.randomUUID().mostSignificantBits
+    val sameOrgOtherReservationJobId = UUID.randomUUID().mostSignificantBits
+    val workspaceOnlyManifest =
+      emptyManifestForUser(userId).copy(
+        workspaceIds = listOf(workspaceOnlyId),
+        workspaceRefs = listOf(DsrManifest.ManifestWorkspace(workspaceOnlyId, "workspace-only")),
+        authUsers = listOf(DsrManifest.ManifestAuthUser("kc-auth-integration", "KEYCLOAK")),
+      )
+
+    database!!.query { ctx: DSLContext ->
+      insertOrganization(ctx, workspaceOnlyOrganizationId, unrelatedUserId, "workspace-only-org", "workspace-only@airbyte.io")
+      insertDataplaneGroup(ctx, workspaceOnlyDataplaneGroupId, workspaceOnlyOrganizationId, "workspace-only-dataplane-group")
+      insertWorkspace(ctx, workspaceOnlyId, workspaceOnlyOrganizationId, workspaceOnlyDataplaneGroupId, "workspace-only", email)
+      insertWorkspace(
+        ctx,
+        sameOrgOtherWorkspaceId,
+        workspaceOnlyOrganizationId,
+        workspaceOnlyDataplaneGroupId,
+        "same-org-other-workspace",
+        "same-org-other@airbyte.io",
+      )
+      insertDataWorkerUsage(ctx, workspaceOnlyOrganizationId, workspaceOnlyId, workspaceOnlyDataplaneGroupId)
+      insertDataWorkerUsageReservation(
+        ctx,
+        workspaceOnlyReservationJobId,
+        workspaceOnlyOrganizationId,
+        workspaceOnlyId,
+        workspaceOnlyDataplaneGroupId,
+      )
+      insertDataWorkerUsage(ctx, workspaceOnlyOrganizationId, sameOrgOtherWorkspaceId, workspaceOnlyDataplaneGroupId)
+      insertDataWorkerUsageReservation(
+        ctx,
+        sameOrgOtherReservationJobId,
+        workspaceOnlyOrganizationId,
+        sameOrgOtherWorkspaceId,
+        workspaceOnlyDataplaneGroupId,
+      )
+    }
+
+    database!!.transaction { ctx: DSLContext ->
+      service.hardDeleteConfigRowsForTest(ctx, workspaceOnlyManifest, datagrailId, emptyList())
+    }
+
+    assertDeletedUuidField("data_worker_usage", "workspace_id", workspaceOnlyId)
+    assertDeletedLong("data_worker_usage_reservation", "job_id", workspaceOnlyReservationJobId)
+    assertPresentUuidField("data_worker_usage", "workspace_id", sameOrgOtherWorkspaceId)
+    assertPresentLong("data_worker_usage_reservation", "job_id", sameOrgOtherReservationJobId)
   }
 
   @Test
@@ -459,6 +592,37 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
         .set(ConfigTables.SCOPED_CONFIGURATION.ORIGIN_TYPE, ConfigOriginType.user)
         .set(ConfigTables.SCOPED_CONFIGURATION.ORIGIN, "integration-test")
         .execute()
+
+      insertObservabilityJobStats(ctx, observabilityJobId, connectionId, workspaceId, organizationId)
+      insertObservabilityStreamStats(ctx, observabilityJobId)
+      insertDataWorkerUsage(ctx, organizationId, workspaceId, dataplaneGroupId)
+      insertDataWorkerUsageReservation(ctx, dataWorkerUsageReservationJobId, organizationId, workspaceId, dataplaneGroupId)
+
+      insertObservabilityJobStats(ctx, unrelatedObservabilityJobId, UUID.randomUUID(), unrelatedWorkspaceId, unrelatedOrganizationId)
+      insertObservabilityStreamStats(ctx, unrelatedObservabilityJobId)
+      insertDataWorkerUsage(ctx, unrelatedOrganizationId, unrelatedWorkspaceId, unrelatedDataplaneGroupId)
+      insertDataWorkerUsageReservation(
+        ctx,
+        unrelatedDataWorkerUsageReservationJobId,
+        unrelatedOrganizationId,
+        unrelatedWorkspaceId,
+        unrelatedDataplaneGroupId,
+      )
+
+      insertWorkload(ctx, legacySyncWorkloadId, workspaceId, organizationId, "sync")
+      insertWorkloadQueue(ctx, legacySyncWorkloadId, dataplaneGroupId)
+      insertCommand(ctx, commandId, legacySyncWorkloadId, workspaceId, organizationId)
+      insertWorkload(ctx, orphanedSyncWorkloadId, workspaceId, organizationId, "sync")
+      insertWorkloadQueue(ctx, orphanedSyncWorkloadId, dataplaneGroupId)
+      insertWorkload(ctx, actorCheckWorkloadId, workspaceId, organizationId, "check")
+      insertWorkloadQueue(ctx, actorCheckWorkloadId, dataplaneGroupId)
+      insertWorkload(ctx, actorDefinitionDiscoverWorkloadId, workspaceId, organizationId, "discover")
+      insertWorkloadQueue(ctx, actorDefinitionDiscoverWorkloadId, dataplaneGroupId)
+
+      insertWorkload(ctx, unrelatedWorkloadId, unrelatedWorkspaceId, unrelatedOrganizationId, "sync")
+      insertWorkload(ctx, unrelatedActorDefinitionDiscoverWorkloadId, unrelatedWorkspaceId, unrelatedOrganizationId, "discover")
+      insertWorkloadQueue(ctx, unrelatedActorDefinitionDiscoverWorkloadId, unrelatedDataplaneGroupId)
+      insertCommand(ctx, unrelatedCommandId, unrelatedWorkloadId, unrelatedWorkspaceId, unrelatedOrganizationId)
     }
   }
 
@@ -625,6 +789,169 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       .execute()
   }
 
+  private fun insertObservabilityJobStats(
+    ctx: DSLContext,
+    jobId: Long,
+    connectionId: UUID,
+    workspaceId: UUID,
+    organizationId: UUID,
+  ) {
+    ctx.execute(
+      """
+      INSERT INTO observability_jobs_stats (
+        job_id,
+        connection_id,
+        workspace_id,
+        organization_id,
+        source_id,
+        source_definition_id,
+        destination_id,
+        destination_definition_id,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      """.trimIndent(),
+      jobId,
+      connectionId,
+      workspaceId,
+      organizationId,
+      sourceId,
+      sourceDefinitionId,
+      destinationId,
+      destinationDefinitionId,
+    )
+  }
+
+  private fun insertObservabilityStreamStats(
+    ctx: DSLContext,
+    jobId: Long,
+  ) {
+    ctx.execute(
+      """
+      INSERT INTO observability_stream_stats (
+        job_id,
+        stream_namespace,
+        stream_name,
+        bytes_loaded,
+        records_loaded,
+        records_rejected,
+        was_backfilled,
+        was_resumed
+      )
+      VALUES (?, NULL, ?, 0, 0, 0, FALSE, FALSE)
+      """.trimIndent(),
+      jobId,
+      "users_$jobId",
+    )
+  }
+
+  private fun insertDataWorkerUsage(
+    ctx: DSLContext,
+    organizationId: UUID,
+    workspaceId: UUID,
+    dataplaneGroupId: UUID,
+  ) {
+    ctx.execute(
+      """
+      INSERT INTO data_worker_usage (
+        organization_id,
+        workspace_id,
+        dataplane_group_id,
+        bucket_start,
+        source_cpu_request,
+        destination_cpu_request,
+        orchestrator_cpu_request
+      )
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP, 1.0, 1.0, 1.0)
+      """.trimIndent(),
+      organizationId,
+      workspaceId,
+      dataplaneGroupId,
+    )
+  }
+
+  private fun insertDataWorkerUsageReservation(
+    ctx: DSLContext,
+    jobId: Long,
+    organizationId: UUID,
+    workspaceId: UUID,
+    dataplaneGroupId: UUID,
+  ) {
+    ctx.execute(
+      """
+      INSERT INTO data_worker_usage_reservation (
+        job_id,
+        organization_id,
+        workspace_id,
+        dataplane_group_id,
+        source_cpu_request,
+        destination_cpu_request,
+        orchestrator_cpu_request
+      )
+      VALUES (?, ?, ?, ?, 1.0, 1.0, 1.0)
+      """.trimIndent(),
+      jobId,
+      organizationId,
+      workspaceId,
+      dataplaneGroupId,
+    )
+  }
+
+  private fun insertWorkload(
+    ctx: DSLContext,
+    id: String,
+    workspaceId: UUID,
+    organizationId: UUID,
+    type: String,
+  ) {
+    ctx.execute(
+      """
+      INSERT INTO workload (id, status, input_payload, log_path, type, workspace_id, organization_id)
+      VALUES (?, 'success'::workload_status, '{}', ?, ?::workload_type, ?, ?)
+      """.trimIndent(),
+      id,
+      "/logs/$id",
+      type,
+      workspaceId,
+      organizationId,
+    )
+  }
+
+  private fun insertWorkloadQueue(
+    ctx: DSLContext,
+    workloadId: String,
+    dataplaneGroupId: UUID,
+  ) {
+    ctx.execute(
+      """
+      INSERT INTO workload_queue (id, dataplane_group, priority, workload_id)
+      VALUES (?, ?, 0, ?)
+      """.trimIndent(),
+      UUID.randomUUID(),
+      dataplaneGroupId.toString(),
+      workloadId,
+    )
+  }
+
+  private fun insertCommand(
+    ctx: DSLContext,
+    id: String,
+    workloadId: String,
+    workspaceId: UUID,
+    organizationId: UUID,
+  ) {
+    ctx.execute(
+      """
+      INSERT INTO commands (id, workload_id, command_type, command_input, workspace_id, organization_id)
+      VALUES (?, ?, 'SPEC', '{}'::jsonb, ?, ?)
+      """.trimIndent(),
+      id,
+      workloadId,
+      workspaceId,
+      organizationId,
+    )
+  }
+
   private fun assertDeleted(
     tableName: String,
     id: UUID,
@@ -639,6 +966,54 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     assertEquals(1, countByUuidField(tableName, "id", id), "$tableName row $id should be present")
   }
 
+  private fun assertDeletedUuidField(
+    tableName: String,
+    fieldName: String,
+    id: UUID,
+  ) {
+    assertEquals(0, countByUuidField(tableName, fieldName, id), "$tableName row with $fieldName=$id should be deleted")
+  }
+
+  private fun assertPresentUuidField(
+    tableName: String,
+    fieldName: String,
+    id: UUID,
+  ) {
+    assertEquals(1, countByUuidField(tableName, fieldName, id), "$tableName row with $fieldName=$id should be present")
+  }
+
+  private fun assertDeletedLong(
+    tableName: String,
+    fieldName: String,
+    value: Long,
+  ) {
+    assertEquals(0, countByLongField(tableName, fieldName, value), "$tableName row $value should be deleted")
+  }
+
+  private fun assertPresentLong(
+    tableName: String,
+    fieldName: String,
+    value: Long,
+  ) {
+    assertEquals(1, countByLongField(tableName, fieldName, value), "$tableName row $value should be present")
+  }
+
+  private fun assertDeletedString(
+    tableName: String,
+    fieldName: String,
+    value: String,
+  ) {
+    assertEquals(0, countByStringField(tableName, fieldName, value), "$tableName row $value should be deleted")
+  }
+
+  private fun assertPresentString(
+    tableName: String,
+    fieldName: String,
+    value: String,
+  ) {
+    assertEquals(1, countByStringField(tableName, fieldName, value), "$tableName row $value should be present")
+  }
+
   private fun countByUuidField(
     tableName: String,
     fieldName: String,
@@ -648,6 +1023,30 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       ctx.fetchCount(
         DSL.table(DSL.name("public", tableName)),
         DSL.field(DSL.name("public", tableName, fieldName), UUID::class.java).eq(id),
+      )
+    }
+
+  private fun countByLongField(
+    tableName: String,
+    fieldName: String,
+    value: Long,
+  ): Int =
+    database!!.query { ctx: DSLContext ->
+      ctx.fetchCount(
+        DSL.table(DSL.name("public", tableName)),
+        DSL.field(DSL.name("public", tableName, fieldName), Long::class.java).eq(value),
+      )
+    }
+
+  private fun countByStringField(
+    tableName: String,
+    fieldName: String,
+    value: String,
+  ): Int =
+    database!!.query { ctx: DSLContext ->
+      ctx.fetchCount(
+        DSL.table(DSL.name("public", tableName)),
+        DSL.field(DSL.name("public", tableName, fieldName), String::class.java).eq(value),
       )
     }
 

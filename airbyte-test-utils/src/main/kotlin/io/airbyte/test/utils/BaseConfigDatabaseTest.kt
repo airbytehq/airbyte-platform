@@ -146,10 +146,13 @@ open class BaseConfigDatabaseTest {
               dataplane_network_config,
               dataplane_heartbeat_log,
               data_worker_usage,
+              data_worker_usage_reservation,
               declarative_manifest,
               "group",
               group_member,
               notification_configuration,
+              observability_jobs_stats,
+              observability_stream_stats,
               operation,
               orchestration,
               orchestration_task,
@@ -170,6 +173,8 @@ open class BaseConfigDatabaseTest {
               tag,
               ${'"'}user${'"'},
               user_invitation,
+              workload,
+              workload_queue,
               workspace,
               workspace_service_account
             

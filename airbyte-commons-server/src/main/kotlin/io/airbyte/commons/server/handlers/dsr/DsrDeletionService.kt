@@ -249,10 +249,24 @@ open class DsrDeletionService(
 
     val terminatedTemporalWorkflows = terminateTemporalWorkflows(manifest, oncallIssueNumber, requestId, errors)
 
+    val connectionScopes = manifest.connectionIds.map { it.toString() }
+    val syncWorkloadIds =
+      if (errors.isEmpty()) {
+        runCatching {
+          dbPrune.listSyncWorkloadIdsByScopes(connectionScopes)
+        }.getOrElse {
+          log.error(it) { "DSR $requestId sync workload lookup failed" }
+          errors.add("Sync workload lookup failed: ${it.message}")
+          emptyList()
+        }
+      } else {
+        emptyList()
+      }
+
     val jobCounts =
       if (errors.isEmpty()) {
         runCatching {
-          dbPrune.pruneJobsAndAttemptsByScopes(manifest.connectionIds.map { it.toString() })
+          dbPrune.pruneJobsAndAttemptsByScopes(connectionScopes)
         }.getOrElse {
           log.error(it) { "DSR $requestId job purge failed" }
           errors.add("Job purge failed: ${it.message}")
@@ -269,7 +283,7 @@ open class DsrDeletionService(
     val configCounts =
       if (errors.isEmpty()) {
         runCatching {
-          configDb.transaction { ctx -> hardDeleteConfigRows(ctx, manifest, datagrailId) }
+          configDb.transaction { ctx -> hardDeleteConfigRows(ctx, manifest, datagrailId, syncWorkloadIds) }
         }.getOrElse {
           log.error(it) { "DSR $requestId config DB purge failed" }
           errors.add("Config DB purge failed: ${it.message}")
@@ -731,7 +745,10 @@ open class DsrDeletionService(
     ctx: DSLContext,
     manifest: DsrManifest,
     datagrailId: String,
+    syncWorkloadIds: List<String>,
   ): ConfigDeletionCounts {
+    ctx.execute("SET LOCAL statement_timeout = '600s'")
+
     val workspaceIds = manifest.workspaceIds.distinct()
     val organizationIds = manifest.organizationIds.distinct()
     val connectionIds = manifest.connectionIds.distinct()
@@ -752,58 +769,26 @@ open class DsrDeletionService(
     val dataplaneIds = selectUuidByUuidField(ctx, "dataplane", "id", "dataplane_group_id", dataplaneGroupIds)
     val orchestrationIds = selectUuidByUuidField(ctx, "orchestration", "id", "workspace_id", workspaceIds)
     val orchestrationRunIds = selectUuidByUuidField(ctx, "orchestration_run", "id", "orchestration_id", orchestrationIds)
+    val actorDefinitionIds = selectUuidByUuidField(ctx, "actor", "actor_definition_id", "id", actorIds)
+    val workspaceOrganizationIds = selectUuidByUuidField(ctx, "workspace", "organization_id", "id", workspaceIds)
     val workloadIds =
-      selectStringByAnyUuidField(
-        ctx = ctx,
-        tableName = "workload",
-        selectFieldName = "id",
-        filters =
-          listOf(
-            "workspace_id" to workspaceIds,
-            "organization_id" to organizationIds,
-          ),
-      )
+      (
+        syncWorkloadIds +
+          selectDsrWorkloadIds(ctx, connectionIds, actorIds, actorDefinitionIds, workspaceIds, organizationIds)
+      ).distinct()
     val observabilityJobIds =
-      selectLongByAnyUuidField(
+      selectLongByUuidField(
         ctx = ctx,
         tableName = "observability_jobs_stats",
         selectFieldName = "job_id",
-        filters =
-          listOf(
-            "connection_id" to connectionIds,
-            "workspace_id" to workspaceIds,
-            "organization_id" to organizationIds,
-          ),
+        whereFieldName = "connection_id",
+        ids = connectionIds,
       )
 
     deleteByLongField(ctx, "observability_stream_stats", "job_id", observabilityJobIds)
-    deleteWhereAnyUuidMatches(
-      ctx,
-      "observability_jobs_stats",
-      listOf(
-        "connection_id" to connectionIds,
-        "workspace_id" to workspaceIds,
-        "organization_id" to organizationIds,
-      ),
-    )
-    deleteWhereAnyUuidMatches(
-      ctx,
-      "data_worker_usage_reservation",
-      listOf(
-        "workspace_id" to workspaceIds,
-        "organization_id" to organizationIds,
-        "dataplane_group_id" to dataplaneGroupIds,
-      ),
-    )
-    deleteWhereAnyUuidMatches(
-      ctx,
-      "data_worker_usage",
-      listOf(
-        "workspace_id" to workspaceIds,
-        "organization_id" to organizationIds,
-        "dataplane_group_id" to dataplaneGroupIds,
-      ),
-    )
+    deleteByLongField(ctx, "observability_jobs_stats", "job_id", observabilityJobIds)
+    deleteDataWorkerUsageRows(ctx, "data_worker_usage_reservation", workspaceIds, organizationIds, workspaceOrganizationIds)
+    deleteDataWorkerUsageRows(ctx, "data_worker_usage", workspaceIds, organizationIds, workspaceOrganizationIds)
 
     deleteByUuidField(ctx, "connection_operation", "connection_id", connectionIds)
     deleteByUuidField(ctx, "connection_tag", "connection_id", connectionIds)
@@ -846,14 +831,8 @@ open class DsrDeletionService(
           .execute()
       }
 
-    deleteWhereAnyUuidMatches(
-      ctx,
-      "actor_oauth_parameter",
-      listOf(
-        "workspace_id" to workspaceIds,
-        "organization_id" to organizationIds,
-      ),
-    )
+    deleteByUuidField(ctx, "actor_oauth_parameter", "workspace_id", workspaceIds)
+    deleteByUuidField(ctx, "actor_oauth_parameter", "organization_id", organizationIds)
 
     val actorsDeleted =
       if (actorIds.isEmpty()) {
@@ -870,47 +849,15 @@ open class DsrDeletionService(
     deleteByUuidField(ctx, "orchestration_task", "orchestration_id", orchestrationIds)
     deleteByUuidField(ctx, "orchestration", "id", orchestrationIds)
 
-    deleteWhereAnyUuidMatches(
-      ctx = ctx,
-      tableName = "connection_timeline_event",
-      filters = listOf("user_id" to listOf(manifest.userId)),
-    )
-
-    deleteByStringField(ctx, "commands", "workload_id", workloadIds)
-    deleteWhereAnyUuidMatches(
-      ctx,
-      "commands",
-      listOf(
-        "workspace_id" to workspaceIds,
-        "organization_id" to organizationIds,
-      ),
-    )
     deleteByStringField(ctx, "workload_queue", "workload_id", workloadIds)
     deleteByStringField(ctx, "workload", "id", workloadIds)
 
-    deleteWhereAnyUuidMatches(
-      ctx,
-      "actor_definition_workspace_grant",
-      listOf(
-        "workspace_id" to workspaceIds,
-        "scope_id" to workspaceIds + organizationIds,
-      ),
-    )
-    deleteWhereAnyUuidMatches(
-      ctx,
-      "secret_persistence_config",
-      listOf("scope_id" to workspaceIds + organizationIds),
-    )
+    deleteByUuidField(ctx, "actor_definition_workspace_grant", "workspace_id", workspaceIds)
+    deleteByUuidField(ctx, "actor_definition_workspace_grant", "scope_id", workspaceIds + organizationIds)
+    deleteByUuidField(ctx, "secret_persistence_config", "scope_id", workspaceIds + organizationIds)
 
-    deleteWhereAnyUuidMatches(
-      ctx,
-      "user_invitation",
-      listOf(
-        "accepted_by_user_id" to listOf(manifest.userId),
-        "inviter_user_id" to listOf(manifest.userId),
-        "scope_id" to workspaceIds + organizationIds,
-      ),
-    )
+    deleteByUuidField(ctx, "user_invitation", "accepted_by_user_id", listOf(manifest.userId))
+    deleteByUuidField(ctx, "user_invitation", "scope_id", workspaceIds + organizationIds)
 
     deleteByUuidField(ctx, "group_member", "user_id", listOf(manifest.userId))
     deleteByUuidField(ctx, "group_member", "group_id", groupIds)
@@ -1050,38 +997,173 @@ open class DsrDeletionService(
       .distinct()
   }
 
-  private fun selectStringByAnyUuidField(
+  private fun selectLongByUuidField(
     ctx: DSLContext,
     tableName: String,
     selectFieldName: String,
-    filters: List<Pair<String, List<UUID>>>,
-  ): List<String> {
-    val condition = anyUuidMatchCondition(tableName, filters) ?: return emptyList()
-    val selectField = stringField(tableName, selectFieldName)
+    whereFieldName: String,
+    ids: List<UUID>,
+  ): List<Long> {
+    if (ids.isEmpty()) {
+      return emptyList()
+    }
+    val selectField = longField(tableName, selectFieldName)
     return ctx
       .select(selectField)
       .from(namedTable(tableName))
-      .where(condition)
+      .where(uuidField(tableName, whereFieldName).`in`(ids.distinct()))
       .fetch(selectField)
       .filterNotNull()
       .distinct()
   }
 
-  private fun selectLongByAnyUuidField(
+  /**
+   * Finds workload rows tied to the DSR target that are not guaranteed to be discoverable from
+   * jobs/attempts. Workload IDs encode their owner as a string prefix, for example:
+   * `<connectionId>_..._sync`, `<actorId>_..._check`, or `<actorDefinitionId>_..._discover`.
+   *
+   * The workspace/organization scope is required so a prefix match cannot delete workload rows
+   * outside the DSR target's tenant boundary.
+   */
+  private fun selectDsrWorkloadIds(
+    ctx: DSLContext,
+    connectionIds: List<UUID>,
+    actorIds: List<UUID>,
+    actorDefinitionIds: List<UUID>,
+    workspaceIds: List<UUID>,
+    organizationIds: List<UUID>,
+  ): List<String> {
+    val prefixes = (connectionIds + actorIds + actorDefinitionIds).map { "${it}_" }.distinct()
+    if (prefixes.isEmpty()) {
+      return emptyList()
+    }
+
+    val scopeCondition = workloadScopeCondition(workspaceIds, organizationIds)
+    if (scopeCondition == null) {
+      log.warn {
+        "Skipping DSR workload prefix lookup because workspace and organization scope are empty. " +
+          "connectionCount=${connectionIds.size}, actorCount=${actorIds.size}, actorDefinitionCount=${actorDefinitionIds.size}"
+      }
+      return emptyList()
+    }
+
+    val workloadIds =
+      selectStringByPrefixRanges(
+        ctx = ctx,
+        tableName = "workload",
+        selectFieldName = "id",
+        prefixes = prefixes,
+        extraCondition = scopeCondition,
+      )
+    validateDsrWorkloadIdsMatchExpectedPrefixes(workloadIds, prefixes)
+    return workloadIds
+  }
+
+  /**
+   * Fails closed if the range query returns an ID that does not literally start with one of the
+   * prefixes this delete path intended to scan. That protects the destructive delete below from
+   * unexpected collation or range-boundary behavior.
+   */
+  private fun validateDsrWorkloadIdsMatchExpectedPrefixes(
+    workloadIds: List<String>,
+    prefixes: List<String>,
+  ) {
+    val distinctPrefixes = prefixes.distinct()
+    val unexpectedWorkloadIds =
+      workloadIds
+        .filterNot { workloadId -> distinctPrefixes.any { prefix -> workloadId.startsWith(prefix) } }
+        .distinct()
+    check(unexpectedWorkloadIds.isEmpty()) {
+      "DSR workload prefix lookup returned ${unexpectedWorkloadIds.size} unexpected workload ID(s) outside expected prefixes: " +
+        unexpectedWorkloadIds.take(10).joinToString(", ")
+    }
+  }
+
+  /**
+   * Limits the workload prefix scan to the workspaces or organizations being deleted. Returning
+   * null tells the caller to skip the scan rather than run an unscoped workload lookup.
+   */
+  private fun workloadScopeCondition(
+    workspaceIds: List<UUID>,
+    organizationIds: List<UUID>,
+  ): Condition? {
+    val scopeConditions =
+      listOfNotNull(
+        workspaceIds.distinct().takeIf { it.isNotEmpty() }?.let { uuidField("workload", "workspace_id").`in`(it) },
+        organizationIds.distinct().takeIf { it.isNotEmpty() }?.let { uuidField("workload", "organization_id").`in`(it) },
+      )
+    return scopeConditions.takeIf { it.isNotEmpty() }?.let(::orCondition)
+  }
+
+  /**
+   * Selects string IDs that start with any of the provided prefixes. Prefixes are batched to keep
+   * the generated OR condition bounded, and each batch is additionally constrained by
+   * [extraCondition] when a caller provides one.
+   */
+  private fun selectStringByPrefixRanges(
     ctx: DSLContext,
     tableName: String,
     selectFieldName: String,
-    filters: List<Pair<String, List<UUID>>>,
-  ): List<Long> {
-    val condition = anyUuidMatchCondition(tableName, filters) ?: return emptyList()
-    val selectField = longField(tableName, selectFieldName)
-    return ctx
-      .select(selectField)
-      .from(namedTable(tableName))
-      .where(condition)
-      .fetch(selectField)
-      .filterNotNull()
-      .distinct()
+    prefixes: List<String>,
+    extraCondition: Condition? = null,
+  ): List<String> {
+    val distinctPrefixes = prefixes.distinct()
+    if (distinctPrefixes.isEmpty()) {
+      return emptyList()
+    }
+    val selectField = stringField(tableName, selectFieldName)
+    return distinctPrefixes
+      .chunked(MAX_PREFIX_RANGE_CONDITIONS)
+      .flatMap { prefixBatch ->
+        val conditions =
+          prefixBatch.map { prefix ->
+            prefixRangeCondition(selectField, prefix)
+          }
+        ctx
+          .select(selectField)
+          .from(namedTable(tableName))
+          .where(extraCondition?.let { orCondition(conditions).and(it) } ?: orCondition(conditions))
+          .fetch(selectField)
+          .filterNotNull()
+      }.distinct()
+  }
+
+  /**
+   * Matches a prefix with a half-open lexicographic range instead of `LIKE`. The explicit C
+   * collation makes the ASCII range math deterministic for workload IDs.
+   */
+  private fun prefixRangeCondition(
+    field: Field<String>,
+    prefix: String,
+  ): Condition =
+    DSL.condition(
+      "{0} COLLATE \"C\" >= {1} COLLATE \"C\" AND {0} COLLATE \"C\" < {2} COLLATE \"C\"",
+      field,
+      DSL.inline(prefix),
+      DSL.inline(prefixUpperBound(prefix)),
+    )
+
+  private fun deleteDataWorkerUsageRows(
+    ctx: DSLContext,
+    tableName: String,
+    workspaceIds: List<UUID>,
+    organizationIds: List<UUID>,
+    workspaceOrganizationIds: List<UUID>,
+  ): Int {
+    val deletedByOrganization = deleteByUuidField(ctx, tableName, "organization_id", organizationIds)
+    val deletedOrganizationIds = organizationIds.toSet()
+    val workspaceScopedOrganizationIds = workspaceOrganizationIds.filterNot { deletedOrganizationIds.contains(it) }.distinct()
+    if (workspaceIds.isEmpty() || workspaceScopedOrganizationIds.isEmpty()) {
+      return deletedByOrganization
+    }
+
+    val deletedByWorkspace =
+      ctx
+        .deleteFrom(namedTable(tableName))
+        .where(uuidField(tableName, "organization_id").`in`(workspaceScopedOrganizationIds))
+        .and(uuidField(tableName, "workspace_id").`in`(workspaceIds.distinct()))
+        .execute()
+    return deletedByOrganization + deletedByWorkspace
   }
 
   private fun deleteByUuidField(
@@ -1179,6 +1261,7 @@ open class DsrDeletionService(
   companion object {
     const val CLOUD_USERS_REALM = "_airbyte-cloud-users"
     private const val LARGE_JOB_COUNT_WARNING_THRESHOLD = 10_000L
+    private const val MAX_PREFIX_RANGE_CONDITIONS = 100
 
     fun emailHash(email: String): String {
       val normalizedEmail = email.trim().lowercase(Locale.US)
@@ -1188,6 +1271,10 @@ open class DsrDeletionService(
           .digest(normalizedEmail.toByteArray(StandardCharsets.UTF_8))
       return digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
     }
+
+    // Workload prefixes end in "_" and "`" is the next ASCII character, so [uuid_, uuid`)
+    // covers exactly the workload IDs that start with uuid_ under C collation.
+    private fun prefixUpperBound(prefix: String): String = prefix.dropLast(1) + "`"
   }
 }
 

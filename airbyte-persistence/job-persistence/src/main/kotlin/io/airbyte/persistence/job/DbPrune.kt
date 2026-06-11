@@ -130,6 +130,10 @@ class DbPrune(
     do {
       deletedInBatch =
         database.transaction { ctx ->
+          // Override the global statement_timeout for DSR prune queries which can touch many rows.
+          // SET LOCAL scopes the override to this transaction only.
+          ctx.execute("SET LOCAL statement_timeout = '600s'")
+
           val jobsToDelete =
             ctx
               .select(Tables.JOBS.ID)
@@ -152,6 +156,32 @@ class DbPrune(
     } while (deletedInBatch.deletedJobsCount > 0)
 
     return totalDeleted
+  }
+
+  /**
+   * Lists sync workload IDs that can be derived from jobs/attempts for the supplied connection scopes.
+   *
+   * DSR config cleanup uses this before pruning jobs so it can delete workload rows by exact primary
+   * key instead of relying only on collation-sensitive workload ID prefix scans.
+   */
+  fun listSyncWorkloadIdsByScopes(connectionScopes: List<String>): List<String> {
+    if (connectionScopes.isEmpty()) {
+      return emptyList()
+    }
+
+    return database.transaction { ctx ->
+      ctx.execute("SET LOCAL statement_timeout = '600s'")
+
+      ctx
+        .select(Tables.JOBS.SCOPE, Tables.JOBS.ID, Tables.ATTEMPTS.ATTEMPT_NUMBER)
+        .from(Tables.JOBS)
+        .join(Tables.ATTEMPTS)
+        .on(Tables.ATTEMPTS.JOB_ID.eq(Tables.JOBS.ID))
+        .where(Tables.JOBS.SCOPE.`in`(connectionScopes))
+        .fetch { record ->
+          "${record.get(Tables.JOBS.SCOPE)}_${record.get(Tables.JOBS.ID)}_${record.get(Tables.ATTEMPTS.ATTEMPT_NUMBER)}_sync"
+        }.distinct()
+    }
   }
 
   /**

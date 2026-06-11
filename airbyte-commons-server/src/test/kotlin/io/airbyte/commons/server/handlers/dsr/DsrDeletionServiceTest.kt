@@ -54,6 +54,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.lang.reflect.InvocationTargetException
 import java.util.Optional
 import java.util.UUID
 
@@ -211,8 +212,82 @@ internal class DsrDeletionServiceTest {
         ctx: DSLContext,
         manifest: DsrManifest,
         datagrailId: String,
+        syncWorkloadIds: List<String>,
       ): DsrDeletionService.ConfigDeletionCounts = configDeletionCounts
     }
+
+  @Test
+  fun `workload prefix range condition renders C collation`() {
+    val method =
+      DsrDeletionService::class.java.getDeclaredMethod(
+        "prefixRangeCondition",
+        org.jooq.Field::class.java,
+        String::class.java,
+      )
+    method.isAccessible = true
+
+    val condition =
+      method.invoke(
+        service,
+        DSL.field(DSL.name("public", "workload", "id"), String::class.java),
+        "${connectionId}_",
+      ) as org.jooq.Condition
+    val sql = DSL.using(org.jooq.SQLDialect.POSTGRES).renderInlined(condition)
+
+    assertTrue(Regex("(?i)collate\\s+\"C\"").findAll(sql).count() >= 4, sql)
+  }
+
+  @Test
+  fun `workload prefix fallback skips lookup when scope is empty`() {
+    val method =
+      DsrDeletionService::class.java.getDeclaredMethod(
+        "selectDsrWorkloadIds",
+        DSLContext::class.java,
+        List::class.java,
+        List::class.java,
+        List::class.java,
+        List::class.java,
+        List::class.java,
+      )
+    method.isAccessible = true
+
+    val workloadIds =
+      method.invoke(
+        service,
+        DSL.using(org.jooq.SQLDialect.POSTGRES),
+        listOf(connectionId),
+        listOf(sourceId),
+        listOf(UUID.randomUUID()),
+        emptyList<UUID>(),
+        emptyList<UUID>(),
+      ) as List<*>
+
+    assertTrue(workloadIds.isEmpty())
+  }
+
+  @Test
+  fun `workload prefix guard rejects ids outside expected prefixes`() {
+    val method =
+      DsrDeletionService::class.java.getDeclaredMethod(
+        "validateDsrWorkloadIdsMatchExpectedPrefixes",
+        List::class.java,
+        List::class.java,
+      )
+    method.isAccessible = true
+
+    val unexpectedWorkloadId = "${UUID.randomUUID()}_123_0_sync"
+    val exception =
+      assertThrows<InvocationTargetException> {
+        method.invoke(
+          service,
+          listOf("${connectionId}_123_0_sync", unexpectedWorkloadId),
+          listOf("${connectionId}_", "${sourceId}_"),
+        )
+      }
+
+    assertTrue(exception.cause is IllegalStateException)
+    assertTrue(exception.cause!!.message!!.contains(unexpectedWorkloadId))
+  }
 
   @Test
   fun `preview captures a detailed manifest, persists it, and does not mutate external systems`() {
@@ -514,6 +589,8 @@ internal class DsrDeletionServiceTest {
       deletionRequestRepository.markRunningIfPreviewed(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io", any())
     } returns 1
     every { connectionManagerUtils.terminateWorkflow(connectionId, any()) } just Runs
+    every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns
+      listOf("${connectionId}_101_0_sync")
     every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
       DbPrune.JobDeletionCounts(deletedJobsCount = 7, deletedAttemptsCount = 9)
     every { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns 1
@@ -540,6 +617,7 @@ internal class DsrDeletionServiceTest {
 
     verifyOrder {
       connectionManagerUtils.terminateWorkflow(connectionId, any())
+      dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString()))
       dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString()))
       sourceHandler.deleteSource(any<SourceIdRequestBody>())
       destinationHandler.deleteDestination(any<DestinationIdRequestBody>())

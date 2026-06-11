@@ -395,6 +395,36 @@ class DbPruneTest {
   }
 
   @Test
+  @DisplayName("listSyncWorkloadIdsByScopes derives exact workload ids from jobs and attempts")
+  fun testListSyncWorkloadIdsByScopes() {
+    val targetConnection = UUID.randomUUID()
+    val otherConnection = UUID.randomUUID()
+    val now = Instant.now()
+
+    val targetJob1 = createJob(targetConnection.toString(), now)
+    val targetAttempt1 = jobPersistence.createAttempt(targetJob1, LOG_PATH)
+    jobPersistence.succeedAttempt(targetJob1, targetAttempt1)
+
+    val targetJob2 = createJob(targetConnection.toString(), now.plusSeconds(1))
+    val targetAttempt2 = jobPersistence.createAttempt(targetJob2, LOG_PATH)
+    jobPersistence.succeedAttempt(targetJob2, targetAttempt2)
+
+    val otherJob = createJob(otherConnection.toString(), now)
+    val otherAttempt = jobPersistence.createAttempt(otherJob, LOG_PATH)
+    jobPersistence.succeedAttempt(otherJob, otherAttempt)
+
+    val workloadIds = dbPrune.listSyncWorkloadIdsByScopes(listOf(targetConnection.toString()))
+
+    assertEquals(
+      setOf(
+        "${targetConnection}_${targetJob1}_${targetAttempt1}_sync",
+        "${targetConnection}_${targetJob2}_${targetAttempt2}_sync",
+      ),
+      workloadIds.toSet(),
+    )
+  }
+
+  @Test
   @DisplayName("pruneJobsAndAttemptsByScopes returns job and attempt deletion counts")
   fun testPruneJobsAndAttemptsByScopesReturnsBothCounts() {
     val targetConnection = UUID.randomUUID()
