@@ -17,6 +17,8 @@ interface EventRunner {
 
   fun startNewManualSync(connectionId: UUID): ManualOperationResult
 
+  fun startNewManualSyncAndWaitForJobId(connectionId: UUID): ManualOperationResult
+
   fun startNewCancellation(connectionId: UUID): ManualOperationResult
 
   fun resetConnection(

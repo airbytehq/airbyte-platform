@@ -477,7 +477,10 @@ open class SchedulerHandler
       return sourceDiscoverSchemaRead
     }
 
-    fun syncConnection(connectionIdRequestBody: ConnectionIdRequestBody): JobInfoRead = submitManualSyncToWorker(connectionIdRequestBody.connectionId)
+    fun syncConnection(
+      connectionIdRequestBody: ConnectionIdRequestBody,
+      organizationId: UUID? = null,
+    ): JobInfoRead = submitManualSyncToWorker(connectionIdRequestBody.connectionId, organizationId)
 
     fun resetConnection(connectionIdRequestBody: ConnectionIdRequestBody): JobInfoRead =
       submitResetConnectionToWorker(connectionIdRequestBody.connectionId)
@@ -612,14 +615,42 @@ open class SchedulerHandler
         true
       }
 
-    private fun submitManualSyncToWorker(connectionId: UUID): JobInfoRead {
+    private fun submitManualSyncToWorker(
+      connectionId: UUID,
+      organizationId: UUID?,
+    ): JobInfoRead {
       // get standard sync to validate connection id before submitting sync to temporal
       val sync = connectionService.getStandardSync(connectionId)
       check(sync.status == StandardSync.Status.ACTIVE) { "Can only sync an active connection" }
-      val manualSyncResult = eventRunner.startNewManualSync(connectionId)
+      val manualSyncResult =
+        if (isDataWorkerCapacityEnforced(connectionId, organizationId)) {
+          // When data worker capacity is enforced, the connection manager workflow creates the job first
+          // and then may queue it for hours while waiting for capacity. Only wait for the job id to be
+          // created so the request returns promptly instead of blocking until the sync starts running.
+          eventRunner.startNewManualSyncAndWaitForJobId(connectionId)
+        } else {
+          eventRunner.startNewManualSync(connectionId)
+        }
       val jobInfo = readJobFromResult(manualSyncResult)
       connectionTimelineEventHelper.logManuallyStartedEventInConnectionTimeline(connectionId, jobInfo, null)
       return jobInfo
+    }
+
+    private fun isDataWorkerCapacityEnforced(
+      connectionId: UUID,
+      organizationId: UUID?,
+    ): Boolean {
+      if (organizationId == null) {
+        log.debug { "No organization id supplied for connection $connectionId; defaulting to existing manual sync wait behavior." }
+        return false
+      }
+
+      return try {
+        featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId))
+      } catch (e: Exception) {
+        log.warn(e) { "Failed to resolve capacity enforcement for organization $organizationId; defaulting to existing manual sync wait behavior." }
+        false
+      }
     }
 
     private fun submitResetConnectionToWorker(

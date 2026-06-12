@@ -30,7 +30,10 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 interface JobService {
-  fun sync(connectionId: UUID): JobResponse
+  fun sync(
+    connectionId: UUID,
+    organizationId: UUID? = null,
+  ): JobResponse
 
   fun reset(connectionId: UUID): JobResponse
 
@@ -67,11 +70,14 @@ class JobServiceImpl(
   /**
    * Starts a sync job for the given connection ID.
    */
-  override fun sync(connectionId: UUID): JobResponse {
+  override fun sync(
+    connectionId: UUID,
+    organizationId: UUID?,
+  ): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val result =
       kotlin
-        .runCatching { schedulerHandler.syncConnection(connectionIdRequestBody) }
+        .runCatching { schedulerHandler.syncConnection(connectionIdRequestBody, organizationId) }
         .onFailure { ConfigClientErrorHandler.handleError(it) }
 
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }

@@ -11,6 +11,7 @@ import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.publicApi.server.generated.apis.PublicJobsApi
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
 import io.airbyte.publicApi.server.generated.models.JobCreateRequest
@@ -48,6 +49,7 @@ open class JobsController(
   private val trackingHelper: TrackingHelper,
   private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
+  private val workspaceHelper: WorkspaceHelper,
 ) : PublicJobsApi {
   @DELETE
   @Path("$JOBS_PATH/{jobId}")
@@ -117,10 +119,12 @@ open class JobsController(
 
     return when (jobCreateRequest.jobType) {
       JobTypeEnum.SYNC -> {
+        val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
         val jobResponse: JobResponse =
           trackingHelper.callWithTracker({
             jobService.sync(
               UUID.fromString(jobCreateRequest.connectionId),
+              organizationId,
             )
           }, JOBS_PATH, POST, userId)!!
         trackingHelper.trackSuccess(

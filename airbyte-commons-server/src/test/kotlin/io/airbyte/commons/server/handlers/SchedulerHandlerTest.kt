@@ -110,7 +110,9 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
 import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretStorageService
+import io.airbyte.featureflag.EnforceDataWorkerCapacity
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.JobCreator
@@ -1456,6 +1458,101 @@ internal class SchedulerHandlerTest {
     schedulerHandler.syncConnection(ConnectionIdRequestBody().connectionId(connectionId))
 
     verify(eventRunner).startNewManualSync(connectionId)
+  }
+
+  @Test
+  fun testSyncConnectionUsesExistingManualSyncPathWhenDataWorkerEnforcementDisabled() {
+    val connectionId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val jobId = 123L
+    val manualOperationResult = ManualOperationResult(null, jobId, null)
+
+    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
+      .thenReturn(false)
+    whenever(eventRunner.startNewManualSync(connectionId))
+      .thenReturn(manualOperationResult)
+    doReturn(job)
+      .whenever(jobPersistence)
+      .getJob(jobId)
+    doReturn(JobInfoRead().job(JobRead().id(jobId)))
+      .whenever(jobConverter)
+      .getJobInfoRead(job)
+
+    schedulerHandler.syncConnection(ConnectionIdRequestBody().connectionId(connectionId), organizationId)
+
+    verify(eventRunner).startNewManualSync(connectionId)
+    verify(eventRunner, never()).startNewManualSyncAndWaitForJobId(connectionId)
+  }
+
+  @Test
+  fun testSyncConnectionWaitsOnlyForJobIdWhenDataWorkerCapacityIsEnforced() {
+    val connectionId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val jobId = 123L
+    val manualOperationResult = ManualOperationResult(null, jobId, null)
+
+    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
+      .thenReturn(true)
+    whenever(eventRunner.startNewManualSyncAndWaitForJobId(connectionId))
+      .thenReturn(manualOperationResult)
+    doReturn(job)
+      .whenever(jobPersistence)
+      .getJob(jobId)
+    doReturn(JobInfoRead().job(JobRead().id(jobId)))
+      .whenever(jobConverter)
+      .getJobInfoRead(job)
+
+    val result = schedulerHandler.syncConnection(ConnectionIdRequestBody().connectionId(connectionId), organizationId)
+
+    verify(eventRunner).startNewManualSyncAndWaitForJobId(connectionId)
+    verify(eventRunner, never()).startNewManualSync(connectionId)
+    Assertions.assertThat(result.job.id).isEqualTo(jobId)
+  }
+
+  @Test
+  fun testSyncConnectionUsesExistingManualSyncPathWhenNoOrganizationIdIsSupplied() {
+    val connectionId = UUID.randomUUID()
+    val jobId = 123L
+    val manualOperationResult = ManualOperationResult(null, jobId, null)
+
+    whenever(eventRunner.startNewManualSync(connectionId))
+      .thenReturn(manualOperationResult)
+    doReturn(job)
+      .whenever(jobPersistence)
+      .getJob(jobId)
+    doReturn(JobInfoRead().job(JobRead().id(jobId)))
+      .whenever(jobConverter)
+      .getJobInfoRead(job)
+
+    schedulerHandler.syncConnection(ConnectionIdRequestBody().connectionId(connectionId))
+
+    verify(eventRunner).startNewManualSync(connectionId)
+    verify(eventRunner, never()).startNewManualSyncAndWaitForJobId(connectionId)
+    verifyNoInteractions(featureFlagClient)
+  }
+
+  @Test
+  fun testSyncConnectionUsesExistingManualSyncPathWhenDataWorkerEnforcementFlagLookupFails() {
+    val connectionId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val jobId = 123L
+    val manualOperationResult = ManualOperationResult(null, jobId, null)
+
+    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
+      .thenThrow(RuntimeException("flag lookup failed"))
+    whenever(eventRunner.startNewManualSync(connectionId))
+      .thenReturn(manualOperationResult)
+    doReturn(job)
+      .whenever(jobPersistence)
+      .getJob(jobId)
+    doReturn(JobInfoRead().job(JobRead().id(jobId)))
+      .whenever(jobConverter)
+      .getJobInfoRead(job)
+
+    schedulerHandler.syncConnection(ConnectionIdRequestBody().connectionId(connectionId), organizationId)
+
+    verify(eventRunner).startNewManualSync(connectionId)
+    verify(eventRunner, never()).startNewManualSyncAndWaitForJobId(connectionId)
   }
 
   @Test

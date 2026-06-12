@@ -26,6 +26,10 @@ class TemporalEventRunner(
   override fun startNewManualSync(connectionId: UUID): ManualOperationResult = temporalClient.startNewManualSync(connectionId)
 
   @WithSpan
+  override fun startNewManualSyncAndWaitForJobId(connectionId: UUID): ManualOperationResult =
+    temporalClient.startNewManualSyncAndWaitForJobId(connectionId)
+
+  @WithSpan
   override fun startNewCancellation(connectionId: UUID): ManualOperationResult = temporalClient.startNewCancellation(connectionId)
 
   @WithSpan

@@ -78,6 +78,7 @@ private const val SAFE_TERMINATE_MESSAGE = "Terminating workflow in unreachable 
  * use the queries to make sure that we are in a state in which we want to continue with.
  */
 private const val DELAY_BETWEEN_QUERY_MS = 10
+private const val START_MANUAL_SYNC_JOB_ID_WAIT_TIMEOUT_MS = 60_000L
 private val logger = KotlinLogging.logger { }
 
 /**
@@ -257,6 +258,71 @@ class TemporalClient(
 
     logger.info { "end of manual schedule" }
     return ManualOperationResult(jobId = connectionManagerUtils.getCurrentJobId(connectionId))
+  }
+
+  /**
+   * Start a manual sync and return as soon as the workflow exposes the created job id.
+   *
+   * This is used by request paths that should not wait for the sync attempt to start.
+   *
+   * @param connectionId connection id
+   * @return sync result
+   */
+  fun startNewManualSyncAndWaitForJobId(connectionId: UUID): ManualOperationResult =
+    startNewManualSyncAndWaitForJobId(connectionId, START_MANUAL_SYNC_JOB_ID_WAIT_TIMEOUT_MS)
+
+  @InternalForTesting
+  internal fun startNewManualSyncAndWaitForJobId(
+    connectionId: UUID,
+    waitTimeoutMs: Long,
+  ): ManualOperationResult {
+    logger.info { "Manual sync request for connection $connectionId" }
+
+    if (connectionManagerUtils.isWorkflowStateRunning(connectionId)) {
+      return ManualOperationResult(
+        failingReason = "A sync is already running for: $connectionId",
+        errorCode = ErrorCode.WORKFLOW_RUNNING,
+      )
+    }
+
+    val oldJobId = connectionManagerUtils.getCurrentJobId(connectionId)
+
+    try {
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId) {
+        Functions.Proc { it.submitManualSync() }
+      }
+    } catch (e: DeletedWorkflowException) {
+      logger.error(e) { "Can't sync a deleted connection." }
+      return ManualOperationResult(
+        failingReason = e.message,
+        errorCode = ErrorCode.WORKFLOW_DELETED,
+      )
+    }
+
+    val waitDeadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(waitTimeoutMs)
+    var jobId: Long?
+    do {
+      try {
+        Thread.sleep(DELAY_BETWEEN_QUERY_MS.toLong())
+      } catch (_: InterruptedException) {
+        Thread.currentThread().interrupt()
+        return ManualOperationResult(
+          failingReason = "Didn't manage to start a sync for: $connectionId",
+          errorCode = ErrorCode.UNKNOWN,
+        )
+      }
+      jobId = getNewJobId(connectionId, oldJobId)
+    } while (jobId == null && System.nanoTime() < waitDeadlineNanos)
+
+    if (jobId == null) {
+      return ManualOperationResult(
+        failingReason = "Timed out waiting for a sync job to be created for: $connectionId",
+        errorCode = ErrorCode.UNKNOWN,
+      )
+    }
+
+    logger.info { "manual sync job created" }
+    return ManualOperationResult(jobId = jobId)
   }
 
   /**
