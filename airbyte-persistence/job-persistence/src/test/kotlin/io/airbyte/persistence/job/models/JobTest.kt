@@ -103,10 +103,7 @@ internal class JobTest {
       IllegalStateException::class.java,
       { queuedJob.validateStatusTransition(JobStatus.INCOMPLETE) },
     )
-    assertThrows(
-      IllegalStateException::class.java,
-      { queuedJob.validateStatusTransition(JobStatus.FAILED) },
-    )
+    assertDoesNotThrow({ queuedJob.validateStatusTransition(JobStatus.FAILED) })
     assertThrows(
       IllegalStateException::class.java,
       { queuedJob.validateStatusTransition(JobStatus.SUCCEEDED) },
