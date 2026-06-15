@@ -4,12 +4,17 @@
 
 package io.airbyte.oauth.flows
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
+import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.io.IOException
+import java.lang.reflect.InvocationTargetException
 import java.net.http.HttpClient
+import java.net.http.HttpResponse
 import java.util.UUID
 import kotlin.reflect.full.declaredMemberFunctions
 import kotlin.reflect.jvm.isAccessible
@@ -159,5 +164,147 @@ class ShopifyOAuthFlowTest {
       url.contains("origin=https"),
       "Expected origin parameter in URL: $url",
     )
+  }
+
+  // ==================== Token Exchange Error Handling ====================
+
+  @Suppress("UNCHECKED_CAST")
+  private fun callCompleteOAuthFlow(
+    clientId: String = "test-client-id",
+    clientSecret: String = "test-client-secret",
+    authCode: String = "test-auth-code",
+    shopName: String = "test-store.myshopify.com",
+    redirectUrl: String = "https://cloud.airbyte.com/auth_flow",
+  ): Map<String, Any> {
+    val method =
+      ShopifyOAuthFlow::class
+        .declaredMemberFunctions
+        .find { it.name == "completeOAuthFlow" }!!
+    method.isAccessible = true
+    return method.call(
+      shopifyOAuthFlow,
+      clientId,
+      clientSecret,
+      authCode,
+      shopName,
+      redirectUrl,
+      Jsons.emptyObject(),
+      Jsons.emptyObject(),
+    ) as Map<String, Any>
+  }
+
+  private fun callExtractOAuthOutput(
+    data: JsonNode,
+    accessTokenUrl: String = "https://test-store.myshopify.com/admin/oauth/access_token",
+    shopName: String = "test-store.myshopify.com",
+  ): Map<String, Any> {
+    val method =
+      ShopifyOAuthFlow::class
+        .declaredMemberFunctions
+        .find { it.name == "extractOAuthOutput" }!!
+    method.isAccessible = true
+    @Suppress("UNCHECKED_CAST")
+    return method.call(shopifyOAuthFlow, data, accessTokenUrl, shopName) as Map<String, Any>
+  }
+
+  private fun mockHttpResponse(
+    statusCode: Int,
+    body: String,
+  ) {
+    val response = mockk<HttpResponse<String>>()
+    every { response.statusCode() } returns statusCode
+    every { response.body() } returns body
+    every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } returns response
+  }
+
+  private fun assertReflectionThrowsIOException(block: () -> Unit): IOException {
+    val ite =
+      Assertions.assertThrows(InvocationTargetException::class.java) {
+        block()
+      }
+    Assertions.assertInstanceOf(IOException::class.java, ite.cause)
+    return ite.cause as IOException
+  }
+
+  @Test
+  fun testCompleteOAuthFlow_httpError_throwsWithStatusAndError() {
+    mockHttpResponse(401, """{"error": "invalid_client"}""")
+
+    val exception = assertReflectionThrowsIOException { callCompleteOAuthFlow() }
+    Assertions.assertTrue(
+      exception.message!!.contains("HTTP 401"),
+      "Expected HTTP status in error: ${exception.message}",
+    )
+    Assertions.assertTrue(
+      exception.message!!.contains("invalid_client"),
+      "Expected Shopify error in message: ${exception.message}",
+    )
+  }
+
+  @Test
+  fun testCompleteOAuthFlow_httpError400_throwsWithResponseBody() {
+    mockHttpResponse(400, """{"error": "invalid_request", "error_description": "code was already used"}""")
+
+    val exception = assertReflectionThrowsIOException { callCompleteOAuthFlow() }
+    Assertions.assertTrue(exception.message!!.contains("HTTP 400"))
+    Assertions.assertTrue(exception.message!!.contains("invalid_request"))
+  }
+
+  @Test
+  fun testCompleteOAuthFlow_httpErrorNonJson_throwsWithRawBody() {
+    mockHttpResponse(500, "Internal Server Error")
+
+    val exception = assertReflectionThrowsIOException { callCompleteOAuthFlow() }
+    Assertions.assertTrue(exception.message!!.contains("HTTP 500"))
+    Assertions.assertTrue(exception.message!!.contains("Internal Server Error"))
+  }
+
+  @Test
+  fun testCompleteOAuthFlow_success_returnsAccessTokenAndShop() {
+    mockHttpResponse(200, """{"access_token": "shpat_test123", "scope": "read_products"}""")
+
+    val result = callCompleteOAuthFlow(shopName = "my-store.myshopify.com")
+    Assertions.assertEquals("shpat_test123", result["access_token"])
+    Assertions.assertEquals("my-store.myshopify.com", result["shop"])
+  }
+
+  @Test
+  fun testExtractOAuthOutput_missingAccessToken_withErrorField() {
+    val data = Jsons.deserialize("""{"error": "invalid_client"}""")
+
+    val exception = assertReflectionThrowsIOException { callExtractOAuthOutput(data) }
+    Assertions.assertTrue(
+      exception.message!!.contains("Missing 'access_token'"),
+      "Expected missing access_token message: ${exception.message}",
+    )
+    Assertions.assertTrue(
+      exception.message!!.contains("invalid_client"),
+      "Expected error field in message: ${exception.message}",
+    )
+    Assertions.assertFalse(
+      exception.message!!.contains("query params"),
+      "Should not say 'query params': ${exception.message}",
+    )
+  }
+
+  @Test
+  fun testExtractOAuthOutput_missingAccessToken_noErrorField() {
+    val data = Jsons.deserialize("""{"scope": "read_products"}""")
+
+    val exception = assertReflectionThrowsIOException { callExtractOAuthOutput(data) }
+    Assertions.assertTrue(exception.message!!.contains("Missing 'access_token'"))
+    Assertions.assertTrue(
+      exception.message!!.contains("response="),
+      "Expected raw response in message: ${exception.message}",
+    )
+  }
+
+  @Test
+  fun testExtractOAuthOutput_success() {
+    val data = Jsons.deserialize("""{"access_token": "shpat_abc123"}""")
+
+    val result = callExtractOAuthOutput(data, shopName = "my-store.myshopify.com")
+    Assertions.assertEquals("shpat_abc123", result["access_token"])
+    Assertions.assertEquals("my-store.myshopify.com", result["shop"])
   }
 }

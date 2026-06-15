@@ -11,6 +11,7 @@ import io.airbyte.oauth.BaseOAuth2Flow
 import io.airbyte.oauth.CLIENT_ID_KEY
 import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URI
@@ -19,6 +20,8 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Shopify Oauth.
@@ -134,7 +137,17 @@ class ShopifyOAuthFlow(
         .build()
     try {
       val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-      return extractOAuthOutput(Jsons.deserialize(response.body()), accessTokenUrl, shopName)
+      val responseBody = response.body()
+      val statusCode = response.statusCode()
+      if (statusCode !in 200..299) {
+        logger.error { "Shopify token exchange failed: HTTP $statusCode from $accessTokenUrl — $responseBody" }
+        val errorDetail = extractShopifyError(responseBody)
+        throw IOException(
+          "Shopify token exchange returned HTTP $statusCode" +
+            if (errorDetail != null) ": $errorDetail" else ". Response: $responseBody",
+        )
+      }
+      return extractOAuthOutput(Jsons.deserialize(responseBody), accessTokenUrl, shopName)
     } catch (e: InterruptedException) {
       throw IOException("Failed to complete OAuth flow", e)
     }
@@ -173,15 +186,24 @@ class ShopifyOAuthFlow(
     shopName: String,
   ): Map<String, Any> {
     val result: MutableMap<String, Any> = HashMap()
-    // getting out access_token
     if (data.has("access_token")) {
       result["access_token"] = data["access_token"].asText()
     } else {
-      throw IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl))
+      val errorField = if (data.has("error")) data["error"].asText() else null
+      val detail = errorField?.let { "error='$it'" } ?: "response=$data"
+      throw IOException("Missing 'access_token' in response from $accessTokenUrl ($detail)")
     }
     result["shop"] = shopName
     return result
   }
+
+  private fun extractShopifyError(responseBody: String): String? =
+    try {
+      val json = Jsons.deserialize(responseBody)
+      if (json.has("error")) json["error"].asText() else null
+    } catch (_: Exception) {
+      null
+    }
 
   companion object {
     private const val SHOP = "shop"
