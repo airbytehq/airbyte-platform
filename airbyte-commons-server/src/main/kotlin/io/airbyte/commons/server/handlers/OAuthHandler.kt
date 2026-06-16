@@ -864,6 +864,31 @@ open class OAuthHandler(
     oAuthService.deleteDestinationOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value)
   }
 
+  fun deleteWorkspaceOverrideOAuthParams(
+    workspaceId: UUID,
+    actorDefinitionId: ActorDefinitionId,
+    actorType: ActorTypeEnum,
+  ) {
+    when (actorType) {
+      ActorTypeEnum.SOURCE -> deleteSourceWorkspaceOverrideOauthParams(workspaceId, actorDefinitionId)
+      ActorTypeEnum.DESTINATION -> deleteDestinationWorkspaceOverrideOauthParams(workspaceId, actorDefinitionId)
+    }
+  }
+
+  fun deleteSourceWorkspaceOverrideOauthParams(
+    workspaceId: UUID,
+    actorDefinitionId: ActorDefinitionId,
+  ) {
+    oAuthService.deleteSourceOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value)
+  }
+
+  fun deleteDestinationWorkspaceOverrideOauthParams(
+    workspaceId: UUID,
+    actorDefinitionId: ActorDefinitionId,
+  ) {
+    oAuthService.deleteDestinationOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value)
+  }
+
   fun setSourceOrganizationOverrideOauthParams(
     organizationId: OrganizationId,
     actorDefinitionId: ActorDefinitionId,

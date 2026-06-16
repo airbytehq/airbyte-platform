@@ -102,7 +102,9 @@ paths:
       summary: "Delete OAuth override credentials for an organization and source/destination type."
       description:
         "Delete a set of OAuth credentials that overrides the Airbyte-provided\
-        \ OAuth credentials used for source/destination OAuth."
+        \ OAuth credentials used for source/destination OAuth.\n\n> \U0001F6A7 Warning\n\
+        >\n> Deleting an override that is actively used by existing sources or destinations\
+        \ will cause those connectors to fail on their next sync and require re-authentication."
 components:
   responses:
     InitiateOauthResponse:

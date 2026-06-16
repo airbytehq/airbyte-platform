@@ -85,6 +85,12 @@ interface WorkspaceService {
     workspaceId: UUID?,
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest?,
   ): Response
+
+  fun controllerDeleteWorkspaceOverrideOAuthParams(
+    workspaceId: UUID,
+    actorType: io.airbyte.publicApi.server.generated.models.ActorTypeEnum,
+    name: String,
+  ): Response
 }
 
 private val log = KotlinLogging.logger {}
@@ -363,6 +369,12 @@ open class WorkspaceServiceImpl(
   override fun controllerSetWorkspaceOverrideOAuthParams(
     workspaceId: UUID?,
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest?,
+  ): Response = Response.status(Response.Status.NOT_IMPLEMENTED).build()
+
+  override fun controllerDeleteWorkspaceOverrideOAuthParams(
+    workspaceId: UUID,
+    actorType: io.airbyte.publicApi.server.generated.models.ActorTypeEnum,
+    name: String,
   ): Response = Response.status(Response.Status.NOT_IMPLEMENTED).build()
 }
 

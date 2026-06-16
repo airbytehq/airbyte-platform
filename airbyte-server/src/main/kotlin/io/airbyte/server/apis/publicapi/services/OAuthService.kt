@@ -38,4 +38,10 @@ interface OAuthService {
     definitionId: UUID,
     oauthCredentialsConfiguration: JsonNode,
   )
+
+  fun deleteWorkspaceOverrideOAuthParams(
+    workspaceId: UUID,
+    actorType: ActorTypeEnum,
+    definitionId: UUID,
+  )
 }

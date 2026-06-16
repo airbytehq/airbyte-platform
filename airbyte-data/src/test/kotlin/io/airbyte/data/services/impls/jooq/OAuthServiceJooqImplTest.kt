@@ -323,6 +323,69 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Nested
+  internal inner class WorkspaceOverrideDeleteSourceTests {
+    @Test
+    fun testDeleteWorkspaceSourceOverrideRemovesOnlyTargetDefinition() {
+      val firstDefinitionId = ACTOR_DEFINITION_ID
+      val secondDefinitionId = UUID.randomUUID()
+      val firstParamId = UUID.randomUUID()
+      val secondParamId = UUID.randomUUID()
+
+      createActorOAuthParameter(firstParamId, Optional.of(WORKSPACE_ID), Optional.empty(), ActorType.SOURCE, firstDefinitionId)
+      createActorOAuthParameter(secondParamId, Optional.of(WORKSPACE_ID), Optional.empty(), ActorType.SOURCE, secondDefinitionId)
+
+      val deleted = oAuthService.deleteSourceOAuthParamByWorkspaceId(WORKSPACE_ID, firstDefinitionId)
+      Assertions.assertEquals(1, deleted)
+
+      Assertions.assertTrue(
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, firstDefinitionId).isEmpty,
+      )
+      Assertions.assertTrue(
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, secondDefinitionId).isPresent,
+      )
+    }
+
+    @Test
+    fun testDeleteWorkspaceSourceOverrideDoesNotAffectOtherWorkspaces() {
+      val definitionId = ACTOR_DEFINITION_ID
+      val wsParamId = UUID.randomUUID()
+      val otherWsParamId = UUID.randomUUID()
+
+      createActorOAuthParameter(wsParamId, Optional.of(WORKSPACE_ID), Optional.empty(), ActorType.SOURCE, definitionId)
+      createActorOAuthParameter(otherWsParamId, Optional.of(A_DIFFERENT_WORKSPACE_ID), Optional.empty(), ActorType.SOURCE, definitionId)
+
+      val deleted = oAuthService.deleteSourceOAuthParamByWorkspaceId(WORKSPACE_ID, definitionId)
+      Assertions.assertEquals(1, deleted)
+
+      Assertions.assertTrue(
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, definitionId).isEmpty,
+      )
+      Assertions.assertTrue(
+        oAuthService.getSourceOAuthParameterOptional(A_DIFFERENT_WORKSPACE_ID, definitionId).isPresent,
+      )
+    }
+
+    @Test
+    fun testDeleteWorkspaceSourceOverrideDoesNotRemoveOrganizationOverride() {
+      val definitionId = ACTOR_DEFINITION_ID
+      val workspaceParamId = UUID.randomUUID()
+      val organizationParamId = UUID.randomUUID()
+
+      createActorOAuthParameter(workspaceParamId, Optional.of(WORKSPACE_ID), Optional.empty(), ActorType.SOURCE, definitionId)
+      createActorOAuthParameter(organizationParamId, Optional.empty(), Optional.of(ORGANIZATION_ID), ActorType.SOURCE, definitionId)
+
+      val deleted = oAuthService.deleteSourceOAuthParamByWorkspaceId(WORKSPACE_ID, definitionId)
+      Assertions.assertEquals(1, deleted)
+
+      Assertions.assertTrue(
+        oAuthService
+          .getSourceOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.of(ORGANIZATION_ID), definitionId)
+          .isPresent,
+      )
+    }
+  }
+
+  @Nested
   internal inner class DestinationOAuthTests {
     @Test
     fun testGetInstanceWideDestinatonOAuthParam() {

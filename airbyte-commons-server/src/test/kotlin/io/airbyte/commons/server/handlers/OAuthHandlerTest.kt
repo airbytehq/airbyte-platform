@@ -181,6 +181,32 @@ internal class OAuthHandlerTest {
   }
 
   @Test
+  fun deleteWorkspaceSourceOverrideOauthParams() {
+    val workspaceId = UUID.randomUUID()
+    val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
+
+    every { oauthService.deleteSourceOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value) } returns 1
+
+    handler.deleteWorkspaceOverrideOAuthParams(workspaceId, actorDefinitionId, ActorTypeEnum.SOURCE)
+
+    verify { oauthService.deleteSourceOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value) }
+    verify(exactly = 0) { oauthService.deleteDestinationOAuthParamByWorkspaceId(any(), any()) }
+  }
+
+  @Test
+  fun deleteWorkspaceDestinationOverrideOauthParams() {
+    val workspaceId = UUID.randomUUID()
+    val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
+
+    every { oauthService.deleteDestinationOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value) } returns 1
+
+    handler.deleteWorkspaceOverrideOAuthParams(workspaceId, actorDefinitionId, ActorTypeEnum.DESTINATION)
+
+    verify { oauthService.deleteDestinationOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value) }
+    verify(exactly = 0) { oauthService.deleteSourceOAuthParamByWorkspaceId(any(), any()) }
+  }
+
+  @Test
   fun testBuildJsonPathFromOAuthFlowInitParameters() {
     val input =
       mapOf(

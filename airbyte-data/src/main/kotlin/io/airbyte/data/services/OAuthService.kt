@@ -80,4 +80,24 @@ interface OAuthService {
     organizationId: UUID,
     destinationDefinitionId: UUID,
   ): Int
+
+  /**
+   * Deletes the workspace-level source OAuth parameter override for the given definition.
+   *
+   * @return number of rows deleted.
+   */
+  fun deleteSourceOAuthParamByWorkspaceId(
+    workspaceId: UUID,
+    sourceDefinitionId: UUID,
+  ): Int
+
+  /**
+   * Deletes the workspace-level destination OAuth parameter override for the given definition.
+   *
+   * @return number of rows deleted.
+   */
+  fun deleteDestinationOAuthParamByWorkspaceId(
+    workspaceId: UUID,
+    destinationDefinitionId: UUID,
+  ): Int
 }

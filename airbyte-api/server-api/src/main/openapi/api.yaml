@@ -2149,6 +2149,47 @@ paths:
         type: string
       in: path
       required: true
+  /workspaces/{workspaceId}/oauthCredentials/{actorType}/{name}:
+    delete:
+      parameters:
+      - name: workspaceId
+        schema:
+          format: UUID
+          type: string
+        in: path
+        required: true
+      - name: actorType
+        schema:
+          $ref: '#/components/schemas/ActorTypeEnum'
+        in: path
+        required: true
+      - name: name
+        schema:
+          type: string
+        in: path
+        required: true
+        description: The name of the source or destination i.e. google-ads
+      tags:
+      - public_workspaces
+      - public
+      - Workspaces
+      responses:
+        '204':
+          description: OAuth credential override was deleted successfully.
+        '400':
+          description: A field in the path has not been set appropriately.
+        '403':
+          description: API key is invalid.
+      operationId: deleteWorkspaceOAuthCredentials
+      x-speakeasy-alias: deleteWorkspaceOAuthCredentials
+      x-speakeasy-group: Workspaces
+      summary: Delete OAuth override credentials for a workspace and source/destination type.
+      description: |-
+        Delete a set of OAuth credentials that overrides the Airbyte-provided OAuth credentials used for source/destination OAuth.
+
+        > 🚧Warning
+        >
+        > Deleting an override that is actively used by existing sources or destinations will cause those connectors to fail on their next sync and require re-authentication.
   /permissions/{permissionId}:
     parameters:
     - name: permissionId
@@ -2398,6 +2439,10 @@ paths:
       summary: Delete OAuth override credentials for an organization and source/destination type.
       description: |-
         Delete a set of OAuth credentials that overrides the Airbyte-provided OAuth credentials used for source/destination OAuth.
+
+        > 🚧Warning
+        >
+        > Deleting an override that is actively used by existing sources or destinations will cause those connectors to fail on their next sync and require re-authentication.
   /users:
     get:
       tags:
