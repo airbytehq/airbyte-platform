@@ -999,6 +999,20 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
+  fun testWebBackendGetConnectionWithDiscoveryFailureFallsBackToExistingCatalog() {
+    every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns
+      Optional.of(ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID()))
+    every { catalogService.getActorCatalogById(any()) } returns ActorCatalog().withId(UUID.randomUUID())
+    // A failed discover job returns a SourceDiscoverSchemaRead with jobInfo but no catalog.
+    every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns SourceDiscoverSchemaRead().jobInfo(mockk())
+
+    val result = testWebBackendGetConnection(true, connectionRead, operationReadList)
+
+    verify(exactly = 1) { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) }
+    Assertions.assertEquals(expectedNoDiscoveryWithNewSchema, result)
+  }
+
+  @Test
   fun testWebBackendGetConnectionNoDiscoveryWithNewSchemaBreaking() {
     every { connectionsHandler.getConnection(brokenConnectionRead.connectionId) } returns brokenConnectionRead
     every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns

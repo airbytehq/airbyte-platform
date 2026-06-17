@@ -403,7 +403,9 @@ class WebBackendConnectionsHandler(
     val diff: CatalogDiff?
     val syncCatalog: AirbyteCatalog
     val currentSourceCatalogId = Optional.ofNullable(connection.sourceCatalogId)
-    if (refreshedCatalog.isPresent) {
+    // A refreshed catalog with a null catalog means the discover job failed; fall back to the
+    // existing catalog instead of crashing on the null catalog below.
+    if (refreshedCatalog.isPresent && refreshedCatalog.get().catalog != null) {
       connection.sourceCatalogId(refreshedCatalog.get().catalogId)
             /*
              * constructs a full picture of all existing configured + all new / updated streams in the newest
