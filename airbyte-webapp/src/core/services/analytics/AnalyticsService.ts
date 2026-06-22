@@ -72,7 +72,13 @@ export class AnalyticsService {
       },
       {} as Record<string, string | number | boolean>
     );
-    this.getHockeyStackAnalytics()?.identify?.(userId, booleanNumberAndStringTraits);
+    const email = booleanNumberAndStringTraits.email;
+    if (typeof email === "string") {
+      this.getHockeyStackAnalytics()?.identify?.(email, {
+        ...booleanNumberAndStringTraits,
+        airbyte_user_id: userId,
+      });
+    }
   }
 
   public group(organisationId: string, traits: Record<string, unknown> = {}): void {
