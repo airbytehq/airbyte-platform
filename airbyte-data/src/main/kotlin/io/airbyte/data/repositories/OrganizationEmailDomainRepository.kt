@@ -23,6 +23,11 @@ interface OrganizationEmailDomainRepository : PageableRepository<OrganizationEma
     emailDomain: String,
   ): Boolean
 
+  fun existsByOrganizationIdAndEmailDomainIgnoreCase(
+    organizationId: UUID,
+    emailDomain: String,
+  ): Boolean
+
   fun findByOrganizationIdAndEmailDomain(
     organizationId: UUID,
     emailDomain: String,

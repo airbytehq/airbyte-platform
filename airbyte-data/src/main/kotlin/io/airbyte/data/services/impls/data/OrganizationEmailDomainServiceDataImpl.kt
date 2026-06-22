@@ -40,7 +40,7 @@ class OrganizationEmailDomainServiceDataImpl(
   override fun existsByOrganizationIdAndDomain(
     organizationId: UUID,
     domain: String,
-  ): Boolean = repository.existsByOrganizationIdAndEmailDomain(organizationId, domain)
+  ): Boolean = repository.existsByOrganizationIdAndEmailDomainIgnoreCase(organizationId, domain)
 
   override fun deleteByOrganizationIdAndDomain(
     organizationId: UUID,

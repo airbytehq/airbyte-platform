@@ -346,6 +346,27 @@ open class UserHandler
       }
     }
 
+    private fun validateSsoEmailDomainClaim(
+      incomingJwtUser: AuthenticatedUser,
+      ssoOrganization: Organization,
+    ) {
+      val emailDomain = incomingJwtUser.email.substringAfter("@").lowercase()
+      val orgId = ssoOrganization.organizationId
+      if (!organizationEmailDomainService.existsByOrganizationIdAndDomain(orgId, emailDomain)) {
+        log.warn {
+          "SSO login rejected: email domain '$emailDomain' is not claimed by organization $orgId"
+        }
+        // Clean up the attacker's just-created Keycloak user before rejecting
+        val authRealm = userAuthenticationResolver.resolveRealm()
+        if (authRealm != null) {
+          externalUserService.deleteUserByExternalId(incomingJwtUser.authUserId, authRealm)
+        }
+        throw OperationNotAllowedException(
+          "SSO provider is not authorized to authenticate users with this email domain.",
+        )
+      }
+    }
+
     private fun handleNewUserLogin(userToCreate: AuthenticatedUser): UserGetOrCreateByAuthIdResponse {
       val createdUser = createUserFromIncomingUser(userToCreate)
       handleUserPermissionsAndWorkspace(createdUser)
@@ -459,8 +480,15 @@ open class UserHandler
       // (1) Restrict logins for SSO domains
       handleSSORestrictions(incomingJwtUser, existingAuthUser.isPresent)
 
+      // SEC-14: Resolve the SSO organization for this request once, reused below.
+      val ssoOrg = ssoOrganizationIfExists
+
       // (2) Authenticate existing auth_user
       if (existingAuthUser.isPresent) {
+        // SEC-14: Validate domain claim on every SSO login, even for already-linked identities.
+        if (ssoOrg.isPresent) {
+          validateSsoEmailDomainClaim(incomingJwtUser, ssoOrg.get())
+        }
         val existingUser = existingAuthUser.get()
 
         // Support upgrading non-agentic users to agentic (one-way operation)
@@ -492,6 +520,7 @@ open class UserHandler
       }
 
       // (3) Handle non-existing auth_user
+
       var existingUserWithEmail = userPersistence.getUserByEmail(incomingJwtUser.email)
       if (existingUserWithEmail.isPresent && existingUserWithEmail.get().userId === DEFAULT_USER_ID) {
         // (Enterprise) If the email is already taken by the default user, we can safely clear it so the
@@ -504,6 +533,11 @@ open class UserHandler
 
       // (3a) Email has not been used before
       if (existingUserWithEmail.isEmpty) {
+        // SEC-14: Even for new users, validate the SSO provider is authorized for this domain.
+        // Prevents an attacker from squatting on victim emails before the victim signs up.
+        if (ssoOrg.isPresent) {
+          validateSsoEmailDomainClaim(incomingJwtUser, ssoOrg.get())
+        }
         return handleNewUserLogin(incomingJwtUser)
       }
 
@@ -511,13 +545,19 @@ open class UserHandler
       val existingUser = existingUserWithEmail.get()
       val existingUserRealms = getExistingUserRealms(existingUser.userId)
 
+      // SEC-14: If this is an SSO login, validate that the SSO provider is authorized
+      // to assert this email domain before any account migration or relinking.
+      if (ssoOrg.isPresent) {
+        validateSsoEmailDomainClaim(incomingJwtUser, ssoOrg.get())
+      }
+
       // (3b0) The existing user does not exist in any auth realm, relink it
       // This can happen if, for example, keycloak state is cleared on an enterprise installation
       if (existingUserRealms.isEmpty()) {
         return handleRelinkAuthUser(existingUser, incomingJwtUser)
       }
 
-      val isCurrentSignInSSO = ssoOrganizationIfExists.isPresent
+      val isCurrentSignInSSO = ssoOrg.isPresent
       val isExistingUserSSOAuthed = isAnyRealmSSO(existingUserRealms)
 
       // (3b1) This is the first SSO sign in for the user, migrate it for SSO

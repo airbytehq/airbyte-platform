@@ -26,6 +26,7 @@ import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.config.InitialUserConfig
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver
 import io.airbyte.commons.enums.convertTo
+import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.config.Application
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthUser
@@ -125,6 +126,11 @@ class UserHandlerTest {
     // ConfigurableSsoDefaultRole defaults ON in tests so existing assertions exercise the configured
     // role; prod default is OFF (dark launch). Flag-off behavior is covered explicitly below.
     whenever(featureFlagClient.boolVariation(eq(ConfigurableSsoDefaultRole), any()))
+      .thenReturn(true)
+
+    // SEC-14: Default domain validation to pass for any org/domain combo.
+    // Tests that exercise rejection override this to return false.
+    whenever(organizationEmailDomainService.existsByOrganizationIdAndDomain(any(), any()))
       .thenReturn(true)
 
     userHandler =
@@ -615,6 +621,9 @@ class UserHandlerTest {
             organization,
           ),
         )
+        // SEC-14: The email domain must be claimed by the SSO org for migration to proceed
+        whenever(organizationEmailDomainService.existsByOrganizationIdAndDomain(organization.organizationId, "airbyte.io"))
+          .thenReturn(true)
 
         whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
         whenever(userPersistence.getUserByAuthId(newAuthUserId))
@@ -693,6 +702,34 @@ class UserHandlerTest {
         val userRead = res.userRead
         Assertions.assertEquals(userRead.userId, existingUserId)
         Assertions.assertEquals(userRead.email, email)
+      }
+
+      @Test
+      fun testSsoLoginRejectedWhenEmailDomainNotClaimedByOrg() {
+        // An attacker sets up SSO in their own org and asserts a victim's email.
+        // The victim's email domain is NOT in the attacker's org's claimed domains.
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.existsByOrganizationIdAndDomain(organization.organizationId, "airbyte.io"))
+          .thenReturn(false)
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.empty<AuthenticatedUser>())
+        whenever(userPersistence.getUserByEmail(email)).thenReturn(Optional.of<User>(existingUser!!))
+        whenever(userPersistence.listAuthUsersForUser(existingUserId))
+          .thenReturn(listOf<AuthUser>(AuthUser().withAuthUserId(existingAuthUserId).withAuthProvider(AuthProvider.KEYCLOAK)))
+
+        Assertions.assertThrows(
+          OperationNotAllowedException::class.java,
+        ) { userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId)) }
+
+        // Verify no account migration occurred
+        Mockito.verify(userPersistence, Mockito.never()).replaceAuthUserForUserId(any(), any(), any())
+        // Verify Keycloak cleanup of the attacker's user
+        Mockito.verify(externalUserService).deleteUserByExternalId(newAuthUserId, ssoRealm)
       }
 
       private val existingUserId: UUID = UUID.randomUUID()
