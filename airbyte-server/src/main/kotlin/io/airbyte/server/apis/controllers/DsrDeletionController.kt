@@ -33,8 +33,10 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
+import jakarta.inject.Named
 import java.time.OffsetDateTime
 import java.util.UUID
+import java.util.concurrent.Executor
 
 private val log = KotlinLogging.logger {}
 
@@ -47,7 +49,7 @@ private val log = KotlinLogging.logger {}
  * 1. `POST /preview` resolves and stores the exact manifest Support must review. This endpoint is
  *    read-only.
  * 2. `POST /{requestId}/execute` validates request id, email, DataGrail id, and on-call issue
- *    number, then performs the irreversible deletes.
+ *    number, starts the irreversible deletes in the background, and returns a polling URL.
  */
 @Controller("/api/v1/internal/dsr")
 @Context
@@ -55,6 +57,7 @@ private val log = KotlinLogging.logger {}
 open class DsrDeletionController(
   private val dsrDeletionService: DsrDeletionService,
   private val objectMapper: ObjectMapper,
+  @Named(AirbyteTaskExecutors.DSR_DELETION) private val dsrDeletionExecutor: Executor,
 ) {
   @Post("/preview")
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -88,38 +91,67 @@ open class DsrDeletionController(
   open fun execute(
     @PathVariable requestId: UUID,
     @Body request: DsrExecuteRequest,
-  ): DsrExecuteResponse? =
+  ): HttpResponse<DsrExecuteResponse>? =
     execute {
       log.warn {
         "DSR execute endpoint called: requestId=$requestId, emailHash=${DsrDeletionService.emailHash(request.email)}, " +
           "datagrailId=${request.datagrailId}, oncallIssueNumber=${request.oncallIssueNumber}, executedBy=${request.executedBy}"
       }
       val result =
-        dsrDeletionService.execute(
+        dsrDeletionService.startExecution(
           requestId = requestId,
           email = request.email,
           datagrailId = request.datagrailId,
           oncallIssueNumber = request.oncallIssueNumber,
           executedBy = request.executedBy,
         )
+      if (result.started) {
+        enqueueDsrDeletion(requestId)
+      }
+      val statusUrl = "/api/v1/internal/dsr/$requestId"
+      val message =
+        if (result.started) {
+          "DSR deletion request accepted and started. Poll status_url for completion."
+        } else {
+          "DSR deletion request is already running. Poll status_url for completion."
+        }
       DsrExecuteResponse(
         requestId = result.requestId,
         status = result.status,
-        deletedJobsCount = result.deletedJobsCount,
-        deletedAttemptsCount = result.deletedAttemptsCount,
-        deletedConnectionsCount = result.deletedConnectionsCount,
-        deletedActorsCount = result.deletedActorsCount,
-        deletedBuilderProjectsCount = result.deletedBuilderProjectsCount,
-        deletedPermissionsCount = result.deletedPermissionsCount,
-        deletedWorkspacesCount = result.deletedWorkspacesCount,
-        deletedOrganizationsCount = result.deletedOrganizationsCount,
-        deletedAuthUsersCount = result.deletedAuthUsersCount,
-        tombstonedUser = result.tombstonedUser,
-        deletedKeycloakUserCount = result.deletedKeycloakUserCount,
-        terminatedTemporalWorkflowCount = result.terminatedTemporalWorkflowCount,
-        errors = result.errors,
-      )
+        started = result.started,
+        statusUrl = statusUrl,
+        message = message,
+      ).let { HttpResponse.status<DsrExecuteResponse>(HttpStatus.ACCEPTED).body(it) }
     }
+
+  private fun enqueueDsrDeletion(requestId: UUID) {
+    try {
+      dsrDeletionExecutor.execute {
+        runCatching {
+          dsrDeletionService.executeClaimedRequest(requestId)
+        }.onFailure { failure ->
+          if (failure !is DsrInvalidStateException) {
+            markRunningRequestFailed(requestId, failure)
+          }
+          log.error(failure) { "DSR background execution failed unexpectedly for request=$requestId" }
+        }
+      }
+    } catch (e: RuntimeException) {
+      markRunningRequestFailed(requestId, e)
+      throw e
+    }
+  }
+
+  private fun markRunningRequestFailed(
+    requestId: UUID,
+    failure: Throwable,
+  ) {
+    runCatching {
+      dsrDeletionService.failRunningRequestUnexpectedly(requestId, failure)
+    }.onFailure {
+      log.error(it) { "DSR failed to persist unexpected background failure for request=$requestId" }
+    }
+  }
 
   @Get("/{requestId}")
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -208,19 +240,9 @@ data class DsrExecuteRequest(
 data class DsrExecuteResponse(
   @JsonProperty("request_id") val requestId: UUID,
   @JsonProperty("status") val status: String,
-  @JsonProperty("deleted_jobs_count") val deletedJobsCount: Int,
-  @JsonProperty("deleted_attempts_count") val deletedAttemptsCount: Int,
-  @JsonProperty("deleted_connections_count") val deletedConnectionsCount: Int,
-  @JsonProperty("deleted_actors_count") val deletedActorsCount: Int,
-  @JsonProperty("deleted_builder_projects_count") val deletedBuilderProjectsCount: Int,
-  @JsonProperty("deleted_permissions_count") val deletedPermissionsCount: Int,
-  @JsonProperty("deleted_workspaces_count") val deletedWorkspacesCount: Int,
-  @JsonProperty("deleted_organizations_count") val deletedOrganizationsCount: Int,
-  @JsonProperty("deleted_auth_users_count") val deletedAuthUsersCount: Int,
-  @JsonProperty("tombstoned_user") val tombstonedUser: Boolean,
-  @JsonProperty("deleted_keycloak_user_count") val deletedKeycloakUserCount: Int,
-  @JsonProperty("terminated_temporal_workflow_count") val terminatedTemporalWorkflowCount: Int,
-  @JsonProperty("errors") val errors: List<String>,
+  @JsonProperty("started") val started: Boolean,
+  @JsonProperty("status_url") val statusUrl: String,
+  @JsonProperty("message") val message: String,
 )
 
 @Introspected
@@ -241,6 +263,7 @@ data class DsrRequestRead(
   @JsonProperty("manifest") val manifest: JsonNode,
   @JsonProperty("preview_warnings") val previewWarnings: JsonNode?,
   @JsonProperty("execution_errors") val executionErrors: JsonNode?,
+  @JsonProperty("execution_counts") val executionCounts: JsonNode?,
   @JsonProperty("previewed_at") val previewedAt: OffsetDateTime?,
   @JsonProperty("executed_at") val executedAt: OffsetDateTime?,
   @JsonProperty("completed_at") val completedAt: OffsetDateTime?,
@@ -265,6 +288,7 @@ private fun DataSubjectDeletionRequest.toRead(objectMapper: ObjectMapper): DsrRe
     manifest = objectMapper.readTree(manifest),
     previewWarnings = prepareWarnings?.let { objectMapper.readTree(it) },
     executionErrors = confirmErrors?.let { objectMapper.readTree(it) },
+    executionCounts = executionCounts?.let { objectMapper.readTree(it) },
     previewedAt = preparedAt,
     executedAt = confirmedAt,
     completedAt = completedAt,

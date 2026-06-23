@@ -14,6 +14,7 @@ import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.temporal.ConnectionManagerUtils
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthUser
+import io.airbyte.config.ConnectorBuilderProject
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
@@ -32,9 +33,11 @@ import io.airbyte.data.services.ConnectorBuilderService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.SourceService
+import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.db.ContextQueryFunction
 import io.airbyte.db.Database
 import io.airbyte.db.instance.configs.jooq.generated.enums.DataSubjectDeletionStatus
+import io.airbyte.domain.services.dsr.DsrDeletionRequestTimeoutService
 import io.airbyte.domain.services.dsr.DsrManifest
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.DbPrune
@@ -50,13 +53,20 @@ import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.lang.reflect.InvocationTargetException
+import java.time.Duration
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.Optional
 import java.util.UUID
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 internal class DsrDeletionServiceTest {
   private lateinit var userPersistence: UserPersistence
@@ -73,9 +83,12 @@ internal class DsrDeletionServiceTest {
   private lateinit var destinationHandler: DestinationHandler
   private lateinit var dbPrune: DbPrune
   private lateinit var deletionRequestRepository: DataSubjectDeletionRequestRepository
+  private lateinit var deletionRequestTimeoutService: DsrDeletionRequestTimeoutService
   private lateinit var configDatabase: Database
   private lateinit var metricClient: MetricClient
   private lateinit var objectMapper: ObjectMapper
+  private lateinit var executionHeartbeatExecutor: ScheduledExecutorService
+  private lateinit var executionHeartbeatFuture: ScheduledFuture<*>
   private lateinit var service: DsrDeletionService
   private var configDeletionCounts = DsrDeletionService.ConfigDeletionCounts.empty()
 
@@ -90,7 +103,16 @@ internal class DsrDeletionServiceTest {
   private val connectionId: UUID = UUID.randomUUID()
   private val sourceId: UUID = UUID.randomUUID()
   private val destinationId: UUID = UUID.randomUUID()
+  private val builderProjectId: UUID = UUID.randomUUID()
   private val permissionId: UUID = UUID.randomUUID()
+
+  private data class FinalizedExecution(
+    val finalStatus: DataSubjectDeletionStatus,
+    val scrubbedEmail: String,
+    val scrubbedManifest: String,
+    val confirmErrors: String?,
+    val executionCounts: String,
+  )
 
   @BeforeEach
   fun setup() {
@@ -108,8 +130,11 @@ internal class DsrDeletionServiceTest {
     destinationHandler = mockk(relaxed = true)
     dbPrune = mockk(relaxed = true)
     deletionRequestRepository = mockk(relaxed = true)
+    deletionRequestTimeoutService = mockk(relaxed = true)
     metricClient = mockk(relaxed = true)
     objectMapper = jacksonObjectMapper()
+    executionHeartbeatExecutor = mockk(relaxed = true)
+    executionHeartbeatFuture = mockk(relaxed = true)
     configDeletionCounts = DsrDeletionService.ConfigDeletionCounts.empty()
 
     configDatabase = mockk()
@@ -152,15 +177,36 @@ internal class DsrDeletionServiceTest {
         .withDestinationId(destinationId)
     every { sourceService.listWorkspaceSourceConnection(workspaceId) } returns
       listOf(SourceConnection().withSourceId(sourceId).withWorkspaceId(workspaceId).withName("postgres"))
+    every { sourceService.listWorkspacesSourceConnections(any()) } answers {
+      val query = firstArg<ResourcesQueryPaginated>()
+      if (workspaceId in query.workspaceIds) {
+        listOf(SourceConnection().withSourceId(sourceId).withWorkspaceId(workspaceId).withName("postgres"))
+      } else {
+        emptyList()
+      }
+    }
     every { sourceService.getSourceConnection(sourceId) } returns
       SourceConnection().withSourceId(sourceId).withWorkspaceId(workspaceId).withName("postgres")
     every { destinationService.listWorkspaceDestinationConnection(workspaceId) } returns
       listOf(DestinationConnection().withDestinationId(destinationId).withWorkspaceId(workspaceId).withName("bigquery"))
+    every { destinationService.listWorkspacesDestinationConnections(any()) } answers {
+      val query = firstArg<ResourcesQueryPaginated>()
+      if (workspaceId in query.workspaceIds) {
+        listOf(DestinationConnection().withDestinationId(destinationId).withWorkspaceId(workspaceId).withName("bigquery"))
+      } else {
+        emptyList()
+      }
+    }
     every { destinationService.getDestinationConnection(destinationId) } returns
       DestinationConnection().withDestinationId(destinationId).withWorkspaceId(workspaceId).withName("bigquery")
-    every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId) } returns
+    every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId) } answers {
       java.util.stream.Stream
         .empty()
+    }
+    every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId, true) } answers {
+      java.util.stream.Stream
+        .empty()
+    }
     every { permissionRepository.findByUserId(userId) } returns
       listOf(
         Permission(
@@ -184,6 +230,14 @@ internal class DsrDeletionServiceTest {
       arg.id = arg.id ?: UUID.randomUUID()
       arg
     }
+    every { deletionRequestRepository.markRunningExecutionStarted(any(), any()) } returns 1
+    every { deletionRequestRepository.heartbeatRunningExecution(any(), any()) } returns 1
+    every { deletionRequestRepository.finalizeRunningExecutionIfActive(any(), any(), any(), any(), any(), any(), any()) } returns 1
+    every { deletionRequestRepository.failRunningExecutionIfRunning(any(), any(), any(), any(), any(), any()) } returns 1
+    every {
+      executionHeartbeatExecutor.scheduleAtFixedRate(any(), any(), any(), TimeUnit.MILLISECONDS)
+    } returns executionHeartbeatFuture
+    every { executionHeartbeatFuture.cancel(false) } returns true
 
     service = buildService()
   }
@@ -204,9 +258,13 @@ internal class DsrDeletionServiceTest {
       destinationHandler = destinationHandler,
       dbPrune = dbPrune,
       deletionRequestRepository = deletionRequestRepository,
+      deletionRequestTimeoutService = deletionRequestTimeoutService,
       objectMapper = objectMapper,
       metricClient = metricClient,
       configDatabase = configDatabase,
+      executionTimeout = Duration.ofMinutes(30),
+      executionHeartbeatExecutor = executionHeartbeatExecutor,
+      executionHeartbeatInterval = Duration.ofMinutes(1),
     ) {
       override fun hardDeleteConfigRows(
         ctx: DSLContext,
@@ -215,6 +273,49 @@ internal class DsrDeletionServiceTest {
         syncWorkloadIds: List<String>,
       ): DsrDeletionService.ConfigDeletionCounts = configDeletionCounts
     }
+
+  private fun captureActiveFinalization(
+    requestId: UUID,
+    updatedRows: Int = 1,
+  ): MutableList<FinalizedExecution> {
+    val finalizations = mutableListOf<FinalizedExecution>()
+    every {
+      deletionRequestRepository.finalizeRunningExecutionIfActive(requestId, any(), any(), any(), any(), any(), any())
+    } answers {
+      val args = invocation.args
+      finalizations.add(
+        FinalizedExecution(
+          finalStatus = args[1] as DataSubjectDeletionStatus,
+          scrubbedEmail = args[3] as String,
+          scrubbedManifest = args[4] as String,
+          confirmErrors = args[5] as String?,
+          executionCounts = args[6] as String,
+        ),
+      )
+      updatedRows
+    }
+    return finalizations
+  }
+
+  private fun captureUnexpectedFailureFinalization(requestId: UUID): MutableList<FinalizedExecution> {
+    val finalizations = mutableListOf<FinalizedExecution>()
+    every {
+      deletionRequestRepository.failRunningExecutionIfRunning(requestId, any(), any(), any(), any(), any())
+    } answers {
+      val args = invocation.args
+      finalizations.add(
+        FinalizedExecution(
+          finalStatus = DataSubjectDeletionStatus.failed,
+          scrubbedEmail = args[2] as String,
+          scrubbedManifest = args[3] as String,
+          confirmErrors = args[4] as String?,
+          executionCounts = args[5] as String,
+        ),
+      )
+      1
+    }
+    return finalizations
+  }
 
   @Test
   fun `workload prefix range condition renders C collation`() {
@@ -332,6 +433,78 @@ internal class DsrDeletionServiceTest {
   }
 
   @Test
+  fun `preview includes tombstoned source and destination actors from deleted workspaces`() {
+    val tombstonedSourceId = UUID.randomUUID()
+    val tombstonedDestinationId = UUID.randomUUID()
+    every { sourceService.listWorkspaceSourceConnection(workspaceId) } returns emptyList()
+    every { destinationService.listWorkspaceDestinationConnection(workspaceId) } returns emptyList()
+    every {
+      sourceService.listWorkspacesSourceConnections(match { it.workspaceIds == listOf(workspaceId) && it.includeDeleted })
+    } returns
+      listOf(
+        SourceConnection()
+          .withSourceId(tombstonedSourceId)
+          .withWorkspaceId(workspaceId)
+          .withName("deleted postgres")
+          .withTombstone(true),
+      )
+    every {
+      destinationService.listWorkspacesDestinationConnections(match { it.workspaceIds == listOf(workspaceId) && it.includeDeleted })
+    } returns
+      listOf(
+        DestinationConnection()
+          .withDestinationId(tombstonedDestinationId)
+          .withWorkspaceId(workspaceId)
+          .withName("deleted bigquery")
+          .withTombstone(true),
+      )
+    every { connectionService.getStandardSync(connectionId) } returns
+      StandardSync()
+        .withConnectionId(connectionId)
+        .withSourceId(tombstonedSourceId)
+        .withDestinationId(tombstonedDestinationId)
+
+    val result = service.preview(email, datagrailId, oncallIssueNumber, requestedBy)
+
+    assertEquals(listOf(tombstonedSourceId), result.manifest.sourceIds)
+    assertEquals(listOf(tombstonedDestinationId), result.manifest.destinationIds)
+    assertEquals(
+      listOf(DsrManifest.ManifestConnection(connectionId, tombstonedSourceId, "deleted postgres", tombstonedDestinationId, "deleted bigquery")),
+      result.manifest.connectionRefs,
+    )
+  }
+
+  @Test
+  fun `preview includes tombstoned connector builder projects from deleted workspaces`() {
+    val tombstonedBuilderProjectId = UUID.randomUUID()
+    every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId) } answers {
+      java.util.stream.Stream.of(
+        ConnectorBuilderProject()
+          .withBuilderProjectId(builderProjectId)
+          .withWorkspaceId(workspaceId)
+          .withName("active builder project"),
+      )
+    }
+    every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId, true) } answers {
+      java.util.stream.Stream.of(
+        ConnectorBuilderProject()
+          .withBuilderProjectId(builderProjectId)
+          .withWorkspaceId(workspaceId)
+          .withName("active builder project"),
+        ConnectorBuilderProject()
+          .withBuilderProjectId(tombstonedBuilderProjectId)
+          .withWorkspaceId(workspaceId)
+          .withName("deleted builder project")
+          .withTombstone(true),
+      )
+    }
+
+    val result = service.preview(email, datagrailId, oncallIssueNumber, requestedBy)
+
+    assertEquals(listOf(builderProjectId, tombstonedBuilderProjectId), result.manifest.connectorBuilderProjectIds)
+  }
+
+  @Test
   fun `preview is idempotent when an active request already exists`() {
     val existing =
       DataSubjectDeletionRequest(
@@ -366,7 +539,174 @@ internal class DsrDeletionServiceTest {
   }
 
   @Test
-  fun `execute rejects when status is not PREVIEWED`() {
+  fun `startExecution claims a PREVIEWED request and does not run destructive work`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.previewed,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(emptyManifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every {
+      deletionRequestRepository.markRunningIfPreviewed(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io", any())
+    } returns 1
+
+    val result = service.startExecution(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
+
+    assertEquals(requestId, result.requestId)
+    assertEquals("RUNNING", result.status)
+    assertTrue(result.started)
+    verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
+    verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
+    verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
+  }
+
+  @Test
+  fun `startExecution is idempotent for a matching RUNNING request`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        confirmedBy = "reviewer@airbyte.io",
+        manifest = objectMapper.writeValueAsString(emptyManifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every {
+      deletionRequestRepository.refreshQueuedRunningIfTimedOut(
+        requestId = requestId,
+        email = email,
+        datagrailId = datagrailId,
+        oncallIssueNumber = oncallIssueNumber,
+        queuedBefore = any(),
+        refreshedAt = any(),
+      )
+    } returns 0
+    every { deletionRequestTimeoutService.failTimedOutActiveRequest(requestId, Duration.ofMinutes(30)) } returns false
+
+    val result = service.startExecution(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
+
+    assertEquals(requestId, result.requestId)
+    assertEquals("RUNNING", result.status)
+    assertFalse(result.started)
+    verify(exactly = 0) {
+      deletionRequestRepository.markRunningIfPreviewed(any(), any(), any(), any(), any(), any())
+    }
+    verify(exactly = 1) {
+      deletionRequestTimeoutService.failTimedOutActiveRequest(requestId, Duration.ofMinutes(30))
+    }
+    verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
+    verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
+    verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
+  }
+
+  @Test
+  fun `startExecution requeues a matching stale queued RUNNING request`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        confirmedBy = "reviewer@airbyte.io",
+        confirmedAt = OffsetDateTime.now(ZoneOffset.UTC).minusHours(1),
+        updatedAt = OffsetDateTime.now(ZoneOffset.UTC).minusHours(1),
+        manifest = objectMapper.writeValueAsString(emptyManifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every {
+      deletionRequestRepository.refreshQueuedRunningIfTimedOut(
+        requestId = requestId,
+        email = email,
+        datagrailId = datagrailId,
+        oncallIssueNumber = oncallIssueNumber,
+        queuedBefore = any(),
+        refreshedAt = any(),
+      )
+    } returns 1
+
+    val result = service.startExecution(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
+
+    assertEquals(requestId, result.requestId)
+    assertEquals("RUNNING", result.status)
+    assertTrue(result.started)
+    verify(exactly = 0) {
+      deletionRequestRepository.markRunningIfPreviewed(any(), any(), any(), any(), any(), any())
+    }
+    verify(exactly = 0) {
+      deletionRequestTimeoutService.failTimedOutActiveRequest(any(), any())
+    }
+    verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
+    verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
+    verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
+  }
+
+  @Test
+  fun `startExecution marks a timed out RUNNING request failed and refuses to start another worker`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        confirmedBy = "reviewer@airbyte.io",
+        manifest = objectMapper.writeValueAsString(emptyManifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every {
+      deletionRequestRepository.refreshQueuedRunningIfTimedOut(
+        requestId = requestId,
+        email = email,
+        datagrailId = datagrailId,
+        oncallIssueNumber = oncallIssueNumber,
+        queuedBefore = any(),
+        refreshedAt = any(),
+      )
+    } returns 0
+    every { deletionRequestTimeoutService.failTimedOutActiveRequest(requestId, Duration.ofMinutes(30)) } returns true
+
+    val error =
+      assertThrows<DsrInvalidStateException> {
+        service.startExecution(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
+      }
+
+    assertTrue(error.message!!.contains("timed out"))
+    verify(exactly = 0) {
+      deletionRequestRepository.markRunningIfPreviewed(any(), any(), any(), any(), any(), any())
+    }
+    verify(exactly = 1) {
+      deletionRequestTimeoutService.failTimedOutActiveRequest(requestId, Duration.ofMinutes(30))
+    }
+    verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
+    verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
+    verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
+  }
+
+  @Test
+  fun `startExecution rejects terminal statuses`() {
     val requestId = UUID.randomUUID()
     val row =
       DataSubjectDeletionRequest(
@@ -383,7 +723,7 @@ internal class DsrDeletionServiceTest {
     every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
 
     assertThrows<DsrInvalidStateException> {
-      service.execute(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
+      service.startExecution(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
     }
   }
 
@@ -405,13 +745,13 @@ internal class DsrDeletionServiceTest {
     every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
 
     assertThrows<DsrInvalidConfirmationException> {
-      service.execute(requestId, "other@example.com", datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
+      service.startExecution(requestId, "other@example.com", datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
     }
     assertThrows<DsrInvalidConfirmationException> {
-      service.execute(requestId, email, "wrong-dg-id", oncallIssueNumber, "reviewer@airbyte.io")
+      service.startExecution(requestId, email, "wrong-dg-id", oncallIssueNumber, "reviewer@airbyte.io")
     }
     assertThrows<DsrInvalidConfirmationException> {
-      service.execute(requestId, email, datagrailId, "ONCALL-9999", "reviewer@airbyte.io")
+      service.startExecution(requestId, email, datagrailId, "ONCALL-9999", "reviewer@airbyte.io")
     }
   }
 
@@ -436,7 +776,7 @@ internal class DsrDeletionServiceTest {
     } returns 0
 
     assertThrows<DsrInvalidStateException> {
-      service.execute(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
+      service.startExecution(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
     }
 
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
@@ -453,28 +793,27 @@ internal class DsrDeletionServiceTest {
         email = email,
         emailHash = emailHash,
         datagrailId = datagrailId,
-        status = DataSubjectDeletionStatus.previewed,
+        status = DataSubjectDeletionStatus.running,
         userId = userId,
         requestedBy = requestedBy,
         oncallIssueNumber = oncallIssueNumber,
         manifest = objectMapper.writeValueAsString(emptyManifest()),
       )
     every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
-    every {
-      deletionRequestRepository.markRunningIfPreviewed(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io", any())
-    } returns 1
-    val finalRowSlot = slot<DataSubjectDeletionRequest>()
-    every { deletionRequestRepository.update(capture(finalRowSlot)) } answers { finalRowSlot.captured }
+    val finalizations = captureActiveFinalization(requestId)
 
-    val result = service.execute(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
+    val result = service.executeClaimedRequest(requestId)
 
     assertEquals("FAILED", result.status)
     assertEquals(0, result.deletedConnectionsCount)
     assertTrue(result.errors.single().contains("Preview manifest is stale"))
-    assertEquals(DataSubjectDeletionStatus.failed, finalRowSlot.captured.status)
-    assertEquals(datagrailId, finalRowSlot.captured.email)
-    assertFalse(finalRowSlot.captured.manifest.contains(email))
-    assertFalse(finalRowSlot.captured.manifest.contains(connectionId.toString()))
+    assertEquals(DataSubjectDeletionStatus.failed, finalizations.single().finalStatus)
+    assertEquals(datagrailId, finalizations.single().scrubbedEmail)
+    val executionCounts = objectMapper.readTree(finalizations.single().executionCounts)
+    assertEquals(0, executionCounts.get("deleted_jobs_count").asInt())
+    assertEquals(0, executionCounts.get("deleted_keycloak_user_count").asInt())
+    assertFalse(finalizations.single().scrubbedManifest.contains(email))
+    assertFalse(finalizations.single().scrubbedManifest.contains(connectionId.toString()))
 
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
     verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
@@ -492,31 +831,66 @@ internal class DsrDeletionServiceTest {
         email = email,
         emailHash = emailHash,
         datagrailId = datagrailId,
-        status = DataSubjectDeletionStatus.previewed,
+        status = DataSubjectDeletionStatus.running,
         userId = userId,
         requestedBy = requestedBy,
         oncallIssueNumber = oncallIssueNumber,
         manifest = "{not valid json",
       )
     every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
-    every {
-      deletionRequestRepository.markRunningIfPreviewed(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io", any())
-    } returns 1
-    val finalRowSlot = slot<DataSubjectDeletionRequest>()
-    every { deletionRequestRepository.update(capture(finalRowSlot)) } answers { finalRowSlot.captured }
+    val finalizations = captureActiveFinalization(requestId)
 
-    val result = service.execute(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
+    val result = service.executeClaimedRequest(requestId)
 
     assertEquals("FAILED", result.status)
     assertTrue(result.errors.single().contains("Stored preview manifest could not be parsed"))
-    assertEquals(DataSubjectDeletionStatus.failed, finalRowSlot.captured.status)
-    assertEquals(datagrailId, finalRowSlot.captured.email)
+    assertEquals(DataSubjectDeletionStatus.failed, finalizations.single().finalStatus)
+    assertEquals(datagrailId, finalizations.single().scrubbedEmail)
+    val executionCounts = objectMapper.readTree(finalizations.single().executionCounts)
+    assertEquals(0, executionCounts.get("deleted_attempts_count").asInt())
+    assertFalse(executionCounts.has("errors"))
 
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
     verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
     verify(exactly = 0) { sourceHandler.deleteSource(any<SourceIdRequestBody>()) }
     verify(exactly = 0) { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) }
     verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
+  }
+
+  @Test
+  fun `executeClaimedRequest refuses duplicate active workers before destructive work`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        confirmedAt = OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(5),
+        updatedAt = OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(4),
+        manifest = objectMapper.writeValueAsString(manifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every { deletionRequestRepository.markRunningExecutionStarted(requestId, any()) } returns 0
+
+    val error =
+      assertThrows<DsrInvalidStateException> {
+        service.executeClaimedRequest(requestId)
+      }
+
+    assertTrue(error.message!!.contains("already being executed"))
+    verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
+    verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
+    verify(exactly = 0) { sourceHandler.deleteSource(any<SourceIdRequestBody>()) }
+    verify(exactly = 0) { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) }
+    verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
+    verify(exactly = 0) {
+      executionHeartbeatExecutor.scheduleAtFixedRate(any(), any(), any(), any())
+    }
   }
 
   @Test
@@ -552,9 +926,14 @@ internal class DsrDeletionServiceTest {
       )
     every { destinationService.getDestinationConnection(organizationDestinationId) } returns
       DestinationConnection().withDestinationId(organizationDestinationId).withWorkspaceId(organizationWorkspaceId).withName("org destination")
-    every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(organizationWorkspaceId) } returns
+    every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(organizationWorkspaceId) } answers {
       java.util.stream.Stream
         .empty()
+    }
+    every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(organizationWorkspaceId, true) } answers {
+      java.util.stream.Stream
+        .empty()
+    }
     every {
       dbPrune.countJobsAndAttemptsByScopes(listOf(connectionId.toString(), organizationConnectionId.toString()))
     } returns DbPrune.JobScopeCounts(jobCount = 11L, attemptCount = 13L)
@@ -569,7 +948,7 @@ internal class DsrDeletionServiceTest {
   }
 
   @Test
-  fun `execute terminates workflows before deletion and scrubs persisted PII`() {
+  fun `executeClaimedRequest terminates workflows before deletion and scrubs persisted PII`() {
     val requestId = UUID.randomUUID()
     val row =
       DataSubjectDeletionRequest(
@@ -577,7 +956,7 @@ internal class DsrDeletionServiceTest {
         email = email,
         emailHash = emailHash,
         datagrailId = datagrailId,
-        status = DataSubjectDeletionStatus.previewed,
+        status = DataSubjectDeletionStatus.running,
         userId = userId,
         requestedBy = requestedBy,
         oncallIssueNumber = oncallIssueNumber,
@@ -585,9 +964,6 @@ internal class DsrDeletionServiceTest {
         prepareWarnings = objectMapper.writeValueAsString(listOf("No Keycloak user was found for $email")),
       )
     every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
-    every {
-      deletionRequestRepository.markRunningIfPreviewed(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io", any())
-    } returns 1
     every { connectionManagerUtils.terminateWorkflow(connectionId, any()) } just Runs
     every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns
       listOf("${connectionId}_101_0_sync")
@@ -605,10 +981,9 @@ internal class DsrDeletionServiceTest {
         authUsers = 1,
         userTombstoned = true,
       )
-    val finalRowSlot = slot<DataSubjectDeletionRequest>()
-    every { deletionRequestRepository.update(capture(finalRowSlot)) } answers { finalRowSlot.captured }
+    val finalizations = captureActiveFinalization(requestId)
 
-    val result = service.execute(requestId, email, datagrailId, oncallIssueNumber, "reviewer@airbyte.io")
+    val result = service.executeClaimedRequest(requestId)
 
     assertEquals("COMPLETED", result.status)
     assertEquals(1, result.terminatedTemporalWorkflowCount)
@@ -616,24 +991,109 @@ internal class DsrDeletionServiceTest {
     assertEquals(9, result.deletedAttemptsCount)
 
     verifyOrder {
+      deletionRequestRepository.markRunningExecutionStarted(requestId, any())
+      executionHeartbeatExecutor.scheduleAtFixedRate(any(), 60000L, 60000L, TimeUnit.MILLISECONDS)
       connectionManagerUtils.terminateWorkflow(connectionId, any())
       dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString()))
       dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString()))
       sourceHandler.deleteSource(any<SourceIdRequestBody>())
       destinationHandler.deleteDestination(any<DestinationIdRequestBody>())
       externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM)
+      executionHeartbeatFuture.cancel(false)
     }
 
-    val finalRow = finalRowSlot.captured
-    assertEquals(DataSubjectDeletionStatus.completed, finalRow.status)
-    assertEquals(datagrailId, finalRow.email)
-    assertEquals(emailHash, finalRow.emailHash)
-    assertEquals(null, finalRow.prepareWarnings)
-    assertEquals(null, finalRow.confirmErrors)
-    assertFalse(finalRow.manifest.contains(email))
-    assertFalse(finalRow.manifest.contains("Davin"))
-    assertFalse(finalRow.manifest.contains("postgres"))
-    assertFalse(finalRow.manifest.contains("bigquery"))
+    val finalization = finalizations.single()
+    assertEquals(DataSubjectDeletionStatus.completed, finalization.finalStatus)
+    assertEquals(datagrailId, finalization.scrubbedEmail)
+    assertNull(finalization.confirmErrors)
+    val executionCounts = objectMapper.readTree(finalization.executionCounts)
+    assertEquals(7, executionCounts.get("deleted_jobs_count").asInt())
+    assertEquals(9, executionCounts.get("deleted_attempts_count").asInt())
+    assertEquals(1, executionCounts.get("deleted_connections_count").asInt())
+    assertEquals(2, executionCounts.get("deleted_actors_count").asInt())
+    assertEquals(1, executionCounts.get("deleted_keycloak_user_count").asInt())
+    assertEquals(1, executionCounts.get("terminated_temporal_workflow_count").asInt())
+    assertTrue(executionCounts.get("tombstoned_user").asBoolean())
+    assertFalse(executionCounts.has("errors"))
+    assertFalse(finalization.scrubbedManifest.contains(email))
+    assertFalse(finalization.scrubbedManifest.contains("Davin"))
+    assertFalse(finalization.scrubbedManifest.contains("postgres"))
+    assertFalse(finalization.scrubbedManifest.contains("bigquery"))
+  }
+
+  @Test
+  fun `executeClaimedRequest persists sanitized errors and partial execution counts`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(manifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every { connectionManagerUtils.terminateWorkflow(connectionId, any()) } just Runs
+    every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns
+      listOf("${connectionId}_101_0_sync")
+    every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
+      DbPrune.JobDeletionCounts(deletedJobsCount = 7, deletedAttemptsCount = 9)
+    every { configDatabase.transaction<DsrDeletionService.ConfigDeletionCounts>(any()) } throws
+      RuntimeException("Config DB purge failed for $email")
+    val finalizations = captureActiveFinalization(requestId)
+
+    val result = service.executeClaimedRequest(requestId)
+
+    assertEquals("FAILED", result.status)
+    assertEquals(7, result.deletedJobsCount)
+    assertEquals(9, result.deletedAttemptsCount)
+    assertTrue(result.errors.single().contains(datagrailId))
+    assertFalse(result.errors.single().contains(email))
+    assertEquals(DataSubjectDeletionStatus.failed, finalizations.single().finalStatus)
+    assertFalse(finalizations.single().confirmErrors!!.contains(email))
+    val executionCounts = objectMapper.readTree(finalizations.single().executionCounts)
+    assertEquals(7, executionCounts.get("deleted_jobs_count").asInt())
+    assertEquals(9, executionCounts.get("deleted_attempts_count").asInt())
+    assertEquals(0, executionCounts.get("deleted_connections_count").asInt())
+    assertEquals(1, executionCounts.get("terminated_temporal_workflow_count").asInt())
+    verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
+  }
+
+  @Test
+  fun `executeClaimedRequest does not blindly overwrite terminal timeout recovery`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(manifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every { connectionManagerUtils.terminateWorkflow(connectionId, any()) } just Runs
+    every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns
+      listOf("${connectionId}_101_0_sync")
+    every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
+      DbPrune.JobDeletionCounts(deletedJobsCount = 7, deletedAttemptsCount = 9)
+    every { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns 1
+    captureActiveFinalization(requestId, updatedRows = 0)
+
+    val error =
+      assertThrows<DsrInvalidStateException> {
+        service.executeClaimedRequest(requestId)
+      }
+
+    assertTrue(error.message!!.contains("already reached a terminal state"))
+    verify(exactly = 0) { deletionRequestRepository.update(any()) }
   }
 
   @Test
@@ -721,6 +1181,43 @@ internal class DsrDeletionServiceTest {
     assertTrue(json.contains("\"datagrail_id\""))
     val parsed: DsrManifest = objectMapper.readValue(json)
     assertEquals(manifest, parsed)
+  }
+
+  @Test
+  fun `failRunningRequestUnexpectedly marks a running request failed and scrubs PII`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        confirmedBy = "reviewer@airbyte.io",
+        manifest = objectMapper.writeValueAsString(emptyManifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    val finalizations = captureUnexpectedFailureFinalization(requestId)
+
+    val result =
+      service.failRunningRequestUnexpectedly(
+        requestId,
+        IllegalStateException("Unexpected background failure for $email"),
+      )
+
+    assertNotNull(result)
+    assertEquals("FAILED", result!!.status)
+    assertEquals(DataSubjectDeletionStatus.failed, finalizations.single().finalStatus)
+    assertEquals(datagrailId, finalizations.single().scrubbedEmail)
+    assertFalse(finalizations.single().scrubbedManifest.contains(email))
+    assertFalse(finalizations.single().confirmErrors!!.contains(email))
+    assertTrue(finalizations.single().confirmErrors!!.contains(datagrailId))
+    val executionCounts = objectMapper.readTree(finalizations.single().executionCounts)
+    assertEquals(0, executionCounts.get("deleted_jobs_count").asInt())
+    assertEquals(0, executionCounts.get("deleted_keycloak_user_count").asInt())
   }
 
   @Test

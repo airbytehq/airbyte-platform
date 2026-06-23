@@ -1,4 +1,8 @@
 micronaut:
+  executors:
+    dsr-deletion-heartbeat:
+      type: scheduled
+      core-pool-size: 1
   netty:
     event-loops:
       other:

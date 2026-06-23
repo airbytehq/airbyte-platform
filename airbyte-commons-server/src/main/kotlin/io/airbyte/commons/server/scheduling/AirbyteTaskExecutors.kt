@@ -25,5 +25,7 @@ interface AirbyteTaskExecutors : TaskExecutors {
     const val PUBLIC_API = "public-api"
     const val WEBHOOK = "webhook"
     const val WORKLOAD = "workload"
+    const val DSR_DELETION = "dsr-deletion"
+    const val DSR_DELETION_HEARTBEAT = "dsr-deletion-heartbeat"
   }
 }

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
+import java.util.concurrent.Executor
 
 internal class DsrDeletionControllerTest {
   private lateinit var dsrDeletionService: DsrDeletionService
@@ -41,7 +42,7 @@ internal class DsrDeletionControllerTest {
   @BeforeEach
   fun setUp() {
     dsrDeletionService = mockk(relaxed = false)
-    controller = DsrDeletionController(dsrDeletionService, objectMapper)
+    controller = DsrDeletionController(dsrDeletionService, objectMapper, Executor { it.run() })
   }
 
   @Test
@@ -75,10 +76,16 @@ internal class DsrDeletionControllerTest {
   }
 
   @Test
-  fun `execute delegates to service and surfaces deletion counts`() {
+  fun `execute claims the request, enqueues deletion, and returns accepted`() {
     every {
-      dsrDeletionService.execute(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, executedBy)
     } returns
+      DsrDeletionService.StartExecutionResult(
+        requestId = requestId,
+        status = "RUNNING",
+        started = true,
+      )
+    every { dsrDeletionService.executeClaimedRequest(requestId) } returns
       DsrDeletionService.ExecuteResult(
         requestId = requestId,
         status = "COMPLETED",
@@ -109,12 +116,126 @@ internal class DsrDeletionControllerTest {
       )
 
     assertNotNull(resp)
-    assertEquals("COMPLETED", resp!!.status)
-    assertEquals(17, resp.deletedJobsCount)
-    assertEquals(34, resp.deletedAttemptsCount)
-    assertEquals(2, resp.terminatedTemporalWorkflowCount)
-    assertEquals(true, resp.tombstonedUser)
-    assertEquals(0, resp.errors.size)
+    assertEquals(202, resp!!.status.code)
+    val body = resp.body()
+    assertNotNull(body)
+    assertEquals(requestId, body.requestId)
+    assertEquals("RUNNING", body.status)
+    assertEquals(true, body.started)
+    assertEquals("/api/v1/internal/dsr/$requestId", body.statusUrl)
+    assertEquals("DSR deletion request accepted and started. Poll status_url for completion.", body.message)
+    verify(exactly = 1) { dsrDeletionService.executeClaimedRequest(requestId) }
+  }
+
+  @Test
+  fun `execute marks the request failed when background deletion throws unexpectedly`() {
+    val failure = IllegalStateException("background failure")
+    every {
+      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+    } returns
+      DsrDeletionService.StartExecutionResult(
+        requestId = requestId,
+        status = "RUNNING",
+        started = true,
+      )
+    every { dsrDeletionService.executeClaimedRequest(requestId) } throws failure
+    every { dsrDeletionService.failRunningRequestUnexpectedly(requestId, any<Throwable>()) } returns
+      DsrDeletionService.ExecuteResult(
+        requestId = requestId,
+        status = "FAILED",
+        deletedJobsCount = 0,
+        deletedAttemptsCount = 0,
+        deletedConnectionsCount = 0,
+        deletedActorsCount = 0,
+        deletedBuilderProjectsCount = 0,
+        deletedPermissionsCount = 0,
+        deletedWorkspacesCount = 0,
+        deletedOrganizationsCount = 0,
+        deletedAuthUsersCount = 0,
+        tombstonedUser = false,
+        deletedKeycloakUserCount = 0,
+        terminatedTemporalWorkflowCount = 0,
+        errors = listOf("Background execution failed unexpectedly: background failure"),
+      )
+
+    val resp =
+      controller.execute(
+        requestId,
+        DsrExecuteRequest(
+          email = email,
+          datagrailId = datagrailId,
+          oncallIssueNumber = oncallIssueNumber,
+          executedBy = executedBy,
+        ),
+      )
+
+    assertNotNull(resp)
+    assertEquals(202, resp!!.status.code)
+    verify(exactly = 1) { dsrDeletionService.executeClaimedRequest(requestId) }
+    verify(exactly = 1) { dsrDeletionService.failRunningRequestUnexpectedly(requestId, failure) }
+  }
+
+  @Test
+  fun `execute does not mark the request failed when duplicate worker sees an active execution`() {
+    val failure = DsrInvalidStateException("Deletion request $requestId is already being executed by another worker.")
+    every {
+      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+    } returns
+      DsrDeletionService.StartExecutionResult(
+        requestId = requestId,
+        status = "RUNNING",
+        started = true,
+      )
+    every { dsrDeletionService.executeClaimedRequest(requestId) } throws failure
+
+    val resp =
+      controller.execute(
+        requestId,
+        DsrExecuteRequest(
+          email = email,
+          datagrailId = datagrailId,
+          oncallIssueNumber = oncallIssueNumber,
+          executedBy = executedBy,
+        ),
+      )
+
+    assertNotNull(resp)
+    assertEquals(202, resp!!.status.code)
+    verify(exactly = 1) { dsrDeletionService.executeClaimedRequest(requestId) }
+    verify(exactly = 0) { dsrDeletionService.failRunningRequestUnexpectedly(any(), any()) }
+  }
+
+  @Test
+  fun `execute returns accepted without enqueueing when request is already running`() {
+    every {
+      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+    } returns
+      DsrDeletionService.StartExecutionResult(
+        requestId = requestId,
+        status = "RUNNING",
+        started = false,
+      )
+
+    val resp =
+      controller.execute(
+        requestId,
+        DsrExecuteRequest(
+          email = email,
+          datagrailId = datagrailId,
+          oncallIssueNumber = oncallIssueNumber,
+          executedBy = executedBy,
+        ),
+      )
+
+    assertNotNull(resp)
+    assertEquals(202, resp!!.status.code)
+    val body = resp.body()
+    assertNotNull(body)
+    assertEquals("RUNNING", body.status)
+    assertEquals(false, body.started)
+    assertEquals("/api/v1/internal/dsr/$requestId", body.statusUrl)
+    assertEquals("DSR deletion request is already running. Poll status_url for completion.", body.message)
+    verify(exactly = 0) { dsrDeletionService.executeClaimedRequest(any()) }
   }
 
   @Test
@@ -174,6 +295,43 @@ internal class DsrDeletionControllerTest {
     assertEquals(datagrailId, body.datagrailId)
     assertEquals(oncallIssueNumber, body.oncallIssueNumber)
     assertEquals(email, body.manifest.get("target_email").asText())
+    assertEquals(null, body.executionCounts)
+  }
+
+  @Test
+  fun `getById includes execution counts after execute completes`() {
+    every { dsrDeletionService.get(requestId) } returns
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = datagrailId,
+        emailHash = DsrDeletionService.emailHash(email),
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.completed,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(redactedManifest()),
+        executionCounts =
+          """
+          {
+            "deleted_jobs_count": 17,
+            "deleted_attempts_count": 34,
+            "deleted_connections_count": 2,
+            "tombstoned_user": true
+          }
+          """.trimIndent(),
+      )
+
+    val resp = controller.getById(requestId)
+    assertEquals(200, resp.status.code)
+    val body = resp.body()
+    assertNotNull(body)
+    assertEquals("COMPLETED", body.status)
+    assertNotNull(body.executionCounts)
+    assertEquals(17, body.executionCounts!!.get("deleted_jobs_count").asInt())
+    assertEquals(34, body.executionCounts!!.get("deleted_attempts_count").asInt())
+    assertEquals(2, body.executionCounts!!.get("deleted_connections_count").asInt())
+    assertEquals(true, body.executionCounts!!.get("tombstoned_user").asBoolean())
   }
 
   @Test
@@ -201,7 +359,7 @@ internal class DsrDeletionControllerTest {
 
   @Test
   fun `service exceptions propagate so controller error mapping can respond`() {
-    every { dsrDeletionService.execute(any(), any(), any(), any(), any()) } throws
+    every { dsrDeletionService.startExecution(any(), any(), any(), any(), any()) } throws
       DsrInvalidConfirmationException("nope")
     assertThrows<DsrInvalidConfirmationException> {
       controller.execute(
@@ -210,7 +368,7 @@ internal class DsrDeletionControllerTest {
       )
     }
 
-    every { dsrDeletionService.execute(any(), any(), any(), any(), any()) } throws
+    every { dsrDeletionService.startExecution(any(), any(), any(), any(), any()) } throws
       DsrInvalidStateException("nope")
     assertThrows<DsrInvalidStateException> {
       controller.execute(
@@ -219,7 +377,7 @@ internal class DsrDeletionControllerTest {
       )
     }
 
-    every { dsrDeletionService.execute(any(), any(), any(), any(), any()) } throws
+    every { dsrDeletionService.startExecution(any(), any(), any(), any(), any()) } throws
       DsrRequestNotFoundException("nope")
     assertThrows<DsrRequestNotFoundException> {
       controller.execute(

@@ -32,6 +32,11 @@ interface ConnectorBuilderService {
 
   fun getConnectorBuilderProjectsByWorkspace(workspaceId: UUID): Stream<ConnectorBuilderProject>
 
+  fun getConnectorBuilderProjectsByWorkspace(
+    workspaceId: UUID,
+    includeDeleted: Boolean,
+  ): Stream<ConnectorBuilderProject>
+
   fun deleteBuilderProject(builderProjectId: UUID): Boolean
 
   fun updateBuilderProjectTestingValues(

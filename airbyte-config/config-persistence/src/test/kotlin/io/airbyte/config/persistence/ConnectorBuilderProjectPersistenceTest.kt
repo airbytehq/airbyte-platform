@@ -55,6 +55,8 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
 
   private var project2: ConnectorBuilderProject? = null
 
+  private var deletedProject: ConnectorBuilderProject? = null
+
   @BeforeEach
   fun beforeEach() {
     truncateAllTables()
@@ -202,6 +204,27 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
       .assertNotNull(projects[0]!!.updatedAt)
     org.junit.jupiter.api.Assertions
       .assertNotNull(projects[1]!!.updatedAt)
+  }
+
+  @Test
+  fun testListIncludingDeleted() {
+    createBaseObjects()
+
+    // set draft to null because it won't be returned as part of listing call
+    project1!!.manifestDraft = null
+    project2!!.manifestDraft = null
+    deletedProject!!.manifestDraft = null
+
+    val projects = connectorBuilderService!!.getConnectorBuilderProjectsByWorkspace(mainWorkspace!!, true).toList()
+
+    Assertions
+      .assertThat<ConnectorBuilderProject?>(
+        ArrayList(
+          listOf(project2, deletedProject, project1),
+        ),
+      ).usingRecursiveComparison()
+      .ignoringFields(UPDATED_AT)
+      .isEqualTo(projects)
   }
 
   @Test
@@ -656,8 +679,8 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     project1 = createConnectorBuilderProject(mainWorkspace, "Z project", false)
     project2 = createConnectorBuilderProject(mainWorkspace, "A project", false)
 
-    // deleted project, should not show up in listing
-    createConnectorBuilderProject(mainWorkspace, "Deleted project", true)
+    // deleted project, should not show up in listing by default
+    deletedProject = createConnectorBuilderProject(mainWorkspace, "Deleted project", true)
 
     // unreachable project, should not show up in listing
     createConnectorBuilderProject(workspaceId2, "Other workspace project", false)

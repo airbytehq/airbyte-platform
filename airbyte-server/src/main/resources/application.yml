@@ -40,6 +40,12 @@ micronaut:
     workload:
       type: fixed
       n-threads: ${WORKLOAD_TASK_EXECUTOR_THREADS:50}
+    dsr-deletion:
+      type: fixed
+      n-threads: ${DSR_DELETION_TASK_EXECUTOR_THREADS:1}
+    dsr-deletion-heartbeat:
+      type: scheduled
+      core-pool-size: ${DSR_DELETION_HEARTBEAT_EXECUTOR_THREADS:1}
   http:
     client:
       read-timeout: ${READ_TIMEOUT:10m}
@@ -142,6 +148,9 @@ airbyte:
   airbyte-agents-url: ${AIRBYTE_AGENTS_URL:}
   airbyte-agents-valid-redirect-uris: ${AIRBYTE_AGENTS_VALID_REDIRECT_URIS:}
   airbyte-agents-web-origins: ${AIRBYTE_AGENTS_WEB_ORIGINS:}
+  dsr-deletion:
+    execution-timeout: ${DSR_DELETION_EXECUTION_TIMEOUT:PT2H}
+    execution-heartbeat-interval: ${DSR_DELETION_EXECUTION_HEARTBEAT_INTERVAL:PT1M}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   license-key: ${AIRBYTE_LICENSE_KEY:}
   shutdown:

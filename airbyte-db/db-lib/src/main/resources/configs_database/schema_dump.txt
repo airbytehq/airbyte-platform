@@ -291,6 +291,7 @@ create table "public"."data_subject_deletion_request" (
   "confirmed_at" timestamp(6) with time zone,
   "completed_at" timestamp(6) with time zone,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "execution_counts" jsonb,
   constraint "data_subject_deletion_request_pkey" primary key ("id")
 );
 create table "public"."data_worker_usage" (

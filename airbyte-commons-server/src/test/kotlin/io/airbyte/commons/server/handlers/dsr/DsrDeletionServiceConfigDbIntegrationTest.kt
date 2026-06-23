@@ -31,6 +31,7 @@ import io.airbyte.data.services.ConnectorBuilderService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.SourceService
+import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorCatalogType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigOriginType
@@ -41,6 +42,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionTy
 import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.Status
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType
+import io.airbyte.domain.services.dsr.DsrDeletionRequestTimeoutService
 import io.airbyte.domain.services.dsr.DsrManifest
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.DbPrune
@@ -49,7 +51,6 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import org.jooq.DSLContext
 import org.jooq.JSONB
@@ -64,6 +65,9 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.Optional
 import java.util.UUID
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.util.stream.Stream
 import io.airbyte.config.AuthProvider as ConfigAuthProvider
 import io.airbyte.db.instance.configs.jooq.generated.Tables as ConfigTables
@@ -84,8 +88,11 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   private lateinit var destinationHandler: DestinationHandler
   private lateinit var dbPrune: DbPrune
   private lateinit var deletionRequestRepository: DataSubjectDeletionRequestRepository
+  private lateinit var deletionRequestTimeoutService: DsrDeletionRequestTimeoutService
   private lateinit var metricClient: MetricClient
   private lateinit var objectMapper: ObjectMapper
+  private lateinit var executionHeartbeatExecutor: ScheduledExecutorService
+  private lateinit var executionHeartbeatFuture: ScheduledFuture<*>
   private lateinit var service: TestDsrDeletionService
 
   private val email = "davin.integration@airbyte.io"
@@ -134,6 +141,14 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   private val unrelatedObservabilityJobId = UUID.randomUUID().mostSignificantBits
   private val unrelatedDataWorkerUsageReservationJobId = UUID.randomUUID().mostSignificantBits
 
+  private data class FinalizedExecution(
+    val finalStatus: DataSubjectDeletionStatus,
+    val scrubbedEmail: String,
+    val scrubbedManifest: String,
+    val confirmErrors: String?,
+    val executionCounts: String,
+  )
+
   @BeforeEach
   fun setup() {
     truncateAllTables()
@@ -152,13 +167,44 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     destinationHandler = mockk(relaxed = true)
     dbPrune = mockk(relaxed = true)
     deletionRequestRepository = mockk(relaxed = true)
+    deletionRequestTimeoutService = mockk(relaxed = true)
     metricClient = mockk(relaxed = true)
     objectMapper = jacksonObjectMapper()
+    executionHeartbeatExecutor = mockk(relaxed = true)
+    executionHeartbeatFuture = mockk(relaxed = true)
+    every { deletionRequestRepository.markRunningExecutionStarted(any(), any()) } returns 1
+    every { deletionRequestRepository.heartbeatRunningExecution(any(), any()) } returns 1
+    every { deletionRequestRepository.finalizeRunningExecutionIfActive(any(), any(), any(), any(), any(), any(), any()) } returns 1
+    every { deletionRequestRepository.failRunningExecutionIfRunning(any(), any(), any(), any(), any(), any()) } returns 1
+    every {
+      executionHeartbeatExecutor.scheduleAtFixedRate(any(), any(), any(), TimeUnit.MILLISECONDS)
+    } returns executionHeartbeatFuture
+    every { executionHeartbeatFuture.cancel(false) } returns true
 
     seedConfigDatabase()
     stubManifestDependencies()
 
     service = TestDsrDeletionService()
+  }
+
+  private fun captureActiveFinalization(requestId: UUID): MutableList<FinalizedExecution> {
+    val finalizations = mutableListOf<FinalizedExecution>()
+    every {
+      deletionRequestRepository.finalizeRunningExecutionIfActive(requestId, any(), any(), any(), any(), any(), any())
+    } answers {
+      val args = invocation.args
+      finalizations.add(
+        FinalizedExecution(
+          finalStatus = args[1] as DataSubjectDeletionStatus,
+          scrubbedEmail = args[3] as String,
+          scrubbedManifest = args[4] as String,
+          confirmErrors = args[5] as String?,
+          executionCounts = args[6] as String,
+        ),
+      )
+      1
+    }
+    return finalizations
   }
 
   private inner class TestDsrDeletionService :
@@ -177,9 +223,11 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       destinationHandler = destinationHandler,
       dbPrune = dbPrune,
       deletionRequestRepository = deletionRequestRepository,
+      deletionRequestTimeoutService = deletionRequestTimeoutService,
       objectMapper = objectMapper,
       metricClient = metricClient,
       configDatabase = database!!,
+      executionHeartbeatExecutor = executionHeartbeatExecutor,
     ) {
     fun hardDeleteConfigRowsForTest(
       ctx: DSLContext,
@@ -205,13 +253,16 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
         manifest = objectMapper.writeValueAsString(manifest()),
         prepareWarnings = objectMapper.writeValueAsString(listOf("reviewed $email")),
       )
-    val finalRowSlot = slot<DataSubjectDeletionRequest>()
+    val finalizations = captureActiveFinalization(requestId)
 
     every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
     every {
       deletionRequestRepository.markRunningIfPreviewed(requestId, email, datagrailId, oncallIssueNumber, executedBy, any())
-    } returns 1
-    every { deletionRequestRepository.update(capture(finalRowSlot)) } answers { finalRowSlot.captured }
+    } answers {
+      row.status = DataSubjectDeletionStatus.running
+      row.confirmedBy = executedBy
+      1
+    }
     every { sourceHandler.deleteSource(any<SourceIdRequestBody>()) } just Runs
     every { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) } just Runs
     every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns listOf(legacySyncWorkloadId)
@@ -219,7 +270,8 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       DbPrune.JobDeletionCounts(deletedJobsCount = 3, deletedAttemptsCount = 4)
     every { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns 1
 
-    val result = service.execute(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+    val startExecutionResult = service.startExecution(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+    val result = service.executeClaimedRequest(startExecutionResult.requestId)
 
     assertEquals("COMPLETED", result.status)
     assertEquals(3, result.deletedJobsCount)
@@ -233,6 +285,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     assertEquals(1, result.deletedAuthUsersCount)
     assertTrue(result.tombstonedUser)
     assertEquals(1, result.deletedKeycloakUserCount)
+    assertEquals(3, objectMapper.readTree(finalizations.single().executionCounts).get("deleted_jobs_count").asInt())
 
     assertDeleted("connection", connectionId)
     assertDeleted("actor", sourceId)
@@ -301,16 +354,14 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     assertEquals("co.member.integration@airbyte.io", coMemberUserRow!!.get(ConfigTables.USER.EMAIL))
     assertNull(coMemberUserRow.get(ConfigTables.USER.DEFAULT_WORKSPACE_ID))
 
-    val finalRow = finalRowSlot.captured
-    assertEquals(DataSubjectDeletionStatus.completed, finalRow.status)
-    assertEquals(datagrailId, finalRow.email)
-    assertEquals(emailHash, finalRow.emailHash)
-    assertNull(finalRow.prepareWarnings)
-    assertNull(finalRow.confirmErrors)
-    assertFalse(finalRow.manifest.contains(email))
-    assertFalse(finalRow.manifest.contains("Davin Integration"))
-    assertFalse(finalRow.manifest.contains("postgres integration"))
-    assertFalse(finalRow.manifest.contains("bigquery integration"))
+    val finalization = finalizations.single()
+    assertEquals(DataSubjectDeletionStatus.completed, finalization.finalStatus)
+    assertEquals(datagrailId, finalization.scrubbedEmail)
+    assertNull(finalization.confirmErrors)
+    assertFalse(finalization.scrubbedManifest.contains(email))
+    assertFalse(finalization.scrubbedManifest.contains("Davin Integration"))
+    assertFalse(finalization.scrubbedManifest.contains("postgres integration"))
+    assertFalse(finalization.scrubbedManifest.contains("bigquery integration"))
 
     verify(exactly = 1) { sourceHandler.deleteSource(any<SourceIdRequestBody>()) }
     verify(exactly = 1) { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) }
@@ -424,7 +475,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
         oncallIssueNumber = oncallIssueNumber,
         manifest = objectMapper.writeValueAsString(missingUserManifest),
       )
-    val finalRowSlot = slot<DataSubjectDeletionRequest>()
+    val finalizations = captureActiveFinalization(requestId)
 
     every { userPersistence.getUserByEmail(email) } returns
       Optional.of(
@@ -443,15 +494,20 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
     every {
       deletionRequestRepository.markRunningIfPreviewed(requestId, email, datagrailId, oncallIssueNumber, executedBy, any())
-    } returns 1
-    every { deletionRequestRepository.update(capture(finalRowSlot)) } answers { finalRowSlot.captured }
+    } answers {
+      row.status = DataSubjectDeletionStatus.running
+      row.confirmedBy = executedBy
+      1
+    }
 
-    val result = service.execute(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+    val startExecutionResult = service.startExecution(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+    val executeRequest = service.executeClaimedRequest(startExecutionResult.requestId)
 
-    assertEquals("FAILED", result.status)
-    assertFalse(result.tombstonedUser)
-    assertTrue(result.errors.single().contains("Expected to tombstone exactly one Airbyte user row"))
-    assertEquals(DataSubjectDeletionStatus.failed, finalRowSlot.captured.status)
+    assertEquals("FAILED", executeRequest.status)
+    assertFalse(executeRequest.tombstonedUser)
+    assertTrue(executeRequest.errors.single().contains("Expected to tombstone exactly one Airbyte user row"))
+    assertEquals(DataSubjectDeletionStatus.failed, finalizations.single().finalStatus)
+    assertEquals(0, objectMapper.readTree(finalizations.single().executionCounts).get("deleted_keycloak_user_count").asInt())
     verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
   }
 
@@ -655,10 +711,26 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
         .withDestinationId(destinationId)
     every { sourceService.listWorkspaceSourceConnection(workspaceId) } returns
       listOf(SourceConnection().withSourceId(sourceId).withWorkspaceId(workspaceId).withName("postgres integration"))
+    every { sourceService.listWorkspacesSourceConnections(any()) } answers {
+      val query = firstArg<ResourcesQueryPaginated>()
+      if (workspaceId in query.workspaceIds) {
+        listOf(SourceConnection().withSourceId(sourceId).withWorkspaceId(workspaceId).withName("postgres integration"))
+      } else {
+        emptyList()
+      }
+    }
     every { sourceService.getSourceConnection(sourceId) } returns
       SourceConnection().withSourceId(sourceId).withWorkspaceId(workspaceId).withName("postgres integration")
     every { destinationService.listWorkspaceDestinationConnection(workspaceId) } returns
       listOf(DestinationConnection().withDestinationId(destinationId).withWorkspaceId(workspaceId).withName("bigquery integration"))
+    every { destinationService.listWorkspacesDestinationConnections(any()) } answers {
+      val query = firstArg<ResourcesQueryPaginated>()
+      if (workspaceId in query.workspaceIds) {
+        listOf(DestinationConnection().withDestinationId(destinationId).withWorkspaceId(workspaceId).withName("bigquery integration"))
+      } else {
+        emptyList()
+      }
+    }
     every { destinationService.getDestinationConnection(destinationId) } returns
       DestinationConnection().withDestinationId(destinationId).withWorkspaceId(workspaceId).withName("bigquery integration")
     every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId) } returns
@@ -667,6 +739,18 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
           .withBuilderProjectId(builderProjectId)
           .withWorkspaceId(workspaceId)
           .withName("builder project"),
+      )
+    every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId, true) } returns
+      Stream.of(
+        ConnectorBuilderProject()
+          .withBuilderProjectId(builderProjectId)
+          .withWorkspaceId(workspaceId)
+          .withName("builder project"),
+        ConnectorBuilderProject()
+          .withBuilderProjectId(tombstonedBuilderProjectId)
+          .withWorkspaceId(workspaceId)
+          .withName("tombstoned builder project")
+          .withTombstone(true),
       )
     every { permissionRepository.findByUserId(userId) } returns
       listOf(
@@ -1073,7 +1157,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
         ),
       sourceIds = listOf(sourceId),
       destinationIds = listOf(destinationId),
-      connectorBuilderProjectIds = listOf(builderProjectId),
+      connectorBuilderProjectIds = listOf(builderProjectId, tombstonedBuilderProjectId),
       permissionIds = listOf(permissionId),
       authUsers = listOf(DsrManifest.ManifestAuthUser("kc-auth-integration", "KEYCLOAK")),
       jobCount = 3L,

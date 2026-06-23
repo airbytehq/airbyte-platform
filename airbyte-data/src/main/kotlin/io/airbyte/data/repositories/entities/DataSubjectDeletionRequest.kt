@@ -40,6 +40,8 @@ open class DataSubjectDeletionRequest(
   var prepareWarnings: String? = null,
   @field:TypeDef(type = DataType.JSON)
   var confirmErrors: String? = null,
+  @field:TypeDef(type = DataType.JSON)
+  var executionCounts: String? = null,
   @DateCreated
   var preparedAt: OffsetDateTime? = null,
   var confirmedAt: OffsetDateTime? = null,

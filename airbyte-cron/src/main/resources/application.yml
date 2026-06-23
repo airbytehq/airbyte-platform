@@ -44,6 +44,11 @@ airbyte:
       enabled: ${RUN_DECLARATIVE_SOURCES_UPDATER:true}
     db-prune:
       enabled: ${DB_PRUNE_CRON_ENABLED:true}
+    dsr-deletion-timeout:
+      enabled: ${DSR_DELETION_TIMEOUT_CRON_ENABLED:true}
+      fixed-rate: ${DSR_DELETION_TIMEOUT_CRON_FIXED_RATE:1h}
+  dsr-deletion:
+    execution-timeout: ${DSR_DELETION_EXECUTION_TIMEOUT:PT2H}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
 
   stigg:

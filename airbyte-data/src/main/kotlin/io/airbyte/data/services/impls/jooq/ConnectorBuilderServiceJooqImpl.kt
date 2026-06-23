@@ -173,8 +173,20 @@ class ConnectorBuilderServiceJooqImpl
      * @return builder project
      * @throws IOException exception while interacting with db
      */
-    override fun getConnectorBuilderProjectsByWorkspace(workspaceId: UUID): Stream<ConnectorBuilderProject> {
+    override fun getConnectorBuilderProjectsByWorkspace(workspaceId: UUID): Stream<ConnectorBuilderProject> =
+      getConnectorBuilderProjectsByWorkspace(workspaceId, includeDeleted = false)
+
+    override fun getConnectorBuilderProjectsByWorkspace(
+      workspaceId: UUID,
+      includeDeleted: Boolean,
+    ): Stream<ConnectorBuilderProject> {
       val matchByWorkspace = Tables.CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId)
+      val deletedCondition =
+        if (includeDeleted) {
+          DSL.trueCondition()
+        } else {
+          Tables.CONNECTOR_BUILDER_PROJECT.TOMBSTONE.notEqual(true)
+        }
 
       return database
         .query { ctx: DSLContext ->
@@ -184,7 +196,7 @@ class ConnectorBuilderServiceJooqImpl
             .from(Tables.CONNECTOR_BUILDER_PROJECT)
             .leftJoin(Tables.ACTIVE_DECLARATIVE_MANIFEST)
             .on(Tables.CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(Tables.ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
-            .where(matchByWorkspace.andNot(Tables.CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
+            .where(matchByWorkspace.and(deletedCondition))
             .orderBy(Tables.CONNECTOR_BUILDER_PROJECT.NAME.asc())
             .fetch()
         }.map { record: Record -> DbConverter.buildConnectorBuilderProjectWithoutManifestDraft(record) }
