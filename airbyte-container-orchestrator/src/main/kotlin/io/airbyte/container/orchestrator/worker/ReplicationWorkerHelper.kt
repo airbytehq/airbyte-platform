@@ -306,6 +306,20 @@ class ReplicationWorkerHelper(
     }
   }
 
+  /**
+   * Eagerly persists connector config from a source CONTROL message before it enters the
+   * processing queue. This prevents OAuth token loss when the sync is later aborted due to
+   * rate limits, timeouts, or crashes — the token is persisted as soon as it is read from stdout.
+   */
+  fun persistSourceConfiguration(rawMessage: AirbyteMessage) {
+    if (rawMessage.type == AirbyteMessage.Type.CONTROL) {
+      logger.info { "Eagerly persisting source connector config from CONTROL message." }
+      eventPublisher.publishEvent(
+        ReplicationAirbyteMessageEvent(AirbyteMessageOrigin.SOURCE, rawMessage, context.replicationContext),
+      )
+    }
+  }
+
   @InternalForTesting
   fun internalProcessMessageFromDestination(destinationRawMessage: AirbyteMessage) {
     streamStatusTracker.track(destinationRawMessage)

@@ -379,4 +379,107 @@ internal class SourceReaderTest {
       // Finally block still closes queue
       verify(exactly = 1) { mockMessagesFromSourceQueue.close() }
     }
+
+  @Test
+  fun `test CONTROL messages are eagerly persisted before queuing`() =
+    runTest {
+      val controlMessage =
+        AirbyteMessage().also {
+          it.type = Type.CONTROL
+        }
+
+      every { mockSource.attemptRead() } returnsMany
+        listOf(
+          Optional.of(controlMessage),
+          Optional.empty(),
+        )
+      every { mockSource.isFinished } returnsMany listOf(false, false, true)
+
+      val sourceReader =
+        SourceReader(
+          source = mockSource,
+          replicationWorkerState = mockReplicationWorkerState,
+          streamStatusCompletionTracker = mockStreamStatusCompletionTracker,
+          replicationWorkerHelper = mockReplicationWorkerHelper,
+          messagesFromSourceQueue = mockMessagesFromSourceQueue,
+          missingStateInjector = null,
+        )
+
+      sourceReader.run()
+
+      // Verify eager persistence was called
+      verify(exactly = 1) { mockReplicationWorkerHelper.persistSourceConfiguration(controlMessage) }
+      // Verify message is still queued for normal processing
+      coVerify(exactly = 1) { mockMessagesFromSourceQueue.send(controlMessage) }
+    }
+
+  @Test
+  fun `test non-CONTROL messages are not eagerly persisted`() =
+    runTest {
+      val recordMessage = AirbyteMessage().also { it.type = Type.RECORD }
+      val stateMessage = AirbyteMessage().also { it.type = Type.STATE }
+
+      every { mockSource.attemptRead() } returnsMany
+        listOf(
+          Optional.of(recordMessage),
+          Optional.of(stateMessage),
+          Optional.empty(),
+        )
+      every { mockSource.isFinished } returnsMany listOf(false, false, false, true)
+
+      val sourceReader =
+        SourceReader(
+          source = mockSource,
+          replicationWorkerState = mockReplicationWorkerState,
+          streamStatusCompletionTracker = mockStreamStatusCompletionTracker,
+          replicationWorkerHelper = mockReplicationWorkerHelper,
+          messagesFromSourceQueue = mockMessagesFromSourceQueue,
+          missingStateInjector = null,
+        )
+
+      sourceReader.run()
+
+      // Verify eager persistence was NOT called for non-CONTROL messages
+      verify(exactly = 0) { mockReplicationWorkerHelper.persistSourceConfiguration(any()) }
+      // But messages are still queued
+      coVerify(exactly = 1) { mockMessagesFromSourceQueue.send(recordMessage) }
+      coVerify(exactly = 1) { mockMessagesFromSourceQueue.send(stateMessage) }
+    }
+
+  @Test
+  fun `test eager persist failure does not abort loop or prevent queuing`() =
+    runTest {
+      val controlMessage = AirbyteMessage().also { it.type = Type.CONTROL }
+      val recordMessage = AirbyteMessage().also { it.type = Type.RECORD }
+
+      every { mockReplicationWorkerHelper.persistSourceConfiguration(controlMessage) } throws RuntimeException("API call failed")
+
+      every { mockSource.attemptRead() } returnsMany
+        listOf(
+          Optional.of(controlMessage),
+          Optional.of(recordMessage),
+          Optional.empty(),
+        )
+      every { mockSource.isFinished } returnsMany listOf(false, false, false, true)
+
+      val sourceReader =
+        SourceReader(
+          source = mockSource,
+          replicationWorkerState = mockReplicationWorkerState,
+          streamStatusCompletionTracker = mockStreamStatusCompletionTracker,
+          replicationWorkerHelper = mockReplicationWorkerHelper,
+          messagesFromSourceQueue = mockMessagesFromSourceQueue,
+          missingStateInjector = null,
+        )
+
+      sourceReader.run()
+
+      // Eager persist was called and threw, but the loop continued
+      verify(exactly = 1) { mockReplicationWorkerHelper.persistSourceConfiguration(controlMessage) }
+      // Both messages were still queued despite the failure
+      coVerify(exactly = 1) { mockMessagesFromSourceQueue.send(controlMessage) }
+      coVerify(exactly = 1) { mockMessagesFromSourceQueue.send(recordMessage) }
+      // endOfSource is still called (sync completed successfully)
+      verify(exactly = 1) { mockReplicationWorkerHelper.endOfSource() }
+    }
 }

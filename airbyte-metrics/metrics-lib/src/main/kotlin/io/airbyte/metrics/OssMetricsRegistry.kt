@@ -432,6 +432,10 @@ enum class OssMetricsRegistry(
     metricName = "job_output_read",
     metricDescription = "Read a job output from the output folder",
   ),
+  CONNECTOR_CONFIG_PERSISTENCE_FAILURE(
+    metricName = "connector_config_persistence_failure",
+    metricDescription = "Failed to persist updated connector config (e.g. refreshed OAuth token) via the platform API",
+  ),
   DESTINATION_DESERIALIZATION_ERROR(
     metricName = "destination_deserialization_error",
     metricDescription = "When a sync failed with a deserialization error from the destination",

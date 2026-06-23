@@ -192,6 +192,13 @@ class SourceReader(
           ) {
             streamStatusCompletionTracker.track(message.trace.streamStatus)
           }
+          if (message.type == Type.CONTROL) {
+            try {
+              replicationWorkerHelper.persistSourceConfiguration(message)
+            } catch (e: Exception) {
+              logger.error(e) { "Failed to eagerly persist source connector config." }
+            }
+          }
           missingStateInjector?.trackMessage(message)
           messagesFromSourceQueue.send(message)
         } else {
