@@ -5,6 +5,7 @@
 package io.airbyte.commons.temporal.scheduling
 
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState
+import io.airbyte.config.JobConfig.ConfigType
 import io.temporal.workflow.QueryMethod
 import io.temporal.workflow.SignalMethod
 import io.temporal.workflow.WorkflowInterface
@@ -73,6 +74,7 @@ interface ConnectionManagerWorkflow {
   data class JobInformation(
     var jobId: Long = 0,
     var attemptId: Int = 0,
+    var configType: ConfigType? = null,
   )
 
   companion object {

@@ -14,6 +14,7 @@ import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateOutput
 import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateWorkflow
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
+import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.JobInformation
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
@@ -24,6 +25,7 @@ import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.JobCheckConnectionConfig
+import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobDiscoverCatalogConfig
 import io.airbyte.config.JobGetSpecConfig
 import io.airbyte.config.RefreshStream
@@ -278,14 +280,23 @@ class TemporalClient(
   ): ManualOperationResult {
     logger.info { "Manual sync request for connection $connectionId" }
 
-    if (connectionManagerUtils.isWorkflowStateRunning(connectionId)) {
+    val workflowState = connectionManagerUtils.getWorkflowState(connectionId).getOrNull()
+    if (workflowState?.isRunning == true) {
       return ManualOperationResult(
         failingReason = "A sync is already running for: $connectionId",
         errorCode = ErrorCode.WORKFLOW_RUNNING,
       )
     }
 
-    val oldJobId = connectionManagerUtils.getCurrentJobId(connectionId)
+    val currentJobInformation = connectionManagerUtils.getJobInformation(connectionId)
+    if (workflowState?.isDoneWaiting == true &&
+      !workflowState.hasCapacityWaitInterruption() &&
+      currentJobInformation?.isQueuedPreAttempt() == true
+    ) {
+      logger.info { "manual sync job already created" }
+      return ManualOperationResult(jobId = currentJobInformation.jobId)
+    }
+    val oldJobId = currentJobInformation?.jobId ?: ConnectionManagerWorkflow.NON_RUNNING_JOB_ID
 
     try {
       connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId) {
@@ -464,6 +475,17 @@ class TemporalClient(
       return currentJobId
     }
   }
+
+  private fun JobInformation.isQueuedPreAttempt(): Boolean =
+    jobId != ConnectionManagerWorkflow.NON_RUNNING_JOB_ID &&
+      attemptId == ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID &&
+      configType == ConfigType.SYNC
+
+  private fun WorkflowState.hasCapacityWaitInterruption(): Boolean =
+    isDeleted ||
+      isUpdated ||
+      isCancelled ||
+      isCancelledForReset
 
   /**
    * Submit a spec job to temporal.

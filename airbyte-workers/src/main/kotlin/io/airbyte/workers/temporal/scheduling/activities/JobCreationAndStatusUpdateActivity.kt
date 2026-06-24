@@ -5,6 +5,7 @@
 package io.airbyte.workers.temporal.scheduling.activities
 
 import io.airbyte.config.AttemptFailureSummary
+import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.StandardSyncOutput
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
@@ -64,10 +65,18 @@ interface JobCreationAndStatusUpdateActivity {
     @JvmField
     var jobId: Long? = null
 
+    @JvmField
+    var jobConfigType: ConfigType? = null
+
     constructor()
 
     constructor(jobId: Long?) {
       this.jobId = jobId
+    }
+
+    constructor(jobId: Long?, jobConfigType: ConfigType?) {
+      this.jobId = jobId
+      this.jobConfigType = jobConfigType
     }
 
     override fun equals(o: Any?): Boolean {
@@ -75,12 +84,12 @@ interface JobCreationAndStatusUpdateActivity {
         return false
       }
       val that = o as JobCreationOutput
-      return jobId == that.jobId
+      return jobId == that.jobId && jobConfigType == that.jobConfigType
     }
 
-    override fun hashCode(): Int = Objects.hashCode(jobId)
+    override fun hashCode(): Int = Objects.hash(jobId, jobConfigType)
 
-    override fun toString(): String = "JobCreationOutput{jobId=" + jobId + '}'
+    override fun toString(): String = "JobCreationOutput{jobId=" + jobId + ", jobConfigType=" + jobConfigType + '}'
   }
 
   /**

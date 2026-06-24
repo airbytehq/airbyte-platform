@@ -33,6 +33,7 @@ interface JobService {
   fun sync(
     connectionId: UUID,
     organizationId: UUID? = null,
+    returnAfterJobId: Boolean = false,
   ): JobResponse
 
   fun reset(connectionId: UUID): JobResponse
@@ -73,11 +74,12 @@ class JobServiceImpl(
   override fun sync(
     connectionId: UUID,
     organizationId: UUID?,
+    returnAfterJobId: Boolean,
   ): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val result =
       kotlin
-        .runCatching { schedulerHandler.syncConnection(connectionIdRequestBody, organizationId) }
+        .runCatching { schedulerHandler.syncConnection(connectionIdRequestBody, organizationId, returnAfterJobId) }
         .onFailure { ConfigClientErrorHandler.handleError(it) }
 
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }

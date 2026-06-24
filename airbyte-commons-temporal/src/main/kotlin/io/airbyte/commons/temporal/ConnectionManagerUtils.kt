@@ -283,12 +283,14 @@ class ConnectionManagerUtils(
    * @param connectionId connection id
    * @return current job id
    */
-  fun getCurrentJobId(connectionId: UUID): Long {
+  fun getCurrentJobId(connectionId: UUID): Long = getJobInformation(connectionId)?.jobId ?: ConnectionManagerWorkflow.NON_RUNNING_JOB_ID
+
+  fun getJobInformation(connectionId: UUID): ConnectionManagerWorkflow.JobInformation? {
     try {
       val connectionManagerWorkflow = getConnectionManagerWorkflow(connectionId)
-      return connectionManagerWorkflow.getJobInformation().jobId
+      return connectionManagerWorkflow.getJobInformation()
     } catch (e: Exception) {
-      return ConnectionManagerWorkflow.NON_RUNNING_JOB_ID
+      return null
     }
   }
 

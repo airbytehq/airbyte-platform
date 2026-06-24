@@ -480,7 +480,8 @@ open class SchedulerHandler
     fun syncConnection(
       connectionIdRequestBody: ConnectionIdRequestBody,
       organizationId: UUID? = null,
-    ): JobInfoRead = submitManualSyncToWorker(connectionIdRequestBody.connectionId, organizationId)
+      returnAfterJobId: Boolean = false,
+    ): JobInfoRead = submitManualSyncToWorker(connectionIdRequestBody.connectionId, organizationId, returnAfterJobId)
 
     fun resetConnection(connectionIdRequestBody: ConnectionIdRequestBody): JobInfoRead =
       submitResetConnectionToWorker(connectionIdRequestBody.connectionId)
@@ -618,12 +619,13 @@ open class SchedulerHandler
     private fun submitManualSyncToWorker(
       connectionId: UUID,
       organizationId: UUID?,
+      returnAfterJobId: Boolean,
     ): JobInfoRead {
       // get standard sync to validate connection id before submitting sync to temporal
       val sync = connectionService.getStandardSync(connectionId)
       check(sync.status == StandardSync.Status.ACTIVE) { "Can only sync an active connection" }
       val manualSyncResult =
-        if (isDataWorkerCapacityEnforced(connectionId, organizationId)) {
+        if (returnAfterJobId || isDataWorkerCapacityEnforced(connectionId, organizationId)) {
           // When data worker capacity is enforced, the connection manager workflow creates the job first
           // and then may queue it for hours while waiting for capacity. Only wait for the job id to be
           // created so the request returns promptly instead of blocking until the sync starts running.

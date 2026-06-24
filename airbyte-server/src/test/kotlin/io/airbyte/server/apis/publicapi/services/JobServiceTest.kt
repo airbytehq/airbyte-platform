@@ -55,7 +55,7 @@ class JobServiceTest {
   @Test
   fun `test sync already running value conflict known exception`() {
     val failureReason = "A sync is already running for: $connectionId"
-    every { schedulerHandler.syncConnection(any(), null) } throws
+    every { schedulerHandler.syncConnection(any(), null, false) } throws
       ValueConflictKnownException(failureReason)
 
     assertThrows<TryAgainLaterConflictProblem>(failureReason) { jobService.sync(connectionId) }
@@ -64,7 +64,7 @@ class JobServiceTest {
   @Test
   fun `test sync already running illegal state exception`() {
     val failureReason = "A sync is already running for: $connectionId"
-    every { schedulerHandler.syncConnection(any(), null) } throws
+    every { schedulerHandler.syncConnection(any(), null, false) } throws
       IllegalStateException(failureReason)
 
     assertThrows<StateConflictProblem>(failureReason) { jobService.sync(connectionId) }
@@ -73,7 +73,7 @@ class JobServiceTest {
   @Test
   fun `test sync forwards organization id to scheduler handler`() {
     val organizationId = UUID.randomUUID()
-    every { schedulerHandler.syncConnection(any(), eq(organizationId)) } returns
+    every { schedulerHandler.syncConnection(any(), organizationId, false) } returns
       JobInfoRead().job(
         JobRead()
           .id(1L)
@@ -89,7 +89,33 @@ class JobServiceTest {
     verify {
       schedulerHandler.syncConnection(
         match { it.connectionId == connectionId },
-        eq(organizationId),
+        organizationId,
+        false,
+      )
+    }
+  }
+
+  @Test
+  fun `test sync forwards return after job id to scheduler handler`() {
+    val organizationId = UUID.randomUUID()
+    every { schedulerHandler.syncConnection(any(), organizationId, true) } returns
+      JobInfoRead().job(
+        JobRead()
+          .id(1L)
+          .status(JobStatus.PENDING)
+          .configId(connectionId.toString())
+          .configType(JobConfigType.SYNC)
+          .createdAt(100L)
+          .updatedAt(100L),
+      )
+
+    jobService.sync(connectionId, organizationId, returnAfterJobId = true)
+
+    verify {
+      schedulerHandler.syncConnection(
+        match { it.connectionId == connectionId },
+        organizationId,
+        true,
       )
     }
   }
@@ -100,11 +126,11 @@ class JobServiceTest {
     // Happens because after canceling a job we go to the job persistence to fetch it but have no ID
 
     val couldNotFindJobMessage = "Could not find job with id: -1"
-    every { schedulerHandler.syncConnection(any(), null) } throws RuntimeException(couldNotFindJobMessage)
+    every { schedulerHandler.syncConnection(any(), null, false) } throws RuntimeException(couldNotFindJobMessage)
     assertThrows<StateConflictProblem>(JOB_NOT_RUNNING_MESSAGE) { jobService.sync(connectionId) }
 
     val failureReason = "Failed to cancel job with id: -1"
-    every { schedulerHandler.syncConnection(any(), null) } throws IllegalStateException(failureReason)
+    every { schedulerHandler.syncConnection(any(), null, false) } throws IllegalStateException(failureReason)
     assertThrows<StateConflictProblem>(JOB_NOT_RUNNING_MESSAGE) { jobService.sync(connectionId) }
   }
 

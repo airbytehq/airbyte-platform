@@ -28,6 +28,7 @@ import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody
 import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.config.AttemptFailureSummary
 import io.airbyte.config.FailureReason
+import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.State
@@ -111,6 +112,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
       val newJob = jobCreationAndStatusUpdateActivity.createNewJob(JobCreationInput(CONNECTION_ID, true))
 
       Assertions.assertEquals(JOB_ID, newJob.jobId)
+      Assertions.assertEquals(ConfigType.SYNC, newJob.jobConfigType)
     }
 
     @Test

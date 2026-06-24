@@ -1485,6 +1485,31 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
+  fun testSyncConnectionWaitsOnlyForJobIdWhenRequestedEvenIfDataWorkerEnforcementDisabled() {
+    val connectionId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val jobId = 123L
+    val manualOperationResult = ManualOperationResult(null, jobId, null)
+
+    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
+      .thenReturn(false)
+    whenever(eventRunner.startNewManualSyncAndWaitForJobId(connectionId))
+      .thenReturn(manualOperationResult)
+    doReturn(job)
+      .whenever(jobPersistence)
+      .getJob(jobId)
+    doReturn(JobInfoRead().job(JobRead().id(jobId)))
+      .whenever(jobConverter)
+      .getJobInfoRead(job)
+
+    val result = schedulerHandler.syncConnection(ConnectionIdRequestBody().connectionId(connectionId), organizationId, returnAfterJobId = true)
+
+    verify(eventRunner).startNewManualSyncAndWaitForJobId(connectionId)
+    verify(eventRunner, never()).startNewManualSync(connectionId)
+    Assertions.assertThat(result.job.id).isEqualTo(jobId)
+  }
+
+  @Test
   fun testSyncConnectionWaitsOnlyForJobIdWhenDataWorkerCapacityIsEnforced() {
     val connectionId = UUID.randomUUID()
     val organizationId = UUID.randomUUID()

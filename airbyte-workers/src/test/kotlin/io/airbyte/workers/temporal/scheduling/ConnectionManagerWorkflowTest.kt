@@ -18,6 +18,7 @@ import io.airbyte.commons.temporal.scheduling.state.listener.TestStateListener.C
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.ChangedStateEvent
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.StateField
 import io.airbyte.config.ConnectionContext
+import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.featureflag.EnforceDataWorkerCapacity
 import io.airbyte.micronaut.temporal.TemporalProxyHelper
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -491,6 +492,22 @@ internal class ConnectionManagerWorkflowTest {
         )
       }
       verify(exactly = 0) { mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()) }
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Test queued job information includes sync config type")
+    fun queuedJobInformationIncludesSyncConfigType() {
+      returnTrueForLastJobOrAttemptFailure()
+      every { mJobCreationAndStatusUpdateActivity.createNewJob(any()) } returns JobCreationOutput(JOB_ID, ConfigType.SYNC)
+      val workflowState = WorkflowState(UUID.randomUUID(), TestStateListener())
+
+      startManualWorkflowWaitingForCapacity(workflowState)
+
+      val jobInformation = workflow.getJobInformation()
+      Assertions.assertThat(jobInformation.jobId).isEqualTo(JOB_ID)
+      Assertions.assertThat(jobInformation.attemptId).isEqualTo(ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID)
+      Assertions.assertThat(jobInformation.configType).isEqualTo(ConfigType.SYNC)
     }
 
     @Test

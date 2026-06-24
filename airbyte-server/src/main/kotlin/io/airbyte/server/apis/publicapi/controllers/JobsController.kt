@@ -125,6 +125,7 @@ open class JobsController(
             jobService.sync(
               UUID.fromString(jobCreateRequest.connectionId),
               organizationId,
+              returnAfterJobId = true,
             )
           }, JOBS_PATH, POST, userId)!!
         trackingHelper.trackSuccess(

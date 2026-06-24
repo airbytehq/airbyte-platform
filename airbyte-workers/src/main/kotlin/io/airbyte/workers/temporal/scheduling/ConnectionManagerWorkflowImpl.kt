@@ -836,6 +836,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     return JobInformation(
       jobId,
       attemptNumber ?: ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID,
+      workflowInternalState.jobConfigType,
     )
   }
 
@@ -1037,6 +1038,8 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         { input: JobCreationInput? -> jobCreationAndStatusUpdateActivity?.createNewJob(input!!) },
         JobCreationInput(connectionUpdaterInput.connectionId, !workflowState.isSkipScheduling),
       )!!
+    workflowInternalState.jobId = jobCreationOutput.jobId
+    workflowInternalState.jobConfigType = jobCreationOutput.jobConfigType
     connectionUpdaterInput.jobId = jobCreationOutput.jobId
 
     return jobCreationOutput.jobId

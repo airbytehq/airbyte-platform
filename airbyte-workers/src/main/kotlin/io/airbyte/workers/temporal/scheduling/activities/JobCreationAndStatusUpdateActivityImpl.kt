@@ -20,6 +20,7 @@ import io.airbyte.api.client.model.generated.ReportJobStartRequest
 import io.airbyte.api.client.model.generated.SetJobQueuedRequest
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.temporal.exception.RetryableException
+import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.State
 import io.airbyte.featureflag.AlwaysRunCheckBeforeSync
 import io.airbyte.featureflag.Connection
@@ -70,7 +71,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     AttemptContext(input.connectionId, null, null).addTagsToTrace()
     try {
       val jobInfoRead = airbyteApiClient.jobsApi.createJob(JobCreate(input.connectionId!!, input.isScheduled))
-      return JobCreationOutput(jobInfoRead.job.id)
+      return JobCreationOutput(jobInfoRead.job.id, jobInfoRead.job.configType.toConfigType())
     } catch (e: ClientException) {
       if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
         throw e
@@ -83,6 +84,18 @@ class JobCreationAndStatusUpdateActivityImpl(
       throw RetryableException(e)
     }
   }
+
+  private fun JobConfigType.toConfigType(): ConfigType =
+    when (this) {
+      JobConfigType.CHECK_CONNECTION_SOURCE -> ConfigType.CHECK_CONNECTION_SOURCE
+      JobConfigType.CHECK_CONNECTION_DESTINATION -> ConfigType.CHECK_CONNECTION_DESTINATION
+      JobConfigType.DISCOVER_SCHEMA -> ConfigType.DISCOVER_SCHEMA
+      JobConfigType.GET_SPEC -> ConfigType.GET_SPEC
+      JobConfigType.SYNC -> ConfigType.SYNC
+      JobConfigType.RESET_CONNECTION -> ConfigType.RESET_CONNECTION
+      JobConfigType.REFRESH -> ConfigType.REFRESH
+      JobConfigType.CLEAR -> ConfigType.CLEAR
+    }
 
   @WithSpan
   override fun createNewAttemptNumber(input: AttemptCreationInput): AttemptNumberCreationOutput {

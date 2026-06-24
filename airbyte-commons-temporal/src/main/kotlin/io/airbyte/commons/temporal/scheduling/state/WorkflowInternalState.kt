@@ -5,6 +5,7 @@
 package io.airbyte.commons.temporal.scheduling.state
 
 import io.airbyte.config.FailureReason
+import io.airbyte.config.JobConfig.ConfigType
 
 /**
  * Internal state of workflow.
@@ -12,10 +13,11 @@ import io.airbyte.config.FailureReason
  */
 data class WorkflowInternalState(
   var jobId: Long? = null,
+  var jobConfigType: ConfigType? = null,
   /** 0-based incrementing sequence. */
   var attemptNumber: Int? = null,
   var failures: MutableSet<FailureReason> = mutableSetOf(),
   var partialSuccess: Boolean? = null,
 ) {
-  constructor() : this(jobId = null, attemptNumber = null, failures = mutableSetOf(), partialSuccess = null)
+  constructor() : this(jobId = null, jobConfigType = null, attemptNumber = null, failures = mutableSetOf(), partialSuccess = null)
 }
