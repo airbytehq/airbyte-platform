@@ -173,6 +173,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       eq(listOf(manifestConfigInjection)),
       eq(adaptedConnectorSpecification),
       eq(AN_IMAGE_VERSION),
+      eq(false),
     )
   }
 
@@ -215,6 +216,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     Mockito
       .verify(connectorBuilderService, Mockito.times(0))
       .createDeclarativeManifestAsActiveVersion(
+        anyOrNull(),
         anyOrNull(),
         anyOrNull(),
         anyOrNull(),
@@ -379,6 +381,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       listOf(manifestConfigInjection),
       adaptedConnectorSpecification,
       AN_IMAGE_VERSION,
+      false,
     )
   }
 
@@ -426,6 +429,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
       listOf(manifestConfigInjection),
       adaptedConnectorSpecification,
       AN_IMAGE_VERSION,
+      false,
     )
     Mockito.verify(manifestInjector, Mockito.times(1)).getCdkVersion(A_MANIFEST)
   }
@@ -467,6 +471,102 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   private fun givenSourceDefinitionAvailableInWorkspace() {
     whenever(workspaceService.workspaceCanUseCustomDefinition(anyOrNull(), anyOrNull()))
       .thenReturn(true)
+  }
+
+  @Test
+  fun givenManifestWithFileUploaderWhenCreateAsActiveThenSupportsFileTransferIsTrue() {
+    val fileUploaderManifest =
+      ObjectMapper().readTree(
+        """{"streams": [{"type": "DeclarativeStream", "name": "file_stream", "file_uploader": {"type": "FileUploader"}}]}""",
+      )
+    givenSourceDefinitionAvailableInWorkspace()
+    givenSourceIsDeclarative()
+    Mockito
+      .`when`(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC))
+      .thenReturn(adaptedConnectorSpecification)
+    Mockito
+      .`when`(
+        manifestInjector.getManifestConnectorInjections(
+          A_SOURCE_DEFINITION_ID,
+          fileUploaderManifest,
+          null,
+        ),
+      ).thenReturn(listOf(manifestConfigInjection))
+    whenever(manifestInjector.getCdkVersion(fileUploaderManifest)).thenReturn(A_CDK_VERSION)
+
+    handler!!.createDeclarativeSourceDefinitionManifest(
+      DeclarativeSourceDefinitionCreateManifestRequestBody()
+        .workspaceId(A_WORKSPACE_ID)
+        .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
+        .setAsActiveManifest(true)
+        .declarativeManifest(
+          anyDeclarativeManifest()!!
+            .manifest(fileUploaderManifest)
+            .spec(A_SPEC)
+            .version(A_VERSION)
+            .description(A_DESCRIPTION),
+        ),
+    )
+
+    Mockito.verify(connectorBuilderService, Mockito.times(1)).createDeclarativeManifestAsActiveVersion(
+      eq(
+        DeclarativeManifest()
+          .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+          .withVersion(A_VERSION)
+          .withDescription(A_DESCRIPTION)
+          .withManifest(fileUploaderManifest)
+          .withSpec(A_SPEC),
+      ),
+      eq(listOf(manifestConfigInjection)),
+      eq(adaptedConnectorSpecification),
+      eq(AN_IMAGE_VERSION),
+      eq(true),
+    )
+  }
+
+  @Test
+  fun givenManifestWithFileUploaderWhenUpdateVersionThenSupportsFileTransferIsTrue() {
+    val fileUploaderManifest =
+      ObjectMapper().readTree(
+        """{"streams": [{"type": "DeclarativeStream", "name": "file_stream", "file_uploader": {"type": "FileUploader"}}]}""",
+      )
+    Mockito
+      .`when`(
+        airbyteCompatibleConnectorsValidator.validateDeclarativeManifest(eq(AN_IMAGE_VERSION)),
+      ).thenReturn(ConnectorPlatformCompatibilityValidationResult(true, ""))
+    givenSourceDefinitionAvailableInWorkspace()
+    givenSourceIsDeclarative()
+    Mockito
+      .`when`(
+        connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(A_SOURCE_DEFINITION_ID, A_VERSION),
+      ).thenReturn(
+        DeclarativeManifest()
+          .withVersion(A_VERSION)
+          .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+          .withManifest(fileUploaderManifest)
+          .withSpec(A_SPEC),
+      )
+    Mockito
+      .`when`(
+        manifestInjector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, fileUploaderManifest, null),
+      ).thenReturn(listOf(manifestConfigInjection))
+    Mockito
+      .`when`(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC))
+      .thenReturn(adaptedConnectorSpecification)
+    whenever(manifestInjector.getCdkVersion(fileUploaderManifest)).thenReturn(A_CDK_VERSION)
+
+    handler!!.updateDeclarativeManifestVersion(
+      UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION),
+    )
+
+    Mockito.verify(connectorBuilderService, Mockito.times(1)).setDeclarativeSourceActiveVersion(
+      A_SOURCE_DEFINITION_ID,
+      A_VERSION,
+      listOf(manifestConfigInjection),
+      adaptedConnectorSpecification,
+      AN_IMAGE_VERSION,
+      true,
+    )
   }
 
   private fun givenSourceIsDeclarative() {

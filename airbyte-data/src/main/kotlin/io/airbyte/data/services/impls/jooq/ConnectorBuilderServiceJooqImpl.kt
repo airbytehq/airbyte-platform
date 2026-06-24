@@ -451,6 +451,7 @@ class ConnectorBuilderServiceJooqImpl
       configInjections: List<ActorDefinitionConfigInjection>,
       connectorSpecification: ConnectorSpecification,
       cdkVersion: String,
+      supportsFileTransfer: Boolean,
     ) {
       // find one manifest config injection
 
@@ -474,7 +475,13 @@ class ConnectorBuilderServiceJooqImpl
 
       database.transaction<Any?> { ctx: DSLContext ->
         // Set new version of the actor definition
-        updateDeclarativeActorDefinitionVersion(manifestConfigInjection.get().actorDefinitionId, connectorSpecification, cdkVersion, ctx)
+        updateDeclarativeActorDefinitionVersion(
+          manifestConfigInjection.get().actorDefinitionId,
+          connectorSpecification,
+          cdkVersion,
+          supportsFileTransfer,
+          ctx,
+        )
 
         // Replace all existing config injections
         upsertActorDefinitionConfigInjections(configInjections, ctx)
@@ -529,9 +536,10 @@ class ConnectorBuilderServiceJooqImpl
       configInjections: List<ActorDefinitionConfigInjection>,
       connectorSpecification: ConnectorSpecification,
       cdkVersion: String,
+      supportsFileTransfer: Boolean,
     ) {
       database.transaction<Any?> { ctx: DSLContext ->
-        updateDeclarativeActorDefinitionVersion(sourceDefinitionId, connectorSpecification, cdkVersion, ctx)
+        updateDeclarativeActorDefinitionVersion(sourceDefinitionId, connectorSpecification, cdkVersion, supportsFileTransfer, ctx)
         upsertActorDefinitionConfigInjections(configInjections, ctx)
         upsertActiveDeclarativeManifest(
           ActiveDeclarativeManifest().withActorDefinitionId(sourceDefinitionId).withVersion(version),
@@ -874,6 +882,7 @@ class ConnectorBuilderServiceJooqImpl
       actorDefinitionId: UUID,
       spec: ConnectorSpecification,
       cdkVersion: String,
+      supportsFileTransfer: Boolean,
       ctx: DSLContext,
     ) {
       // We are updating the same version since connector builder projects have a different concept of
@@ -883,6 +892,7 @@ class ConnectorBuilderServiceJooqImpl
         .set(Tables.ACTOR_DEFINITION_VERSION.UPDATED_AT, OffsetDateTime.now())
         .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
         .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, cdkVersion)
+        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER, supportsFileTransfer)
         .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
         .execute()
     }

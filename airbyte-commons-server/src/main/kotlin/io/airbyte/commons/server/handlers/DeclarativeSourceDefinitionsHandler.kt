@@ -14,6 +14,7 @@ import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.server.errors.DeclarativeSourceNotFoundException
 import io.airbyte.commons.server.errors.SourceIsNotDeclarativeException
 import io.airbyte.commons.server.errors.ValueConflictKnownException
+import io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler.Companion.manifestHasFileUploader
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector
 import io.airbyte.config.DeclarativeManifest
 import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
@@ -81,6 +82,7 @@ open class DeclarativeSourceDefinitionsHandler
           configInjectionsToCreate,
           manifestInjector.createDeclarativeManifestConnectorSpecification(spec),
           getImageVersionForManifest(declarativeManifest).imageVersion,
+          manifestHasFileUploader(manifest),
         )
       } else {
         connectorBuilderService.insertDeclarativeManifest(declarativeManifest)
@@ -138,6 +140,7 @@ open class DeclarativeSourceDefinitionsHandler
         configInjectionsToCreate,
         manifestInjector.createDeclarativeManifestConnectorSpecification(declarativeManifest.spec),
         imageVersionForManifest,
+        manifestHasFileUploader(declarativeManifest.manifest),
       )
     }
 

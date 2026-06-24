@@ -84,6 +84,7 @@ interface ConnectorBuilderService {
     configInjections: List<ActorDefinitionConfigInjection>,
     connectorSpecification: ConnectorSpecification,
     cdkVersion: String,
+    supportsFileTransfer: Boolean = false,
   )
 
   fun setDeclarativeSourceActiveVersion(
@@ -92,6 +93,7 @@ interface ConnectorBuilderService {
     configInjections: List<ActorDefinitionConfigInjection>,
     connectorSpecification: ConnectorSpecification,
     cdkVersion: String,
+    supportsFileTransfer: Boolean = false,
   )
 
   fun getActorDefinitionConfigInjections(actorDefinitionId: UUID): Stream<ActorDefinitionConfigInjection>
