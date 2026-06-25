@@ -62,6 +62,7 @@ import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.EmailAttribute
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
@@ -352,17 +353,33 @@ open class UserHandler
     ) {
       val emailDomain = incomingJwtUser.email.substringAfter("@").lowercase()
       val orgId = ssoOrganization.organizationId
-      if (!organizationEmailDomainService.existsByOrganizationIdAndDomain(orgId, emailDomain)) {
+
+      val claimedDomains = organizationEmailDomainService.findByOrganizationId(orgId)
+      if (claimedDomains.isEmpty()) {
         log.warn {
-          "SSO login rejected: email domain '$emailDomain' is not claimed by organization $orgId"
+          "SSO domain not verified: organization $orgId has no claimed domains, user email domain '$emailDomain'"
         }
-        // Clean up the attacker's just-created Keycloak user before rejecting
-        val authRealm = userAuthenticationResolver.resolveRealm()
-        if (authRealm != null) {
-          externalUserService.deleteUserByExternalId(incomingJwtUser.authUserId, authRealm)
+        ApmTraceUtils.addTagsToTrace(
+          mapOf(
+            "sso.email_domain" to emailDomain,
+            "sso.organization_id" to orgId.toString(),
+            "sso.domain_validation" to "no_claimed_domains",
+          ),
+        )
+        return
+      }
+
+      if (claimedDomains.none { it.emailDomain.equals(emailDomain, ignoreCase = true) }) {
+        log.warn {
+          "SSO domain mismatch: email domain '$emailDomain' is not claimed by organization $orgId " +
+            "(claimed: ${claimedDomains.joinToString { it.emailDomain }})"
         }
-        throw OperationNotAllowedException(
-          "SSO provider is not authorized to authenticate users with this email domain.",
+        ApmTraceUtils.addTagsToTrace(
+          mapOf(
+            "sso.email_domain" to emailDomain,
+            "sso.organization_id" to orgId.toString(),
+            "sso.domain_validation" to "mismatch",
+          ),
         )
       }
     }

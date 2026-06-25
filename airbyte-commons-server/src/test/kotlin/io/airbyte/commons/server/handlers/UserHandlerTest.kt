@@ -26,7 +26,6 @@ import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.config.InitialUserConfig
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver
 import io.airbyte.commons.enums.convertTo
-import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.config.Application
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthUser
@@ -128,10 +127,10 @@ class UserHandlerTest {
     whenever(featureFlagClient.boolVariation(eq(ConfigurableSsoDefaultRole), any()))
       .thenReturn(true)
 
-    // SEC-14: Default domain validation to pass for any org/domain combo.
-    // Tests that exercise rejection override this to return false.
-    whenever(organizationEmailDomainService.existsByOrganizationIdAndDomain(any(), any()))
-      .thenReturn(true)
+    // SEC-14: Default to org without domain verification (no claimed domains → validation skipped).
+    // Tests that exercise domain enforcement override this with a non-empty list.
+    whenever(organizationEmailDomainService.findByOrganizationId(any()))
+      .thenReturn(emptyList())
 
     userHandler =
       UserHandler(
@@ -622,8 +621,14 @@ class UserHandlerTest {
           ),
         )
         // SEC-14: The email domain must be claimed by the SSO org for migration to proceed
-        whenever(organizationEmailDomainService.existsByOrganizationIdAndDomain(organization.organizationId, "airbyte.io"))
-          .thenReturn(true)
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(
+            listOf(
+              OrganizationEmailDomain()
+                .withOrganizationId(organization.organizationId)
+                .withEmailDomain("airbyte.io"),
+            ),
+          )
 
         whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
         whenever(userPersistence.getUserByAuthId(newAuthUserId))
@@ -705,31 +710,51 @@ class UserHandlerTest {
       }
 
       @Test
-      fun testSsoLoginRejectedWhenEmailDomainNotClaimedByOrg() {
-        // An attacker sets up SSO in their own org and asserts a victim's email.
-        // The victim's email domain is NOT in the attacker's org's claimed domains.
+      fun testSsoLoginAllowedWhenEmailDomainNotClaimedByOrg() {
+        // SEC-14 observation mode: domain mismatch is logged but login is allowed.
+        // This lets us track which orgs need domain verification without blocking users.
         whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
           Optional.of<Organization>(organization),
         )
-        whenever(organizationEmailDomainService.existsByOrganizationIdAndDomain(organization.organizationId, "airbyte.io"))
-          .thenReturn(false)
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(
+            listOf(
+              OrganizationEmailDomain()
+                .withOrganizationId(organization.organizationId)
+                .withEmailDomain("attacker.com"),
+            ),
+          )
 
         whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
         whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
         whenever(userPersistence.getUserByAuthId(newAuthUserId))
-          .thenReturn(Optional.empty<AuthenticatedUser>())
-        whenever(userPersistence.getUserByEmail(email)).thenReturn(Optional.of<User>(existingUser!!))
-        whenever(userPersistence.listAuthUsersForUser(existingUserId))
-          .thenReturn(listOf<AuthUser>(AuthUser().withAuthUserId(existingAuthUserId).withAuthProvider(AuthProvider.KEYCLOAK)))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
 
-        Assertions.assertThrows(
-          OperationNotAllowedException::class.java,
-        ) { userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId)) }
+        val result = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
 
-        // Verify no account migration occurred
-        Mockito.verify(userPersistence, Mockito.never()).replaceAuthUserForUserId(any(), any(), any())
-        // Verify Keycloak cleanup of the attacker's user
-        Mockito.verify(externalUserService).deleteUserByExternalId(newAuthUserId, ssoRealm)
+        // Login succeeds despite domain mismatch — no exception thrown
+        Assertions.assertNotNull(result)
+      }
+
+      @Test
+      fun testSsoLoginAllowedForOrgWithNoClaimedDomains() {
+        // An SSO org that hasn't completed domain verification has no entries in organization_email_domain.
+        // Domain validation should be skipped until they complete the verification process.
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(emptyList())
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        val result = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        // Login succeeds — no exception thrown
+        Assertions.assertNotNull(result)
       }
 
       private val existingUserId: UUID = UUID.randomUUID()
