@@ -179,6 +179,17 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
   const [error, setError] = useState<string | null>(null);
   const [pendingDeferredTools, setPendingDeferredTools] = useState<Set<string>>(new Set());
 
+  // Accumulator for batching deferred tool results — the backend requires all
+  // deferred tool results from a single turn to be sent in one request.
+  const deferredResultsRef = useRef<Map<string, DeferredToolResult>>(new Map());
+  const expectedDeferredCountRef = useRef<number>(0);
+  // Guards against synchronous handlers sending a partial batch before all
+  // deferred_tool SSE events have been parsed. Set to false when the first
+  // deferred event of a turn arrives; set back to true on stream completion.
+  const allDeferredEventsReceivedRef = useRef<boolean>(true);
+  const maybeSendBatchRef = useRef<() => void>(() => {});
+  const continuationCounterRef = useRef<number>(0);
+
   const { stream, stop, isStreaming } = useAgentStream();
   const [threadId, setThreadId] = useState<string | undefined>(initialThreadId);
   const lastThreadIdRef = useRef<string | undefined>(initialThreadId);
@@ -212,7 +223,7 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
   }, []);
 
   const addToolCall = useCallback((toolCall: ToolCallEvent) => {
-    const continuationMessageId = `assistant-continuation-${Date.now()}`;
+    const continuationMessageId = `assistant-continuation-${Date.now()}-${++continuationCounterRef.current}`;
     streamingMessageIdRef.current = continuationMessageId;
     dispatch({ type: "ADD_TOOL_CALL", toolCall, continuationMessageId });
   }, []);
@@ -261,6 +272,17 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
 
   const handleDeferredTool = useCallback((deferredTool: DeferredToolEvent) => {
     const handler = clientToolsRef.current[deferredTool.tool_name];
+
+    // Arm the gate and count before branching so both registered and
+    // unregistered tools participate in the same batch lifecycle.
+    // Clear any stale results from a previous reset so they don't
+    // leak into this turn's batch.
+    if (expectedDeferredCountRef.current === 0) {
+      allDeferredEventsReceivedRef.current = false;
+      deferredResultsRef.current = new Map();
+    }
+    expectedDeferredCountRef.current += 1;
+
     if (handler) {
       // Mark this tool as pending
       setPendingDeferredTools((prev) => new Set(prev).add(deferredTool.tool_call_id));
@@ -317,47 +339,63 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
       }
     } else {
       console.warn(`[useChatMessages] No handler found for deferred tool: ${deferredTool.tool_name}`);
+      sendDeferredToolResultRef.current?.(
+        deferredTool.tool_call_id,
+        JSON.stringify({ success: false, message: `No handler registered for tool: ${deferredTool.tool_name}` })
+      );
     }
   }, []);
 
-  const sendDeferredToolResultCallback = useCallback(
-    (toolCallId: string, result: string) => {
-      const deferredToolResult: DeferredToolResult = {
-        tool_call_id: toolCallId,
-        result,
-      };
-
-      sendDeferredToolResults([deferredToolResult], {
-        onAssistantDelta: (chunk: string) => {
-          const activeMessageId = streamingMessageIdRef.current;
-          if (activeMessageId) {
-            updateStreamingMessage(activeMessageId, chunk);
-          }
-        },
-        onToolCall: (toolCall: ToolCallEvent) => addToolCall(toolCall),
-        onToolResponse: (toolResponse: ToolResponseEvent) => addToolResponse(toolResponse),
-        onDeferredTool: handleDeferredTool,
-        onComplete: () => finalizeAllStreamingMessages(),
-      }).catch((err: Error) => {
-        if (err instanceof Error && err.name !== "AbortError") {
-          setError(err.message);
-          removeStreamingMessages();
-        }
-      });
-    },
-    [
-      sendDeferredToolResults,
-      updateStreamingMessage,
-      addToolCall,
-      addToolResponse,
-      handleDeferredTool,
-      finalizeAllStreamingMessages,
-      removeStreamingMessages,
-    ]
-  );
+  const sendDeferredToolResultCallback = useCallback((toolCallId: string, result: string) => {
+    deferredResultsRef.current.set(toolCallId, { tool_call_id: toolCallId, result });
+    maybeSendBatchRef.current();
+  }, []);
 
   // Keep the ref up to date
   sendDeferredToolResultRef.current = sendDeferredToolResultCallback;
+
+  // Ref-based batch sender — captures the latest closures on every render so
+  // it can be called from both sendDeferredToolResultCallback and onComplete.
+  maybeSendBatchRef.current = () => {
+    if (!allDeferredEventsReceivedRef.current) {
+      return;
+    }
+    if (expectedDeferredCountRef.current === 0) {
+      return;
+    }
+    if (deferredResultsRef.current.size < expectedDeferredCountRef.current) {
+      return;
+    }
+
+    const allResults = Array.from(deferredResultsRef.current.values());
+    deferredResultsRef.current = new Map();
+    expectedDeferredCountRef.current = 0;
+
+    sendDeferredToolResults(allResults, {
+      onAssistantDelta: (chunk: string) => {
+        const activeMessageId = streamingMessageIdRef.current;
+        if (activeMessageId) {
+          updateStreamingMessage(activeMessageId, chunk);
+        }
+      },
+      onToolCall: (toolCall: ToolCallEvent) => addToolCall(toolCall),
+      onToolResponse: (toolResponse: ToolResponseEvent) => addToolResponse(toolResponse),
+      onDeferredTool: handleDeferredTool,
+      onComplete: () => {
+        finalizeAllStreamingMessages();
+        allDeferredEventsReceivedRef.current = true;
+        maybeSendBatchRef.current();
+      },
+    }).catch((err: Error) => {
+      if (err instanceof Error && err.name !== "AbortError") {
+        setError(err.message);
+        removeStreamingMessages();
+      }
+      deferredResultsRef.current = new Map();
+      expectedDeferredCountRef.current = 0;
+      allDeferredEventsReceivedRef.current = true;
+    });
+  };
 
   const { mutate: sendMessage, isLoading: isPending } = useMutation({
     mutationFn: async (content: string) => {
@@ -393,7 +431,11 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
           onToolCall: (toolCall) => addToolCall(toolCall),
           onToolResponse: (toolResponse) => addToolResponse(toolResponse),
           onDeferredTool: handleDeferredTool,
-          onComplete: () => finalizeAllStreamingMessages(),
+          onComplete: () => {
+            finalizeAllStreamingMessages();
+            allDeferredEventsReceivedRef.current = true;
+            maybeSendBatchRef.current();
+          },
         });
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
@@ -405,6 +447,9 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
     onError: (err) => {
       setError(err instanceof Error ? err.message : "An error occurred");
       removeStreamingMessages();
+      deferredResultsRef.current = new Map();
+      expectedDeferredCountRef.current = 0;
+      allDeferredEventsReceivedRef.current = true;
     },
   });
 
@@ -413,6 +458,9 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
     setError(null);
     clearThread();
     streamingMessageIdRef.current = null;
+    deferredResultsRef.current = new Map();
+    expectedDeferredCountRef.current = 0;
+    allDeferredEventsReceivedRef.current = true;
   }, [clearThread]);
 
   // Send initial request with agentParams when component mounts
@@ -446,12 +494,19 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
         onToolCall: (toolCall) => addToolCall(toolCall),
         onToolResponse: (toolResponse) => addToolResponse(toolResponse),
         onDeferredTool: handleDeferredTool,
-        onComplete: () => finalizeAllStreamingMessages(),
+        onComplete: () => {
+          finalizeAllStreamingMessages();
+          allDeferredEventsReceivedRef.current = true;
+          maybeSendBatchRef.current();
+        },
       }).catch((err) => {
         if (err instanceof Error && err.name !== "AbortError") {
           setError(err.message);
           removeStreamingMessages();
         }
+        deferredResultsRef.current = new Map();
+        expectedDeferredCountRef.current = 0;
+        allDeferredEventsReceivedRef.current = true;
       });
     }
   }, [
@@ -482,6 +537,9 @@ export const useChatMessages = (params: UseChatMessagesParams): UseChatMessagesR
         dispatch({ type: "FINALIZE_STREAMING", messageId: lastStreaming.id });
       }
       streamingMessageIdRef.current = null;
+      deferredResultsRef.current = new Map();
+      expectedDeferredCountRef.current = 0;
+      allDeferredEventsReceivedRef.current = true;
     },
     isStreaming,
   };

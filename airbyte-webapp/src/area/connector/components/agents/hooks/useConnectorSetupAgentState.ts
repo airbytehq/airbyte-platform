@@ -175,11 +175,6 @@ export const useConnectorSetupAgentState = ({
 
     // Switching from agent to form view
     if (!isAgentView && previousIsAgentView) {
-      // If agent is waiting for secret input, dismiss it with a message
-      if (secretInputState.isSecretInputActive) {
-        secretInputState.dismissSecret("Cancelled! I'll add it via form.");
-      }
-
       // Take snapshots when entering form view so we can detect changes later
       if (getFormValuesRef.current) {
         const currentFormValues = getFormValuesRef.current();
@@ -189,7 +184,16 @@ export const useConnectorSetupAgentState = ({
     }
 
     previousIsAgentViewRef.current = isAgentView;
-  }, [isAgentView, sendMessage, createMaskedSnapshot, secretInputState, connectionSpecification]);
+  }, [isAgentView, sendMessage, createMaskedSnapshot, connectionSpecification]);
+
+  // Dismiss queued secret inputs while in form view. Runs once per queue
+  // item: each dismiss dequeues the head, triggering a re-render that
+  // re-evaluates this effect until the queue is empty.
+  useEffect(() => {
+    if (!isAgentView && secretInputState.isSecretInputActive) {
+      secretInputState.dismissSecret("Cancelled! I'll add it via form.");
+    }
+  }, [isAgentView, secretInputState]);
 
   return {
     // Client tools
