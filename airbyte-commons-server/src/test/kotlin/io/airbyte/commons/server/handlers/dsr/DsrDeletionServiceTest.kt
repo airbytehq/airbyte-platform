@@ -7,10 +7,6 @@ package io.airbyte.commons.server.handlers.dsr
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.commons.server.handlers.DestinationHandler
-import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.temporal.ConnectionManagerUtils
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthUser
@@ -20,6 +16,11 @@ import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
 import io.airbyte.config.User
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.config.secrets.ConfigWithSecretReferences
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.config.secrets.persistence.DataPlaneOnlySecretPersistence
+import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.repositories.DataSubjectDeletionRequestRepository
 import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.data.repositories.PermissionRepository
@@ -32,14 +33,25 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectorBuilderService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ExternalUserService
+import io.airbyte.data.services.SecretReferenceService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.db.ContextQueryFunction
 import io.airbyte.db.Database
 import io.airbyte.db.instance.configs.jooq.generated.enums.DataSubjectDeletionStatus
+import io.airbyte.domain.models.SecretConfig
+import io.airbyte.domain.models.SecretConfigId
+import io.airbyte.domain.models.SecretReference
+import io.airbyte.domain.models.SecretReferenceId
+import io.airbyte.domain.models.SecretReferenceScopeType
+import io.airbyte.domain.models.SecretReferenceWithConfig
 import io.airbyte.domain.services.dsr.DsrDeletionRequestTimeoutService
 import io.airbyte.domain.services.dsr.DsrManifest
+import io.airbyte.domain.services.secrets.SecretPersistenceService
+import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.DbPrune
 import io.mockk.Runs
 import io.mockk.every
@@ -79,8 +91,10 @@ internal class DsrDeletionServiceTest {
   private lateinit var permissionRepository: PermissionRepository
   private lateinit var externalUserService: ExternalUserService
   private lateinit var connectionManagerUtils: ConnectionManagerUtils
-  private lateinit var sourceHandler: SourceHandler
-  private lateinit var destinationHandler: DestinationHandler
+  private lateinit var secretReferenceService: SecretReferenceService
+  private lateinit var secretPersistenceService: SecretPersistenceService
+  private lateinit var secretsRepositoryWriter: SecretsRepositoryWriter
+  private lateinit var secretPersistence: SecretPersistence
   private lateinit var dbPrune: DbPrune
   private lateinit var deletionRequestRepository: DataSubjectDeletionRequestRepository
   private lateinit var deletionRequestTimeoutService: DsrDeletionRequestTimeoutService
@@ -126,8 +140,10 @@ internal class DsrDeletionServiceTest {
     permissionRepository = mockk(relaxed = true)
     externalUserService = mockk(relaxed = true)
     connectionManagerUtils = mockk(relaxed = true)
-    sourceHandler = mockk(relaxed = true)
-    destinationHandler = mockk(relaxed = true)
+    secretReferenceService = mockk(relaxed = true)
+    secretPersistenceService = mockk(relaxed = true)
+    secretsRepositoryWriter = mockk(relaxed = true)
+    secretPersistence = mockk(relaxed = true)
     dbPrune = mockk(relaxed = true)
     deletionRequestRepository = mockk(relaxed = true)
     deletionRequestTimeoutService = mockk(relaxed = true)
@@ -186,7 +202,11 @@ internal class DsrDeletionServiceTest {
       }
     }
     every { sourceService.getSourceConnection(sourceId) } returns
-      SourceConnection().withSourceId(sourceId).withWorkspaceId(workspaceId).withName("postgres")
+      SourceConnection()
+        .withSourceId(sourceId)
+        .withWorkspaceId(workspaceId)
+        .withName("postgres")
+        .withConfiguration(objectMapper.readTree("""{"password":{"_secret":"airbyte_source_password_v1"}}"""))
     every { destinationService.listWorkspaceDestinationConnection(workspaceId) } returns
       listOf(DestinationConnection().withDestinationId(destinationId).withWorkspaceId(workspaceId).withName("bigquery"))
     every { destinationService.listWorkspacesDestinationConnections(any()) } answers {
@@ -198,7 +218,15 @@ internal class DsrDeletionServiceTest {
       }
     }
     every { destinationService.getDestinationConnection(destinationId) } returns
-      DestinationConnection().withDestinationId(destinationId).withWorkspaceId(workspaceId).withName("bigquery")
+      DestinationConnection()
+        .withDestinationId(destinationId)
+        .withWorkspaceId(workspaceId)
+        .withName("bigquery")
+        .withConfiguration(objectMapper.readTree("""{"password":{"_secret":"airbyte_destination_password_v1"}}"""))
+    every { secretReferenceService.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, any()) } returns emptyList()
+    every { secretPersistenceService.getPersistenceMapFromConfig(any(), any()) } returns mapOf(null to secretPersistence)
+    every { secretsRepositoryWriter.deleteFromConfig(any<ConfigWithSecretReferences>(), secretPersistence) } just Runs
+    every { secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, any()) } just Runs
     every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId) } answers {
       java.util.stream.Stream
         .empty()
@@ -254,8 +282,9 @@ internal class DsrDeletionServiceTest {
       permissionRepository = permissionRepository,
       externalUserService = externalUserService,
       connectionManagerUtils = connectionManagerUtils,
-      sourceHandler = sourceHandler,
-      destinationHandler = destinationHandler,
+      secretReferenceService = secretReferenceService,
+      secretPersistenceService = secretPersistenceService,
+      secretsRepositoryWriter = secretsRepositoryWriter,
       dbPrune = dbPrune,
       deletionRequestRepository = deletionRequestRepository,
       deletionRequestTimeoutService = deletionRequestTimeoutService,
@@ -405,7 +434,7 @@ internal class DsrDeletionServiceTest {
     assertEquals(email, result.manifest.targetEmail)
     assertEquals(datagrailId, result.manifest.datagrailId)
     assertEquals(userId, result.manifest.userId)
-    assertEquals(listOf(DsrManifest.ManifestWorkspace(workspaceId, "my-workspace")), result.manifest.workspaceRefs)
+    assertEquals(listOf(DsrManifest.ManifestWorkspace(workspaceId, "my-workspace", orgId)), result.manifest.workspaceRefs)
     assertEquals(listOf(DsrManifest.ManifestOrganization(orgId, "my-org")), result.manifest.organizationRefs)
     assertEquals(
       listOf(DsrManifest.ManifestConnection(connectionId, sourceId, "postgres", destinationId, "bigquery")),
@@ -427,13 +456,12 @@ internal class DsrDeletionServiceTest {
     assertEquals(oncallIssueNumber, savedSlot.captured.oncallIssueNumber)
 
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
-    verify(exactly = 0) { sourceHandler.deleteSource(any<SourceIdRequestBody>()) }
-    verify(exactly = 0) { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) }
+    verify(exactly = 0) { secretsRepositoryWriter.deleteFromConfig(any<ConfigWithSecretReferences>(), any<SecretPersistence>()) }
     verify(exactly = 0) { dbPrune.pruneJobsByScopes(any()) }
   }
 
   @Test
-  fun `preview includes tombstoned source and destination actors from deleted workspaces`() {
+  fun `preview includes tombstoned source and destination actors from tombstoned workspaces`() {
     val tombstonedSourceId = UUID.randomUUID()
     val tombstonedDestinationId = UUID.randomUUID()
     every { sourceService.listWorkspaceSourceConnection(workspaceId) } returns emptyList()
@@ -475,7 +503,7 @@ internal class DsrDeletionServiceTest {
   }
 
   @Test
-  fun `preview includes tombstoned connector builder projects from deleted workspaces`() {
+  fun `preview includes tombstoned connector builder projects from tombstoned workspaces`() {
     val tombstonedBuilderProjectId = UUID.randomUUID()
     every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId) } answers {
       java.util.stream.Stream.of(
@@ -654,6 +682,13 @@ internal class DsrDeletionServiceTest {
     verify(exactly = 0) {
       deletionRequestTimeoutService.failTimedOutActiveRequest(any(), any())
     }
+    verify(exactly = 1) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_RECOVERED,
+        value = 1,
+        attributes = arrayOf(MetricAttribute("execution_state", "queued")),
+      )
+    }
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
     verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
     verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
@@ -699,6 +734,13 @@ internal class DsrDeletionServiceTest {
     }
     verify(exactly = 1) {
       deletionRequestTimeoutService.failTimedOutActiveRequest(requestId, Duration.ofMinutes(30))
+    }
+    verify(exactly = 1) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_RECOVERED,
+        value = 1,
+        attributes = arrayOf(MetricAttribute("execution_state", "active")),
+      )
     }
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
     verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
@@ -817,8 +859,7 @@ internal class DsrDeletionServiceTest {
 
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
     verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
-    verify(exactly = 0) { sourceHandler.deleteSource(any<SourceIdRequestBody>()) }
-    verify(exactly = 0) { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) }
+    verify(exactly = 0) { secretsRepositoryWriter.deleteFromConfig(any<ConfigWithSecretReferences>(), any<SecretPersistence>()) }
     verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
   }
 
@@ -852,8 +893,7 @@ internal class DsrDeletionServiceTest {
 
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
     verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
-    verify(exactly = 0) { sourceHandler.deleteSource(any<SourceIdRequestBody>()) }
-    verify(exactly = 0) { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) }
+    verify(exactly = 0) { secretsRepositoryWriter.deleteFromConfig(any<ConfigWithSecretReferences>(), any<SecretPersistence>()) }
     verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
   }
 
@@ -885,8 +925,7 @@ internal class DsrDeletionServiceTest {
     assertTrue(error.message!!.contains("already being executed"))
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
     verify(exactly = 0) { dbPrune.pruneJobsAndAttemptsByScopes(any()) }
-    verify(exactly = 0) { sourceHandler.deleteSource(any<SourceIdRequestBody>()) }
-    verify(exactly = 0) { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) }
+    verify(exactly = 0) { secretsRepositoryWriter.deleteFromConfig(any<ConfigWithSecretReferences>(), any<SecretPersistence>()) }
     verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
     verify(exactly = 0) {
       executionHeartbeatExecutor.scheduleAtFixedRate(any(), any(), any(), any())
@@ -996,10 +1035,34 @@ internal class DsrDeletionServiceTest {
       connectionManagerUtils.terminateWorkflow(connectionId, any())
       dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString()))
       dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString()))
-      sourceHandler.deleteSource(any<SourceIdRequestBody>())
-      destinationHandler.deleteDestination(any<DestinationIdRequestBody>())
       externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM)
       executionHeartbeatFuture.cancel(false)
+    }
+    verify(exactly = 2) {
+      secretsRepositoryWriter.deleteFromConfig(match<ConfigWithSecretReferences> { it.referencedSecrets.isNotEmpty() }, secretPersistence)
+    }
+    verify(exactly = 1) { secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, sourceId) }
+    verify(exactly = 1) { secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, destinationId) }
+    verify(exactly = 1) { metricClient.count(metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_STARTED) }
+    verify(exactly = 1) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_PHASE,
+        attributes = arrayOf(MetricAttribute("phase", "cleanup_actor_secrets"), MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS)),
+      )
+    }
+    verify(exactly = 1) {
+      metricClient.distribution(
+        metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_PHASE_DURATION_MS,
+        value = any(),
+        attributes = arrayOf(MetricAttribute("phase", "cleanup_actor_secrets"), MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS)),
+      )
+    }
+    verify(exactly = 1) {
+      metricClient.distribution(
+        metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_DURATION_MS,
+        value = any(),
+        attributes = arrayOf(MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS)),
+      )
     }
 
     val finalization = finalizations.single()
@@ -1019,6 +1082,286 @@ internal class DsrDeletionServiceTest {
     assertFalse(finalization.scrubbedManifest.contains("Davin"))
     assertFalse(finalization.scrubbedManifest.contains("postgres"))
     assertFalse(finalization.scrubbedManifest.contains("bigquery"))
+  }
+
+  @Test
+  fun `executeClaimedRequest continues actor cleanup when workspace is tombstoned`() {
+    val requestId = UUID.randomUUID()
+    val sourceSecretReferenceId = SecretReferenceId(UUID.randomUUID())
+    val sourceSecretConfigId = SecretConfigId(UUID.randomUUID())
+    val sourceSecretStorageId = UUID.randomUUID()
+    val sourceSecretCoordinate = "airbyte_source_password_v1"
+    val sourceSecretPersistence = mockk<SecretPersistence>(relaxed = true)
+    val externalSourceSecretReferenceId = SecretReferenceId(UUID.randomUUID())
+    val externalSourceSecretConfigId = SecretConfigId(UUID.randomUUID())
+    val externalSourceSecretStorageId = UUID.randomUUID()
+    val externalSourceSecretCoordinate = "airbyte_customer_managed_secret_v1"
+    val externalSourceSecretPersistence = mockk<SecretPersistence>(relaxed = true)
+    val dualWrittenSourceSecretReferenceId = SecretReferenceId(UUID.randomUUID())
+    val dualWrittenSourceSecretConfigId = SecretConfigId(UUID.randomUUID())
+    val dualWrittenSourceSecretStorageId = UUID.randomUUID()
+    val dualWrittenPersistedSourceSecretCoordinate = "airbyte_dual_written_persisted_password_v1"
+    val dualWrittenInlinedSourceSecretCoordinate = "airbyte_dual_written_inlined_password_v2"
+    val dualWrittenSourceSecretPersistence = mockk<SecretPersistence>(relaxed = true)
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(manifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every { sourceService.getSourceConnection(sourceId) } returns
+      SourceConnection()
+        .withSourceId(sourceId)
+        .withWorkspaceId(workspaceId)
+        .withName("postgres")
+        .withConfiguration(
+          objectMapper.readTree(
+            """
+            {
+              "password": {"_secret_reference_id": "${sourceSecretReferenceId.value}"},
+              "api_key": {"_secret_reference_id": "${externalSourceSecretReferenceId.value}"},
+              "token": {
+                "_secret": "$dualWrittenInlinedSourceSecretCoordinate",
+                "_secret_reference_id": "${dualWrittenSourceSecretReferenceId.value}",
+                "_secret_storage_id": "$dualWrittenSourceSecretStorageId"
+              }
+            }
+            """.trimIndent(),
+          ),
+        )
+    every { secretReferenceService.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, sourceId) } returns
+      listOf(
+        SecretReferenceWithConfig(
+          secretReference =
+            SecretReference(
+              id = sourceSecretReferenceId,
+              secretConfigId = sourceSecretConfigId,
+              scopeType = SecretReferenceScopeType.ACTOR,
+              scopeId = sourceId,
+              hydrationPath = "$.password",
+              createdAt = null,
+              updatedAt = null,
+            ),
+          secretConfig =
+            SecretConfig(
+              id = sourceSecretConfigId,
+              secretStorageId = sourceSecretStorageId,
+              descriptor = "source password",
+              externalCoordinate = sourceSecretCoordinate,
+              airbyteManaged = true,
+              createdBy = null,
+              updatedBy = null,
+              createdAt = null,
+              updatedAt = null,
+            ),
+        ),
+        SecretReferenceWithConfig(
+          secretReference =
+            SecretReference(
+              id = externalSourceSecretReferenceId,
+              secretConfigId = externalSourceSecretConfigId,
+              scopeType = SecretReferenceScopeType.ACTOR,
+              scopeId = sourceId,
+              hydrationPath = "$.api_key",
+              createdAt = null,
+              updatedAt = null,
+            ),
+          secretConfig =
+            SecretConfig(
+              id = externalSourceSecretConfigId,
+              secretStorageId = externalSourceSecretStorageId,
+              descriptor = "external source api key",
+              externalCoordinate = externalSourceSecretCoordinate,
+              airbyteManaged = false,
+              createdBy = null,
+              updatedBy = null,
+              createdAt = null,
+              updatedAt = null,
+            ),
+        ),
+        SecretReferenceWithConfig(
+          secretReference =
+            SecretReference(
+              id = dualWrittenSourceSecretReferenceId,
+              secretConfigId = dualWrittenSourceSecretConfigId,
+              scopeType = SecretReferenceScopeType.ACTOR,
+              scopeId = sourceId,
+              hydrationPath = "$.token",
+              createdAt = null,
+              updatedAt = null,
+            ),
+          secretConfig =
+            SecretConfig(
+              id = dualWrittenSourceSecretConfigId,
+              secretStorageId = dualWrittenSourceSecretStorageId,
+              descriptor = "dual-written source token",
+              externalCoordinate = dualWrittenPersistedSourceSecretCoordinate,
+              airbyteManaged = true,
+              createdBy = null,
+              updatedBy = null,
+              createdAt = null,
+              updatedAt = null,
+            ),
+        ),
+      )
+    every { connectionManagerUtils.terminateWorkflow(connectionId, any()) } just Runs
+    every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns emptyList()
+    every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
+      DbPrune.JobDeletionCounts(deletedJobsCount = 7, deletedAttemptsCount = 9)
+    every { secretPersistenceService.getPersistenceMapFromConfig(any(), any()) } answers {
+      val config = firstArg<ConfigWithSecretReferences>()
+      config.referencedSecrets.values.map { it.secretStorageId }.toSet().associateWith {
+        when (it) {
+          sourceSecretStorageId -> sourceSecretPersistence
+          externalSourceSecretStorageId -> externalSourceSecretPersistence
+          dualWrittenSourceSecretStorageId -> dualWrittenSourceSecretPersistence
+          else -> secretPersistence
+        }
+      }
+    }
+    every { secretPersistenceService.getPersistenceFromWorkspaceId(any()) } throws
+      IllegalStateException("must not use tombstone-filtered workspace secret storage lookup")
+    every { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns 1
+    configDeletionCounts =
+      DsrDeletionService.ConfigDeletionCounts(
+        connections = 1,
+        actors = 2,
+        builderProjects = 0,
+        permissions = 1,
+        workspaces = 0,
+        organizations = 0,
+        authUsers = 1,
+        userTombstoned = true,
+      )
+    val finalizations = captureActiveFinalization(requestId)
+
+    val result = service.executeClaimedRequest(requestId)
+
+    assertEquals("COMPLETED", result.status)
+    assertTrue(result.errors.isEmpty())
+    assertEquals(DataSubjectDeletionStatus.completed, finalizations.single().finalStatus)
+    assertNull(finalizations.single().confirmErrors)
+    verify(exactly = 1) {
+      secretsRepositoryWriter.deleteFromConfig(match<ConfigWithSecretReferences> { it.referencedSecrets.isNotEmpty() }, secretPersistence)
+    }
+    verify(exactly = 2) {
+      secretPersistenceService.getPersistenceMapFromConfig(
+        any(),
+        match { it.organizationId.value == orgId && it.workspaceId.value == workspaceId },
+      )
+    }
+    verify(exactly = 0) { secretPersistenceService.getPersistenceFromWorkspaceId(any()) }
+    verify(exactly = 1) {
+      sourceSecretPersistence.delete(match<AirbyteManagedSecretCoordinate> { it.fullCoordinate == sourceSecretCoordinate })
+    }
+    verify(exactly = 1) {
+      dualWrittenSourceSecretPersistence.delete(
+        match<AirbyteManagedSecretCoordinate> { it.fullCoordinate == dualWrittenInlinedSourceSecretCoordinate },
+      )
+    }
+    verify(exactly = 0) {
+      externalSourceSecretPersistence.delete(any())
+    }
+    verify(exactly = 1) { secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, sourceId) }
+    verify(exactly = 1) { secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, destinationId) }
+    verify(exactly = 1) { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) }
+  }
+
+  @Test
+  fun `executeClaimedRequest skips control-plane delete for data-plane-only actor secrets`() {
+    val requestId = UUID.randomUUID()
+    val sourceSecretReferenceId = SecretReferenceId(UUID.randomUUID())
+    val sourceSecretConfigId = SecretConfigId(UUID.randomUUID())
+    val sourceSecretStorageId = UUID.randomUUID()
+    val sourceSecretCoordinate = "airbyte_source_password_v1"
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(manifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every { sourceService.getSourceConnection(sourceId) } returns
+      SourceConnection()
+        .withSourceId(sourceId)
+        .withWorkspaceId(workspaceId)
+        .withName("postgres")
+        .withConfiguration(objectMapper.readTree("""{"password":{"_secret_reference_id":"${sourceSecretReferenceId.value}"}}"""))
+    every { secretReferenceService.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, sourceId) } returns
+      listOf(
+        SecretReferenceWithConfig(
+          secretReference =
+            SecretReference(
+              id = sourceSecretReferenceId,
+              secretConfigId = sourceSecretConfigId,
+              scopeType = SecretReferenceScopeType.ACTOR,
+              scopeId = sourceId,
+              hydrationPath = "$.password",
+              createdAt = null,
+              updatedAt = null,
+            ),
+          secretConfig =
+            SecretConfig(
+              id = sourceSecretConfigId,
+              secretStorageId = sourceSecretStorageId,
+              descriptor = "source password",
+              externalCoordinate = sourceSecretCoordinate,
+              airbyteManaged = true,
+              createdBy = null,
+              updatedBy = null,
+              createdAt = null,
+              updatedAt = null,
+            ),
+        ),
+      )
+    every { connectionManagerUtils.terminateWorkflow(connectionId, any()) } just Runs
+    every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns emptyList()
+    every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
+      DbPrune.JobDeletionCounts(deletedJobsCount = 7, deletedAttemptsCount = 9)
+    every { secretPersistenceService.getPersistenceMapFromConfig(any(), any()) } answers {
+      val config = firstArg<ConfigWithSecretReferences>()
+      config.referencedSecrets.values.map { it.secretStorageId }.toSet().associateWith {
+        when (it) {
+          sourceSecretStorageId -> DataPlaneOnlySecretPersistence()
+          else -> secretPersistence
+        }
+      }
+    }
+    every { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns 1
+    configDeletionCounts =
+      DsrDeletionService.ConfigDeletionCounts(
+        connections = 1,
+        actors = 2,
+        builderProjects = 0,
+        permissions = 1,
+        workspaces = 0,
+        organizations = 0,
+        authUsers = 1,
+        userTombstoned = true,
+      )
+    val finalizations = captureActiveFinalization(requestId)
+
+    val result = service.executeClaimedRequest(requestId)
+
+    assertEquals("COMPLETED", result.status)
+    assertTrue(result.errors.isEmpty())
+    assertEquals(DataSubjectDeletionStatus.completed, finalizations.single().finalStatus)
+    assertNull(finalizations.single().confirmErrors)
+    verify(exactly = 1) { secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, sourceId) }
+    verify(exactly = 1) { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) }
   }
 
   @Test
@@ -1061,6 +1404,56 @@ internal class DsrDeletionServiceTest {
     assertEquals(0, executionCounts.get("deleted_connections_count").asInt())
     assertEquals(1, executionCounts.get("terminated_temporal_workflow_count").asInt())
     verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
+    verify(exactly = 1) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_PHASE,
+        attributes = arrayOf(MetricAttribute("phase", "hard_delete_config_rows"), MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE)),
+      )
+    }
+    verify(exactly = 1) {
+      metricClient.distribution(
+        metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_DURATION_MS,
+        value = any(),
+        attributes = arrayOf(MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE)),
+      )
+    }
+  }
+
+  @Test
+  fun `executeClaimedRequest emits heartbeat metrics from the scheduled worker heartbeat`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(manifest()),
+      )
+    val heartbeatSlot = slot<Runnable>()
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every { connectionManagerUtils.terminateWorkflow(connectionId, any()) } just Runs
+    every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns emptyList()
+    every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
+      DbPrune.JobDeletionCounts(deletedJobsCount = 0, deletedAttemptsCount = 0)
+    every { externalUserService.deleteUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns 1
+    every {
+      executionHeartbeatExecutor.scheduleAtFixedRate(capture(heartbeatSlot), any(), any(), TimeUnit.MILLISECONDS)
+    } returns executionHeartbeatFuture
+
+    service.executeClaimedRequest(requestId)
+    heartbeatSlot.captured.run()
+
+    verify(exactly = 1) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_HEARTBEAT,
+        attributes = arrayOf(MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS)),
+      )
+    }
   }
 
   @Test
@@ -1281,7 +1674,7 @@ internal class DsrDeletionServiceTest {
       userId = userId,
       user = DsrManifest.ManifestUser(userId, email, "Davin"),
       workspaceIds = listOf(workspaceId),
-      workspaceRefs = listOf(DsrManifest.ManifestWorkspace(workspaceId, "my-workspace")),
+      workspaceRefs = listOf(DsrManifest.ManifestWorkspace(workspaceId, "my-workspace", orgId)),
       organizationIds = listOf(orgId),
       organizationRefs = listOf(DsrManifest.ManifestOrganization(orgId, "my-org")),
       connectionIds = listOf(connectionId),

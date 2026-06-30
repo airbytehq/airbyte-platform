@@ -4,17 +4,24 @@
 
 package io.airbyte.commons.server.handlers.dsr
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.PropertyNamingStrategies
 import com.fasterxml.jackson.databind.annotation.JsonNaming
 import com.fasterxml.jackson.module.kotlin.readValue
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.commons.server.handlers.DestinationHandler
-import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.temporal.ConnectionManagerUtils
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.config.secrets.ConfigWithSecretReferences
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
+import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.SecretReferenceConfig
+import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers
+import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.config.secrets.persistence.DataPlaneOnlySecretPersistence
+import io.airbyte.config.secrets.persistence.SecretPersistence
+import io.airbyte.config.secrets.toConfigWithRefs
 import io.airbyte.data.repositories.DataSubjectDeletionRequestRepository
 import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.data.repositories.PermissionRepository
@@ -24,15 +31,23 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectorBuilderService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ExternalUserService
+import io.airbyte.data.services.SecretReferenceService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.instance.configs.jooq.generated.enums.DataSubjectDeletionStatus
+import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.SecretReferenceScopeType
+import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.domain.services.dsr.DsrDeletionRequestTimeoutService
 import io.airbyte.domain.services.dsr.DsrManifest
+import io.airbyte.domain.services.secrets.SecretHydrationContext
+import io.airbyte.domain.services.secrets.SecretPersistenceService
+import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.DbPrune
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
@@ -77,8 +92,9 @@ open class DsrDeletionService(
   private val permissionRepository: PermissionRepository,
   private val externalUserService: ExternalUserService,
   private val connectionManagerUtils: ConnectionManagerUtils,
-  private val sourceHandler: SourceHandler,
-  private val destinationHandler: DestinationHandler,
+  private val secretReferenceService: SecretReferenceService,
+  private val secretPersistenceService: SecretPersistenceService,
+  private val secretsRepositoryWriter: SecretsRepositoryWriter,
   private val dbPrune: DbPrune,
   private val deletionRequestRepository: DataSubjectDeletionRequestRepository,
   private val deletionRequestTimeoutService: DsrDeletionRequestTimeoutService,
@@ -125,6 +141,28 @@ open class DsrDeletionService(
     val status: String,
     val started: Boolean,
   )
+
+  private data class ActorSecretCleanupTarget(
+    val actorId: UUID,
+    val actorType: String,
+    val workspaceId: UUID,
+    val configuration: JsonNode,
+  )
+
+  private enum class ExecutionPhase(
+    val metricValue: String,
+  ) {
+    PARSE_PREVIEW_MANIFEST("parse_preview_manifest"),
+    REFRESH_MANIFEST("refresh_manifest"),
+    CHECK_MANIFEST_DRIFT("check_manifest_drift"),
+    TERMINATE_TEMPORAL_WORKFLOWS("terminate_temporal_workflows"),
+    LIST_SYNC_WORKLOADS("list_sync_workloads"),
+    PRUNE_JOBS("prune_jobs"),
+    CLEANUP_ACTOR_SECRETS("cleanup_actor_secrets"),
+    HARD_DELETE_CONFIG_ROWS("hard_delete_config_rows"),
+    DELETE_KEYCLOAK_USERS("delete_keycloak_users"),
+    FINALIZE_EXECUTION("finalize_execution"),
+  }
 
   @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy::class)
   data class ExecutionCounts(
@@ -217,6 +255,7 @@ open class DsrDeletionService(
         .orElseThrow { DsrRequestNotFoundException("No DSR deletion request with id $requestId") }
 
     if (row.status == DataSubjectDeletionStatus.running) {
+      log.info { "DSR startExecution found existing RUNNING request=$requestId; checking queued/active timeout state" }
       return startOrRecoverRunningRequest(row, requestId, email, datagrailId, oncallIssueNumber)
     }
 
@@ -235,6 +274,7 @@ open class DsrDeletionService(
     if (claimed != 1) {
       val current = deletionRequestRepository.findById(requestId).orElse(row)
       if (current.status == DataSubjectDeletionStatus.running) {
+        log.info { "DSR startExecution lost PREVIEWED claim race for request=$requestId; current state is RUNNING" }
         return startOrRecoverRunningRequest(current, requestId, email, datagrailId, oncallIssueNumber)
       }
       throw DsrInvalidStateException(
@@ -242,6 +282,7 @@ open class DsrDeletionService(
       )
     }
 
+    log.warn { "DSR startExecution claimed PREVIEWED request=$requestId for background execution by=$executedBy" }
     return StartExecutionResult(
       requestId = requestId,
       status = DataSubjectDeletionStatus.running.literal.uppercase(),
@@ -268,6 +309,12 @@ open class DsrDeletionService(
         refreshedAt = now,
       )
     if (refreshedQueuedRequest == 1) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_RECOVERED,
+        value = 1,
+        attributes = arrayOf(MetricAttribute(DSR_EXECUTION_STATE_TAG, DSR_EXECUTION_STATE_QUEUED)),
+      )
+      log.warn { "DSR startExecution returned stale queued RUNNING request=$requestId to active execution" }
       return StartExecutionResult(
         requestId = requestId,
         status = DataSubjectDeletionStatus.running.literal.uppercase(),
@@ -276,6 +323,7 @@ open class DsrDeletionService(
     }
 
     failTimedOutActiveRequestOrThrow(requestId)
+    log.info { "DSR startExecution found active RUNNING request=$requestId; not starting a duplicate worker" }
     return StartExecutionResult(
       requestId = requestId,
       status = DataSubjectDeletionStatus.running.literal.uppercase(),
@@ -285,6 +333,12 @@ open class DsrDeletionService(
 
   private fun failTimedOutActiveRequestOrThrow(requestId: UUID) {
     if (deletionRequestTimeoutService.failTimedOutActiveRequest(requestId, executionTimeout)) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_RECOVERED,
+        value = 1,
+        attributes = arrayOf(MetricAttribute(DSR_EXECUTION_STATE_TAG, DSR_EXECUTION_STATE_ACTIVE)),
+      )
+      log.warn { "DSR startExecution marked timed-out active RUNNING request=$requestId FAILED after $executionTimeout" }
       throw DsrInvalidStateException(
         "Deletion request $requestId timed out after $executionTimeout and was marked FAILED. " +
           "Verify no background worker is still running before retrying.",
@@ -308,11 +362,27 @@ open class DsrDeletionService(
         startedAt = OffsetDateTime.now(ZoneOffset.UTC),
       )
     if (started != 1) {
+      log.warn { "DSR execution worker could not claim active execution for request=$requestId; another worker may already be running" }
       throw DsrInvalidStateException("Deletion request $requestId is already being executed by another worker.")
     }
 
+    metricClient.count(metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_STARTED)
+    log.warn {
+      "DSR execution worker claimed request=$requestId emailHash=${row.emailHash} datagrailId=${row.datagrailId} " +
+        "timeout=$executionTimeout heartbeatInterval=$executionHeartbeatInterval"
+    }
     return withRunningExecutionHeartbeat(requestId) {
-      executeStartedRequest(requestId, row)
+      val executionStartedNanos = System.nanoTime()
+      try {
+        val result = executeStartedRequest(requestId, row)
+        val status = if (result.status == DataSubjectDeletionStatus.completed.literal.uppercase()) MetricTags.SUCCESS else MetricTags.FAILURE
+        recordExecutionDuration(requestId, executionStartedNanos, status)
+        result
+      } catch (e: Throwable) {
+        recordExecutionDuration(requestId, executionStartedNanos, MetricTags.FAILURE)
+        log.error(e) { "DSR execution worker failed request=$requestId before returning an execution result" }
+        throw e
+      }
     }
   }
 
@@ -325,7 +395,9 @@ open class DsrDeletionService(
     val oncallIssueNumber = row.oncallIssueNumber
     val previewManifest =
       runCatching {
-        objectMapper.readValue<DsrManifest>(row.manifest)
+        runExecutionPhase(requestId, ExecutionPhase.PARSE_PREVIEW_MANIFEST) {
+          objectMapper.readValue<DsrManifest>(row.manifest)
+        }
       }.getOrElse {
         return failClaimedRequest(
           row = row,
@@ -337,7 +409,12 @@ open class DsrDeletionService(
         )
       }
     val targetEmailHash = emailHash(email)
-    val currentManifestResult = runCatching { buildManifest(email, datagrailId) }
+    val currentManifestResult =
+      runCatching {
+        runExecutionPhase(requestId, ExecutionPhase.REFRESH_MANIFEST) {
+          buildManifest(email, datagrailId)
+        }
+      }
     if (currentManifestResult.isFailure) {
       return failClaimedRequest(
         row = row,
@@ -350,7 +427,14 @@ open class DsrDeletionService(
     }
 
     val manifest = currentManifestResult.getOrThrow()
-    val driftErrors = manifestScopeDriftErrors(previewManifest, manifest)
+    val driftErrors =
+      runExecutionPhase(
+        requestId = requestId,
+        phase = ExecutionPhase.CHECK_MANIFEST_DRIFT,
+        statusForResult = { errors -> if (errors.isEmpty()) MetricTags.SUCCESS else MetricTags.FAILURE },
+      ) {
+        manifestScopeDriftErrors(previewManifest, manifest)
+      }
     if (driftErrors.isNotEmpty()) {
       return failClaimedRequest(
         row = row,
@@ -370,62 +454,81 @@ open class DsrDeletionService(
         "${manifest.organizationIds.size} orgs, ${manifest.jobCount} jobs and ${manifest.attemptCount} attempts."
     }
 
-    val terminatedTemporalWorkflows = terminateTemporalWorkflows(manifest, oncallIssueNumber, requestId, errors)
+    val terminatedTemporalWorkflows =
+      runExecutionPhase(requestId, ExecutionPhase.TERMINATE_TEMPORAL_WORKFLOWS, errors) {
+        terminateTemporalWorkflows(manifest, oncallIssueNumber, requestId, errors)
+      }
 
     val connectionScopes = manifest.connectionIds.map { it.toString() }
     val syncWorkloadIds =
       if (errors.isEmpty()) {
-        runCatching {
-          dbPrune.listSyncWorkloadIdsByScopes(connectionScopes)
-        }.getOrElse {
-          log.error(it) { "DSR $requestId sync workload lookup failed" }
-          errors.add("Sync workload lookup failed: ${it.message}")
-          emptyList()
+        runExecutionPhase(requestId, ExecutionPhase.LIST_SYNC_WORKLOADS, errors) {
+          runCatching {
+            dbPrune.listSyncWorkloadIdsByScopes(connectionScopes)
+          }.getOrElse {
+            log.error(it) { "DSR $requestId sync workload lookup failed" }
+            errors.add("Sync workload lookup failed: ${it.message}")
+            emptyList()
+          }
         }
       } else {
+        recordExecutionPhaseSkipped(requestId, ExecutionPhase.LIST_SYNC_WORKLOADS, "previous errors")
         emptyList()
       }
 
     val jobCounts =
       if (errors.isEmpty()) {
-        runCatching {
-          dbPrune.pruneJobsAndAttemptsByScopes(connectionScopes)
-        }.getOrElse {
-          log.error(it) { "DSR $requestId job purge failed" }
-          errors.add("Job purge failed: ${it.message}")
-          DbPrune.JobDeletionCounts(deletedJobsCount = 0, deletedAttemptsCount = 0)
+        runExecutionPhase(requestId, ExecutionPhase.PRUNE_JOBS, errors) {
+          runCatching {
+            dbPrune.pruneJobsAndAttemptsByScopes(connectionScopes)
+          }.getOrElse {
+            log.error(it) { "DSR $requestId job purge failed" }
+            errors.add("Job purge failed: ${it.message}")
+            DbPrune.JobDeletionCounts(deletedJobsCount = 0, deletedAttemptsCount = 0)
+          }
         }
       } else {
+        recordExecutionPhaseSkipped(requestId, ExecutionPhase.PRUNE_JOBS, "previous errors")
         DbPrune.JobDeletionCounts(deletedJobsCount = 0, deletedAttemptsCount = 0)
       }
 
     if (errors.isEmpty()) {
-      cleanupActorSecrets(manifest, errors)
+      runExecutionPhase(requestId, ExecutionPhase.CLEANUP_ACTOR_SECRETS, errors) {
+        cleanupActorSecrets(requestId, manifest, errors)
+      }
+    } else {
+      recordExecutionPhaseSkipped(requestId, ExecutionPhase.CLEANUP_ACTOR_SECRETS, "previous errors")
     }
 
     val configCounts =
       if (errors.isEmpty()) {
-        runCatching {
-          configDb.transaction { ctx -> hardDeleteConfigRows(ctx, manifest, datagrailId, syncWorkloadIds) }
-        }.getOrElse {
-          log.error(it) { "DSR $requestId config DB purge failed" }
-          errors.add("Config DB purge failed: ${it.message}")
-          ConfigDeletionCounts.empty()
+        runExecutionPhase(requestId, ExecutionPhase.HARD_DELETE_CONFIG_ROWS, errors) {
+          runCatching {
+            configDb.transaction { ctx -> hardDeleteConfigRows(ctx, manifest, datagrailId, syncWorkloadIds) }
+          }.getOrElse {
+            log.error(it) { "DSR $requestId config DB purge failed" }
+            errors.add("Config DB purge failed: ${it.message}")
+            ConfigDeletionCounts.empty()
+          }
         }
       } else {
+        recordExecutionPhaseSkipped(requestId, ExecutionPhase.HARD_DELETE_CONFIG_ROWS, "previous errors")
         ConfigDeletionCounts.empty()
       }
 
     val deletedKeycloakUsers =
       if (errors.isEmpty()) {
-        runCatching {
-          externalUserService.deleteUsersByEmailInRealm(email, CLOUD_USERS_REALM)
-        }.getOrElse {
-          log.error(it) { "DSR $requestId Keycloak delete failed for emailHash=${emailHash(email)} in $CLOUD_USERS_REALM" }
-          errors.add("Keycloak delete failed: ${it.message}")
-          0
+        runExecutionPhase(requestId, ExecutionPhase.DELETE_KEYCLOAK_USERS, errors) {
+          runCatching {
+            externalUserService.deleteUsersByEmailInRealm(email, CLOUD_USERS_REALM)
+          }.getOrElse {
+            log.error(it) { "DSR $requestId Keycloak delete failed for emailHash=${emailHash(email)} in $CLOUD_USERS_REALM" }
+            errors.add("Keycloak delete failed: ${it.message}")
+            0
+          }
         }
       } else {
+        recordExecutionPhaseSkipped(requestId, ExecutionPhase.DELETE_KEYCLOAK_USERS, "previous errors")
         0
       }
 
@@ -451,15 +554,21 @@ open class DsrDeletionService(
         errors = persistedErrors,
       )
     val persisted =
-      finalizeRunningExecutionIfActive(
+      runExecutionPhase(
         requestId = requestId,
-        finalStatus = finalStatus,
-        completedAt = completedAt,
-        manifest = manifest,
-        datagrailId = datagrailId,
-        persistedErrors = persistedErrors,
-        executionCounts = result.toExecutionCounts(),
-      )
+        phase = ExecutionPhase.FINALIZE_EXECUTION,
+        statusForResult = { persisted -> if (persisted) MetricTags.SUCCESS else MetricTags.FAILURE },
+      ) {
+        finalizeRunningExecutionIfActive(
+          requestId = requestId,
+          finalStatus = finalStatus,
+          completedAt = completedAt,
+          manifest = manifest,
+          datagrailId = datagrailId,
+          persistedErrors = persistedErrors,
+          executionCounts = result.toExecutionCounts(),
+        )
+      }
     if (!persisted) {
       throw DsrInvalidStateException(
         "Deletion request $requestId already reached a terminal state before final execution result could be persisted.",
@@ -482,14 +591,33 @@ open class DsrDeletionService(
     block: () -> T,
   ): T {
     val intervalMs = executionHeartbeatInterval.toMillis().coerceAtLeast(1L)
+    log.info { "Scheduling DSR execution heartbeat for request=$requestId every ${intervalMs}ms" }
     val heartbeat =
       Runnable {
         runCatching {
-          deletionRequestRepository.heartbeatRunningExecution(
-            requestId = requestId,
-            heartbeatAt = OffsetDateTime.now(ZoneOffset.UTC),
-          )
+          val updatedRows =
+            deletionRequestRepository.heartbeatRunningExecution(
+              requestId = requestId,
+              heartbeatAt = OffsetDateTime.now(ZoneOffset.UTC),
+            )
+          if (updatedRows == 1) {
+            metricClient.count(
+              metric = OssMetricsRegistry.DSR_DELETION_HEARTBEAT,
+              attributes = arrayOf(MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS)),
+            )
+            log.info { "DSR execution heartbeat recorded for request=$requestId" }
+          } else {
+            metricClient.count(
+              metric = OssMetricsRegistry.DSR_DELETION_HEARTBEAT,
+              attributes = arrayOf(MetricAttribute(MetricTags.STATUS, HEARTBEAT_STATUS_STALE)),
+            )
+            log.warn { "DSR execution heartbeat for request=$requestId updated $updatedRows rows; worker may be racing terminal recovery" }
+          }
         }.onFailure {
+          metricClient.count(
+            metric = OssMetricsRegistry.DSR_DELETION_HEARTBEAT,
+            attributes = arrayOf(MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE)),
+          )
           log.warn(it) { "DSR execution heartbeat failed for request=$requestId" }
         }
       }
@@ -497,9 +625,102 @@ open class DsrDeletionService(
     return try {
       block()
     } finally {
+      log.info { "Canceling DSR execution heartbeat for request=$requestId" }
       heartbeatFuture.cancel(false)
     }
   }
+
+  private fun recordExecutionDuration(
+    requestId: UUID,
+    startedNanos: Long,
+    status: String,
+  ) {
+    val durationMs = elapsedMillis(startedNanos)
+    metricClient.distribution(
+      metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_DURATION_MS,
+      value = durationMs.toDouble(),
+      attributes = arrayOf(MetricAttribute(MetricTags.STATUS, status)),
+    )
+    log.warn { "DSR execution worker finished request=$requestId status=$status durationMs=$durationMs" }
+  }
+
+  private inline fun <T> runExecutionPhase(
+    requestId: UUID,
+    phase: ExecutionPhase,
+    noinline statusForResult: (T) -> String = { MetricTags.SUCCESS },
+    block: () -> T,
+  ): T {
+    recordExecutionPhaseStarted(requestId, phase)
+    val startedNanos = System.nanoTime()
+    return try {
+      val result = block()
+      val status = statusForResult(result)
+      recordExecutionPhaseCompleted(requestId, phase, startedNanos, status)
+      result
+    } catch (e: Throwable) {
+      recordExecutionPhaseCompleted(requestId, phase, startedNanos, MetricTags.FAILURE)
+      throw e
+    }
+  }
+
+  private inline fun <T> runExecutionPhase(
+    requestId: UUID,
+    phase: ExecutionPhase,
+    errors: MutableList<String>,
+    block: () -> T,
+  ): T {
+    val errorsBefore = errors.size
+    return runExecutionPhase(
+      requestId = requestId,
+      phase = phase,
+      statusForResult = { if (errors.size == errorsBefore) MetricTags.SUCCESS else MetricTags.FAILURE },
+      block = block,
+    )
+  }
+
+  private fun recordExecutionPhaseStarted(
+    requestId: UUID,
+    phase: ExecutionPhase,
+  ) {
+    metricClient.count(
+      metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_PHASE,
+      attributes = arrayOf(MetricAttribute(DSR_PHASE_TAG, phase.metricValue), MetricAttribute(MetricTags.STATUS, DSR_PHASE_STATUS_STARTED)),
+    )
+    log.info { "DSR execution phase ${phase.metricValue} STARTED for request=$requestId" }
+  }
+
+  private fun recordExecutionPhaseCompleted(
+    requestId: UUID,
+    phase: ExecutionPhase,
+    startedNanos: Long,
+    status: String,
+  ) {
+    val durationMs = elapsedMillis(startedNanos)
+    metricClient.count(
+      metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_PHASE,
+      attributes = arrayOf(MetricAttribute(DSR_PHASE_TAG, phase.metricValue), MetricAttribute(MetricTags.STATUS, status)),
+    )
+    metricClient.distribution(
+      metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_PHASE_DURATION_MS,
+      value = durationMs.toDouble(),
+      attributes = arrayOf(MetricAttribute(DSR_PHASE_TAG, phase.metricValue), MetricAttribute(MetricTags.STATUS, status)),
+    )
+    log.info { "DSR execution phase ${phase.metricValue} finished for request=$requestId status=$status durationMs=$durationMs" }
+  }
+
+  private fun recordExecutionPhaseSkipped(
+    requestId: UUID,
+    phase: ExecutionPhase,
+    reason: String,
+  ) {
+    metricClient.count(
+      metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_PHASE,
+      attributes = arrayOf(MetricAttribute(DSR_PHASE_TAG, phase.metricValue), MetricAttribute(MetricTags.STATUS, MetricTags.SKIPPED)),
+    )
+    log.info { "DSR execution phase ${phase.metricValue} skipped for request=$requestId reason=$reason" }
+  }
+
+  private fun elapsedMillis(startedNanos: Long): Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedNanos)
 
   open fun get(requestId: UUID): DataSubjectDeletionRequest? = deletionRequestRepository.findById(requestId).orElse(null)
 
@@ -734,7 +955,10 @@ open class DsrDeletionService(
       userId = userId,
       user = DsrManifest.ManifestUser(userId = userId, email = user.email, name = user.name),
       workspaceIds = workspaceIds,
-      workspaceRefs = workspaces.mapNotNull { workspace -> workspace.id?.let { DsrManifest.ManifestWorkspace(it, workspace.name) } },
+      workspaceRefs =
+        workspaces.mapNotNull { workspace ->
+          workspace.id?.let { DsrManifest.ManifestWorkspace(it, workspace.name, workspace.organizationId) }
+        },
       organizationIds = organizationIds,
       organizationRefs = organizations.mapNotNull { org -> org.id?.let { DsrManifest.ManifestOrganization(it, org.name) } },
       connectionIds = connectionIds,
@@ -807,27 +1031,176 @@ open class DsrDeletionService(
   }
 
   private fun cleanupActorSecrets(
+    requestId: UUID,
     manifest: DsrManifest,
     errors: MutableList<String>,
   ) {
-    manifest.sourceIds.forEach { sourceId ->
+    log.info {
+      "DSR actor secret cleanup discovering targets for request=$requestId sources=${manifest.sourceIds.size} " +
+        "destinations=${manifest.destinationIds.size} workspaceRefs=${manifest.workspaceRefs.size}"
+    }
+    val actorSecretCleanupTargets = mutableListOf<ActorSecretCleanupTarget>()
+    manifest.sourceIds.forEachIndexed { index, sourceId ->
       runCatching {
-        sourceHandler.deleteSource(SourceIdRequestBody().sourceId(sourceId))
+        log.info { "DSR actor secret cleanup reading source ${index + 1}/${manifest.sourceIds.size} sourceId=$sourceId request=$requestId" }
+        val source = sourceService.getSourceConnection(sourceId)
+        actorSecretCleanupTargets.add(
+          ActorSecretCleanupTarget(sourceId, "Source", source.workspaceId, source.configuration),
+        )
       }.onFailure {
         log.error(it) { "DSR source secret cleanup failed for source $sourceId" }
         errors.add("Source secret cleanup failed for source $sourceId: ${it.message}")
       }
     }
 
-    manifest.destinationIds.forEach { destinationId ->
+    manifest.destinationIds.forEachIndexed { index, destinationId ->
       runCatching {
-        destinationHandler.deleteDestination(DestinationIdRequestBody().destinationId(destinationId))
+        log.info {
+          "DSR actor secret cleanup reading destination ${index + 1}/${manifest.destinationIds.size} " +
+            "destinationId=$destinationId request=$requestId"
+        }
+        val destination = destinationService.getDestinationConnection(destinationId)
+        actorSecretCleanupTargets.add(
+          ActorSecretCleanupTarget(destinationId, "Destination", destination.workspaceId, destination.configuration),
+        )
       }.onFailure {
         log.error(it) { "DSR destination secret cleanup failed for destination $destinationId" }
         errors.add("Destination secret cleanup failed for destination $destinationId: ${it.message}")
       }
     }
+
+    val workspaceOrganizationIds =
+      manifest.workspaceRefs
+        .mapNotNull { workspaceRef -> workspaceRef.organizationId?.let { workspaceRef.workspaceId to it } }
+        .toMap()
+
+    log.info { "DSR actor secret cleanup resolved ${actorSecretCleanupTargets.size} actor targets for request=$requestId" }
+    actorSecretCleanupTargets.forEachIndexed { index, target ->
+      runCatching {
+        val organizationId =
+          workspaceOrganizationIds[target.workspaceId]
+            ?: throw DsrInvalidStateException(
+              "No organization id for workspace ${target.workspaceId} in DSR ${target.actorType} secret cleanup manifest.",
+            )
+        cleanupActorSecrets(
+          requestId,
+          index + 1,
+          actorSecretCleanupTargets.size,
+          target.actorId,
+          target.actorType,
+          target.workspaceId,
+          organizationId,
+          target.configuration,
+        )
+      }.onFailure {
+        val actorTypeForMessage = target.actorType.lowercase(Locale.US)
+        log.error(it) { "DSR $actorTypeForMessage secret cleanup failed for $actorTypeForMessage ${target.actorId}" }
+        errors.add("${target.actorType} secret cleanup failed for $actorTypeForMessage ${target.actorId}: ${it.message}")
+      }
+    }
   }
+
+  private fun cleanupActorSecrets(
+    requestId: UUID,
+    actorIndex: Int,
+    actorCount: Int,
+    actorId: UUID,
+    actorType: String,
+    workspaceId: UUID,
+    organizationId: UUID,
+    configuration: JsonNode,
+  ) {
+    val startedNanos = System.nanoTime()
+    log.info {
+      "DSR $actorType secret cleanup STARTED for actor $actorId ($actorIndex/$actorCount) " +
+        "request=$requestId workspaceId=$workspaceId organizationId=$organizationId"
+    }
+    val configWithSecretReferences = buildConfigWithSecretReferences(actorId, configuration)
+    val secretPersistenceByStorageId =
+      secretPersistenceService.getPersistenceMapFromConfig(
+        configWithSecretReferences,
+        SecretHydrationContext(OrganizationId(organizationId), WorkspaceId(workspaceId)),
+      )
+    deleteAirbyteManagedActorSecrets(configWithSecretReferences, secretPersistenceByStorageId)
+    secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId)
+    log.info {
+      "DSR $actorType secret cleanup completed for actor $actorId ($actorIndex/$actorCount) request=$requestId " +
+        "referencedSecrets=${configWithSecretReferences.referencedSecrets.size} secretPersistences=${secretPersistenceByStorageId.size} " +
+        "durationMs=${elapsedMillis(startedNanos)}"
+    }
+  }
+
+  private fun deleteAirbyteManagedActorSecrets(
+    configWithSecretReferences: ConfigWithSecretReferences,
+    secretPersistenceByStorageId: Map<UUID?, SecretPersistence>,
+  ) {
+    val defaultPersistenceSecretCount = configWithSecretReferences.referencedSecrets.values.count { it.secretStorageId == null }
+    val storageBackedSecretCount = configWithSecretReferences.referencedSecrets.values.count { it.secretStorageId != null }
+    log.info {
+      "DSR actor secret cleanup deleting Airbyte-managed secrets: defaultPersistenceSecretCount=$defaultPersistenceSecretCount " +
+        "storageBackedSecretCount=$storageBackedSecretCount persistenceCount=${secretPersistenceByStorageId.size}"
+    }
+    secretPersistenceByStorageId[null]?.let { secretPersistence ->
+      secretsRepositoryWriter.deleteFromConfig(configWithSecretReferences, secretPersistence)
+    }
+    configWithSecretReferences.referencedSecrets.values
+      .mapNotNull { secretReferenceConfig ->
+        val secretStorageId = secretReferenceConfig.secretStorageId ?: return@mapNotNull null
+        val secretCoordinate = secretReferenceConfig.secretCoordinate as? AirbyteManagedSecretCoordinate ?: return@mapNotNull null
+        secretStorageId to secretCoordinate
+      }.distinctBy { (secretStorageId, secretCoordinate) -> secretStorageId to secretCoordinate.fullCoordinate }
+      .forEach { (secretStorageId, secretCoordinate) ->
+        val secretPersistence =
+          secretPersistenceByStorageId[secretStorageId]
+            ?: throw DsrInvalidStateException("No secret persistence for secret storage $secretStorageId during DSR actor secret cleanup.")
+        if (secretPersistence is DataPlaneOnlySecretPersistence) {
+          log.warn {
+            "Skipping DSR actor secret ${secretCoordinate.fullCoordinate} delete from data-plane-only secret storage $secretStorageId"
+          }
+          return@forEach
+        }
+        log.info { "Deleting DSR actor secret ${secretCoordinate.fullCoordinate} from secret storage $secretStorageId" }
+        secretPersistence.delete(secretCoordinate)
+      }
+  }
+
+  private fun buildConfigWithSecretReferences(
+    actorId: UUID,
+    configuration: JsonNode,
+  ): ConfigWithSecretReferences {
+    val inlinedSecretRefs = InlinedConfigWithSecretRefs(configuration).toConfigWithRefs()
+    val persistedSecretRefs =
+      secretReferenceService
+        .listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId)
+        .mapNotNull { secretRefWithConfig ->
+          val hydrationPath = secretRefWithConfig.secretReference.hydrationPath ?: return@mapNotNull null
+          val configSecretReferenceId = SecretReferenceHelpers.getSecretReferenceIdAtPath(configuration, hydrationPath)
+          if (configSecretReferenceId != secretRefWithConfig.secretReference.id) {
+            return@mapNotNull null
+          }
+          hydrationPath to
+            SecretReferenceConfig(
+              secretCoordinate =
+                secretCoordinateFromConfig(
+                  secretRefWithConfig.secretConfig.externalCoordinate,
+                  secretRefWithConfig.secretConfig.airbyteManaged,
+                ),
+              secretStorageId = secretRefWithConfig.secretConfig.secretStorageId,
+              secretReferenceId = secretRefWithConfig.secretReference.id.value,
+            )
+        }.toMap()
+    return ConfigWithSecretReferences(configuration, persistedSecretRefs + inlinedSecretRefs.referencedSecrets)
+  }
+
+  private fun secretCoordinateFromConfig(
+    externalCoordinate: String,
+    airbyteManaged: Boolean,
+  ): SecretCoordinate =
+    if (airbyteManaged) {
+      SecretCoordinate.fromFullCoordinate(externalCoordinate)
+    } else {
+      SecretCoordinate.ExternalSecretCoordinate(externalCoordinate)
+    }
 
   private fun manifestScopeDriftErrors(
     previewManifest: DsrManifest,
@@ -906,15 +1279,21 @@ open class DsrDeletionService(
         errors = persistedErrors,
       )
     val persisted =
-      finalizeRunningExecutionIfActive(
+      runExecutionPhase(
         requestId = requestId,
-        finalStatus = DataSubjectDeletionStatus.failed,
-        completedAt = OffsetDateTime.now(ZoneOffset.UTC),
-        manifest = manifest,
-        datagrailId = datagrailId,
-        persistedErrors = persistedErrors,
-        executionCounts = result.toExecutionCounts(),
-      )
+        phase = ExecutionPhase.FINALIZE_EXECUTION,
+        statusForResult = { persisted -> if (persisted) MetricTags.SUCCESS else MetricTags.FAILURE },
+      ) {
+        finalizeRunningExecutionIfActive(
+          requestId = requestId,
+          finalStatus = DataSubjectDeletionStatus.failed,
+          completedAt = OffsetDateTime.now(ZoneOffset.UTC),
+          manifest = manifest,
+          datagrailId = datagrailId,
+          persistedErrors = persistedErrors,
+          executionCounts = result.toExecutionCounts(),
+        )
+      }
     if (!persisted) {
       throw DsrInvalidStateException(
         "Deletion request $requestId already reached a terminal state before failure result could be persisted.",
@@ -1543,6 +1922,12 @@ open class DsrDeletionService(
     const val CLOUD_USERS_REALM = "_airbyte-cloud-users"
     private const val LARGE_JOB_COUNT_WARNING_THRESHOLD = 10_000L
     private const val MAX_PREFIX_RANGE_CONDITIONS = 100
+    private const val DSR_PHASE_TAG = "phase"
+    private const val DSR_PHASE_STATUS_STARTED = "started"
+    private const val DSR_EXECUTION_STATE_TAG = "execution_state"
+    private const val DSR_EXECUTION_STATE_ACTIVE = "active"
+    private const val DSR_EXECUTION_STATE_QUEUED = "queued"
+    private const val HEARTBEAT_STATUS_STALE = "stale"
 
     fun emailHash(email: String): String {
       val normalizedEmail = email.trim().lowercase(Locale.US)

@@ -6,10 +6,6 @@ package io.airbyte.commons.server.handlers.dsr
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.commons.server.handlers.DestinationHandler
-import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.temporal.ConnectionManagerUtils
 import io.airbyte.config.AuthUser
 import io.airbyte.config.ConnectorBuilderProject
@@ -18,6 +14,9 @@ import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
 import io.airbyte.config.User
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.config.secrets.ConfigWithSecretReferences
+import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.repositories.DataSubjectDeletionRequestRepository
 import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.data.repositories.PermissionRepository
@@ -30,6 +29,7 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectorBuilderService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.ExternalUserService
+import io.airbyte.data.services.SecretReferenceService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorCatalogType
@@ -42,8 +42,10 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionTy
 import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.Status
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType
+import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.services.dsr.DsrDeletionRequestTimeoutService
 import io.airbyte.domain.services.dsr.DsrManifest
+import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.DbPrune
 import io.airbyte.test.utils.BaseConfigDatabaseTest
@@ -84,8 +86,10 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   private lateinit var permissionRepository: PermissionRepository
   private lateinit var externalUserService: ExternalUserService
   private lateinit var connectionManagerUtils: ConnectionManagerUtils
-  private lateinit var sourceHandler: SourceHandler
-  private lateinit var destinationHandler: DestinationHandler
+  private lateinit var secretReferenceService: SecretReferenceService
+  private lateinit var secretPersistenceService: SecretPersistenceService
+  private lateinit var secretsRepositoryWriter: SecretsRepositoryWriter
+  private lateinit var secretPersistence: SecretPersistence
   private lateinit var dbPrune: DbPrune
   private lateinit var deletionRequestRepository: DataSubjectDeletionRequestRepository
   private lateinit var deletionRequestTimeoutService: DsrDeletionRequestTimeoutService
@@ -163,8 +167,10 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     permissionRepository = mockk(relaxed = true)
     externalUserService = mockk(relaxed = true)
     connectionManagerUtils = mockk(relaxed = true)
-    sourceHandler = mockk(relaxed = true)
-    destinationHandler = mockk(relaxed = true)
+    secretReferenceService = mockk(relaxed = true)
+    secretPersistenceService = mockk(relaxed = true)
+    secretsRepositoryWriter = mockk(relaxed = true)
+    secretPersistence = mockk(relaxed = true)
     dbPrune = mockk(relaxed = true)
     deletionRequestRepository = mockk(relaxed = true)
     deletionRequestTimeoutService = mockk(relaxed = true)
@@ -219,8 +225,9 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       permissionRepository = permissionRepository,
       externalUserService = externalUserService,
       connectionManagerUtils = connectionManagerUtils,
-      sourceHandler = sourceHandler,
-      destinationHandler = destinationHandler,
+      secretReferenceService = secretReferenceService,
+      secretPersistenceService = secretPersistenceService,
+      secretsRepositoryWriter = secretsRepositoryWriter,
       dbPrune = dbPrune,
       deletionRequestRepository = deletionRequestRepository,
       deletionRequestTimeoutService = deletionRequestTimeoutService,
@@ -263,8 +270,6 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       row.confirmedBy = executedBy
       1
     }
-    every { sourceHandler.deleteSource(any<SourceIdRequestBody>()) } just Runs
-    every { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) } just Runs
     every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns listOf(legacySyncWorkloadId)
     every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
       DbPrune.JobDeletionCounts(deletedJobsCount = 3, deletedAttemptsCount = 4)
@@ -363,8 +368,11 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     assertFalse(finalization.scrubbedManifest.contains("postgres integration"))
     assertFalse(finalization.scrubbedManifest.contains("bigquery integration"))
 
-    verify(exactly = 1) { sourceHandler.deleteSource(any<SourceIdRequestBody>()) }
-    verify(exactly = 1) { destinationHandler.deleteDestination(any<DestinationIdRequestBody>()) }
+    verify(exactly = 2) {
+      secretsRepositoryWriter.deleteFromConfig(match<ConfigWithSecretReferences> { it.referencedSecrets.isNotEmpty() }, secretPersistence)
+    }
+    verify(exactly = 1) { secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, sourceId) }
+    verify(exactly = 1) { secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, destinationId) }
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
   }
 
@@ -720,7 +728,11 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       }
     }
     every { sourceService.getSourceConnection(sourceId) } returns
-      SourceConnection().withSourceId(sourceId).withWorkspaceId(workspaceId).withName("postgres integration")
+      SourceConnection()
+        .withSourceId(sourceId)
+        .withWorkspaceId(workspaceId)
+        .withName("postgres integration")
+        .withConfiguration(objectMapper.readTree("""{"password":{"_secret":"airbyte_source_password_v1"}}"""))
     every { destinationService.listWorkspaceDestinationConnection(workspaceId) } returns
       listOf(DestinationConnection().withDestinationId(destinationId).withWorkspaceId(workspaceId).withName("bigquery integration"))
     every { destinationService.listWorkspacesDestinationConnections(any()) } answers {
@@ -732,7 +744,14 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       }
     }
     every { destinationService.getDestinationConnection(destinationId) } returns
-      DestinationConnection().withDestinationId(destinationId).withWorkspaceId(workspaceId).withName("bigquery integration")
+      DestinationConnection()
+        .withDestinationId(destinationId)
+        .withWorkspaceId(workspaceId)
+        .withName("bigquery integration")
+        .withConfiguration(objectMapper.readTree("""{"password":{"_secret":"airbyte_destination_password_v1"}}"""))
+    every { secretPersistenceService.getPersistenceMapFromConfig(any(), any()) } returns mapOf(null to secretPersistence)
+    every { secretsRepositoryWriter.deleteFromConfig(any<ConfigWithSecretReferences>(), secretPersistence) } just Runs
+    every { secretReferenceService.deleteByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, any()) } just Runs
     every { connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId) } returns
       Stream.of(
         ConnectorBuilderProject()
@@ -1141,7 +1160,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       userId = userId,
       user = DsrManifest.ManifestUser(userId, email, "Davin Integration"),
       workspaceIds = listOf(workspaceId),
-      workspaceRefs = listOf(DsrManifest.ManifestWorkspace(workspaceId, "dsr-workspace")),
+      workspaceRefs = listOf(DsrManifest.ManifestWorkspace(workspaceId, "dsr-workspace", organizationId)),
       organizationIds = listOf(organizationId),
       organizationRefs = listOf(DsrManifest.ManifestOrganization(organizationId, "dsr-org")),
       connectionIds = listOf(connectionId),

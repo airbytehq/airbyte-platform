@@ -30,25 +30,58 @@ internal class DsrDeletionTimeoutWorkflowTest {
 
   @Test
   fun `recoverTimedOutRequests recovers stale running DSR requests`() {
-    every { deletionRequestTimeoutService.recoverTimedOutRunningRequests(Duration.ofHours(2)) } returns 3
+    every { deletionRequestTimeoutService.recoverTimedOutRunningRequestsWithSummary(Duration.ofHours(2)) } returns
+      DsrDeletionRequestTimeoutService.TimeoutRecoveryResult(
+        activeTimedOutCount = 2,
+        activeFailedCount = 1,
+        queuedTimedOutCount = 3,
+        queuedRecoveredCount = 2,
+      )
 
     workflow.recoverTimedOutRequests()
 
-    verify(exactly = 1) { deletionRequestTimeoutService.recoverTimedOutRunningRequests(Duration.ofHours(2)) }
+    verify(exactly = 1) { deletionRequestTimeoutService.recoverTimedOutRunningRequestsWithSummary(Duration.ofHours(2)) }
     verify {
       metricClient.count(
         metric = OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE,
         attributes = arrayOf(MetricAttribute(MetricTags.CRON_TYPE, "dsr_deletion_timeout")),
       )
     }
+    verify {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_SWEEP,
+        attributes = arrayOf(MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS)),
+      )
+    }
+    verify {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_RECOVERED,
+        value = 1,
+        attributes = arrayOf(MetricAttribute("execution_state", "active")),
+      )
+    }
+    verify {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_RECOVERED,
+        value = 2,
+        attributes = arrayOf(MetricAttribute("execution_state", "queued")),
+      )
+    }
   }
 
   @Test
   fun `recoverTimedOutRequests does not throw when timeout sweep fails`() {
-    every { deletionRequestTimeoutService.recoverTimedOutRunningRequests(Duration.ofHours(2)) } throws RuntimeException("database unavailable")
+    every { deletionRequestTimeoutService.recoverTimedOutRunningRequestsWithSummary(Duration.ofHours(2)) } throws
+      RuntimeException("database unavailable")
 
     workflow.recoverTimedOutRequests()
 
-    verify(exactly = 1) { deletionRequestTimeoutService.recoverTimedOutRunningRequests(Duration.ofHours(2)) }
+    verify(exactly = 1) { deletionRequestTimeoutService.recoverTimedOutRunningRequestsWithSummary(Duration.ofHours(2)) }
+    verify {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_SWEEP,
+        attributes = arrayOf(MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE)),
+      )
+    }
   }
 }

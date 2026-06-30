@@ -72,6 +72,7 @@ data class DsrManifest(
   data class ManifestWorkspace(
     val workspaceId: UUID,
     val name: String?,
+    val organizationId: UUID? = null,
   )
 
   @Introspected

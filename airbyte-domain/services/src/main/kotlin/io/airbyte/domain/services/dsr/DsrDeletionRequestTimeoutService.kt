@@ -11,11 +11,14 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.airbyte.data.repositories.DataSubjectDeletionRequestRepository
 import io.airbyte.data.repositories.entities.DataSubjectDeletionRequest
 import io.airbyte.db.instance.configs.jooq.generated.enums.DataSubjectDeletionStatus
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
+
+private val log = KotlinLogging.logger {}
 
 @Singleton
 open class DsrDeletionRequestTimeoutService(
@@ -38,6 +41,16 @@ open class DsrDeletionRequestTimeoutService(
     val terminatedTemporalWorkflowCount: Int = 0,
   )
 
+  data class TimeoutRecoveryResult(
+    val activeTimedOutCount: Int,
+    val activeFailedCount: Int,
+    val queuedTimedOutCount: Int,
+    val queuedRecoveredCount: Int,
+  ) {
+    val recoveredCount: Int
+      get() = activeFailedCount + queuedRecoveredCount
+  }
+
   open fun failTimedOutActiveRequest(
     requestId: UUID,
     executionTimeout: Duration,
@@ -49,17 +62,33 @@ open class DsrDeletionRequestTimeoutService(
     return failTimedOutActiveRequest(row, staleBefore(executionTimeout), executionTimeout)
   }
 
-  open fun recoverTimedOutRunningRequests(executionTimeout: Duration): Int {
+  open fun recoverTimedOutRunningRequests(executionTimeout: Duration): Int =
+    recoverTimedOutRunningRequestsWithSummary(executionTimeout).recoveredCount
+
+  open fun recoverTimedOutRunningRequestsWithSummary(executionTimeout: Duration): TimeoutRecoveryResult {
     val staleBefore = staleBefore(executionTimeout)
-    val activeFailedCount =
-      deletionRequestRepository
-        .findRunningUpdatedBefore(staleBefore)
-        .count { failTimedOutActiveRequest(it, staleBefore, executionTimeout) }
-    val queuedRecoveredCount =
-      deletionRequestRepository
-        .findQueuedRunningUpdatedBefore(staleBefore)
-        .count { resetTimedOutQueuedRequest(it, staleBefore) }
-    return activeFailedCount + queuedRecoveredCount
+    val activeTimedOutRequests = deletionRequestRepository.findRunningUpdatedBefore(staleBefore)
+    val queuedTimedOutRequests = deletionRequestRepository.findQueuedRunningUpdatedBefore(staleBefore)
+    log.info {
+      "DSR timeout recovery found ${activeTimedOutRequests.size} active and ${queuedTimedOutRequests.size} queued " +
+        "RUNNING requests older than $staleBefore (timeout=$executionTimeout)"
+    }
+
+    val activeFailedCount = activeTimedOutRequests.count { failTimedOutActiveRequest(it, staleBefore, executionTimeout) }
+    val queuedRecoveredCount = queuedTimedOutRequests.count { resetTimedOutQueuedRequest(it, staleBefore) }
+    val result =
+      TimeoutRecoveryResult(
+        activeTimedOutCount = activeTimedOutRequests.size,
+        activeFailedCount = activeFailedCount,
+        queuedTimedOutCount = queuedTimedOutRequests.size,
+        queuedRecoveredCount = queuedRecoveredCount,
+      )
+    log.warn {
+      "DSR timeout recovery completed: activeTimedOut=${result.activeTimedOutCount}, " +
+        "activeFailed=${result.activeFailedCount}, queuedTimedOut=${result.queuedTimedOutCount}, " +
+        "queuedRecovered=${result.queuedRecoveredCount}"
+    }
+    return result
   }
 
   private fun failTimedOutActiveRequest(
@@ -82,7 +111,18 @@ open class DsrDeletionRequestTimeoutService(
         confirmErrors = objectMapper.writeValueAsString(listOf(timeoutError)),
         executionCounts = objectMapper.writeValueAsString(ExecutionCounts()),
       )
-    return updatedRows == 1
+    if (updatedRows == 1) {
+      log.warn {
+        "DSR timeout recovery marked active request $requestId FAILED after $executionTimeout; " +
+          "lastUpdatedAt=${row.updatedAt}, staleBefore=$staleBefore"
+      }
+      return true
+    }
+    log.info {
+      "DSR timeout recovery skipped active request $requestId because it was updated by another worker; " +
+        "lastUpdatedAt=${row.updatedAt}, staleBefore=$staleBefore"
+    }
+    return false
   }
 
   private fun resetTimedOutQueuedRequest(
@@ -90,7 +130,19 @@ open class DsrDeletionRequestTimeoutService(
     staleBefore: OffsetDateTime,
   ): Boolean {
     val requestId = row.id ?: return false
-    return deletionRequestRepository.markPreviewedIfQueuedTimedOut(requestId, staleBefore) == 1
+    val updatedRows = deletionRequestRepository.markPreviewedIfQueuedTimedOut(requestId, staleBefore)
+    if (updatedRows == 1) {
+      log.warn {
+        "DSR timeout recovery returned queued request $requestId to PREVIEWED; " +
+          "lastUpdatedAt=${row.updatedAt}, staleBefore=$staleBefore"
+      }
+      return true
+    }
+    log.info {
+      "DSR timeout recovery skipped queued request $requestId because it was updated by another worker; " +
+        "lastUpdatedAt=${row.updatedAt}, staleBefore=$staleBefore"
+    }
+    return false
   }
 
   private fun staleBefore(executionTimeout: Duration): OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC).minus(executionTimeout)

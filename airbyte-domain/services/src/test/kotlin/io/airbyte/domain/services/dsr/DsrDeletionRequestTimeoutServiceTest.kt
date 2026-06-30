@@ -136,6 +136,36 @@ internal class DsrDeletionRequestTimeoutServiceTest {
     assertEquals(2, recoveredCount)
   }
 
+  @Test
+  fun `recoverTimedOutRunningRequestsWithSummary reports inspected and recovered timeout rows`() {
+    val activeFirst = runningRow(requestId = UUID.randomUUID())
+    val activeSecond = runningRow(requestId = UUID.randomUUID())
+    val queuedFirst = runningRow(requestId = UUID.randomUUID())
+    val queuedSecond = runningRow(requestId = UUID.randomUUID())
+    every { deletionRequestRepository.findRunningUpdatedBefore(any()) } returns listOf(activeFirst, activeSecond)
+    every { deletionRequestRepository.findQueuedRunningUpdatedBefore(any()) } returns listOf(queuedFirst, queuedSecond)
+    every {
+      deletionRequestRepository.failRunningIfTimedOut(activeFirst.id!!, any(), any(), any(), any(), any(), any())
+    } returns 1
+    every {
+      deletionRequestRepository.failRunningIfTimedOut(activeSecond.id!!, any(), any(), any(), any(), any(), any())
+    } returns 0
+    every {
+      deletionRequestRepository.markPreviewedIfQueuedTimedOut(queuedFirst.id!!, any())
+    } returns 1
+    every {
+      deletionRequestRepository.markPreviewedIfQueuedTimedOut(queuedSecond.id!!, any())
+    } returns 0
+
+    val result = service.recoverTimedOutRunningRequestsWithSummary(Duration.ofHours(2))
+
+    assertEquals(2, result.activeTimedOutCount)
+    assertEquals(1, result.activeFailedCount)
+    assertEquals(2, result.queuedTimedOutCount)
+    assertEquals(1, result.queuedRecoveredCount)
+    assertEquals(2, result.recoveredCount)
+  }
+
   private fun runningRow(requestId: UUID = this.requestId): DataSubjectDeletionRequest =
     DataSubjectDeletionRequest(
       id = requestId,

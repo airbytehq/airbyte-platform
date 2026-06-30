@@ -19,6 +19,11 @@ import java.time.Duration
 
 private val log = KotlinLogging.logger {}
 
+private const val DSR_DELETION_TIMEOUT_CRON_TYPE = "dsr_deletion_timeout"
+private const val DSR_EXECUTION_STATE_TAG = "execution_state"
+private const val DSR_EXECUTION_STATE_ACTIVE = "active"
+private const val DSR_EXECUTION_STATE_QUEUED = "queued"
+
 /**
  * Recovers DSR deletion requests when an in-process async executor is lost and the row remains
  * RUNNING past the configured timeout. Active requests are failed; accepted-but-unclaimed requests
@@ -43,13 +48,39 @@ class DsrDeletionTimeoutWorkflow(
 
     metricClient.count(
       metric = OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE,
-      attributes = arrayOf(MetricAttribute(MetricTags.CRON_TYPE, "dsr_deletion_timeout")),
+      attributes = arrayOf(MetricAttribute(MetricTags.CRON_TYPE, DSR_DELETION_TIMEOUT_CRON_TYPE)),
     )
 
     try {
-      val recoveredCount = deletionRequestTimeoutService.recoverTimedOutRunningRequests(executionTimeout)
-      log.info { "Recovered $recoveredCount timed-out DSR deletion requests" }
+      val result = deletionRequestTimeoutService.recoverTimedOutRunningRequestsWithSummary(executionTimeout)
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_SWEEP,
+        attributes = arrayOf(MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS)),
+      )
+      if (result.activeFailedCount > 0) {
+        metricClient.count(
+          metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_RECOVERED,
+          value = result.activeFailedCount.toLong(),
+          attributes = arrayOf(MetricAttribute(DSR_EXECUTION_STATE_TAG, DSR_EXECUTION_STATE_ACTIVE)),
+        )
+      }
+      if (result.queuedRecoveredCount > 0) {
+        metricClient.count(
+          metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_RECOVERED,
+          value = result.queuedRecoveredCount.toLong(),
+          attributes = arrayOf(MetricAttribute(DSR_EXECUTION_STATE_TAG, DSR_EXECUTION_STATE_QUEUED)),
+        )
+      }
+      log.info {
+        "Recovered ${result.recoveredCount} timed-out DSR deletion requests " +
+          "(activeTimedOut=${result.activeTimedOutCount}, activeFailed=${result.activeFailedCount}, " +
+          "queuedTimedOut=${result.queuedTimedOutCount}, queuedRecovered=${result.queuedRecoveredCount})"
+      }
     } catch (e: Exception) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_TIMEOUT_SWEEP,
+        attributes = arrayOf(MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE)),
+      )
       log.error(e) { "Failed to recover timed-out DSR deletion requests" }
     }
   }

@@ -772,6 +772,34 @@ enum class OssMetricsRegistry(
     metricName = "dsr_deletion_failed",
     metricDescription = "Count of DSR / GDPR deletion confirmations that finished with at least one error.",
   ),
+  DSR_DELETION_EXECUTION_STARTED(
+    metricName = "dsr_deletion_execution_started",
+    metricDescription = "Count of DSR / GDPR deletion background workers that started claimed execution.",
+  ),
+  DSR_DELETION_EXECUTION_DURATION_MS(
+    metricName = "dsr_deletion_execution_duration_ms",
+    metricDescription = "Distribution of total DSR / GDPR deletion execution duration in milliseconds.",
+  ),
+  DSR_DELETION_EXECUTION_PHASE(
+    metricName = "dsr_deletion_execution_phase",
+    metricDescription = "Count of DSR / GDPR deletion execution phases by phase and status.",
+  ),
+  DSR_DELETION_EXECUTION_PHASE_DURATION_MS(
+    metricName = "dsr_deletion_execution_phase_duration_ms",
+    metricDescription = "Distribution of DSR / GDPR deletion execution phase duration in milliseconds by phase and status.",
+  ),
+  DSR_DELETION_HEARTBEAT(
+    metricName = "dsr_deletion_heartbeat",
+    metricDescription = "Count of DSR / GDPR deletion worker heartbeat attempts by status.",
+  ),
+  DSR_DELETION_TIMEOUT_SWEEP(
+    metricName = "dsr_deletion_timeout_sweep",
+    metricDescription = "Count of DSR / GDPR deletion timeout recovery sweeps by status.",
+  ),
+  DSR_DELETION_TIMEOUT_RECOVERED(
+    metricName = "dsr_deletion_timeout_recovered",
+    metricDescription = "Count of DSR / GDPR deletion requests recovered or terminalized after timing out.",
+  ),
   ;
 
   override fun getMetricName(): String = metricName
