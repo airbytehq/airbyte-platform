@@ -16,7 +16,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.file.StandardWatchEventKinds
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 private val logger = KotlinLogging.logger {}
@@ -116,12 +115,8 @@ data class ContainerIOHandle(
 
     return try {
       terminationFile.writeText(TERMINATION_FILE_BODY)
-      val future =
-        CompletableFuture.supplyAsync {
-          return@supplyAsync watchForExitFile()
-        }
       logger.debug { "Waiting for $timeout $timeUnit for exit value..." }
-      return future.get(timeout, timeUnit)
+      watchForExitFile(timeout, timeUnit)
     } catch (e: Exception) {
       logger.warn(e) { "Failed to wait for exit value file $exitValueFile to be found." }
       false
@@ -146,25 +141,58 @@ data class ContainerIOHandle(
     }
   }
 
-  private fun watchForExitFile(): Boolean {
+  fun waitForExitCode(
+    timeout: Long = 1L,
+    timeUnit: TimeUnit = TimeUnit.MINUTES,
+  ): Boolean =
+    try {
+      logger.debug { "Waiting gracefully for $timeout $timeUnit for exit value..." }
+      watchForExitFile(timeout, timeUnit)
+    } catch (e: Exception) {
+      logger.debug(e) { "Graceful wait for exit value file $exitValueFile timed out or failed." }
+      false
+    }
+
+  private fun watchForExitFile(
+    timeout: Long,
+    timeUnit: TimeUnit,
+  ): Boolean {
     val watchService = FileSystems.getDefault().newWatchService()
     watchService.use {
-      var found = false
       try {
+        val deadlineNanos = System.nanoTime() + timeUnit.toNanos(timeout)
         // register to watch for exit file creation
-        exitValueFile.parentFile.toPath().register(it, StandardWatchEventKinds.ENTRY_MODIFY)
+        exitValueFile.parentFile.toPath().register(it, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_MODIFY)
         // now check if the file already exists to avoid a race
-        found = exitCodeExists()
-        while (!found) {
-          val watchKey = it.take()
-          found = watchKey.pollEvents().find {
-            (it.context() as Path).endsWith(exitValueFile.name)
-          } != null
+        if (exitCodeExists()) {
+          return true
         }
+        while (true) {
+          val remainingNanos = deadlineNanos - System.nanoTime()
+          if (remainingNanos <= 0) {
+            return false
+          }
+
+          val watchKey = it.poll(remainingNanos, TimeUnit.NANOSECONDS) ?: return false
+          val found =
+            watchKey.pollEvents().any { event ->
+              (event.context() as? Path)?.endsWith(exitValueFile.name) == true
+            }
+          if (found) {
+            return true
+          }
+          if (!watchKey.reset()) {
+            return false
+          }
+        }
+      } catch (e: InterruptedException) {
+        Thread.currentThread().interrupt()
+        logger.warn(e) { "Interrupted while waiting for exit value file $exitValueFile to be found." }
+        return false
       } catch (e: Exception) {
         logger.warn(e) { "Exit value file $exitValueFile could not be found." }
+        return false
       }
-      return found
     }
   }
 }

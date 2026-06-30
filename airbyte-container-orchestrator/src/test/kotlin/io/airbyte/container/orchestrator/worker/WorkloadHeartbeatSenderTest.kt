@@ -11,6 +11,7 @@ import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.micronaut.runtime.AirbyteContextConfig
+import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.micronaut.http.HttpStatus
 import io.mockk.clearAllMocks
@@ -19,9 +20,9 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -151,8 +152,31 @@ internal class WorkloadHeartbeatSenderTest {
       // We should have failed the workload because of the destination timeout failure
       verify(exactly = 1) { mockReplicationWorkerState.markFailed() }
 
-      // Verify destination.close() was called to unblock any stuck reader threads
-      verify(exactly = 1) { destination.close() }
+      // Verify destination.cancel() was called to unblock any stuck reader threads
+      verify(exactly = 1) { destination.cancel() }
+    }
+
+  @Test
+  fun `destination timeout exits heartbeat loop even if destination cancel throws`() =
+    runTest {
+      every { mockDestinationTimeoutMonitor.hasTimedOut() } returns true
+      every { mockDestinationTimeoutMonitor.timeSinceLastAction } returns AtomicLong(0)
+      every { mockWorkloadApiClient.workloadRunning(any()) } returns Unit
+      every { destination.cancel() } throws WorkerException("Destination has not terminated.")
+
+      val sender = getSender(heartbeatTimeoutDuration = Duration.ofMinutes(1))
+
+      val job =
+        backgroundScope.launch {
+          sender.sendHeartbeat()
+        }
+
+      advanceTimeBy(20)
+
+      assertTrue(job.isCompleted)
+      verify(exactly = 1) { mockReplicationWorkerState.markFailed() }
+      verify(exactly = 1) { destination.cancel() }
+      verify(exactly = 0) { hardExitCallable() }
     }
 
   /**
@@ -249,12 +273,17 @@ internal class WorkloadHeartbeatSenderTest {
           sender.sendHeartbeat() // infinite while loop trying to transition to running
         }
 
-      // The first iteration tries to transition to running, it fails with "Transient server error", logs it, won't break
-      // We now move time forward beyond shortHeartbeatTimeout to ensure the next iteration sees a time gap > heartbeatTimeout
-      delay(1000) // well beyond 50ms
+      // The first transition attempt fails and schedules a retry after shortHeartbeatInterval.
+      runCurrent()
 
-      // The iteration sees that lastSuccessfulHeartbeat is from the moment we started the loop => more than 50ms
-      // => it triggers exit
+      // WorkloadHeartbeatSender measures this timeout with Instant.now(), not coroutine virtual time.
+      Thread.sleep(shortHeartbeatTimeout.toMillis() + 10)
+
+      // Let the retry run after real wall-clock time has exceeded shortHeartbeatTimeout.
+      advanceTimeBy(shortHeartbeatInterval.toMillis())
+      runCurrent()
+
+      // The retry sees that lastSuccessfulHeartbeat is from the moment we started the loop => more than 50ms => it triggers exit.
       assertTrue(job.isCompleted)
 
       // We confirm we hardExit

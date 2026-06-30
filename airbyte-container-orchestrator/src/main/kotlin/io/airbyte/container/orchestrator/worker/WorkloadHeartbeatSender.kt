@@ -114,12 +114,16 @@ class WorkloadHeartbeatSender(
             logger.warn(e) { "Destination has timed out; failing the workload." }
             failWorkload(e)
 
-            // Close the destination to unblock any threads stuck reading from destination pipes.
+            // Cancel the destination to unblock any threads stuck reading from destination pipes.
             // The DestinationReader may be blocked in a native read0() call on the stdout FIFO,
-            // which ignores Thread.interrupt() and coroutine cancellation. Closing the destination
+            // which ignores Thread.interrupt() and coroutine cancellation. Cancelling the destination
             // triggers ContainerIOHandle.terminate() which closes the underlying streams, causing
             // the blocked read to throw IOException and allowing shutdown to proceed.
-            destination.close()
+            try {
+              destination.cancel()
+            } catch (e: Exception) {
+              logger.warn(e) { "Destination cancel failed after destination timeout." }
+            }
 
             break
           }

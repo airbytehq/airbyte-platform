@@ -24,6 +24,7 @@ import java.io.OutputStreamWriter
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 private val logger = KotlinLogging.logger {}
@@ -42,6 +43,7 @@ class LocalContainerAirbyteDestination(
   private val dockerImage: String? = null,
   private val flushImmediately: Boolean = false,
   private val exitCodeWaitSeconds: Long = EXIT_CODE_WAIT_SECONDS,
+  private val gracefulShutdownTimeoutSeconds: Long = GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS,
 ) : AirbyteDestination {
   companion object {
     // Fallback exit code when the destination container is killed (e.g., OOM) and no exit code file is written
@@ -49,6 +51,9 @@ class LocalContainerAirbyteDestination(
 
     // Time to wait for exit code file after pipe closes (to handle race condition between pipe close and exit code write)
     const val EXIT_CODE_WAIT_SECONDS = 10L
+
+    // Time to wait for the destination to exit gracefully after notifyEndOfInput before forceful termination
+    const val GRACEFUL_SHUTDOWN_TIMEOUT_SECONDS = 60L
   }
 
   private val inputHasEnded = AtomicBoolean(false)
@@ -67,6 +72,19 @@ class LocalContainerAirbyteDestination(
       notifyEndOfInput()
     }
 
+    // First, attempt graceful shutdown: wait for the destination to exit on its own after EOF.
+    // This avoids calling closeStreams()/terminate() which kills the destination prematurely.
+    val gracefulExit = containerIOHandle.waitForExitCode(gracefulShutdownTimeoutSeconds, TimeUnit.SECONDS)
+    if (gracefulExit) {
+      if (!LocalContainerConstants.IGNORED_EXIT_CODES.contains(exitValue)) {
+        LocalContainerConstants.emitExitCodeMetric(metricClient, "destination", exitValue, workspaceId, connectionId, dockerImage)
+        throw WorkerException("Destination process exit with code $exitValue. This warning is normal if the job was cancelled.")
+      }
+      return
+    }
+
+    // Graceful shutdown timed out — fall back to forceful termination.
+    logger.warn { "Destination did not exit gracefully within ${gracefulShutdownTimeoutSeconds}s, forcing termination." }
     val terminationResult = containerIOHandle.terminate()
     if (terminationResult) {
       if (!LocalContainerConstants.IGNORED_EXIT_CODES.contains(exitValue)) {
@@ -184,7 +202,20 @@ class LocalContainerAirbyteDestination(
   }
 
   override fun cancel() {
-    close()
+    emitDestinationMessageCountMetrics()
+
+    // Skip notifyEndOfInput() — cancel() is called from timeout/abort paths where
+    // accept() or notifyEndOfInput() may already be hung on writer.flush()/close().
+    // Go straight to terminate() which closes the underlying streams forcefully.
+    val terminationResult = containerIOHandle.terminate()
+    if (terminationResult) {
+      if (!LocalContainerConstants.IGNORED_EXIT_CODES.contains(exitValue)) {
+        LocalContainerConstants.emitExitCodeMetric(metricClient, "destination", exitValue, workspaceId, connectionId, dockerImage)
+        throw WorkerException("Destination process exit with code $exitValue. This warning is normal if the job was cancelled.")
+      }
+    } else {
+      throw WorkerException("Destination has not terminated.  This warning is normal if the job was cancelled.")
+    }
   }
 
   fun acceptWithNoTimeoutMonitor(message: AirbyteMessage) {
