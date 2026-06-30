@@ -54,6 +54,24 @@ it's currently `config.yaml`.
    PR. The backend stubs are not committed (they're in `build/`),
    but they must compile cleanly.
 6. **Run `make check.oss`** before declaring done.
+7. **If the change affects behavior visible to external API consumers,
+   propagate it through the full chain: `server-api` →
+   `public-api` spec → public SDKs.**
+   Many changes to `server-api` (new enum values, new response
+   fields, new endpoints) surface through the public API even when
+   you only edit the internal spec. Ask yourself: "will an external
+   caller see this value or need this endpoint?" If yes, update the
+   `public-api` OpenAPI spec in this repo to match, then propagate
+   to the Speakeasy-generated SDKs
+   ([airbyte-api-python-sdk](https://github.com/airbytehq/airbyte-api-python-sdk),
+   [airbyte-api-java-sdk](https://github.com/airbytehq/airbyte-api-java-sdk)).
+   When the public spec and SDKs are not updated in lockstep,
+   external consumers (Airflow/Dagster operators, Terraform
+   provider, direct API callers) break at runtime — e.g. the
+   `JobStatusEnum.QUEUED` incident where the server returned a new
+   value the SDK didn't recognize.
+   Open a tracking issue or PR on the SDK repos as part of the same
+   change, and link it in your platform PR description.
 
 ## Conventions
 
@@ -81,6 +99,18 @@ it's currently `config.yaml`.
 - `public-api` is externally documented and treated as a stable
   contract. Breaking changes require deprecation + announcement —
   ask before changing.
+- **`server-api` changes that affect external behavior must flow to
+  `public-api` and the SDKs.** `server-api` is internal, but many
+  of its models (enums, response shapes) are returned through the
+  public API. When you change something in `server-api` that
+  external consumers will observe, update the `public-api` spec in
+  the same PR, then ensure the Speakeasy-generated Python and Java
+  SDKs (`airbyte-api` on PyPI, `com.airbyte:api` on Maven) are
+  updated and released. A spec change that isn't reflected in a
+  published SDK release causes runtime failures when the API
+  returns values the SDK doesn't recognize. Treat the full
+  `server-api` → `public-api` → SDK propagation as a mandatory
+  follow-up, not an optional nice-to-have.
 - `server-api`, `workload-api`, `problems-api`,
   `manifest-server-api` are internal; iterate freely, but still
   commit the YAML and regenerated frontend client atomically so the
