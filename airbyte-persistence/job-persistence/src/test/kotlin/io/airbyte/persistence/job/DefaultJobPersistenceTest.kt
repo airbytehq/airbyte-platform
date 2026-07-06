@@ -1649,6 +1649,46 @@ internal class DefaultJobPersistenceTest {
     }
 
     @Test
+    @DisplayName("getAttemptStats should merge results from every batch when the job id list spans multiple batches")
+    fun testGetMultipleStatsAcrossBatches() {
+      // Create more jobs than fit in a single batch so the chunked lookup runs several times. This guards
+      // against a merge bug silently dropping stats for jobs beyond the first batch.
+      val numJobs = DefaultJobPersistence.ATTEMPT_STATS_JOB_ID_BATCH_SIZE + 2
+      val jobIds = mutableListOf<Long>()
+      val expectedKeys = mutableSetOf<JobAttemptPair>()
+
+      for (i in 0 until numJobs) {
+        val jobId = jobPersistence.enqueueJob("$SCOPE-batch-$i", SPEC_JOB_CONFIG, true).orElseThrow()
+        val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+        val streamStats =
+          listOf(
+            StreamSyncStats()
+              .withStreamName("name-$i")
+              .withStats(
+                SyncStats()
+                  .withBytesEmitted(1L)
+                  .withRecordsEmitted(1L)
+                  .withEstimatedBytes(2L)
+                  .withEstimatedRecords(2L),
+              ),
+          )
+        jobPersistence.writeStats(jobId, attemptNumber, 2L, 2L, 1L, 1L, 1L, 1L, 0L, CONNECTION_ID, streamStats)
+        jobIds.add(jobId)
+        expectedKeys.add(JobAttemptPair(jobId, attemptNumber))
+      }
+
+      val stats = jobPersistence.getAttemptStats(jobIds)
+
+      // Every job across every batch is present...
+      assertEquals(expectedKeys, stats.keys)
+      // ...and each entry has its per-stream stat hydrated, proving the stream-stats query results are
+      // merged for all batches rather than only the first.
+      stats.forEach { (key, attemptStats) ->
+        assertEquals(1, attemptStats.perStreamStats.size, "missing per-stream stats for $key")
+      }
+    }
+
+    @Test
     @DisplayName("Writing stats for different streams should not have side effects")
     fun testWritingStatsForDifferentStreams() {
       val jobOneId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()

@@ -541,18 +541,22 @@ class DefaultJobPersistence
         }
 
     override fun getAttemptStats(jobIds: List<Long>?): Map<JobAttemptPair, JobPersistence.AttemptStats> {
-      if (jobIds == null || jobIds.isEmpty()) {
+      if (jobIds.isNullOrEmpty()) {
         return emptyMap()
       }
 
-      val jobIdsStr = jobIds.joinToString(",") { obj: Long -> obj.toString() }
-
       return jobDatabase.query { ctx: DSLContext ->
-        // Instead of one massive join query, separate this query into two queries for better readability
-        // for now.
-        // We can combine the queries at a later date if this still proves to be not efficient enough.
-        val attemptStats = hydrateSyncStats(jobIdsStr, ctx)
-        hydrateStreamStats(jobIdsStr, ctx, attemptStats)
+        // Process the job ids in bounded batches. The ids are bound as a single bigint[] parameter (see
+        // hydrateSyncStats / hydrateStreamStats) so the plan is stable and cacheable across call sites,
+        // and batching keeps each list small enough that the planner uses the attempts / stream_stats
+        // indexes instead of sequentially scanning the very large stats tables.
+        val attemptStats = mutableMapOf<JobAttemptPair, JobPersistence.AttemptStats>()
+        for (batch in jobIds.chunked(ATTEMPT_STATS_JOB_ID_BATCH_SIZE)) {
+          // Instead of one massive join query, separate this query into two queries for better readability.
+          val syncStats = hydrateSyncStats(batch, ctx)
+          attemptStats.putAll(hydrateStreamStats(batch, ctx, syncStats))
+        }
+        attemptStats
       }
     }
 
@@ -1906,7 +1910,7 @@ class DefaultJobPersistence
       }
 
       private fun hydrateSyncStats(
-        jobIdsStr: String,
+        jobIds: List<Long>,
         ctx: DSLContext,
       ): Map<JobAttemptPair, JobPersistence.AttemptStats> {
         val attemptStats = HashMap<JobAttemptPair, JobPersistence.AttemptStats>()
@@ -1918,8 +1922,9 @@ class DefaultJobPersistence
                 "stats.bytes_committed, stats.records_committed, stats.records_rejected " +
                 "FROM sync_stats stats " +
                 "INNER JOIN attempts atmpt ON stats.attempt_id = atmpt.id " +
-                "WHERE job_id IN ( " + jobIdsStr + ");"
+                "WHERE atmpt.job_id = ANY({0}::bigint[])"
             ),
+            jobIds.toTypedArray(),
           )
         syncResults.forEach(
           Consumer { r: Record ->
@@ -1940,6 +1945,10 @@ class DefaultJobPersistence
         return attemptStats
       }
 
+      // Cap the number of job ids bound into a single stats lookup. Small batches keep the planner on
+      // the attempts / stream_stats indexes instead of sequentially scanning the large stats tables.
+      internal const val ATTEMPT_STATS_JOB_ID_BATCH_SIZE = 20
+
       private const val STREAM_STAT_SELECT_STATEMENT = (
         "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, " +
           "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted," +
@@ -1959,12 +1968,12 @@ class DefaultJobPersistence
        * has prepopulated the map.
        */
       private fun hydrateStreamStats(
-        jobIdsStr: String,
+        jobIds: List<Long>,
         ctx: DSLContext,
         attemptStatsImmutable: Map<JobAttemptPair, JobPersistence.AttemptStats>,
       ): Map<JobAttemptPair, JobPersistence.AttemptStats> {
         val attemptStats = attemptStatsImmutable.toMutableMap()
-        val attemptOutputs = ctx.fetch("SELECT id, output FROM attempts WHERE job_id in ($jobIdsStr);")
+        val attemptOutputs = ctx.fetch("SELECT id, output FROM attempts WHERE job_id = ANY({0}::bigint[])", jobIds.toTypedArray())
         val backFilledStreamsPerAttemptId: MutableMap<Long, MutableSet<StreamDescriptor>> = HashMap()
         val resumedStreamsPerAttemptId: MutableMap<Long, MutableSet<StreamDescriptor>> = HashMap()
         for (result in attemptOutputs) {
@@ -1992,10 +2001,8 @@ class DefaultJobPersistence
 
         val streamResults =
           ctx.fetch(
-            (
-              STREAM_STAT_SELECT_STATEMENT +
-                "WHERE atmpt.job_id IN ( " + jobIdsStr + ");"
-            ),
+            STREAM_STAT_SELECT_STATEMENT + "WHERE atmpt.job_id = ANY({0}::bigint[])",
+            jobIds.toTypedArray(),
           )
 
         streamResults.forEach(
