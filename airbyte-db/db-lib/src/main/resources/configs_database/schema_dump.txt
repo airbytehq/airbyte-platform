@@ -844,6 +844,7 @@ create index "actor_catalog_fetch_event_actor_catalog_id_idx" on "public"."actor
 create index "actor_catalog_fetch_event_actor_id_idx" on "public"."actor_catalog_fetch_event"("actor_id" asc);
 create index "actor_oauth_parameter_workspace_definition_idx" on "public"."actor_oauth_parameter"("workspace_id" asc, "actor_definition_id" asc);
 create index "airbyte_configs_migrations_s_idx" on "public"."airbyte_configs_migrations"("success" asc);
+create index "commands_workload_id_idx" on "public"."commands"("workload_id" asc);
 create index "connection_destination_id_idx" on "public"."connection"("destination_id" asc);
 create index "connection_source_id_idx" on "public"."connection"("source_id" asc);
 create index "connection_status_idx" on "public"."connection"("status" asc);
