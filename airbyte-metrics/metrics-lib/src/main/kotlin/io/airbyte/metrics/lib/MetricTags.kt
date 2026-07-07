@@ -96,6 +96,7 @@ object MetricTags {
   const val UNKNOWN: String = "unknown"
   const val USER_TYPE: String = "user_type" // real user, service account, data plane user, etc
   const val CLIENT_ID: String = "client_id"
+  const val TOKEN_SUBJECT: String = "token_subject" // JWT sub of a caller, e.g. for load-shedding
   const val LOG_CLIENT_TYPE: String = "log_client_type"
   const val MALFORMED_LOG_LINE_LENGTH: String = "malformed_log_line_length"
   const val PROMPT_LENGTH: String = "prompt_length"

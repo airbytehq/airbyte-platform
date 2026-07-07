@@ -192,6 +192,8 @@ object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.w
 
 object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-shed.scheduler-backoff-minutes", default = -1)
 
+object LoadShedPublicApi : Permanent<Boolean>(key = "platform.load-shed.public-api", default = false)
+
 object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platform.validate-conflicting-destination-streams", default = false)
 
 object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-sync-job-failure-explanation", default = false)

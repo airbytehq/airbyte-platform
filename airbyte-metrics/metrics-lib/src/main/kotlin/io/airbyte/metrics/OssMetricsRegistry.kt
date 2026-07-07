@@ -75,6 +75,10 @@ enum class OssMetricsRegistry(
     metricName = "api-trace",
     metricDescription = "",
   ),
+  PUBLIC_API_LOAD_SHED(
+    metricName = "public-api.load-shed",
+    metricDescription = "increments once per public API request shed by PublicApiLoadShedFilter, tagged by token_subject",
+  ),
   ATTEMPTS_CREATED(
     metricName = "attempt_created",
     metricDescription = "increments when a new attempt is created. one is emitted per attempt",
