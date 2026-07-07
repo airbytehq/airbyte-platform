@@ -140,8 +140,6 @@ interface ConnectionService {
 
   fun listConnectionIdsForOrganization(organizationId: UUID): List<UUID>
 
-  fun countConnectionsForOrganization(organizationId: UUID): Int
-
   fun listConnectionIdsForOrganizationAndActorDefinitions(
     organizationId: UUID,
     actorDefinitionIds: Collection<UUID>,

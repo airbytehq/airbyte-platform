@@ -62,10 +62,6 @@ object ConfigTemplateEntitlement : FeatureEntitlement(
   featureId = "feature-embedded",
 )
 
-object UnimitedConnectionsEntitlement : FeatureEntitlement(
-  featureId = "feature-unlimited-n-connections",
-)
-
 object DestinationSalesforceEnterpriseConnector : ConnectorEntitlement(
   actorDefinitionId = UUID.fromString("c0b24000-d34d-b33f-fea7-6b96dc0e5f0d"),
 ) {
@@ -149,7 +145,6 @@ object Entitlements {
       RbacRolesEntitlement,
       RejectedRecordsStorage,
       ConfigTemplateEntitlement,
-      UnimitedConnectionsEntitlement,
       DestinationSalesforceEnterpriseConnector,
       SourceNetsuiteEnterpriseConnector,
       SourceOracleEnterpriseConnector,
