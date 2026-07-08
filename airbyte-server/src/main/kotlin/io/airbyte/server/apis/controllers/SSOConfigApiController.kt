@@ -53,7 +53,7 @@ open class SSOConfigApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.SSO)
   override fun createSsoConfig(createSSOConfigRequestBody: CreateSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(createSSOConfigRequestBody.organizationId), SsoEntitlement)
 
@@ -78,7 +78,7 @@ open class SSOConfigApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.SSO)
   override fun deleteSsoConfig(deleteSSOConfigRequestBody: DeleteSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(deleteSSOConfigRequestBody.organizationId), SsoEntitlement)
 
@@ -92,7 +92,7 @@ open class SSOConfigApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.SSO)
   override fun updateSsoCredentials(updateSSOCredentialsRequestBody: UpdateSSOCredentialsRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(updateSSOCredentialsRequestBody.organizationId), SsoEntitlement)
 
@@ -109,7 +109,7 @@ open class SSOConfigApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.SSO)
   override fun activateSsoConfig(activateSSOConfigRequestBody: ActivateSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(activateSSOConfigRequestBody.organizationId), SsoEntitlement)
 
@@ -123,7 +123,7 @@ open class SSOConfigApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.SSO)
   override fun validateSsoToken(validateSSOTokenRequestBody: ValidateSSOTokenRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(validateSSOTokenRequestBody.organizationId), SsoEntitlement)
 
