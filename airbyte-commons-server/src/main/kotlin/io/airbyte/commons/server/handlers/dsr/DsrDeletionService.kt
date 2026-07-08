@@ -105,8 +105,17 @@ open class DsrDeletionService(
   @Named(AirbyteTaskExecutors.DSR_DELETION_HEARTBEAT) executionHeartbeatExecutor: ExecutorService,
   @param:Value("\${airbyte.dsr-deletion.execution-heartbeat-interval:PT1M}")
   private val executionHeartbeatInterval: Duration = Duration.ofMinutes(1),
+  @Value("\${airbyte.dsr-deletion.max-workspaces-per-request:10}")
+  maxWorkspacesPerRequest: Int? = 10,
+  @Value("\${airbyte.dsr-deletion.max-organizations-per-request:5}")
+  maxOrganizationsPerRequest: Int? = 5,
+  @Value("\${airbyte.dsr-deletion.max-connections-per-request:100}")
+  maxConnectionsPerRequest: Int? = 100,
 ) {
   private val configDb = ExceptionWrappingDatabase(configDatabase)
+  private val maxWorkspacesPerRequest = maxWorkspacesPerRequest ?: 10
+  private val maxOrganizationsPerRequest = maxOrganizationsPerRequest ?: 5
+  private val maxConnectionsPerRequest = maxConnectionsPerRequest ?: 100
   private val executionHeartbeatScheduler =
     executionHeartbeatExecutor as? ScheduledExecutorService
       ?: error("${AirbyteTaskExecutors.DSR_DELETION_HEARTBEAT} executor must be configured as a scheduled executor.")
@@ -190,6 +199,7 @@ open class DsrDeletionService(
     require(datagrailId.isNotBlank()) { "datagrailId must not be blank" }
     require(oncallIssueNumber.isNotBlank()) { "oncallIssueNumber must not be blank" }
     require(requestedBy.isNotBlank()) { "requestedBy must not be blank" }
+    validateTargetEmail(email)
 
     val emailHash = emailHash(email)
     val existing = deletionRequestRepository.findActiveByEmailHash(emailHash)
@@ -205,6 +215,7 @@ open class DsrDeletionService(
     }
 
     val manifest = buildManifest(email, datagrailId)
+    validateDeletionScope(manifest)
     val warnings = buildPreviewWarnings(manifest)
 
     val saved =
@@ -248,6 +259,7 @@ open class DsrDeletionService(
     require(datagrailId.isNotBlank()) { "datagrailId must not be blank" }
     require(oncallIssueNumber.isNotBlank()) { "oncallIssueNumber must not be blank" }
     require(executedBy.isNotBlank()) { "executedBy must not be blank" }
+    validateTargetEmail(email)
 
     val row =
       deletionRequestRepository
@@ -408,6 +420,17 @@ open class DsrDeletionService(
           errors = listOf("Stored preview manifest could not be parsed: ${it.message}"),
         )
       }
+    val previewSafetyErrors = deletionSafetyErrors(email, previewManifest)
+    if (previewSafetyErrors.isNotEmpty()) {
+      return failClaimedRequest(
+        row = row,
+        requestId = requestId,
+        manifest = previewManifest,
+        datagrailId = datagrailId,
+        email = email,
+        errors = previewSafetyErrors,
+      )
+    }
     val targetEmailHash = emailHash(email)
     val currentManifestResult =
       runCatching {
@@ -427,6 +450,17 @@ open class DsrDeletionService(
     }
 
     val manifest = currentManifestResult.getOrThrow()
+    val currentSafetyErrors = deletionSafetyErrors(email, manifest)
+    if (currentSafetyErrors.isNotEmpty()) {
+      return failClaimedRequest(
+        row = row,
+        requestId = requestId,
+        manifest = previewManifest,
+        datagrailId = datagrailId,
+        email = email,
+        errors = currentSafetyErrors,
+      )
+    }
     val driftErrors =
       runExecutionPhase(
         requestId = requestId,
@@ -1007,6 +1041,60 @@ open class DsrDeletionService(
     }
     return warnings
   }
+
+  private fun validateTargetEmail(email: String) {
+    targetEmailValidationError(email)?.let { throw DsrInvalidConfirmationException(it) }
+  }
+
+  private fun validateDeletionScope(manifest: DsrManifest) {
+    val violations = deletionScopeViolations(manifest)
+    if (violations.isNotEmpty()) {
+      throw DsrInvalidConfirmationException("DSR deletion manifest exceeds safety limits: ${violations.joinToString("; ")}.")
+    }
+  }
+
+  private fun deletionSafetyErrors(
+    email: String,
+    manifest: DsrManifest,
+  ): List<String> {
+    val errors = mutableListOf<String>()
+    targetEmailValidationError(email)?.let { errors.add(it) }
+    val scopeViolations = deletionScopeViolations(manifest)
+    if (scopeViolations.isNotEmpty()) {
+      errors.add("DSR deletion manifest exceeds safety limits: ${scopeViolations.joinToString("; ")}.")
+    }
+    return errors
+  }
+
+  private fun targetEmailValidationError(email: String): String? {
+    val domain =
+      email
+        .trim()
+        .substringAfterLast('@', missingDelimiterValue = "")
+        .lowercase(Locale.US)
+    if (domain in PROTECTED_TARGET_EMAIL_DOMAINS || PROTECTED_TARGET_EMAIL_DOMAINS.any { domain.endsWith(".$it") }) {
+      return "DSR deletion cannot target Airbyte email domains (airbyte.io or airbyte.com)."
+    }
+    return null
+  }
+
+  private fun deletionScopeViolations(manifest: DsrManifest): List<String> =
+    listOfNotNull(
+      deletionLimitViolation("workspace", manifest.workspaceIds.size, maxWorkspacesPerRequest),
+      deletionLimitViolation("organization", manifest.organizationIds.size, maxOrganizationsPerRequest),
+      deletionLimitViolation("connection", manifest.connectionIds.size, maxConnectionsPerRequest),
+    )
+
+  private fun deletionLimitViolation(
+    resourceName: String,
+    count: Int,
+    maximum: Int,
+  ): String? =
+    if (count > maximum) {
+      "$resourceName count $count exceeds maximum $maximum"
+    } else {
+      null
+    }
 
   private fun terminateTemporalWorkflows(
     manifest: DsrManifest,
@@ -1920,6 +2008,7 @@ open class DsrDeletionService(
 
   companion object {
     const val CLOUD_USERS_REALM = "_airbyte-cloud-users"
+    private val PROTECTED_TARGET_EMAIL_DOMAINS = setOf("airbyte.io", "airbyte.com")
     private const val LARGE_JOB_COUNT_WARNING_THRESHOLD = 10_000L
     private const val MAX_PREFIX_RANGE_CONDITIONS = 100
     private const val DSR_PHASE_TAG = "phase"

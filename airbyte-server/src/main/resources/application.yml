@@ -151,6 +151,9 @@ airbyte:
   dsr-deletion:
     execution-timeout: ${DSR_DELETION_EXECUTION_TIMEOUT:PT2H}
     execution-heartbeat-interval: ${DSR_DELETION_EXECUTION_HEARTBEAT_INTERVAL:PT1M}
+    max-workspaces-per-request: ${DSR_DELETION_MAX_WORKSPACES_PER_REQUEST:10}
+    max-organizations-per-request: ${DSR_DELETION_MAX_ORGANIZATIONS_PER_REQUEST:5}
+    max-connections-per-request: ${DSR_DELETION_MAX_CONNECTIONS_PER_REQUEST:100}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   license-key: ${AIRBYTE_LICENSE_KEY:}
   shutdown:

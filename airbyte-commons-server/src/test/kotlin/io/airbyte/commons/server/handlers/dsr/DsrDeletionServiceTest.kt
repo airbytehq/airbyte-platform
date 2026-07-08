@@ -106,7 +106,7 @@ internal class DsrDeletionServiceTest {
   private lateinit var service: DsrDeletionService
   private var configDeletionCounts = DsrDeletionService.ConfigDeletionCounts.empty()
 
-  private val email = "davin+2@airbyte.io"
+  private val email = "davin+2@example.com"
   private val datagrailId = "dg-abc-123"
   private val oncallIssueNumber = "ONCALL-1234"
   private val requestedBy = "support@airbyte.io"
@@ -458,6 +458,96 @@ internal class DsrDeletionServiceTest {
     verify(exactly = 0) { connectionManagerUtils.terminateWorkflow(any<UUID>(), any()) }
     verify(exactly = 0) { secretsRepositoryWriter.deleteFromConfig(any<ConfigWithSecretReferences>(), any<SecretPersistence>()) }
     verify(exactly = 0) { dbPrune.pruneJobsByScopes(any()) }
+  }
+
+  @Test
+  fun `preview rejects Airbyte target email domains before resolving the manifest`() {
+    listOf("employee@airbyte.io", "employee@airbyte.com", "employee@eng.airbyte.io").forEach { protectedEmail ->
+      val error =
+        assertThrows<DsrInvalidConfirmationException> {
+          service.preview(protectedEmail, datagrailId, oncallIssueNumber, requestedBy)
+        }
+
+      assertTrue(error.message!!.contains("Airbyte email domains"))
+    }
+
+    verify(exactly = 0) { userPersistence.getUserByEmail(match { it.endsWith("airbyte.io") || it.endsWith("airbyte.com") }) }
+    verify(exactly = 0) { deletionRequestRepository.save(any<DataSubjectDeletionRequest>()) }
+  }
+
+  @Test
+  fun `preview rejects manifests that exceed the workspace deletion limit`() {
+    val extraWorkspaces =
+      (1..10).map { index ->
+        Workspace(
+          id = UUID.randomUUID(),
+          name = "workspace-$index",
+          slug = "workspace-$index",
+          email = email,
+          dataplaneGroupId = UUID.randomUUID(),
+          organizationId = orgId,
+        )
+      }
+    every { workspaceRepository.findByEmailIgnoreCase(email) } returns
+      listOf(
+        Workspace(
+          id = workspaceId,
+          name = "my-workspace",
+          slug = "my-workspace",
+          email = email,
+          dataplaneGroupId = UUID.randomUUID(),
+          organizationId = orgId,
+        ),
+      ) + extraWorkspaces
+    extraWorkspaces.forEach { workspace ->
+      every { connectionService.listConnectionIdsForWorkspace(workspace.id!!) } returns emptyList()
+    }
+
+    val error =
+      assertThrows<DsrInvalidConfirmationException> {
+        service.preview(email, datagrailId, oncallIssueNumber, requestedBy)
+      }
+
+    assertTrue(error.message!!.contains("workspace count 11 exceeds maximum 10"))
+    verify(exactly = 0) { deletionRequestRepository.save(any<DataSubjectDeletionRequest>()) }
+  }
+
+  @Test
+  fun `preview rejects manifests that exceed the organization deletion limit`() {
+    val organizations =
+      (1..6).map { index ->
+        Organization(id = UUID.randomUUID(), name = "org-$index", userId = userId, email = email)
+      }
+    val organizationIds = organizations.mapNotNull { it.id }
+    every { organizationRepository.findByEmailIgnoreCase(email) } returns organizations
+    every { workspaceRepository.findByOrganizationIdIn(organizationIds) } returns emptyList()
+
+    val error =
+      assertThrows<DsrInvalidConfirmationException> {
+        service.preview(email, datagrailId, oncallIssueNumber, requestedBy)
+      }
+
+    assertTrue(error.message!!.contains("organization count 6 exceeds maximum 5"))
+    verify(exactly = 0) { deletionRequestRepository.save(any<DataSubjectDeletionRequest>()) }
+  }
+
+  @Test
+  fun `preview rejects manifests that exceed the connection deletion limit`() {
+    val connectionIds = (1..101).map { UUID.randomUUID() }
+    every { connectionService.listConnectionIdsForWorkspace(workspaceId) } returns connectionIds
+    connectionIds.forEach { connectionId ->
+      every { connectionService.getStandardSync(connectionId) } returns StandardSync().withConnectionId(connectionId)
+    }
+    every { dbPrune.countJobsAndAttemptsByScopes(connectionIds.map { it.toString() }) } returns
+      DbPrune.JobScopeCounts(jobCount = 0L, attemptCount = 0L)
+
+    val error =
+      assertThrows<DsrInvalidConfirmationException> {
+        service.preview(email, datagrailId, oncallIssueNumber, requestedBy)
+      }
+
+    assertTrue(error.message!!.contains("connection count 101 exceeds maximum 100"))
+    verify(exactly = 0) { deletionRequestRepository.save(any<DataSubjectDeletionRequest>()) }
   }
 
   @Test

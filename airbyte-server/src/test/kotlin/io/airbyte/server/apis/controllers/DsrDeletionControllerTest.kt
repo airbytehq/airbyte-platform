@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
@@ -12,6 +13,8 @@ import io.airbyte.commons.server.handlers.dsr.DsrInvalidConfirmationException
 import io.airbyte.commons.server.handlers.dsr.DsrInvalidStateException
 import io.airbyte.commons.server.handlers.dsr.DsrRequestNotFoundException
 import io.airbyte.commons.server.handlers.dsr.DsrUserNotFoundException
+import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.repositories.entities.DataSubjectDeletionRequest
 import io.airbyte.db.instance.configs.jooq.generated.enums.DataSubjectDeletionStatus
 import io.airbyte.domain.services.dsr.DsrManifest
@@ -19,6 +22,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -28,6 +32,7 @@ import java.util.concurrent.Executor
 
 internal class DsrDeletionControllerTest {
   private lateinit var dsrDeletionService: DsrDeletionService
+  private lateinit var currentUserService: CurrentUserService
   private lateinit var controller: DsrDeletionController
   private val objectMapper = jacksonObjectMapper()
 
@@ -35,20 +40,22 @@ internal class DsrDeletionControllerTest {
   private val datagrailId = "dg-abc-123"
   private val oncallIssueNumber = "ONCALL-1234"
   private val requestedBy = "support@airbyte.io"
-  private val executedBy = "reviewer@airbyte.io"
+  private val authenticatedActorEmail = "reviewer@airbyte.io"
   private val requestId: UUID = UUID.randomUUID()
   private val userId: UUID = UUID.randomUUID()
 
   @BeforeEach
   fun setUp() {
     dsrDeletionService = mockk(relaxed = false)
-    controller = DsrDeletionController(dsrDeletionService, objectMapper, Executor { it.run() })
+    currentUserService = mockk()
+    every { currentUserService.getCurrentUser() } returns authenticatedUser(authenticatedActorEmail)
+    controller = DsrDeletionController(dsrDeletionService, objectMapper, Executor { it.run() }, currentUserService)
   }
 
   @Test
-  fun `preview delegates to service and maps the response fields`() {
+  fun `preview delegates to service with authenticated actor email and maps the response fields`() {
     every {
-      dsrDeletionService.preview(email, datagrailId, oncallIssueNumber, requestedBy)
+      dsrDeletionService.preview(email, datagrailId, oncallIssueNumber, authenticatedActorEmail)
     } returns
       DsrDeletionService.PreviewResult(
         requestId = requestId,
@@ -63,7 +70,6 @@ internal class DsrDeletionControllerTest {
           email = email,
           datagrailId = datagrailId,
           oncallIssueNumber = oncallIssueNumber,
-          requestedBy = requestedBy,
         ),
       )
 
@@ -72,13 +78,13 @@ internal class DsrDeletionControllerTest {
     assertEquals(requestId, resp.requestId)
     assertEquals(listOf("a warning"), resp.warnings)
     assertEquals(email, resp.manifest.targetEmail)
-    verify(exactly = 1) { dsrDeletionService.preview(email, datagrailId, oncallIssueNumber, requestedBy) }
+    verify(exactly = 1) { dsrDeletionService.preview(email, datagrailId, oncallIssueNumber, authenticatedActorEmail) }
   }
 
   @Test
-  fun `execute claims the request, enqueues deletion, and returns accepted`() {
+  fun `execute claims the request with authenticated actor email, enqueues deletion, and returns accepted`() {
     every {
-      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, authenticatedActorEmail)
     } returns
       DsrDeletionService.StartExecutionResult(
         requestId = requestId,
@@ -111,7 +117,6 @@ internal class DsrDeletionControllerTest {
           email = email,
           datagrailId = datagrailId,
           oncallIssueNumber = oncallIssueNumber,
-          executedBy = executedBy,
         ),
       )
 
@@ -131,7 +136,7 @@ internal class DsrDeletionControllerTest {
   fun `execute marks the request failed when background deletion throws unexpectedly`() {
     val failure = IllegalStateException("background failure")
     every {
-      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, authenticatedActorEmail)
     } returns
       DsrDeletionService.StartExecutionResult(
         requestId = requestId,
@@ -165,7 +170,6 @@ internal class DsrDeletionControllerTest {
           email = email,
           datagrailId = datagrailId,
           oncallIssueNumber = oncallIssueNumber,
-          executedBy = executedBy,
         ),
       )
 
@@ -179,7 +183,7 @@ internal class DsrDeletionControllerTest {
   fun `execute does not mark the request failed when duplicate worker sees an active execution`() {
     val failure = DsrInvalidStateException("Deletion request $requestId is already being executed by another worker.")
     every {
-      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, authenticatedActorEmail)
     } returns
       DsrDeletionService.StartExecutionResult(
         requestId = requestId,
@@ -195,7 +199,6 @@ internal class DsrDeletionControllerTest {
           email = email,
           datagrailId = datagrailId,
           oncallIssueNumber = oncallIssueNumber,
-          executedBy = executedBy,
         ),
       )
 
@@ -208,7 +211,7 @@ internal class DsrDeletionControllerTest {
   @Test
   fun `execute returns accepted without enqueueing when request is already running`() {
     every {
-      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, executedBy)
+      dsrDeletionService.startExecution(requestId, email, datagrailId, oncallIssueNumber, authenticatedActorEmail)
     } returns
       DsrDeletionService.StartExecutionResult(
         requestId = requestId,
@@ -223,7 +226,6 @@ internal class DsrDeletionControllerTest {
           email = email,
           datagrailId = datagrailId,
           oncallIssueNumber = oncallIssueNumber,
-          executedBy = executedBy,
         ),
       )
 
@@ -257,10 +259,25 @@ internal class DsrDeletionControllerTest {
     assertEquals(
       AuditLoggingProvider.ONLY_ACTOR,
       DsrDeletionController::class.java
-        .getMethod("cancel", UUID::class.java, DsrCancelRequest::class.java)
+        .getMethod("cancel", UUID::class.java)
         .getAnnotation(AuditLogging::class.java)
         .provider,
     )
+  }
+
+  @Test
+  fun `DSR write request models do not accept caller supplied actor fields`() {
+    assertFalse(
+      DsrPreviewRequest::class.java.declaredFields
+        .map { it.name }
+        .contains("requestedBy"),
+    )
+    assertFalse(
+      DsrExecuteRequest::class.java.declaredFields
+        .map { it.name }
+        .contains("executedBy"),
+    )
+    assertNotNull(DsrDeletionController::class.java.getMethod("cancel", UUID::class.java))
   }
 
   @Test
@@ -282,6 +299,7 @@ internal class DsrDeletionControllerTest {
         status = DataSubjectDeletionStatus.previewed,
         userId = userId,
         requestedBy = requestedBy,
+        confirmedBy = authenticatedActorEmail,
         oncallIssueNumber = oncallIssueNumber,
         manifest = objectMapper.writeValueAsString(manifest()),
       )
@@ -294,6 +312,9 @@ internal class DsrDeletionControllerTest {
     assertEquals(email, body.email)
     assertEquals(datagrailId, body.datagrailId)
     assertEquals(oncallIssueNumber, body.oncallIssueNumber)
+    val bodyJson = objectMapper.valueToTree<JsonNode>(body)
+    assertEquals(requestedBy, bodyJson.get("requested_by")?.asText())
+    assertEquals(authenticatedActorEmail, bodyJson.get("confirmed_by")?.asText())
     assertEquals(email, body.manifest.get("target_email").asText())
     assertEquals(null, body.executionCounts)
   }
@@ -364,7 +385,7 @@ internal class DsrDeletionControllerTest {
     assertThrows<DsrInvalidConfirmationException> {
       controller.execute(
         requestId,
-        DsrExecuteRequest(email, datagrailId, oncallIssueNumber, executedBy),
+        DsrExecuteRequest(email, datagrailId, oncallIssueNumber),
       )
     }
 
@@ -373,7 +394,7 @@ internal class DsrDeletionControllerTest {
     assertThrows<DsrInvalidStateException> {
       controller.execute(
         requestId,
-        DsrExecuteRequest(email, datagrailId, oncallIssueNumber, executedBy),
+        DsrExecuteRequest(email, datagrailId, oncallIssueNumber),
       )
     }
 
@@ -382,7 +403,7 @@ internal class DsrDeletionControllerTest {
     assertThrows<DsrRequestNotFoundException> {
       controller.execute(
         requestId,
-        DsrExecuteRequest(email, datagrailId, oncallIssueNumber, executedBy),
+        DsrExecuteRequest(email, datagrailId, oncallIssueNumber),
       )
     }
 
@@ -390,14 +411,44 @@ internal class DsrDeletionControllerTest {
       DsrUserNotFoundException("nope")
     assertThrows<DsrUserNotFoundException> {
       controller.preview(
-        DsrPreviewRequest(email, datagrailId, oncallIssueNumber, requestedBy),
+        DsrPreviewRequest(email, datagrailId, oncallIssueNumber),
       )
     }
   }
 
   @Test
+  fun `DSR endpoints reject non-Airbyte authenticated actors before service calls`() {
+    every { currentUserService.getCurrentUser() } returns authenticatedUser("customer@example.com")
+
+    listOf(
+      { controller.preview(DsrPreviewRequest(email, datagrailId, oncallIssueNumber)) },
+      { controller.execute(requestId, DsrExecuteRequest(email, datagrailId, oncallIssueNumber)) },
+      { controller.cancel(requestId) },
+      { controller.getById(requestId) },
+      { controller.listByEmail(email) },
+    ).forEach { callEndpoint ->
+      val error = assertThrows<DsrForbiddenActorException> { callEndpoint() }
+      assertEquals("DSR endpoints require an authenticated Airbyte actor.", error.message)
+    }
+
+    verify(exactly = 0) { dsrDeletionService.preview(any(), any(), any(), any()) }
+    verify(exactly = 0) { dsrDeletionService.startExecution(any(), any(), any(), any(), any()) }
+    verify(exactly = 0) { dsrDeletionService.cancel(any(), any()) }
+    verify(exactly = 0) { dsrDeletionService.get(any()) }
+    verify(exactly = 0) { dsrDeletionService.listByEmail(any()) }
+  }
+
+  @Test
+  fun `forbidden actor errors map to 403`() {
+    val response = controller.forbiddenActor(DsrForbiddenActorException("nope"))
+
+    assertEquals(403, response.status.code)
+    assertEquals("nope", response.body()["error"])
+  }
+
+  @Test
   fun `cancel delegates to service`() {
-    every { dsrDeletionService.cancel(requestId, executedBy) } returns
+    every { dsrDeletionService.cancel(requestId, authenticatedActorEmail) } returns
       DataSubjectDeletionRequest(
         id = requestId,
         email = datagrailId,
@@ -406,16 +457,23 @@ internal class DsrDeletionControllerTest {
         status = DataSubjectDeletionStatus.canceled,
         userId = userId,
         requestedBy = requestedBy,
-        confirmedBy = executedBy,
+        confirmedBy = authenticatedActorEmail,
         oncallIssueNumber = oncallIssueNumber,
         manifest = objectMapper.writeValueAsString(redactedManifest()),
       )
 
-    val resp = controller.cancel(requestId, DsrCancelRequest(canceledBy = executedBy))
+    val resp = controller.cancel(requestId)
     assertNotNull(resp)
     assertEquals("CANCELED", resp!!.status)
     assertEquals(datagrailId, resp.email)
   }
+
+  private fun authenticatedUser(email: String): AuthenticatedUser =
+    AuthenticatedUser()
+      .withUserId(userId)
+      .withEmail(email)
+      .withName("Reviewer")
+      .withAuthUserId("auth-user-id")
 
   private fun manifest(): DsrManifest =
     DsrManifest(

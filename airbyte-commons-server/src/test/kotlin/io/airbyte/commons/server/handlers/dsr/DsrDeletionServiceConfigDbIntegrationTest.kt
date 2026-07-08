@@ -99,7 +99,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   private lateinit var executionHeartbeatFuture: ScheduledFuture<*>
   private lateinit var service: TestDsrDeletionService
 
-  private val email = "davin.integration@airbyte.io"
+  private val email = "davin.integration@example.com"
   private val datagrailId = "dg-integration-123"
   private val oncallIssueNumber = "ONCALL-4321"
   private val executedBy = "reviewer@airbyte.io"

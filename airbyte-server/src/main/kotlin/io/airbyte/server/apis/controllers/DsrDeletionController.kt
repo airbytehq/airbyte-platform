@@ -16,6 +16,7 @@ import io.airbyte.commons.server.handlers.dsr.DsrInvalidStateException
 import io.airbyte.commons.server.handlers.dsr.DsrRequestNotFoundException
 import io.airbyte.commons.server.handlers.dsr.DsrUserNotFoundException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.repositories.entities.DataSubjectDeletionRequest
 import io.airbyte.domain.services.dsr.DsrManifest
 import io.airbyte.server.apis.execute
@@ -35,6 +36,7 @@ import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import jakarta.inject.Named
 import java.time.OffsetDateTime
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Executor
 
@@ -58,6 +60,7 @@ open class DsrDeletionController(
   private val dsrDeletionService: DsrDeletionService,
   private val objectMapper: ObjectMapper,
   @Named(AirbyteTaskExecutors.DSR_DELETION) private val dsrDeletionExecutor: Executor,
+  private val currentUserService: CurrentUserService,
 ) {
   @Post("/preview")
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -66,16 +69,17 @@ open class DsrDeletionController(
     @Body request: DsrPreviewRequest,
   ): DsrPreviewResponse? =
     execute {
+      val actorEmail = requireAirbyteActorEmail()
       log.warn {
         "DSR preview endpoint called: emailHash=${DsrDeletionService.emailHash(request.email)}, datagrailId=${request.datagrailId}, " +
-          "oncallIssueNumber=${request.oncallIssueNumber}, requestedBy=${request.requestedBy}"
+          "oncallIssueNumber=${request.oncallIssueNumber}, actorEmailHash=${DsrDeletionService.emailHash(actorEmail)}"
       }
       val result =
         dsrDeletionService.preview(
           email = request.email,
           datagrailId = request.datagrailId,
           oncallIssueNumber = request.oncallIssueNumber,
-          requestedBy = request.requestedBy,
+          requestedBy = actorEmail,
         )
       DsrPreviewResponse(
         requestId = result.requestId,
@@ -93,9 +97,12 @@ open class DsrDeletionController(
     @Body request: DsrExecuteRequest,
   ): HttpResponse<DsrExecuteResponse>? =
     execute {
+      val actorEmail = requireAirbyteActorEmail()
       log.warn {
         "DSR execute endpoint called: requestId=$requestId, emailHash=${DsrDeletionService.emailHash(request.email)}, " +
-          "datagrailId=${request.datagrailId}, oncallIssueNumber=${request.oncallIssueNumber}, executedBy=${request.executedBy}"
+          "datagrailId=${request.datagrailId}, oncallIssueNumber=${request.oncallIssueNumber}, actorEmailHash=${DsrDeletionService.emailHash(
+            actorEmail,
+          )}"
       }
       val result =
         dsrDeletionService.startExecution(
@@ -103,7 +110,7 @@ open class DsrDeletionController(
           email = request.email,
           datagrailId = request.datagrailId,
           oncallIssueNumber = request.oncallIssueNumber,
-          executedBy = request.executedBy,
+          executedBy = actorEmail,
         )
       if (result.started) {
         enqueueDsrDeletion(requestId)
@@ -158,6 +165,7 @@ open class DsrDeletionController(
   open fun getById(
     @PathVariable requestId: UUID,
   ): HttpResponse<DsrRequestRead> {
+    requireAirbyteActorEmail()
     val row = dsrDeletionService.get(requestId) ?: return HttpResponse.notFound()
     return HttpResponse.ok(row.toRead(objectMapper))
   }
@@ -166,10 +174,12 @@ open class DsrDeletionController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   open fun listByEmail(
     @QueryValue email: String,
-  ): DsrRequestListRead =
-    DsrRequestListRead(
+  ): DsrRequestListRead {
+    requireAirbyteActorEmail()
+    return DsrRequestListRead(
       requests = dsrDeletionService.listByEmail(email).map { it.toRead(objectMapper) },
     )
+  }
 
   @Post("/{requestId}/cancel")
   @Status(HttpStatus.OK)
@@ -177,11 +187,24 @@ open class DsrDeletionController(
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   open fun cancel(
     @PathVariable requestId: UUID,
-    @Body request: DsrCancelRequest,
   ): DsrRequestRead? =
     execute {
-      dsrDeletionService.cancel(requestId, request.canceledBy).toRead(objectMapper)
+      dsrDeletionService.cancel(requestId, requireAirbyteActorEmail()).toRead(objectMapper)
     }
+
+  private fun requireAirbyteActorEmail(): String {
+    val actorEmail =
+      currentUserService
+        .getCurrentUser()
+        .email
+        ?.trim()
+        ?.lowercase(Locale.US)
+    val actorDomain = actorEmail?.substringAfterLast('@', missingDelimiterValue = "")
+    if (actorEmail.isNullOrBlank() || actorDomain !in AIRBYTE_ACTOR_EMAIL_DOMAINS) {
+      throw DsrForbiddenActorException("DSR endpoints require an authenticated Airbyte actor.")
+    }
+    return actorEmail
+  }
 
   @io.micronaut.http.annotation.Error(exception = DsrUserNotFoundException::class, global = false)
   fun userNotFound(e: DsrUserNotFoundException): HttpResponse<Map<String, String>> {
@@ -210,14 +233,29 @@ open class DsrDeletionController(
       .status<Map<String, String>>(HttpStatus.BAD_REQUEST)
       .body(mapOf("error" to (e.message ?: "Invalid confirmation")))
   }
+
+  @io.micronaut.http.annotation.Error(exception = DsrForbiddenActorException::class, global = false)
+  fun forbiddenActor(e: DsrForbiddenActorException): HttpResponse<Map<String, String>> {
+    log.warn { "DSR: forbidden actor - ${e.message}" }
+    return HttpResponse
+      .status<Map<String, String>>(HttpStatus.FORBIDDEN)
+      .body(mapOf("error" to (e.message ?: "Forbidden")))
+  }
+
+  companion object {
+    private val AIRBYTE_ACTOR_EMAIL_DOMAINS = setOf("airbyte.io", "airbyte.com")
+  }
 }
+
+class DsrForbiddenActorException(
+  message: String,
+) : RuntimeException(message)
 
 @Introspected
 data class DsrPreviewRequest(
   @JsonProperty("email") val email: String,
   @JsonProperty("datagrail_id") val datagrailId: String,
   @JsonProperty("oncall_issue_number") val oncallIssueNumber: String,
-  @JsonProperty("requested_by") val requestedBy: String,
 )
 
 @Introspected
@@ -233,7 +271,6 @@ data class DsrExecuteRequest(
   @JsonProperty("email") val email: String,
   @JsonProperty("datagrail_id") val datagrailId: String,
   @JsonProperty("oncall_issue_number") val oncallIssueNumber: String,
-  @JsonProperty("executed_by") val executedBy: String,
 )
 
 @Introspected
@@ -243,11 +280,6 @@ data class DsrExecuteResponse(
   @JsonProperty("started") val started: Boolean,
   @JsonProperty("status_url") val statusUrl: String,
   @JsonProperty("message") val message: String,
-)
-
-@Introspected
-data class DsrCancelRequest(
-  @JsonProperty("canceled_by") val canceledBy: String,
 )
 
 @Introspected
