@@ -8,4 +8,6 @@ import { v4 as uuidv4 } from "uuid";
 
 const uniqueId = uuidv4();
 export const testEmail = `integration-test+${uniqueId}@airbyte.com`;
-export const testPassword = "passwordpassword";
+// Derived from a random UUID so it stays out of the Keycloak password blacklist
+// while satisfying the realm's length policy.
+export const testPassword = `test-${uniqueId}`;
