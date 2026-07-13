@@ -441,4 +441,39 @@ class AwsSecretManagerPersistenceTest {
       )
     }
   }
+
+  @Test
+  fun `test deleting a secret with a recovery window`() {
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+    val recoveryWindowInDays = 30L
+
+    val mockAwsClient = mockk<AWSSecretsManager>()
+    every { mockAwsClient.deleteSecret(any()) } returns mockk<DeleteSecretResult>()
+
+    val mockClient: SystemAwsSecretsManagerClient = mockk()
+    every { mockClient.getClient() } returns mockAwsClient
+    every { mockClient.deleteSecretWithRecoveryWindow(coordinate.coordinateBase, recoveryWindowInDays) } answers { callOriginal() }
+    every { mockClient.deleteSecretWithRecoveryWindow(coordinate.fullCoordinate, recoveryWindowInDays) } answers { callOriginal() }
+
+    val persistence = AwsSecretManagerPersistence(mockClient)
+    persistence.deleteWithRecoveryWindow(coordinate, recoveryWindowInDays)
+
+    verify {
+      mockAwsClient.deleteSecret(
+        withArg {
+          assert(it.secretId.equals(coordinate.coordinateBase))
+          assert(it.recoveryWindowInDays.equals(recoveryWindowInDays))
+          assert(it.forceDeleteWithoutRecovery == null)
+        },
+      )
+
+      mockAwsClient.deleteSecret(
+        withArg {
+          assert(it.secretId.equals(coordinate.fullCoordinate))
+          assert(it.recoveryWindowInDays.equals(recoveryWindowInDays))
+          assert(it.forceDeleteWithoutRecovery == null)
+        },
+      )
+    }
+  }
 }

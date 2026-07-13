@@ -128,7 +128,10 @@ class OrphanedSecretConfigCleanup(
         log.info {
           "Deleting: ${coordinate.fullCoordinate} from storage ID ${secretConfig.secretStorageId} (persistence: ${secretPersistence::class.simpleName})"
         }
-        secretPersistence.delete(coordinate)
+        // In AWS this will deprecate the secret and mark it for deletion after the recovery window time has passed. For
+        // other secret managers where the recovery time is not supported this call simply executes the delete call
+        // to remove the secret immediately.
+        secretPersistence.deleteWithRecoveryWindow(coordinate, SECRET_DELETION_RECOVERY_WINDOW_IN_DAYS)
         deletedIds.add(secretConfig.id)
 
         metricClient.count(
@@ -155,5 +158,9 @@ class OrphanedSecretConfigCleanup(
     secretConfigService.deleteByIds(deletedIds)
 
     log.info { "Cleaned up ${deletedIds.size} orphaned secret configs" }
+  }
+
+  companion object {
+    private const val SECRET_DELETION_RECOVERY_WINDOW_IN_DAYS = 7L
   }
 }

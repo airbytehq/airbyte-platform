@@ -142,9 +142,30 @@ class AwsSecretManagerPersistence(
     deleteSecretId(coordinate.fullCoordinate)
   }
 
-  private fun deleteSecretId(secretId: String) {
+  /**
+   * Schedules the secret for deletion, retaining it for [recoveryWindowInDays] days before AWS
+   * permanently removes it (see AWS [DeleteSecret] RecoveryWindowInDays).
+   */
+  override fun deleteWithRecoveryWindow(
+    coordinate: AirbyteManagedSecretCoordinate,
+    recoveryWindowInDays: Long,
+  ) {
+    // Clean up the old bad secrets we might have left behind
+    deleteSecretId(coordinate.coordinateBase, recoveryWindowInDays)
+    // Clean up the actual versioned secrets we left behind
+    deleteSecretId(coordinate.fullCoordinate, recoveryWindowInDays)
+  }
+
+  private fun deleteSecretId(
+    secretId: String,
+    recoveryWindowInDays: Long? = null,
+  ) {
     try {
-      awsClient.deleteSecret(secretId)
+      if (recoveryWindowInDays != null) {
+        awsClient.deleteSecretWithRecoveryWindow(secretId, recoveryWindowInDays)
+      } else {
+        awsClient.deleteSecret(secretId)
+      }
     } catch (_: ResourceNotFoundException) {
       logger.warn { "Secret $secretId not found" }
     } catch (_: InvalidRequestException) {
@@ -291,6 +312,16 @@ interface AwsSecretsManagerClient {
         .withForceDeleteWithoutRecovery(true),
     )
 
+  fun deleteSecretWithRecoveryWindow(
+    secretId: String,
+    recoveryWindow: Long,
+  ): DeleteSecretResult =
+    getClient().deleteSecret(
+      DeleteSecretRequest()
+        .withSecretId(secretId)
+        .withRecoveryWindowInDays(recoveryWindow),
+    )
+
   fun parseTags(tags: String?): Map<String, String> {
     if (tags.isNullOrBlank()) return emptyMap()
 
@@ -328,6 +359,7 @@ interface AwsSecretsManagerClient {
             config,
           )
         }
+
         is AwsSecretsManagerRuntimeConfiguration.AssumeRoleConfig -> {
           val stsClient =
             AWSSecurityTokenServiceClientBuilder
@@ -387,7 +419,10 @@ class RuntimeAwsSecretsManagerClient(
             is AwsSecretsManagerRuntimeConfiguration.AssumeRoleConfig -> {
               withKmsKeyId(config.kmsKeyArn)
             }
-            else -> Unit
+
+            else -> {
+              Unit
+            }
           }
         }.apply {
           when (config) {
@@ -396,7 +431,10 @@ class RuntimeAwsSecretsManagerClient(
                 withTags(Tag().withKey(config.tagKey).withValue("true"))
               }
             }
-            else -> Unit
+
+            else -> {
+              Unit
+            }
           }
         }
 
