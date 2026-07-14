@@ -26,6 +26,7 @@ import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.config.InitialUserConfig
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver
 import io.airbyte.commons.enums.convertTo
+import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.config.Application
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthUser
@@ -45,6 +46,7 @@ import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.featureflag.BypassSsoDomainValidationEnforcement
 import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
@@ -75,6 +77,7 @@ import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
 import java.util.stream.Stream
+import io.airbyte.featureflag.Organization as FeatureFlagOrganization
 
 class UserHandlerTest {
   private lateinit var uuidSupplier: Supplier<UUID>
@@ -126,9 +129,11 @@ class UserHandlerTest {
     // role; prod default is OFF (dark launch). Flag-off behavior is covered explicitly below.
     whenever(featureFlagClient.boolVariation(eq(ConfigurableSsoDefaultRole), any()))
       .thenReturn(true)
+    whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
+      .thenReturn(true)
 
-    // SEC-14: Default to org without domain verification (no claimed domains → validation skipped).
-    // Tests that exercise domain enforcement override this with a non-empty list.
+    // SEC-14: Most tests use an org without claimed domains and the bypass enabled above, preserving
+    // their pre-enforcement behavior. Domain-enforcement tests override both inputs explicitly.
     whenever(organizationEmailDomainService.findByOrganizationId(any()))
       .thenReturn(emptyList())
 
@@ -710,9 +715,65 @@ class UserHandlerTest {
       }
 
       @Test
-      fun testSsoLoginAllowedWhenEmailDomainNotClaimedByOrg() {
-        // SEC-14 observation mode: domain mismatch is logged but login is allowed.
-        // This lets us track which orgs need domain verification without blocking users.
+      fun testSsoLoginWithInvalidDomainRejectedBeforeExistingUserMigration() {
+        whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
+          .thenReturn(false)
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(
+            listOf(
+              OrganizationEmailDomain()
+                .withOrganizationId(organization.organizationId)
+                .withEmailDomain("attacker.com"),
+            ),
+          )
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.empty<AuthenticatedUser>())
+        whenever(userPersistence.getUserByEmail(email)).thenReturn(Optional.of<User>(existingUser!!))
+        whenever(userPersistence.getUser(existingUserId)).thenReturn(Optional.of<User>(existingUser!!))
+        whenever(userPersistence.listAuthUsersForUser(existingUserId))
+          .thenReturn(
+            listOf(
+              AuthUser()
+                .withAuthUserId(existingAuthUserId)
+                .withAuthProvider(AuthProvider.KEYCLOAK),
+            ),
+          )
+        whenever(externalUserService.getRealmByAuthUserId(existingAuthUserId)).thenReturn(realm)
+        whenever(ssoConfigService.getSsoConfigByRealmName(realm)).thenReturn(null)
+
+        val existingAuthedUser =
+          AuthenticatedUserConverter.toAuthenticatedUser(existingUser!!, existingAuthUserId, AuthProvider.KEYCLOAK)
+        whenever(applicationService.listApplicationsByUser(existingAuthedUser))
+          .thenReturn(listOf(Application().withId("app_id")))
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf(WorkspaceRead().workspaceId(UUID.randomUUID()))))
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId))
+          .thenReturn(listOf(UserPermission().withUser(User().withUserId(UUID.randomUUID()))))
+
+        Assertions.assertThrows(OperationNotAllowedException::class.java) {
+          userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+        }
+
+        Mockito.verify(externalUserService, Mockito.never()).deleteUserByExternalId(newAuthUserId, ssoRealm)
+        Mockito
+          .verify(userPersistence, Mockito.never())
+          .replaceAuthUserForUserId(existingUserId, newAuthUserId, AuthProvider.KEYCLOAK)
+        Mockito.verify(externalUserService, Mockito.never()).deleteUserByEmailOnOtherRealms(email, ssoRealm)
+        Mockito.verify(applicationService, Mockito.never()).deleteApplication(existingAuthedUser, "app_id")
+        Mockito.verify(permissionHandler, Mockito.never()).createPermission(any())
+      }
+
+      @Test
+      fun testSsoLoginWithMismatchedDomainAllowedWhenOrganizationIsBypassed() {
         whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
           Optional.of<Organization>(organization),
         )
@@ -734,12 +795,41 @@ class UserHandlerTest {
 
         // Login succeeds despite domain mismatch — no exception thrown
         Assertions.assertNotNull(result)
+        Mockito.verify(featureFlagClient).boolVariation(
+          BypassSsoDomainValidationEnforcement,
+          FeatureFlagOrganization(organization.organizationId),
+        )
       }
 
       @Test
-      fun testSsoLoginAllowedForOrgWithNoClaimedDomains() {
-        // An SSO org that hasn't completed domain verification has no entries in organization_email_domain.
-        // Domain validation should be skipped until they complete the verification process.
+      fun testSsoLoginWithMismatchedDomainRejectedWhenOrganizationIsNotBypassed() {
+        whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
+          .thenReturn(false)
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(
+            listOf(
+              OrganizationEmailDomain()
+                .withOrganizationId(organization.organizationId)
+                .withEmailDomain("attacker.com"),
+            ),
+          )
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        Assertions.assertThrows(OperationNotAllowedException::class.java) {
+          userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+        }
+        Mockito.verify(externalUserService, Mockito.never()).deleteUserByExternalId(newAuthUserId, ssoRealm)
+      }
+
+      @Test
+      fun testSsoLoginWithNoClaimedDomainsAllowedWhenOrganizationIsBypassed() {
         whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
           Optional.of<Organization>(organization),
         )
@@ -755,6 +845,92 @@ class UserHandlerTest {
 
         // Login succeeds — no exception thrown
         Assertions.assertNotNull(result)
+      }
+
+      @Test
+      fun testSsoLoginWithNoClaimedDomainsRejectedWhenOrganizationIsNotBypassed() {
+        whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
+          .thenReturn(false)
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(emptyList())
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        Assertions.assertThrows(OperationNotAllowedException::class.java) {
+          userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+        }
+        Mockito.verify(externalUserService, Mockito.never()).deleteUserByExternalId(newAuthUserId, ssoRealm)
+      }
+
+      @Test
+      fun testSsoLoginWithMatchingDomainAllowedWhenOrganizationIsNotBypassed() {
+        whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
+          .thenReturn(false)
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(
+            listOf(
+              OrganizationEmailDomain()
+                .withOrganizationId(organization.organizationId)
+                .withEmailDomain("airbyte.io"),
+            ),
+          )
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        val result = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Assertions.assertNotNull(result)
+        Mockito.verify(featureFlagClient, Mockito.never()).boolVariation(
+          eq(BypassSsoDomainValidationEnforcement),
+          any(),
+        )
+      }
+
+      @Test
+      fun testSsoLoginWithInvalidDomainAllowedWhenBypassFlagIsAbsent() {
+        userHandler =
+          UserHandler(
+            userPersistence,
+            externalUserService,
+            organizationService,
+            ssoConfigService,
+            organizationEmailDomainService,
+            Optional.of(applicationService),
+            permissionHandler,
+            workspacesHandler,
+            uuidSupplier,
+            jwtUserAuthenticationResolver,
+            Optional.of(initialUserConfig),
+            resourceBootstrapHandler,
+            TestClient(emptyMap()),
+          )
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(emptyList())
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        val result = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Assertions.assertNotNull(result)
+        Mockito.verify(externalUserService, Mockito.never()).deleteUserByExternalId(any(), any())
       }
 
       private val existingUserId: UUID = UUID.randomUUID()

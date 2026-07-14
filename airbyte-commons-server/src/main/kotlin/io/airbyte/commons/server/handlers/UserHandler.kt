@@ -58,6 +58,7 @@ import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.featureflag.BypassSsoDomainValidationEnforcement
 import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.EmailAttribute
 import io.airbyte.featureflag.FeatureFlagClient
@@ -73,6 +74,7 @@ import java.util.Objects
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
+import io.airbyte.featureflag.Organization as FeatureFlagOrganization
 
 /**
  * UserHandler, provides basic CRUD operation access for users. Some are migrated from Cloud
@@ -347,6 +349,17 @@ open class UserHandler
       }
     }
 
+    /**
+     * Verifies that an SSO organization is authorized to assert the incoming user's email domain.
+     *
+     * A matching claimed domain is allowed immediately. Missing or mismatched claims are always logged
+     * and tagged, then allowed only when the organization-level bypass resolves to `true`. Otherwise,
+     * the login is rejected before user creation, migration, or relinking.
+     *
+     * This check does not mutate or delete identity state.
+     *
+     * @throws OperationNotAllowedException when an invalid domain claim is not bypassed
+     */
     private fun validateSsoEmailDomainClaim(
       incomingJwtUser: AuthenticatedUser,
       ssoOrganization: Organization,
@@ -366,10 +379,7 @@ open class UserHandler
             "sso.domain_validation" to "no_claimed_domains",
           ),
         )
-        return
-      }
-
-      if (claimedDomains.none { it.emailDomain.equals(emailDomain, ignoreCase = true) }) {
+      } else if (claimedDomains.none { it.emailDomain.equals(emailDomain, ignoreCase = true) }) {
         log.warn {
           "SSO domain mismatch: email domain '$emailDomain' is not claimed by organization $orgId " +
             "(claimed: ${claimedDomains.joinToString { it.emailDomain }})"
@@ -381,7 +391,24 @@ open class UserHandler
             "sso.domain_validation" to "mismatch",
           ),
         )
+      } else {
+        // A matching claimed domain is authorized; bypass evaluation is unnecessary.
+        return
       }
+
+      // Only missing or mismatched domain claims reach this point.
+      val bypassEnforcement =
+        featureFlagClient.boolVariation(
+          BypassSsoDomainValidationEnforcement,
+          FeatureFlagOrganization(orgId),
+        )
+      if (bypassEnforcement) {
+        return
+      }
+
+      throw OperationNotAllowedException(
+        "SSO provider is not authorized to authenticate users with this email domain.",
+      )
     }
 
     private fun handleNewUserLogin(userToCreate: AuthenticatedUser): UserGetOrCreateByAuthIdResponse {

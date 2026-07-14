@@ -262,6 +262,14 @@ object EnableDataWorkerUsage : Temporary<Boolean>(key = "platform.enable-data-wo
 
 object EnforceDataWorkerCapacity : Temporary<Boolean>(key = "platform.enforce-data-worker-capacity", default = false)
 
+// IMPORTANT: These defaults intentionally point in opposite directions. The code default is true so
+// a missing flag or failed LaunchDarkly evaluation fails open and preserves SSO access. The production
+// LaunchDarkly fallthrough must be false so organizations are enforced unless explicitly bypassed.
+object BypassSsoDomainValidationEnforcement : Temporary<Boolean>(
+  key = "platform.bypass-sso-domain-validation-enforcement",
+  default = true,
+)
+
 object UseVerifiedDomainsForSsoActivate : Temporary<Boolean>(key = "platform.use-verified-domains-for-sso-activate", default = false)
 
 object AutoGrantOrgPermissionsOnSsoActivation : Temporary<Boolean>(key = "platform.auto-grant-org-permissions-on-sso-activation", default = false)
