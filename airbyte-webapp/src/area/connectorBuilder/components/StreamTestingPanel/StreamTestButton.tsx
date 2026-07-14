@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { ComponentProps, useMemo } from "react";
+import { ComponentProps, useCallback, useMemo } from "react";
 import { get } from "react-hook-form";
 import { useHotkeys } from "react-hotkeys-hook";
 import { FormattedMessage } from "react-intl";
@@ -53,6 +53,10 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   const testStreamId = useBuilderWatch("testStreamId");
   const { hasErrors, validateAndTouch } = useBuilderErrors();
   const focusField = useFocusField();
+  const testStreamViews = useCallback(
+    () => [testStreamId, { type: "global" as const }, { type: "inputs" as const }],
+    [testStreamId]
+  );
   const streamPath = getStreamFieldPath(testStreamId);
   const stream = useBuilderWatch(streamPath);
   const oAuthConfigSpec = useBuilderWatch(OAUTH_CONFIG_SPEC_PATH);
@@ -105,7 +109,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlTest" />;
   }
 
-  if ((mode === "ui" && hasErrors()) || (mode === "yaml" && hasTestingValuesErrors)) {
+  if ((mode === "ui" && hasErrors(testStreamViews())) || (mode === "yaml" && hasTestingValuesErrors)) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsTest" />;
   } else if (hasResolveErrors) {
@@ -140,7 +144,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
       return;
     }
 
-    validateAndTouch(queueStreamRead);
+    validateAndTouch(queueStreamRead, testStreamViews());
   };
 
   const testButton = (
