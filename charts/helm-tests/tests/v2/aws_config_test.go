@@ -24,7 +24,7 @@ func TestAwsAssumeRoleConfig(t *testing.T) {
 	}
 
 	releaseApps := appsForRelease("airbyte")
-	for _, name := range []string{"server", "worker"} {
+	for _, name := range []string{"server", "worker", "cron"} {
 		app := releaseApps[name]
 		chartYaml.VerifyEnvVarsForApp(t, app.Kind, app.FQN(), expectedEnvVars)
 	}
