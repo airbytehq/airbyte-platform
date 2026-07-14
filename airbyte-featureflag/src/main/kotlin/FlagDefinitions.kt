@@ -230,8 +230,6 @@ object ReplicationDebugLogLevelEnabled : Permanent<Boolean>(key = "platform.repl
 
 object UseDeadlineInWorkloadMonitorQueries : Temporary<Boolean>(key = "platform.use-deadline-in-workload-monitor-queries", default = false)
 
-object EnableOrchestration : Permanent<Boolean>(key = "platform.enable-orchestration", default = false)
-
 object ForceDdRemoteConfigVar : Temporary<Boolean>(key = "platform.force-dd-remote-config-var", default = false)
 
 object ReplicationCommandFallsBackToWorkloadStatus : Temporary<Boolean>(

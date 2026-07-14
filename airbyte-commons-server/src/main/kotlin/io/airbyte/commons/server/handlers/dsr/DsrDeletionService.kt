@@ -1515,8 +1515,6 @@ open class DsrDeletionService(
     val groupIds = selectUuidByUuidField(ctx, "group", "id", "organization_id", organizationIds)
     val dataplaneGroupIds = selectUuidByUuidField(ctx, "dataplane_group", "id", "organization_id", organizationIds)
     val dataplaneIds = selectUuidByUuidField(ctx, "dataplane", "id", "dataplane_group_id", dataplaneGroupIds)
-    val orchestrationIds = selectUuidByUuidField(ctx, "orchestration", "id", "workspace_id", workspaceIds)
-    val orchestrationRunIds = selectUuidByUuidField(ctx, "orchestration_run", "id", "orchestration_id", orchestrationIds)
     val actorDefinitionIds = selectUuidByUuidField(ctx, "actor", "actor_definition_id", "id", actorIds)
     val workspaceOrganizationIds = selectUuidByUuidField(ctx, "workspace", "organization_id", "id", workspaceIds)
     val workloadIds =
@@ -1591,11 +1589,6 @@ open class DsrDeletionService(
           .where(ConfigTables.ACTOR.ID.`in`(actorIds))
           .execute()
       }
-
-    deleteByUuidField(ctx, "orchestration_task_run", "orchestration_run_id", orchestrationRunIds)
-    deleteByUuidField(ctx, "orchestration_run", "orchestration_id", orchestrationIds)
-    deleteByUuidField(ctx, "orchestration_task", "orchestration_id", orchestrationIds)
-    deleteByUuidField(ctx, "orchestration", "id", orchestrationIds)
 
     deleteByStringField(ctx, "workload_queue", "workload_id", workloadIds)
     deleteByStringField(ctx, "workload", "id", workloadIds)

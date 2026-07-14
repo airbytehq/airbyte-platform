@@ -22,10 +22,6 @@ object SsoEntitlement : FeatureEntitlement(
   featureId = "feature-sso",
 )
 
-object OrchestrationEntitlement : FeatureEntitlement(
-  featureId = "feature-orchestration",
-)
-
 object SelfManagedRegionsEntitlement : FeatureEntitlement(
   featureId = "feature-self-managed-regions",
 )
@@ -135,7 +131,6 @@ object Entitlements {
       FifteenMinuteSyncFrequencyEntitlement,
       DestinationObjectStorageEntitlement,
       SsoEntitlement,
-      OrchestrationEntitlement,
       SelfManagedRegionsEntitlement,
       PrivateLinkEntitlement,
       PrivateLinkLimitEntitlement,
