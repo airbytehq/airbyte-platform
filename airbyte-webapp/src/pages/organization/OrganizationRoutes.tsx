@@ -5,7 +5,7 @@ import OrganizationSettingsLayout from "area/organization/OrganizationSettingsLa
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
-import { useExperiment, useExperimentContext } from "core/services/Experiment";
+import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { OrganizationSettingsPage } from "pages/SettingsPage/OrganizationSettingsPage";
@@ -30,8 +30,6 @@ export const OrganizationRoutes: React.FC = () => {
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
   const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
-
-  useExperimentContext("organization", organizationId);
 
   return (
     <Routes>

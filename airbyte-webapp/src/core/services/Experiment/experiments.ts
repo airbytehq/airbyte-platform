@@ -7,6 +7,7 @@
  */
 
 export interface Experiments {
+  allowAgentsDataReplicationAccess: boolean;
   asyncSchemaDiscovery: boolean;
   "authPage.rightSideUrl": string | undefined;
   "billing.early-sync-enabled": boolean;
@@ -44,6 +45,7 @@ export interface Experiments {
 }
 
 export const defaultExperimentValues: Experiments = {
+  allowAgentsDataReplicationAccess: false,
   asyncSchemaDiscovery: true,
   "authPage.rightSideUrl": undefined,
   "billing.early-sync-enabled": false,
