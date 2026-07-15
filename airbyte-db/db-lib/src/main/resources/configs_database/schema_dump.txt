@@ -465,45 +465,6 @@ create table "public"."operation" (
   "operator_webhook" jsonb,
   constraint "operation_pkey" primary key ("id")
 );
-create table "public"."orchestration" (
-  "id" uuid not null,
-  "version_id" uuid not null,
-  "workspace_id" uuid not null,
-  "name" varchar(2147483647) not null,
-  "schedule" jsonb,
-  "created_at" timestamp(6) with time zone not null default current_timestamp,
-  "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "tombstone" boolean not null default false,
-  constraint "orchestration_pkey" primary key ("id", "version_id")
-);
-create table "public"."orchestration_run" (
-  "id" uuid not null,
-  "orchestration_id" uuid not null,
-  "orchestration_version_id" uuid not null,
-  "status" "public"."orchestration_run_status" not null,
-  "created_at" timestamp(6) with time zone not null default current_timestamp,
-  "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  constraint "orchestration_run_pkey" primary key ("id")
-);
-create table "public"."orchestration_task" (
-  "id" uuid not null,
-  "orchestration_id" uuid not null,
-  "orchestration_version_id" uuid not null,
-  "type" orchestration_task_type not null,
-  "scope_id" uuid not null,
-  "depends_on" varchar(2147483647)[] not null,
-  "created_at" timestamp(6) with time zone not null default current_timestamp,
-  "name" varchar(2147483647) not null,
-  constraint "orchestration_task_pkey" primary key ("id")
-);
-create table "public"."orchestration_task_run" (
-  "id" uuid not null,
-  "orchestration_run_id" uuid not null,
-  "status" "public"."orchestration_task_run_status" not null,
-  "task_id" uuid not null,
-  "task_ref_id" varchar(2147483647) not null,
-  constraint "orchestration_task_run_pkey" primary key ("id")
-);
 create table "public"."organization" (
   "id" uuid not null,
   "name" varchar(256) not null,
@@ -873,14 +834,6 @@ create index "observability_jobs_stats__job_id__idx" on "public"."observability_
 create index "observability_stream_stats__job_id__idx" on "public"."observability_stream_stats"("job_id" asc);
 create unique index "observability_stream_stats__job_id__stream_name__uq" on "public"."observability_stream_stats"("job_id" asc, "stream_name" asc)
 where ((stream_namespace IS NULL));
-create index "orchestration_name_idx" on "public"."orchestration"("name" asc);
-create index "orchestration_workspace_id_idx" on "public"."orchestration"("workspace_id" asc);
-create index "orchestration_run_orchestration_id_idx" on "public"."orchestration_run"("orchestration_id" asc);
-create index "orchestration_run_status_idx" on "public"."orchestration_run"("status" asc);
-create unique index "name_unique_key" on "public"."orchestration_task"("orchestration_id" asc, "orchestration_version_id" asc, "name" asc);
-create index "orchestration_task_run_orchestration_run_id_idx" on "public"."orchestration_task_run"("orchestration_run_id" asc);
-create index "orchestration_task_run_status_idx" on "public"."orchestration_task_run"("status" asc);
-create index "orchestration_task_run_task_id_idx" on "public"."orchestration_task_run"("task_id" asc);
 create index "idx_domain_verification_created_by" on "public"."organization_domain_verification"("created_by" asc);
 create index "idx_domain_verification_domain" on "public"."organization_domain_verification"("domain" asc);
 create index "idx_domain_verification_org" on "public"."organization_domain_verification"("organization_id" asc);
@@ -973,10 +926,6 @@ alter table "public"."group_member" add constraint "group_member_group_id_fkey" 
 alter table "public"."group_member" add constraint "group_member_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."notification_configuration" add constraint "notification_configuration_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."operation" add constraint "operation_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
-alter table "public"."orchestration" add constraint "orchestration_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
-alter table "public"."orchestration_run" add constraint "orchestration_run_orchestration_id_orchestration_version_i_fkey" foreign key ("orchestration_id", "orchestration_version_id") references "public"."orchestration" ("id", "version_id");
-alter table "public"."orchestration_task" add constraint "orchestration_task_orchestration_id_orchestration_version__fkey" foreign key ("orchestration_id", "orchestration_version_id") references "public"."orchestration" ("id", "version_id");
-alter table "public"."orchestration_task_run" add constraint "orchestration_task_run_orchestration_run_id_fkey" foreign key ("orchestration_run_id") references "public"."orchestration_run" ("id");
 alter table "public"."organization_domain_verification" add constraint "organization_domain_verification_created_by_fkey" foreign key ("created_by") references "public"."user" ("id");
 alter table "public"."organization_domain_verification" add constraint "organization_domain_verification_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."organization_email_domain" add constraint "organization_email_domain_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
