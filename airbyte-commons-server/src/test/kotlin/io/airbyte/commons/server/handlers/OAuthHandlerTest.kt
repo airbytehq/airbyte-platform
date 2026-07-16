@@ -344,6 +344,40 @@ internal class OAuthHandlerTest {
   }
 
   @Test
+  fun testCompleteSourceOAuthHandleReturnSecretDoesNotPersistFailedOAuth() {
+    val sourceDefinitionId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+
+    val completeSourceOauthRequest =
+      CompleteSourceOauthRequest()
+        .sourceDefinitionId(sourceDefinitionId)
+        .workspaceId(workspaceId)
+        .returnSecretCoordinate(true)
+
+    val handlerSpy: OAuthHandler = spyk(handler)
+
+    // A denied/aborted OAuth flow: request_succeeded=false with an empty auth_payload.
+    val failedResponse =
+      mapToCompleteOAuthResponse(
+        mapOf(
+          "request_succeeded" to "false",
+          "request_error" to "access_denied",
+        ),
+      )
+
+    every { handlerSpy.completeSourceOAuth(any<CompleteSourceOauthRequest>()) } returns failedResponse
+
+    val result = handlerSpy.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest)
+
+    // No secret should be minted for a failed OAuth, even with returnSecretCoordinate=true.
+    verify(exactly = 0) { handlerSpy.writeOAuthResponseSecret(any<UUID>(), any<CompleteOAuthResponse>()) }
+    // The failure response is surfaced so callers can report the real OAuth error.
+    Assertions.assertEquals(failedResponse, result)
+    Assertions.assertEquals(false, result?.requestSucceeded)
+    Assertions.assertEquals("access_denied", result?.requestError)
+  }
+
+  @Test
   fun testGetSourceOAuthParamConfig() {
     val sourceDefinitionId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()

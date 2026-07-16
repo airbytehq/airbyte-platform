@@ -341,9 +341,15 @@ open class OAuthHandler(
     return result
   }
 
+  /**
+   * Completes a source OAuth flow and, when [CompleteSourceOauthRequest.returnSecretCoordinate] is
+   * set, persists the response as a secret and returns a `secretId`. A failed/denied completion is
+   * not persisted; the failure response is returned unchanged so callers can surface the error.
+   */
   fun completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest: CompleteSourceOauthRequest): CompleteOAuthResponse? {
     val completeOAuthResponse = completeSourceOAuth(completeSourceOauthRequest)
-    return if (completeSourceOauthRequest.returnSecretCoordinate) {
+    // A denied flow (request_succeeded=false) carries no credentials, so don't mint a secretId for it.
+    return if (completeSourceOauthRequest.returnSecretCoordinate && completeOAuthResponse.requestSucceeded != false) {
       writeOAuthResponseSecret(completeSourceOauthRequest.workspaceId, completeOAuthResponse)
     } else {
       completeOAuthResponse
