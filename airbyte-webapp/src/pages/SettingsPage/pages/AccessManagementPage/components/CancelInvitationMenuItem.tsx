@@ -17,7 +17,7 @@ export const CancelInvitationMenuItem: React.FC<CancelInvitationMenuItemProps> =
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const workspaceName = useCurrentWorkspaceOrUndefined()?.name;
-  const { organizationName } = useCurrentOrganizationInfo();
+  const organizationName = useCurrentOrganizationInfo()?.organizationName;
 
   const { mutateAsync: cancelInvitation } = useCancelUserInvitation();
 

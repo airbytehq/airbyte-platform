@@ -53,7 +53,7 @@ export const useOrganizationSubscriptionStatus = (options?: {
   const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
 
-  const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
+  const { billing } = useOrgInfo(organizationId ?? "", canManageOrganizationBilling) || {};
 
   const {
     isStiggPlanEnabled,
@@ -68,7 +68,7 @@ export const useOrganizationSubscriptionStatus = (options?: {
   // Conditional trial status fetching - only when user has permissions and organization's plan is a unified trial plan
   const shouldFetchTrialStatus = canViewTrialStatus && isUnifiedTrialPlan;
 
-  const trialStatus = useOrganizationTrialStatus(organizationId, {
+  const trialStatus = useOrganizationTrialStatus(organizationId ?? "", {
     enabled: shouldFetchTrialStatus,
     ...(options?.refetchWithInterval && {
       refetchInterval: options?.refetchWithInterval,

@@ -27,7 +27,10 @@ import { OrganizationUsersTable } from "./OrganizationUsersTable";
 const SEARCH_PARAM = "search";
 
 export const OrganizationAccessManagementSection: React.FC = () => {
-  const { organizationId, organizationName, sso } = useCurrentOrganizationInfo();
+  const organizationInfo = useCurrentOrganizationInfo();
+  const organizationId = organizationInfo?.organizationId ?? "";
+  const organizationName = organizationInfo?.organizationName ?? "";
+  const sso = organizationInfo?.sso;
   const canUpdateOrganizationPermissions = useGeneratedIntent(Intent.UpdateOrganizationPermissions);
   const allowExternalInvitations = useFeature(FeatureItem.ExternalInvitations);
   const allowUpdateSsoConfig = useFeature(FeatureItem.AllowUpdateSSOConfig);

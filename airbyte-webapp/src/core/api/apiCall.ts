@@ -20,14 +20,16 @@ export interface RequestOptions<DataType = unknown> {
 }
 
 function getRequestBody<U>(data: U) {
-  const stringifiedData = JSON.stringify(data);
-  const nonJsonObject = stringifiedData === "{}";
-  if (nonJsonObject) {
-    // The app tries to stringify blobs which results in broken functionality.
-    // There may be some edge cases where we pass in an empty object.
+  if (
+    data instanceof Blob ||
+    data instanceof ArrayBuffer ||
+    ArrayBuffer.isView(data) ||
+    data instanceof FormData ||
+    data instanceof URLSearchParams
+  ) {
     return data as BodyInit;
   }
-  return stringifiedData;
+  return JSON.stringify(data);
 }
 
 export const fetchApiCall = async <T, U = unknown>(

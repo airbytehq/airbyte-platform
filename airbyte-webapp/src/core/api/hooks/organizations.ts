@@ -63,11 +63,13 @@ export const organizationKeys = {
   scopedTokenOrganization: () => [...organizationKeys.all, "scopedTokenOrganization"] as const,
 };
 
-export const useCurrentOrganizationInfo = () => {
+export const useCurrentOrganizationInfo = (): OrganizationInfoRead | undefined => {
   const requestOptions = useRequestOptions();
   const organizationId = useCurrentOrganizationId();
 
-  return useSuspenseQuery(organizationKeys.info(organizationId), () => getOrgInfo({ organizationId }, requestOptions));
+  return useSuspenseQuery(organizationKeys.info(organizationId), () => getOrgInfo({ organizationId }, requestOptions), {
+    enabled: Boolean(organizationId),
+  });
 };
 
 export const useOrganization = (organizationId: string) => {
@@ -95,7 +97,7 @@ export const useOrgInfo = (organizationId: string, enabled?: boolean): Organizat
       return getOrgInfo({ organizationId }, requestOptions);
     },
     {
-      enabled,
+      enabled: Boolean(organizationId) && enabled,
     }
   );
 };

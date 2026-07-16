@@ -41,7 +41,7 @@ export const OrganizationPicker = () => {
   const { formatMessage } = useIntl();
 
   const currentOrgName =
-    currentOrganizationInfo.organizationName.length > 0
+    currentOrganizationInfo && currentOrganizationInfo.organizationName.length > 0
       ? currentOrganizationInfo.organizationName
       : formatMessage({ id: "organization.emptyName" });
 
@@ -54,7 +54,7 @@ export const OrganizationPicker = () => {
             size="lg"
             bold
             className={styles.organizationPicker__orgName}
-            italicized={!currentOrganizationInfo.organizationName}
+            italicized={!currentOrganizationInfo?.organizationName}
           >
             {currentOrgName}
           </Text>
@@ -73,7 +73,7 @@ export const OrganizationPicker = () => {
             size="lg"
             bold
             className={styles.organizationPicker__orgName}
-            italicized={!currentOrganizationInfo.organizationName}
+            italicized={!currentOrganizationInfo?.organizationName}
           >
             {currentOrgName}
           </Text>
@@ -163,7 +163,7 @@ const OrganizationPickerPanelContent = () => {
             context={{
               isFetchingNextPage,
               closePopover,
-              currentOrganizationId: currentOrganization.organizationId,
+              currentOrganizationId: currentOrganization?.organizationId ?? "",
             }}
             endReached={() => {
               if (hasNextPage && !isFetchingNextPage) {
