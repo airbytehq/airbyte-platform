@@ -46,10 +46,12 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobFailureInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber
+import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import io.temporal.failure.ApplicationFailure
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -57,6 +59,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
 import java.util.UUID
 
@@ -570,6 +573,21 @@ internal class JobCreationAndStatusUpdateActivityTest {
           )
         }.isInstanceOf(RetryableException::class.java)
         .hasCauseInstanceOf(IOException::class.java)
+    }
+
+    @Test
+    @DisplayName("Test 409 conflict is not retried")
+    fun createAttemptNumberConflictNotRetried() {
+      every { airbyteApiClient.attemptApi } returns attemptApi
+      every { attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(JOB_ID)) } throws
+        ClientException("Conflict", HttpStatus.CONFLICT.code, null)
+
+      // A non-retryable ApplicationFailure so Temporal does not retry the terminal conflict.
+      val thrown =
+        Assertions.assertThrows(ApplicationFailure::class.java) {
+          jobCreationAndStatusUpdateActivity.createNewAttemptNumber(AttemptCreationInput(JOB_ID))
+        }
+      Assertions.assertTrue(thrown.isNonRetryable)
     }
   }
 

@@ -47,6 +47,7 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpStatus
 import io.opentelemetry.instrumentation.annotations.WithSpan
+import io.temporal.failure.ApplicationFailure
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
@@ -108,7 +109,17 @@ class JobCreationAndStatusUpdateActivityImpl(
     } catch (e: ClientException) {
       if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
         throw e
+      } else if (e.statusCode == HttpStatus.CONFLICT.getCode()) {
+        // 409 (job already terminal or has a running attempt) are terminal
+        // conditions. Throw a NON-RETRYABLE failure: the shortRetryOptions policy retries every
+        // exception (except WorkspaceNotFoundException) up to maxAttempts, so a bare throw would
+        // still be retried.
+        throw ApplicationFailure.newNonRetryableFailure(
+          "createNewAttemptNumber for job ${input.jobId} failed with non-retryable status ${e.statusCode}: ${e.message}",
+          e::class.java.name,
+        )
       }
+
       log.error("createNewAttemptNumber for job {} failed with exception: {}", input.jobId, e.message, e)
       throw RetryableException(e)
     } catch (e: Exception) {
@@ -355,11 +366,15 @@ class JobCreationAndStatusUpdateActivityImpl(
         log.info("Skipping source check for reset job")
         false
       }
+
       shouldSkipSourceCheck(input.connectionId!!) -> {
         log.info("Skipping source check due to feature flag for connection ${input.connectionId}")
         false
       }
-      else -> isLastJobOrAttemptFailure(input)
+
+      else -> {
+        isLastJobOrAttemptFailure(input)
+      }
     }
 
   /**
@@ -376,7 +391,10 @@ class JobCreationAndStatusUpdateActivityImpl(
         log.info("Skipping destination check due to feature flag for connection ${input.connectionId}")
         false
       }
-      else -> isLastJobOrAttemptFailure(input)
+
+      else -> {
+        isLastJobOrAttemptFailure(input)
+      }
     }
 
   private fun isResetJob(jobId: Long): Boolean =

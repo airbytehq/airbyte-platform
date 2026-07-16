@@ -147,12 +147,13 @@ interface JobPersistence {
   )
 
   /**
-   * Create a new attempt for a job and return its attempt number. Throws
-   * [IllegalStateException] if the job is already in a terminal state.
+   * Create a new attempt for a job and return its attempt number.
    *
    * @param jobId job for which an attempt will be created
    * @param logPath path where logs should be written for the attempt
    * @return The attempt number of the created attempt (see [DefaultJobPersistence])
+   * @throws JobInTerminalStateException if the job is already in a terminal state
+   * @throws JobRunningAttemptExistsException if the job already has a non-terminal (running) attempt
    * @throws IOException exception due to interaction with persistence
    */
   fun createAttempt(

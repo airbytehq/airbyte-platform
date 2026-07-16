@@ -2023,9 +2023,11 @@ internal class DefaultJobPersistenceTest {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.createAttempt(jobId, LOG_PATH)
 
-      assertThrows(
-        IllegalStateException::class.java,
-      ) { jobPersistence.createAttempt(jobId, LOG_PATH) }
+      val exception =
+        assertThrows(
+          JobRunningAttemptExistsException::class.java,
+        ) { jobPersistence.createAttempt(jobId, LOG_PATH) }
+      assertEquals(0, exception.existingAttemptNumber)
 
       val actual = jobPersistence.getJob(jobId)
       val expected =
@@ -2047,7 +2049,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.succeedAttempt(jobId, attemptNumber)
 
       assertThrows(
-        IllegalStateException::class.java,
+        JobInTerminalStateException::class.java,
       ) { jobPersistence.createAttempt(jobId, LOG_PATH) }
 
       val actual = jobPersistence.getJob(jobId)

@@ -19,6 +19,7 @@ import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.errors.BadRequestException
+import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.UnprocessableContentException
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
@@ -68,7 +69,9 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Flag
 import io.airbyte.featureflag.TestClient
 import io.airbyte.mappers.transformations.Mapper
+import io.airbyte.persistence.job.JobInTerminalStateException
 import io.airbyte.persistence.job.JobPersistence
+import io.airbyte.persistence.job.JobRunningAttemptExistsException
 import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -132,6 +135,60 @@ internal class AttemptHandlerTest {
         streamAttemptMetadataService,
         apiPojoConverters,
       )
+  }
+
+  @Test
+  fun createNewAttemptNumberThrowsConflictWhenAttemptRunning() {
+    val connId = UUID.randomUUID()
+    val job =
+      Job(
+        JOB_ID,
+        ConfigType.SYNC,
+        connId.toString(),
+        Mockito.mock(JobConfig::class.java),
+        mutableListOf(),
+        JobStatus.RUNNING,
+        1001L,
+        1000L,
+        1002L,
+        true,
+      )
+    Mockito.`when`(jobPersistence.getJob(JOB_ID)).thenReturn(job)
+    Mockito.`when`(path.resolve(Mockito.anyString())).thenReturn(path)
+    Mockito
+      .`when`(jobPersistence.createAttempt(eq(JOB_ID), anyOrNull()))
+      .thenThrow(JobRunningAttemptExistsException(JOB_ID, connId.toString(), 2))
+
+    // Conflict, not idempotent success: the job already has an in-flight attempt.
+    Assertions.assertThrows(ConflictException::class.java) { handler.createNewAttemptNumber(JOB_ID) }
+    Mockito.verifyNoInteractions(generationBumper)
+    Mockito.verifyNoInteractions(connectionService)
+  }
+
+  @Test
+  fun createNewAttemptNumberThrowsConflictWhenJobTerminal() {
+    val connId = UUID.randomUUID()
+    val job =
+      Job(
+        JOB_ID,
+        ConfigType.SYNC,
+        connId.toString(),
+        Mockito.mock(JobConfig::class.java),
+        mutableListOf(),
+        JobStatus.SUCCEEDED,
+        1001L,
+        1000L,
+        1002L,
+        true,
+      )
+    Mockito.`when`(jobPersistence.getJob(JOB_ID)).thenReturn(job)
+    Mockito.`when`(path.resolve(Mockito.anyString())).thenReturn(path)
+    Mockito
+      .`when`(jobPersistence.createAttempt(eq(JOB_ID), anyOrNull()))
+      .thenThrow(JobInTerminalStateException(JOB_ID, connId.toString(), JobStatus.SUCCEEDED))
+
+    Assertions.assertThrows(ConflictException::class.java) { handler.createNewAttemptNumber(JOB_ID) }
+    Mockito.verifyNoInteractions(generationBumper)
   }
 
   @Test

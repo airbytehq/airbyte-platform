@@ -276,25 +276,12 @@ class DefaultJobPersistence
       return jobDatabase.transaction { ctx: DSLContext ->
         val job = getJob(ctx, jobId)
         if (job.isJobInTerminalState()) {
-          val errMsg =
-            String.format(
-              "Cannot create an attempt for a job id: %s that is in a terminal state: %s for connection id: %s",
-              job.id,
-              job.status,
-              job.scope,
-            )
-          throw IllegalStateException(errMsg)
+          throw JobInTerminalStateException(job.id, job.scope, job.status)
         }
 
-        if (job.hasRunningAttempt()) {
-          val errMsg =
-            String.format(
-              "Cannot create an attempt for a job id: %s that has a running attempt: %s for connection id: %s",
-              job.id,
-              job.status,
-              job.scope,
-            )
-          throw IllegalStateException(errMsg)
+        val runningAttempt = job.attempts.firstOrNull { a -> !Attempt.isAttemptInTerminalState(a) }
+        if (runningAttempt != null) {
+          throw JobRunningAttemptExistsException(job.id, job.scope, runningAttempt.attemptNumber)
         }
 
         val now = updateJobStatus(ctx, jobId, JobStatus.RUNNING)
