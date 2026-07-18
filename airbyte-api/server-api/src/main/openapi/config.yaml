@@ -11065,6 +11065,27 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "409":
           description: Private link status cannot move backward
+  /v1/private_link/list_by_status:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+        - internal
+      summary: List private links by status (internal — admin only)
+      operationId: listPrivateLinksByStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkListByStatusRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateLinkReadList"
 
 components:
   securitySchemes:
@@ -11112,6 +11133,13 @@ components:
       properties:
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+    PrivateLinkListByStatusRequestBody:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/PrivateLinkStatus"
     PrivateLinkIdRequestBody:
       type: object
       required:
@@ -11175,6 +11203,9 @@ components:
         dataplaneGroupId:
           type: string
           format: uuid
+        dataplaneRegion:
+          type: string
+          description: Region where the private link's VPC endpoint is deployed.
         name:
           type: string
         status:

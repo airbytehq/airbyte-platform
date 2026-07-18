@@ -57,13 +57,14 @@ class PrivateLinkRepositoryTest : AbstractConfigRepositoryTest() {
   private fun createPrivateLink(
     workspaceId: UUID = UUID.randomUUID(),
     name: String = "test-link",
+    status: PrivateLinkStatus = PrivateLinkStatus.creating,
   ): PrivateLink =
     privateLinkRepository.save(
       PrivateLink(
         workspaceId = workspaceId,
         dataplaneGroupId = dataplaneGroupId,
         name = name,
-        status = PrivateLinkStatus.creating,
+        status = status,
       ),
     )
 
@@ -107,6 +108,18 @@ class PrivateLinkRepositoryTest : AbstractConfigRepositoryTest() {
   fun `test list by workspace id returns empty when none exist`() {
     val results = privateLinkRepository.findByWorkspaceId(UUID.randomUUID())
     assertTrue(results.isEmpty())
+  }
+
+  @Test
+  fun `test list by status returns only matching rows`() {
+    createPrivateLink(name = "ready-1", status = PrivateLinkStatus.available)
+    createPrivateLink(name = "ready-2", status = PrivateLinkStatus.available)
+    createPrivateLink(name = "pending", status = PrivateLinkStatus.pending_acceptance)
+
+    val results = privateLinkRepository.findByStatus(PrivateLinkStatus.available)
+
+    assertEquals(setOf("ready-1", "ready-2"), results.map { it.name }.toSet())
+    assertTrue(results.all { it.status == PrivateLinkStatus.available })
   }
 
   @Test

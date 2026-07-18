@@ -68,6 +68,11 @@ class PrivateLinkService(
     return repository.update(entity).toDomainModel()
   }
 
+  fun listByStatus(status: PrivateLinkStatus): List<PrivateLink> =
+    repository
+      .findByStatus(status.toEntityEnum())
+      .map { it.toDomainModel() }
+
   fun clearScopedConfigurationId(id: UUID): PrivateLink {
     val entity = repository.findById(id).orElseThrow { NoSuchElementException("Private link $id not found") }
     entity.scopedConfigurationId = null

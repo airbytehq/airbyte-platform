@@ -8,6 +8,7 @@ import io.airbyte.api.generated.PrivateLinkApi
 import io.airbyte.api.model.generated.PrivateLinkCreateRequestBody
 import io.airbyte.api.model.generated.PrivateLinkIdRequestBody
 import io.airbyte.api.model.generated.PrivateLinkInternalIdRequestBody
+import io.airbyte.api.model.generated.PrivateLinkListByStatusRequestBody
 import io.airbyte.api.model.generated.PrivateLinkListRequestBody
 import io.airbyte.api.model.generated.PrivateLinkRead
 import io.airbyte.api.model.generated.PrivateLinkReadList
@@ -59,4 +60,11 @@ open class PrivateLinkController : PrivateLinkApi {
   override fun updatePrivateLink(
     @Body privateLinkUpdateRequestBody: PrivateLinkUpdateRequestBody,
   ): PrivateLinkRead = throw ApiNotImplementedInOssProblem()
+
+  @Secured(AuthRoleConstants.ADMIN)
+  @Post("/list_by_status")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun listPrivateLinksByStatus(
+    @Body privateLinkListByStatusRequestBody: PrivateLinkListByStatusRequestBody,
+  ): PrivateLinkReadList = throw ApiNotImplementedInOssProblem()
 }

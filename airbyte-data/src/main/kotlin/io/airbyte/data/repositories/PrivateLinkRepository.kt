@@ -13,4 +13,6 @@ import java.util.UUID
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface PrivateLinkRepository : PageableRepository<PrivateLink, UUID> {
   fun findByWorkspaceId(workspaceId: UUID): List<PrivateLink>
+
+  fun findByStatus(status: io.airbyte.db.instance.configs.jooq.generated.enums.PrivateLinkStatus): List<PrivateLink>
 }

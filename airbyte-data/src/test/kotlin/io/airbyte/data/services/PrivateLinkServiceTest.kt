@@ -8,6 +8,7 @@ import io.airbyte.data.repositories.PrivateLinkRepository
 import io.airbyte.domain.models.PrivateLinkStatus
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.Optional
@@ -74,5 +75,17 @@ class PrivateLinkServiceTest {
     val result = service.updatePrivateLink(id, status = PrivateLinkStatus.DELETING)
 
     assertEquals(PrivateLinkStatus.DELETING, result.status)
+  }
+
+  @Test
+  fun `listByStatus maps domain status and returns matching rows`() {
+    every { repository.findByStatus(EntityPrivateLinkStatus.available) } returns
+      listOf(entity(name = "ready", status = EntityPrivateLinkStatus.available))
+
+    val result = service.listByStatus(PrivateLinkStatus.AVAILABLE)
+
+    assertEquals(listOf("ready"), result.map { it.name })
+    assertEquals(listOf(PrivateLinkStatus.AVAILABLE), result.map { it.status })
+    verify(exactly = 1) { repository.findByStatus(EntityPrivateLinkStatus.available) }
   }
 }
