@@ -161,6 +161,8 @@ open class BaseConfigDatabaseTest {
               permission,
               private_link,
               schema_management,
+              scim_configuration,
+              scim_resource_mapping,
               sso_config,
               state,
               stream_generation,

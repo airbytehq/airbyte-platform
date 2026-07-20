@@ -48,7 +48,7 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V2_1_0_034__AddGroupOrganizationKey
+import io.airbyte.db.instance.configs.migrations.V2_1_0_035__CreateScimTables
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.instance.jobs.migrations.V2_1_0_003__AddJobsCreatedAtIndex
@@ -824,7 +824,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V2_1_0_034__AddGroupOrganizationKey::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V2_1_0_035__CreateScimTables::class.java
     private val CURRENT_JOBS_MIGRATION = V2_1_0_003__AddJobsCreatedAtIndex::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =

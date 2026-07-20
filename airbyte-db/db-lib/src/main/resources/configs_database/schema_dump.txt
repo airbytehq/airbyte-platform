@@ -553,6 +553,39 @@ create table "public"."schema_management" (
   "backfill_preference" "public"."backfill_preference" not null default cast('disabled' as backfill_preference),
   constraint "schema_management_pkey" primary key ("id")
 );
+create table "public"."scim_configuration" (
+  "id" uuid not null,
+  "organization_id" uuid not null,
+  "token_hash" text,
+  "idp_provider" text,
+  "enabled" boolean not null default false,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "created_by_user_id" uuid,
+  "token_issued_at" timestamp(6) with time zone,
+  "token_issued_by_user_id" uuid,
+  "disabled_at" timestamp(6) with time zone,
+  "disabled_by_user_id" uuid,
+  constraint "scim_configuration_pkey" primary key ("id"),
+  constraint "scim_configuration_id_organization_id_key" unique ("id", "organization_id"),
+  constraint "scim_configuration_organization_id_key" unique ("organization_id")
+);
+create table "public"."scim_resource_mapping" (
+  "id" uuid not null,
+  "scim_configuration_id" uuid not null,
+  "organization_id" uuid not null,
+  "resource_type" scim_resource_type not null,
+  "user_id" uuid,
+  "group_id" uuid,
+  "external_id" text,
+  "user_name" text,
+  "primary_email" text,
+  "user_active" boolean,
+  "attributes" jsonb not null default cast('{}' as jsonb),
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "scim_resource_mapping_pkey" primary key ("id")
+);
 create table "public"."scoped_configuration" (
   "id" uuid not null,
   "key" varchar(256) not null,
@@ -855,6 +888,35 @@ create index "idx_private_link_workspace_id" on "public"."private_link"("workspa
 create unique index "private_link_workspace_id_name_key" on "public"."private_link"("workspace_id" asc, "name" asc)
 where ((status <> 'deleted'::private_link_status));
 create index "connection_idx" on "public"."schema_management"("connection_id" asc);
+create unique index "scim_configuration_token_hash_key" on "public"."scim_configuration"("token_hash" asc)
+where ((token_hash IS NOT NULL));
+create index "scim_resource_mapping_configuration_resource_idx" on "public"."scim_resource_mapping"(
+  "scim_configuration_id" asc,
+  "resource_type" asc,
+  "organization_id" asc,
+  "created_at" asc,
+  "id" asc
+);
+create unique index "scim_resource_mapping_configuration_user_key" on "public"."scim_resource_mapping"("scim_configuration_id" asc, "resource_type" asc, "user_id" asc)
+where ((resource_type = 'USER'::scim_resource_type));
+create unique index "scim_resource_mapping_external_id_key" on "public"."scim_resource_mapping"("scim_configuration_id" asc, "resource_type" asc, "external_id" asc)
+where ((external_id IS NOT NULL));
+create unique index "scim_resource_mapping_group_key" on "public"."scim_resource_mapping"("group_id" asc)
+where ((resource_type = 'GROUP'::scim_resource_type));
+create unique index "scim_resource_mapping_primary_email_key" on "public"."scim_resource_mapping"(
+  "scim_configuration_id" asc,
+  "resource_type" asc,
+  lower(primary_email) asc
+)
+where ((resource_type = 'USER'::scim_resource_type));
+create index "scim_resource_mapping_primary_email_lookup_idx" on "public"."scim_resource_mapping"(lower(primary_email) asc)
+where ((resource_type = 'USER'::scim_resource_type));
+create unique index "scim_resource_mapping_user_name_key" on "public"."scim_resource_mapping"(
+  "scim_configuration_id" asc,
+  "resource_type" asc,
+  lower(user_name) asc
+)
+where ((resource_type = 'USER'::scim_resource_type));
 create index "scoped_configuration_origin_idx" on "public"."scoped_configuration"("origin" asc);
 create unique index "secret_reference_scope_type_scope_id_hydration_path_idx" on "public"."secret_reference"(
   "scope_type" asc,
@@ -940,6 +1002,13 @@ alter table "public"."private_link" add constraint "private_link_dataplane_group
 alter table "public"."private_link" add constraint "private_link_scoped_configuration_id_fkey" foreign key ("scoped_configuration_id") references "public"."scoped_configuration" ("id");
 alter table "public"."private_link" add constraint "private_link_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."schema_management" add constraint "schema_management_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
+alter table "public"."scim_configuration" add constraint "scim_configuration_created_by_user_id_fkey" foreign key ("created_by_user_id") references "public"."user" ("id");
+alter table "public"."scim_configuration" add constraint "scim_configuration_disabled_by_user_id_fkey" foreign key ("disabled_by_user_id") references "public"."user" ("id");
+alter table "public"."scim_configuration" add constraint "scim_configuration_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
+alter table "public"."scim_configuration" add constraint "scim_configuration_token_issued_by_user_id_fkey" foreign key ("token_issued_by_user_id") references "public"."user" ("id");
+alter table "public"."scim_resource_mapping" add constraint "scim_resource_mapping_configuration_organization_fkey" foreign key ("scim_configuration_id", "organization_id") references "public"."scim_configuration" ("id", "organization_id");
+alter table "public"."scim_resource_mapping" add constraint "scim_resource_mapping_group_organization_fkey" foreign key ("group_id", "organization_id") references "public"."group" ("id", "organization_id");
+alter table "public"."scim_resource_mapping" add constraint "scim_resource_mapping_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."secret_config" add constraint "secret_config_secret_storage_id_fkey" foreign key ("secret_storage_id") references "public"."secret_storage" ("id");
 alter table "public"."secret_reference" add constraint "secret_reference_secret_config_id_fkey" foreign key ("secret_config_id") references "public"."secret_config" ("id");
 alter table "public"."sso_config" add constraint "sso_config_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
