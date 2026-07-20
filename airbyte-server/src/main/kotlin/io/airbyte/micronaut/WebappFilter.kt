@@ -125,6 +125,8 @@ internal val pathPrefixes =
     "/fonts",
     // routes is a special endpoint
     "/routes",
+    // SCIM endpoints are handled by backend controllers
+    "/scim",
   )
 
 @InternalForTesting

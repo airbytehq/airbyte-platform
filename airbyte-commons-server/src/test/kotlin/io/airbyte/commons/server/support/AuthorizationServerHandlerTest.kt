@@ -6,6 +6,7 @@ package io.airbyte.commons.server.support
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.DefaultFullHttpRequest
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.charset.StandardCharsets
+import java.util.Optional
 import java.util.UUID
 
 internal class AuthorizationServerHandlerTest {
@@ -146,5 +148,41 @@ internal class AuthorizationServerHandlerTest {
 
     assertEquals("sonar-production", request.headers().get("X-Airbyte-Client-ID"))
     assertEquals("Bearer some-token", request.headers().get("Authorization"))
+  }
+
+  @Test
+  fun `SCIM payloads skip body extraction while spoofed internal headers are stripped`() {
+    val extractor = mockk<AirbyteHttpRequestFieldExtractor>(relaxed = true)
+    every { extractor.contentToJson(any()) } returns Optional.empty()
+    val scimHandler = AuthorizationServerHandler(extractor)
+    val uris =
+      listOf(
+        "/scim/v2",
+        "/scim/v2?startIndex=1",
+        "/scim/v2/Users",
+        "/scim/v2/Users?filter=userName%20eq%20%22test%22",
+      )
+
+    uris.forEach { uri ->
+      val request = buildRequest(uri, """{"password":"secret"}""")
+      request.headers().add(AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER, UUID.randomUUID().toString())
+
+      scimHandler.channelRead(context, request)
+
+      assertFalse(request.headers().contains(AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER))
+    }
+    verify(exactly = 0) { extractor.contentToJson(any()) }
+  }
+
+  @Test
+  fun `non SCIM lookalike path still extracts authorization fields`() {
+    val extractor = mockk<AirbyteHttpRequestFieldExtractor>(relaxed = true)
+    every { extractor.contentToJson(any()) } returns Optional.empty()
+    val scimHandler = AuthorizationServerHandler(extractor)
+    val request = buildRequest("/scim/v20", """{"password":"secret"}""")
+
+    scimHandler.channelRead(context, request)
+
+    verify(exactly = 1) { extractor.contentToJson(any()) }
   }
 }

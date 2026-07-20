@@ -5,6 +5,7 @@
 package io.airbyte.domain.services.scim
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -23,6 +24,17 @@ class ScimTokenServiceTest {
   @Test
   fun `generates distinct tokens`() {
     assertNotEquals(tokenService.generateToken(), tokenService.generateToken())
+  }
+
+  @Test
+  fun `validates only the exact SCIM token shape`() {
+    assertTrue(tokenService.isValidToken("airbyte_scim_${"a".repeat(64)}"))
+    assertFalse(tokenService.isValidToken("airbyte_scim_${"A".repeat(64)}"))
+    assertFalse(tokenService.isValidToken("airbyte_scim_${"a".repeat(63)}"))
+    assertFalse(tokenService.isValidToken("airbyte_scim_${"a".repeat(65)}"))
+    assertFalse(tokenService.isValidToken(" airbyte_scim_${"a".repeat(64)}"))
+    assertFalse(tokenService.isValidToken("airbyte_scim_${"a".repeat(64)} "))
+    assertFalse(tokenService.isValidToken(""))
   }
 
   @Test

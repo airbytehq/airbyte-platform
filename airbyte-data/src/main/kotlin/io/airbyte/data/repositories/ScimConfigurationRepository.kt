@@ -19,11 +19,33 @@ interface ScimConfigurationRepository : PageableRepository<ScimConfiguration, UU
   @Query(
     """
     SELECT * FROM scim_configuration
+    WHERE token_hash = :tokenHash
+      AND enabled = TRUE
+    """,
+  )
+  fun findEnabledByTokenHash(tokenHash: String): ScimConfiguration?
+
+  @Query(
+    """
+    SELECT * FROM scim_configuration
     WHERE organization_id = :organizationId
     FOR UPDATE
     """,
   )
   fun findByOrganizationIdForUpdate(organizationId: UUID): ScimConfiguration?
+
+  @Query(
+    """
+    SELECT * FROM scim_configuration
+    WHERE id = :id
+      AND organization_id = :organizationId
+    FOR UPDATE
+    """,
+  )
+  fun findByIdAndOrganizationIdForUpdate(
+    id: UUID,
+    organizationId: UUID,
+  ): ScimConfiguration?
 
   @Query(
     """

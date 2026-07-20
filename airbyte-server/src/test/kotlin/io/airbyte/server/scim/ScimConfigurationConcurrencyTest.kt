@@ -13,11 +13,14 @@ import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.UserId
+import io.airbyte.domain.models.scim.ScimAuthenticationException
 import io.airbyte.domain.models.scim.ScimConfigurationConflictException
 import io.airbyte.domain.models.scim.ScimConfigurationRead
 import io.airbyte.domain.models.scim.ScimIdpProvider
 import io.airbyte.domain.services.scim.ScimAccessGate
+import io.airbyte.domain.services.scim.ScimAuthenticationContext
 import io.airbyte.domain.services.scim.ScimConfigurationService
+import io.airbyte.domain.services.scim.ScimMutationService
 import io.airbyte.domain.services.scim.ScimTokenService
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.env.PropertySource
@@ -37,12 +40,15 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.testcontainers.containers.PostgreSQLContainer
 import java.sql.Connection
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.sql.DataSource
 
 class ScimConfigurationConcurrencyTest {
@@ -258,6 +264,159 @@ class ScimConfigurationConcurrencyTest {
     assertThat(after.tokenHash).isEqualTo(before.tokenHash)
     assertThat(after.disabledAt).isNull()
     assertThat(after.disabledByUserId).isNull()
+  }
+
+  @Test
+  fun `rotation that acquires locks first invalidates a waiting mutation`() {
+    val organization =
+      organizationRepository.save(
+        Organization(name = "rotation-vs-mutation", email = "rotation-vs-mutation@example.com"),
+      )
+    val organizationId = OrganizationId(organization.id!!)
+    val userId = UserId(UUID.randomUUID())
+    insertUser(userId.value)
+    val tokenService = ScimTokenService()
+    val lifecycleService = createService(organizationId, tokenService)
+    val rawToken = lifecycleService.enable(organizationId, ScimIdpProvider.OKTA, userId).token!!
+    val configuration = scimConfigurationRepository.findByOrganizationId(organizationId.value)!!
+    val oldContext =
+      ScimAuthenticationContext(
+        configurationId = configuration.id!!,
+        organizationId = organizationId,
+        tokenHash = tokenService.hashToken(rawToken),
+      )
+    val mutationService =
+      ScimMutationService(
+        organizationRepository,
+        scimConfigurationRepository,
+        configTransactionOperations,
+      )
+    val lifecycleUpdated = CountDownLatch(1)
+    val allowLifecycleCommit = CountDownLatch(1)
+    val mutationStarted = CountDownLatch(1)
+    val mutationRan = AtomicBoolean(false)
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val lifecycle =
+        executor.submit(
+          Callable {
+            configTransactionOperations.executeWrite { _ ->
+              assertThat(organizationRepository.findByIdForUpdate(organizationId.value)).isPresent
+              val locked = scimConfigurationRepository.findByOrganizationIdForUpdate(organizationId.value)!!
+              val now = OffsetDateTime.now(ZoneOffset.UTC)
+              assertThat(
+                scimConfigurationRepository.rotateTokenByIdAndOrganizationId(
+                  id = locked.id!!,
+                  organizationId = organizationId.value,
+                  tokenHash = tokenService.hashToken(tokenService.generateToken()),
+                  tokenIssuedAt = now,
+                  tokenIssuedByUserId = userId.value,
+                  updatedAt = now,
+                ),
+              ).isEqualTo(1)
+              lifecycleUpdated.countDown()
+              assertThat(allowLifecycleCommit.await(10, TimeUnit.SECONDS)).isTrue()
+            }
+          },
+        )
+      assertThat(lifecycleUpdated.await(10, TimeUnit.SECONDS)).isTrue()
+      val mutation =
+        executor.submit(
+          Callable {
+            mutationStarted.countDown()
+            assertThatThrownBy {
+              mutationService.execute(oldContext) { mutationRan.set(true) }
+            }.isInstanceOf(ScimAuthenticationException::class.java)
+          },
+        )
+      assertThat(mutationStarted.await(10, TimeUnit.SECONDS)).isTrue()
+
+      allowLifecycleCommit.countDown()
+      lifecycle.get(10, TimeUnit.SECONDS)
+      mutation.get(10, TimeUnit.SECONDS)
+
+      assertThat(mutationRan).isFalse()
+    } finally {
+      allowLifecycleCommit.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `disable that acquires locks first invalidates a waiting mutation`() {
+    val organization =
+      organizationRepository.save(
+        Organization(name = "disable-vs-mutation", email = "disable-vs-mutation@example.com"),
+      )
+    val organizationId = OrganizationId(organization.id!!)
+    val userId = UserId(UUID.randomUUID())
+    insertUser(userId.value)
+    val tokenService = ScimTokenService()
+    val lifecycleService = createService(organizationId, tokenService)
+    val rawToken = lifecycleService.enable(organizationId, ScimIdpProvider.OKTA, userId).token!!
+    val configuration = scimConfigurationRepository.findByOrganizationId(organizationId.value)!!
+    val oldContext =
+      ScimAuthenticationContext(
+        configurationId = configuration.id!!,
+        organizationId = organizationId,
+        tokenHash = tokenService.hashToken(rawToken),
+      )
+    val mutationService =
+      ScimMutationService(
+        organizationRepository,
+        scimConfigurationRepository,
+        configTransactionOperations,
+      )
+    val lifecycleUpdated = CountDownLatch(1)
+    val allowLifecycleCommit = CountDownLatch(1)
+    val mutationStarted = CountDownLatch(1)
+    val mutationRan = AtomicBoolean(false)
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val lifecycle =
+        executor.submit(
+          Callable {
+            configTransactionOperations.executeWrite { _ ->
+              assertThat(organizationRepository.findByIdForUpdate(organizationId.value)).isPresent
+              val locked = scimConfigurationRepository.findByOrganizationIdForUpdate(organizationId.value)!!
+              val now = OffsetDateTime.now(ZoneOffset.UTC)
+              assertThat(
+                scimConfigurationRepository.disableByIdAndOrganizationId(
+                  id = locked.id!!,
+                  organizationId = organizationId.value,
+                  disabledAt = now,
+                  disabledByUserId = userId.value,
+                  updatedAt = now,
+                ),
+              ).isEqualTo(1)
+              lifecycleUpdated.countDown()
+              assertThat(allowLifecycleCommit.await(10, TimeUnit.SECONDS)).isTrue()
+            }
+          },
+        )
+      assertThat(lifecycleUpdated.await(10, TimeUnit.SECONDS)).isTrue()
+      val mutation =
+        executor.submit(
+          Callable {
+            mutationStarted.countDown()
+            assertThatThrownBy {
+              mutationService.execute(oldContext) { mutationRan.set(true) }
+            }.isInstanceOf(ScimAuthenticationException::class.java)
+          },
+        )
+      assertThat(mutationStarted.await(10, TimeUnit.SECONDS)).isTrue()
+
+      allowLifecycleCommit.countDown()
+      lifecycle.get(10, TimeUnit.SECONDS)
+      mutation.get(10, TimeUnit.SECONDS)
+
+      assertThat(mutationRan).isFalse()
+    } finally {
+      allowLifecycleCommit.countDown()
+      executor.shutdownNow()
+    }
   }
 
   private fun createService(

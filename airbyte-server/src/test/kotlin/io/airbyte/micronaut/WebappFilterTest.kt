@@ -29,13 +29,14 @@ class WebappFilterTest {
   fun `pathPrefixes are unchanged`() {
     // Given the importance of these prefixes, this silly looking test is here to double-check that any changes to the pathPrefixes was made
     // intentionally.
-    assertEquals(4, pathPrefixes.size)
+    assertEquals(5, pathPrefixes.size)
     assertTrue(pathPrefixes.all { it.startsWith("/") }, "path prefixes must start with a /s")
 
     assertTrue(pathPrefixes.contains("/api"), "api path prefix missing")
     assertTrue(pathPrefixes.contains("/assets"), "assets path prefix missing")
     assertTrue(pathPrefixes.contains("/fonts"), "fonts path prefix missing")
     assertTrue(pathPrefixes.contains("/routes"), "routes path prefix missing")
+    assertTrue(pathPrefixes.contains("/scim"), "scim path prefix missing")
   }
 
   @Test

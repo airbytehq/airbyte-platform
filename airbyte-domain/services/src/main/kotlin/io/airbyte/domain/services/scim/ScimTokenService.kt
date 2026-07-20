@@ -19,6 +19,8 @@ open class ScimTokenService {
     return TOKEN_PREFIX + HexFormat.of().formatHex(randomBytes)
   }
 
+  open fun isValidToken(rawToken: String): Boolean = SCIM_TOKEN_REGEX.matches(rawToken)
+
   open fun hashToken(rawToken: String): String {
     require(rawToken.isNotEmpty()) { "Token cannot be empty" }
 
@@ -34,6 +36,7 @@ open class ScimTokenService {
     const val TOKEN_PREFIX = "airbyte_scim_"
     const val TOKEN_RANDOM_BYTES = 32
     const val SHA_256 = "SHA-256"
+    val SCIM_TOKEN_REGEX = Regex("^airbyte_scim_[0-9a-f]{64}$")
     val secureRandom = SecureRandom()
   }
 }

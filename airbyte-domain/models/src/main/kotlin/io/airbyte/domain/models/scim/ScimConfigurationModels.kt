@@ -39,6 +39,8 @@ class ScimAccessDeniedException(
   message: String,
 ) : RuntimeException(message)
 
+class ScimAuthenticationException : RuntimeException("SCIM authentication failed")
+
 class ScimConfigurationConflictException(
   message: String,
 ) : RuntimeException(message)

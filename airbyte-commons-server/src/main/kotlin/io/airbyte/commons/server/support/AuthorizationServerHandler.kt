@@ -35,12 +35,21 @@ open class AuthorizationServerHandler(
         message.headers().remove(authenticationId.httpHeader)
       }
 
-      if (!SKIP_HEADER_UPDATE.contains(message.uri())) {
+      if (!shouldSkipHeaderUpdate(message.uri())) {
         updatedMessage = updateHeaders(message)
       }
     }
 
     context.fireChannelRead(updatedMessage)
+  }
+
+  private fun shouldSkipHeaderUpdate(uri: String): Boolean {
+    if (SKIP_HEADER_UPDATE.contains(uri)) {
+      return true
+    }
+
+    val path = uri.substringBefore('?')
+    return path == SCIM_BASE_PATH || path.startsWith("$SCIM_BASE_PATH/")
   }
 
   /**
@@ -88,6 +97,7 @@ open class AuthorizationServerHandler(
 
   companion object {
     private val log = KotlinLogging.logger {}
+    private const val SCIM_BASE_PATH = "/scim/v2"
 
     private val SKIP_HEADER_UPDATE =
       setOf(

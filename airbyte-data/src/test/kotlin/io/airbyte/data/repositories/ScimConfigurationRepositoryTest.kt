@@ -89,6 +89,54 @@ class ScimConfigurationRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `enabled token lookup resolves only the matching configuration`() {
+    val first = saveEnabledConfiguration(createOrganization("first-token-lookup"), "first-token-hash")
+    saveEnabledConfiguration(createOrganization("second-token-lookup"), "second-token-hash")
+
+    assertThat(scimConfigurationRepository.findEnabledByTokenHash("first-token-hash")?.id).isEqualTo(first.id)
+    assertThat(scimConfigurationRepository.findEnabledByTokenHash("unknown-token-hash")).isNull()
+  }
+
+  @Test
+  fun `enabled token lookup stops resolving a rotated or disabled token`() {
+    val rotatedOrganization = createOrganization("rotated-token-lookup")
+    val rotated = saveEnabledConfiguration(rotatedOrganization, "old-token-hash")
+    val disabledOrganization = createOrganization("disabled-token-lookup")
+    val disabled = saveEnabledConfiguration(disabledOrganization, "disabled-token-hash")
+    rotated.tokenHash = "new-token-hash"
+    disabled.enabled = false
+    disabled.tokenHash = null
+    disabled.tokenIssuedAt = null
+    disabled.disabledAt = OffsetDateTime.now()
+    scimConfigurationRepository.update(rotated)
+    scimConfigurationRepository.update(disabled)
+
+    assertThat(scimConfigurationRepository.findEnabledByTokenHash("old-token-hash")).isNull()
+    assertThat(scimConfigurationRepository.findEnabledByTokenHash("new-token-hash")?.id).isEqualTo(rotated.id)
+    assertThat(scimConfigurationRepository.findEnabledByTokenHash("disabled-token-hash")).isNull()
+  }
+
+  @Test
+  fun `configuration row lock requires matching configuration and organization ids`() {
+    val configuredOrganization = createOrganization("configuration-row-lock")
+    val otherOrganization = createOrganization("other-configuration-row-lock")
+    val configuration = saveEnabledConfiguration(configuredOrganization, "configuration-row-lock-hash")
+
+    assertThat(
+      scimConfigurationRepository.findByIdAndOrganizationIdForUpdate(
+        configuration.id!!,
+        configuredOrganization.id!!,
+      ),
+    ).isNotNull()
+    assertThat(
+      scimConfigurationRepository.findByIdAndOrganizationIdForUpdate(
+        configuration.id!!,
+        otherOrganization.id!!,
+      ),
+    ).isNull()
+  }
+
+  @Test
   fun `lifecycle updates require the configuration and organization ids to match`() {
     val configuredOrganization = createOrganization("configured-update")
     val otherOrganization = createOrganization("other-update")
@@ -138,6 +186,20 @@ class ScimConfigurationRepositoryTest : AbstractConfigRepositoryTest() {
       Organization(
         name = name,
         email = "$name@example.com",
+      ),
+    )
+
+  private fun saveEnabledConfiguration(
+    organization: Organization,
+    tokenHash: String,
+  ): ScimConfiguration =
+    scimConfigurationRepository.save(
+      ScimConfiguration(
+        organizationId = organization.id!!,
+        tokenHash = tokenHash,
+        idpProvider = "okta",
+        enabled = true,
+        tokenIssuedAt = OffsetDateTime.now(),
       ),
     )
 }

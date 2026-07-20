@@ -1,6 +1,10 @@
 micronaut:
   application:
     name: airbyte-server
+  codec:
+    json:
+      additional-types:
+        - application/scim+json
   caches:
     # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
     # track events
