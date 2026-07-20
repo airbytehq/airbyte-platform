@@ -396,6 +396,7 @@ create table "public"."group" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "group_pkey" primary key ("id"),
+  constraint "group_id_organization_id_key" unique ("id", "organization_id"),
   constraint "group_organization_id_name_key" unique ("organization_id", "name")
 );
 create table "public"."group_member" (
