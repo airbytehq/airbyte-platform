@@ -358,13 +358,25 @@ private fun updateDomainClientsWithFailsafe(clientPath: String) {
   dir.walk().forEach { domainClient ->
     if (domainClient.name.endsWith(".kt")) {
       var domainClientFileText = domainClient.readText()
+      val defaultRetryPolicy =
+        if (domainClient.name == "ScimConfigApi.kt") {
+          "RetryPolicy.builder<okhttp3.Response>().withMaxRetries(0).build()"
+        } else {
+          "RetryPolicy.ofDefaults()"
+        }
+      val defaultClient =
+        if (domainClient.name == "ScimConfigApi.kt") {
+          "ApiClient.defaultClient.newBuilder().retryOnConnectionFailure(false).build()"
+        } else {
+          "ApiClient.defaultClient"
+        }
 
       // replace class declaration
       domainClientFileText =
         domainClientFileText.replace(
           "class (\\S+)\\(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient\\) : ApiClient\\(basePath, client\\)"
             .toRegex(),
-          "class $1(basePath: kotlin.String = defaultBasePath, client: Call.Factory = ApiClient.defaultClient, policy : RetryPolicy<okhttp3.Response> = RetryPolicy.ofDefaults()) : ApiClient(basePath, client, policy)",
+          "class $1(basePath: kotlin.String = defaultBasePath, client: Call.Factory = $defaultClient, policy : RetryPolicy<okhttp3.Response> = $defaultRetryPolicy) : ApiClient(basePath, client, policy)",
         )
 
       // add imports if not exist

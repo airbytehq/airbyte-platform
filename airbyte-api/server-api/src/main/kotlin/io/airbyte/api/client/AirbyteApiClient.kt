@@ -28,6 +28,7 @@ import io.airbyte.api.client.generated.OrganizationApi
 import io.airbyte.api.client.generated.OrganizationPaymentConfigApi
 import io.airbyte.api.client.generated.PermissionApi
 import io.airbyte.api.client.generated.PrivateLinkApi
+import io.airbyte.api.client.generated.ScimConfigApi
 import io.airbyte.api.client.generated.ScopedConfigurationApi
 import io.airbyte.api.client.generated.SecretStorageApi
 import io.airbyte.api.client.generated.SecretsPersistenceConfigApi
@@ -95,6 +96,11 @@ open class AirbyteApiClient(
   val organizationPaymentConfigApi = OrganizationPaymentConfigApi(basePath = basePath, client = httpClient, policy = policy)
   val permissionApi = PermissionApi(basePath = basePath, client = httpClient, policy = policy)
   val privateLinkApi = PrivateLinkApi(basePath = basePath, client = httpClient, policy = policy)
+  val scimConfigApi =
+    ScimConfigApi(
+      basePath = basePath,
+      client = httpClient.newBuilder().retryOnConnectionFailure(false).build(),
+    )
   val scopedConfigurationApi = ScopedConfigurationApi(basePath = basePath, client = httpClient, policy = policy)
   val secretPersistenceConfigApi = SecretsPersistenceConfigApi(basePath = basePath, client = httpClient, policy = policy)
   val signalApi = SignalApi(basePath = basePath, client = httpClient, policy = policy)

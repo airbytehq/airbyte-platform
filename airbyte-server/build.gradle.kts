@@ -105,6 +105,7 @@ dependencies {
   testImplementation(libs.bundles.kotest)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
+  testImplementation(libs.logback.classic)
   testImplementation(libs.mockk)
   testImplementation(libs.micronaut.http.client)
 

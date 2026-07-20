@@ -5,19 +5,21 @@
 package io.airbyte.api.client
 
 import dev.failsafe.RetryPolicy
-import io.mockk.mockk
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNotSame
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class AirbyteApiClientTest {
   @Test
   fun `test that the Airbyte API client creates the underlying API objects with the provided configuration`() {
     val basePath = "base-path"
-    val client: OkHttpClient = mockk()
-    val policy: RetryPolicy<Response> = mockk()
+    val client = OkHttpClient()
+    val policy: RetryPolicy<Response> = RetryPolicy.ofDefaults()
 
     val airbyteApiClient = AirbyteApiClient(basePath, policy, client)
     assertNotNull(airbyteApiClient.attemptApi)
@@ -68,6 +70,13 @@ class AirbyteApiClientTest {
     assertEquals(client, airbyteApiClient.organizationApi.client)
     assertEquals(policy, airbyteApiClient.organizationApi.policy)
     assertEquals(basePath, airbyteApiClient.organizationApi.baseUrl)
+    assertNotNull(airbyteApiClient.scimConfigApi)
+    val scimHttpClient = airbyteApiClient.scimConfigApi.client as OkHttpClient
+    assertNotSame(client, scimHttpClient)
+    assertFalse(scimHttpClient.retryOnConnectionFailure)
+    assertTrue(client.retryOnConnectionFailure)
+    assertEquals(basePath, airbyteApiClient.scimConfigApi.baseUrl)
+    assertNotSame(policy, airbyteApiClient.scimConfigApi.policy)
     assertNotNull(airbyteApiClient.permissionApi)
     assertEquals(client, airbyteApiClient.permissionApi.client)
     assertEquals(policy, airbyteApiClient.permissionApi.policy)

@@ -7767,6 +7767,115 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/scim_config/get:
+    post:
+      summary: Retrieve the SCIM configuration for an organization
+      tags:
+        - scim_config
+      operationId: getScimConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: SCIM configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScimConfigResponse"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/scim_config/enable:
+    post:
+      summary: Enable SCIM for an organization
+      description: The bearer token is returned only for the initial enable. Clients must not automatically retry this operation.
+      tags:
+        - scim_config
+      operationId: enableScim
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnableScimRequestBody"
+        required: true
+      responses:
+        "200":
+          description: SCIM enabled or already enabled with the requested provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScimConfigResponse"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: SCIM configuration state conflicts with the requested enable operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownExceptionInfo"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/scim_config/rotate_token:
+    post:
+      summary: Rotate the SCIM bearer token for an organization
+      description: The previous token is invalidated and the replacement token is returned only once. Clients must not automatically retry this operation.
+      tags:
+        - scim_config
+      operationId: rotateScimToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: SCIM bearer token rotated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScimConfigResponse"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: SCIM must be enabled before its token can be rotated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownExceptionInfo"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/scim_config/disable:
+    post:
+      summary: Disable SCIM for an organization
+      tags:
+        - scim_config
+      operationId: disableScim
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: SCIM disabled or already absent or disabled
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   # Airbyte API
   /public:
     get:
@@ -22729,6 +22838,54 @@ components:
           format: uuid
         emailDomain:
           type: string
+
+    ScimIdpProvider:
+      type: string
+      enum:
+        - okta
+        - microsoft_entra_id
+
+    ScimConfigStatus:
+      type: string
+      enum:
+        - not_configured
+        - enabled
+        - disabled
+
+    EnableScimRequestBody:
+      type: object
+      required:
+        - organizationId
+        - idpProvider
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        idpProvider:
+          $ref: "#/components/schemas/ScimIdpProvider"
+
+    ScimConfigResponse:
+      type: object
+      required:
+        - status
+        - scimBaseUrl
+      properties:
+        status:
+          $ref: "#/components/schemas/ScimConfigStatus"
+        idpProvider:
+          $ref: "#/components/schemas/ScimIdpProvider"
+        scimBaseUrl:
+          type: string
+          description: Absolute Airbyte SCIM endpoint configured in the identity provider.
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+        token:
+          type: string
+          description: One-time bearer token returned only after initial enable or rotation.
 
   responses:
     NotFoundResponse:
