@@ -116,6 +116,10 @@ object GroupsEntitlement : FeatureEntitlement(
   featureId = "feature-groups",
 )
 
+object ScimEntitlement : FeatureEntitlement(
+  featureId = "feature-scim",
+)
+
 object OnDemandCapacityEnabledEntitlement : FeatureEntitlement(
   featureId = "feature-on-demand-capacity-enabled",
 )
@@ -150,6 +154,7 @@ object Entitlements {
       SourceDb2EnterpriseConnector,
       SourceSharepointEnterpriseListsConnector,
       GroupsEntitlement,
+      ScimEntitlement,
       OnDemandCapacityEnabledEntitlement,
       CommittedDataWorkersEntitlement,
     )

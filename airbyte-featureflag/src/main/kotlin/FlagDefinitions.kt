@@ -50,6 +50,8 @@ object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
 
+object ScimProvisioningPilot : Temporary<Boolean>(key = "platform.scim-provisioning-pilot", default = false)
+
 object SuccessiveCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-successive", default = -1)
 
 object TotalCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-total", default = -1)

@@ -8,10 +8,17 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 internal class FlagsTest {
+  @Test
+  fun `SCIM provisioning pilot uses the approved key and defaults off`() {
+    assertEquals("platform.scim-provisioning-pilot", ScimProvisioningPilot.key)
+    assertFalse(ScimProvisioningPilot.default)
+  }
+
   @Nested
   inner class FieldSelectionWorkspacesTest {
     /**
