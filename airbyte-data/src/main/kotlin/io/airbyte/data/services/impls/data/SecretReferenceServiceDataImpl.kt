@@ -10,6 +10,7 @@ import io.airbyte.data.services.SecretReferenceService
 import io.airbyte.data.services.impls.data.mappers.SecretReferenceMapper.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.SecretReferenceMapper.toEntity
 import io.airbyte.data.services.impls.data.mappers.SecretReferenceWithConfigMapper.toConfigModel
+import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.domain.models.SecretReference
 import io.airbyte.domain.models.SecretReferenceCreate
 import io.airbyte.domain.models.SecretReferenceId
@@ -57,6 +58,9 @@ open class SecretReferenceServiceDataImpl(
     scopeType: SecretReferenceScopeType,
     scopeId: UUID,
   ): List<SecretReference> = secretReferenceRepository.listByScopeTypeAndScopeId(scopeType.toEntity(), scopeId).map { it.toConfigModel() }
+
+  override fun existsBySecretConfigId(secretConfigId: SecretConfigId): Boolean =
+    secretReferenceRepository.existsBySecretConfigId(secretConfigId.value)
 
   override fun listWithConfigByScopeTypeAndScopeId(
     scopeType: SecretReferenceScopeType,

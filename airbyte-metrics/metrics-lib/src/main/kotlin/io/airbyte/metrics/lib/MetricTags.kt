@@ -77,6 +77,11 @@ object MetricTags {
   const val ORGANIZATION_ID: String = "organization_id"
   const val RELEASE_STAGE: String = "release_stage"
   const val SECRET_COORDINATES_UPDATED: String = "secret_coordinates_updated"
+
+  // Distinguishes what triggered a DELETE_SECRET: inline actor update/delete vs. the orphan-cleanup cron.
+  const val SECRET_DELETION_TRIGGER: String = "secret_deletion_trigger"
+  const val SECRET_DELETION_TRIGGER_INLINE: String = "inline"
+  const val SECRET_DELETION_TRIGGER_CRON: String = "cron"
   const val SOURCE_ID: String = "source_id"
   const val SOURCE_DEFINITION_ID: String = "source_definition_id"
   const val SOURCE_IMAGE_TAG: String = "source_image_tag"

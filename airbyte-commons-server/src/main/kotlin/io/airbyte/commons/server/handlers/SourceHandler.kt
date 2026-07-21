@@ -476,6 +476,7 @@ class SourceHandler
       }
 
       val secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(WorkspaceId(workspaceIdRequestBody.workspaceId))
+      val secretStorageId = Optional.ofNullable(secretStorageService.getByWorkspaceId(WorkspaceId(source.workspaceId))).map { obj -> obj.id.value }
 
       val configWithSecretReferences =
         secretReferenceService.getConfigWithSecretReferences(
@@ -484,11 +485,25 @@ class SourceHandler
           WorkspaceId(source.workspaceId),
         )
 
-      // Delete airbyte-managed secrets for this source
+      // Capture the referenced secret configs before removing references, so we can delete the
+      // now-orphaned airbyte-managed secrets below.
+      val priorSecretConfigIds =
+        if (secretStorageId.isPresent) {
+          secretReferenceService.getReferencedSecretConfigIds(source.sourceId, SecretReferenceScopeType.ACTOR)
+        } else {
+          emptySet()
+        }
+
+      // Delete airbyte-managed secrets for this source (legacy, no-secret-storage configs only)
       secretsRepositoryWriter.deleteFromConfig(configWithSecretReferences, secretPersistence)
 
       // Delete secret references for this source
       secretReferenceService.deleteActorSecretReferences(ActorId(source.sourceId))
+
+      // Reclaim the secret-storage-backed secrets orphaned by the reference deletion above.
+      if (secretStorageId.isPresent) {
+        secretReferenceService.deleteOrphanedAirbyteManagedSecrets(priorSecretConfigIds, SecretStorageId(secretStorageId.get()))
+      }
 
       // Mark source as tombstoned and clear config
       try {
@@ -670,6 +685,15 @@ class SourceHandler
           .withTombstone(tombstone)
           .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
 
+      // Capture the secret configs referenced before this write so we can reclaim any that become
+      // orphaned (e.g. by a version bump) once the new config is durably persisted.
+      val priorSecretConfigIds =
+        if (secretStorageId.isPresent) {
+          secretReferenceService.getReferencedSecretConfigIds(sourceId, SecretReferenceScopeType.ACTOR)
+        } else {
+          emptySet()
+        }
+
       var updatedConfig = persistConfigRawSecretValues(maskedConfig, secretStorageId, workspaceId, spec, sourceId)
       var reprocessedConfig: ConfigWithProcessedSecrets? = null
 
@@ -695,6 +719,11 @@ class SourceHandler
 
       if (reprocessedConfig != null) {
         secretReferenceService.cleanupDanglingSecretReferences(ActorId(sourceId).value, SecretReferenceScopeType.ACTOR, reprocessedConfig)
+      }
+
+      // Safe to run only after the new config is persisted above.
+      if (secretStorageId.isPresent) {
+        secretReferenceService.deleteOrphanedAirbyteManagedSecrets(priorSecretConfigIds, SecretStorageId(secretStorageId.get()))
       }
     }
 

@@ -140,6 +140,7 @@ class OrphanedSecretConfigCleanup(
             arrayOf(
               MetricAttribute(MetricTags.SUCCESS, "true"),
               MetricAttribute(MetricTags.SECRET_STORAGE_ID, secretConfig.secretStorageId.toString()),
+              MetricAttribute(MetricTags.SECRET_DELETION_TRIGGER, MetricTags.SECRET_DELETION_TRIGGER_CRON),
             ),
         )
       } catch (e: Exception) {
@@ -150,6 +151,7 @@ class OrphanedSecretConfigCleanup(
             arrayOf(
               MetricAttribute(MetricTags.SUCCESS, "false"),
               MetricAttribute(MetricTags.SECRET_STORAGE_ID, secretConfig.secretStorageId.toString()),
+              MetricAttribute(MetricTags.SECRET_DELETION_TRIGGER, MetricTags.SECRET_DELETION_TRIGGER_CRON),
             ),
         )
       }

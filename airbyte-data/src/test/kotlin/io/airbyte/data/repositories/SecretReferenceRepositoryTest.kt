@@ -245,4 +245,56 @@ class SecretReferenceRepositoryTest : AbstractConfigRepositoryTest() {
       .ignoringFields("createdAt", "updatedAt")
       .isEqualTo(persistedSecretRef2)
   }
+
+  @Test
+  fun `test existsBySecretConfigId`() {
+    val persistedOrg = organizationRepository.save(Organization(name = "Airbyte Inc.", email = "contact@airbyte.io"))
+    val persistedSecretStorage =
+      secretStorageRepository.save(
+        SecretStorage(
+          scopeType = SecretStorageScopeType.organization,
+          scopeId = persistedOrg.id!!,
+          descriptor = "test",
+          storageType = SecretStorageType.aws_secrets_manager,
+          configuredFromEnvironment = true,
+          createdBy = userId,
+          updatedBy = userId,
+        ),
+      )
+
+    val referencedConfig =
+      secretConfigRepository.save(
+        SecretConfig(
+          secretStorageId = persistedSecretStorage.id!!,
+          descriptor = "referenced",
+          externalCoordinate = "referenced.coordinate",
+          airbyteManaged = true,
+          createdBy = userId,
+          updatedBy = userId,
+        ),
+      )
+    val orphanedConfig =
+      secretConfigRepository.save(
+        SecretConfig(
+          secretStorageId = persistedSecretStorage.id!!,
+          descriptor = "orphaned",
+          externalCoordinate = "orphaned.coordinate",
+          airbyteManaged = true,
+          createdBy = userId,
+          updatedBy = userId,
+        ),
+      )
+
+    secretReferenceRepository.save(
+      SecretReference(
+        secretConfigId = referencedConfig.id!!,
+        scopeType = SecretReferenceScopeType.actor,
+        scopeId = UUID.randomUUID(),
+        hydrationPath = "$.foo.bar",
+      ),
+    )
+
+    assertThat(secretReferenceRepository.existsBySecretConfigId(referencedConfig.id!!)).isTrue()
+    assertThat(secretReferenceRepository.existsBySecretConfigId(orphanedConfig.id!!)).isFalse()
+  }
 }

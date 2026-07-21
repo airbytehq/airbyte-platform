@@ -18,6 +18,8 @@ interface SecretReferenceRepository : PageableRepository<SecretReference, UUID> 
     scopeId: UUID,
   ): List<SecretReference>
 
+  fun existsBySecretConfigId(secretConfigId: UUID): Boolean
+
   fun deleteByScopeTypeAndScopeId(
     scopeType: SecretReferenceScopeType,
     id: UUID,

@@ -19,6 +19,7 @@ import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SecretConfigCreate
+import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.domain.models.SecretReferenceCreate
 import io.airbyte.domain.models.SecretReferenceId
 import io.airbyte.domain.models.SecretReferenceScopeType
@@ -26,11 +27,17 @@ import io.airbyte.domain.models.SecretReferenceWithConfig
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.UserId
 import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.featureflag.CleanupDanglingSecretConfigs
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.ReadSecretReferenceIdsInConfigs
+import io.airbyte.featureflag.SecretStorage
 import io.airbyte.featureflag.Workspace
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -38,6 +45,10 @@ import io.airbyte.data.services.SecretConfigService as SecretConfigRepository
 import io.airbyte.data.services.SecretReferenceService as SecretReferenceRepository
 
 private val logger = KotlinLogging.logger {}
+
+// Matches the recovery window used by the OrphanedSecretConfigCleanup cron. In AWS this deprecates
+// the secret and schedules deletion after the window; other stores delete immediately.
+private const val SECRET_DELETION_RECOVERY_WINDOW_IN_DAYS = 7L
 
 /**
  * Service for performing operations related to Airbyte's SecretReference domain model.
@@ -50,6 +61,7 @@ class SecretReferenceService(
   private val workspaceHelper: WorkspaceHelper,
   private val secretPersistenceService: SecretPersistenceService,
   private val secretsRepositoryReader: SecretsRepositoryReader,
+  private val metricClient: MetricClient,
 ) {
   @JvmName("createAndInsertSecretReferencesWithStorageId")
   fun createAndInsertSecretReferencesWithStorageId(
@@ -322,5 +334,93 @@ class SecretReferenceService(
       scopeType = SecretReferenceScopeType.ACTOR,
       scopeId = actorId.value,
     )
+  }
+
+  /**
+   * Returns the set of secret config IDs currently referenced by the given scope. Capture this
+   * before mutating a scope's config/references so that [deleteOrphanedAirbyteManagedSecrets] can
+   * later reclaim the configs that this operation leaves unreferenced.
+   */
+  fun getReferencedSecretConfigIds(
+    scopeId: UUID,
+    scopeType: SecretReferenceScopeType,
+  ): Set<SecretConfigId> =
+    secretReferenceRepository
+      .listByScopeTypeAndScopeId(scopeType, scopeId)
+      .map { it.secretConfigId }
+      .toSet()
+
+  /**
+   * Deletes Airbyte-managed secrets that were previously referenced by a scope but are no longer
+   * referenced after an update or deletion, both from the secret store and the secret_config table.
+   *
+   * This MUST be called only after the updated config has been durably persisted, for the same
+   * crash-safety reason described on [cleanupDanglingSecretReferences]: if a secret is deleted from
+   * the store before the config write and that write fails, the persisted config would point at a
+   * deleted secret. On the happy path this reclaims orphaned secrets inline rather than waiting for
+   * (or relying entirely on) the OrphanedSecretConfigCleanup cron, which remains the backstop for
+   * partial failures. Gated per storage by [CleanupDanglingSecretConfigs], matching the cron.
+   *
+   * @param candidateSecretConfigIds configs referenced by the scope before the operation (see
+   *   [getReferencedSecretConfigIds]); each is deleted only if no reference points at it anymore.
+   * @param secretStorageId the storage the scope's secrets live in
+   */
+  fun deleteOrphanedAirbyteManagedSecrets(
+    candidateSecretConfigIds: Collection<SecretConfigId>,
+    secretStorageId: SecretStorageId,
+  ) {
+    if (candidateSecretConfigIds.isEmpty()) {
+      return
+    }
+    if (!featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(secretStorageId.value.toString()))) {
+      return
+    }
+
+    val secretPersistence = secretPersistenceService.getPersistenceByStorageId(secretStorageId)
+    val configIdsToDelete = mutableListOf<SecretConfigId>()
+    for (configId in candidateSecretConfigIds) {
+      try {
+        // Skip configs that are still referenced (e.g. re-pointed to themselves, or shared elsewhere).
+        if (secretReferenceRepository.existsBySecretConfigId(configId)) {
+          continue
+        }
+        val secretConfig = secretConfigRepository.findById(configId) ?: continue
+        // Never delete externally/customer-managed secrets - we only own airbyte-managed ones.
+        if (!secretConfig.airbyteManaged) {
+          continue
+        }
+        val coordinate = AirbyteManagedSecretCoordinate.fromFullCoordinate(secretConfig.externalCoordinate)
+        if (coordinate == null) {
+          logger.warn { "Skipping inline deletion for invalid coordinate ${secretConfig.externalCoordinate} in storage $secretStorageId" }
+          continue
+        }
+        secretPersistence.deleteWithRecoveryWindow(coordinate, SECRET_DELETION_RECOVERY_WINDOW_IN_DAYS)
+        configIdsToDelete.add(configId)
+        metricClient.count(
+          metric = OssMetricsRegistry.DELETE_SECRET,
+          attributes =
+            arrayOf(
+              MetricAttribute(MetricTags.SUCCESS, "true"),
+              MetricAttribute(MetricTags.SECRET_STORAGE_ID, secretStorageId.value.toString()),
+              MetricAttribute(MetricTags.SECRET_DELETION_TRIGGER, MetricTags.SECRET_DELETION_TRIGGER_INLINE),
+            ),
+        )
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to inline-delete orphaned secret config $configId in storage $secretStorageId" }
+        metricClient.count(
+          metric = OssMetricsRegistry.DELETE_SECRET,
+          attributes =
+            arrayOf(
+              MetricAttribute(MetricTags.SUCCESS, "false"),
+              MetricAttribute(MetricTags.SECRET_STORAGE_ID, secretStorageId.value.toString()),
+              MetricAttribute(MetricTags.SECRET_DELETION_TRIGGER, MetricTags.SECRET_DELETION_TRIGGER_INLINE),
+            ),
+        )
+      }
+    }
+    if (configIdsToDelete.isNotEmpty()) {
+      secretConfigRepository.deleteByIds(configIdsToDelete)
+      logger.info { "Inline-deleted ${configIdsToDelete.size} orphaned airbyte-managed secret config(s) in storage $secretStorageId" }
+    }
   }
 }
