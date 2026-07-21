@@ -929,9 +929,9 @@ server:
     - env: GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME
       key: warehouseExports.bucketName
 
-    - env: GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX
-      key: data.salesCustomerAttributesObjectPrefix
-      defaultValue: data/sales_customer_attributes
+    - env: GCS_DATA_ORGANIZATION_CUSTOMER_TIERS_OBJECT_PREFIX
+      key: data.organizationCustomerTiersObjectPrefix
+      defaultValue: data/organization_customer_tiers
 
     - env: HTTP_IDLE_TIMEOUT
       key: httpIdleTimeout

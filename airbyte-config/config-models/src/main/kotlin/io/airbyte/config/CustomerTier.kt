@@ -5,7 +5,7 @@
 package io.airbyte.config
 
 enum class CustomerTier {
-  TIER_0,
+  TIER_0, // Most sensitive
   TIER_1,
-  TIER_2,
+  TIER_2, // Least sensitive
 }

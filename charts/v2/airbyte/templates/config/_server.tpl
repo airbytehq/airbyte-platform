@@ -111,21 +111,21 @@ Renders the server.warehouseExports.bucketName environment variable
 {{- end }}
 
 {{/*
-Renders the server.data.salesCustomerAttributesObjectPrefix value
+Renders the server.data.organizationCustomerTiersObjectPrefix value
 */}}
-{{- define "airbyte.server.data.salesCustomerAttributesObjectPrefix" }}
-    {{- .Values.server.data.salesCustomerAttributesObjectPrefix | default "data/sales_customer_attributes" }}
+{{- define "airbyte.server.data.organizationCustomerTiersObjectPrefix" }}
+    {{- .Values.server.data.organizationCustomerTiersObjectPrefix | default "data/organization_customer_tiers" }}
 {{- end }}
 
 {{/*
-Renders the server.data.salesCustomerAttributesObjectPrefix environment variable
+Renders the server.data.organizationCustomerTiersObjectPrefix environment variable
 */}}
-{{- define "airbyte.server.data.salesCustomerAttributesObjectPrefix.env" }}
-- name: GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX
+{{- define "airbyte.server.data.organizationCustomerTiersObjectPrefix.env" }}
+- name: GCS_DATA_ORGANIZATION_CUSTOMER_TIERS_OBJECT_PREFIX
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX
+      key: GCS_DATA_ORGANIZATION_CUSTOMER_TIERS_OBJECT_PREFIX
 {{- end }}
 
 {{/*
@@ -495,7 +495,7 @@ Renders the set of all server environment variables
 {{- end }}
 {{- include "airbyte.server.warehouseExports.projectId.env" . }}
 {{- include "airbyte.server.warehouseExports.bucketName.env" . }}
-{{- include "airbyte.server.data.salesCustomerAttributesObjectPrefix.env" . }}
+{{- include "airbyte.server.data.organizationCustomerTiersObjectPrefix.env" . }}
 {{- include "airbyte.server.httpIdleTimeout.env" . }}
 {{- include "airbyte.server.openai.syncAssistantApiKey.env" . }}
 {{- include "airbyte.server.publicApiExecutor.numThreads.env" . }}
@@ -528,7 +528,7 @@ CONNECTOR_DATADOG_SUPPORT_NAMES: {{ include "airbyte.server.connectorDatadogSupp
 {{- end }}
 GCS_AIRBYTE_WAREHOUSE_EXPORTS_PROJECT_ID: {{ include "airbyte.server.warehouseExports.projectId" . | quote }}
 GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME: {{ include "airbyte.server.warehouseExports.bucketName" . | quote }}
-GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX: {{ include "airbyte.server.data.salesCustomerAttributesObjectPrefix" . | quote }}
+GCS_DATA_ORGANIZATION_CUSTOMER_TIERS_OBJECT_PREFIX: {{ include "airbyte.server.data.organizationCustomerTiersObjectPrefix" . | quote }}
 HTTP_IDLE_TIMEOUT: {{ include "airbyte.server.httpIdleTimeout" . | quote }}
 PUBLIC_API_EXECUTOR_THREADS: {{ include "airbyte.server.publicApiExecutor.numThreads" . | quote }}
 IO_TASK_EXECUTOR_THREADS: {{ include "airbyte.server.ioExecutor.numThreads" . | quote }}

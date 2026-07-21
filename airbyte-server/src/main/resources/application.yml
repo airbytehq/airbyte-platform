@@ -21,7 +21,7 @@ micronaut:
     platform-compatibility-provider:
       expire-after-write: 15s
     organization-customer-attributes:
-      expire-after-access: 1h
+      expire-after-write: 1h
     user-info-endpoint-response:
       expire-after-access: 1m
   executors:
@@ -230,7 +230,7 @@ airbyte:
       application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       project-id: ${GCS_AIRBYTE_WAREHOUSE_EXPORTS_PROJECT_ID:}
       bucket-name: ${GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME:}
-      object-prefix: ${GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX:}
+      object-prefix: ${GCS_DATA_ORGANIZATION_CUSTOMER_TIERS_OBJECT_PREFIX:}
     timeouts:
       wait_between_rollout_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_ROLLOUTS_SECONDS:60}
       wait_between_sync_results_queries_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS:10}

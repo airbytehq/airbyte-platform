@@ -337,31 +337,38 @@ class RolloutActorFinder(
     candidates: Collection<ConfigScopeMapWithId>,
     filters: List<CustomerTierFilter>?,
   ): Collection<ConfigScopeMapWithId> {
-    val organizationTiers = organizationCustomerAttributesService.getOrganizationTiers()
-    logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} organizationTiers=$organizationTiers" }
     if (filters.isNullOrEmpty()) {
       logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} no tier filter specified." }
       return candidates
-    } else {
-      logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} applying tier filter for filters=$filters" }
-      return candidates.filter { candidate ->
-        val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION] ?: return@filter false
-
-        val tier = organizationTiers[organizationId]
-        filters.all { filter ->
-          // Evaluate the filter based on the organization's tier:
-          // - If the tier is known, evaluate it normally.
-          // - If the tier is unknown but the filter allows TIER_2, treat it as a match.
-          // - Otherwise, the filter fails.
-          when {
-            tier != null -> filter.evaluate(tier)
-            filter.value.contains(CustomerTier.TIER_2) -> true
-            else -> false
-          }
-        }
+    }
+    val organizationTiers = organizationCustomerAttributesService.getOrganizationTiers()
+    logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} organizationTiers=$organizationTiers" }
+    logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} applying tier filter for filters=$filters" }
+    val organizationsWithUnknownTier = getOrganizationsWithUnknownTier(candidates, organizationTiers)
+    if (organizationsWithUnknownTier.isNotEmpty()) {
+      logger.warn {
+        "Rollout ${connectorRollout.id}: ${organizationsWithUnknownTier.size} organizations have unknown customer tier and will be " +
+          "excluded from rollout. organizationIds=${organizationsWithUnknownTier.joinToString()}"
+      }
+    }
+    return candidates.filter { candidate ->
+      val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION] ?: return@filter false
+      // Unknown tier never matches - exclude these customers from all progressive rollouts.
+      val tier = organizationTiers[organizationId] ?: return@filter false
+      filters.all { filter ->
+        filter.evaluate(tier)
       }
     }
   }
+
+  private fun getOrganizationsWithUnknownTier(
+    candidates: Collection<ConfigScopeMapWithId>,
+    organizationTiers: Map<UUID, CustomerTier?>,
+  ): List<UUID> =
+    candidates
+      .mapNotNull { it.scopeMap[ConfigScopeType.ORGANIZATION] }
+      .distinct()
+      .filter { organizationTiers[it] == null }
 
   internal fun filterByTier(
     connectorRollout: ConnectorRollout,

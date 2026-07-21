@@ -804,6 +804,14 @@ enum class OssMetricsRegistry(
     metricName = "dsr_deletion_timeout_recovered",
     metricDescription = "Count of DSR / GDPR deletion requests recovered or terminalized after timing out.",
   ),
+  ORGANIZATION_ATTRIBUTE_AGE_HOURS(
+    metricName = "organization_attribute_age_hours",
+    metricDescription = "age in hours between now and the timestamp of the most recent organization customer attributes file in GCS",
+  ),
+  ORGANIZATION_ATTRIBUTE_COUNT(
+    metricName = "organization_attribute_count",
+    metricDescription = "number of organizations present in organization customer attributes file from GCS",
+  ),
   ;
 
   override fun getMetricName(): String = metricName
