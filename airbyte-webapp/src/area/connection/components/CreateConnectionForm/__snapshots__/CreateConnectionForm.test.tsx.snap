@@ -381,6 +381,38 @@ exports[`CreateConnectionForm should render 1`] = `
                     <div
                       class="<removed-for-snapshot-test>"
                     >
+                      <div
+                        class="<removed-for-snapshot-test>"
+                        data-icon="status-warning"
+                        data-testid="mocksvg"
+                      />
+                    </div>
+                    <div
+                      class="<removed-for-snapshot-test>"
+                    >
+                      <span
+                        class="<removed-for-snapshot-test>"
+                      >
+                        Initial sync will replicate all data in enabled streams
+                      </span>
+                      <p
+                        class="<removed-for-snapshot-test>"
+                        data-type="text"
+                      >
+                        On first run, every row and field in an enabled stream is pulled from the source, which can mean a large volume of historical data. In Airbyte Cloud, usage is billed based on data replicated, so enable only the streams and fields you need. If your source supports a replication start date, setting a recent one limits how much history is synced.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="<removed-for-snapshot-test>"
+                >
+                  <div
+                    class="<removed-for-snapshot-test>"
+                  >
+                    <div
+                      class="<removed-for-snapshot-test>"
+                    >
                       <h5
                         class="<removed-for-snapshot-test>"
                       >

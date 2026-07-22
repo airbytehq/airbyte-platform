@@ -139,6 +139,7 @@ test.describe("Connection - Create new connection", () => {
         // Verify the streams table is present
         const streamsTable = page.locator('table[data-testid="sync-catalog-table"]');
         await expect(streamsTable).toBeVisible({ timeout: 30000 });
+        await streamsTable.scrollIntoViewIfNeeded();
 
         // Verify stream rows are loaded
         const streamRows = page.locator('[data-testid^="row-depth-1-stream"]');

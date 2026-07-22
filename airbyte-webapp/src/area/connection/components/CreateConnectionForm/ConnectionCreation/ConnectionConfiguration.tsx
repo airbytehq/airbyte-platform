@@ -10,6 +10,7 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
+import { Message } from "components/ui/Message";
 import { ScrollParent } from "components/ui/ScrollParent";
 import { Text } from "components/ui/Text";
 
@@ -76,6 +77,11 @@ const ConnectionCreationReplication: React.FC = () => {
         >
           <SchemaQuestionnaire />
         </Card>
+        <Message
+          type="warning"
+          text={formatMessage({ id: "connectionForm.initialSyncDataVolume.title" })}
+          secondaryText={formatMessage({ id: "connectionForm.initialSyncDataVolume.description" })}
+        />
         <Card noPadding title={formatMessage({ id: "connection.schema" })}>
           <Box mb="xl">
             <SyncCatalogTable />

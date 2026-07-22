@@ -375,6 +375,8 @@
   "connectionForm.selectStreams.readonly": "Selected streams",
   "connectionForm.selectSyncMode": "Select sync mode",
   "connectionForm.selectSyncModeDescription": "Tell us how you want your data moved and we'll select the right sync mode for your streams.",
+  "connectionForm.initialSyncDataVolume.title": "Initial sync will replicate all data in enabled streams",
+  "connectionForm.initialSyncDataVolume.description": "On first run, every row and field in an enabled stream is pulled from the source, which can mean a large volume of historical data. In Airbyte Cloud, usage is billed based on data replicated, so enable only the streams and fields you need. If your source supports a replication start date, setting a recent one limits how much history is synced.",
   "connectionForm.destinationNew": "Set up a new destination",
   "connectionForm.destinationNewDescription": "Configure a new destination from Airbyte's catalog of available connectors",
   "connectionForm.sourceFormat": "Mirror source structure",
