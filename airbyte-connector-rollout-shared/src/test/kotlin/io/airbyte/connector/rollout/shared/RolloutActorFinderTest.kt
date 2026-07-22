@@ -1325,13 +1325,17 @@ class RolloutActorFinderTest {
 
     val connectionSummaryMap = mockConnectionSummaries.associateBy { it.connectionId }
 
+    // Manual connections are excluded from the latest-job lookup when includeManual = false.
+    val nonManualSummaries = mockConnectionSummaries.filter { it.manual != true }
+    val nonManualSummaryMap = nonManualSummaries.associateBy { it.connectionId }
+
     val mockJobs =
       connectionSummaryMap.mapValues { (_, conn) ->
         jobWithVersionAndDefaultFlag(actorType, null, true, scope = conn.connectionId.toString())
       }
 
     val mockConnectionWithJobs =
-      mockConnectionSummaries.map {
+      nonManualSummaries.map {
         ConnectionWithLatestJob(it, mockJobs[it.connectionId])
       }
 
@@ -1349,7 +1353,7 @@ class RolloutActorFinderTest {
     every {
       spyFinder.getConnectionsWithLatestJob(
         connectorRollout,
-        connectionSummaryMap,
+        nonManualSummaryMap,
         actorType,
         any(),
         null,
@@ -1374,6 +1378,11 @@ class RolloutActorFinderTest {
     assertTrue(frequencies == frequencies.sorted(), "Connections should be sorted by frequency")
 
     assertFalse(result.any { it.connection.manual == true }, "Should exclude manual connections")
+
+    // The latest-job lookup should be performed only for non-manual connections.
+    verify {
+      spyFinder.getConnectionsWithLatestJob(connectorRollout, nonManualSummaryMap, actorType, any(), null)
+    }
   }
 
   @Test

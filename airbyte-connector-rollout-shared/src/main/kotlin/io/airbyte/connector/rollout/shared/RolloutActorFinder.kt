@@ -460,10 +460,17 @@ class RolloutActorFinder(
             batchActorIds,
           )
 
+        // Manual connections are dropped downstream when includeManual is false, so skip the
+        // latest-job lookup for them entirely. This avoids resolving the latest job for
+        // connections that would be discarded, which dominates the cost of actor selection on
+        // high-volume connectors.
+        val batchConnectionsForJobLookup =
+          if (includeManual) batchConnections else batchConnections.filter { it.manual != true }
+
         val batchConnectionSummariesWithLatestJob =
           getConnectionsWithLatestJob(
             connectorRollout,
-            batchConnections.associateBy { it.connectionId },
+            batchConnectionsForJobLookup.associateBy { it.connectionId },
             actorType,
             Instant.ofEpochMilli(connectorRollout.createdAt).atOffset(ZoneOffset.UTC),
             versionId,
@@ -475,6 +482,7 @@ class RolloutActorFinder(
             "actorIdBatchIndex=$actorIdBatchIndex " +
             "batchActorIds.size=${batchActorIds.size} " +
             "batchConnections.size=${batchConnections.size} " +
+            "batchConnectionsForJobLookup.size=${batchConnectionsForJobLookup.size} " +
             "batchConnectionSummariesWithLatestJob.size=${batchConnectionSummariesWithLatestJob.size}"
         }
 
