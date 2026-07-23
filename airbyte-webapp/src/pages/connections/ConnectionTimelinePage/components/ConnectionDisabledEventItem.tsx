@@ -6,8 +6,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import { TimelineEventUser } from "./TimelineEventUser";

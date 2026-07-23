@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
 
-import datadog.trace.api.Trace
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody
@@ -88,7 +87,9 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ApiConverters.Companion.toInternal
 import io.airbyte.commons.converters.toServerApi
 import io.airbyte.commons.entitlements.Entitlement
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.entitlements.models.OnDemandCapacityEnabledEntitlement
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
@@ -158,6 +159,7 @@ import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason
 import io.airbyte.data.services.shared.ConnectionEvent
 import io.airbyte.data.services.shared.FailedEvent
 import io.airbyte.data.services.shared.FinalStatusEvent
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.CheckWithCatalog
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EnableDestinationCatalogValidation
@@ -179,6 +181,7 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -241,6 +244,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     private val licenseEntitlementChecker: LicenseEntitlementChecker,
     private val contextBuilder: ContextBuilder,
     private val catalogDiffService: CatalogDiffService,
+    private val entitlementService: EntitlementService,
   ) {
     private val maxJobLookback = 10
 
@@ -343,6 +347,10 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                 tag!!,
               )
             }.toList()
+      }
+
+      if (patch.onDemandEnabled != null) {
+        sync.onDemandEnabled = patch.onDemandEnabled
       }
     }
 
@@ -502,6 +510,11 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceConnection.sourceDefinitionId)
       licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationConnection.destinationDefinitionId)
 
+      // Ensure org is entitled to use on-demand capacity if requested
+      if (connectionCreate.onDemandEnabled == true) {
+        entitlementService.ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+      }
+
       val connectionId = uuidGenerator.get()
 
       // If not specified, default the NamespaceDefinition to 'source'
@@ -528,6 +541,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           .withDestinationCatalogId(connectionCreate.destinationCatalogId)
           .withBreakingChange(false)
           .withNotifySchemaChanges(connectionCreate.notifySchemaChanges)
+          .withOnDemandEnabled(connectionCreate.onDemandEnabled ?: false)
           .withNonBreakingChangesPreference(
             apiPojoConverters.toPersistenceNonBreakingChangesPreference(connectionCreate.nonBreakingChangesPreference),
           ).withBackfillPreference(apiPojoConverters.toPersistenceBackfillPreference(connectionCreate.backfillPreference))
@@ -761,6 +775,11 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
       licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceDefinition.sourceDefinitionId)
       licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationDefinition.destinationDefinitionId)
+
+      // Ensure org is entitled to use on-demand capacity if requested
+      if (connectionPatch.onDemandEnabled == true) {
+        entitlementService.ensureEntitled(OrganizationId(organizationId), OnDemandCapacityEnabledEntitlement)
+      }
 
       if (connectionPatch.syncCatalog != null) {
         val sourceVersion =
@@ -1146,29 +1165,34 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         require(patch.scheduleData == null) { "ConnectionUpdate should not include any scheduleData without also specifying a valid scheduleType." }
       } else {
         when (patch.scheduleType) {
-          ConnectionScheduleType.MANUAL ->
+          ConnectionScheduleType.MANUAL -> {
             require(
               patch.scheduleData == null,
             ) { "ConnectionUpdate should not include any scheduleData when setting the Connection scheduleType to MANUAL." }
+          }
 
-          ConnectionScheduleType.BASIC ->
+          ConnectionScheduleType.BASIC -> {
             requireNotNull(patch.scheduleData) { "ConnectionUpdate should include scheduleData when setting the Connection scheduleType to BASIC." }
+          }
 
-          ConnectionScheduleType.CRON ->
+          ConnectionScheduleType.CRON -> {
             requireNotNull(patch.scheduleData) { "ConnectionUpdate should include scheduleData when setting the Connection scheduleType to CRON." }
+          }
 
-          else -> throw RuntimeException("Unrecognized scheduleType!")
+          else -> {
+            throw RuntimeException("Unrecognized scheduleType!")
+          }
         }
       }
     }
 
-    @Trace
+    @WithSpan
     fun listConnectionsForWorkspace(workspaceIdRequestBody: WorkspaceIdRequestBody): ConnectionReadList {
       addTagsToTrace(mapOf(MetricTags.WORKSPACE_ID to workspaceIdRequestBody.workspaceId.toString()))
       return listConnectionsForWorkspace(workspaceIdRequestBody, false)
     }
 
-    @Trace
+    @WithSpan
     fun listConnectionsForWorkspace(
       workspaceIdRequestBody: WorkspaceIdRequestBody,
       includeDeleted: Boolean,
@@ -1213,7 +1237,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return ConnectionReadList().connections(connectionReads)
     }
 
-    @Trace
+    @WithSpan
     fun getConnection(connectionId: UUID): ConnectionRead = buildConnectionRead(connectionId)
 
     fun getConnectionForJob(
@@ -1309,7 +1333,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         ),
       )
 
-    @Trace
+    @WithSpan
     fun getConnectionAirbyteCatalog(connectionId: UUID): Optional<AirbyteCatalog> {
       val connection = connectionService.getStandardSync(connectionId)
       if (connection.sourceCatalogId == null) {
@@ -1460,7 +1484,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return failureReason
     }
 
-    @Trace
+    @WithSpan
     fun getConnectionStatuses(connectionStatusesRequestBody: ConnectionStatusesRequestBody): List<ConnectionStatusRead> {
       addTagsToTrace(mapOf(MetricTags.CONNECTION_IDS to connectionStatusesRequestBody.connectionIds.toString()))
       val connectionIds = connectionStatusesRequestBody.connectionIds
@@ -1478,7 +1502,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
               job.status,
             )
           }
-        val isRunning = activeJob.isPresent
+        val activeJobStatus = activeJob.map { job: Job -> job.status }.orElse(null)
 
         val lastSucceededOrFailedJob =
           jobs.stream().filter { job: Job -> JobStatus.TERMINAL_STATUSES.contains(job.status) && job.status != JobStatus.CANCELLED }.findFirst()
@@ -1549,8 +1573,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           connectionStatus.lastSyncJobCreatedAt = job.createdAt
         }
 
-        if (isRunning) {
+        if (activeJobStatus == JobStatus.RUNNING) {
           connectionStatus.connectionSyncStatus = ConnectionSyncStatus.RUNNING
+        } else if (activeJobStatus == JobStatus.QUEUED) {
+          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.QUEUED
+        } else if (activeJobStatus != null) {
+          connectionStatus.connectionSyncStatus = ConnectionSyncStatus.PENDING
         } else if (hasBreakingSchemaChange || hasConfigError) {
           connectionStatus.connectionSyncStatus = ConnectionSyncStatus.FAILED
         } else if (connectionRead.status != ConnectionStatus.ACTIVE) {
@@ -2102,7 +2130,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
     }
 
-    @Trace
+    @WithSpan
     fun getConnectionLastJobPerStream(req: ConnectionLastJobPerStreamRequestBody): List<ConnectionLastJobPerStreamReadItem> {
       addTagsToTrace(mapOf(MetricTags.CONNECTION_ID to req.connectionId.toString()))
 

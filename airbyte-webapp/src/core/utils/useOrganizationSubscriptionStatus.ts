@@ -1,8 +1,7 @@
 import dayjs from "dayjs";
 import { useMemo } from "react";
 
-import { ORG_PLAN_IDS } from "components/ui/BrandingBadge/BrandingBadge";
-
+import { useOrganizationPlan } from "area/organization/utils";
 import { useOrganizationTrialStatus, useOrgInfo, useCurrentOrganizationInfo } from "core/api";
 import {
   OrganizationTrialStatusReadTrialStatus,
@@ -54,19 +53,22 @@ export const useOrganizationSubscriptionStatus = (options?: {
   const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
 
-  const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
+  const { billing } = useOrgInfo(organizationId ?? "", canManageOrganizationBilling) || {};
 
-  const isUnifiedTrialPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.UNIFIED_TRIAL;
-  const isStandardTrialPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.STANDARD_TRIAL;
-  const isStandardPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.STANDARD;
-  const isSmePlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.SME;
-  const isFlexPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.FLEX;
-  const isProPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.PRO;
+  const {
+    isStiggPlanEnabled,
+    isUnifiedTrialPlan,
+    isStandardTrialPlan,
+    isStandardPlan,
+    isSmePlan,
+    isFlexPlan,
+    isProPlan,
+  } = useOrganizationPlan();
 
   // Conditional trial status fetching - only when user has permissions and organization's plan is a unified trial plan
   const shouldFetchTrialStatus = canViewTrialStatus && isUnifiedTrialPlan;
 
-  const trialStatus = useOrganizationTrialStatus(organizationId, {
+  const trialStatus = useOrganizationTrialStatus(organizationId ?? "", {
     enabled: shouldFetchTrialStatus,
     ...(options?.refetchWithInterval && {
       refetchInterval: options?.refetchWithInterval,
@@ -102,7 +104,7 @@ export const useOrganizationSubscriptionStatus = (options?: {
 
   return {
     // Organization plan information
-    isStiggPlanEnabled: !!organizationInfo?.organizationPlanId,
+    isStiggPlanEnabled,
     isUnifiedTrialPlan,
     isStandardTrialPlan,
     isStandardPlan,

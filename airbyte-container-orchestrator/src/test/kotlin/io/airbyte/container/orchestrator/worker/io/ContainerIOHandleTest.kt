@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container.orchestrator.worker.io
@@ -116,4 +116,107 @@ internal class ContainerIOHandleTest {
     exitValueFile.delete()
     assertEquals(false, containerIOHandle.terminate(timeUnit = TimeUnit.SECONDS))
   }
+
+  @Test
+  internal fun testTerminationTimeoutDoesNotLeaveWatchTaskBlocked() {
+    exitValueFile.delete()
+    assertNoBlockedExitWatchersAdded {
+      containerIOHandle.terminate(100, TimeUnit.MILLISECONDS)
+    }
+  }
+
+  @Test
+  internal fun testTerminationDetectsFileCreatedViaMv() {
+    exitValueFile.delete()
+
+    val resultFuture =
+      CompletableFuture.supplyAsync {
+        return@supplyAsync containerIOHandle.terminate()
+      }
+
+    sleep(TimeUnit.SECONDS.toMillis(1))
+
+    // Simulate mv (atomic rename) which fires ENTRY_CREATE, not ENTRY_MODIFY
+    val tempFile = File(exitValueFile.parent, "TEMP_EXIT_CODE.txt")
+    tempFile.writeText("0")
+    tempFile.renameTo(exitValueFile)
+
+    assertEquals(true, resultFuture.get(5, TimeUnit.SECONDS))
+  }
+
+  @Test
+  internal fun testWaitForExitCodeSuccess() {
+    exitValueFile.delete()
+
+    val resultFuture =
+      CompletableFuture.supplyAsync {
+        return@supplyAsync containerIOHandle.waitForExitCode(5, TimeUnit.SECONDS)
+      }
+
+    sleep(TimeUnit.SECONDS.toMillis(1))
+    exitValueFile.writeText("0")
+
+    assertEquals(true, resultFuture.get(5, TimeUnit.SECONDS))
+  }
+
+  @Test
+  internal fun testWaitForExitCodeAlreadyExists() {
+    exitValueFile.writeText("0")
+    val result = containerIOHandle.waitForExitCode(1, TimeUnit.SECONDS)
+    assertEquals(true, result)
+  }
+
+  @Test
+  internal fun testWaitForExitCodeTimeout() {
+    exitValueFile.delete()
+    val result = containerIOHandle.waitForExitCode(1, TimeUnit.SECONDS)
+    assertEquals(false, result)
+  }
+
+  @Test
+  internal fun testWaitForExitCodeTimeoutDoesNotLeaveWatchTaskBlocked() {
+    exitValueFile.delete()
+    assertNoBlockedExitWatchersAdded {
+      containerIOHandle.waitForExitCode(100, TimeUnit.MILLISECONDS)
+    }
+  }
+
+  @Test
+  internal fun testWaitForExitCodeDetectsFileCreatedViaMv() {
+    exitValueFile.delete()
+
+    val resultFuture =
+      CompletableFuture.supplyAsync {
+        return@supplyAsync containerIOHandle.waitForExitCode(5, TimeUnit.SECONDS)
+      }
+
+    sleep(TimeUnit.SECONDS.toMillis(1))
+
+    // Simulate mv (atomic rename) which fires ENTRY_CREATE, not ENTRY_MODIFY
+    val tempFile = File(exitValueFile.parent, "TEMP_EXIT_CODE.txt")
+    tempFile.writeText("0")
+    tempFile.renameTo(exitValueFile)
+
+    assertEquals(true, resultFuture.get(5, TimeUnit.SECONDS))
+  }
+
+  private fun assertNoBlockedExitWatchersAdded(action: () -> Boolean) {
+    val blockedWatchersBefore = blockedExitFileWatcherCount()
+
+    assertEquals(false, action())
+    sleep(100)
+
+    assertEquals(blockedWatchersBefore, blockedExitFileWatcherCount())
+  }
+
+  private fun blockedExitFileWatcherCount(): Int =
+    Thread
+      .getAllStackTraces()
+      .values
+      .count { stackTrace ->
+        stackTrace.any {
+          it.className == "io.airbyte.container.orchestrator.worker.io.ContainerIOHandle" &&
+            it.methodName == "watchForExitFile"
+        }
+      }
 }

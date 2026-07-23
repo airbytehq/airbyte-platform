@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pods
 
+import io.airbyte.commons.constants.NetworkPolicyConstants
 import io.airbyte.micronaut.runtime.WORKLOAD_LAUNCHER_NETWORK_POLICY_INTROSPECTION
 import io.airbyte.workers.hashing.Hasher
 import io.fabric8.kubernetes.api.model.networking.v1.NetworkPolicy
@@ -29,7 +30,7 @@ class PodNetworkSecurityLabeler(
   cacheManager: CacheManager<Any>,
   private val hasher: Hasher,
 ) {
-  private val cache = cacheManager.getCache("network-security-labels")
+  private val cache = cacheManager.getCache("network-policy-label-cache")
 
   fun getLabels(
     workspaceId: UUID?,
@@ -42,7 +43,8 @@ class PodNetworkSecurityLabeler(
           return emptyMap()
         }
         try {
-          val cachedLabels = cache.get(workspaceId, Map::class.java)
+          val cacheKey = "$workspaceId:${networkSecurityTokens.sorted()}"
+          val cachedLabels = cache.get(cacheKey, Map::class.java)
           if (cachedLabels.isPresent && cachedLabels.get().isNotEmpty()) {
             @Suppress("UNCHECKED_CAST")
             return cachedLabels.get() as Map<String, String>
@@ -50,7 +52,7 @@ class PodNetworkSecurityLabeler(
           val matchingNetworkPolicies = networkPolicyFetcher.matchingNetworkPolicies(workspaceId, networkSecurityTokens, hasher)
 
           val labels = flatten(matchingNetworkPolicies.map { it.spec.podSelector.matchLabels })
-          cache.put(workspaceId, labels)
+          cache.put(cacheKey, labels)
           return labels
         } catch (e: Exception) {
           logger.error(e) { "Failed to get network security labels for workspace $workspaceId" }
@@ -77,9 +79,9 @@ class PodNetworkSecurityLabeler(
 class NetworkPolicyFetcher(
   private val kubernetesClient: KubernetesClient,
 ) {
-  private val tokenHashKey = "airbyte/networkSecurityTokenHash"
-  private val salt = "airbyte.network.security.token"
-  private val workspaceIdLabelKey = "airbyte/workspaceId"
+  private val tokenHashKey = NetworkPolicyConstants.TOKEN_HASH_LABEL_KEY
+  private val salt = NetworkPolicyConstants.TOKEN_HASH_SALT
+  private val workspaceIdLabelKey = NetworkPolicyConstants.WORKSPACE_ID_LABEL_KEY
 
   fun matchingNetworkPolicies(
     workspaceId: UUID,
@@ -87,11 +89,11 @@ class NetworkPolicyFetcher(
     hasher: Hasher,
   ): List<NetworkPolicy> {
     // Need to truncate the token because labels can only be so long
-    val hashedTokens = networkSecurityTokens.map { hasher.hash(it, salt).slice(IntRange(0, 49)) }
+    val hashedTokens = networkSecurityTokens.map { hasher.hash(it, salt).slice(IntRange(0, NetworkPolicyConstants.TOKEN_HASH_TRUNCATION_LENGTH - 1)) }
     return kubernetesClient
       .network()
       .networkPolicies()
-      .inNamespace("jobs")
+      .inNamespace(NetworkPolicyConstants.NETWORK_POLICY_NAMESPACE)
       .withLabelIn(tokenHashKey, *hashedTokens.toTypedArray())
       .withLabel(workspaceIdLabelKey, workspaceId.toString())
       .list()

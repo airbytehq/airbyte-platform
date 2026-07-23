@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { FormattedMessage } from "react-intl";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 
-import { ConnectorIcon } from "components/ConnectorIcon";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -10,6 +9,7 @@ import { StepStatus, StepsIndicators } from "components/ui/StepsIndicators/Steps
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
+import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import {
   useCurrentWorkspace,
   useDestinationDefinitionVersion,

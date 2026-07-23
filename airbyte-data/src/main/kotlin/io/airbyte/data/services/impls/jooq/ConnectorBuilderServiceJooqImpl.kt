@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq
@@ -173,8 +173,20 @@ class ConnectorBuilderServiceJooqImpl
      * @return builder project
      * @throws IOException exception while interacting with db
      */
-    override fun getConnectorBuilderProjectsByWorkspace(workspaceId: UUID): Stream<ConnectorBuilderProject> {
+    override fun getConnectorBuilderProjectsByWorkspace(workspaceId: UUID): Stream<ConnectorBuilderProject> =
+      getConnectorBuilderProjectsByWorkspace(workspaceId, includeDeleted = false)
+
+    override fun getConnectorBuilderProjectsByWorkspace(
+      workspaceId: UUID,
+      includeDeleted: Boolean,
+    ): Stream<ConnectorBuilderProject> {
       val matchByWorkspace = Tables.CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId)
+      val deletedCondition =
+        if (includeDeleted) {
+          DSL.trueCondition()
+        } else {
+          Tables.CONNECTOR_BUILDER_PROJECT.TOMBSTONE.notEqual(true)
+        }
 
       return database
         .query { ctx: DSLContext ->
@@ -184,7 +196,7 @@ class ConnectorBuilderServiceJooqImpl
             .from(Tables.CONNECTOR_BUILDER_PROJECT)
             .leftJoin(Tables.ACTIVE_DECLARATIVE_MANIFEST)
             .on(Tables.CONNECTOR_BUILDER_PROJECT.ACTOR_DEFINITION_ID.eq(Tables.ACTIVE_DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
-            .where(matchByWorkspace.andNot(Tables.CONNECTOR_BUILDER_PROJECT.TOMBSTONE))
+            .where(matchByWorkspace.and(deletedCondition))
             .orderBy(Tables.CONNECTOR_BUILDER_PROJECT.NAME.asc())
             .fetch()
         }.map { record: Record -> DbConverter.buildConnectorBuilderProjectWithoutManifestDraft(record) }
@@ -439,6 +451,7 @@ class ConnectorBuilderServiceJooqImpl
       configInjections: List<ActorDefinitionConfigInjection>,
       connectorSpecification: ConnectorSpecification,
       cdkVersion: String,
+      supportsFileTransfer: Boolean,
     ) {
       // find one manifest config injection
 
@@ -462,7 +475,13 @@ class ConnectorBuilderServiceJooqImpl
 
       database.transaction<Any?> { ctx: DSLContext ->
         // Set new version of the actor definition
-        updateDeclarativeActorDefinitionVersion(manifestConfigInjection.get().actorDefinitionId, connectorSpecification, cdkVersion, ctx)
+        updateDeclarativeActorDefinitionVersion(
+          manifestConfigInjection.get().actorDefinitionId,
+          connectorSpecification,
+          cdkVersion,
+          supportsFileTransfer,
+          ctx,
+        )
 
         // Replace all existing config injections
         upsertActorDefinitionConfigInjections(configInjections, ctx)
@@ -517,9 +536,10 @@ class ConnectorBuilderServiceJooqImpl
       configInjections: List<ActorDefinitionConfigInjection>,
       connectorSpecification: ConnectorSpecification,
       cdkVersion: String,
+      supportsFileTransfer: Boolean,
     ) {
       database.transaction<Any?> { ctx: DSLContext ->
-        updateDeclarativeActorDefinitionVersion(sourceDefinitionId, connectorSpecification, cdkVersion, ctx)
+        updateDeclarativeActorDefinitionVersion(sourceDefinitionId, connectorSpecification, cdkVersion, supportsFileTransfer, ctx)
         upsertActorDefinitionConfigInjections(configInjections, ctx)
         upsertActiveDeclarativeManifest(
           ActiveDeclarativeManifest().withActorDefinitionId(sourceDefinitionId).withVersion(version),
@@ -862,6 +882,7 @@ class ConnectorBuilderServiceJooqImpl
       actorDefinitionId: UUID,
       spec: ConnectorSpecification,
       cdkVersion: String,
+      supportsFileTransfer: Boolean,
       ctx: DSLContext,
     ) {
       // We are updating the same version since connector builder projects have a different concept of
@@ -871,6 +892,7 @@ class ConnectorBuilderServiceJooqImpl
         .set(Tables.ACTOR_DEFINITION_VERSION.UPDATED_AT, OffsetDateTime.now())
         .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(spec)))
         .set(Tables.ACTOR_DEFINITION_VERSION.DOCKER_IMAGE_TAG, cdkVersion)
+        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER, supportsFileTransfer)
         .where(Tables.ACTOR_DEFINITION_VERSION.ACTOR_DEFINITION_ID.eq(actorDefinitionId))
         .execute()
     }

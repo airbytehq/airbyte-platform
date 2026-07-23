@@ -6,3 +6,8 @@
   padding: variables.$spacing-xl;
   scrollbar-gutter: stable;
 }
+
+.supportAgentBotPadding {
+  // Reserve space for Support Agent Bot floating button on the right
+  padding-right: 25px;
+}

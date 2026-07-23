@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers
@@ -46,7 +46,6 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import kotlin.math.max
 
 /**
  * Performs any required initialization logic on application context start.

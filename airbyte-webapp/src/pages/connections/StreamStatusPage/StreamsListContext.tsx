@@ -1,8 +1,7 @@
 import { createContext, useContext } from "react";
 
-import { sortStreamsAlphabetically } from "components/connection/StreamStatus/streamStatusUtils";
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
-
+import { sortStreamsAlphabetically } from "area/connection/components/StreamStatus/streamStatusUtils";
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import { useStreamsStatuses } from "area/connection/utils";
 import { useCurrentConnection } from "core/api";
 

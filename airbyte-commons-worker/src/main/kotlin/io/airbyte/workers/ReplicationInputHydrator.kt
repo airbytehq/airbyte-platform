@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers
@@ -168,12 +168,19 @@ class ReplicationInputHydrator(
         InlinedConfigWithSecretRefs(replicationActivityInput.destinationConfiguration!!).toConfigWithRefs()
       fullDestinationConfig = connectorSecretsHydrator.hydrateConfig(destConfig, hydrationContext)
     } catch (e: SecretCoordinateException) {
+      val attrs =
+        mutableListOf(
+          MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.destinationLauncherConfig!!.dockerImage),
+          MetricAttribute(CONNECTOR_TYPE, ActorType.DESTINATION.toString()),
+          MetricAttribute(CONNECTION_ID, replicationActivityInput.destinationLauncherConfig!!.connectionId.toString()),
+        )
+      e.secretStoreType?.let { storeType ->
+        attrs.add(MetricAttribute("secret_store_type", storeType))
+      }
       metricClient.count(
         OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
         1L,
-        MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.destinationLauncherConfig!!.dockerImage),
-        MetricAttribute(CONNECTOR_TYPE, ActorType.DESTINATION.toString()),
-        MetricAttribute(CONNECTION_ID, replicationActivityInput.destinationLauncherConfig!!.connectionId.toString()),
+        *attrs.toTypedArray(),
       )
       throw e
     }
@@ -183,12 +190,19 @@ class ReplicationInputHydrator(
         InlinedConfigWithSecretRefs(replicationActivityInput.sourceConfiguration!!).toConfigWithRefs()
       fullSourceConfig = connectorSecretsHydrator.hydrateConfig(sourceConfig, hydrationContext)
     } catch (e: SecretCoordinateException) {
+      val attrs =
+        mutableListOf(
+          MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.sourceLauncherConfig!!.dockerImage),
+          MetricAttribute(CONNECTOR_TYPE, ActorType.SOURCE.toString()),
+          MetricAttribute(CONNECTION_ID, replicationActivityInput.sourceLauncherConfig!!.connectionId.toString()),
+        )
+      e.secretStoreType?.let { storeType ->
+        attrs.add(MetricAttribute("secret_store_type", storeType))
+      }
       metricClient.count(
         OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
         1L,
-        MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.sourceLauncherConfig!!.dockerImage),
-        MetricAttribute(CONNECTOR_TYPE, ActorType.SOURCE.toString()),
-        MetricAttribute(CONNECTION_ID, replicationActivityInput.sourceLauncherConfig!!.connectionId.toString()),
+        *attrs.toTypedArray(),
       )
       throw e
     }

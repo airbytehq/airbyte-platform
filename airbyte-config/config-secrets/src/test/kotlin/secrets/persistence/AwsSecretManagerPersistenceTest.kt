@@ -1,16 +1,18 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
 
 import com.amazonaws.secretsmanager.caching.SecretCache
 import com.amazonaws.services.secretsmanager.AWSSecretsManager
+import com.amazonaws.services.secretsmanager.model.AWSSecretsManagerException
 import com.amazonaws.services.secretsmanager.model.CreateSecretResult
 import com.amazonaws.services.secretsmanager.model.DeleteSecretResult
 import com.amazonaws.services.secretsmanager.model.ResourceNotFoundException
 import com.amazonaws.services.secretsmanager.model.Tag
 import com.amazonaws.services.secretsmanager.model.UpdateSecretResult
+import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.micronaut.runtime.AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.AwsSecretsManagerConfig
 import io.mockk.every
@@ -19,6 +21,7 @@ import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import secrets.persistence.SecretCoordinateException
 
 class AwsSecretManagerPersistenceTest {
   @Test
@@ -102,6 +105,196 @@ class AwsSecretManagerPersistenceTest {
     }
     verify(exactly = 1) {
       mockAwsCache.getSecretString(coordinate.coordinateBase)
+    }
+  }
+
+  @Test
+  fun `test reading secret throws SecretCoordinateException when AWS auth fails`() {
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val mockAwsCache: SecretCache = mockk()
+    val awsException = AWSSecretsManagerException("The security token included in the request is invalid.")
+    every { mockAwsCache.getSecretString(any()) } throws awsException
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getCache() } returns mockAwsCache
+
+    val exception =
+      Assertions.assertThrows(SecretCoordinateException::class.java) {
+        spyAwsClient.getSecret(coordinate)
+      }
+    Assertions.assertSame(awsException, exception.cause)
+    Assertions.assertTrue(exception.message!!.contains(coordinate.fullCoordinate))
+    Assertions.assertEquals("aws", exception.secretStoreType)
+  }
+
+  @Test
+  fun `test reading secret still returns empty when ResourceNotFoundException is thrown`() {
+    val coordinate = SecretCoordinate.ExternalSecretCoordinate("external_secret_coordinate")
+
+    val mockAwsCache: SecretCache = mockk()
+    every { mockAwsCache.getSecretString(any()) } throws ResourceNotFoundException("not found")
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getCache() } returns mockAwsCache
+
+    val result = spyAwsClient.getSecret(coordinate)
+    Assertions.assertEquals("", result)
+  }
+
+  @Test
+  fun `test reading secret with assumed-role AccessDeniedException falls back to coordinateBase`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val mockAwsCache: SecretCache = mockk()
+    val awsException = AWSSecretsManagerException("User: arn:aws:sts::123456:assumed-role/TestRole/airbyte is not authorized")
+    awsException.errorCode = "AccessDeniedException"
+    every { mockAwsCache.getSecretString(coordinate.fullCoordinate) } throws awsException
+    every { mockAwsCache.getSecretString(coordinate.coordinateBase) } returns secret
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getCache() } returns mockAwsCache
+
+    val result = spyAwsClient.getSecret(coordinate)
+    Assertions.assertEquals(secret, result)
+
+    verify(exactly = 1) {
+      mockAwsCache.getSecretString(coordinate.fullCoordinate)
+    }
+    verify(exactly = 1) {
+      mockAwsCache.getSecretString(coordinate.coordinateBase)
+    }
+  }
+
+  @Test
+  fun `test reading secret with assumed-role AccessDeniedException returns empty when coordinateBase also not found`() {
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val mockAwsCache: SecretCache = mockk()
+    val awsException = AWSSecretsManagerException("User: arn:aws:sts::123456:assumed-role/TestRole/airbyte is not authorized")
+    awsException.errorCode = "AccessDeniedException"
+    every { mockAwsCache.getSecretString(coordinate.fullCoordinate) } throws awsException
+    every { mockAwsCache.getSecretString(coordinate.coordinateBase) } throws ResourceNotFoundException("not found")
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getCache() } returns mockAwsCache
+
+    val result = spyAwsClient.getSecret(coordinate)
+    Assertions.assertEquals("", result)
+  }
+
+  @Test
+  fun `test reading secret with assumed-role AccessDeniedException returns empty when coordinateBase also gets AccessDeniedException`() {
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val mockAwsCache: SecretCache = mockk()
+    val fullCoordinateException = AWSSecretsManagerException("User: arn:aws:sts::123456:assumed-role/TestRole/airbyte is not authorized")
+    fullCoordinateException.errorCode = "AccessDeniedException"
+    val coordinateBaseException = AWSSecretsManagerException("User: arn:aws:sts::123456:assumed-role/TestRole/airbyte is not authorized")
+    coordinateBaseException.errorCode = "AccessDeniedException"
+    every { mockAwsCache.getSecretString(coordinate.fullCoordinate) } throws fullCoordinateException
+    every { mockAwsCache.getSecretString(coordinate.coordinateBase) } throws coordinateBaseException
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getCache() } returns mockAwsCache
+
+    val result = spyAwsClient.getSecret(coordinate)
+    Assertions.assertEquals("", result)
+  }
+
+  @Test
+  fun `test reading secret with assumed-role AccessDeniedException throws when coordinateBase fails with different error`() {
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val mockAwsCache: SecretCache = mockk()
+    val fullCoordinateException = AWSSecretsManagerException("User: arn:aws:sts::123456:assumed-role/TestRole/airbyte is not authorized")
+    fullCoordinateException.errorCode = "AccessDeniedException"
+    val coordinateBaseException = AWSSecretsManagerException("The security token included in the request is invalid.")
+    coordinateBaseException.errorCode = "InvalidClientTokenId"
+    every { mockAwsCache.getSecretString(coordinate.fullCoordinate) } throws fullCoordinateException
+    every { mockAwsCache.getSecretString(coordinate.coordinateBase) } throws coordinateBaseException
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getCache() } returns mockAwsCache
+
+    val exception =
+      Assertions.assertThrows(SecretCoordinateException::class.java) {
+        spyAwsClient.getSecret(coordinate)
+      }
+    Assertions.assertSame(coordinateBaseException, exception.cause)
+  }
+
+  @Test
+  fun `test write handles SecretCoordinateException with assumed-role AccessDeniedException`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val mockAwsClient = mockk<AWSSecretsManager>()
+    every { mockAwsClient.createSecret(any()) } returns mockk<CreateSecretResult>()
+
+    val awsException = AWSSecretsManagerException("User: arn:aws:sts::123456:assumed-role/TestRole/airbyte is not authorized")
+    awsException.errorCode = "AccessDeniedException"
+    val wrappedException = SecretCoordinateException("Failed to read secret", "aws", awsException)
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getClient() } returns mockAwsClient
+    every { spyAwsClient.getSecret(coordinate) } throws wrappedException
+    every { spyAwsClient.getKmsKeyArn() } returns "testKms"
+
+    val persistence = AwsSecretManagerPersistence(spyAwsClient)
+    persistence.write(coordinate, secret)
+
+    verify(exactly = 1) { mockAwsClient.createSecret(any()) }
+  }
+
+  @Test
+  fun `test write rethrows SecretCoordinateException without assumed-role`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val awsException = AWSSecretsManagerException("The security token included in the request is invalid.")
+    awsException.errorCode = "InvalidClientTokenId"
+    val wrappedException = SecretCoordinateException("Failed to read secret", "aws", awsException)
+
+    val awsClient =
+      SystemAwsSecretsManagerClient(
+        config = AwsSecretsManagerConfig(),
+      )
+    val spyAwsClient = spyk(awsClient)
+    every { spyAwsClient.getSecret(coordinate) } throws wrappedException
+
+    val persistence = AwsSecretManagerPersistence(spyAwsClient)
+    Assertions.assertThrows(SecretCoordinateException::class.java) {
+      persistence.write(coordinate, secret)
     }
   }
 
@@ -244,6 +437,41 @@ class AwsSecretManagerPersistenceTest {
         withArg {
           assert(it.secretId.equals(coordinate.fullCoordinate))
           assert(it.forceDeleteWithoutRecovery.equals(true))
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `test deleting a secret with a recovery window`() {
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+    val recoveryWindowInDays = 30L
+
+    val mockAwsClient = mockk<AWSSecretsManager>()
+    every { mockAwsClient.deleteSecret(any()) } returns mockk<DeleteSecretResult>()
+
+    val mockClient: SystemAwsSecretsManagerClient = mockk()
+    every { mockClient.getClient() } returns mockAwsClient
+    every { mockClient.deleteSecretWithRecoveryWindow(coordinate.coordinateBase, recoveryWindowInDays) } answers { callOriginal() }
+    every { mockClient.deleteSecretWithRecoveryWindow(coordinate.fullCoordinate, recoveryWindowInDays) } answers { callOriginal() }
+
+    val persistence = AwsSecretManagerPersistence(mockClient)
+    persistence.deleteWithRecoveryWindow(coordinate, recoveryWindowInDays)
+
+    verify {
+      mockAwsClient.deleteSecret(
+        withArg {
+          assert(it.secretId.equals(coordinate.coordinateBase))
+          assert(it.recoveryWindowInDays.equals(recoveryWindowInDays))
+          assert(it.forceDeleteWithoutRecovery == null)
+        },
+      )
+
+      mockAwsClient.deleteSecret(
+        withArg {
+          assert(it.secretId.equals(coordinate.fullCoordinate))
+          assert(it.recoveryWindowInDays.equals(recoveryWindowInDays))
+          assert(it.forceDeleteWithoutRecovery == null)
         },
       )
     }

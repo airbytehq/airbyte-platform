@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services
@@ -37,6 +37,16 @@ interface OAuthService {
     sourceDefinitionId: UUID,
   ): Optional<SourceOAuthParameter>
 
+  /**
+   * Deletes the organization-level source OAuth parameter override for the given definition.
+   *
+   * @return number of rows deleted.
+   */
+  fun deleteSourceOAuthParamByDefinitionId(
+    organizationId: UUID,
+    sourceDefinitionId: UUID,
+  ): Int
+
   fun writeDestinationOAuthParam(destinationOAuthParameter: DestinationOAuthParameter)
 
   fun getDestinationOAuthParameterWithSecretsOptional(
@@ -60,4 +70,34 @@ interface OAuthService {
     organizationId: Optional<UUID>,
     destinationDefinitionId: UUID,
   ): Optional<DestinationOAuthParameter>
+
+  /**
+   * Deletes the organization-level destination OAuth parameter override for the given definition.
+   *
+   * @return number of rows deleted.
+   */
+  fun deleteDestinationOAuthParamByDefinitionId(
+    organizationId: UUID,
+    destinationDefinitionId: UUID,
+  ): Int
+
+  /**
+   * Deletes the workspace-level source OAuth parameter override for the given definition.
+   *
+   * @return number of rows deleted.
+   */
+  fun deleteSourceOAuthParamByWorkspaceId(
+    workspaceId: UUID,
+    sourceDefinitionId: UUID,
+  ): Int
+
+  /**
+   * Deletes the workspace-level destination OAuth parameter override for the given definition.
+   *
+   * @return number of rows deleted.
+   */
+  fun deleteDestinationOAuthParamByWorkspaceId(
+    workspaceId: UUID,
+    destinationDefinitionId: UUID,
+  ): Int
 }

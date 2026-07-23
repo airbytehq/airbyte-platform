@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.handler
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.config.WorkloadPriority
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteWorkloadApiClientConfig
 import io.airbyte.workload.api.domain.WorkloadLabel
@@ -79,7 +78,6 @@ class WorkloadHandlerImplTest {
         id = WORKLOAD_ID,
         dataplaneId = null,
         status = WorkloadStatus.PENDING,
-        workloadLabels = null,
         inputPayload = "",
         workspaceId = UUID.randomUUID(),
         organizationId = UUID.randomUUID(),
@@ -134,10 +132,7 @@ class WorkloadHandlerImplTest {
             it.dataplaneId == null &&
             it.status == WorkloadStatus.PENDING &&
             it.lastHeartbeatAt == null &&
-            it.workloadLabels!![0].key == workloadLabel1.key &&
-            it.workloadLabels!![0].value == workloadLabel1.value &&
-            it.workloadLabels!![1].key == workloadLabel2.key &&
-            it.workloadLabels!![1].value == workloadLabel2.value &&
+            it.labels == mapOf("key1" to "value1", "key2" to "value2") &&
             it.inputPayload == "input payload" &&
             it.logPath == "/log/path" &&
             it.mutexKey == "mutex-this" &&
@@ -234,7 +229,6 @@ class WorkloadHandlerImplTest {
         id = WORKLOAD_ID,
         dataplaneId = null,
         status = WorkloadStatus.PENDING,
-        workloadLabels = null,
         inputPayload = "a payload",
         logPath = "/log/path",
         mutexKey = "mutex-this",
@@ -443,7 +437,6 @@ class WorkloadHandlerImplTest {
     val workloadQueueRepository = mockk<WorkloadQueueRepository>()
     val metricClient: MetricClient = mockk(relaxed = true)
     private val airbyteApi: AirbyteApiClient = mockk()
-    val featureFlagClient: FeatureFlagClient = mockk(relaxed = true)
     val signalSender = ApiSignalSender(airbyteApi, metricClient)
     val workloadService =
       spyk(
@@ -452,7 +445,6 @@ class WorkloadHandlerImplTest {
           workloadQueueRepository = workloadQueueRepository,
           signalSender = signalSender,
           defaultDeadlineValues = DefaultDeadlineValues(),
-          featureFlagClient = featureFlagClient,
           metricClient = metricClient,
         ),
       )
@@ -478,7 +470,6 @@ class WorkloadHandlerImplTest {
       id: String = WORKLOAD_ID,
       dataplaneId: String? = null,
       status: WorkloadStatus = WorkloadStatus.PENDING,
-      workloadLabels: List<io.airbyte.workload.repository.domain.WorkloadLabel>? = listOf(),
       inputPayload: String = "",
       workspaceId: UUID? = UUID.randomUUID(),
       organizationId: UUID? = UUID.randomUUID(),
@@ -494,7 +485,6 @@ class WorkloadHandlerImplTest {
         id = id,
         dataplaneId = dataplaneId,
         status = status,
-        workloadLabels = workloadLabels,
         inputPayload = inputPayload,
         workspaceId = workspaceId,
         organizationId = organizationId,

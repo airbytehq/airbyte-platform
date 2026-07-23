@@ -5,11 +5,11 @@ import { MemoryRouter } from "react-router-dom";
 
 import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { WebappConfigContextProvider } from "core/config";
+import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { defaultOssFeatures, FeatureItem, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
-import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { ModalServiceProvider } from "hooks/services/Modal";
-import { NotificationService } from "hooks/services/Notification";
+import { ModalServiceProvider } from "core/services/Modal";
+import { NotificationService } from "core/services/Notification";
 
 import { mockWebappConfig } from "./mock-data/mockWebappConfig";
 

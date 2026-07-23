@@ -1,12 +1,12 @@
 import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { HeadTitle } from "components/HeadTitle";
-import { PageContainer } from "components/PageContainer";
-import { SelectConnector } from "components/source/SelectConnector";
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
+import { PageContainer } from "components/ui/PageContainer";
 
+import { SelectConnector } from "area/connector/components/source/SelectConnector";
 import { useSuggestedDestinations } from "area/connector/utils";
 import { useDestinationDefinitionList } from "core/api";
 

@@ -1,0 +1,12 @@
+@use "scss/variables";
+
+.burstTag {
+  // CSS variables can't be used here because tag colors must remain consistent across themes
+  background: linear-gradient(to top right, hsl(25, 95%, 53%) 0%, hsl(31, 97%, 72%) 100%);
+  color: white;
+
+  // Override text color for all child elements
+  * {
+    color: inherit;
+  }
+}

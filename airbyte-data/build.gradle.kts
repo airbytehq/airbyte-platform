@@ -7,7 +7,6 @@ plugins {
 dependencies {
   implementation(libs.bundles.micronaut.annotation)
   implementation(libs.micronaut.cache.caffeine)
-
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
@@ -16,7 +15,6 @@ dependencies {
 
   implementation(libs.bundles.jackson)
   implementation(libs.bundles.micronaut.data.jdbc)
-  implementation(libs.bundles.datadog)
   implementation("org.springframework.security:spring-security-crypto:6.3.8")
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
@@ -32,11 +30,12 @@ dependencies {
   implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-json-validation"))
   implementation(project(":oss:airbyte-featureflag"))
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(libs.airbyte.protocol)
   // For Keycloak Application Management
   implementation(libs.bundles.keycloak.client)
+  implementation(libs.otel.annotations)
   implementation(libs.micronaut.security.jwt)
-
 
   testImplementation(libs.assertj.core)
   testImplementation(libs.bundles.micronaut.test)

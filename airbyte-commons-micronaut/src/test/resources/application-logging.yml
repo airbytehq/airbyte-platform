@@ -3,4 +3,5 @@ airbyte:
     client:
       log-tail-size: 50
     log-level: DEBUG
+    platform-log-format: "json"
     s3-path-style-access: "test"

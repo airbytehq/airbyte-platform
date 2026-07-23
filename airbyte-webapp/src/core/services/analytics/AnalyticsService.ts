@@ -1,5 +1,3 @@
-import { PostHog } from "posthog-js";
-
 import { HockeyStackAnalyticsObject } from "./HockeyStackAnalytics";
 import { Action, EventParams, Namespace } from "./types";
 
@@ -11,8 +9,6 @@ export class AnalyticsService {
   private getSegmentAnalytics = (): SegmentAnalytics.AnalyticsJS | undefined => window.analytics;
 
   private getHockeyStackAnalytics = (): HockeyStackAnalyticsObject | undefined => window.HockeyStack;
-
-  private getPosthogAnalytics = (): PostHog | undefined => window.posthog;
 
   public setContext(context: Context) {
     this.context = {
@@ -38,12 +34,9 @@ export class AnalyticsService {
       console.debug(`%c[Analytics.Page] ${name}`, "color: teal", params);
     }
 
-    const session_id = this.getPosthogAnalytics()?.get_session_id();
-
     this.getSegmentAnalytics()?.page?.(name, {
       ...params,
       ...this.context,
-      ...(session_id && { $session_id: session_id }),
     });
   }
 
@@ -51,30 +44,15 @@ export class AnalyticsService {
     this.getSegmentAnalytics()?.reset?.();
   }
 
-  public track(
-    namespace: Namespace,
-    action: Action,
-    params: EventParams & { actionDescription?: string },
-    options: { sendToPosthog?: boolean } = {}
-  ) {
+  public track(namespace: Namespace, action: Action, params: EventParams & { actionDescription?: string }) {
     if (process.env.NODE_ENV === "development") {
-      console.debug(`%c[Analytics.Track] Airbyte.UI.${namespace}.${action}`, "color: teal", params, options);
+      console.debug(`%c[Analytics.Track] Airbyte.UI.${namespace}.${action}`, "color: teal", params);
     }
-    const session_id = this.getPosthogAnalytics()?.get_session_id();
 
     this.getSegmentAnalytics()?.track(`Airbyte.UI.${namespace}.${action}`, {
       ...params,
       ...this.context,
-      ...(session_id && { $session_id: session_id }),
     });
-
-    // we need to send some events directly to Posthog when we want a survey to be triggered
-    if (options?.sendToPosthog) {
-      this.getPosthogAnalytics()?.capture(`Airbyte.UI.${namespace}.${action}`, {
-        ...params,
-        ...this.context,
-      });
-    }
   }
 
   public identify(userId: string, traits: Record<string, unknown> = {}): void {
@@ -82,11 +60,6 @@ export class AnalyticsService {
       console.debug(`%c[Analytics.Identify] ${userId}`, "color: teal", traits);
     }
     this.getSegmentAnalytics()?.identify?.(userId, traits);
-    // PostHog identify and alias to link anonymous history
-    const posthog = this.getPosthogAnalytics();
-    if (posthog) {
-      posthog.identify(userId, traits);
-    }
 
     // HockeyStack supports string, boolean and number custom properties
     // https://docs.hockeystack.com/advanced-strategies-and-techniques/advanced-features/identifying-users
@@ -99,7 +72,13 @@ export class AnalyticsService {
       },
       {} as Record<string, string | number | boolean>
     );
-    this.getHockeyStackAnalytics()?.identify?.(userId, booleanNumberAndStringTraits);
+    const email = booleanNumberAndStringTraits.email;
+    if (typeof email === "string") {
+      this.getHockeyStackAnalytics()?.identify?.(email, {
+        ...booleanNumberAndStringTraits,
+        airbyte_user_id: userId,
+      });
+    }
   }
 
   public group(organisationId: string, traits: Record<string, unknown> = {}): void {

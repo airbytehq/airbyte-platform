@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.repositories.entities
@@ -19,6 +19,7 @@ open class Organization(
   var userId: UUID? = null,
   var email: String,
   var tombstone: Boolean = false,
+  var isAgentic: Boolean = false,
   @DateCreated
   var createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated

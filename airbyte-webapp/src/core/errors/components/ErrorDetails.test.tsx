@@ -15,7 +15,7 @@ jest.mock("locales/en.errors.json", () => ({
 }));
 
 // Mock the AirbyteTheme
-jest.mock("hooks/theme/useAirbyteTheme", () => {
+jest.mock("core/utils/useAirbyteTheme", () => {
   const themeContextValue = {
     theme: "airbyteThemeLight",
     colorValues: {},

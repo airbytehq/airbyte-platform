@@ -2,10 +2,10 @@ import React, { useCallback, useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import { ConnectorIcon } from "components/ConnectorIcon";
-import { FormControlErrorMessage } from "components/forms/FormControl";
 import { FlexContainer } from "components/ui/Flex";
+import { FormControlErrorMessage } from "components/ui/forms/FormControl";
 
+import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
 import { EMPTY_FIELD } from "area/dataActivation/utils";
 import { useSetDefaultValuesForDestinationOperation } from "area/dataActivation/utils/useSetDefaultValuesForDestinationOperation";

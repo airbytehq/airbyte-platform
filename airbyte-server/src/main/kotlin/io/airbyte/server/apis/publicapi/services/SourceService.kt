@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -152,7 +152,7 @@ open class SourceServiceImpl(
 
     val result =
       kotlin
-        .runCatching { sourceHandler.partialUpdateSource(sourceUpdate) }
+        .runCatching { sourceHandler.updateSourceWithOptionalSecret(sourceUpdate, allowInlineOAuthServerOutputSecrets = true) }
         .onFailure {
           log.error(it) { "Error for partialUpdateSource" }
           ConfigClientErrorHandler.handleError(it)

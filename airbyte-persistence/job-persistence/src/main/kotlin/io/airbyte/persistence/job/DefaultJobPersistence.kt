@@ -1,11 +1,10 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job
 
 import com.fasterxml.jackson.core.type.TypeReference
-import datadog.trace.api.Trace
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
@@ -37,6 +36,7 @@ import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import org.jooq.DSLContext
 import org.jooq.Field
 import org.jooq.JSONB
@@ -174,6 +174,54 @@ class DefaultJobPersistence
       }
     }
 
+    override fun queueJob(jobId: Long): Boolean =
+      jobDatabase.query<Boolean> { ctx: DSLContext ->
+        val updatedRows =
+          ctx.execute(
+            "UPDATE jobs SET status = CAST(? as JOB_STATUS), updated_at = ? WHERE id = ? AND status = CAST(? as JOB_STATUS)",
+            toSqlName(JobStatus.QUEUED),
+            currentTime,
+            jobId,
+            toSqlName(JobStatus.PENDING),
+          )
+
+        if (updatedRows > 0) {
+          true
+        } else {
+          getJob(ctx, jobId)
+          false
+        }
+      }
+
+    override fun cancelQueuedJob(jobId: Long) {
+      jobDatabase.query<Any?> { ctx: DSLContext ->
+        updateJobStatusIfCurrentStatus(ctx, jobId, JobStatus.QUEUED, JobStatus.CANCELLED)
+        null
+      }
+    }
+
+    override fun updateSyncJobOnDemandCapacity(
+      jobId: Long,
+      usedOnDemandCapacity: Boolean,
+    ) {
+      val job = getJob(jobId)
+      if (job.configType != ConfigType.SYNC || job.config.sync == null) {
+        return
+      }
+
+      job.config.sync.withUsedOnDemandCapacity(usedOnDemandCapacity)
+
+      jobDatabase.query<Any?> { ctx: DSLContext ->
+        ctx.execute(
+          "UPDATE jobs SET config = CAST(? as JSONB), updated_at = ? WHERE id = ?",
+          Jsons.serialize(job.config),
+          currentTime,
+          jobId,
+        )
+        null
+      }
+    }
+
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
     // returns the new updated_at time for the job
@@ -198,6 +246,26 @@ class DefaultJobPersistence
       return now
     }
 
+    // TODO: stop using LocalDateTime
+    // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
+    private fun updateJobStatusIfCurrentStatus(
+      ctx: DSLContext,
+      jobId: Long,
+      expectedCurrentStatus: JobStatus,
+      newStatus: JobStatus,
+    ): LocalDateTime {
+      val now = currentTime
+      getJob(ctx, jobId)
+      ctx.execute(
+        "UPDATE jobs SET status = CAST(? as JOB_STATUS), updated_at = ? WHERE id = ? AND status = CAST(? as JOB_STATUS)",
+        toSqlName(newStatus),
+        currentTime,
+        jobId,
+        toSqlName(expectedCurrentStatus),
+      )
+      return now
+    }
+
     override fun createAttempt(
       jobId: Long,
       logPath: Path,
@@ -208,25 +276,12 @@ class DefaultJobPersistence
       return jobDatabase.transaction { ctx: DSLContext ->
         val job = getJob(ctx, jobId)
         if (job.isJobInTerminalState()) {
-          val errMsg =
-            String.format(
-              "Cannot create an attempt for a job id: %s that is in a terminal state: %s for connection id: %s",
-              job.id,
-              job.status,
-              job.scope,
-            )
-          throw IllegalStateException(errMsg)
+          throw JobInTerminalStateException(job.id, job.scope, job.status)
         }
 
-        if (job.hasRunningAttempt()) {
-          val errMsg =
-            String.format(
-              "Cannot create an attempt for a job id: %s that has a running attempt: %s for connection id: %s",
-              job.id,
-              job.status,
-              job.scope,
-            )
-          throw IllegalStateException(errMsg)
+        val runningAttempt = job.attempts.firstOrNull { a -> !Attempt.isAttemptInTerminalState(a) }
+        if (runningAttempt != null) {
+          throw JobRunningAttemptExistsException(job.id, job.scope, runningAttempt.attemptNumber)
         }
 
         val now = updateJobStatus(ctx, jobId, JobStatus.RUNNING)
@@ -323,7 +378,7 @@ class DefaultJobPersistence
           .update(Tables.ATTEMPTS)
           .set(
             Tables.ATTEMPTS.OUTPUT,
-            JSONB.valueOf(Jsons.serialize(output)),
+            JSONB.valueOf(removeUnsupportedUnicodeFromSerializedJson(Jsons.serialize(output))),
           ).set(Tables.ATTEMPTS.UPDATED_AT, now)
           .where(
             Tables.ATTEMPTS.JOB_ID.eq(jobId),
@@ -473,18 +528,22 @@ class DefaultJobPersistence
         }
 
     override fun getAttemptStats(jobIds: List<Long>?): Map<JobAttemptPair, JobPersistence.AttemptStats> {
-      if (jobIds == null || jobIds.isEmpty()) {
+      if (jobIds.isNullOrEmpty()) {
         return emptyMap()
       }
 
-      val jobIdsStr = jobIds.joinToString(",") { obj: Long -> obj.toString() }
-
       return jobDatabase.query { ctx: DSLContext ->
-        // Instead of one massive join query, separate this query into two queries for better readability
-        // for now.
-        // We can combine the queries at a later date if this still proves to be not efficient enough.
-        val attemptStats = hydrateSyncStats(jobIdsStr, ctx)
-        hydrateStreamStats(jobIdsStr, ctx, attemptStats)
+        // Process the job ids in bounded batches. The ids are bound as a single bigint[] parameter (see
+        // hydrateSyncStats / hydrateStreamStats) so the plan is stable and cacheable across call sites,
+        // and batching keeps each list small enough that the planner uses the attempts / stream_stats
+        // indexes instead of sequentially scanning the very large stats tables.
+        val attemptStats = mutableMapOf<JobAttemptPair, JobPersistence.AttemptStats>()
+        for (batch in jobIds.chunked(ATTEMPT_STATS_JOB_ID_BATCH_SIZE)) {
+          // Instead of one massive join query, separate this query into two queries for better readability.
+          val syncStats = hydrateSyncStats(batch, ctx)
+          attemptStats.putAll(hydrateStreamStats(batch, ctx, syncStats))
+        }
+        attemptStats
       }
     }
 
@@ -1079,7 +1138,7 @@ class DefaultJobPersistence
         ),
       )
 
-    @Trace
+    @WithSpan
     override fun listJobsIncludingId(
       configTypes: Set<ConfigType>,
       connectionId: String?,
@@ -1573,19 +1632,13 @@ class DefaultJobPersistence
         // Strip literal nulls. Frankly, this should never happen in a JSON-serialized string,
         // but I'm keeping this logic in case there's historical reasons for needing this.
         ?.replace("""\u0000""".toRegex(), "")
-        // Strip the `\u0000` sequence, but only if it's not escaped.
-        // For example, `"\\u0000"` is perfectly valid, but `"\\\u0000"` needs to be stripped.
-        // In general: an even number of backslashes is fine; an odd number is not.
-        // This monstrosity matches:
-        // 1. Any non-backslash character
-        // 2. Any even number of backslashes (including 0) - these represent escaped backslashes.
-        // 3. A single backslash
-        // 4. u0000
-        // And captures 1+2 into $1.
-        // We then emit just $1 - which is equivalent to stripping 3+4 (i.e. the \u0000 sequence).
-        // (NB: triple-quoted string doesn't respect backslashes, but we still need to double up
-        // because regex itself needs us to escape those backslashes.)
-        ?.replace("""([^\\](\\\\)*)\\u0000""".toRegex(), "$1")
+        // Strip the `\u0000` sequence aggressively.
+        // This is overly conservative (e.g. """{"foo": "bar\\u0000"}""" is a perfectly safe string),
+        // but this is simple and reliable.
+        // Doing a fancier replacement to handle escape sequences would be complicated,
+        // and there are performance concerns in this function,
+        // so we don't necessarily want to parse the entire JSON tree and search for null chars.
+        ?.replace("""\\+u0000""".toRegex(), "<NULL>")
 
     /**
      * Needed to get the jooq sort field for the subquery job order by clause.
@@ -1844,7 +1897,7 @@ class DefaultJobPersistence
       }
 
       private fun hydrateSyncStats(
-        jobIdsStr: String,
+        jobIds: List<Long>,
         ctx: DSLContext,
       ): Map<JobAttemptPair, JobPersistence.AttemptStats> {
         val attemptStats = HashMap<JobAttemptPair, JobPersistence.AttemptStats>()
@@ -1856,8 +1909,9 @@ class DefaultJobPersistence
                 "stats.bytes_committed, stats.records_committed, stats.records_rejected " +
                 "FROM sync_stats stats " +
                 "INNER JOIN attempts atmpt ON stats.attempt_id = atmpt.id " +
-                "WHERE job_id IN ( " + jobIdsStr + ");"
+                "WHERE atmpt.job_id = ANY({0}::bigint[])"
             ),
+            jobIds.toTypedArray(),
           )
         syncResults.forEach(
           Consumer { r: Record ->
@@ -1878,6 +1932,10 @@ class DefaultJobPersistence
         return attemptStats
       }
 
+      // Cap the number of job ids bound into a single stats lookup. Small batches keep the planner on
+      // the attempts / stream_stats indexes instead of sequentially scanning the large stats tables.
+      internal const val ATTEMPT_STATS_JOB_ID_BATCH_SIZE = 20
+
       private const val STREAM_STAT_SELECT_STATEMENT = (
         "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, " +
           "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted," +
@@ -1897,12 +1955,12 @@ class DefaultJobPersistence
        * has prepopulated the map.
        */
       private fun hydrateStreamStats(
-        jobIdsStr: String,
+        jobIds: List<Long>,
         ctx: DSLContext,
         attemptStatsImmutable: Map<JobAttemptPair, JobPersistence.AttemptStats>,
       ): Map<JobAttemptPair, JobPersistence.AttemptStats> {
         val attemptStats = attemptStatsImmutable.toMutableMap()
-        val attemptOutputs = ctx.fetch("SELECT id, output FROM attempts WHERE job_id in ($jobIdsStr);")
+        val attemptOutputs = ctx.fetch("SELECT id, output FROM attempts WHERE job_id = ANY({0}::bigint[])", jobIds.toTypedArray())
         val backFilledStreamsPerAttemptId: MutableMap<Long, MutableSet<StreamDescriptor>> = HashMap()
         val resumedStreamsPerAttemptId: MutableMap<Long, MutableSet<StreamDescriptor>> = HashMap()
         for (result in attemptOutputs) {
@@ -1930,10 +1988,8 @@ class DefaultJobPersistence
 
         val streamResults =
           ctx.fetch(
-            (
-              STREAM_STAT_SELECT_STATEMENT +
-                "WHERE atmpt.job_id IN ( " + jobIdsStr + ");"
-            ),
+            STREAM_STAT_SELECT_STATEMENT + "WHERE atmpt.job_id = ANY({0}::bigint[])",
+            jobIds.toTypedArray(),
           )
 
         streamResults.forEach(
@@ -2138,23 +2194,26 @@ class DefaultJobPersistence
             record.get(ATTEMPT_NUMBER_FIELD, Int::class.javaPrimitiveType),
             record.get(JOB_ID, Long::class.java),
             Path.of(record.get("log_path", String::class.java)),
-            if (record.get("attempt_sync_config", String::class.java) == null) {
-              null
-            } else {
-              try {
+            try {
+              // record.get will try to deserialized the json blob before converting it to a string.
+              // We are swallowing the exception because we don't want to fail here if the JSON is invalid since it is a recoverable error.
+              val syncConfig = record.get("attempt_sync_config", String::class.java)
+              if (syncConfig == null) {
+                null
+              } else {
                 Jsons.deserialize(
-                  record.get("attempt_sync_config", String::class.java),
+                  syncConfig,
                   AttemptSyncConfig::class.java,
                 )
-              } catch (e: Exception) {
-                log.error(e) {
-                  "Failed to deserialize attempt_sync_config for job ${record.get(
-                    JOB_ID,
-                    Long::class.java,
-                  )} attempt ${record.get(ATTEMPT_NUMBER_FIELD, Int::class.javaPrimitiveType)}"
-                }
-                null
               }
+            } catch (e: Exception) {
+              log.error(e) {
+                "Failed to deserialize attempt_sync_config for job ${record.get(
+                  JOB_ID,
+                  Long::class.java,
+                )} attempt ${record.get(ATTEMPT_NUMBER_FIELD, Int::class.javaPrimitiveType)}"
+              }
+              null
             },
             if (attemptOutputString == null) null else parseJobOutputFromString(attemptOutputString),
             record.get("attempt_status", String::class.java).toEnum<AttemptStatus>()!!,

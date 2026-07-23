@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.client
@@ -12,6 +12,7 @@ import java.util.UUID
 
 internal class WebUrlHelperTest {
   private val airbyteUrl: String = "https://cloud.airbyte.com"
+  private val airbyteAgentsUrl: String = "https://app.airbyte.ai"
   private val connectionId: UUID = UUID.randomUUID()
   private val destinationId: UUID = UUID.randomUUID()
   private val sourceId: UUID = UUID.randomUUID()
@@ -22,13 +23,24 @@ internal class WebUrlHelperTest {
 
   @BeforeEach
   fun setup() {
-    airbyteConfig = AirbyteConfig(airbyteUrl = airbyteUrl)
+    airbyteConfig = AirbyteConfig(airbyteUrl = airbyteUrl, airbyteAgentsUrl = airbyteAgentsUrl)
     webUrlHelper = WebUrlHelper(airbyteConfig)
   }
 
   @Test
   fun testGetBaseUrl() {
     assertEquals(airbyteUrl, webUrlHelper.baseUrl)
+  }
+
+  @Test
+  fun testGetAgentsBaseUrl() {
+    assertEquals(airbyteAgentsUrl, webUrlHelper.agentsBaseUrl)
+  }
+
+  @Test
+  fun testAgentsBaseUrlFallsBackToBaseUrlWhenUnset() {
+    val helper = WebUrlHelper(AirbyteConfig(airbyteUrl = airbyteUrl))
+    assertEquals(airbyteUrl, helper.agentsBaseUrl)
   }
 
   @Test

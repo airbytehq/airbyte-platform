@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.converters
 
-import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.DestinationUpdate
@@ -14,6 +13,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.security.sha256
 import io.airbyte.protocol.models.v0.Config
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.nio.charset.StandardCharsets
 import java.util.UUID
@@ -34,7 +34,7 @@ class ConnectorConfigUpdater(
    * Updates the Source from a sync job ID with the provided Configuration. Secrets and OAuth
    * parameters will be masked when saving.
    */
-  @Trace
+  @WithSpan
   fun updateSource(
     sourceId: UUID,
     config: Config,

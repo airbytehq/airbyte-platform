@@ -15,12 +15,12 @@ import { ExternalLink } from "components/ui/Link";
 
 import { useCurrentConnectionId } from "area/connection/utils/useCurrentConnectionId";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useFormatError } from "core/errors";
 import { getFrequencyFromScheduleData, useAnalyticsService, Action, Namespace } from "core/services/analytics";
+import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
-import { useNotificationService } from "hooks/services/Notification";
-import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { RoutePaths } from "pages/routePaths";
 
 import { useCurrentWorkspace, useInvalidateWorkspaceStateQuery } from "./workspaces";
@@ -57,7 +57,6 @@ import {
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
-  ConnectionStatusesRead,
   ConnectionStatusRead,
   ConnectionStream,
   ConnectionSyncStatus,
@@ -652,6 +651,7 @@ interface ConnectionListFilters {
   sourceDefinitionIds: string[];
   destinationDefinitionIds: string[];
   tagIds: string[];
+  onDemandEnabled?: boolean | null;
 }
 
 export const useConnectionList = ({
@@ -676,6 +676,9 @@ export const useConnectionList = ({
     ...(filters?.sourceDefinitionIds?.length ? [`sourceDef-${filters.sourceDefinitionIds.join(",")}`] : []),
     ...(filters?.destinationDefinitionIds?.length ? [`destDef-${filters.destinationDefinitionIds.join(",")}`] : []),
     ...(filters?.tagIds?.length ? [`tags-${filters.tagIds.join(",")}`] : []),
+    ...(filters?.onDemandEnabled !== undefined && filters?.onDemandEnabled !== null
+      ? [`onDemand-${filters.onDemandEnabled}`]
+      : []),
     `sort-${sortKey}`,
     `pageSize-${pageSize}`,
   ]);
@@ -698,6 +701,7 @@ export const useConnectionList = ({
             statuses: filters.status ? [filters.status] : undefined,
             states: filters.state ? [filters.state] : undefined,
             tagIds: filters.tagIds,
+            ...(filters.onDemandEnabled != null && { onDemandEnabled: filters.onDemandEnabled }),
           },
         },
         requestOptions
@@ -827,29 +831,6 @@ export const useListConnectionsStatuses = (connectionIds: string[]) => {
   );
 };
 
-export const useListConnectionsStatusesAsync = (connectionIds: string[], enabled: boolean = true) => {
-  const requestOptions = useRequestOptions();
-  const queryKey = connectionsKeys.statuses(connectionIds);
-
-  return (
-    useQuery(queryKey, async () => getConnectionStatuses({ connectionIds }, requestOptions), {
-      enabled,
-      refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
-    }) ?? []
-  );
-};
-
-export const useGetCachedConnectionStatusesById = (connectionIds: string[]) => {
-  const queryClient = useQueryClient();
-  const queryData = queryClient.getQueriesData<ConnectionStatusesRead>(connectionsKeys.statuses());
-  const allStatuses = queryData.flatMap(([_, data]) => data ?? []);
-
-  return connectionIds.reduce<Record<string, ConnectionStatusRead | undefined>>((acc, connectionId) => {
-    acc[connectionId] = allStatuses.find((status) => status.connectionId === connectionId);
-    return acc;
-  }, {});
-};
-
 export const useSetConnectionStatusActiveJob = () => {
   const queryClient = useQueryClient();
 
@@ -896,7 +877,7 @@ export const useGetConnectionStatusesCounts = () => {
   const workspaceId = useCurrentWorkspaceId();
   const requestOptions = useRequestOptions();
 
-  return useQuery(connectionsKeys.statusCounts(workspaceId), () =>
+  return useQuery(connectionsKeys.statusCounts(workspaceId), async () =>
     webBackendGetConnectionStatusCounts({ workspaceId }, requestOptions)
   );
 };

@@ -1,0 +1,9 @@
+@use "scss/variables";
+
+.subscription__header {
+  row-gap: variables.$spacing-sm;
+}
+
+.subscription__changePlan {
+  margin-left: auto;
+}

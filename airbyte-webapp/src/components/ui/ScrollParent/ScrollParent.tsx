@@ -1,6 +1,8 @@
 import classnames from "classnames";
 import React from "react";
 
+import { FeatureItem, useFeature } from "core/services/features";
+
 import styles from "./ScrollParent.module.scss";
 
 export const ScrollParentContext = React.createContext<HTMLDivElement | null>(null);
@@ -11,13 +13,20 @@ interface ScrollParentProps<T> {
 }
 
 export const ScrollParent = <T = "div",>({ children, as, props }: React.PropsWithChildren<ScrollParentProps<T>>) => {
+  const supportAgentBotEnabled = useFeature(FeatureItem.SupportAgentBot);
   const [ref, setRef] = React.useState<HTMLDivElement | null>(null);
   const Component = as || "div";
 
   const { className, ...rest } = props || ({} as React.ComponentPropsWithoutRef<"div">);
   return (
     <ScrollParentContext.Provider value={ref}>
-      <Component className={classnames(className, styles.container)} {...rest} ref={setRef}>
+      <Component
+        className={classnames(className, styles.container, {
+          [styles.supportAgentBotPadding]: supportAgentBotEnabled,
+        })}
+        {...rest}
+        ref={setRef}
+      >
         {children}
       </Component>
     </ScrollParentContext.Provider>

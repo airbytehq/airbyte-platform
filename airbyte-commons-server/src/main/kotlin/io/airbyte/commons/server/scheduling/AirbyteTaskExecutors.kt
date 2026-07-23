@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.scheduling
@@ -25,5 +25,7 @@ interface AirbyteTaskExecutors : TaskExecutors {
     const val PUBLIC_API = "public-api"
     const val WEBHOOK = "webhook"
     const val WORKLOAD = "workload"
+    const val DSR_DELETION = "dsr-deletion"
+    const val DSR_DELETION_HEARTBEAT = "dsr-deletion-heartbeat"
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.micronaut.runtime
@@ -20,6 +20,9 @@ internal class AirbyteConfigDefaultTest {
   fun testLoadingValuesFromConfig() {
     assertEquals(false, airbyteConfig.acceptanceTestEnabled)
     assertEquals("", airbyteConfig.airbyteUrl)
+    assertEquals("", airbyteConfig.airbyteAgentsUrl)
+    assertEquals(emptyList<String>(), airbyteConfig.airbyteAgentsValidRedirectUris)
+    assertEquals(emptyList<String>(), airbyteConfig.airbyteAgentsWebOrigins)
     assertEquals(DEFAULT_AIRBYTE_DEPLOYMENT_ENVIRONMENT, airbyteConfig.deploymentEnvironment)
     assertEquals("", airbyteConfig.licenseKey)
     assertEquals(Configs.AirbyteEdition.COMMUNITY, airbyteConfig.edition)
@@ -39,6 +42,9 @@ internal class AirbyteConfigTest {
   fun testLoadingValuesFromConfig() {
     assertEquals(true, airbyteConfig.acceptanceTestEnabled)
     assertEquals("http://some-url", airbyteConfig.airbyteUrl)
+    assertEquals("http://some-agents-url", airbyteConfig.airbyteAgentsUrl)
+    assertEquals(listOf("http://some-agents-url/*", "http://some-other-agents-url/*"), airbyteConfig.airbyteAgentsValidRedirectUris)
+    assertEquals(listOf("http://some-agents-url", "http://some-other-agents-url"), airbyteConfig.airbyteAgentsWebOrigins)
     assertEquals("test", airbyteConfig.deploymentEnvironment)
     assertEquals("test-license-key", airbyteConfig.licenseKey)
     assertEquals(Configs.AirbyteEdition.ENTERPRISE, airbyteConfig.edition)

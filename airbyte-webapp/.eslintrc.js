@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const path = require("node:path");
 
-const legacyFiles = require("./.eslintLegacyFolderStructure.js");
-
 const confusingBrowserGlobals = [
   "addEventListener",
   "blur",
@@ -104,6 +102,9 @@ module.exports = {
     react: {
       version: "detect",
     },
+    "css-modules": {
+      basePath: path.resolve(__dirname, "src"),
+    },
   },
   rules: {
     "jsx-a11y/label-has-associated-control": [
@@ -113,7 +114,7 @@ module.exports = {
       },
     ],
     curly: "warn",
-    "css-modules/no-undef-class": "off",
+    "css-modules/no-undef-class": ["error", { camelCase: true }],
     "css-modules/no-unused-class": ["error", { camelCase: true }],
     "dot-location": ["warn", "property"],
     "dot-notation": "warn",
@@ -147,7 +148,7 @@ module.exports = {
             group: "internal",
           },
           {
-            pattern: "+(area|core|hooks|locales|packages|pages|services|types|views){/**,}",
+            pattern: "+(area|cloud|core|locales|pages|types){/**,}",
             group: "internal",
             position: "after",
           },
@@ -433,29 +434,6 @@ module.exports = {
       },
     },
     {
-      // Prevent new files being created in the legacy folder structure.
-      // This makes sure to forbid any new files in the legacy folders
-      // we want to get rid of in favor of the new folder structure outlined
-      // in the README.md.
-      files: ["src/**/*"],
-      // Only exclude the files that already existed and haven't been moved
-      // to the new folder structure yet
-      excludedFiles: legacyFiles,
-      rules: {
-        "check-file/filename-blocklist": [
-          "error",
-          {
-            // Services should be in either src/core/services or src/area/*/services
-            "src/services/**/*": "src/core/services/**/*",
-            // Hooks (not belonging to any service) should just be in src/core/utils or src/area/*/utils
-            "src/hooks/**/*": "src/core/utils/*",
-            // Components should be in either ui/ (basic UI components) or src/area/*/components/*
-            "src/views/**/*": "src/area/*/components/*",
-          },
-        ],
-      },
-    },
-    {
       // Only applies to files in src. Rules should be in here that are requiring type information
       // and thus require the below parserOptions.
       files: ["src/**/*"],
@@ -475,21 +453,6 @@ module.exports = {
       extends: ["plugin:jest/recommended"],
       rules: {
         "jest/consistent-test-it": ["warn", { fn: "it", withinDescribe: "it" }],
-        "no-only-tests/no-only-tests": "error",
-      },
-    },
-    {
-      // Only for cypress files
-      files: ["cypress/**"],
-      env: {
-        browser: true,
-        node: true,
-      },
-      extends: ["plugin:cypress/recommended"],
-      rules: {
-        "cypress/no-unnecessary-waiting": "warn",
-        "no-template-curly-in-string": "off",
-        "@typescript-eslint/no-unused-expressions": "off",
         "no-only-tests/no-only-tests": "error",
       },
     },

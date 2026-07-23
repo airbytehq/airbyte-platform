@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
@@ -7,6 +7,8 @@ package io.airbyte.commons.server.handlers
 import com.amazonaws.util.json.Jackson
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ArrayNode
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.model.generated.ActorType
@@ -17,9 +19,12 @@ import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest
 import io.airbyte.api.model.generated.DestinationOauthConsentRequest
 import io.airbyte.api.model.generated.OAuthConsentRead
+import io.airbyte.api.model.generated.OAuthScopeItem
 import io.airbyte.api.model.generated.RevokeSourceOauthTokensRequest
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody
+import io.airbyte.api.model.generated.SourceOAuthScopesRead
+import io.airbyte.api.model.generated.SourceOAuthScopesRequest
 import io.airbyte.api.model.generated.SourceOauthConsentRequest
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.AirbyteSecretConstants
@@ -57,17 +62,22 @@ import io.airbyte.featureflag.FieldSelectionWorkspaces.ConnectorOAuthConsentDisa
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.Workspace
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DEFINITION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DEFINITION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToRootSpan
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.oauth.MoreOAuthParameters.flattenOAuthConfig
 import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier.Companion.hasOAuthConfigSpecification
 import io.airbyte.persistence.job.tracker.TrackingMetadata.generateDestinationDefinitionMetadata
 import io.airbyte.persistence.job.tracker.TrackingMetadata.generateSourceDefinitionMetadata
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
@@ -93,6 +103,7 @@ open class OAuthHandler(
   private val secretReferenceService: SecretReferenceService,
   private val workspaceService: WorkspaceService,
   private val secretStorageService: SecretStorageService,
+  private val metricClient: MetricClient,
 ) {
   fun getSourceOAuthConsent(sourceOauthConsentRequest: SourceOauthConsentRequest): OAuthConsentRead {
     val traceTags =
@@ -139,6 +150,12 @@ open class OAuthHandler(
     if (hasOAuthConfigSpecification(spec)) {
       val oauthConfigSpecification = spec.advancedAuth.oauthConfigSpecification
       updateOauthConfigToAcceptAdditionalUserInputProperties(oauthConfigSpecification)
+      val effectiveOauthConfigSpec =
+        applyRequestedScopes(
+          oauthConfigSpecification,
+          sourceOauthConsentRequest.requestedScopes,
+          sourceOauthConsentRequest.requestedOptionalScopes,
+        )
 
       val oAuthInputConfigurationForConsent: JsonNode
 
@@ -176,7 +193,7 @@ open class OAuthHandler(
             sourceOauthConsentRequest.sourceDefinitionId,
             sourceOauthConsentRequest.redirectUrl,
             oAuthInputConfigValues,
-            oauthConfigSpecification,
+            effectiveOauthConfigSpec,
             oAuthInputConfigValues,
           ),
         )
@@ -198,6 +215,13 @@ open class OAuthHandler(
     } catch (e: Exception) {
       log.error(e) { ERROR_MESSAGE }
     }
+    metricClient.count(
+      OssMetricsRegistry.OAUTH_CONSENT_URL_REQUEST,
+      1L,
+      MetricAttribute(MetricTags.CONNECTOR_TYPE, "source"),
+      MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, sourceOauthConsentRequest.sourceDefinitionId.toString()),
+      MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+    )
     return result
   }
 
@@ -307,12 +331,25 @@ open class OAuthHandler(
     } catch (e: Exception) {
       log.error(e) { ERROR_MESSAGE }
     }
+    metricClient.count(
+      OssMetricsRegistry.OAUTH_CONSENT_URL_REQUEST,
+      1L,
+      MetricAttribute(MetricTags.CONNECTOR_TYPE, "destination"),
+      MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, destinationOauthConsentRequest.destinationDefinitionId.toString()),
+      MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+    )
     return result
   }
 
+  /**
+   * Completes a source OAuth flow and, when [CompleteSourceOauthRequest.returnSecretCoordinate] is
+   * set, persists the response as a secret and returns a `secretId`. A failed/denied completion is
+   * not persisted; the failure response is returned unchanged so callers can surface the error.
+   */
   fun completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest: CompleteSourceOauthRequest): CompleteOAuthResponse? {
     val completeOAuthResponse = completeSourceOAuth(completeSourceOauthRequest)
-    return if (completeSourceOauthRequest.returnSecretCoordinate) {
+    // A denied flow (request_succeeded=false) carries no credentials, so don't mint a secretId for it.
+    return if (completeSourceOauthRequest.returnSecretCoordinate && completeOAuthResponse.requestSucceeded != false) {
       writeOAuthResponseSecret(completeSourceOauthRequest.workspaceId, completeOAuthResponse)
     } else {
       completeOAuthResponse
@@ -354,6 +391,12 @@ open class OAuthHandler(
     if (hasOAuthConfigSpecification(spec)) {
       val oauthConfigSpecification = spec.advancedAuth.oauthConfigSpecification
       updateOauthConfigToAcceptAdditionalUserInputProperties(oauthConfigSpecification)
+      val effectiveOauthConfigSpec =
+        applyRequestedScopes(
+          oauthConfigSpecification,
+          completeSourceOauthRequest.requestedScopes,
+          completeSourceOauthRequest.requestedOptionalScopes,
+        )
 
       val oAuthInputConfigurationForConsent: JsonNode
 
@@ -391,7 +434,7 @@ open class OAuthHandler(
           completeSourceOauthRequest.queryParams,
           completeSourceOauthRequest.redirectUrl,
           oAuthInputConfigValues,
-          oauthConfigSpecification,
+          effectiveOauthConfigSpec,
           oAuthInputConfigValues,
         )
     } else {
@@ -410,6 +453,13 @@ open class OAuthHandler(
     } catch (e: Exception) {
       log.error(e) { ERROR_MESSAGE }
     }
+    metricClient.count(
+      OssMetricsRegistry.OAUTH_COMPLETE_REQUEST,
+      1L,
+      MetricAttribute(MetricTags.CONNECTOR_TYPE, "source"),
+      MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, completeSourceOauthRequest.sourceDefinitionId.toString()),
+      MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+    )
     return mapToCompleteOAuthResponse(result)
   }
 
@@ -503,10 +553,25 @@ open class OAuthHandler(
     } catch (e: Exception) {
       log.error(e) { ERROR_MESSAGE }
     }
+    metricClient.count(
+      OssMetricsRegistry.OAUTH_COMPLETE_REQUEST,
+      1L,
+      MetricAttribute(MetricTags.CONNECTOR_TYPE, "destination"),
+      MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, completeDestinationOAuthRequest.destinationDefinitionId.toString()),
+      MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+    )
     return mapToCompleteOAuthResponse(result)
   }
 
   fun revokeSourceOauthTokens(revokeSourceOauthTokensRequest: RevokeSourceOauthTokensRequest) {
+    val traceTags =
+      mapOf<String?, Any?>(
+        WORKSPACE_ID_KEY to revokeSourceOauthTokensRequest.workspaceId,
+        SOURCE_DEFINITION_ID_KEY to revokeSourceOauthTokensRequest.sourceDefinitionId,
+      )
+    addTagsToTrace(traceTags)
+    addTagsToRootSpan(traceTags)
+
     val sourceDefinition =
       sourceService.getStandardSourceDefinition(revokeSourceOauthTokensRequest.sourceDefinitionId)
     val workspaceId = revokeSourceOauthTokensRequest.workspaceId
@@ -541,6 +606,75 @@ open class OAuthHandler(
       hydratedSourceConfig,
       sourceOAuthParamConfig,
     )
+    try {
+      trackingClient.track(
+        revokeSourceOauthTokensRequest.workspaceId,
+        ScopeType.WORKSPACE,
+        "Revoke OAuth Token - Backend",
+        generateSourceDefinitionMetadata(sourceDefinition, sourceVersion),
+      )
+    } catch (e: Exception) {
+      log.error(e) { ERROR_MESSAGE }
+    }
+    metricClient.count(
+      OssMetricsRegistry.OAUTH_REVOKE_TOKEN_REQUEST,
+      1L,
+      MetricAttribute(MetricTags.CONNECTOR_TYPE, "source"),
+      MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, revokeSourceOauthTokensRequest.sourceDefinitionId.toString()),
+      MetricAttribute(MetricTags.STATUS, MetricTags.SUCCESS),
+    )
+  }
+
+  fun getSourceOAuthScopes(request: SourceOAuthScopesRequest): SourceOAuthScopesRead {
+    val sourceDefinition = sourceService.getStandardSourceDefinition(request.sourceDefinitionId)
+    val sourceVersion =
+      actorDefinitionVersionHelper.getSourceVersion(
+        sourceDefinition,
+        request.workspaceId,
+        null,
+      )
+    val spec = sourceVersion.spec
+
+    if (!hasOAuthConfigSpecification(spec)) {
+      throw ConfigNotFoundException(
+        ConfigNotFoundType.SOURCE_OAUTH_PARAM,
+        "Source definition ${request.sourceDefinitionId} has no OAuth configuration.",
+      )
+    }
+
+    val oauthInputSpec = spec.advancedAuth.oauthConfigSpecification.oauthConnectorInputSpecification
+    val specNode = if (oauthInputSpec.has("properties")) oauthInputSpec["properties"] else oauthInputSpec
+
+    val scopesList = extractScopesList(specNode, "scopes")
+    if (scopesList.isEmpty()) {
+      throw ConfigNotFoundException(
+        ConfigNotFoundType.SOURCE_OAUTH_PARAM,
+        "Source definition ${request.sourceDefinitionId} has OAuth configuration but no structured scopes array.",
+      )
+    }
+
+    val optionalScopesList = extractScopesList(specNode, "optional_scopes")
+    val joinStrategyText = specNode.path("scopes_join_strategy").asText("space")
+    val joinStrategy = SourceOAuthScopesRead.ScopeJoinStrategyEnum.fromValue(joinStrategyText)
+
+    return SourceOAuthScopesRead().apply {
+      scopes = scopesList
+      optionalScopes = optionalScopesList
+      scopeJoinStrategy = joinStrategy
+    }
+  }
+
+  private fun extractScopesList(
+    specNode: JsonNode,
+    fieldName: String,
+  ): List<OAuthScopeItem> {
+    val node = specNode.path(fieldName)
+    if (!node.isArray || node.isEmpty) return emptyList()
+    return node
+      .mapNotNull { item ->
+        val text = item.path("scope").asText("")
+        if (text.isNotEmpty()) OAuthScopeItem().scope(text) else null
+      }
   }
 
   fun setSourceInstancewideOauthParams(requestBody: SetInstancewideSourceOauthParamsRequestBody) {
@@ -709,6 +843,56 @@ open class OAuthHandler(
       ActorTypeEnum.SOURCE -> setSourceOrganizationOverrideOauthParams(organizationId, actorDefinitionId, params)
       ActorTypeEnum.DESTINATION -> setDestinationOrganizationOverrideOauthParams(organizationId, actorDefinitionId, params)
     }
+  }
+
+  fun deleteOrganizationOverrideOAuthParams(
+    organizationId: OrganizationId,
+    actorDefinitionId: ActorDefinitionId,
+    actorType: ActorTypeEnum,
+  ) {
+    when (actorType) {
+      ActorTypeEnum.SOURCE -> deleteSourceOrganizationOverrideOauthParams(organizationId, actorDefinitionId)
+      ActorTypeEnum.DESTINATION -> deleteDestinationOrganizationOverrideOauthParams(organizationId, actorDefinitionId)
+    }
+  }
+
+  fun deleteSourceOrganizationOverrideOauthParams(
+    organizationId: OrganizationId,
+    actorDefinitionId: ActorDefinitionId,
+  ) {
+    oAuthService.deleteSourceOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value)
+  }
+
+  fun deleteDestinationOrganizationOverrideOauthParams(
+    organizationId: OrganizationId,
+    actorDefinitionId: ActorDefinitionId,
+  ) {
+    oAuthService.deleteDestinationOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value)
+  }
+
+  fun deleteWorkspaceOverrideOAuthParams(
+    workspaceId: UUID,
+    actorDefinitionId: ActorDefinitionId,
+    actorType: ActorTypeEnum,
+  ) {
+    when (actorType) {
+      ActorTypeEnum.SOURCE -> deleteSourceWorkspaceOverrideOauthParams(workspaceId, actorDefinitionId)
+      ActorTypeEnum.DESTINATION -> deleteDestinationWorkspaceOverrideOauthParams(workspaceId, actorDefinitionId)
+    }
+  }
+
+  fun deleteSourceWorkspaceOverrideOauthParams(
+    workspaceId: UUID,
+    actorDefinitionId: ActorDefinitionId,
+  ) {
+    oAuthService.deleteSourceOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value)
+  }
+
+  fun deleteDestinationWorkspaceOverrideOauthParams(
+    workspaceId: UUID,
+    actorDefinitionId: ActorDefinitionId,
+  ) {
+    oAuthService.deleteDestinationOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value)
   }
 
   fun setSourceOrganizationOverrideOauthParams(
@@ -1009,6 +1193,83 @@ open class OAuthHandler(
       )
     val hydratedConfig = secretReferenceService.getHydratedConfiguration(configWithSecretRefs, WorkspaceId(workspaceId))
     return flattenOAuthConfig(hydratedConfig)
+  }
+
+  /**
+   * Overrides connector-default scopes with caller-requested scopes.
+   * requestedOptionalScopes is only applied when requestedScopes is provided.
+   *
+   * Note: optional_scopes is a non-standard extension (not part of RFC 6749) used by
+   * providers like HubSpot that accept a separate optional_scope consent URL parameter.
+   * Most connectors only use scopes.
+   *
+   * TODO: Consider supporting requestedOptionalScopes without requestedScopes if a use case
+   * arises where callers want to narrow optional scopes while keeping default required ones.
+   */
+  @InternalForTesting
+  fun applyRequestedScopes(
+    oauthConfigSpecification: OAuthConfigSpecification,
+    requestedScopes: List<String>?,
+    requestedOptionalScopes: List<String>? = null,
+  ): OAuthConfigSpecification {
+    if (requestedScopes.isNullOrEmpty()) return oauthConfigSpecification
+
+    log.info {
+      "Overriding OAuth scopes: requestedScopes=$requestedScopes" +
+        if (!requestedOptionalScopes.isNullOrEmpty()) ", requestedOptionalScopes=$requestedOptionalScopes" else ""
+    }
+
+    val inputSpec =
+      oauthConfigSpecification.oauthConnectorInputSpecification
+        ?: throw IllegalStateException("requestedScopes provided but connector has no oauthConnectorInputSpecification")
+    val specNode = if (inputSpec.has("properties")) inputSpec["properties"] else inputSpec
+
+    // Require the connector to define scopes as an array (not a legacy scope string)
+    val scopesNode = specNode.path("scopes")
+    if (!scopesNode.isArray || scopesNode.isEmpty) {
+      throw IllegalArgumentException(
+        "The connector specification does not support requesting specific OAuth scopes.",
+      )
+    }
+
+    // Deep copy to avoid mutating cached spec
+    val specCopy = Jsons.clone(oauthConfigSpecification)
+    val specNodeCopy =
+      (
+        if (specCopy.oauthConnectorInputSpecification.has("properties")) {
+          specCopy.oauthConnectorInputSpecification["properties"]
+        } else {
+          specCopy.oauthConnectorInputSpecification
+        }
+      ) as ObjectNode
+
+    // Override scopes
+    specNodeCopy.set<JsonNode>("scopes", buildScopesArray(requestedScopes))
+
+    // Override optional_scopes only if provided — but validate the connector supports it
+    if (!requestedOptionalScopes.isNullOrEmpty()) {
+      val optionalScopesNode = specNode.path("optional_scopes")
+      if (!optionalScopesNode.isArray || optionalScopesNode.isEmpty) {
+        throw IllegalArgumentException(
+          "requestedOptionalScopes was provided but the connector specification " +
+            "does not define optional_scopes. This field is only supported for connectors " +
+            "that use the optional_scopes array (e.g. HubSpot).",
+        )
+      }
+      specNodeCopy.set<JsonNode>("optional_scopes", buildScopesArray(requestedOptionalScopes))
+    }
+
+    return specCopy
+  }
+
+  private fun buildScopesArray(scopes: List<String>): ArrayNode {
+    val scopesArray = Jsons.arrayNode()
+    for (scope in scopes) {
+      val item = JsonNodeFactory.instance.objectNode()
+      item.put("scope", scope)
+      scopesArray.add(item)
+    }
+    return scopesArray
   }
 
   companion object {

@@ -1,0 +1,96 @@
+/* eslint sort-keys: "error" */
+/**
+ * Experiments are short-term flags for A/B testing or staged rollouts of features.
+ *
+ * When adding a new feature flag in LaunchDarkly to consume in code you'll need to make
+ * sure to update the typing here.
+ */
+
+export interface Experiments {
+  allowAgentsDataReplicationAccess: boolean;
+  asyncSchemaDiscovery: boolean;
+  "billing.early-sync-enabled": boolean;
+  "billing.selfServePlusPlan": boolean;
+  "connection.allowToSupportAllSyncModes": boolean;
+  "connection.columnSelection": boolean;
+  "connection.onboarding.destinations": string;
+  "connection.onboarding.sources": string;
+  "connection.rateLimitedUI": boolean;
+  "connection.unifiedChangesReview": boolean;
+  "connector.agentAssistedSetup": boolean;
+  "connector.airbyteCloudIpAddressesByDataplane": Record<string, string[]>;
+  "connector.allowSavingWithoutTesting": boolean;
+  "connector.suggestedSourceConnectors": string;
+  "connector.suggestedDestinationConnectors": string;
+  "connector.unifiedConnectorView": boolean;
+  "connectorBuilder.aiAssist.enabled": boolean;
+  "connectorBuilder.customComponents": boolean;
+  "connectorBuilder.contributeEditsToMarketplace": boolean;
+  "connectorBuilder.declarativeOauth": boolean;
+  "connectorBuilder.dynamicStreams": boolean;
+  "connectorBuilder.generateConnectorFromParams": boolean;
+  "onboarding.surveyEnabled": boolean;
+  "organization.workerUsagePage": boolean;
+  "platform.llm-sync-job-failure-explanation": boolean;
+  "platform.use-runtime-secret-persistence": boolean;
+  "platform.use-verified-domains-for-sso-activate": boolean;
+  "platform.workspace-dw-usage": boolean;
+  productLimitsUI: boolean;
+  "settings.breakingChangeNotifications": boolean;
+  "settings.domainVerification": boolean;
+  "settings.downloadDiagnostics": boolean;
+  "settings.showAdvancedSettings": boolean;
+  "settings.ssoConfigValidation": boolean;
+}
+
+export const defaultExperimentValues: Experiments = {
+  allowAgentsDataReplicationAccess: false,
+  asyncSchemaDiscovery: true,
+  "billing.early-sync-enabled": false,
+  "billing.selfServePlusPlan": false,
+  "connection.allowToSupportAllSyncModes": false,
+  "connection.columnSelection": true,
+  "connection.onboarding.destinations": "",
+  "connection.onboarding.sources": "",
+  "connection.rateLimitedUI": false,
+  "connection.unifiedChangesReview": false,
+  "connector.agentAssistedSetup": false,
+  "connector.airbyteCloudIpAddressesByDataplane": {
+    auto: [
+      "34.106.109.131",
+      "34.106.196.165",
+      "34.106.60.246",
+      "34.106.229.69",
+      "34.106.127.139",
+      "34.106.218.58",
+      "34.106.115.240",
+      "34.106.225.141",
+      "13.37.4.46",
+      "13.37.142.60",
+      "35.181.124.238",
+      "34.33.7.0/29",
+    ],
+  },
+  "connector.allowSavingWithoutTesting": false,
+  "connector.suggestedDestinationConnectors": "",
+  "connector.suggestedSourceConnectors": "",
+  "connector.unifiedConnectorView": false,
+  "connectorBuilder.aiAssist.enabled": false,
+  "connectorBuilder.contributeEditsToMarketplace": true,
+  "connectorBuilder.customComponents": false,
+  "connectorBuilder.declarativeOauth": true,
+  "connectorBuilder.dynamicStreams": false,
+  "connectorBuilder.generateConnectorFromParams": false,
+  "onboarding.surveyEnabled": false,
+  "organization.workerUsagePage": false,
+  "platform.llm-sync-job-failure-explanation": false,
+  "platform.use-runtime-secret-persistence": false,
+  "platform.use-verified-domains-for-sso-activate": false,
+  "platform.workspace-dw-usage": false,
+  productLimitsUI: false,
+  "settings.breakingChangeNotifications": false,
+  "settings.domainVerification": false,
+  "settings.downloadDiagnostics": false,
+  "settings.showAdvancedSettings": false,
+  "settings.ssoConfigValidation": false,
+};

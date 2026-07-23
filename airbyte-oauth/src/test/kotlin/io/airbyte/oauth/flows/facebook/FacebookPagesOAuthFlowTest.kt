@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.flows.facebook
@@ -17,7 +17,7 @@ class FacebookPagesOAuthFlowTest : BaseOAuthFlowTest() {
 
   @Suppress("ktlint:standard:max-line-length")
   override val expectedConsentUrl: String
-    get() = "https://www.facebook.com/v23.0/dialog/oauth?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=pages_manage_ads%2Cpages_manage_metadata%2Cpages_read_engagement%2Cpages_read_user_content"
+    get() = "https://www.facebook.com/v23.0/dialog/oauth?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=pages_manage_ads%2Cpages_manage_metadata%2Cpages_read_engagement%2Cpages_read_user_content%2Cread_insights%2Ccatalog_management"
 
   override val expectedOutputPath: List<String>
     get() = listOf()

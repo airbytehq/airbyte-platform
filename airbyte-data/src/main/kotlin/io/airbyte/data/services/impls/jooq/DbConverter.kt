@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq
@@ -196,6 +196,7 @@ object DbConverter {
           .literal
           .toEnum<StandardSync.BackfillPreference>()!!,
       ).withTags(tags)
+      .withOnDemandEnabled(record.get(Tables.CONNECTION.ON_DEMAND_ENABLED) ?: false)
   }
 
   private fun parseConfiguredAirbyteCatalog(configuredAirbyteCatalogString: String): ConfiguredAirbyteCatalog =

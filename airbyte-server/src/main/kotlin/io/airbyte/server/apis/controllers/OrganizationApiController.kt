@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.controllers
@@ -9,6 +9,7 @@ import io.airbyte.api.model.generated.DataWorkerUsage
 import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
 import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
+import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationDataWorkerUsageRead
 import io.airbyte.api.model.generated.OrganizationDataWorkerUsageRequestBody
@@ -29,6 +30,8 @@ import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.services.dataworker.DataWorkerCapacityService
 import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.server.apis.execute
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
@@ -45,13 +48,19 @@ open class OrganizationApiController(
   val organizationsHandler: OrganizationsHandler,
   val organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper,
   val dataWorkerUsageService: DataWorkerUsageService,
+  val dataWorkerCapacityService: DataWorkerCapacityService,
 ) : OrganizationApi {
   @Post("/get")
-  @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganization(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
-  ): OrganizationRead? = execute { organizationsHandler.getOrganization(organizationIdRequestBody) }
+  ): OrganizationRead? =
+    execute {
+      organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationIdRequestBody.organizationId)
+
+      organizationsHandler.getOrganization(organizationIdRequestBody)
+    }
 
   @Post("/update")
   @Secured(AuthRoleConstants.ORGANIZATION_EDITOR)
@@ -59,6 +68,13 @@ open class OrganizationApiController(
   override fun updateOrganization(
     @Body organizationUpdateRequestBody: OrganizationUpdateRequestBody,
   ): OrganizationRead? = execute { organizationsHandler.updateOrganization(organizationUpdateRequestBody) }
+
+  @Post("/agentic_status")
+  @Secured(AuthRoleConstants.ADMIN)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  override fun setOrganizationAgenticStatus(
+    @Body organizationAgenticStatusUpdateRequestBody: OrganizationAgenticStatusUpdateRequestBody,
+  ): OrganizationRead? = execute { organizationsHandler.setOrganizationAgenticStatus(organizationAgenticStatusUpdateRequestBody) }
 
   @Post("/create")
   @Secured(AuthRoleConstants.ADMIN) // instance admin only
@@ -125,8 +141,14 @@ open class OrganizationApiController(
           organizationDataWorkerUsageRequestBody.endDate,
         )
 
+      val committedDataWorkers =
+        dataWorkerCapacityService.getCommittedDataWorkersOrNull(
+          OrganizationId(organizationDataWorkerUsageRequestBody.organizationId),
+        )
+
       OrganizationDataWorkerUsageRead()
         .organizationId(organizationDataWorkerUsageRequestBody.organizationId)
+        .committedDataWorkers(committedDataWorkers)
         .regions(
           dataWorkerUsage.dataplaneGroups.map { usageByDataplaneGroup ->
             RegionDataWorkerUsage()

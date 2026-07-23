@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification
@@ -19,6 +19,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.config.SlackNotificationConfiguration
 import io.airbyte.notification.SlackNotificationClient.Companion.buildSummary
+import io.airbyte.notification.SlackNotificationClient.Companion.sanitizePayloadForWebhook
 import io.airbyte.notification.messages.ConnectionInfo
 import io.airbyte.notification.messages.DestinationInfo
 import io.airbyte.notification.messages.SchemaUpdateNotification
@@ -158,6 +159,112 @@ internal class SlackNotificationClientTest {
     val client =
       SlackNotificationClient(SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.address.port + TEST_PATH))
     Assertions.assertTrue(client.notifyJobSuccess(summary, ""))
+  }
+
+  @Test
+  fun testNotifyJobQueued() {
+    server.createContext(TEST_PATH, ServerHandler(EXPECTED_QUEUED_MESSAGE))
+    val summary =
+      SyncSummary(
+        WorkspaceInfo(null, null, null),
+        ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        false,
+        null,
+        null,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        null,
+        null,
+        null,
+      )
+    val client =
+      SlackNotificationClient(SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.address.port + TEST_PATH))
+    Assertions.assertTrue(client.notifyJobQueued(summary, ""))
+  }
+
+  @Test
+  fun testNotifyJobQueuedToGenericWebhookOmitsCompletionSections() {
+    server.createContext(TEST_PATH, QueuedRichPayloadHandler(EXPECTED_QUEUED_MESSAGE))
+    val summary =
+      SyncSummary(
+        WorkspaceInfo(null, null, null),
+        ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        false,
+        null,
+        null,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        null,
+        null,
+        null,
+      )
+    val client =
+      SlackNotificationClient(SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.address.port + TEST_PATH))
+    Assertions.assertTrue(client.notifyJobQueued(summary, ""))
+  }
+
+  @Test
+  fun testNotifyJobSuccessToGenericWebhookPreservesRichPayload() {
+    server.createContext(TEST_PATH, RichPayloadHandler(EXPECTED_SUCCESS_MESSAGE))
+    val summary =
+      SyncSummary(
+        WorkspaceInfo(null, null, null),
+        ConnectionInfo(UUID.randomUUID(), CONNECTION_NAME, LOG_URL),
+        SourceInfo(UUID.randomUUID(), SOURCE_TEST, "http://source"),
+        DestinationInfo(UUID.randomUUID(), DESTINATION_TEST, "http://destination"),
+        JOB_ID,
+        false,
+        null,
+        null,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        JOB_DESCRIPTION,
+        null,
+        null,
+      )
+    val client =
+      SlackNotificationClient(SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.address.port + TEST_PATH))
+    Assertions.assertTrue(client.notifyJobSuccess(summary, ""))
+  }
+
+  @Test
+  fun testSanitizePayloadForGoogleChatWebhookUsesTextOnlyPayload() {
+    val payload = Jsons.deserialize("""{"text":"hello","blocks":[{"type":"section"}],"data":{"jobId":1}}""")
+
+    val sanitized = sanitizePayloadForWebhook(payload, "https://chat.googleapis.com/v1/spaces/test/messages?key=abc&token=def")
+
+    Assertions.assertEquals("hello", sanitized["text"].asText())
+    Assertions.assertFalse(sanitized.has("blocks"))
+    Assertions.assertFalse(sanitized.has("data"))
+  }
+
+  @Test
+  fun testSanitizePayloadForGenericWebhookPreservesRichPayload() {
+    val payload = Jsons.deserialize("""{"text":"hello","blocks":[{"type":"section"}],"data":{"jobId":1}}""")
+
+    val sanitized = sanitizePayloadForWebhook(payload, "https://example.com/webhooks/custom")
+
+    Assertions.assertEquals("hello", sanitized["text"].asText())
+    Assertions.assertTrue(sanitized.has("blocks"))
+    Assertions.assertTrue(sanitized.has("data"))
   }
 
   @Test
@@ -611,6 +718,105 @@ internal class SlackNotificationClientTest {
     }
   }
 
+  internal class RichPayloadHandler(
+    private val expectedMessage: String,
+  ) : HttpHandler {
+    override fun handle(t: HttpExchange) {
+      val body = String(t.requestBody.readAllBytes())
+      log.info { "Received: '$body'" }
+      val message =
+        try {
+          Jsons.deserialize(body)
+        } catch (e: RuntimeException) {
+          log.error(e) { "Failed to parse JSON from body $body" }
+          null
+        }
+
+      val response: String
+      if (message == null || !message.has("text")) {
+        response = "No notification message or message missing `text` node"
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else if (message["text"].asText() != expectedMessage) {
+        response = String.format("Wrong notification message: %s", message["text"].asText())
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else if (!message.has("blocks")) {
+        response = "Expected webhook payload to preserve `blocks`"
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else if (!message.has("data")) {
+        response = "Expected webhook payload to preserve `data`"
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else {
+        response = "Notification acknowledged!"
+        t.sendResponseHeaders(200, response.length.toLong())
+      }
+
+      val os = t.responseBody
+      os.write(response.toByteArray(StandardCharsets.UTF_8))
+      os.close()
+    }
+  }
+
+  internal class QueuedRichPayloadHandler(
+    private val expectedMessage: String,
+  ) : HttpHandler {
+    override fun handle(t: HttpExchange) {
+      val body = String(t.requestBody.readAllBytes())
+      log.info { "Received: '$body'" }
+      val message =
+        try {
+          Jsons.deserialize(body)
+        } catch (e: RuntimeException) {
+          log.error(e) { "Failed to parse JSON from body $body" }
+          null
+        }
+
+      val response: String
+      if (message == null || !message.has("text")) {
+        response = "No notification message or message missing `text` node"
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else if (message["text"].asText() != expectedMessage) {
+        response = String.format("Wrong notification message: %s", message["text"].asText())
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else if (!message.has("blocks")) {
+        response = "Expected queued webhook payload to preserve `blocks`"
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else if (!message.has("data")) {
+        response = "Expected queued webhook payload to preserve `data`"
+        t.sendResponseHeaders(500, response.length.toLong())
+      } else {
+        val blockTexts =
+          message["blocks"]
+            .flatMap { block ->
+              val values = mutableListOf<String>()
+              block["text"]?.get("text")?.asText()?.let(values::add)
+              block["fields"]?.forEach { field -> field["text"]?.asText()?.let(values::add) }
+              values
+            }
+
+        if (blockTexts.any { it.contains("*Sync Summary:*") }) {
+          response = "Queued webhook payload should not include sync summary"
+          t.sendResponseHeaders(500, response.length.toLong())
+        } else if (blockTexts.any { it.contains("*Duration:*") }) {
+          response = "Queued webhook payload should not include duration"
+          t.sendResponseHeaders(500, response.length.toLong())
+        } else if (blockTexts.any { it.contains("*Failure reason:*") }) {
+          response = "Queued webhook payload should not include failure reason"
+          t.sendResponseHeaders(500, response.length.toLong())
+        } else if (blockTexts.none { it.contains("*Job ID:* $JOB_ID") }) {
+          response = "Queued webhook payload should include job id"
+          t.sendResponseHeaders(500, response.length.toLong())
+        } else {
+          response = "Notification acknowledged!"
+          t.sendResponseHeaders(200, response.length.toLong())
+        }
+      }
+
+      val os = t.responseBody
+      os.write(response.toByteArray(StandardCharsets.UTF_8))
+      os.close()
+    }
+  }
+
   companion object {
     private val log = KotlinLogging.logger {}
     private val WORKSPACE_ID: UUID = UUID.randomUUID()
@@ -641,6 +847,14 @@ internal class SlackNotificationClientTest {
         "You can access its logs here: logUrl\n" +
         "\n" +
         "Job ID: 1"
+    )
+    private const val EXPECTED_QUEUED_MESSAGE = (
+      "Your sync for connection 'connectionName' is queued and waiting for Data Worker capacity.\n" +
+        "\n" +
+        "Source: source-test\n" +
+        "Destination: destination-test\n" +
+        "Connection URL: logUrl\n" +
+        "Job ID: 1\n"
     )
   }
 }

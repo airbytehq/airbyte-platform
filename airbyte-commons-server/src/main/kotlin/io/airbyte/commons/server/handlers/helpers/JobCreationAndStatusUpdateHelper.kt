@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers
@@ -20,6 +20,7 @@ import io.airbyte.config.Metadata
 import io.airbyte.config.ReleaseStage
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -54,6 +55,7 @@ class JobCreationAndStatusUpdateHelper(
   private val jobTracker: JobTracker,
   private val connectionTimelineEventHelper: ConnectionTimelineEventHelper,
   private val metricClient: MetricClient,
+  private val dataWorkerUsageService: DataWorkerUsageService,
 ) {
   fun findPreviousJob(
     jobs: List<Job>,
@@ -108,6 +110,11 @@ class JobCreationAndStatusUpdateHelper(
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.attemptNumber))
       }
       val failedJob = jobPersistence.getJob(jobId)
+      try {
+        dataWorkerUsageService.releaseReservedUsageForJob(jobId)
+      } catch (e: Exception) {
+        log.error(e) { "Failed to release reserved usage for job $jobId during non-terminal cleanup" }
+      }
       jobNotifier.failJob(failedJob, attemptStats)
       // log failure events in connection timeline
       connectionTimelineEventHelper.logJobFailureEventInConnectionTimeline(failedJob, connectionId, attemptStats)
@@ -530,6 +537,22 @@ class JobCreationAndStatusUpdateHelper(
   fun reportJobStart(jobId: Long) {
     val job = jobPersistence.getJob(jobId)
     jobTracker.trackSync(job, JobTracker.JobState.STARTED)
+  }
+
+  /**
+   * Set a job status to QUEUED when waiting for Data Worker capacity.
+   */
+  fun setJobQueued(jobId: Long) {
+    if (jobPersistence.queueJob(jobId)) {
+      jobNotifier.queuedJob(jobPersistence.getJob(jobId))
+    }
+  }
+
+  /**
+   * Cancel a job that is still queued while waiting for capacity.
+   */
+  fun cancelQueuedJob(jobId: Long) {
+    jobPersistence.cancelQueuedJob(jobId)
   }
 
   companion object {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -75,6 +75,7 @@ val DESTINATION_NAME_TO_DEFINITION_ID: Map<String, UUID> =
     Pair("local-json", UUID.fromString("a625d593-bba5-4a1c-a53d-2d246268a816")),
     Pair("selectdb", UUID.fromString("50a559a7-6323-4e33-8aa0-51dfd9dfadac")),
     Pair("e2e-test", UUID.fromString("2eb65e87-983a-4fd7-b3e3-9d9dc6eb8537")),
+    Pair("hubspot", UUID.fromString("c8ccd253-8525-4bbd-801c-f0b84ac71f61")),
   )
 
 val DEFINITION_ID_TO_DESTINATION_NAME: Map<UUID, String> =
@@ -141,6 +142,7 @@ val DEFINITION_ID_TO_DESTINATION_NAME: Map<UUID, String> =
     Pair(UUID.fromString("a625d593-bba5-4a1c-a53d-2d246268a816"), "local-json"),
     Pair(UUID.fromString("50a559a7-6323-4e33-8aa0-51dfd9dfadac"), "selectdb"),
     Pair(UUID.fromString("2eb65e87-983a-4fd7-b3e3-9d9dc6eb8537"), "e2e-test"),
+    Pair(UUID.fromString("c8ccd253-8525-4bbd-801c-f0b84ac71f61"), "hubspot"),
   )
 
 val SOURCE_NAME_TO_DEFINITION_ID: Map<String, UUID> =
@@ -324,6 +326,7 @@ val SOURCE_NAME_TO_DEFINITION_ID: Map<String, UUID> =
     Pair("microsoft-dataverse", UUID.fromString("9220e3de-3b60-4bb2-a46f-046d59ea235a")),
     Pair("news-api", UUID.fromString("df38991e-f35b-4af2-996d-36817f614587")),
     Pair("youtube-analytics", UUID.fromString("afa734e4-3571-11ec-991a-1e0031268139")),
+    Pair("youtube-data", UUID.fromString("743a2a44-fd13-4109-a8fe-fb0e68f467f5")),
     Pair("callrail", UUID.fromString("dc98a6ad-2dd1-47b6-9529-2ec35820f9c6")),
     Pair("courier", UUID.fromString("0541b2cd-2367-4986-b5f1-b79ff55439e4")),
     Pair("airbyte-harness-source", UUID.fromString("6fe89830-d04d-401b-aad6-6552ffa5c4af")),
@@ -436,6 +439,10 @@ val SOURCE_NAME_TO_DEFINITION_ID: Map<String, UUID> =
     Pair("flexport", UUID.fromString("f95337f1-2ad1-4baf-922f-2ca9152de630")),
     Pair("google-drive", UUID.fromString("9f8dda77-1048-4368-815b-269bf54ee9b8")),
     Pair("microsoft-sharepoint", UUID.fromString("59353119-f0f2-4e5a-a8ba-15d887bc34f6")),
+    Pair("datagen", UUID.fromString("f14d5125-dc0d-4f6c-abe5-acde821a2203")),
+    Pair("gmail", UUID.fromString("f7833dac-fc18-4feb-a2a9-94b22001edc6")),
+    Pair("google-calendar", UUID.fromString("c01b6259-bdf4-45ff-bcd5-66424cd2f18b")),
+    Pair("linear", UUID.fromString("1c5d8316-ed42-4473-8fbc-2626f03f070c")),
   )
 
 val DEFINITION_ID_TO_SOURCE_NAME: Map<UUID, String> =
@@ -619,6 +626,7 @@ val DEFINITION_ID_TO_SOURCE_NAME: Map<UUID, String> =
     Pair(UUID.fromString("9220e3de-3b60-4bb2-a46f-046d59ea235a"), "microsoft-dataverse"),
     Pair(UUID.fromString("df38991e-f35b-4af2-996d-36817f614587"), "news-api"),
     Pair(UUID.fromString("afa734e4-3571-11ec-991a-1e0031268139"), "youtube-analytics"),
+    Pair(UUID.fromString("743a2a44-fd13-4109-a8fe-fb0e68f467f5"), "youtube-data"),
     Pair(UUID.fromString("dc98a6ad-2dd1-47b6-9529-2ec35820f9c6"), "callrail"),
     Pair(UUID.fromString("0541b2cd-2367-4986-b5f1-b79ff55439e4"), "courier"),
     Pair(UUID.fromString("6fe89830-d04d-401b-aad6-6552ffa5c4af"), "airbyte-harness-source"),
@@ -731,4 +739,8 @@ val DEFINITION_ID_TO_SOURCE_NAME: Map<UUID, String> =
     Pair(UUID.fromString("f95337f1-2ad1-4baf-922f-2ca9152de630"), "flexport"),
     Pair(UUID.fromString("9f8dda77-1048-4368-815b-269bf54ee9b8"), "google-drive"),
     Pair(UUID.fromString("59353119-f0f2-4e5a-a8ba-15d887bc34f6"), "microsoft-sharepoint"),
+    Pair(UUID.fromString("f14d5125-dc0d-4f6c-abe5-acde821a2203"), "datagen"),
+    Pair(UUID.fromString("f7833dac-fc18-4feb-a2a9-94b22001edc6"), "gmail"),
+    Pair(UUID.fromString("c01b6259-bdf4-45ff-bcd5-66424cd2f18b"), "google-calendar"),
+    Pair(UUID.fromString("1c5d8316-ed42-4473-8fbc-2626f03f070c"), "linear"),
   )

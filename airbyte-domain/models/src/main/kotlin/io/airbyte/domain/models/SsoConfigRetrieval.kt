@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.domain.models
@@ -10,4 +10,5 @@ data class SsoConfigRetrieval(
   val clientSecret: String,
   val emailDomains: List<String>,
   val status: SsoConfigStatus,
+  val defaultRole: SsoDefaultRole = DEFAULT_SSO_ROLE,
 )

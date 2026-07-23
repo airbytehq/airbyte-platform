@@ -1,17 +1,17 @@
 import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text, TextColor } from "components/ui/Text";
 
+import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { useDestinationDefinitionList, useSourceDefinitionList } from "core/api";
 import { naturalComparatorBy } from "core/utils/objects";
 
 import { SummaryKey } from "../ConnectionsSummary";
 
-type filterIconType = "successFilled" | "errorFilled" | "sync" | "pauseFilled";
+type filterIconType = "successFilled" | "errorFilled" | "sync" | "pauseFilled" | "statusQueuedConnection";
 
 const generateStatusFilterOption = (value: SummaryKey, id: string, iconType: filterIconType, color: TextColor) => ({
   label: (
@@ -49,6 +49,12 @@ export const statusFilterOptions = [
     ),
     value: null,
   },
+  generateStatusFilterOption(
+    "queued",
+    "tables.connections.filters.status.queued",
+    "statusQueuedConnection",
+    "yellow600"
+  ),
   generateStatusFilterOption("healthy", "tables.connections.filters.status.healthy", "successFilled", "green600"),
   generateStatusFilterOption("failed", "tables.connections.filters.status.failed", "errorFilled", "red"),
   generateStatusFilterOption("running", "tables.connections.filters.status.running", "sync", "blue"),

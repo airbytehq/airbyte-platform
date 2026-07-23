@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.handlers
@@ -278,13 +278,42 @@ class UserInvitationHandler(
 
     log.info { "${"created invitation {}"} $saved" }
 
-    // send invite email to the user
-    // the email content includes the name of the inviter and the invite link
-    // the invite link should look like cloud.airbyte.com/accept-invite?inviteCode=randomCodeHere
-    val inviteLink = webUrlHelper.baseUrl + ACCEPT_INVITE_PATH + saved.inviteCode
-    customerIoEmailNotificationSender.sendInviteToUser(CustomerIoEmailConfig(req.invitedEmail), currentUser.name, inviteLink)
+    // Agentic orgs (Airbyte Agents) get accept-invite links pointing at app.airbyte.ai when
+    // AIRBYTE_AGENTS_URL is configured; everything else continues to use AIRBYTE_URL.
+    val isAgentic = getOrgIdFromCreateRequest(req)?.let(::isAgenticOrg) ?: false
+    val inviteLink = getAcceptInviteUrl(saved.inviteCode, isAgentic)
+    customerIoEmailNotificationSender.sendInviteToUser(
+      CustomerIoEmailConfig(req.invitedEmail),
+      currentUser.name,
+      inviteLink,
+      getInvitedResourceName(req),
+      isAgentic = isAgentic,
+    )
 
     return saved
+  }
+
+  /**
+   * Looks up an organization by id and returns whether it is flagged as agentic (i.e. an
+   * Airbyte Agents org). Returns `false` if the organization cannot be found so the legacy
+   * Cloud-branded invitation flow remains the safe default.
+   */
+  private fun isAgenticOrg(orgId: UUID): Boolean =
+    organizationService
+      .getOrganization(orgId)
+      .map { it.isAgentic }
+      .orElse(false)
+
+  /**
+   * Build the accept-invite URL for a user invitation. Routes agentic organizations to the
+   * Airbyte Agents host (e.g. app.airbyte.ai) and all other invitations to the Cloud host.
+   */
+  private fun getAcceptInviteUrl(
+    inviteCode: String,
+    isAgentic: Boolean,
+  ): String {
+    val host = if (isAgentic) webUrlHelper.agentsBaseUrl else webUrlHelper.baseUrl
+    return "$host$ACCEPT_INVITE_PATH$inviteCode"
   }
 
   /**
@@ -338,8 +367,8 @@ class UserInvitationHandler(
   } // TODO implement `decline`
 
   companion object {
-    const val ACCEPT_INVITE_PATH: String = "/accept-invite?inviteCode="
     const val INVITE_EXPIRATION_DAYS: Int = 7
     const val USER_INVITED: String = "User Invited"
+    private const val ACCEPT_INVITE_PATH: String = "/accept-invite?inviteCode="
   }
 }

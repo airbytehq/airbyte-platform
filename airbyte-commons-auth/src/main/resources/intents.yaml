@@ -92,7 +92,6 @@ intents:
     # POST request bodies, thus our authentication logic might not find the organizationId in the request.
     roles:
       - ADMIN
-
   ManageDomainVerification:
     name: Manage domain verification
     description: Manage domain verification request for an organization
@@ -116,30 +115,6 @@ intents:
     name: Manage secret storages
     description: Ability to manage secret storages
     roles:
-      - ADMIN
-
-  ViewConfigTemplates:
-    name: View config templates
-    description: Allow user to get and list config templates
-    roles:
-      - EMBEDDED_END_USER
-      - WORKSPACE_READER
-      - WORKSPACE_RUNNER
-      - WORKSPACE_EDITOR
-      - WORKSPACE_ADMIN
-      - ORGANIZATION_READER
-      - ORGANIZATION_RUNNER
-      - ORGANIZATION_EDITOR
-      - ORGANIZATION_ADMIN
-      - ADMIN
-
-  ViewAndEditPartialConfigs:
-    name: View and edit partial configs
-    description: Allow user to view and edit partial configs
-    roles:
-      - EMBEDDED_END_USER
-      - ORGANIZATION_EDITOR
-      - ORGANIZATION_ADMIN
       - ADMIN
 
   RunOAuthFlow:
@@ -212,4 +187,11 @@ intents:
     description: Create, edit, list, and delete dataplane groups
     roles:
       - ORGANIZATION_ADMIN
+      - ADMIN
+  ManageConnectionOnDemandCapacity:
+    name: Manage connection on-demand capacity
+    description: Enable or disable on-demand capacity for a connection
+    roles:
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_ADMIN
       - ADMIN

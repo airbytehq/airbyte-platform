@@ -1,0 +1,18 @@
+/*
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
+ */
+
+package io.airbyte.data.repositories
+
+import io.airbyte.data.repositories.entities.PrivateLink
+import io.micronaut.data.jdbc.annotation.JdbcRepository
+import io.micronaut.data.model.query.builder.sql.Dialect
+import io.micronaut.data.repository.PageableRepository
+import java.util.UUID
+
+@JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
+interface PrivateLinkRepository : PageableRepository<PrivateLink, UUID> {
+  fun findByWorkspaceId(workspaceId: UUID): List<PrivateLink>
+
+  fun findByStatus(status: io.airbyte.db.instance.configs.jooq.generated.enums.PrivateLinkStatus): List<PrivateLink>
+}

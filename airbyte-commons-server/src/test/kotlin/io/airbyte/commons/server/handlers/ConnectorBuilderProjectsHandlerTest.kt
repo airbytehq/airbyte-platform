@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
@@ -863,7 +863,8 @@ internal class ConnectorBuilderProjectsHandlerTest {
             .withInternalSupportLevel(100L)
             .withReleaseStage(ReleaseStage.CUSTOM)
             .withDocumentationUrl(A_DOCUMENTATION_URL)
-            .withProtocolVersion("0.2.0"),
+            .withProtocolVersion("0.2.0")
+            .withSupportsFileTransfer(false),
         ),
         eq(organizationId),
         eq(ScopeType.ORGANIZATION),
@@ -938,7 +939,8 @@ internal class ConnectorBuilderProjectsHandlerTest {
             .withInternalSupportLevel(100L)
             .withReleaseStage(ReleaseStage.CUSTOM)
             .withDocumentationUrl(A_DOCUMENTATION_URL)
-            .withProtocolVersion("0.2.0"),
+            .withProtocolVersion("0.2.0")
+            .withSupportsFileTransfer(false),
         ),
         eq(workspaceId),
         eq(ScopeType.WORKSPACE),
@@ -1864,6 +1866,115 @@ internal class ConnectorBuilderProjectsHandlerTest {
       )
 
     Assertions.assertEquals(expectedResponse, response)
+  }
+
+  @Test
+  fun whenManifestHasFileUploaderThenReturnTrue() {
+    val manifestWithFileUploader =
+      ObjectMapper().readTree(
+        """{"streams": [{"type": "DeclarativeStream", "name": "test_stream", "file_uploader": {"type": "FileUploader"}}]}""",
+      )
+    Assertions.assertTrue(ConnectorBuilderProjectsHandler.manifestHasFileUploader(manifestWithFileUploader))
+  }
+
+  @Test
+  fun whenManifestHasNoFileUploaderThenReturnFalse() {
+    val manifestWithoutFileUploader =
+      ObjectMapper().readTree(
+        """{"streams": [{"type": "DeclarativeStream", "name": "test_stream"}]}""",
+      )
+    Assertions.assertFalse(ConnectorBuilderProjectsHandler.manifestHasFileUploader(manifestWithoutFileUploader))
+  }
+
+  @Test
+  fun whenManifestHasNoStreamsThenReturnFalse() {
+    val manifestWithoutStreams = ObjectMapper().readTree("""{"version": "0.1.0"}""")
+    Assertions.assertFalse(ConnectorBuilderProjectsHandler.manifestHasFileUploader(manifestWithoutStreams))
+  }
+
+  @Test
+  fun whenManifestHasNullFileUploaderThenReturnFalse() {
+    val manifestWithNullFileUploader =
+      ObjectMapper().readTree(
+        """{"streams": [{"type": "DeclarativeStream", "name": "test_stream", "file_uploader": null}]}""",
+      )
+    Assertions.assertFalse(ConnectorBuilderProjectsHandler.manifestHasFileUploader(manifestWithNullFileUploader))
+  }
+
+  @Test
+  fun whenManifestHasDynamicStreamsWithFileUploaderThenReturnTrue() {
+    val manifestWithDynamicStreams =
+      ObjectMapper().readTree(
+        """{"dynamic_streams": [{"type": "DynamicDeclarativeStream", "name": "dynamic_stream", "file_uploader": {"type": "FileUploader"}}]}""",
+      )
+    Assertions.assertTrue(ConnectorBuilderProjectsHandler.manifestHasFileUploader(manifestWithDynamicStreams))
+  }
+
+  @Test
+  fun whenManifestHasFileUploaderInOneOfManyStreamsThenReturnTrue() {
+    val manifestWithMixedStreams =
+      ObjectMapper().readTree(
+        """{"streams": [{"type": "DeclarativeStream", "name": "no_upload"}, {"type": "DeclarativeStream", "name": "with_upload", "file_uploader": {"type": "FileUploader"}}]}""",
+      )
+    Assertions.assertTrue(ConnectorBuilderProjectsHandler.manifestHasFileUploader(manifestWithMixedStreams))
+  }
+
+  @Test
+  fun whenPublishConnectorBuilderProjectWithFileUploaderThenSupportsFileTransferIsTrue() {
+    val fileUploaderManifest =
+      ObjectMapper().readTree(
+        """{"streams": [{"type": "DeclarativeStream", "name": "file_stream", "file_uploader": {"type": "FileUploader"}}]}""",
+      )
+
+    Mockito.`when`(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID)
+    Mockito
+      .`when`(
+        manifestInjector.getManifestConnectorInjections(
+          eq(A_SOURCE_DEFINITION_ID),
+          eq(fileUploaderManifest),
+          anyOrNull(),
+        ),
+      ).thenReturn(listOf(A_CONFIG_INJECTION))
+    setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL)
+
+    val project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(workspaceId)
+    Mockito
+      .`when`(connectorBuilderService.getConnectorBuilderProject(anyOrNull(), anyOrNull()))
+      .thenReturn(project)
+
+    val organizationId = UUID.randomUUID()
+    Mockito
+      .`when`(workspaceService.getOrganizationIdFromWorkspaceId(anyOrNull()))
+      .thenReturn(Optional.of(organizationId))
+
+    connectorBuilderProjectsHandler.publishConnectorBuilderProject(
+      anyConnectorBuilderProjectRequest()
+        .builderProjectId(A_BUILDER_PROJECT_ID)
+        .workspaceId(workspaceId)
+        .name(A_SOURCE_NAME)
+        .initialDeclarativeManifest(anyInitialManifest()!!.manifest(fileUploaderManifest).spec(A_SPEC)),
+    )
+
+    Mockito
+      .verify(sourceService, Mockito.times(1))
+      .writeCustomConnectorMetadata(
+        anyOrNull(),
+        eq(
+          ActorDefinitionVersion()
+            .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+            .withDockerRepository(AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE)
+            .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION.imageVersion)
+            .withSpec(adaptedConnectorSpecification)
+            .withSupportLevel(SupportLevel.NONE)
+            .withInternalSupportLevel(100L)
+            .withReleaseStage(ReleaseStage.CUSTOM)
+            .withDocumentationUrl(A_DOCUMENTATION_URL)
+            .withProtocolVersion("0.2.0")
+            .withSupportsFileTransfer(true),
+        ),
+        eq(organizationId),
+        eq(ScopeType.ORGANIZATION),
+      )
   }
 
   companion object {

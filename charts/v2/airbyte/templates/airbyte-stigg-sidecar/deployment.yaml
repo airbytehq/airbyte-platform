@@ -156,11 +156,6 @@ spec:
         - name: metrics
           containerPort: 8080
           protocol: TCP
-        {{- if .Values.stiggSidecar.debug.enabled }}
-        - name: debug
-          containerPort: {{ .Values.stiggSidecar.debug.remoteDebugPort }}
-          protocol: TCP
-        {{- end}}
         {{- if .Values.stiggSidecar.resources }}
         resources: {{- toYaml .Values.stiggSidecar.resources | nindent 10 }}
         {{- end }}

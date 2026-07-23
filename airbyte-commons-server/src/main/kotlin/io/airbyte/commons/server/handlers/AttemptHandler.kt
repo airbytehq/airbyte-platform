@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
@@ -18,6 +18,7 @@ import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.errors.BadRequestException
+import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.UnprocessableContentException
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper
@@ -46,7 +47,9 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EnableResumableFullRefresh
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.persistence.job.JobInTerminalStateException
 import io.airbyte.persistence.job.JobPersistence
+import io.airbyte.persistence.job.JobRunningAttemptExistsException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -85,7 +88,19 @@ open class AttemptHandler(
 
     val jobRoot = getJobRoot(workspaceRoot, jobId.toString(), job.getAttemptsCount().toLong())
     val logFilePath: Path = jobRoot.resolve(DEFAULT_LOG_FILENAME)
-    val persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath)
+    val persistedAttemptNumber =
+      try {
+        jobPersistence.createAttempt(jobId, logFilePath)
+      } catch (e: JobRunningAttemptExistsException) {
+        // Non-retryable conflict: the job already has an in-flight attempt. Returning it would let a
+        // duplicate/retried caller proceed against an attempt it does not own, so surface a 409.
+        log.warn { "Conflict (409) creating attempt for job $jobId: ${e.message}" }
+        throw ConflictException(e.message, e)
+      } catch (e: JobInTerminalStateException) {
+        // Non-retryable conflict: the job is already terminal; do not resurrect it.
+        log.warn { "Conflict (409) creating attempt for job $jobId: ${e.message}" }
+        throw ConflictException(e.message, e)
+      }
 
     val connectionId = UUID.fromString(job.scope)
     val standardSync = connectionService.getStandardSync(connectionId)

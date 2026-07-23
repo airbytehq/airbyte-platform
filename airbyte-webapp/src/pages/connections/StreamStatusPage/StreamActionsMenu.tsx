@@ -3,12 +3,12 @@ import React, { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Text } from "components/ui/Text";
 
+import { useConnectionSyncContext } from "area/connection/components/ConnectionSync/ConnectionSyncContext";
 import { useIsDataActivationConnection } from "area/connection/utils/useIsDataActivationConnection";
 import { useCurrentConnection, useDestinationDefinitionVersion } from "core/api";
 import {
@@ -17,9 +17,9 @@ import {
   DestinationSyncMode,
   SyncMode,
 } from "core/api/types/AirbyteClient";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
+import { useModalService } from "core/services/Modal";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useModalService } from "hooks/services/Modal";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
 import styles from "./StreamActionsMenu.module.scss";

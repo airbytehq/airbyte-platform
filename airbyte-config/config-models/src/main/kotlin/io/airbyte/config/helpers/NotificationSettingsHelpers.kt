@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers
@@ -20,5 +20,6 @@ fun patchNotificationSettingsWithDefaultValue(notificationSettings: Notification
   ns.sendOnConnectionUpdateActionRequired = ns.sendOnConnectionUpdateActionRequired ?: emailNotificationItem()
   ns.sendOnBreakingChangeWarning = ns.sendOnBreakingChangeWarning ?: emailNotificationItem()
   ns.sendOnBreakingChangeSyncsDisabled = ns.sendOnBreakingChangeSyncsDisabled ?: emailNotificationItem()
+  ns.sendOnConnectionSyncQueued = ns.sendOnConnectionSyncQueued ?: NotificationItem()
   return ns
 }

@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers
 
 import io.airbyte.config.BasicSchedule
 import io.airbyte.config.Schedule
+import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
 import java.util.concurrent.TimeUnit
 
@@ -45,6 +46,22 @@ object ScheduleHelpers {
 
   @JvmStatic
   fun getIntervalInSecond(schedule: BasicSchedule): Long = getSecondsInUnit(schedule.timeUnit) * schedule.units
+
+  @JvmStatic
+  fun setBasicHourlySchedule(standardSync: StandardSync): StandardSync =
+    standardSync
+      .withScheduleType(StandardSync.ScheduleType.BASIC_SCHEDULE)
+      .withScheduleData(
+        ScheduleData().withBasicSchedule(
+          BasicSchedule()
+            .withTimeUnit(BasicSchedule.TimeUnit.HOURS)
+            .withUnits(1L),
+        ),
+      ).withSchedule(
+        Schedule()
+          .withTimeUnit(Schedule.TimeUnit.HOURS)
+          .withUnits(1L),
+      ).withManual(false)
 
   /**
    * Test if schedule configuration is consistent.

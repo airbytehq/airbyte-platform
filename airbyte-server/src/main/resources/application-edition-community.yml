@@ -13,6 +13,8 @@ micronaut:
       oauth:
         path: /api/oauth/access_token
     authentication: cookie
+    basic-auth:
+      enabled: false
     redirect:
       enabled: false
     token:

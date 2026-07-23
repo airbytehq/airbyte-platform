@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
+import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.model.generated.OrganizationRead
@@ -16,6 +17,7 @@ import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.config.Organization
+import io.airbyte.config.Permission
 import io.airbyte.data.repositories.OrgMemberCount
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
@@ -82,6 +84,9 @@ class OrganizationsHandlerTest {
         ),
         recordPrivateCalls = true,
       )
+
+    // Default: user has no permissions; tests that exercise the agentic-org filter override this.
+    every { permissionService.getPermissionsForUser(any()) } returns emptyList()
   }
 
   @Test
@@ -167,6 +172,44 @@ class OrganizationsHandlerTest {
   }
 
   @Test
+  fun testSetOrganizationAgenticStatus() {
+    every {
+      organizationService.setOrganizationAgenticStatus(organizationId1, true)
+    } returns Optional.of(organization.withIsAgentic(true))
+
+    val result =
+      organizationsHandler.setOrganizationAgenticStatus(
+        OrganizationAgenticStatusUpdateRequestBody()
+          .organizationId(organizationId1)
+          .isAgentic(true),
+      )
+
+    assertEquals(organizationId1, result.organizationId)
+    assertEquals(organizationName, result.organizationName)
+    assertEquals(organizationEmail, result.email)
+    assertEquals(true, result.isAgentic)
+  }
+
+  @Test
+  fun testSetOrganizationAgenticStatusFalse() {
+    every {
+      organizationService.setOrganizationAgenticStatus(organizationId1, false)
+    } returns Optional.of(organization.withIsAgentic(false))
+
+    val result =
+      organizationsHandler.setOrganizationAgenticStatus(
+        OrganizationAgenticStatusUpdateRequestBody()
+          .organizationId(organizationId1)
+          .isAgentic(false),
+      )
+
+    assertEquals(organizationId1, result.organizationId)
+    assertEquals(organizationName, result.organizationName)
+    assertEquals(organizationEmail, result.email)
+    assertEquals(false, result.isAgentic)
+  }
+
+  @Test
   fun testListOrganizationsByUserWithoutPagination() {
     val userId = UUID.randomUUID()
     val orgId = UUID.randomUUID()
@@ -245,6 +288,107 @@ class OrganizationsHandlerTest {
 
     val result = organizationsHandler.listOrganizationsByUser(request)
     assertEquals(expectedList, result)
+  }
+
+  @Test
+  fun `testListAllOrganizationsByUser delegates to unfiltered service method without pagination`() {
+    val userId = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
+    val request = ListOrganizationsByUserRequestBody().userId(userId)
+
+    every {
+      organizationService.listAllOrganizationsByUserId(userId, any())
+    } returns
+      listOf(
+        Organization()
+          .withOrganizationId(orgId)
+          .withUserId(userId)
+          .withName(organizationName)
+          .withEmail(organizationEmail)
+          .withIsAgentic(true),
+      )
+
+    val result = organizationsHandler.listAllOrganizationsByUser(request)
+
+    assertEquals(1, result.organizations.size)
+    assertEquals(orgId, result.organizations[0].organizationId)
+    assertEquals(true, result.organizations[0].isAgentic)
+    verify(exactly = 0) { organizationService.listOrganizationsByUserId(any(), any(), any()) }
+  }
+
+  @Test
+  fun `testListAllOrganizationsByUser delegates to unfiltered service method with pagination`() {
+    val userId = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
+    val request =
+      ListOrganizationsByUserRequestBody()
+        .userId(userId)
+        .pagination(Pagination().pageSize(10).rowOffset(0))
+
+    every {
+      organizationService.listAllOrganizationsByUserIdPaginated(any(), any())
+    } returns
+      listOf(
+        Organization()
+          .withOrganizationId(orgId)
+          .withUserId(userId)
+          .withName(organizationName)
+          .withEmail(organizationEmail)
+          .withIsAgentic(true),
+      )
+
+    val result = organizationsHandler.listAllOrganizationsByUser(request)
+
+    assertEquals(1, result.organizations.size)
+    assertEquals(orgId, result.organizations[0].organizationId)
+    assertEquals(true, result.organizations[0].isAgentic)
+    verify(exactly = 0) { organizationService.listOrganizationsByUserIdPaginated(any(), any()) }
+  }
+
+  @Test
+  fun `getOrganizationSummaries does not re-introduce isAgentic org via workspace fallback`() {
+    // Regression: workspaces from a filtered-out agentic org pull the org back through the
+    // listWorkspacesByUser → getOrganization fallback path. Filter must be re-applied at the end.
+    val userId = UUID.randomUUID()
+    val regularOrgId = UUID.randomUUID()
+    val agenticOrgId = UUID.randomUUID()
+    val agenticWorkspaceId = UUID.randomUUID()
+    val request =
+      ListOrganizationSummariesRequestBody()
+        .userId(userId)
+        .pagination(Pagination().pageSize(10).rowOffset(0))
+
+    every { organizationService.listOrganizationsByUserIdPaginated(any(), any()) } returns
+      listOf(
+        Organization().withOrganizationId(regularOrgId).withName("regular").withEmail(organizationEmail),
+      )
+    every { permissionService.getPermissionsForUser(userId) } returns
+      listOf(
+        Permission()
+          .withUserId(userId)
+          .withOrganizationId(agenticOrgId)
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER),
+      )
+    every { workspacesHandler.listWorkspacesByUser(any()) } returns
+      WorkspaceReadList().workspaces(
+        listOf(
+          WorkspaceRead().workspaceId(agenticWorkspaceId).organizationId(agenticOrgId).name("agentic-ws"),
+        ),
+      )
+    every { organizationService.getOrganization(agenticOrgId) } returns
+      Optional.of(
+        Organization()
+          .withOrganizationId(agenticOrgId)
+          .withName("agentic")
+          .withEmail(organizationEmail)
+          .withIsAgentic(true),
+      )
+    every { permissionService.getMemberCountsForOrganizationList(listOf(regularOrgId)) } returns
+      listOf(OrgMemberCount(regularOrgId, 1))
+
+    val response = organizationsHandler.getOrganizationSummaries(request)
+
+    assertEquals(listOf(regularOrgId), response.organizationSummaries.map { it.organization.organizationId })
   }
 
   @Test

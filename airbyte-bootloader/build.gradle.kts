@@ -11,13 +11,13 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
-  implementation(libs.bundles.micronaut.kotlin)  // Explicitly needed for Micronaut Kotlin extensions
+  implementation(libs.bundles.micronaut.kotlin) // Explicitly needed for Micronaut Kotlin extensions
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.micronaut.security.jwt)
   implementation(libs.bundles.flyway)
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.jooq)
-  implementation(libs.kotlin.logging)  // Explicitly needed for KotlinLogging usage
+  implementation(libs.kotlin.logging) // Explicitly needed for KotlinLogging usage
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
@@ -59,7 +59,7 @@ dependencies {
 airbyte {
   application {
     mainClass = "io.airbyte.bootloader.ApplicationKt"
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
+
     localEnvVars.putAll(
       mapOf(
         "AIRBYTE_VERSION" to "dev",

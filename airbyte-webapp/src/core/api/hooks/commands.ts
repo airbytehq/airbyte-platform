@@ -3,9 +3,9 @@ import { useEffect, useRef } from "react";
 import { useIntl } from "react-intl";
 import { v4 as uuidv4 } from "uuid";
 
+import { ConnectorCardValues } from "area/connector/components/ConnectorForm";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ConnectorHelper, ConnectorT } from "core/domain/connector";
-import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 
 import { ApiCallOptions } from "../apiCall";
 import { CommandErrorWithJobInfo } from "../errors";

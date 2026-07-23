@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader
@@ -48,10 +48,10 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V2_1_0_013__AddTombstoneToOrganizationDomainVerificationTable
+import io.airbyte.db.instance.configs.migrations.V2_1_0_035__CreateScimTables
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
-import io.airbyte.db.instance.jobs.migrations.V2_1_0_001__AddStreamStatsAdditionalStats
+import io.airbyte.db.instance.jobs.migrations.V2_1_0_003__AddJobsCreatedAtIndex
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
@@ -824,8 +824,8 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V2_1_0_013__AddTombstoneToOrganizationDomainVerificationTable::class.java
-    private val CURRENT_JOBS_MIGRATION = V2_1_0_001__AddStreamStatsAdditionalStats::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V2_1_0_035__CreateScimTables::class.java
+    private val CURRENT_JOBS_MIGRATION = V2_1_0_003__AddJobsCreatedAtIndex::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =
       cls.simpleName

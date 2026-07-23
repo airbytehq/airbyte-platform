@@ -23,7 +23,6 @@ dependencies {
   implementation(libs.temporal.sdk) {
     exclude(module = "guava")
   }
-  implementation(libs.bundles.datadog)
   implementation(libs.failsafe.okhttp)
   implementation(libs.google.cloud.storage)
   implementation(libs.okhttp)
@@ -57,7 +56,6 @@ dependencies {
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-worker-models"))
   implementation(libs.jakarta.validation.api)
-
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.annotation.processor)

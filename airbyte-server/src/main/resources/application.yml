@@ -1,6 +1,10 @@
 micronaut:
   application:
     name: airbyte-server
+  codec:
+    json:
+      additional-types:
+        - application/scim+json
   caches:
     # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
     # track events
@@ -17,7 +21,7 @@ micronaut:
     platform-compatibility-provider:
       expire-after-write: 15s
     organization-customer-attributes:
-      expire-after-access: 1h
+      expire-after-write: 1h
     user-info-endpoint-response:
       expire-after-access: 1m
   executors:
@@ -40,6 +44,12 @@ micronaut:
     workload:
       type: fixed
       n-threads: ${WORKLOAD_TASK_EXECUTOR_THREADS:50}
+    dsr-deletion:
+      type: fixed
+      n-threads: ${DSR_DELETION_TASK_EXECUTOR_THREADS:1}
+    dsr-deletion-heartbeat:
+      type: scheduled
+      core-pool-size: ${DSR_DELETION_HEARTBEAT_EXECUTOR_THREADS:1}
   http:
     client:
       read-timeout: ${READ_TIMEOUT:10m}
@@ -139,6 +149,15 @@ micronaut:
 
 airbyte:
   airbyte-url: ${AIRBYTE_URL:}
+  airbyte-agents-url: ${AIRBYTE_AGENTS_URL:}
+  airbyte-agents-valid-redirect-uris: ${AIRBYTE_AGENTS_VALID_REDIRECT_URIS:}
+  airbyte-agents-web-origins: ${AIRBYTE_AGENTS_WEB_ORIGINS:}
+  dsr-deletion:
+    execution-timeout: ${DSR_DELETION_EXECUTION_TIMEOUT:PT2H}
+    execution-heartbeat-interval: ${DSR_DELETION_EXECUTION_HEARTBEAT_INTERVAL:PT1M}
+    max-workspaces-per-request: ${DSR_DELETION_MAX_WORKSPACES_PER_REQUEST:10}
+    max-organizations-per-request: ${DSR_DELETION_MAX_ORGANIZATIONS_PER_REQUEST:5}
+    max-connections-per-request: ${DSR_DELETION_MAX_CONNECTIONS_PER_REQUEST:100}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   license-key: ${AIRBYTE_LICENSE_KEY:}
   shutdown:
@@ -146,6 +165,10 @@ airbyte:
   notification:
     customerio:
       api-key: ${CUSTOMERIO_API_KEY:}
+      transactional:
+        # Cloned Customer.io transactional message ID for agentic-org (Airbyte Agents)
+        # new-user invites. Leave unset to fall back to the hardcoded agentic template (36).
+        invite-user-agentic-id: ${CUSTOMERIO_INVITE_USER_AGENTIC_ID:}
   auth:
     token-expiration:
       application-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_APPLICATION:15}
@@ -207,7 +230,7 @@ airbyte:
       application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       project-id: ${GCS_AIRBYTE_WAREHOUSE_EXPORTS_PROJECT_ID:}
       bucket-name: ${GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME:}
-      object-prefix: ${GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX:}
+      object-prefix: ${GCS_DATA_ORGANIZATION_CUSTOMER_TIERS_OBJECT_PREFIX:}
     timeouts:
       wait_between_rollout_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_ROLLOUTS_SECONDS:60}
       wait_between_sync_results_queries_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS:10}
@@ -433,9 +456,8 @@ airbyte:
     segment_token: ${WEBAPP_SEGMENT_TOKEN:}
     sonar_api_url: ${WEBAPP_SONAR_API_URL:}
     coral_agents_api_url: ${WEBAPP_CORAL_AGENTS_API_URL:}
+    fullstory_guides_org_id: ${WEBAPP_FULLSTORY_GUIDES_ORG_ID:}
     zendesk_key: ${WEBAPP_ZENDESK_KEY:}
-    posthog_api_key: ${WEBAPP_POSTHOG_API_KEY:}
-    posthog_host: ${WEBAPP_POSTHOG_HOST:}
 
   workspace-root: ${WORKSPACE_ROOT}
   protocol:
@@ -519,6 +541,23 @@ datasources:
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD:}
     pool-name: config-pool
+  config-replica:
+    connection-test-query: SELECT 1
+    connection-timeout: 30000
+    maximum-pool-size: ${CONFIG_DB_REPLICA_MAX_POOL_SIZE:20}
+    minimum-idle: 0
+    idle-timeout: 600000
+    initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
+    # CONFIG_DATABASE_REPLICA_URL is set by Helm chart, falls back to DATABASE_URL if replica not configured
+    url: ${CONFIG_DATABASE_REPLICA_URL}
+    driverClassName: org.postgresql.Driver
+    # CONFIG_DATABASE_REPLICA_USER is set by Helm chart, falls back to DATABASE_USER if replica not configured
+    username: ${CONFIG_DATABASE_REPLICA_USER}
+    # CONFIG_DATABASE_REPLICA_PASSWORD is set by Helm chart, falls back to DATABASE_PASSWORD if replica not configured
+    password: ${CONFIG_DATABASE_REPLICA_PASSWORD:}
+    leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
+    max-lifetime: 600000
+    read-only: true
 
 endpoints:
   all:
@@ -571,6 +610,8 @@ flyway:
 jackson:
   mapper:
     ACCEPT_CASE_INSENSITIVE_ENUMS: true
+  serialization:
+    WRITE_DATES_AS_TIMESTAMPS: false
   serialization-inclusion: NON_ABSENT
 
 jooq:
@@ -582,6 +623,9 @@ jooq:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
     local-secrets:
+      jackson-converter-enabled: true
+      sql-dialect: POSTGRES
+    config-replica:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
 

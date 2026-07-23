@@ -1,5 +1,3 @@
-import org.jsonschema2pojo.SourceType
-
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
@@ -16,13 +14,11 @@ dependencies {
   implementation(project(":oss:airbyte-domain:models"))
 
   implementation(platform(libs.fasterxml))
-  implementation(libs.bundles.datadog)
   implementation(libs.bundles.jackson)
   implementation(libs.micronaut.kotlin.extension.functions)
   implementation(libs.airbyte.protocol)
   implementation(libs.kotlin.logging)
   implementation(libs.cron.utils)
-
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)

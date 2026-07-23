@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
@@ -442,6 +442,7 @@ open class ConnectorBuilderProjectsHandler
           .withSupportLevel(SupportLevel.NONE)
           .withInternalSupportLevel(100L)
           .withDocumentationUrl(connectorSpecification.documentationUrl.toString())
+          .withSupportsFileTransfer(manifestHasFileUploader(manifest))
 
       // Scope connector to the organization if present, otherwise scope to the workspace.
       val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId)
@@ -810,5 +811,33 @@ open class ConnectorBuilderProjectsHandler
       private val log = KotlinLogging.logger {}
       const val SPEC_FIELD: String = "spec"
       const val CONNECTION_SPECIFICATION_FIELD: String = "connection_specification"
+      private const val STREAMS_FIELD: String = "streams"
+      private const val DYNAMIC_STREAMS_FIELD: String = "dynamic_streams"
+      private const val FILE_UPLOADER_FIELD: String = "file_uploader"
+
+      /**
+       * Checks whether any stream in the manifest defines a file_uploader component.
+       */
+      fun manifestHasFileUploader(manifest: JsonNode): Boolean {
+        val streamsNode = manifest[STREAMS_FIELD]
+        if (streamsNode != null && streamsNode.isArray) {
+          for (stream in streamsNode) {
+            val fileUploader = stream[FILE_UPLOADER_FIELD]
+            if (fileUploader != null && !fileUploader.isNull) {
+              return true
+            }
+          }
+        }
+        val dynamicStreamsNode = manifest[DYNAMIC_STREAMS_FIELD]
+        if (dynamicStreamsNode != null && dynamicStreamsNode.isArray) {
+          for (stream in dynamicStreamsNode) {
+            val fileUploader = stream[FILE_UPLOADER_FIELD]
+            if (fileUploader != null && !fileUploader.isNull) {
+              return true
+            }
+          }
+        }
+        return false
+      }
     }
   }

@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.services
 
-import io.airbyte.featureflag.TestClient
 import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
@@ -42,7 +41,6 @@ class WorkloadServiceTest {
         workloadQueueRepository = workloadQueueRepository,
         signalSender = signalSender,
         defaultDeadlineValues = DefaultDeadlineValues(),
-        featureFlagClient = TestClient(emptyMap()),
         metricClient = mockk(relaxed = true),
       )
   }
@@ -292,7 +290,7 @@ class WorkloadServiceTest {
   }
 
   @Test
-  fun `createWorkload populates both workloadLabels and labels fields for dual-write`() {
+  fun `createWorkload populates labels JSONB field`() {
     val workloadId = "test-workload-${UUID.randomUUID()}"
     val labels =
       listOf(
@@ -325,14 +323,10 @@ class WorkloadServiceTest {
       priority = null,
     )
 
-    // Verify that workloadRepository.save was called with BOTH fields populated
     verify {
       workloadRepository.save(
         match { workload ->
-          // Verify workloadLabels field (legacy) is populated
-          workload.workloadLabels == labels &&
-            // Verify labels field (new JSONB) is populated with the converted map
-            workload.labels ==
+          workload.labels ==
             mapOf(
               "job_id" to "123",
               "attempt_id" to "1",
@@ -360,7 +354,6 @@ class WorkloadServiceTest {
         mutexKey = "mutex",
         signalInput = signalInput,
         type = WorkloadType.SYNC,
-        workloadLabels = null,
       )
   }
 }

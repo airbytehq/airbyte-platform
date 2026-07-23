@@ -8,11 +8,15 @@ export interface RegionDataBar {
 }
 
 const DATE_FORMAT = "YYYY-MM-DD";
+const DATETIME_FORMAT = "YYYY-MM-DD HH:mm";
 
 /**
  * Calculates graph data for a given date range and region usage.
  * Creates a data point for each day in the range, populating workspace usage values.
- * When multiple data points exist for the same workspace on the same day, keeps the maximum value.
+ *
+ * For each day, finds the "peak hour" - the hour with the highest total usage across all workspaces.
+ * Then uses each workspace's usage value from that peak hour as the daily value.
+ * This represents the actual concurrent usage at the moment of peak demand.
  *
  * @param dateRange - A tuple of [startDate, endDate] in YYYY-MM-DD format
  * @param regionDataWorkerUsage - Optional region usage data containing workspace usage information
@@ -43,39 +47,81 @@ export const calculateGraphData = (
 
   // Populate workspace usage data
   if (regionDataWorkerUsage) {
-    // First pass: calculate max usage per workspace per day
-    const workspaceMaxUsage = new Map<string, Map<string, number>>();
+    // First pass: collect all hourly data points per workspace
+    // Map: workspaceId -> Map<hourTimestamp, usage>
+    const workspaceHourlyUsage = new Map<string, Map<string, number>>();
 
     regionDataWorkerUsage.workspaces.forEach((workspace) => {
-      const dailyMaxUsage = new Map<string, number>();
+      const hourlyUsage = new Map<string, number>();
 
       workspace.dataWorkers.forEach(({ date, used }) => {
-        const formattedDate = dayjs(date).format(DATE_FORMAT);
-        if (days.has(formattedDate)) {
-          const existingMax = dailyMaxUsage.get(formattedDate) ?? 0;
-          dailyMaxUsage.set(formattedDate, Math.max(existingMax, used));
+        const hourKey = dayjs(date).format(DATETIME_FORMAT);
+        // If multiple entries for the same hour, take the max
+        const existing = hourlyUsage.get(hourKey) ?? 0;
+        hourlyUsage.set(hourKey, Math.max(existing, used));
+      });
+
+      workspaceHourlyUsage.set(workspace.id, hourlyUsage);
+    });
+
+    // Second pass: for each day, find the peak hour (hour with highest total across all workspaces)
+    // Map: day -> peakHourKey
+    const peakHourByDay = new Map<string, string>();
+
+    // Collect all unique hours and group by day
+    const hoursByDay = new Map<string, Set<string>>();
+    workspaceHourlyUsage.forEach((hourlyUsage) => {
+      hourlyUsage.forEach((_, hourKey) => {
+        const dayKey = dayjs(hourKey, DATETIME_FORMAT).format(DATE_FORMAT);
+        if (days.has(dayKey)) {
+          if (!hoursByDay.has(dayKey)) {
+            hoursByDay.set(dayKey, new Set());
+          }
+          hoursByDay.get(dayKey)!.add(hourKey);
+        }
+      });
+    });
+
+    // For each day, find the hour with the highest total usage
+    hoursByDay.forEach((hours, dayKey) => {
+      let maxTotal = -1;
+      let peakHour = "";
+
+      hours.forEach((hourKey) => {
+        let totalForHour = 0;
+        workspaceHourlyUsage.forEach((hourlyUsage) => {
+          totalForHour += hourlyUsage.get(hourKey) ?? 0;
+        });
+
+        if (totalForHour > maxTotal) {
+          maxTotal = totalForHour;
+          peakHour = hourKey;
         }
       });
 
-      workspaceMaxUsage.set(workspace.id, dailyMaxUsage);
+      if (peakHour) {
+        peakHourByDay.set(dayKey, peakHour);
+      }
     });
 
-    // Second pass: assign to top 10 or sum into "Other"
+    // Third pass: for each workspace, use the value from the peak hour of each day
     regionDataWorkerUsage.workspaces.forEach((workspace) => {
       const isInTop10 = !top10WorkspaceIds || top10WorkspaceIds.includes(workspace.id);
       const isInOther = otherWorkspaceIds?.includes(workspace.id);
-      const dailyMaxUsage = workspaceMaxUsage.get(workspace.id)!;
+      const hourlyUsage = workspaceHourlyUsage.get(workspace.id)!;
 
-      dailyMaxUsage.forEach((maxUsage, formattedDate) => {
-        const day = days.get(formattedDate);
+      peakHourByDay.forEach((peakHourKey, dayKey) => {
+        const day = days.get(dayKey);
         if (day) {
+          const usageAtPeakHour = hourlyUsage.get(peakHourKey) ?? 0;
+
           if (isInTop10 && !isInOther) {
             // Add to top 10 workspace
-            day.workspaceUsage[workspace.id] = maxUsage;
+            day.workspaceUsage[workspace.id] = usageAtPeakHour;
           } else if (isInOther) {
-            // Sum max usage values into "Other" category
+            // Sum usage values into "Other" category
             const existingOtherUsage = day.workspaceUsage.other ?? 0;
-            day.workspaceUsage.other = existingOtherUsage + maxUsage;
+            day.workspaceUsage.other = existingOtherUsage + usageAtPeakHour;
           }
         }
       });

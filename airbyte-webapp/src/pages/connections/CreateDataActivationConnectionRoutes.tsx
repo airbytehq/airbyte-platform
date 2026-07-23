@@ -2,17 +2,17 @@ import { Suspense, useState, createContext, useContext, useMemo } from "react";
 import { useIntl } from "react-intl";
 import { Outlet } from "react-router-dom";
 
-import { CreateConnectionFlowLayout } from "components/connection/CreateConnectionFlowLayout";
-import { HeadTitle } from "components/HeadTitle";
-import LoadingPage from "components/LoadingPage";
+import { HeadTitle } from "components/ui/HeadTitle";
+import LoadingPage from "components/ui/LoadingPage";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
+import { CreateConnectionFlowLayout } from "area/connection/components/CreateConnectionFlowLayout";
+import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout";
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { CreateConnectionTitleBlock } from "pages/connections/CreateConnectionPage/CreateConnectionTitleBlock";
 import { RoutePaths } from "pages/routePaths";
-import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 interface StreamMappingsContextValue {
   streamMappings?: DataActivationConnectionFormValues;

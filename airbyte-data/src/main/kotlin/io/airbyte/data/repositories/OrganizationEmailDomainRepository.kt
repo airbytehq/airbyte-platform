@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.repositories
@@ -19,6 +19,11 @@ interface OrganizationEmailDomainRepository : PageableRepository<OrganizationEma
   fun findByOrganizationId(organizationId: UUID): List<OrganizationEmailDomain>
 
   fun existsByOrganizationIdAndEmailDomain(
+    organizationId: UUID,
+    emailDomain: String,
+  ): Boolean
+
+  fun existsByOrganizationIdAndEmailDomainIgnoreCase(
     organizationId: UUID,
     emailDomain: String,
   ): Boolean

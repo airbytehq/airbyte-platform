@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job
@@ -116,12 +116,44 @@ interface JobPersistence {
   fun failJob(jobId: Long)
 
   /**
-   * Create a new attempt for a job and return its attempt number. Throws
-   * [IllegalStateException] if the job is already in a terminal state.
+   * Set job status from PENDING to QUEUED. This is used when a job is waiting for
+   * Data Worker capacity. If not in PENDING status, no op.
+   *
+   * @param jobId job to queue
+   * @return true if the status transitioned from PENDING to QUEUED, otherwise false
+   * @throws IOException exception due to interaction with persistence
+   */
+  fun queueJob(jobId: Long): Boolean
+
+  /**
+   * Set job status from QUEUED to CANCELLED. This is used when a job waiting for
+   * Data Worker capacity should be discarded before it starts. If not in QUEUED status, no op.
+   *
+   * @param jobId job to cancel
+   * @throws IOException exception due to interaction with persistence
+   */
+  fun cancelQueuedJob(jobId: Long)
+
+  /**
+   * Update the persisted sync job config to record whether the job used on-demand capacity.
+   *
+   * @param jobId sync job id
+   * @param usedOnDemandCapacity whether the job used on-demand capacity
+   * @throws IOException exception due to interaction with persistence
+   */
+  fun updateSyncJobOnDemandCapacity(
+    jobId: Long,
+    usedOnDemandCapacity: Boolean,
+  )
+
+  /**
+   * Create a new attempt for a job and return its attempt number.
    *
    * @param jobId job for which an attempt will be created
    * @param logPath path where logs should be written for the attempt
    * @return The attempt number of the created attempt (see [DefaultJobPersistence])
+   * @throws JobInTerminalStateException if the job is already in a terminal state
+   * @throws JobRunningAttemptExistsException if the job already has a non-terminal (running) attempt
    * @throws IOException exception due to interaction with persistence
    */
   fun createAttempt(

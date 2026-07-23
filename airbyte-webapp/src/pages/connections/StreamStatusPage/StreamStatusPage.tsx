@@ -1,9 +1,9 @@
 import { useEffectOnce } from "react-use";
 
-import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { HistoricalOverview } from "area/connection/components";
+import { ConnectionSyncContextProvider } from "area/connection/components/ConnectionSync/ConnectionSyncContext";
 import { FeatureItem, useFeature } from "core/services/features";
 import { trackTiming } from "core/utils/datadog";
 

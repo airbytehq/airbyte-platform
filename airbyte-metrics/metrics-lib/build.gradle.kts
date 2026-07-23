@@ -6,7 +6,7 @@ plugins {
 dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  api(libs.bundles.micronaut.metrics)  // Keep: metric types may be in public API
+  api(libs.bundles.micronaut.metrics) // Keep: metric types may be in public API
   implementation(libs.kotlin.logging)
   implementation(libs.micronaut.cache.caffeine)
 
@@ -17,18 +17,11 @@ dependencies {
 
   implementation(libs.google.cloud.storage)
   implementation(libs.bundles.micronaut.kotlin)
-  implementation(libs.otel.sdk)
-  implementation(libs.otel.sdk.testing)
+  implementation(libs.otel.api)
   implementation(libs.otel.semconv)
   implementation(libs.micrometer.otlp)
   implementation(libs.micrometer.statsd)
-  implementation(platform(libs.otel.bom))
-  implementation(("io.opentelemetry:opentelemetry-api"))
-  implementation(("io.opentelemetry:opentelemetry-sdk"))
-  implementation(("io.opentelemetry:opentelemetry-exporter-otlp"))
-
   implementation(libs.java.dogstatsd.client)
-  implementation(libs.bundles.datadog)
 
   testImplementation(project(":oss:airbyte-config:config-persistence"))
   testImplementation(project(":oss:airbyte-test-utils"))
@@ -38,8 +31,6 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(libs.mockk)
   testImplementation(libs.junit.jupiter.system.stubs)
-  testImplementation((variantOf(libs.opentracing.util) { classifier("tests") }))
-
   testImplementation(libs.junit.pioneer)
 }
 

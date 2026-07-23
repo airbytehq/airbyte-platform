@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal
@@ -14,6 +14,7 @@ import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateOutput
 import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateWorkflow
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
+import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.JobInformation
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
@@ -24,6 +25,7 @@ import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.JobCheckConnectionConfig
+import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobDiscoverCatalogConfig
 import io.airbyte.config.JobGetSpecConfig
 import io.airbyte.config.RefreshStream
@@ -78,6 +80,7 @@ private const val SAFE_TERMINATE_MESSAGE = "Terminating workflow in unreachable 
  * use the queries to make sure that we are in a state in which we want to continue with.
  */
 private const val DELAY_BETWEEN_QUERY_MS = 10
+private const val START_MANUAL_SYNC_JOB_ID_WAIT_TIMEOUT_MS = 60_000L
 private val logger = KotlinLogging.logger { }
 
 /**
@@ -260,6 +263,80 @@ class TemporalClient(
   }
 
   /**
+   * Start a manual sync and return as soon as the workflow exposes the created job id.
+   *
+   * This is used by request paths that should not wait for the sync attempt to start.
+   *
+   * @param connectionId connection id
+   * @return sync result
+   */
+  fun startNewManualSyncAndWaitForJobId(connectionId: UUID): ManualOperationResult =
+    startNewManualSyncAndWaitForJobId(connectionId, START_MANUAL_SYNC_JOB_ID_WAIT_TIMEOUT_MS)
+
+  @InternalForTesting
+  internal fun startNewManualSyncAndWaitForJobId(
+    connectionId: UUID,
+    waitTimeoutMs: Long,
+  ): ManualOperationResult {
+    logger.info { "Manual sync request for connection $connectionId" }
+
+    val workflowState = connectionManagerUtils.getWorkflowState(connectionId).getOrNull()
+    if (workflowState?.isRunning == true) {
+      return ManualOperationResult(
+        failingReason = "A sync is already running for: $connectionId",
+        errorCode = ErrorCode.WORKFLOW_RUNNING,
+      )
+    }
+
+    val currentJobInformation = connectionManagerUtils.getJobInformation(connectionId)
+    if (workflowState?.isDoneWaiting == true &&
+      !workflowState.hasCapacityWaitInterruption() &&
+      currentJobInformation?.isQueuedPreAttempt() == true
+    ) {
+      logger.info { "manual sync job already created" }
+      return ManualOperationResult(jobId = currentJobInformation.jobId)
+    }
+    val oldJobId = currentJobInformation?.jobId ?: ConnectionManagerWorkflow.NON_RUNNING_JOB_ID
+
+    try {
+      connectionManagerUtils.signalWorkflowAndRepairIfNecessary(connectionId) {
+        Functions.Proc { it.submitManualSync() }
+      }
+    } catch (e: DeletedWorkflowException) {
+      logger.error(e) { "Can't sync a deleted connection." }
+      return ManualOperationResult(
+        failingReason = e.message,
+        errorCode = ErrorCode.WORKFLOW_DELETED,
+      )
+    }
+
+    val waitDeadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(waitTimeoutMs)
+    var jobId: Long?
+    do {
+      try {
+        Thread.sleep(DELAY_BETWEEN_QUERY_MS.toLong())
+      } catch (_: InterruptedException) {
+        Thread.currentThread().interrupt()
+        return ManualOperationResult(
+          failingReason = "Didn't manage to start a sync for: $connectionId",
+          errorCode = ErrorCode.UNKNOWN,
+        )
+      }
+      jobId = getNewJobId(connectionId, oldJobId)
+    } while (jobId == null && System.nanoTime() < waitDeadlineNanos)
+
+    if (jobId == null) {
+      return ManualOperationResult(
+        failingReason = "Timed out waiting for a sync job to be created for: $connectionId",
+        errorCode = ErrorCode.UNKNOWN,
+      )
+    }
+
+    logger.info { "manual sync job created" }
+    return ManualOperationResult(jobId = jobId)
+  }
+
+  /**
    * Cancel a running job for a connection.
    *
    * @param connectionId connection id
@@ -398,6 +475,17 @@ class TemporalClient(
       return currentJobId
     }
   }
+
+  private fun JobInformation.isQueuedPreAttempt(): Boolean =
+    jobId != ConnectionManagerWorkflow.NON_RUNNING_JOB_ID &&
+      attemptId == ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID &&
+      configType == ConfigType.SYNC
+
+  private fun WorkflowState.hasCapacityWaitInterruption(): Boolean =
+    isDeleted ||
+      isUpdated ||
+      isCancelled ||
+      isCancelledForReset
 
   /**
    * Submit a spec job to temporal.

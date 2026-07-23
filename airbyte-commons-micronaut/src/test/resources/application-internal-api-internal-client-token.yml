@@ -3,6 +3,7 @@ airbyte:
     base-path: "http://localhost:8001/api"
     connect-timeout-seconds: 60
     read-timeout-seconds: 300
+    call-timeout-seconds: 120
     retries:
       delay-seconds: 10
       jitter-factor: .75

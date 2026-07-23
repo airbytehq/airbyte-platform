@@ -5,9 +5,9 @@ import { FormattedMessage, FormattedTime } from "react-intl";
 // eslint-disable-next-line no-restricted-imports
 import { Link } from "react-router-dom";
 
-import { FormattedTimeRange } from "components/FormattedTimeRange";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { FormattedTimeRange } from "components/ui/FormattedTimeRange";
 import { IconType } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 

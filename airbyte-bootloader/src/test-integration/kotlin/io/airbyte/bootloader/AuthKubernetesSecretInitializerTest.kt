@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.bootloader
@@ -30,7 +30,7 @@ internal const val PROVIDED_CLIENT_ID_VALUE = "myClientId"
 internal const val PROVIDED_CLIENT_SECRET_VALUE = "myClientSecret"
 internal const val PROVIDED_JWT_SIGNATURE_VALUE = "myJwtSignature"
 
-@MicronautTest(environments = [Environment.TEST])
+@MicronautTest(environments = [Environment.TEST], transactional = false)
 @Property(name = "airbyte.auth.kubernetes-secret.name", value = SECRET_NAME)
 @Property(name = "airbyte.version", value = "dev")
 class AuthKubernetesSecretInitializerTest {

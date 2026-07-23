@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job
@@ -142,24 +142,81 @@ internal class DefaultJobPersistenceTest {
       attemptNumber,
       AttemptFailureSummary().withFailures(
         listOf(
-          FailureReason().withInternalMessage(
-            // kotlin's raw (triple-quoted) strings don't respect backslash escapes.
-            // After json-serialization, this will turn into
-            // {"internalMessage": "Here are some weird characters: \u0000, \\\u0000, \\\\\u0000, u0000, \\u0000, \\\\u0000, \\\\\\u0000."}
-            """Here are some weird characters: ${'\u0000'}, \${'\u0000'}, \\${'\u0000'}, u0000, \u0000, \\u0000, \\\u0000.""",
-          ),
+          FailureReason()
+            .withInternalMessage(
+              // kotlin's raw (triple-quoted) strings don't respect backslash escapes.
+              // After json-serialization, this will turn into
+              // {"internalMessage": "Here are some weird characters: \u0000, \\\u0000, \\\\\u0000, u0000, \\u0000, \\\\u0000, \\\\\\u0000."}
+              """Here are some weird characters: ${'\u0000'}, \${'\u0000'}, \\${'\u0000'}, u0000, \u0000, \\u0000, \\\u0000.""",
+            ).withStacktrace(
+              // regex+string.replace struggles with multiple null chars in sequence, so verify that we can handle this
+              """java.time.format.DateTimeParseException: Text '2026-01E${'\u0000'}${'\u0000'}${'\u0000'}-SFATAL${'\u0000'}C08P01${'\u0000'}' could not be parsed at index 7""",
+            ),
         ),
       ),
     )
 
     val persistedAttempt = jobPersistence.getAttemptForJob(jobId, attemptNumber).get()
     assertEquals(
-      // Note that we stripped the literal null characters, but preserved the literal `u0000`s.
-      """Here are some weird characters: , \, \\, u0000, \u0000, \\u0000, \\\u0000.""",
+      """Here are some weird characters: <NULL>, <NULL>, <NULL>, u0000, <NULL>, <NULL>, <NULL>.""",
       persistedAttempt.failureSummary!!
         .failures
         .first()
         .internalMessage,
+    )
+    assertEquals(
+      """java.time.format.DateTimeParseException: Text '2026-01E<NULL><NULL><NULL>-SFATAL<NULL>C08P01<NULL>' could not be parsed at index 7""",
+      persistedAttempt.failureSummary!!
+        .failures
+        .first()
+        .stacktrace,
+    )
+  }
+
+  /**
+   * Very similar to [testWriteAttemptFailureWithNullChars], but exercises writeOutput.
+   */
+  @Test
+  @DisplayName("Should write output even if the failure reason contains null bytes")
+  fun testWriteOutputWithNullChars() {
+    val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+    val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+
+    val standardSyncOutput =
+      StandardSyncOutput()
+        .withFailures(
+          listOf(
+            FailureReason()
+              .withInternalMessage(
+                // kotlin's raw (triple-quoted) strings don't respect backslash escapes.
+                // After json-serialization, this will turn into
+                // {"internalMessage": "Here are some weird characters: \u0000, \\\u0000, \\\\\u0000, u0000, \\u0000, \\\\u0000, \\\\\\u0000."}
+                """Here are some weird characters: ${'\u0000'}, \${'\u0000'}, \\${'\u0000'}, u0000, \u0000, \\u0000, \\\u0000.""",
+              ).withStacktrace(
+                // regex+string.replace struggles with multiple null chars in sequence, so verify that we can handle this
+                """java.time.format.DateTimeParseException: Text '2026-01E${'\u0000'}${'\u0000'}${'\u0000'}-SFATAL${'\u0000'}C08P01${'\u0000'}' could not be parsed at index 7""",
+              ),
+          ),
+        ).withStandardSyncSummary(StandardSyncSummary())
+    val jobOutput = JobOutput().withOutputType(JobOutput.OutputType.SYNC).withSync(standardSyncOutput)
+
+    jobPersistence.writeOutput(jobId, attemptNumber, jobOutput)
+
+    val updated = jobPersistence.getJob(jobId)
+    val persistedOutput = updated.attempts[0].output
+
+    assertEquals(
+      """Here are some weird characters: <NULL>, <NULL>, <NULL>, u0000, <NULL>, <NULL>, <NULL>.""",
+      persistedOutput!!
+        .sync.failures
+        .first()
+        .internalMessage,
+    )
+    assertEquals(
+      """java.time.format.DateTimeParseException: Text '2026-01E<NULL><NULL><NULL>-SFATAL<NULL>C08P01<NULL>' could not be parsed at index 7""",
+      persistedOutput.sync.failures
+        .first()
+        .stacktrace,
     )
   }
 
@@ -1592,6 +1649,46 @@ internal class DefaultJobPersistenceTest {
     }
 
     @Test
+    @DisplayName("getAttemptStats should merge results from every batch when the job id list spans multiple batches")
+    fun testGetMultipleStatsAcrossBatches() {
+      // Create more jobs than fit in a single batch so the chunked lookup runs several times. This guards
+      // against a merge bug silently dropping stats for jobs beyond the first batch.
+      val numJobs = DefaultJobPersistence.ATTEMPT_STATS_JOB_ID_BATCH_SIZE + 2
+      val jobIds = mutableListOf<Long>()
+      val expectedKeys = mutableSetOf<JobAttemptPair>()
+
+      for (i in 0 until numJobs) {
+        val jobId = jobPersistence.enqueueJob("$SCOPE-batch-$i", SPEC_JOB_CONFIG, true).orElseThrow()
+        val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+        val streamStats =
+          listOf(
+            StreamSyncStats()
+              .withStreamName("name-$i")
+              .withStats(
+                SyncStats()
+                  .withBytesEmitted(1L)
+                  .withRecordsEmitted(1L)
+                  .withEstimatedBytes(2L)
+                  .withEstimatedRecords(2L),
+              ),
+          )
+        jobPersistence.writeStats(jobId, attemptNumber, 2L, 2L, 1L, 1L, 1L, 1L, 0L, CONNECTION_ID, streamStats)
+        jobIds.add(jobId)
+        expectedKeys.add(JobAttemptPair(jobId, attemptNumber))
+      }
+
+      val stats = jobPersistence.getAttemptStats(jobIds)
+
+      // Every job across every batch is present...
+      assertEquals(expectedKeys, stats.keys)
+      // ...and each entry has its per-stream stat hydrated, proving the stream-stats query results are
+      // merged for all batches rather than only the first.
+      stats.forEach { (key, attemptStats) ->
+        assertEquals(1, attemptStats.perStreamStats.size, "missing per-stream stats for $key")
+      }
+    }
+
+    @Test
     @DisplayName("Writing stats for different streams should not have side effects")
     fun testWritingStatsForDifferentStreams() {
       val jobOneId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
@@ -1822,6 +1919,64 @@ internal class DefaultJobPersistenceTest {
   }
 
   @Nested
+  @DisplayName("When queueing job")
+  internal inner class QueueJob {
+    @Test
+    @DisplayName("Should queue a pending job")
+    fun testQueuePendingJob() {
+      val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+
+      every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
+      val queued = jobPersistence.queueJob(jobId)
+
+      val updated = jobPersistence.getJob(jobId)
+      assertTrue(queued)
+      assertEquals(JobStatus.QUEUED, updated.status)
+    }
+
+    @Test
+    @DisplayName("Should leave a running job unchanged")
+    fun testQueueRunningJobNoOp() {
+      val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+      jobPersistence.createAttempt(jobId, LOG_PATH)
+
+      val queued = jobPersistence.queueJob(jobId)
+
+      val updated = jobPersistence.getJob(jobId)
+      assertFalse(queued)
+      assertEquals(JobStatus.RUNNING, updated.status)
+    }
+  }
+
+  @Nested
+  @DisplayName("When cancelling queued job")
+  internal inner class CancelQueuedJob {
+    @Test
+    @DisplayName("Should cancel a queued job")
+    fun testCancelQueuedJob() {
+      val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+      jobPersistence.queueJob(jobId)
+
+      every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
+      jobPersistence.cancelQueuedJob(jobId)
+
+      val updated = jobPersistence.getJob(jobId)
+      assertEquals(JobStatus.CANCELLED, updated.status)
+    }
+
+    @Test
+    @DisplayName("Should leave a pending job unchanged")
+    fun testCancelQueuedJobNoOpForPendingJob() {
+      val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+
+      jobPersistence.cancelQueuedJob(jobId)
+
+      val updated = jobPersistence.getJob(jobId)
+      assertEquals(JobStatus.PENDING, updated.status)
+    }
+  }
+
+  @Nested
   @DisplayName("When creating attempt")
   internal inner class CreateAttempt {
     @Test
@@ -1868,9 +2023,11 @@ internal class DefaultJobPersistenceTest {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.createAttempt(jobId, LOG_PATH)
 
-      assertThrows(
-        IllegalStateException::class.java,
-      ) { jobPersistence.createAttempt(jobId, LOG_PATH) }
+      val exception =
+        assertThrows(
+          JobRunningAttemptExistsException::class.java,
+        ) { jobPersistence.createAttempt(jobId, LOG_PATH) }
+      assertEquals(0, exception.existingAttemptNumber)
 
       val actual = jobPersistence.getJob(jobId)
       val expected =
@@ -1892,7 +2049,7 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.succeedAttempt(jobId, attemptNumber)
 
       assertThrows(
-        IllegalStateException::class.java,
+        JobInTerminalStateException::class.java,
       ) { jobPersistence.createAttempt(jobId, LOG_PATH) }
 
       val actual = jobPersistence.getJob(jobId)

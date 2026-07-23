@@ -1,18 +1,17 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs
 
-import datadog.trace.api.Trace
 import io.airbyte.commons.temporal.TemporalClient
-import io.airbyte.cron.SCHEDULED_TRACE_OPERATION_NAME
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.scheduling.annotation.Scheduled
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
 import jakarta.inject.Singleton
 
@@ -27,7 +26,7 @@ class SelfHealTemporalWorkflows(
     log.debug { "Creating temporal self-healing" }
   }
 
-  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
+  @WithSpan
   @Scheduled(fixedRate = "10s")
   fun cleanTemporal() {
     metricClient.count(

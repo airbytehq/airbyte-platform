@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
@@ -35,9 +35,21 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import secrets.persistence.SecretCoordinateException
 import kotlin.jvm.optionals.getOrElse
 
 private val logger = KotlinLogging.logger {}
+
+private const val ACCESS_DENIED_ERROR_CODE = "AccessDeniedException"
+private const val ASSUMED_ROLE_MARKER = "assumed-role"
+
+/**
+ * Returns true if this [AWSSecretsManagerException] is an AccessDeniedException whose message
+ * mentions an assumed-role, indicating tag-based IAM (ABAC) denied access because the secret
+ * does not exist (AWS cannot evaluate tag conditions on a non-existent resource).
+ */
+private fun AWSSecretsManagerException.isAssumedRoleAccessDenied(): Boolean =
+  errorCode == ACCESS_DENIED_ERROR_CODE && errorMessage?.contains(ASSUMED_ROLE_MARKER) == true
 
 enum class AwsAuthType(
   val value: String,
@@ -77,6 +89,17 @@ class AwsSecretManagerPersistence(
     val existingSecret =
       try {
         read(coordinate)
+      } catch (e: SecretCoordinateException) {
+        // read() may wrap an AWSSecretsManagerException in a SecretCoordinateException.
+        // Apply the same assumed-role handling: if the underlying cause is an assumed-role
+        // AccessDeniedException, treat it as "secret not found" and proceed to create.
+        val cause = e.cause
+        if (cause is AWSSecretsManagerException && cause.isAssumedRoleAccessDenied()) {
+          logger.info { "SecretCoordinateException with assumed-role AccessDeniedException - Secret ${coordinate.fullCoordinate} not found" }
+          ""
+        } else {
+          throw e
+        }
       } catch (e: AWSSecretsManagerException) {
         // We use tags to control access to secrets.
         // The AWS SDK doesn't differentiate between role access exceptions and secret not found exceptions to prevent leaking information.
@@ -84,7 +107,7 @@ class AwsSecretManagerPersistence(
         // In theory, the secret should not exist, and we will go straight to attempting to create which is safe because:
         // 1. Update and create are distinct actions, and we can't create over an already existing secret, so we should get an error and no-op
         // 2. If the secret does exist, we will get an error and no-op
-        if (e.localizedMessage.contains("assumed-role")) {
+        if (e.isAssumedRoleAccessDenied()) {
           logger.info { "AWS exception caught - Secret ${coordinate.fullCoordinate} not found" }
           ""
         } else {
@@ -119,9 +142,30 @@ class AwsSecretManagerPersistence(
     deleteSecretId(coordinate.fullCoordinate)
   }
 
-  private fun deleteSecretId(secretId: String) {
+  /**
+   * Schedules the secret for deletion, retaining it for [recoveryWindowInDays] days before AWS
+   * permanently removes it (see AWS [DeleteSecret] RecoveryWindowInDays).
+   */
+  override fun deleteWithRecoveryWindow(
+    coordinate: AirbyteManagedSecretCoordinate,
+    recoveryWindowInDays: Long,
+  ) {
+    // Clean up the old bad secrets we might have left behind
+    deleteSecretId(coordinate.coordinateBase, recoveryWindowInDays)
+    // Clean up the actual versioned secrets we left behind
+    deleteSecretId(coordinate.fullCoordinate, recoveryWindowInDays)
+  }
+
+  private fun deleteSecretId(
+    secretId: String,
+    recoveryWindowInDays: Long? = null,
+  ) {
     try {
-      awsClient.deleteSecret(secretId)
+      if (recoveryWindowInDays != null) {
+        awsClient.deleteSecretWithRecoveryWindow(secretId, recoveryWindowInDays)
+      } else {
+        awsClient.deleteSecret(secretId)
+      }
     } catch (_: ResourceNotFoundException) {
       logger.warn { "Secret $secretId not found" }
     } catch (_: InvalidRequestException) {
@@ -211,6 +255,39 @@ interface AwsSecretsManagerClient {
           logger.warn { "Secret ${coordinate.coordinateBase} not found" }
         }
       }
+    } catch (e: AWSSecretsManagerException) {
+      // When IAM policies use tag-based conditions (ABAC), AWS returns AccessDeniedException instead of
+      // ResourceNotFoundException for non-existent secrets because it cannot evaluate tag conditions.
+      // In this case, we should attempt the same coordinateBase fallback as for ResourceNotFoundException.
+      if (e.isAssumedRoleAccessDenied() &&
+        coordinate is AirbyteManagedSecretCoordinate
+      ) {
+        logger.warn { "AccessDeniedException for ${coordinate.fullCoordinate} with assumed-role - attempting coordinateBase fallback" }
+        try {
+          secretString = cache.getSecretString(coordinate.coordinateBase)
+        } catch (_: ResourceNotFoundException) {
+          logger.warn { "Secret ${coordinate.coordinateBase} not found" }
+        } catch (fallbackEx: AWSSecretsManagerException) {
+          // If the fallback also fails with an assumed-role AccessDeniedException, the secret
+          // simply doesn't exist under either coordinate. Log and fall through to return empty string,
+          // same as the ResourceNotFoundException catch above.
+          if (fallbackEx.isAssumedRoleAccessDenied()) {
+            logger.warn { "AccessDeniedException for ${coordinate.coordinateBase} with assumed-role - secret does not exist" }
+          } else {
+            throw SecretCoordinateException(
+              "Failed to read secret ${coordinate.fullCoordinate}: ${fallbackEx.errorMessage}",
+              "aws",
+              fallbackEx,
+            )
+          }
+        }
+      } else {
+        throw SecretCoordinateException(
+          "Failed to read secret ${coordinate.fullCoordinate}: ${e.errorMessage}",
+          "aws",
+          e,
+        )
+      }
     }
 
     return secretString
@@ -233,6 +310,16 @@ interface AwsSecretsManagerClient {
       DeleteSecretRequest()
         .withSecretId(secretId)
         .withForceDeleteWithoutRecovery(true),
+    )
+
+  fun deleteSecretWithRecoveryWindow(
+    secretId: String,
+    recoveryWindow: Long,
+  ): DeleteSecretResult =
+    getClient().deleteSecret(
+      DeleteSecretRequest()
+        .withSecretId(secretId)
+        .withRecoveryWindowInDays(recoveryWindow),
     )
 
   fun parseTags(tags: String?): Map<String, String> {
@@ -272,6 +359,7 @@ interface AwsSecretsManagerClient {
             config,
           )
         }
+
         is AwsSecretsManagerRuntimeConfiguration.AssumeRoleConfig -> {
           val stsClient =
             AWSSecurityTokenServiceClientBuilder
@@ -331,7 +419,10 @@ class RuntimeAwsSecretsManagerClient(
             is AwsSecretsManagerRuntimeConfiguration.AssumeRoleConfig -> {
               withKmsKeyId(config.kmsKeyArn)
             }
-            else -> Unit
+
+            else -> {
+              Unit
+            }
           }
         }.apply {
           when (config) {
@@ -340,7 +431,10 @@ class RuntimeAwsSecretsManagerClient(
                 withTags(Tag().withKey(config.tagKey).withValue("true"))
               }
             }
-            else -> Unit
+
+            else -> {
+              Unit
+            }
           }
         }
 

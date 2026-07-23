@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.acceptance
@@ -98,7 +98,7 @@ private val log = KotlinLogging.logger {}
 const val NAME_PREFIX = "ATC"
 
 /** The Atc (Acceptance Test Connector) docker repo. */
-const val CUSTOM_DOCKER_REPO = "coleairbyte/abcdk"
+const val CUSTOM_DOCKER_REPO = "airbyte/abcdk"
 
 /** The Atc version. */
 const val CUSTOM_DOCKER_TAG = "0.7.2"

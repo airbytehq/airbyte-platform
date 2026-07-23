@@ -5,6 +5,7 @@
   height: variables.$tag-height;
   display: flex;
   align-items: center;
+  gap: variables.$spacing-xs;
   padding-inline: variables.$spacing-sm;
   border-radius: variables.$border-radius-2xs;
   cursor: default;

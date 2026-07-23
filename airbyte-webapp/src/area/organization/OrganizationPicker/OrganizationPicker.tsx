@@ -7,11 +7,11 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Link } from "react-router-dom";
 import { Components, Virtuoso, VirtuosoHandle, ItemContent } from "react-virtuoso";
 
-import AirbyteLogoIcon from "components/illustrations/airbyte-logo-icon.svg?react";
 import { Box } from "components/ui/Box";
 import { BrandingBadge, useGetProductBranding } from "components/ui/BrandingBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
+import AirbyteLogoIcon from "components/ui/illustrations/airbyte-logo-icon.svg?react";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
@@ -41,7 +41,7 @@ export const OrganizationPicker = () => {
   const { formatMessage } = useIntl();
 
   const currentOrgName =
-    currentOrganizationInfo.organizationName.length > 0
+    currentOrganizationInfo && currentOrganizationInfo.organizationName.length > 0
       ? currentOrganizationInfo.organizationName
       : formatMessage({ id: "organization.emptyName" });
 
@@ -54,7 +54,7 @@ export const OrganizationPicker = () => {
             size="lg"
             bold
             className={styles.organizationPicker__orgName}
-            italicized={!currentOrganizationInfo.organizationName}
+            italicized={!currentOrganizationInfo?.organizationName}
           >
             {currentOrgName}
           </Text>
@@ -73,7 +73,7 @@ export const OrganizationPicker = () => {
             size="lg"
             bold
             className={styles.organizationPicker__orgName}
-            italicized={!currentOrganizationInfo.organizationName}
+            italicized={!currentOrganizationInfo?.organizationName}
           >
             {currentOrgName}
           </Text>
@@ -163,7 +163,7 @@ const OrganizationPickerPanelContent = () => {
             context={{
               isFetchingNextPage,
               closePopover,
-              currentOrganizationId: currentOrganization.organizationId,
+              currentOrganizationId: currentOrganization?.organizationId ?? "",
             }}
             endReached={() => {
               if (hasNextPage && !isFetchingNextPage) {

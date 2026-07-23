@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container.orchestrator.worker.io
@@ -11,6 +11,7 @@ import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerSourceConfig
 import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
+import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
@@ -35,6 +36,10 @@ class LocalContainerAirbyteSource(
   private val messageMetricsTracker: MessageMetricsTracker,
   private val containerIOHandle: ContainerIOHandle,
   private val containerLogMdcBuilder: MdcScope.Builder,
+  private val metricClient: MetricClient,
+  private val workspaceId: UUID? = null,
+  private val connectionId: UUID? = null,
+  private val dockerImage: String? = null,
   private val diagnosticLogsEnabled: Boolean = false,
   private val exitCodeWaitSeconds: Long = EXIT_CODE_WAIT_SECONDS,
 ) : AirbyteSource {
@@ -68,6 +73,7 @@ class LocalContainerAirbyteSource(
     val terminationResult = containerIOHandle.terminate()
     if (terminationResult) {
       if (!LocalContainerConstants.IGNORED_EXIT_CODES.contains(exitValue)) {
+        LocalContainerConstants.emitExitCodeMetric(metricClient, "source", exitValue, workspaceId, connectionId, dockerImage)
         throw WorkerException("Source process exit with code $exitValue. This warning is normal if the job was cancelled.")
       }
     } else {

@@ -1,9 +1,9 @@
 import { Listbox } from "@headlessui/react";
 import isEqual from "lodash/isEqual";
 
-import { FormControlErrorMessage } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { FormControlErrorMessage } from "components/ui/forms/FormControl";
 import { Icon, IconType } from "components/ui/Icon";
 import { FloatLayout } from "components/ui/ListBox/FloatLayout";
 import { ListboxButton } from "components/ui/ListBox/ListboxButton";

@@ -4,15 +4,16 @@ import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
 
-import { useCurrentOrganizationId } from "area/organization/utils";
+import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
+import { isOrganizationSubscribed, useCurrentOrganizationId } from "area/organization/utils";
 import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/SettingsLayout";
 import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
-import { useDefaultWorkspaceInOrganization } from "core/api";
+import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
+import { useDefaultWorkspaceInOrganization, useOrgInfo } from "core/api";
+import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
-import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { SettingsRoutePaths } from "pages/routePaths";
 
 export const OrganizationSettingsPage: React.FC = () => {
@@ -24,10 +25,15 @@ export const OrganizationSettingsPage: React.FC = () => {
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
   const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
+  const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
+  const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
+  const isSubscribed = isOrganizationSubscribed(billing);
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
 
   const defaultWorkspace = useDefaultWorkspaceInOrganization(organizationId);
   const isCloudApp = useIsCloudApp();
+  const isBillingNavVisible =
+    isCloudApp && canManageOrganizationBilling && (!isSelfServePlusPlanEnabled || isSubscribed);
 
   return (
     <SettingsLayout>
@@ -46,11 +52,18 @@ export const OrganizationSettingsPage: React.FC = () => {
                 to={SettingsRoutePaths.OrganizationMembers}
               />
             )}
-            {isCloudApp && canManageOrganizationBilling && (
+            {isBillingNavVisible && (
               <SettingsLink
                 iconType="credits"
                 name={formatMessage({ id: "sidebar.billing" })}
                 to={CloudSettingsRoutePaths.Billing}
+              />
+            )}
+            {isCloudApp && canManageOrganizationBilling && isSelfServePlusPlanEnabled && (
+              <SettingsLink
+                iconType="creditCard"
+                name={formatMessage({ id: "sidebar.plan" })}
+                to={CloudSettingsRoutePaths.Plan}
               />
             )}
             {isCloudApp && canViewOrganizationUsage && (

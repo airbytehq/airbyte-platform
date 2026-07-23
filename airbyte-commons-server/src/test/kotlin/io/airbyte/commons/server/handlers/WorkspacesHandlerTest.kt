@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
@@ -263,6 +263,10 @@ internal class WorkspacesHandlerTest {
         io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
           NotificationType.CUSTOMERIO,
         ),
+      ).sendOnConnectionSyncQueued(
+        io.airbyte.api.model.generated
+          .NotificationItem()
+          .notificationType(mutableListOf<NotificationType?>()),
       )
 
   private fun generateDefaultApiNotificationSettings(): io.airbyte.api.model.generated.NotificationSettings? =
@@ -300,6 +304,10 @@ internal class WorkspacesHandlerTest {
         io.airbyte.api.model.generated.NotificationItem().addNotificationTypeItem(
           NotificationType.CUSTOMERIO,
         ),
+      ).sendOnConnectionSyncQueued(
+        io.airbyte.api.model.generated
+          .NotificationItem()
+          .notificationType(mutableListOf<NotificationType?>()),
       )
 
   @ParameterizedTest

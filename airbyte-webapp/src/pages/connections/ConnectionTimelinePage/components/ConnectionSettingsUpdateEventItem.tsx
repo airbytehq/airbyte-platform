@@ -7,7 +7,7 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { useModalService } from "hooks/services/Modal";
+import { useModalService } from "core/services/Modal";
 
 import {
   ConnectionSettingsUpdateEventItemDescription,

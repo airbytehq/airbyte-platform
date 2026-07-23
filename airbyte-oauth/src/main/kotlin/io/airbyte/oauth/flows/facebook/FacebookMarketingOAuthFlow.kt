@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.flows.facebook
@@ -22,6 +22,6 @@ class FacebookMarketingOAuthFlow : FacebookOAuthFlow {
   override fun getDefaultOAuthOutputPath(): List<String> = listOf("credentials")
 
   companion object {
-    private const val SCOPES = "ads_management,ads_read,read_insights,business_management"
+    private const val SCOPES = "ads_management,ads_read,business_management"
   }
 }

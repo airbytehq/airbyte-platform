@@ -14,7 +14,7 @@ import { CONNECTIONS_GRAPH_EVENT_TYPES, useGetConnectionsGraphData } from "core/
 import { ConnectionEventMinimal, ConnectionEventType } from "core/api/types/AirbyteClient";
 import { DefaultErrorBoundary } from "core/errors";
 import { useDrawerActions } from "core/services/ui/DrawerService";
-import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
+import { useAirbyteTheme } from "core/utils/useAirbyteTheme";
 
 import { ConnectionEventsList } from "./ConnectionEventsList";
 import styles from "./ConnectionsGraph.module.scss";

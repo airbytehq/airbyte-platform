@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.shared
@@ -41,6 +41,7 @@ data class Filters(
   val statuses: List<ConnectionJobStatus>? = null,
   val states: List<ActorStatus>? = null,
   val tagIds: List<UUID>? = null,
+  val onDemandEnabled: Boolean? = null,
 )
 
 data class Cursor(
@@ -264,6 +265,7 @@ fun buildFilters(filters: WebBackendConnectionListFilters?): Filters? {
         .collect(Collectors.toList())
     },
     filters.tagIds,
+    filters.onDemandEnabled,
   )
 }
 

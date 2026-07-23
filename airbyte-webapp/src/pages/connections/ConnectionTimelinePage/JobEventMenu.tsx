@@ -9,9 +9,9 @@ import { Text } from "components/ui/Text";
 import { useCurrentConnection, useDonwnloadJobLogsFetchQuery } from "core/api";
 import { WebBackendConnectionRead } from "core/api/types/AirbyteClient";
 import { DefaultErrorBoundary } from "core/errors";
+import { ModalOptions, ModalResult, useModalService } from "core/services/Modal";
+import { useNotificationService } from "core/services/Notification";
 import { copyToClipboard } from "core/utils/clipboard";
-import { ModalOptions, ModalResult, useModalService } from "hooks/services/Modal";
-import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./JobEventMenu.module.scss";
 import { JobLogsModalContent } from "./JobLogsModalContent";

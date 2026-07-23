@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.micronaut.runtime
@@ -20,6 +20,7 @@ internal class AirbyteInternalApiClientConfigDefaultTest {
     assertEquals("", airbyteInternalApiClientConfig.basePath)
     assertEquals(30, airbyteInternalApiClientConfig.connectTimeoutSeconds)
     assertEquals(600, airbyteInternalApiClientConfig.readTimeoutSeconds)
+    assertEquals(0, airbyteInternalApiClientConfig.callTimeoutSeconds)
     assertEquals(2, airbyteInternalApiClientConfig.retries.delaySeconds)
     assertEquals(.25, airbyteInternalApiClientConfig.retries.jitterFactor)
     assertEquals(5, airbyteInternalApiClientConfig.retries.max)
@@ -41,6 +42,7 @@ internal class AirbyteInternalApiClientConfigDataplaneAccessTokenTest {
     assertEquals("http://localhost:8001/api", airbyteInternalApiClientConfig.basePath)
     assertEquals(60, airbyteInternalApiClientConfig.connectTimeoutSeconds)
     assertEquals(300, airbyteInternalApiClientConfig.readTimeoutSeconds)
+    assertEquals(120, airbyteInternalApiClientConfig.callTimeoutSeconds)
     assertEquals(10, airbyteInternalApiClientConfig.retries.delaySeconds)
     assertEquals(.75, airbyteInternalApiClientConfig.retries.jitterFactor)
     assertEquals(2, airbyteInternalApiClientConfig.retries.max)
@@ -62,6 +64,7 @@ internal class AirbyteInternalApiClientConfigInternalClientTokenTest {
     assertEquals("http://localhost:8001/api", airbyteInternalApiClientConfig.basePath)
     assertEquals(60, airbyteInternalApiClientConfig.connectTimeoutSeconds)
     assertEquals(300, airbyteInternalApiClientConfig.readTimeoutSeconds)
+    assertEquals(120, airbyteInternalApiClientConfig.callTimeoutSeconds)
     assertEquals(10, airbyteInternalApiClientConfig.retries.delaySeconds)
     assertEquals(.75, airbyteInternalApiClientConfig.retries.jitterFactor)
     assertEquals(2, airbyteInternalApiClientConfig.retries.max)

@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.model.generated.OrganizationInfoRead
@@ -11,6 +12,7 @@ import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.server.handlers.OrganizationsHandler
+import io.airbyte.domain.services.dataworker.DataWorkerCapacityService
 import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.mockk.every
@@ -27,6 +29,7 @@ class OrganizationApiControllerTest {
   private lateinit var organizationsHandler: OrganizationsHandler
   private lateinit var organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper
   private lateinit var dataWorkerUsageService: DataWorkerUsageService
+  private lateinit var dataWorkerCapacityService: DataWorkerCapacityService
 
   private lateinit var organizationApiController: OrganizationApiController
 
@@ -42,23 +45,68 @@ class OrganizationApiControllerTest {
     organizationsHandler = mockk()
     organizationAccessAuthorizationHelper = mockk(relaxed = true)
     dataWorkerUsageService = mockk()
-    organizationApiController = OrganizationApiController(organizationsHandler, organizationAccessAuthorizationHelper, dataWorkerUsageService)
+    dataWorkerCapacityService = mockk()
+    organizationApiController =
+      OrganizationApiController(organizationsHandler, organizationAccessAuthorizationHelper, dataWorkerUsageService, dataWorkerCapacityService)
 
     // Default behavior: organizationsHandler returns organization info
     every { organizationsHandler.getOrganizationInfo(organizationId) } returns organizationInfoRead
   }
 
   @Test
-  fun testGetOrganization() {
-    every { organizationsHandler.getOrganization(any()) } returns OrganizationRead()
-    val body = OrganizationIdRequestBody().organizationId(UUID.randomUUID())
-    assertNotNull(organizationApiController.getOrganization(body))
+  fun `getOrganization succeeds when validation passes`() {
+    val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
+    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } returns Unit
+    every { organizationsHandler.getOrganization(requestBody) } returns OrganizationRead()
+
+    val result = organizationApiController.getOrganization(requestBody)
+
+    assertNotNull(result)
+    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
+    verify(exactly = 1) { organizationsHandler.getOrganization(requestBody) }
+  }
+
+  @Test
+  fun `getOrganization fails when validation fails`() {
+    val forbiddenException = ForbiddenProblem()
+    every { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) } throws forbiddenException
+
+    val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
+
+    val exception =
+      assertThrows<ForbiddenProblem> {
+        organizationApiController.getOrganization(requestBody)
+      }
+
+    assertEquals(forbiddenException, exception)
+    verify(exactly = 0) { organizationsHandler.getOrganization(any()) }
+    verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
   }
 
   @Test
   fun testUpdateOrganization() {
     every { organizationsHandler.updateOrganization(any()) } returns OrganizationRead()
     assertNotNull(organizationApiController.updateOrganization(OrganizationUpdateRequestBody()))
+  }
+
+  @Test
+  fun testSetOrganizationAgenticStatus() {
+    val requestBody =
+      OrganizationAgenticStatusUpdateRequestBody()
+        .organizationId(organizationId)
+        .isAgentic(true)
+    every { organizationsHandler.setOrganizationAgenticStatus(requestBody) } returns OrganizationRead().isAgentic(true)
+    assertEquals(true, organizationApiController.setOrganizationAgenticStatus(requestBody)?.isAgentic)
+  }
+
+  @Test
+  fun testSetOrganizationAgenticStatusFalse() {
+    val requestBody =
+      OrganizationAgenticStatusUpdateRequestBody()
+        .organizationId(organizationId)
+        .isAgentic(false)
+    every { organizationsHandler.setOrganizationAgenticStatus(requestBody) } returns OrganizationRead().isAgentic(false)
+    assertEquals(false, organizationApiController.setOrganizationAgenticStatus(requestBody)?.isAgentic)
   }
 
   @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
@@ -10,6 +10,7 @@ import io.airbyte.api.model.generated.JobInfoRead
 import io.airbyte.api.model.generated.JobRead
 import io.airbyte.api.model.generated.JobStatus
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
@@ -47,6 +48,16 @@ class JobResponseMapperTest {
     jobInfoRead.job = jobRead
 
     assertThrows<IllegalArgumentException> { JobResponseMapper.from(jobInfoRead) }
+  }
+
+  @Test
+  fun `from should convert a queued JobRead object from the config api to a JobResponse`() {
+    val jobRead = getJobRead(JobConfigType.SYNC).apply { status = JobStatus.QUEUED }
+    val jobInfoRead = JobInfoRead().apply { job = jobRead }
+
+    val jobResponse = JobResponseMapper.from(jobInfoRead)
+
+    assertEquals(jobRead.status.toString(), jobResponse.status.toString())
   }
 
   private fun getJobRead(jobConfigType: JobConfigType): JobRead =

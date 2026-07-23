@@ -13,9 +13,9 @@ import {
   useCancelSubscription,
 } from "core/api";
 import { OrganizationPaymentConfigReadSubscriptionStatus } from "core/api/types/AirbyteClient";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
+import { useNotificationService } from "core/services/Notification";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useNotificationService } from "hooks/services/Notification";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./DeleteWorkspace.module.scss";
@@ -31,7 +31,7 @@ export const DeleteWorkspace: React.FC = () => {
   const { formatMessage, formatDate } = useIntl();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const redirectPathAfterDeletion = `/${RoutePaths.Organization}/${workspace.organizationId}`;
-  const { subscriptionStatus, isStandardPlan } = useOrganizationSubscriptionStatus();
+  const { subscriptionStatus } = useOrganizationSubscriptionStatus();
 
   // Check if this is the last workspace in the organization
   const { isLastWorkspace, isLoading: isCheckingLastWorkspace } = useIsLastWorkspaceInOrganization(
@@ -40,13 +40,16 @@ export const DeleteWorkspace: React.FC = () => {
   );
 
   // Fetch subscription info only if this is the last workspace
-  const { data: subscriptionInfo } = useGetOrganizationSubscriptionInfo(organizationId || "", isLastWorkspace);
+  const { data: subscriptionInfo, isLoading: isSubscriptionInfoLoading } = useGetOrganizationSubscriptionInfo(
+    organizationId || "",
+    isLastWorkspace
+  );
   const hasActiveSubscription = subscriptionStatus === OrganizationPaymentConfigReadSubscriptionStatus.subscribed;
-  const shouldShowCancelSubscriptionWarning = isLastWorkspace && hasActiveSubscription && isStandardPlan;
+  const shouldShowCancelSubscriptionWarning =
+    isLastWorkspace && hasActiveSubscription && subscriptionInfo?.selfServeSubscription === true;
 
   // Handle subscription cancellation after workspace deletion
   const handleCancelSubscription = async () => {
-    // Only attempt subscription cancellation if this is the last workspace, the organization has an active subscription, and is on Standard plan
     if (organizationId && shouldShowCancelSubscriptionWarning) {
       try {
         await cancelSubscription();
@@ -119,7 +122,12 @@ export const DeleteWorkspace: React.FC = () => {
 
   return (
     <Button
-      isLoading={isCheckingLastWorkspace || isDeletingWorkspace || isCancellingSubscription}
+      isLoading={
+        isCheckingLastWorkspace ||
+        (isLastWorkspace && isSubscriptionInfoLoading) ||
+        isDeletingWorkspace ||
+        isCancellingSubscription
+      }
       variant="danger"
       onClick={onRemoveWorkspaceClick}
     >

@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling
 
+import io.airbyte.api.client.model.generated.ConnectionScheduleType
 import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput
@@ -17,6 +18,8 @@ import io.airbyte.commons.temporal.scheduling.state.listener.TestStateListener.C
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.ChangedStateEvent
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.StateField
 import io.airbyte.config.ConnectionContext
+import io.airbyte.config.JobConfig.ConfigType
+import io.airbyte.featureflag.EnforceDataWorkerCapacity
 import io.airbyte.micronaut.temporal.TemporalProxyHelper
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.temporal.activities.GetConnectionContextOutput
@@ -28,6 +31,9 @@ import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionAc
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionOutput
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivityImpl
+import io.airbyte.workers.temporal.scheduling.activities.CapacityCheckActivity
+import io.airbyte.workers.temporal.scheduling.activities.CapacityCheckActivity.CapacityCheckOutput
+import io.airbyte.workers.temporal.scheduling.activities.CapacityCheckActivityImpl
 import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity
 import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivityImpl
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity
@@ -36,6 +42,7 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.Sch
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivityImpl
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity
+import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivityImpl
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity
@@ -146,6 +153,7 @@ internal class ConnectionManagerWorkflowTest {
     clearMocks(mCheckRunProgressActivity)
     clearMocks(mRetryStatePersistenceActivity)
     clearMocks(mAppendToAttemptLogActivity)
+    clearMocks(mCapacityCheckActivity)
 
     // default is to wait "forever"
     every { mConfigFetchActivity.getTimeToWait(any()) } returns
@@ -161,7 +169,7 @@ internal class ConnectionManagerWorkflowTest {
 
     every { mConfigFetchActivity.getConnectionContext(any()) } returns
       GetConnectionContextOutput(
-        ConnectionContext().withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID),
+        ConnectionContext().withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID).withOrganizationId(ORGANIZATION_ID),
       )
 
     every { mJobCreationAndStatusUpdateActivity.createNewJob(any()) } returns
@@ -188,6 +196,8 @@ internal class ConnectionManagerWorkflowTest {
       PersistOutput(true)
     every { mAppendToAttemptLogActivity.log(any()) } returns
       LogOutput(true)
+    every { mCapacityCheckActivity.checkCapacity(any()) } returns
+      CapacityCheckOutput(true, false, false)
 
     activityOptions =
       ActivityOptions
@@ -298,6 +308,34 @@ internal class ConnectionManagerWorkflowTest {
               changedStateEvent.isValue
           },
         ).isEmpty()
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Feature flag lookup uses hydrated organization context")
+    fun featureFlagLookupUsesHydratedOrganizationContext() {
+      returnTrueForLastJobOrAttemptFailure()
+      every { mConfigFetchActivity.getTimeToWait(any()) } returns ScheduleRetrieverOutput(SCHEDULE_WAIT)
+
+      val input =
+        ConnectionUpdaterInput(
+          connectionId = UUID.randomUUID(),
+          jobId = JOB_ID,
+          attemptId = ATTEMPT_ID,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = WorkflowState(UUID.randomUUID(), TestStateListener()),
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
+        )
+
+      startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() + 1))
+
+      verify(atLeast = 1) {
+        mFeatureFlagFetchActivity.getFeatureFlags(FeatureFlagFetchInput(input.connectionId, ORGANIZATION_ID))
+      }
     }
 
     @Test
@@ -436,6 +474,126 @@ internal class ConnectionManagerWorkflowTest {
 
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Test manual sync waiting for capacity is cancelled after 8 hours")
+    fun manualRunCapacityTimeout() {
+      returnTrueForLastJobOrAttemptFailure()
+      val testId = UUID.randomUUID()
+      val testStateListener = TestStateListener()
+      val workflowState = WorkflowState(testId, testStateListener)
+      val connectionId = startManualWorkflowWaitingForCapacity(workflowState)
+      testEnv.sleep(Duration.ofHours(8).plusMinutes(1))
+
+      verify(atLeast = 1) {
+        mJobCreationAndStatusUpdateActivity.cancelJob(
+          match {
+            it.connectionId == connectionId &&
+              it.reason == "Job cancelled: manual sync waited 8 hours for Data Worker capacity"
+          },
+        )
+      }
+      verify(exactly = 0) { mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()) }
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Test queued job information includes sync config type")
+    fun queuedJobInformationIncludesSyncConfigType() {
+      returnTrueForLastJobOrAttemptFailure()
+      every { mJobCreationAndStatusUpdateActivity.createNewJob(any()) } returns JobCreationOutput(JOB_ID, ConfigType.SYNC)
+      val workflowState = WorkflowState(UUID.randomUUID(), TestStateListener())
+
+      startManualWorkflowWaitingForCapacity(workflowState)
+
+      val jobInformation = workflow.getJobInformation()
+      Assertions.assertThat(jobInformation.jobId).isEqualTo(JOB_ID)
+      Assertions.assertThat(jobInformation.attemptId).isEqualTo(ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID)
+      Assertions.assertThat(jobInformation.configType).isEqualTo(ConfigType.SYNC)
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Test scheduled sync waiting for capacity is cancelled when the next scheduled run is already due")
+    fun scheduledRunCapacityTimeoutWhenNextRunIsDue() {
+      returnTrueForLastJobOrAttemptFailure()
+      val workflowState = WorkflowState(UUID.randomUUID(), TestStateListener())
+      val connectionId = startScheduledWorkflowWaitingForCapacity(workflowState, Duration.ZERO)
+
+      verify(timeout = TEN_SECONDS.toLong(), atLeast = 1) {
+        mJobCreationAndStatusUpdateActivity.cancelJob(
+          match {
+            it.connectionId == connectionId &&
+              it.reason == "Job cancelled: next scheduled sync time reached while waiting for Data Worker capacity"
+          },
+        )
+      }
+      verify(exactly = 0) { mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()) }
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Test queued job is cancelled when connection is deleted while waiting for capacity")
+    fun deleteWhileWaitingForCapacity() {
+      returnTrueForLastJobOrAttemptFailure()
+      val workflowState = WorkflowState(UUID.randomUUID(), TestStateListener())
+      val connectionId = startManualWorkflowWaitingForCapacity(workflowState)
+
+      workflow.deleteConnection()
+
+      verify(timeout = TEN_SECONDS.toLong(), atLeast = 1) {
+        mJobCreationAndStatusUpdateActivity.cancelJob(
+          match {
+            it.connectionId == connectionId &&
+              it.reason == "Job cancelled: connection deleted while waiting for Data Worker capacity"
+          },
+        )
+      }
+      verify(exactly = 0) { mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()) }
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Test queued job is cancelled when cancel is requested while waiting for capacity")
+    fun cancelWhileWaitingForCapacity() {
+      returnTrueForLastJobOrAttemptFailure()
+      val workflowState = WorkflowState(UUID.randomUUID(), TestStateListener())
+      val connectionId = startManualWorkflowWaitingForCapacity(workflowState)
+
+      workflow.cancelJob()
+
+      verify(timeout = TEN_SECONDS.toLong(), atLeast = 1) {
+        mJobCreationAndStatusUpdateActivity.cancelJob(
+          match {
+            it.connectionId == connectionId &&
+              it.reason == "Job cancelled: cancellation requested while waiting for Data Worker capacity"
+          },
+        )
+      }
+      verify(exactly = 0) { mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()) }
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Test queued job is cancelled when connection is updated while waiting for capacity")
+    fun updateWhileWaitingForCapacity() {
+      returnTrueForLastJobOrAttemptFailure()
+      val workflowState = WorkflowState(UUID.randomUUID(), TestStateListener())
+      val connectionId = startManualWorkflowWaitingForCapacity(workflowState)
+
+      workflow.connectionUpdated()
+
+      verify(timeout = TEN_SECONDS.toLong(), atLeast = 1) {
+        mJobCreationAndStatusUpdateActivity.cancelJob(
+          match {
+            it.connectionId == connectionId &&
+              it.reason == "Job cancelled: connection updated while waiting for Data Worker capacity"
+          },
+        )
+      }
+      verify(exactly = 0) { mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()) }
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test workflow which receives an update signal stops waiting, doesn't run, and doesn't update the job status")
     fun updatedSignalReceived() {
       returnTrueForLastJobOrAttemptFailure()
@@ -521,6 +679,67 @@ internal class ConnectionManagerWorkflowTest {
         ).isEmpty()
 
       verify { mJobCreationAndStatusUpdateActivity wasNot Called }
+    }
+
+    private fun startManualWorkflowWaitingForCapacity(workflowState: WorkflowState): UUID {
+      val connectionId = UUID.randomUUID()
+
+      every { mConfigFetchActivity.getConnectionContext(any()) } returns
+        GetConnectionContextOutput(
+          ConnectionContext()
+            .withSourceId(SOURCE_ID)
+            .withDestinationId(DESTINATION_ID)
+            .withOrganizationId(UUID.randomUUID()),
+        )
+      every { mCapacityCheckActivity.checkCapacity(any()) } returns
+        CapacityCheckOutput(false, false, true)
+      every { mFeatureFlagFetchActivity.getFeatureFlags(any()) } returns
+        FeatureFlagFetchOutput(mutableMapOf(EnforceDataWorkerCapacity.key to true))
+      every { mConfigFetchActivity.getTimeToWait(any()) } returns
+        ScheduleRetrieverOutput(Duration.ofDays((100 * 365).toLong()), ConnectionScheduleType.MANUAL)
+
+      val input =
+        ConnectionUpdaterInput(
+          connectionId = connectionId,
+          workflowState = workflowState,
+        )
+
+      startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofMinutes(1))
+      workflow.submitManualSync()
+      testEnv.sleep(Duration.ofMinutes(1))
+
+      return connectionId
+    }
+
+    private fun startScheduledWorkflowWaitingForCapacity(
+      workflowState: WorkflowState,
+      timeToNextRun: Duration,
+    ): UUID {
+      val connectionId = UUID.randomUUID()
+
+      every { mConfigFetchActivity.getConnectionContext(any()) } returns
+        GetConnectionContextOutput(
+          ConnectionContext()
+            .withSourceId(SOURCE_ID)
+            .withDestinationId(DESTINATION_ID)
+            .withOrganizationId(UUID.randomUUID()),
+        )
+      every { mCapacityCheckActivity.checkCapacity(any()) } returns
+        CapacityCheckOutput(false, false, true)
+      every { mFeatureFlagFetchActivity.getFeatureFlags(any()) } returns
+        FeatureFlagFetchOutput(mutableMapOf(EnforceDataWorkerCapacity.key to true))
+      every { mConfigFetchActivity.getTimeToWait(any()) } returns
+        ScheduleRetrieverOutput(timeToNextRun, ConnectionScheduleType.BASIC)
+
+      val input =
+        ConnectionUpdaterInput(
+          connectionId = connectionId,
+          workflowState = workflowState,
+        )
+
+      startWorkflowAndWaitUntilReady(workflow, input)
+      return connectionId
     }
 
     @Test
@@ -1935,6 +2154,7 @@ internal class ConnectionManagerWorkflowTest {
       mCheckRunProgressActivity,
       mRetryStatePersistenceActivity,
       mAppendToAttemptLogActivity,
+      mCapacityCheckActivity,
       mJobPostProcessingActivity,
     )
 
@@ -2055,6 +2275,7 @@ internal class ConnectionManagerWorkflowTest {
       mCheckRunProgressActivity,
       mRetryStatePersistenceActivity,
       mAppendToAttemptLogActivity,
+      mCapacityCheckActivity,
       mJobPostProcessingActivity,
     )
 
@@ -2091,6 +2312,7 @@ internal class ConnectionManagerWorkflowTest {
     private const val ATTEMPT_ID = 1
     val SOURCE_ID: UUID = UUID.randomUUID()
     val DESTINATION_ID: UUID = UUID.randomUUID()
+    val ORGANIZATION_ID: UUID = UUID.randomUUID()
 
     private val SCHEDULE_WAIT: Duration = Duration.ofMinutes(20L)
     private const val WORKFLOW_ID = "workflow-id"
@@ -2117,6 +2339,8 @@ internal class ConnectionManagerWorkflowTest {
       mockk<RetryStatePersistenceActivityImpl>(relaxed = true)
     private val mAppendToAttemptLogActivity: AppendToAttemptLogActivity =
       mockk<AppendToAttemptLogActivityImpl>(relaxed = true)
+    private val mCapacityCheckActivity: CapacityCheckActivity =
+      mockk<CapacityCheckActivityImpl>(relaxed = true)
     private const val EVENT = "event = "
 
     private fun startWorkflowAndWaitUntilReady(

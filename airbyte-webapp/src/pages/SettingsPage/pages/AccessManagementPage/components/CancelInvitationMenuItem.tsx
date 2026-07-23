@@ -4,7 +4,7 @@ import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { useCancelUserInvitation, useCurrentOrganizationInfo, useCurrentWorkspaceOrUndefined } from "core/api";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
 
 import styles from "./RemoveRoleMenuItem.module.scss";
 import { UnifiedUserModel } from "./util";
@@ -17,7 +17,7 @@ export const CancelInvitationMenuItem: React.FC<CancelInvitationMenuItemProps> =
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const workspaceName = useCurrentWorkspaceOrUndefined()?.name;
-  const { organizationName } = useCurrentOrganizationInfo();
+  const organizationName = useCurrentOrganizationInfo()?.organizationName;
 
   const { mutateAsync: cancelInvitation } = useCancelUserInvitation();
 

@@ -111,21 +111,21 @@ Renders the server.warehouseExports.bucketName environment variable
 {{- end }}
 
 {{/*
-Renders the server.data.salesCustomerAttributesObjectPrefix value
+Renders the server.data.organizationCustomerTiersObjectPrefix value
 */}}
-{{- define "airbyte.server.data.salesCustomerAttributesObjectPrefix" }}
-    {{- .Values.server.data.salesCustomerAttributesObjectPrefix | default "data/sales_customer_attributes" }}
+{{- define "airbyte.server.data.organizationCustomerTiersObjectPrefix" }}
+    {{- .Values.server.data.organizationCustomerTiersObjectPrefix | default "data/organization_customer_tiers" }}
 {{- end }}
 
 {{/*
-Renders the server.data.salesCustomerAttributesObjectPrefix environment variable
+Renders the server.data.organizationCustomerTiersObjectPrefix environment variable
 */}}
-{{- define "airbyte.server.data.salesCustomerAttributesObjectPrefix.env" }}
-- name: GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX
+{{- define "airbyte.server.data.organizationCustomerTiersObjectPrefix.env" }}
+- name: GCS_DATA_ORGANIZATION_CUSTOMER_TIERS_OBJECT_PREFIX
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX
+      key: GCS_DATA_ORGANIZATION_CUSTOMER_TIERS_OBJECT_PREFIX
 {{- end }}
 
 {{/*
@@ -359,42 +359,6 @@ Renders the server.webapp.datadogSite environment variable
 {{- end }}
 
 {{/*
-Renders the server.webapp.posthogApiKey value
-*/}}
-{{- define "airbyte.server.webapp.posthogApiKey" }}
-    {{- .Values.server.webapp.posthogApiKey }}
-{{- end }}
-
-{{/*
-Renders the server.webapp.posthogApiKey environment variable
-*/}}
-{{- define "airbyte.server.webapp.posthogApiKey.env" }}
-- name: WEBAPP_POSTHOG_API_KEY
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: WEBAPP_POSTHOG_API_KEY
-{{- end }}
-
-{{/*
-Renders the server.webapp.posthogHost value
-*/}}
-{{- define "airbyte.server.webapp.posthogHost" }}
-    {{- .Values.server.webapp.posthogHost }}
-{{- end }}
-
-{{/*
-Renders the server.webapp.posthogHost environment variable
-*/}}
-{{- define "airbyte.server.webapp.posthogHost.env" }}
-- name: WEBAPP_POSTHOG_HOST
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: WEBAPP_POSTHOG_HOST
-{{- end }}
-
-{{/*
 Renders the server.webapp.hockeystackApiKey value
 */}}
 {{- define "airbyte.server.webapp.hockeystackApiKey" }}
@@ -531,7 +495,7 @@ Renders the set of all server environment variables
 {{- end }}
 {{- include "airbyte.server.warehouseExports.projectId.env" . }}
 {{- include "airbyte.server.warehouseExports.bucketName.env" . }}
-{{- include "airbyte.server.data.salesCustomerAttributesObjectPrefix.env" . }}
+{{- include "airbyte.server.data.organizationCustomerTiersObjectPrefix.env" . }}
 {{- include "airbyte.server.httpIdleTimeout.env" . }}
 {{- include "airbyte.server.openai.syncAssistantApiKey.env" . }}
 {{- include "airbyte.server.publicApiExecutor.numThreads.env" . }}
@@ -544,8 +508,6 @@ Renders the set of all server environment variables
 {{- include "airbyte.server.webapp.datadogEnv.env" . }}
 {{- include "airbyte.server.webapp.datadogService.env" . }}
 {{- include "airbyte.server.webapp.datadogSite.env" . }}
-{{- include "airbyte.server.webapp.posthogApiKey.env" . }}
-{{- include "airbyte.server.webapp.posthogHost.env" . }}
 {{- include "airbyte.server.webapp.hockeystackApiKey.env" . }}
 {{- include "airbyte.server.webapp.launchdarklyKey.env" . }}
 {{- include "airbyte.server.webapp.osanoKey.env" . }}
@@ -566,7 +528,7 @@ CONNECTOR_DATADOG_SUPPORT_NAMES: {{ include "airbyte.server.connectorDatadogSupp
 {{- end }}
 GCS_AIRBYTE_WAREHOUSE_EXPORTS_PROJECT_ID: {{ include "airbyte.server.warehouseExports.projectId" . | quote }}
 GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME: {{ include "airbyte.server.warehouseExports.bucketName" . | quote }}
-GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX: {{ include "airbyte.server.data.salesCustomerAttributesObjectPrefix" . | quote }}
+GCS_DATA_ORGANIZATION_CUSTOMER_TIERS_OBJECT_PREFIX: {{ include "airbyte.server.data.organizationCustomerTiersObjectPrefix" . | quote }}
 HTTP_IDLE_TIMEOUT: {{ include "airbyte.server.httpIdleTimeout" . | quote }}
 PUBLIC_API_EXECUTOR_THREADS: {{ include "airbyte.server.publicApiExecutor.numThreads" . | quote }}
 IO_TASK_EXECUTOR_THREADS: {{ include "airbyte.server.ioExecutor.numThreads" . | quote }}
@@ -577,8 +539,6 @@ WEBAPP_DATADOG_CLIENT_TOKEN: {{ include "airbyte.server.webapp.datadogClientToke
 WEBAPP_DATADOG_ENV: {{ include "airbyte.server.webapp.datadogEnv" . | quote }}
 WEBAPP_DATADOG_SERVICE: {{ include "airbyte.server.webapp.datadogService" . | quote }}
 WEBAPP_DATADOG_SITE: {{ include "airbyte.server.webapp.datadogSite" . | quote }}
-WEBAPP_POSTHOG_API_KEY: {{ include "airbyte.server.webapp.posthogApiKey" . | quote }}
-WEBAPP_POSTHOG_HOST: {{ include "airbyte.server.webapp.posthogHost" . | quote }}
 WEBAPP_HOCKEYSTACK_API_KEY: {{ include "airbyte.server.webapp.hockeystackApiKey" . | quote }}
 WEBAPP_LAUNCHDARKLY_KEY: {{ include "airbyte.server.webapp.launchdarklyKey" . | quote }}
 WEBAPP_OSANO_KEY: {{ include "airbyte.server.webapp.osanoKey" . | quote }}

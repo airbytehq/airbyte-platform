@@ -1641,6 +1641,45 @@ paths:
         type: "string"
       in: "path"
       required: true
+  /workspaces/{workspaceId}/oauthCredentials/{actorType}/{name}:
+    delete:
+      parameters:
+      - name: "workspaceId"
+        schema:
+          format: "UUID"
+          type: "string"
+        in: "path"
+        required: true
+      - name: "actorType"
+        schema:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        in: "path"
+        required: true
+      - name: "name"
+        schema:
+          type: "string"
+        in: "path"
+        required: true
+        description: "The name of the source or destination i.e. google-ads"
+      tags:
+      - "public_workspaces"
+      - "public"
+      - "Workspaces"
+      responses:
+        "2XX":
+          description: "OAuth credential override was deleted successfully."
+        "400":
+          description: "A field in the path has not been set appropriately."
+        "403":
+          description: "API key is invalid."
+      operationId: "deleteWorkspaceOAuthCredentials"
+      x-speakeasy-alias: "deleteWorkspaceOAuthCredentials"
+      x-speakeasy-group: "Workspaces"
+      summary: "Delete OAuth override credentials for a workspace and source/destination type."
+      description: "Delete a set of OAuth credentials that overrides the Airbyte-provided\
+        \ OAuth credentials used for source/destination OAuth.\n\n> \U0001F6A7 Warning\n\
+        >\n> Deleting an override that is actively used by existing sources or destinations\
+        \ will cause those connectors to fail on their next sync and require re-authentication."
   /permissions/{permissionId}:
     parameters:
     - name: "permissionId"
@@ -1854,6 +1893,45 @@ paths:
         \ OAuth credentials used for source/destination OAuth.\nIn order to determine\
         \ what the credential configuration needs to be, please see the connector\
         \ specification of the relevant source/destination."
+  /organizations/{organizationId}/oauthCredentials/{actorType}/{name}:
+    delete:
+      parameters:
+      - name: "organizationId"
+        schema:
+          format: "UUID"
+          type: "string"
+        in: "path"
+        required: true
+      - name: "actorType"
+        schema:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        in: "path"
+        required: true
+      - name: "name"
+        schema:
+          type: "string"
+        in: "path"
+        required: true
+        description: "The name of the source or destination i.e. google-ads"
+      tags:
+      - "public_organizations"
+      - "public"
+      - "Organizations"
+      responses:
+        "204":
+          description: "OAuth credential override was deleted successfully."
+        "400":
+          description: "A field in the path has not been set appropriately."
+        "403":
+          description: "API key is invalid."
+      operationId: "deleteOrganizationOAuthCredentials"
+      x-speakeasy-alias: "deleteOrganizationOAuthCredentials"
+      x-speakeasy-group: "Organizations"
+      summary: "Delete OAuth override credentials for an organization and source/destination type."
+      description: "Delete a set of OAuth credentials that overrides the Airbyte-provided\
+        \ OAuth credentials used for source/destination OAuth.\n\n> \U0001F6A7 Warning\n\
+        >\n> Deleting an override that is actively used by existing sources or destinations\
+        \ will cause those connectors to fail on their next sync and require re-authentication."
   /users:
     get:
       tags:
@@ -2741,6 +2819,7 @@ components:
     JobStatusEnum:
       enum:
       - "pending"
+      - "queued"
       - "running"
       - "incomplete"
       - "failed"
@@ -2876,6 +2955,20 @@ components:
         oAuthInputConfiguration:
           $ref: "#/components/schemas/OAuthInputConfiguration"
           description: "Input configuration for OAuth required by some sources."
+        requestedScopes:
+          type: "array"
+          description: "Optional OAuth scopes to request, overriding the connector's\
+            \ default scopes. Only supported for connectors that define scopes as\
+            \ an array."
+          items:
+            type: "string"
+        requestedOptionalScopes:
+          type: "array"
+          description: "Optional OAuth optional_scopes to request, overriding the\
+            \ connector's default optional_scopes. Only applied when requestedScopes\
+            \ is also provided."
+          items:
+            type: "string"
       example:
         redirectUrl: "https://cloud.airbyte.io/v1/api/oauth/callback"
         workspaceId: "871d9b60-11d1-44cb-8c92-c246d53bf87e"
@@ -4005,106 +4098,6 @@ components:
           items:
             $ref: "#/components/schemas/DataplaneResponse"
       x-speakeasy-component: true
-    ConfigTemplateListResponse:
-      type: "object"
-      required:
-      - "data"
-      properties:
-        data:
-          type: "array"
-          items:
-            $ref: "#/components/schemas/ConfigTemplateListItem"
-      x-speakeasy-component: true
-    ConfigTemplateListItem:
-      type: "object"
-      required:
-      - "id"
-      - "name"
-      - "icon"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
-        name:
-          type: "string"
-        icon:
-          type: "string"
-      x-speakeasy-component: true
-    ConfigTemplatePublicRead:
-      type: "object"
-      required:
-      - "id"
-      - "name"
-      - "icon"
-      - "sourceDefinitionId"
-      - "configTemplateSpec"
-      - "partialDefaultConfig"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
-        name:
-          type: "string"
-          description: "Name of the associated actor definition"
-        icon:
-          type: "string"
-          description: "url to icon in connector asset (svg) registry"
-        sourceDefinitionId:
-          type: "string"
-          format: "uuid"
-        configTemplateSpec:
-          $ref: "#/components/schemas/SourceDefinitionSpecification"
-        partialDefaultConfig:
-          type: "object"
-      x-speakeasy-component: true
-    ConfigTemplateCreateRequestBody:
-      type: "object"
-      required:
-      - "actorDefinitionId"
-      - "partialDefaultConfig"
-      - "organizationId"
-      properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
-        actorDefinitionId:
-          $ref: "#/components/schemas/ActorDefinitionId"
-        partialDefaultConfig:
-          $ref: "#/components/schemas/SourceConfiguration"
-        partialUserConfigSpec:
-          $ref: "#/components/schemas/SourceConfiguration"
-      x-speakeasy-component: true
-    ConfigTemplateCreateResponse:
-      type: "object"
-      required:
-      - "id"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
-      x-speakeasy-component: true
-    ConfigTemplateUpdateRequestBody:
-      type: "object"
-      required:
-      - "organizationId"
-      properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
-        partialDefaultConfig:
-          $ref: "#/components/schemas/SourceConfiguration"
-        partialUserConfigSpec:
-          $ref: "#/components/schemas/SourceConfiguration"
-      x-speakeasy-component: true
-    ConfigTemplateUpdateResponse:
-      type: "object"
-      required:
-      - "id"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
-      x-speakeasy-component: true
     EmbeddedWidgetRequest:
       type: "object"
       required:
@@ -4144,54 +4137,6 @@ components:
       properties:
         token:
           type: "string"
-      x-speakeasy-component: true
-    ConnectionTemplateCreateRequestBody:
-      type: "object"
-      required:
-      - "destinationConfiguration"
-      - "organizationId"
-      - "destinationName"
-      - "destinationActorDefinitionId"
-      properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
-        destinationName:
-          type: "string"
-        destinationConfiguration:
-          $ref: "#/components/schemas/DestinationConfiguration"
-        destinationActorDefinitionId:
-          $ref: "#/components/schemas/ActorDefinitionId"
-        namespaceDefinitionType:
-          $ref: "#/components/schemas/NamespaceDefinitionType"
-          description: "The namespace definition type for the connection. This is\
-            \ used to determine how the namespace is defined for the connection. If\
-            \ none is provided, the namespace will be set to ${WORKSPACE_NAME}."
-        namespaceFormat:
-          type: "string"
-          default: null
-        prefix:
-          type: "string"
-        schedule:
-          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
-          description: "The schedule for connections. If none is provided, syncs will\
-            \ run every hour."
-        resourceRequirements:
-          $ref: "#/components/schemas/ResourceRequirements"
-        nonBreakingChangesPreference:
-          $ref: "#/components/schemas/NonBreakingChangesPreference"
-        syncOnCreate:
-          type: "boolean"
-          default: true
-      x-speakeasy-component: true
-    ConnectionTemplateCreateResponse:
-      type: "object"
-      required:
-      - "id"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
       x-speakeasy-component: true
     EmbeddedOrganizationsList:
       required:

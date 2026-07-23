@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.repositories
@@ -17,6 +17,8 @@ interface SecretReferenceRepository : PageableRepository<SecretReference, UUID> 
     scopeType: SecretReferenceScopeType,
     scopeId: UUID,
   ): List<SecretReference>
+
+  fun existsBySecretConfigId(secretConfigId: UUID): Boolean
 
   fun deleteByScopeTypeAndScopeId(
     scopeType: SecretReferenceScopeType,

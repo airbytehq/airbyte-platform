@@ -1,11 +1,10 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
@@ -20,8 +19,10 @@ import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
+import io.airbyte.api.model.generated.SourceMetadata
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceReadList
+import io.airbyte.api.model.generated.SourceReadWithMetadata
 import io.airbyte.api.model.generated.SourceSearch
 import io.airbyte.api.model.generated.SourceSnippetRead
 import io.airbyte.api.model.generated.SourceUpdate
@@ -44,6 +45,7 @@ import io.airbyte.config.JobStatus
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
+import io.airbyte.config.secrets.ConfigWithProcessedSecrets
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretCoordinate.Companion.fromFullCoordinate
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.configWithTextualSecretPlaceholders
@@ -55,14 +57,15 @@ import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
-import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
+import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.DEFAULT_PAGE_SIZE
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.data.services.shared.buildFilters
 import io.airbyte.data.services.shared.parseSortKey
 import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.UserId
 import io.airbyte.domain.models.WorkspaceId
@@ -77,6 +80,7 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.Optional
@@ -100,6 +104,7 @@ class SourceHandler
     private val oAuthConfigSupplier: OAuthConfigSupplier,
     private val actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
     private val sourceService: SourceService,
+    private val workspaceService: WorkspaceService,
     private val workspaceHelper: WorkspaceHelper,
     private val secretPersistenceService: SecretPersistenceService,
     private val actorDefinitionHandlerHelper: ActorDefinitionHandlerHelper,
@@ -113,7 +118,6 @@ class SourceHandler
     private val secretStorageService: SecretStorageService,
     private val secretReferenceService: SecretReferenceService,
     private val currentUserService: CurrentUserService,
-    private val partialUserConfigService: PartialUserConfigService,
   ) {
     fun createSourceWithOptionalSecret(sourceCreate: SourceCreate): SourceRead {
       if (sourceCreate.secretId != null && !sourceCreate.secretId.isBlank()) {
@@ -131,40 +135,49 @@ class SourceHandler
       return createSource(sourceCreate)
     }
 
-    @Trace
-    fun updateSourceWithOptionalSecret(partialSourceUpdate: PartialSourceUpdate): SourceRead {
+    @WithSpan
+    fun updateSourceWithOptionalSecret(
+      partialSourceUpdate: PartialSourceUpdate,
+      /**
+       * Allows inline values for OAuth-managed fields returned by the connector's OAuth server output spec.
+       * This only skips that OAuth-managed field validation; `secretId` hydration still runs whenever present.
+       */
+      allowInlineOAuthServerOutputSecrets: Boolean = false,
+    ): SourceRead {
       val spec = getSourceVersionForSourceId(partialSourceUpdate.sourceId).spec
       addTagsToTrace(
         mapOf(
           SOURCE_ID to partialSourceUpdate.sourceId.toString(),
         ),
       )
-      if (partialSourceUpdate.secretId != null && !partialSourceUpdate.secretId.isBlank()) {
-        val sourceConnection: SourceConnection
-        try {
-          sourceConnection = sourceService.getSourceConnection(partialSourceUpdate.sourceId)
-        } catch (e: ConfigNotFoundException) {
-          throw ConfigNotFoundException(e.type, e.configId)
-        }
-        val hydratedSecret = hydrateOAuthResponseSecret(partialSourceUpdate.secretId, sourceConnection.workspaceId)
-        // add OAuth Response data to connection configuration
-        partialSourceUpdate.connectionConfiguration =
-          setSecretsInConnectionConfiguration(
-            spec,
-            hydratedSecret,
-            Optional
-              .ofNullable(partialSourceUpdate.connectionConfiguration)
-              .orElse(Jsons.emptyObject()),
+
+      val secretId = partialSourceUpdate.secretId
+
+      when {
+        !secretId.isNullOrBlank() -> {
+          val sourceConnection =
+            try {
+              sourceService.getSourceConnection(partialSourceUpdate.sourceId)
+            } catch (e: ConfigNotFoundException) {
+              throw ConfigNotFoundException(e.type, e.configId)
+            }
+          val hydratedSecret = hydrateOAuthResponseSecret(secretId, sourceConnection.workspaceId)
+          // add OAuth Response data to connection configuration
+          partialSourceUpdate.connectionConfiguration =
+            setSecretsInConnectionConfiguration(
+              spec,
+              hydratedSecret,
+              Optional.ofNullable(partialSourceUpdate.connectionConfiguration).orElse(Jsons.emptyObject()),
+            )
+          addTagsToTrace(
+            mapOf(
+              "oauth_secret" to true,
+            ),
           )
-        addTagsToTrace(
-          mapOf(
-            "oauth_secret" to true,
-          ),
-        )
-      } else {
-        // We aren't using a secret to update the source so no server provided credentials should have been
-        // passed in.
-        validateNoSecretsInConfiguration(spec, partialSourceUpdate.connectionConfiguration)
+        }
+        !allowInlineOAuthServerOutputSecrets -> {
+          validateNoSecretsInConfiguration(spec, partialSourceUpdate.connectionConfiguration)
+        }
       }
       return partialUpdateSource(partialSourceUpdate)
     }
@@ -238,7 +251,7 @@ class SourceHandler
       return buildSourceRead(sourceService.getSourceConnection(sourceId), spec)
     }
 
-    @Trace
+    @WithSpan
     fun updateSource(sourceUpdate: SourceUpdate): SourceRead {
       if (sourceUpdate.resourceAllocation != null && airbyteEdition == AirbyteEdition.CLOUD) {
         throw BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition))
@@ -293,6 +306,31 @@ class SourceHandler
       sourceIdRequestBody: SourceIdRequestBody,
       includeSecretCoordinates: Boolean,
     ): SourceRead = buildSourceRead(sourceIdRequestBody.sourceId, includeSecretCoordinates)
+
+    fun getSourceWithMetadata(
+      sourceIdRequestBody: SourceIdRequestBody,
+      includeSecretCoordinates: Boolean = false,
+    ): SourceReadWithMetadata {
+      val sourceRead = buildSourceRead(sourceIdRequestBody.sourceId, includeSecretCoordinates)
+      val workspace = workspaceService.getStandardWorkspaceNoSecrets(sourceRead.workspaceId, false)
+      val metadata = SourceMetadata().workspaceName(workspace.name)
+      return SourceReadWithMetadata()
+        .sourceDefinitionId(sourceRead.sourceDefinitionId)
+        .sourceId(sourceRead.sourceId)
+        .workspaceId(sourceRead.workspaceId)
+        .connectionConfiguration(sourceRead.connectionConfiguration)
+        .name(sourceRead.name)
+        .sourceName(sourceRead.sourceName)
+        .icon(sourceRead.icon)
+        .isVersionOverrideApplied(sourceRead.isVersionOverrideApplied)
+        .isEntitled(sourceRead.isEntitled)
+        .breakingChanges(sourceRead.breakingChanges)
+        .supportState(sourceRead.supportState)
+        .status(sourceRead.status)
+        .createdAt(sourceRead.createdAt)
+        .resourceAllocation(sourceRead.resourceAllocation)
+        .metadata(metadata)
+    }
 
     fun getMostRecentSourceActorCatalogWithUpdatedAt(sourceIdRequestBody: SourceIdRequestBody): ActorCatalogWithUpdatedAt {
       val actorCatalog =
@@ -438,6 +476,7 @@ class SourceHandler
       }
 
       val secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(WorkspaceId(workspaceIdRequestBody.workspaceId))
+      val secretStorageId = Optional.ofNullable(secretStorageService.getByWorkspaceId(WorkspaceId(source.workspaceId))).map { obj -> obj.id.value }
 
       val configWithSecretReferences =
         secretReferenceService.getConfigWithSecretReferences(
@@ -446,14 +485,25 @@ class SourceHandler
           WorkspaceId(source.workspaceId),
         )
 
-      // Delete airbyte-managed secrets for this source
+      // Capture the referenced secret configs before removing references, so we can delete the
+      // now-orphaned airbyte-managed secrets below.
+      val priorSecretConfigIds =
+        if (secretStorageId.isPresent) {
+          secretReferenceService.getReferencedSecretConfigIds(source.sourceId, SecretReferenceScopeType.ACTOR)
+        } else {
+          emptySet()
+        }
+
+      // Delete airbyte-managed secrets for this source (legacy, no-secret-storage configs only)
       secretsRepositoryWriter.deleteFromConfig(configWithSecretReferences, secretPersistence)
 
       // Delete secret references for this source
       secretReferenceService.deleteActorSecretReferences(ActorId(source.sourceId))
 
-      // Delete partial user config(s) for this source, if any
-      partialUserConfigService.deletePartialUserConfigForSource(source.sourceId)
+      // Reclaim the secret-storage-backed secrets orphaned by the reference deletion above.
+      if (secretStorageId.isPresent) {
+        secretReferenceService.deleteOrphanedAirbyteManagedSecrets(priorSecretConfigIds, SecretStorageId(secretStorageId.get()))
+      }
 
       // Mark source as tombstoned and clear config
       try {
@@ -635,10 +685,20 @@ class SourceHandler
           .withTombstone(tombstone)
           .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
 
+      // Capture the secret configs referenced before this write so we can reclaim any that become
+      // orphaned (e.g. by a version bump) once the new config is durably persisted.
+      val priorSecretConfigIds =
+        if (secretStorageId.isPresent) {
+          secretReferenceService.getReferencedSecretConfigIds(sourceId, SecretReferenceScopeType.ACTOR)
+        } else {
+          emptySet()
+        }
+
       var updatedConfig = persistConfigRawSecretValues(maskedConfig, secretStorageId, workspaceId, spec, sourceId)
+      var reprocessedConfig: ConfigWithProcessedSecrets? = null
 
       if (secretStorageId.isPresent) {
-        val reprocessedConfig =
+        reprocessedConfig =
           processConfigSecrets(
             updatedConfig,
             spec.connectionSpecification,
@@ -656,6 +716,15 @@ class SourceHandler
 
       newSourceConnection.configuration = updatedConfig
       sourceService.writeSourceConnectionNoSecrets(newSourceConnection)
+
+      if (reprocessedConfig != null) {
+        secretReferenceService.cleanupDanglingSecretReferences(ActorId(sourceId).value, SecretReferenceScopeType.ACTOR, reprocessedConfig)
+      }
+
+      // Safe to run only after the new config is persisted above.
+      if (secretStorageId.isPresent) {
+        secretReferenceService.deleteOrphanedAirbyteManagedSecrets(priorSecretConfigIds, SecretStorageId(secretStorageId.get()))
+      }
     }
 
     /**

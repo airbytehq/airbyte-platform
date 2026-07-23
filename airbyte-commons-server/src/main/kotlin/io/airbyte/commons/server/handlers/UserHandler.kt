@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
@@ -58,9 +58,12 @@ import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.featureflag.BypassSsoDomainValidationEnforcement
+import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.EmailAttribute
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
+import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
@@ -71,6 +74,7 @@ import java.util.Objects
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
+import io.airbyte.featureflag.Organization as FeatureFlagOrganization
 
 /**
  * UserHandler, provides basic CRUD operation access for users. Some are migrated from Cloud
@@ -155,6 +159,7 @@ open class UserHandler
         .metadata(if (user.uiMetadata != null) user.uiMetadata else emptyMap<Any, Any>())
         .news(user.news)
         .defaultWorkspaceId(user.defaultWorkspaceId)
+        .agenticEnabledAt(user.agenticEnabledAt)
 
     /**
      * Patch update a user object.
@@ -344,8 +349,70 @@ open class UserHandler
       }
     }
 
-    private fun handleNewUserLogin(incomingJwtUser: AuthenticatedUser): UserGetOrCreateByAuthIdResponse {
-      val createdUser = createUserFromIncomingUser(incomingJwtUser)
+    /**
+     * Verifies that an SSO organization is authorized to assert the incoming user's email domain.
+     *
+     * A matching claimed domain is allowed immediately. Missing or mismatched claims are always logged
+     * and tagged, then allowed only when the organization-level bypass resolves to `true`. Otherwise,
+     * the login is rejected before user creation, migration, or relinking.
+     *
+     * This check does not mutate or delete identity state.
+     *
+     * @throws OperationNotAllowedException when an invalid domain claim is not bypassed
+     */
+    private fun validateSsoEmailDomainClaim(
+      incomingJwtUser: AuthenticatedUser,
+      ssoOrganization: Organization,
+    ) {
+      val emailDomain = incomingJwtUser.email.substringAfter("@").lowercase()
+      val orgId = ssoOrganization.organizationId
+
+      val claimedDomains = organizationEmailDomainService.findByOrganizationId(orgId)
+      if (claimedDomains.isEmpty()) {
+        log.warn {
+          "SSO domain not verified: organization $orgId has no claimed domains, user email domain '$emailDomain'"
+        }
+        ApmTraceUtils.addTagsToTrace(
+          mapOf(
+            "sso.email_domain" to emailDomain,
+            "sso.organization_id" to orgId.toString(),
+            "sso.domain_validation" to "no_claimed_domains",
+          ),
+        )
+      } else if (claimedDomains.none { it.emailDomain.equals(emailDomain, ignoreCase = true) }) {
+        log.warn {
+          "SSO domain mismatch: email domain '$emailDomain' is not claimed by organization $orgId " +
+            "(claimed: ${claimedDomains.joinToString { it.emailDomain }})"
+        }
+        ApmTraceUtils.addTagsToTrace(
+          mapOf(
+            "sso.email_domain" to emailDomain,
+            "sso.organization_id" to orgId.toString(),
+            "sso.domain_validation" to "mismatch",
+          ),
+        )
+      } else {
+        // A matching claimed domain is authorized; bypass evaluation is unnecessary.
+        return
+      }
+
+      // Only missing or mismatched domain claims reach this point.
+      val bypassEnforcement =
+        featureFlagClient.boolVariation(
+          BypassSsoDomainValidationEnforcement,
+          FeatureFlagOrganization(orgId),
+        )
+      if (bypassEnforcement) {
+        return
+      }
+
+      throw OperationNotAllowedException(
+        "SSO provider is not authorized to authenticate users with this email domain.",
+      )
+    }
+
+    private fun handleNewUserLogin(userToCreate: AuthenticatedUser): UserGetOrCreateByAuthIdResponse {
+      val createdUser = createUserFromIncomingUser(userToCreate)
       handleUserPermissionsAndWorkspace(createdUser)
 
       // refresh the user from the database in case anything changed during permission/workspace
@@ -362,9 +429,9 @@ open class UserHandler
 
       return UserGetOrCreateByAuthIdResponse()
         .userRead(buildUserRead(updatedUser))
-        .authUserId(incomingJwtUser.authUserId)
+        .authUserId(userToCreate.authUserId)
         .authProvider(
-          incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
+          userToCreate.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
         ).newUserCreated(true)
     }
 
@@ -457,10 +524,39 @@ open class UserHandler
       // (1) Restrict logins for SSO domains
       handleSSORestrictions(incomingJwtUser, existingAuthUser.isPresent)
 
+      // SEC-14: Resolve the SSO organization for this request once, reused below.
+      val ssoOrg = ssoOrganizationIfExists
+
       // (2) Authenticate existing auth_user
       if (existingAuthUser.isPresent) {
+        // SEC-14: Validate domain claim on every SSO login, even for already-linked identities.
+        if (ssoOrg.isPresent) {
+          validateSsoEmailDomainClaim(incomingJwtUser, ssoOrg.get())
+        }
+        val existingUser = existingAuthUser.get()
+
+        // Support upgrading non-agentic users to agentic (one-way operation)
+        // If user is not agentic yet AND request wants to make them agentic, upgrade them
+        if (existingUser.agenticEnabledAt == null &&
+          userAuthIdRequestBody.isAgenticUser == true &&
+          incomingJwtUser.agenticEnabledAt != null
+        ) {
+          // Upgrade user: set agenticEnabledAt timestamp
+          val upgradedUser = existingUser.withAgenticEnabledAt(incomingJwtUser.agenticEnabledAt)
+          userPersistence.writeAuthenticatedUser(upgradedUser)
+          log.info { "Upgraded user ${existingUser.userId} to agentic user" }
+
+          return UserGetOrCreateByAuthIdResponse()
+            .userRead(buildUserRead(toUser(upgradedUser)))
+            .authUserId(userAuthIdRequestBody.authUserId)
+            .authProvider(
+              incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
+            ).newUserCreated(false)
+        }
+
+        // Otherwise, return existing user as-is (agenticEnabledAt is immutable once set)
         return UserGetOrCreateByAuthIdResponse()
-          .userRead(buildUserRead(toUser(existingAuthUser.get())))
+          .userRead(buildUserRead(toUser(existingUser)))
           .authUserId(userAuthIdRequestBody.authUserId)
           .authProvider(
             incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
@@ -468,6 +564,7 @@ open class UserHandler
       }
 
       // (3) Handle non-existing auth_user
+
       var existingUserWithEmail = userPersistence.getUserByEmail(incomingJwtUser.email)
       if (existingUserWithEmail.isPresent && existingUserWithEmail.get().userId === DEFAULT_USER_ID) {
         // (Enterprise) If the email is already taken by the default user, we can safely clear it so the
@@ -480,6 +577,11 @@ open class UserHandler
 
       // (3a) Email has not been used before
       if (existingUserWithEmail.isEmpty) {
+        // SEC-14: Even for new users, validate the SSO provider is authorized for this domain.
+        // Prevents an attacker from squatting on victim emails before the victim signs up.
+        if (ssoOrg.isPresent) {
+          validateSsoEmailDomainClaim(incomingJwtUser, ssoOrg.get())
+        }
         return handleNewUserLogin(incomingJwtUser)
       }
 
@@ -487,13 +589,19 @@ open class UserHandler
       val existingUser = existingUserWithEmail.get()
       val existingUserRealms = getExistingUserRealms(existingUser.userId)
 
+      // SEC-14: If this is an SSO login, validate that the SSO provider is authorized
+      // to assert this email domain before any account migration or relinking.
+      if (ssoOrg.isPresent) {
+        validateSsoEmailDomainClaim(incomingJwtUser, ssoOrg.get())
+      }
+
       // (3b0) The existing user does not exist in any auth realm, relink it
       // This can happen if, for example, keycloak state is cleared on an enterprise installation
       if (existingUserRealms.isEmpty()) {
         return handleRelinkAuthUser(existingUser, incomingJwtUser)
       }
 
-      val isCurrentSignInSSO = ssoOrganizationIfExists.isPresent
+      val isCurrentSignInSSO = ssoOrg.isPresent
       val isExistingUserSSOAuthed = isAnyRealmSSO(existingUserRealms)
 
       // (3b1) This is the first SSO sign in for the user, migrate it for SSO
@@ -511,7 +619,18 @@ open class UserHandler
 
     private fun resolveIncomingJwtUser(userAuthIdRequestBody: UserAuthIdRequestBody): AuthenticatedUser {
       val authUserId = userAuthIdRequestBody.authUserId
-      return userAuthenticationResolver.resolveUser(authUserId)
+      // Create fresh AuthenticatedUser from JWT claims (agenticEnabledAt is always null here)
+      val user = userAuthenticationResolver.resolveUser(authUserId)
+
+      // If isAgenticUser is true, set the timestamp to now on this fresh object
+      // This applies to both new user creation and upgrading existing non-agentic users
+      // Note: For existing users, the database value is checked separately (line 467)
+      //       and this timestamp is only used if the DB value is null (upgrading)
+      if (userAuthIdRequestBody.isAgenticUser == true) {
+        return user.withAgenticEnabledAt(java.time.OffsetDateTime.now())
+      }
+
+      return user
     }
 
     private fun createUserFromIncomingUser(incomingUser: AuthenticatedUser): UserRead {
@@ -569,7 +688,7 @@ open class UserHandler
             .anyMatch { userPermission: UserPermission -> userPermission.user.userId == userId }
         // check to avoid creating duplicate permissions
         if (!hasOrgPermission) {
-          createPermissionForUserAndOrg(userId, organization.organizationId, Permission.PermissionType.ORGANIZATION_MEMBER)
+          createPermissionForUserAndOrg(userId, organization.organizationId, getSsoDefaultRole(organization.organizationId))
         }
       }
 
@@ -641,6 +760,16 @@ open class UserHandler
           .withUserId(userId)
           .withPermissionType(permissionType),
       )
+    }
+
+    private fun getSsoDefaultRole(organizationId: UUID): Permission.PermissionType {
+      // ConfigurableSsoDefaultRole (temporary, default OFF) dark-launches per-config SSO default roles.
+      // While the flag is off for the org, ignore the configured role and fall back to ORGANIZATION_MEMBER,
+      // matching pre-feature behavior so the deploy can be separated from the release.
+      if (!featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, io.airbyte.featureflag.Organization(organizationId))) {
+        return Permission.PermissionType.ORGANIZATION_MEMBER
+      }
+      return ssoConfigService.getSsoConfig(organizationId)?.defaultRole ?: Permission.PermissionType.ORGANIZATION_MEMBER
     }
 
     private fun createInstanceAdminPermissionIfInitialUser(createdUser: UserRead) {

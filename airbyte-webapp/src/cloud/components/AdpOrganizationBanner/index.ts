@@ -1,0 +1,1 @@
+export { AdpOrganizationBanner } from "./AdpOrganizationBanner";

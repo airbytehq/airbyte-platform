@@ -3,8 +3,6 @@ import classNames from "classnames";
 import React, { useRef, useMemo, useContext, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -13,6 +11,8 @@ import { ScrollParentContext } from "components/ui/ScrollParent";
 import { SearchInput } from "components/ui/SearchInput";
 import { Table } from "components/ui/Table";
 
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import { activeStatuses } from "area/connection/utils";
 import { useTrackSyncProgress } from "area/connection/utils/useStreamsTableAnalytics";
 import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";

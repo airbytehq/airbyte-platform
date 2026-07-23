@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { z } from "zod";
 
 import { useCurrentWorkspace, useListDataplaneGroups } from "core/api";
-import { useExperiment } from "hooks/services/Experiment";
+import { useExperiment } from "core/services/Experiment";
 
 const airbyteCloudIpAddressesByDataplanesSchema = z.record(z.array(z.string()));
 

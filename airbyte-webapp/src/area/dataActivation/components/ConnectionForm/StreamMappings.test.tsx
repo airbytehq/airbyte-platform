@@ -7,7 +7,7 @@ import { mockDestination, mockSource, render } from "test-utils";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
 import { AirbyteCatalog, DestinationCatalog, SyncMode } from "core/api/types/AirbyteClient";
-import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
+import { AirbyteThemeProvider } from "core/utils/useAirbyteTheme";
 
 import { StreamMappings } from "./StreamMappings";
 

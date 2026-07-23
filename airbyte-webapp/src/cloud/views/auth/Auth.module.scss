@@ -1,0 +1,14 @@
+@use "scss/colors";
+
+.container {
+  height: 100%;
+  background: colors.$foreground;
+
+  &__left-side {
+    flex: 1 0 50%;
+    height: 100%;
+    padding: 20px 36px 39px 46px;
+    overflow: auto;
+    margin: auto;
+  }
+}

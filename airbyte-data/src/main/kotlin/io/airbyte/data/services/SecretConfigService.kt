@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services
@@ -9,6 +9,7 @@ import io.airbyte.domain.models.SecretConfigCreate
 import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.domain.models.SecretStorageId
 import java.time.OffsetDateTime
+import java.util.UUID
 
 interface SecretConfigService {
   fun create(secretConfigCreate: SecretConfigCreate): SecretConfig
@@ -24,6 +25,16 @@ interface SecretConfigService {
     excludeCreatedAfter: OffsetDateTime,
     limit: Int,
   ): List<SecretConfig>
+
+  fun findDistinctOrphanedStorageIds(excludeCreatedBefore: OffsetDateTime): List<UUID>
+
+  fun findAirbyteManagedConfigsWithoutReferencesByStorageIds(
+    excludeCreatedBefore: OffsetDateTime,
+    limit: Int,
+    storageIds: List<UUID>,
+  ): List<SecretConfig>
+
+  fun countOrphanedAirbyteManagedConfigs(): Long
 
   fun deleteByIds(ids: List<SecretConfigId>)
 }

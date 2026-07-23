@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.connector.rollout.shared
@@ -30,7 +30,7 @@ import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
 import io.airbyte.data.services.shared.ConnectorVersionKey
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.http.annotation.Trace
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -80,7 +80,7 @@ class RolloutActorFinder(
    * - The most recent sync for each of their connections succeeded.
    * - They are using the default version of the connector (i.e. aren't pinned to a non-default image).
    */
-  @Trace
+  @WithSpan
   fun getActorSelectionInfo(
     connectorRollout: ConnectorRollout,
     targetPercent: Int?,
@@ -220,7 +220,7 @@ class RolloutActorFinder(
     )
   }
 
-  @Trace
+  @WithSpan
   internal fun getActorJobInfo(
     connectorRollout: ConnectorRollout,
     connectionsWithLatestJob: List<ConnectionWithLatestJob>,
@@ -331,37 +331,44 @@ class RolloutActorFinder(
       }
     }
 
-  @Trace
+  @WithSpan
   internal fun filterByTier(
     connectorRollout: ConnectorRollout,
     candidates: Collection<ConfigScopeMapWithId>,
     filters: List<CustomerTierFilter>?,
   ): Collection<ConfigScopeMapWithId> {
-    val organizationTiers = organizationCustomerAttributesService.getOrganizationTiers()
-    logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} organizationTiers=$organizationTiers" }
     if (filters.isNullOrEmpty()) {
       logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} no tier filter specified." }
       return candidates
-    } else {
-      logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} applying tier filter for filters=$filters" }
-      return candidates.filter { candidate ->
-        val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION] ?: return@filter false
-
-        val tier = organizationTiers[organizationId]
-        filters.all { filter ->
-          // Evaluate the filter based on the organization's tier:
-          // - If the tier is known, evaluate it normally.
-          // - If the tier is unknown but the filter allows TIER_2, treat it as a match.
-          // - Otherwise, the filter fails.
-          when {
-            tier != null -> filter.evaluate(tier)
-            filter.value.contains(CustomerTier.TIER_2) -> true
-            else -> false
-          }
-        }
+    }
+    val organizationTiers = organizationCustomerAttributesService.getOrganizationTiers()
+    logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} organizationTiers=$organizationTiers" }
+    logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} applying tier filter for filters=$filters" }
+    val organizationsWithUnknownTier = getOrganizationsWithUnknownTier(candidates, organizationTiers)
+    if (organizationsWithUnknownTier.isNotEmpty()) {
+      logger.warn {
+        "Rollout ${connectorRollout.id}: ${organizationsWithUnknownTier.size} organizations have unknown customer tier and will be " +
+          "excluded from rollout. organizationIds=${organizationsWithUnknownTier.joinToString()}"
+      }
+    }
+    return candidates.filter { candidate ->
+      val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION] ?: return@filter false
+      // Unknown tier never matches - exclude these customers from all progressive rollouts.
+      val tier = organizationTiers[organizationId] ?: return@filter false
+      filters.all { filter ->
+        filter.evaluate(tier)
       }
     }
   }
+
+  private fun getOrganizationsWithUnknownTier(
+    candidates: Collection<ConfigScopeMapWithId>,
+    organizationTiers: Map<UUID, CustomerTier?>,
+  ): List<UUID> =
+    candidates
+      .mapNotNull { it.scopeMap[ConfigScopeType.ORGANIZATION] }
+      .distinct()
+      .filter { organizationTiers[it] == null }
 
   internal fun filterByTier(
     connectorRollout: ConnectorRollout,
@@ -382,7 +389,7 @@ class RolloutActorFinder(
       connectorRollout.filters?.customerTierFilters,
     ).map { it.id }
 
-  @Trace
+  @WithSpan
   internal fun filterByAlreadyPinned(
     actorDefinitionId: UUID,
     configScopeMaps: Collection<ConfigScopeMapWithId>,
@@ -397,7 +404,7 @@ class RolloutActorFinder(
     }
   }
 
-  @Trace
+  @WithSpan
   internal fun getActorsPinnedToReleaseCandidate(connectorRollout: ConnectorRollout): List<UUID> {
     val scopedConfigurations =
       scopedConfigurationService.listScopedConfigurationsWithValues(
@@ -424,7 +431,7 @@ class RolloutActorFinder(
     return filtered
   }
 
-  @Trace
+  @WithSpan
   internal fun getSortedConnectionsWithLatestJob(
     connectorRollout: ConnectorRollout,
     actorIds: List<UUID>,
@@ -453,10 +460,17 @@ class RolloutActorFinder(
             batchActorIds,
           )
 
+        // Manual connections are dropped downstream when includeManual is false, so skip the
+        // latest-job lookup for them entirely. This avoids resolving the latest job for
+        // connections that would be discarded, which dominates the cost of actor selection on
+        // high-volume connectors.
+        val batchConnectionsForJobLookup =
+          if (includeManual) batchConnections else batchConnections.filter { it.manual != true }
+
         val batchConnectionSummariesWithLatestJob =
           getConnectionsWithLatestJob(
             connectorRollout,
-            batchConnections.associateBy { it.connectionId },
+            batchConnectionsForJobLookup.associateBy { it.connectionId },
             actorType,
             Instant.ofEpochMilli(connectorRollout.createdAt).atOffset(ZoneOffset.UTC),
             versionId,
@@ -468,6 +482,7 @@ class RolloutActorFinder(
             "actorIdBatchIndex=$actorIdBatchIndex " +
             "batchActorIds.size=${batchActorIds.size} " +
             "batchConnections.size=${batchConnections.size} " +
+            "batchConnectionsForJobLookup.size=${batchConnectionsForJobLookup.size} " +
             "batchConnectionSummariesWithLatestJob.size=${batchConnectionSummariesWithLatestJob.size}"
         }
 
@@ -497,7 +512,7 @@ class RolloutActorFinder(
     return sortedConnections
   }
 
-  @Trace
+  @WithSpan
   internal fun getConnectionsWithLatestJob(
     connectorRollout: ConnectorRollout,
     connectionSummaryMap: Map<UUID, ConnectionSummary>,

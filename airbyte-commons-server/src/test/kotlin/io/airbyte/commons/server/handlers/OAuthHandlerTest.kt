@@ -1,27 +1,37 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.api.model.generated.ActorTypeEnum
 import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest
+import io.airbyte.api.model.generated.OAuthScopeItem
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody
+import io.airbyte.api.model.generated.SourceOAuthScopesRead
+import io.airbyte.api.model.generated.SourceOAuthScopesRequest
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.handlers.helpers.OAuthHelper.mapToCompleteOAuthResponse
+import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.DestinationOAuthParameter
 import io.airbyte.config.SourceOAuthParameter
+import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.domain.models.ActorDefinitionId
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.domain.services.secrets.SecretStorageService
@@ -29,6 +39,9 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.oauth.OAuthImplementationFactory
+import io.airbyte.protocol.models.v0.AdvancedAuth
+import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -59,7 +72,7 @@ internal class OAuthHandlerTest {
 
   @BeforeEach
   fun init() {
-    metricClient = mockk<MetricClient>()
+    metricClient = mockk<MetricClient>(relaxed = true)
     trackingClient = mockk<TrackingClient>()
     oauthImplementationFactory = mockk<OAuthImplementationFactory>()
     secretsRepositoryReader = mockk<SecretsRepositoryReader>()
@@ -87,6 +100,7 @@ internal class OAuthHandlerTest {
         secretReferenceService,
         workspaceService,
         secretStorageService,
+        metricClient,
       )
   }
 
@@ -138,6 +152,58 @@ internal class OAuthHandlerTest {
     verify { oauthService.writeDestinationOAuthParam(capture(argumentSlot)) }
     Assertions.assertEquals(jsonNode(params), argumentSlot.captured.configuration)
     Assertions.assertEquals(destinationDefId, argumentSlot.captured.destinationDefinitionId)
+  }
+
+  @Test
+  fun deleteOrganizationSourceOverrideOauthParams() {
+    val organizationId = OrganizationId(UUID.randomUUID())
+    val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
+
+    every { oauthService.deleteSourceOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value) } returns 1
+
+    handler.deleteOrganizationOverrideOAuthParams(organizationId, actorDefinitionId, ActorTypeEnum.SOURCE)
+
+    verify { oauthService.deleteSourceOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value) }
+    verify(exactly = 0) { oauthService.deleteDestinationOAuthParamByDefinitionId(any(), any()) }
+  }
+
+  @Test
+  fun deleteOrganizationDestinationOverrideOauthParams() {
+    val organizationId = OrganizationId(UUID.randomUUID())
+    val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
+
+    every { oauthService.deleteDestinationOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value) } returns 1
+
+    handler.deleteOrganizationOverrideOAuthParams(organizationId, actorDefinitionId, ActorTypeEnum.DESTINATION)
+
+    verify { oauthService.deleteDestinationOAuthParamByDefinitionId(organizationId.value, actorDefinitionId.value) }
+    verify(exactly = 0) { oauthService.deleteSourceOAuthParamByDefinitionId(any(), any()) }
+  }
+
+  @Test
+  fun deleteWorkspaceSourceOverrideOauthParams() {
+    val workspaceId = UUID.randomUUID()
+    val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
+
+    every { oauthService.deleteSourceOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value) } returns 1
+
+    handler.deleteWorkspaceOverrideOAuthParams(workspaceId, actorDefinitionId, ActorTypeEnum.SOURCE)
+
+    verify { oauthService.deleteSourceOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value) }
+    verify(exactly = 0) { oauthService.deleteDestinationOAuthParamByWorkspaceId(any(), any()) }
+  }
+
+  @Test
+  fun deleteWorkspaceDestinationOverrideOauthParams() {
+    val workspaceId = UUID.randomUUID()
+    val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
+
+    every { oauthService.deleteDestinationOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value) } returns 1
+
+    handler.deleteWorkspaceOverrideOAuthParams(workspaceId, actorDefinitionId, ActorTypeEnum.DESTINATION)
+
+    verify { oauthService.deleteDestinationOAuthParamByWorkspaceId(workspaceId, actorDefinitionId.value) }
+    verify(exactly = 0) { oauthService.deleteSourceOAuthParamByWorkspaceId(any(), any()) }
   }
 
   @Test
@@ -278,6 +344,40 @@ internal class OAuthHandlerTest {
   }
 
   @Test
+  fun testCompleteSourceOAuthHandleReturnSecretDoesNotPersistFailedOAuth() {
+    val sourceDefinitionId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+
+    val completeSourceOauthRequest =
+      CompleteSourceOauthRequest()
+        .sourceDefinitionId(sourceDefinitionId)
+        .workspaceId(workspaceId)
+        .returnSecretCoordinate(true)
+
+    val handlerSpy: OAuthHandler = spyk(handler)
+
+    // A denied/aborted OAuth flow: request_succeeded=false with an empty auth_payload.
+    val failedResponse =
+      mapToCompleteOAuthResponse(
+        mapOf(
+          "request_succeeded" to "false",
+          "request_error" to "access_denied",
+        ),
+      )
+
+    every { handlerSpy.completeSourceOAuth(any<CompleteSourceOauthRequest>()) } returns failedResponse
+
+    val result = handlerSpy.completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest)
+
+    // No secret should be minted for a failed OAuth, even with returnSecretCoordinate=true.
+    verify(exactly = 0) { handlerSpy.writeOAuthResponseSecret(any<UUID>(), any<CompleteOAuthResponse>()) }
+    // The failure response is surfaced so callers can report the real OAuth error.
+    Assertions.assertEquals(failedResponse, result)
+    Assertions.assertEquals(false, result?.requestSucceeded)
+    Assertions.assertEquals("access_denied", result?.requestError)
+  }
+
+  @Test
   fun testGetSourceOAuthParamConfig() {
     val sourceDefinitionId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -402,6 +502,378 @@ internal class OAuthHandlerTest {
     verify(exactly = 1) {
       secretReferenceService.getHydratedConfiguration(any(), any())
     }
+  }
+
+  private fun mockSourceVersionWithSpec(
+    sourceDefId: UUID,
+    workspaceId: UUID,
+    spec: ConnectorSpecification,
+  ) {
+    val sourceDefinition = StandardSourceDefinition()
+    every { sourceService.getStandardSourceDefinition(sourceDefId) } returns sourceDefinition
+    val version = ActorDefinitionVersion().withSpec(spec)
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, null) } returns version
+  }
+
+  private fun buildOAuthSpec(oauthInputSpecJson: String): ConnectorSpecification =
+    ConnectorSpecification()
+      .withAdvancedAuth(
+        AdvancedAuth()
+          .withOauthConfigSpecification(
+            OAuthConfigSpecification()
+              .withOauthConnectorInputSpecification(Jsons.deserialize(oauthInputSpecJson)),
+          ),
+      )
+
+  @Test
+  fun testGetSourceOAuthScopes_objectArray() {
+    val sourceDefId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val spec =
+      buildOAuthSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}]
+          }
+        }
+        """.trimIndent(),
+      )
+    mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
+
+    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val result = handler.getSourceOAuthScopes(request)
+
+    Assertions.assertEquals(listOf(OAuthScopeItem().scope("read"), OAuthScopeItem().scope("chat")), result.scopes)
+    Assertions.assertEquals(emptyList<OAuthScopeItem>(), result.optionalScopes)
+    Assertions.assertEquals(SourceOAuthScopesRead.ScopeJoinStrategyEnum.SPACE, result.scopeJoinStrategy)
+  }
+
+  @Test
+  fun testGetSourceOAuthScopes_legacyScopeStringThrowsError() {
+    val sourceDefId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val spec =
+      buildOAuthSpec(
+        """
+        {
+          "properties": {
+            "scope": "read chat"
+          }
+        }
+        """.trimIndent(),
+      )
+    mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
+
+    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val exception =
+      Assertions.assertThrows(ConfigNotFoundException::class.java) {
+        handler.getSourceOAuthScopes(request)
+      }
+    Assertions.assertTrue(exception.configId!!.contains(sourceDefId.toString()))
+    Assertions.assertTrue(exception.configId!!.contains("no structured scopes array"))
+  }
+
+  @Test
+  fun testGetSourceOAuthScopes_optionalScopes() {
+    val sourceDefId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val spec =
+      buildOAuthSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}],
+            "optional_scopes": [{"scope": "admin:read"}]
+          }
+        }
+        """.trimIndent(),
+      )
+    mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
+
+    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val result = handler.getSourceOAuthScopes(request)
+
+    Assertions.assertEquals(listOf(OAuthScopeItem().scope("read")), result.scopes)
+    Assertions.assertEquals(listOf(OAuthScopeItem().scope("admin:read")), result.optionalScopes)
+  }
+
+  @Test
+  fun testGetSourceOAuthScopes_customJoinStrategy() {
+    val sourceDefId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val spec =
+      buildOAuthSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}],
+            "scopes_join_strategy": "comma"
+          }
+        }
+        """.trimIndent(),
+      )
+    mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
+
+    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val result = handler.getSourceOAuthScopes(request)
+
+    Assertions.assertEquals(SourceOAuthScopesRead.ScopeJoinStrategyEnum.COMMA, result.scopeJoinStrategy)
+  }
+
+  @Test
+  fun testGetSourceOAuthScopes_invalidJoinStrategyThrowsError() {
+    val sourceDefId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val spec =
+      buildOAuthSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}],
+            "scopes_join_strategy": "pipe"
+          }
+        }
+        """.trimIndent(),
+      )
+    mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
+
+    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    Assertions.assertThrows(IllegalArgumentException::class.java) {
+      handler.getSourceOAuthScopes(request)
+    }
+  }
+
+  @Test
+  fun testGetSourceOAuthScopes_noOAuthSpecThrowsError() {
+    val sourceDefId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val spec = ConnectorSpecification()
+    mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
+
+    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val exception =
+      Assertions.assertThrows(ConfigNotFoundException::class.java) {
+        handler.getSourceOAuthScopes(request)
+      }
+    Assertions.assertTrue(exception.configId!!.contains(sourceDefId.toString()))
+    Assertions.assertTrue(exception.configId!!.contains("no OAuth configuration"))
+  }
+
+  @Test
+  fun testGetSourceOAuthScopes_scopesArrayTakesPrecedenceOverScopeString() {
+    val sourceDefId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val spec =
+      buildOAuthSpec(
+        """
+        {
+          "properties": {
+            "scope": "old_read old_chat",
+            "scopes": [{"scope": "new_read"}, {"scope": "new_chat"}]
+          }
+        }
+        """.trimIndent(),
+      )
+    mockSourceVersionWithSpec(sourceDefId, workspaceId, spec)
+
+    val request = SourceOAuthScopesRequest().sourceDefinitionId(sourceDefId).workspaceId(workspaceId)
+    val result = handler.getSourceOAuthScopes(request)
+
+    Assertions.assertEquals(listOf(OAuthScopeItem().scope("new_read"), OAuthScopeItem().scope("new_chat")), result.scopes)
+  }
+
+  // --- applyRequestedScopes tests ---
+
+  private fun buildOAuthConfigSpec(oauthInputSpecJson: String): OAuthConfigSpecification =
+    OAuthConfigSpecification()
+      .withOauthConnectorInputSpecification(Jsons.deserialize(oauthInputSpecJson))
+
+  @Test
+  fun testApplyRequestedScopes_nullOrEmpty_returnsOriginal() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    Assertions.assertSame(spec, handler.applyRequestedScopes(spec, null))
+    Assertions.assertSame(spec, handler.applyRequestedScopes(spec, emptyList()))
+  }
+
+  @Test
+  fun testApplyRequestedScopes_replacesScopesArray() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    val result = handler.applyRequestedScopes(spec, listOf("read"))
+    val resultScopes = result.oauthConnectorInputSpecification["properties"]["scopes"]
+
+    Assertions.assertTrue(resultScopes.isArray)
+    Assertions.assertEquals(1, resultScopes.size())
+    Assertions.assertEquals("read", resultScopes[0]["scope"].asText())
+  }
+
+  @Test
+  fun testApplyRequestedScopes_withOptionalScopes() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}],
+            "optional_scopes": [{"scope": "admin:read"}, {"scope": "admin:write"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    val result = handler.applyRequestedScopes(spec, listOf("read"), listOf("admin:read"))
+    val resultScopes = result.oauthConnectorInputSpecification["properties"]["scopes"]
+    val resultOptionalScopes = result.oauthConnectorInputSpecification["properties"]["optional_scopes"]
+
+    Assertions.assertEquals(1, resultScopes.size())
+    Assertions.assertEquals("read", resultScopes[0]["scope"].asText())
+    Assertions.assertEquals(1, resultOptionalScopes.size())
+    Assertions.assertEquals("admin:read", resultOptionalScopes[0]["scope"].asText())
+  }
+
+  @Test
+  fun testApplyRequestedScopes_withoutOptionalScopes_keepsDefaults() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}],
+            "optional_scopes": [{"scope": "admin:read"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    val result = handler.applyRequestedScopes(spec, listOf("read"))
+    val resultOptionalScopes = result.oauthConnectorInputSpecification["properties"]["optional_scopes"]
+
+    // optional_scopes should remain unchanged
+    Assertions.assertEquals(1, resultOptionalScopes.size())
+    Assertions.assertEquals("admin:read", resultOptionalScopes[0]["scope"].asText())
+  }
+
+  @Test
+  fun testApplyRequestedScopes_onlyOptionalScopes_noOverride() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}],
+            "optional_scopes": [{"scope": "admin:read"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    // requestedScopes is null, so no override even with requestedOptionalScopes
+    val result = handler.applyRequestedScopes(spec, null, listOf("admin:write"))
+    Assertions.assertSame(spec, result)
+  }
+
+  @Test
+  fun testApplyRequestedScopes_throwsWhenOptionalScopesNotInSpec() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    Assertions.assertThrows(IllegalArgumentException::class.java) {
+      handler.applyRequestedScopes(spec, listOf("read"), listOf("admin:read"))
+    }
+  }
+
+  @Test
+  fun testApplyRequestedScopes_throwsWhenNoOauthConnectorInputSpec() {
+    val spec = OAuthConfigSpecification()
+
+    Assertions.assertThrows(IllegalStateException::class.java) {
+      handler.applyRequestedScopes(spec, listOf("read"))
+    }
+  }
+
+  @Test
+  fun testApplyRequestedScopes_throwsForLegacyScopeString() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scope": "read chat"
+          }
+        }
+        """.trimIndent(),
+      )
+
+    Assertions.assertThrows(IllegalArgumentException::class.java) {
+      handler.applyRequestedScopes(spec, listOf("read"))
+    }
+  }
+
+  @Test
+  fun testApplyRequestedScopes_doesNotMutateOriginal() {
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "properties": {
+            "scopes": [{"scope": "read"}, {"scope": "chat"}]
+          }
+        }
+        """.trimIndent(),
+      )
+
+    val originalScopes = spec.oauthConnectorInputSpecification["properties"]["scopes"].toString()
+    handler.applyRequestedScopes(spec, listOf("write"))
+    val afterScopes = spec.oauthConnectorInputSpecification["properties"]["scopes"].toString()
+
+    Assertions.assertEquals(originalScopes, afterScopes)
+  }
+
+  @Test
+  fun testApplyRequestedScopes_specWithoutPropertiesWrapper() {
+    // Some specs don't wrap in "properties"
+    val spec =
+      buildOAuthConfigSpec(
+        """
+        {
+          "scopes": [{"scope": "read"}, {"scope": "chat"}]
+        }
+        """.trimIndent(),
+      )
+
+    val result = handler.applyRequestedScopes(spec, listOf("write"))
+    val resultScopes = result.oauthConnectorInputSpecification["scopes"]
+
+    Assertions.assertEquals(1, resultScopes.size())
+    Assertions.assertEquals("write", resultScopes[0]["scope"].asText())
   }
 
   companion object {

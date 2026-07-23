@@ -58,15 +58,20 @@ spec:
             protocol: TCP
           {{- if .Values.metrics.debug.enabled }}
           - name: debug
-            containerPort: {{ .Values.metrics.debug.remoteDebugPort }}
+            containerPort: 5005
             protocol: TCP
           {{- end }}
 
+        envFrom:
+          - configMapRef:
+              name: {{ .Release.Name }}-airbyte-telemetry-env
         env:
+        {{- include "airbyte.java_opts.envs" (list .Values.metrics $) | nindent 8 }}
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.datadog.envs" .Values.metrics.datadog | nindent 8 }}
 
         # Values from secret
         {{- if .Values.metrics.secrets }}

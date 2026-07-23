@@ -1,9 +1,9 @@
 import dayjs from "dayjs";
 
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { mockAirbyteStream } from "test-utils/mock-data/mockAirbyteStream";
 import { mockStreamStatusRead } from "test-utils/mock-data/mockStreamStatusRead";
 
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import {
   AirbyteStream,
   ConnectionSyncResultRead,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs
@@ -13,8 +13,10 @@ import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.featureflag.CleanupDanglingSecretConfigs
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.OrphanedSecretCleanupLimit
 import io.airbyte.featureflag.SecretStorage
 import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.just
@@ -22,7 +24,6 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -47,7 +48,7 @@ class OrphanedSecretConfigCleanupTest {
   @BeforeEach
   fun reset() {
     clearAllMocks()
-    every { secretConfigService.deleteByIds(any()) } just runs
+    every { secretConfigService.countOrphanedAirbyteManagedConfigs() } returns 1000L
   }
 
   private fun createSecretConfig(
@@ -77,16 +78,18 @@ class OrphanedSecretConfigCleanupTest {
     val orphanedConfigs = listOf(orphanedConfig1, orphanedConfig2)
 
     // Mock external services
-    every { secretConfigService.findAirbyteManagedConfigsWithoutReferences(any(), any()) } returns orphanedConfigs
+    every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
+    every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns orphanedConfigs
     every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
-    every { secretPersistence.delete(any()) } just runs
+    every { secretPersistence.deleteWithRecoveryWindow(any(), any()) } just runs
     every { secretConfigService.deleteByIds(any()) } just runs
 
     cleanup.cleanupOrphanedSecrets()
 
-    // Verify external secret deletions
-    verify(exactly = 2) { secretPersistence.delete(any()) }
+    // Verify external secret deletions use a 7-day recovery window
+    verify(exactly = 2) { secretPersistence.deleteWithRecoveryWindow(any(), 7L) }
 
     // Verify database cleanup with only successfully deleted configs
     verify { secretConfigService.deleteByIds(listOf(orphanedConfig1.id, orphanedConfig2.id)) }
@@ -94,27 +97,35 @@ class OrphanedSecretConfigCleanupTest {
 
   @Test
   fun `cleanup skips configs when feature flag is disabled`() {
-    val orphanedConfig = createSecretConfig()
-    every { secretConfigService.findAirbyteManagedConfigsWithoutReferences(any(), any()) } returns listOf(orphanedConfig)
+    val storageId = UUID.randomUUID()
+
+    every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns false
 
     cleanup.cleanupOrphanedSecrets()
 
+    // Should never fetch configs or attempt deletions since FF is disabled for all storages
+    verify(exactly = 0) { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) }
     verify(exactly = 0) { secretPersistenceService.getPersistenceByStorageId(any()) }
-    verify(exactly = 0) { secretPersistence.delete(any()) }
-    verify { secretConfigService.deleteByIds(emptyList()) }
+    verify(exactly = 0) { secretPersistence.deleteWithRecoveryWindow(any(), any()) }
+    verify(exactly = 0) { secretConfigService.deleteByIds(any()) }
   }
 
   @Test
   fun `cleanup skips configs with invalid coordinates`() {
-    val orphanedConfig = createSecretConfig(externalCoordinate = "invalid-coordinate-format")
-    every { secretConfigService.findAirbyteManagedConfigsWithoutReferences(any(), any()) } returns listOf(orphanedConfig)
+    val storageId = UUID.randomUUID()
+    val orphanedConfig = createSecretConfig(secretStorageId = storageId, externalCoordinate = "invalid-coordinate-format")
+
+    every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
-    every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(orphanedConfig.secretStorageId)) } returns secretPersistence
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
+    every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns listOf(orphanedConfig)
+    every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
+    every { secretConfigService.deleteByIds(any()) } just runs
 
     cleanup.cleanupOrphanedSecrets()
 
-    verify(exactly = 0) { secretPersistence.delete(any()) }
+    verify(exactly = 0) { secretPersistence.deleteWithRecoveryWindow(any(), any()) }
     verify { secretConfigService.deleteByIds(emptyList()) }
   }
 
@@ -125,17 +136,20 @@ class OrphanedSecretConfigCleanupTest {
     val orphanedConfig2 = createSecretConfig(secretStorageId = storageId, descriptor = "failure")
     val orphanedConfigs = listOf(orphanedConfig1, orphanedConfig2)
 
-    every { secretConfigService.findAirbyteManagedConfigsWithoutReferences(any(), any()) } returns orphanedConfigs
+    every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
+    every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns orphanedConfigs
     every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
+    every { secretConfigService.deleteByIds(any()) } just runs
 
     // First deletion succeeds, second fails
-    every { secretPersistence.delete(any()) } just runs andThenThrows RuntimeException("External deletion failed")
+    every { secretPersistence.deleteWithRecoveryWindow(any(), any()) } just runs andThenThrows RuntimeException("External deletion failed")
 
     cleanup.cleanupOrphanedSecrets()
 
     // Verify both external deletions were attempted
-    verify(exactly = 2) { secretPersistence.delete(any()) }
+    verify(exactly = 2) { secretPersistence.deleteWithRecoveryWindow(any(), any()) }
 
     // Verify only the successful one is deleted from database
     verify { secretConfigService.deleteByIds(listOf(orphanedConfig1.id)) }
@@ -143,11 +157,11 @@ class OrphanedSecretConfigCleanupTest {
 
   @Test
   fun `cleanup does nothing when no orphaned configs found`() {
-    every { secretConfigService.findAirbyteManagedConfigsWithoutReferences(any(), any()) } returns emptyList()
+    every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns emptyList()
 
     cleanup.cleanupOrphanedSecrets()
 
-    verify { secretConfigService.findAirbyteManagedConfigsWithoutReferences(any(), any()) }
+    verify { secretConfigService.findDistinctOrphanedStorageIds(any()) }
     verify(exactly = 0) { featureFlagClient.boolVariation(any(), any<SecretStorage>()) }
     verify(exactly = 0) { secretPersistenceService.getPersistenceByStorageId(any()) }
     verify(exactly = 0) { secretConfigService.deleteByIds(any()) }
@@ -157,19 +171,16 @@ class OrphanedSecretConfigCleanupTest {
   @Test
   fun `cleanup uses correct time filter for one hour grace period`() {
     val timeSlot = slot<OffsetDateTime>()
-    val limitSlot = slot<Int>()
-    every { secretConfigService.findAirbyteManagedConfigsWithoutReferences(capture(timeSlot), capture(limitSlot)) } returns emptyList()
+    every { secretConfigService.findDistinctOrphanedStorageIds(capture(timeSlot)) } returns emptyList()
 
     cleanup.cleanupOrphanedSecrets()
 
     // Verify the date filter is approximately 1 hour ago (within 5 minutes tolerance)
     val capturedTime = timeSlot.captured
-    val capturedLimit = limitSlot.captured
     val now = OffsetDateTime.now()
     val oneHourAgo = now.minusHours(1)
     assertTrue(capturedTime.isAfter(oneHourAgo.minusMinutes(5)))
     assertTrue(capturedTime.isBefore(oneHourAgo.plusMinutes(5)))
-    assertEquals(10000, capturedLimit)
   }
 
   @Test
@@ -177,23 +188,31 @@ class OrphanedSecretConfigCleanupTest {
     val storageId1 = UUID.randomUUID()
     val storageId2 = UUID.randomUUID()
     val config1 = createSecretConfig(secretStorageId = storageId1)
-    val config2 = createSecretConfig(secretStorageId = storageId2)
     val config3 = createSecretConfig(secretStorageId = storageId1)
 
-    every { secretConfigService.findAirbyteManagedConfigsWithoutReferences(any(), any()) } returns listOf(config1, config2, config3)
+    // Both storage IDs have orphans
+    every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId1, storageId2)
 
     // Feature flag enabled for storage1, disabled for storage2
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(storageId1.toString())) } returns true
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(storageId2.toString())) } returns false
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
+
+    // Query should only be called with storageId1 (the enabled one)
+    every {
+      secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), listOf(storageId1))
+    } returns listOf(config1, config3)
 
     val persistence1 = mockk<SecretPersistence>()
     every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId1)) } returns persistence1
-    every { persistence1.delete(any()) } just runs
+    every { persistence1.deleteWithRecoveryWindow(any(), any()) } just runs
+
+    every { secretConfigService.deleteByIds(any()) } just runs
 
     cleanup.cleanupOrphanedSecrets()
 
     // Verify only configs from storage1 are processed
-    verify(exactly = 2) { persistence1.delete(any()) } // config1 and config3
+    verify(exactly = 2) { persistence1.deleteWithRecoveryWindow(any(), any()) } // config1 and config3
 
     // Verify caching: persistence lookup only called once for storageId1 despite 2 configs
     verify(exactly = 1) { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId1)) }
@@ -204,16 +223,46 @@ class OrphanedSecretConfigCleanupTest {
   }
 
   @Test
+  fun `cleanup emits per-delete counter metrics for successes and failures`() {
+    val storageId = UUID.randomUUID()
+    val orphanedConfig1 = createSecretConfig(secretStorageId = storageId)
+    val orphanedConfig2 = createSecretConfig(secretStorageId = storageId)
+    val orphanedConfig3 = createSecretConfig(secretStorageId = storageId)
+
+    every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
+    every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
+    every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns
+      listOf(orphanedConfig1, orphanedConfig2, orphanedConfig3)
+    every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
+    // First two succeed, third fails
+    every { secretPersistence.deleteWithRecoveryWindow(any(), any()) } just runs andThen {} andThenThrows RuntimeException("fail")
+    every { secretConfigService.deleteByIds(any()) } just runs
+
+    cleanup.cleanupOrphanedSecrets()
+
+    // Verify orphaned configs found counter emitted batch size of 3
+    verify { metricClient.count(OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_FOUND, 3L) }
+    // Verify per-delete counters fired for all 3 attempts (2 success + 1 failure via DELETE_SECRET)
+    verify(exactly = 3) { metricClient.count(eq(OssMetricsRegistry.DELETE_SECRET), any(), *anyVararg()) }
+  }
+
+  @Test
   fun `cleanup caches persistence objects to avoid redundant lookups`() {
     val storageId = UUID.randomUUID()
     val config1 = createSecretConfig(secretStorageId = storageId)
     val config2 = createSecretConfig(secretStorageId = storageId)
     val config3 = createSecretConfig(secretStorageId = storageId)
 
-    every { secretConfigService.findAirbyteManagedConfigsWithoutReferences(any(), any()) } returns listOf(config1, config2, config3)
+    every { secretConfigService.findDistinctOrphanedStorageIds(any()) } returns listOf(storageId)
     every { featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, any<SecretStorage>()) } returns true
+    every { featureFlagClient.intVariation(OrphanedSecretCleanupLimit, any<SecretStorage>()) } returns 100
+    every { secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(any(), any(), any()) } returns
+      listOf(config1, config2, config3)
     every { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) } returns secretPersistence
-    every { secretPersistence.delete(any()) } just runs
+    every { secretPersistence.deleteWithRecoveryWindow(any(), any()) } just runs
+
+    every { secretConfigService.deleteByIds(any()) } just runs
 
     cleanup.cleanupOrphanedSecrets()
 
@@ -221,7 +270,7 @@ class OrphanedSecretConfigCleanupTest {
     verify(exactly = 1) { secretPersistenceService.getPersistenceByStorageId(SecretStorageId(storageId)) }
 
     // Verify all 3 secrets are deleted from external storage
-    verify(exactly = 3) { secretPersistence.delete(any()) }
+    verify(exactly = 3) { secretPersistence.deleteWithRecoveryWindow(any(), any()) }
 
     // Verify all 3 configs are deleted from database
     verify { secretConfigService.deleteByIds(listOf(config1.id, config2.id, config3.id)) }

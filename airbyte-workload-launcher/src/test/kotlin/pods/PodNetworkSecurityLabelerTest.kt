@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pods
 
+import io.airbyte.commons.constants.NetworkPolicyConstants
 import io.airbyte.workers.hashing.TestHasher
 import io.fabric8.kubernetes.api.model.LabelSelector
 import io.fabric8.kubernetes.api.model.networking.v1.NetworkPolicy
@@ -25,7 +26,7 @@ internal class PodNetworkSecurityLabelerTest {
   private lateinit var mNetworkPolicyFetcher: NetworkPolicyFetcher
   private lateinit var mCacheManager: CacheManager<Any>
   private lateinit var mCache: SyncCache<Any>
-  private val tokenHashKey = "airbyte/networkSecurityTokenHash"
+  private val tokenHashKey = NetworkPolicyConstants.TOKEN_HASH_LABEL_KEY
 
   @BeforeEach
   fun setup() {
@@ -33,7 +34,7 @@ internal class PodNetworkSecurityLabelerTest {
     mCacheManager = mockk()
     mCache = mockk()
 
-    every { mCacheManager.getCache(any()) } returns mCache
+    every { mCacheManager.getCache("network-policy-label-cache") } returns mCache
   }
 
   @Test
@@ -41,8 +42,8 @@ internal class PodNetworkSecurityLabelerTest {
     val labeler = PodNetworkSecurityLabeler(mNetworkPolicyFetcher, mCacheManager, TestHasher())
     val networkSecurityTokens = listOf("token1", "token2")
     val workspaceId = UUID.randomUUID()
-    // No cache
-    every { mCache.get(workspaceId, Map::class.java) } returns Optional.empty()
+    val cacheKey = "$workspaceId:${networkSecurityTokens.sorted()}"
+    every { mCache.get(cacheKey, Map::class.java) } returns Optional.empty()
     every { mCache.put(any(), any()) } just runs
     every { mNetworkPolicyFetcher.matchingNetworkPolicies(workspaceId, networkSecurityTokens, any()) } returns
       listOf(
@@ -67,6 +68,40 @@ internal class PodNetworkSecurityLabelerTest {
       )
     val result = labeler.getLabels(workspaceId, networkSecurityTokens)
     Assertions.assertEquals(mapOf("Label1" to "value1", "Label2" to "value2"), result)
+  }
+
+  @Test
+  fun testNewTokenInvalidatesCache() {
+    val labeler = PodNetworkSecurityLabeler(mNetworkPolicyFetcher, mCacheManager, TestHasher())
+    val workspaceId = UUID.randomUUID()
+    val oldTokens = listOf("token1")
+    val newTokens = listOf("token1", "token2")
+
+    val oldCacheKey = "$workspaceId:${oldTokens.sorted()}"
+    val newCacheKey = "$workspaceId:${newTokens.sorted()}"
+
+    // Old tokens are cached
+    every { mCache.get(oldCacheKey, Map::class.java) } returns Optional.of(mapOf("Label1" to "value1"))
+    // New tokens are a cache miss
+    every { mCache.get(newCacheKey, Map::class.java) } returns Optional.empty()
+    every { mCache.put(any(), any()) } just runs
+    every { mNetworkPolicyFetcher.matchingNetworkPolicies(workspaceId, newTokens, any()) } returns
+      listOf(
+        NetworkPolicy().apply {
+          spec =
+            NetworkPolicySpec().apply {
+              podSelector =
+                LabelSelector().apply {
+                  matchLabels = mapOf("Label1" to "value1", "Label2" to "value2")
+                }
+            }
+        },
+      )
+
+    // With new tokens, should fetch fresh from K8s API
+    val result = labeler.getLabels(workspaceId, newTokens)
+    Assertions.assertEquals(mapOf("Label1" to "value1", "Label2" to "value2"), result)
+    verify(exactly = 1) { mNetworkPolicyFetcher.matchingNetworkPolicies(workspaceId, newTokens, any()) }
   }
 
   @Test

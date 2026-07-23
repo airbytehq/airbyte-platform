@@ -1,5 +1,6 @@
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { render } from "test-utils";
+
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 
 import { LatestSyncCell } from "./LatestSyncCell";
 

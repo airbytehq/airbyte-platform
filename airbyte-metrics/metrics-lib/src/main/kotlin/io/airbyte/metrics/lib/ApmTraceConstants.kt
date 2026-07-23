@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib
@@ -8,11 +8,6 @@ package io.airbyte.metrics.lib
  * Collection of constants for APM tracing.
  */
 object ApmTraceConstants {
-  /**
-   * Operation name for an APM trace of a Temporal activity.
-   */
-  const val ACTIVITY_TRACE_OPERATION_NAME: String = "activity"
-
   /**
    * Operation name for an APM trace of API endpoint execution.
    */
@@ -37,6 +32,11 @@ object ApmTraceConstants {
    * Trace tag constants.
    */
   object Tags {
+    const val ERROR: String = "error"
+    const val ERROR_MSG: String = "error.message"
+    const val ERROR_TYPE: String = "error.type"
+    const val ERROR_STACK: String = "error.stack"
+
     /**
      * Name of the APM trace tag that holds the attempt number value associated with the trace.
      */

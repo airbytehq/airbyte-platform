@@ -12,5 +12,4 @@ airbyte:
     segment-token: test-segment-token
     sonar-api-url: test-sonar-api-url
     zendesk-key: test-zendesk-key
-    posthog-api-key: test-posthog-api-key
-    posthog-host: test-posthog-host
+    fullstory-guides-org-id: test-fullstory-guides-org-id

@@ -3,23 +3,23 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { HeadTitle } from "components/HeadTitle";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { PageGridContainer } from "components/ui/PageGridContainer";
 import { PageHeader } from "components/ui/PageHeader";
 import { ScrollParent } from "components/ui/ScrollParent";
 
+import { CapacityReachedMessage } from "area/connection/components/CapacityReachedMessage";
 import { ActiveConnectionLimitReachedModal } from "area/workspace/components/ActiveConnectionLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
-import { useConnectionList, useCurrentWorkspace, useListConnectionsStatusesAsync, useFilters } from "core/api";
+import { useConnectionList, useCurrentWorkspace, useFilters } from "core/api";
 import { WebBackendConnectionListSortKey } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useModalService } from "core/services/Modal";
 import { useDrawerActions } from "core/services/ui/DrawerService";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
-import { useModalService } from "hooks/services/Modal";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
 
 import styles from "./AllConnectionsPage.module.scss";
@@ -28,7 +28,7 @@ import { ConnectionsListCard } from "./ConnectionsListCard";
 import { ConnectionsSummary } from "./ConnectionsSummary";
 
 const ConnectionOnboarding = React.lazy(() =>
-  import("components/connection/ConnectionOnboarding").then((module) => ({ default: module.ConnectionOnboarding }))
+  import("area/connection/components/ConnectionOnboarding").then((module) => ({ default: module.ConnectionOnboarding }))
 );
 
 export const AllConnectionsPage: React.FC = () => {
@@ -51,6 +51,9 @@ export const AllConnectionsPage: React.FC = () => {
   // Tag filter state management
   const [tagFilters, setTagFilters] = React.useState<string[]>([]);
 
+  // Burst (on-demand) filter state management
+  const [burstFilter, setBurstFilter] = React.useState(false);
+
   // Sort state management
   const [sortKey, setSortKey] = React.useState<WebBackendConnectionListSortKey>("connectionName_asc");
 
@@ -66,6 +69,7 @@ export const AllConnectionsPage: React.FC = () => {
       sourceDefinitionIds: filterValues.source ? [filterValues.source] : [],
       destinationDefinitionIds: filterValues.destination ? [filterValues.destination] : [],
       tagIds: tagFilters.length > 0 ? tagFilters : [],
+      onDemandEnabled: burstFilter ? true : null,
     },
     sortKey,
   });
@@ -74,18 +78,12 @@ export const AllConnectionsPage: React.FC = () => {
     () => connectionListQuery.data?.pages.flatMap((page) => page.connections) ?? [],
     [connectionListQuery.data?.pages]
   );
-  const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
 
   const onCreateConnection = () => {
     navigate(
       `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`
     );
   };
-
-  useListConnectionsStatusesAsync(
-    connections.map((connection) => connection.connectionId),
-    isAllConnectionsStatusEnabled
-  );
 
   const onCreateClick = (sourceDefinitionId?: string) => {
     if (activeConnectionLimitReached && limits) {
@@ -119,35 +117,38 @@ export const AllConnectionsPage: React.FC = () => {
         <HeadTitle titles={[{ id: "sidebar.connections" }]} />
         {hasAnyConnections ? (
           <PageGridContainer>
-            <PageHeader
-              className={styles.pageHeader}
-              leftComponent={
-                <FlexContainer direction="column">
-                  <FlexItem>
-                    <Heading as="h1" size="lg">
-                      <FormattedMessage id="sidebar.connections" />
-                    </Heading>
+            <FlexContainer direction="column">
+              <PageHeader
+                className={styles.pageHeader}
+                leftComponent={
+                  <FlexContainer direction="column">
+                    <FlexItem>
+                      <Heading as="h1" size="lg">
+                        <FormattedMessage id="sidebar.connections" />
+                      </Heading>
+                    </FlexItem>
+                    <FlexItem>
+                      <ConnectionsSummary />
+                    </FlexItem>
+                  </FlexContainer>
+                }
+                endComponent={
+                  <FlexItem className={styles.alignSelfStart}>
+                    <Button
+                      disabled={!canCreateConnection}
+                      icon="plus"
+                      variant="primary"
+                      size="sm"
+                      onClick={() => onCreateClick()}
+                      data-testid="new-connection-button"
+                    >
+                      <FormattedMessage id="connection.newConnection" />
+                    </Button>
                   </FlexItem>
-                  <FlexItem>
-                    <ConnectionsSummary />
-                  </FlexItem>
-                </FlexContainer>
-              }
-              endComponent={
-                <FlexItem className={styles.alignSelfStart}>
-                  <Button
-                    disabled={!canCreateConnection}
-                    icon="plus"
-                    variant="primary"
-                    size="sm"
-                    onClick={() => onCreateClick()}
-                    data-testid="new-connection-button"
-                  >
-                    <FormattedMessage id="connection.newConnection" />
-                  </Button>
-                </FlexItem>
-              }
-            />
+                }
+              />
+              <CapacityReachedMessage />
+            </FlexContainer>
             <ScrollParent props={{ className: styles.pageBody }}>
               <ConnectionsListCard
                 isLoading={connectionListQuery.isLoading}
@@ -159,9 +160,12 @@ export const AllConnectionsPage: React.FC = () => {
                 resetFilters={() => {
                   resetFilters();
                   setTagFilters([]);
+                  setBurstFilter(false);
                 }}
                 tagFilters={tagFilters}
                 setTagFilters={setTagFilters}
+                burstFilter={burstFilter}
+                setBurstFilter={setBurstFilter}
                 sortKey={sortKey}
                 setSortKey={setSortKey}
               />

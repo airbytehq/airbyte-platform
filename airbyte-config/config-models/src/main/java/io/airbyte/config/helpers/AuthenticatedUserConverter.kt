@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.helpers
@@ -20,6 +20,7 @@ object AuthenticatedUserConverter {
       .withEmail(user.email)
       .withNews(user.news)
       .withUiMetadata(user.uiMetadata)
+      .withAgenticEnabledAt(user.agenticEnabledAt)
 
   @JvmStatic
   fun toAuthenticatedUser(
@@ -38,4 +39,5 @@ object AuthenticatedUserConverter {
       .withEmail(user.email)
       .withNews(user.news)
       .withUiMetadata(user.uiMetadata)
+      .withAgenticEnabledAt(user.agenticEnabledAt)
 }

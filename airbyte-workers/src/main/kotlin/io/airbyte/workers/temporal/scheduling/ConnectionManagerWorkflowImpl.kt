@@ -1,10 +1,10 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling
 
-import datadog.trace.api.Trace
+import io.airbyte.api.client.model.generated.ConnectionScheduleType
 import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.TemporalTaskQueueUtils.getTaskQueue
 import io.airbyte.commons.temporal.TemporalWorkflowUtils.buildStartWorkflowInput
@@ -28,11 +28,11 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.JobStatus
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
+import io.airbyte.featureflag.EnforceDataWorkerCapacity
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY
-import io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.ApmTraceUtils.addExceptionToTrace
 import io.airbyte.metrics.lib.MetricTags
@@ -49,9 +49,13 @@ import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActiv
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity.LogOutput
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput
+import io.airbyte.workers.temporal.scheduling.activities.CapacityCheckActivity
+import io.airbyte.workers.temporal.scheduling.activities.CapacityCheckActivity.CapacityCheckInput
+import io.airbyte.workers.temporal.scheduling.activities.CapacityCheckActivity.CapacityCheckOutput
 import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverInput
+import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput
@@ -59,6 +63,7 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput
+import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.CancelJobInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCheckFailureInput
@@ -66,6 +71,7 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobFailureInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.ReportJobStartInput
+import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.SetJobQueuedInput
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.FailureCause
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.RecordMetricInput
@@ -77,6 +83,7 @@ import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceAc
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity.DeleteStreamResetRecordsForJobInput
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import io.temporal.api.enums.v1.ParentClosePolicy
 import io.temporal.failure.ActivityFailure
 import io.temporal.failure.CanceledFailure
@@ -133,6 +140,9 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private val appendToAttemptLogActivity: AppendToAttemptLogActivity? = null
 
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private val capacityCheckActivity: CapacityCheckActivity? = null
+
   private var cancellableSyncWorkflow: CancellationScope? = null
 
   private var connectionId: UUID? = null
@@ -144,7 +154,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   private var connectionContext: ConnectionContext? = null
 
   @Suppress("UNUSED")
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun run(connectionUpdaterInput: ConnectionUpdaterInput) {
     try {
       if (connectionUpdaterInput.connectionId == null || isTombstone(connectionUpdaterInput.connectionId)) {
@@ -316,10 +326,49 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         retryManager = hydrateRetryManager()
 
         // This var is unused since no feature flags are currently required in this workflow.
-        // We keep the activity around to get any feature flags that might be needed in the future
-        val featureFlags = getFeatureFlags(connectionUpdaterInput.connectionId)
+        // Fetch workflow-scoped feature flags up front so activities do not need to resolve them.
+        val featureFlags = getFeatureFlags(connectionUpdaterInput.connectionId, connectionContext?.organizationId)
 
+        // Create the job first before checking capacity, so we have a job to cancel if needed
         workflowInternalState.jobId = getOrCreateJobId(connectionUpdaterInput)
+
+        // Check Data Worker capacity after job creation but before attempt creation.
+        // If capacity is unavailable, the job transitions from PENDING to QUEUED while the workflow polls.
+        // Once capacity is available, attempt creation moves the job to RUNNING.
+        // If the wait exceeds the next scheduled run, or 8 hours for MANUAL connections,
+        // this throws CapacityWaitExceededException so the queued job can be cancelled and continued as new.
+        try {
+          waitForCapacityIfNeeded(connectionUpdaterInput, featureFlags)
+        } catch (e: CapacityWaitInterruptedException) {
+          log.info(
+            "Capacity wait interrupted for connection {} due to {}, cancelling queued job",
+            connectionUpdaterInput.connectionId,
+            e.interruptionReason,
+          )
+          cancelJobBeforeAttempt(connectionUpdaterInput, e.interruptionReason.cancellationReason)
+          if (e.interruptionReason == CapacityWaitInterruptionReason.UPDATED) {
+            resetNewConnectionInput(connectionUpdaterInput)
+            prepareForNextRunAndContinueAsNew(connectionUpdaterInput)
+          }
+          return@Runnable
+        } catch (e: CapacityWaitExceededException) {
+          log.info("Capacity wait exceeded for connection {}, cancelling queued job and continuing", connectionUpdaterInput.connectionId)
+          // Cancel the job that was waiting for capacity
+          cancelJobBeforeAttempt(connectionUpdaterInput, e.cancellationReason)
+          // Record metric for queued job being skipped
+          recordMetric(
+            RecordMetricInput(
+              connectionUpdaterInput,
+              Optional.of<FailureCause>(FailureCause.CAPACITY_WAIT_EXCEEDED),
+              OssMetricsRegistry.TEMPORAL_WORKFLOW_FAILURE,
+              null,
+            ),
+          )
+          resetNewConnectionInput(connectionUpdaterInput)
+          prepareForNextRunAndContinueAsNew(connectionUpdaterInput)
+          return@Runnable
+        }
+        // Create the attempt now that we have capacity - this sets the job to RUNNING
         workflowInternalState.attemptNumber = createAttempt(workflowInternalState.jobId!!)
 
         reportJobStarting(connectionUpdaterInput.connectionId)
@@ -717,10 +766,15 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     workflowState.isSkipScheduling = true
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun cancelJob() {
     traceConnectionId()
     if (!workflowState.isRunning) {
+      if (isWaitingForCapacity()) {
+        // A queued job already exists; the capacity-wait loop will observe this and cancel that job.
+        workflowState.isCancelled = true
+        return
+      }
       log.info("Can't cancel a non-running sync for connection {}", connectionId)
       return
     }
@@ -729,7 +783,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   }
 
   // TODO: Delete when the don't delete in temporal is removed
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun deleteConnection() {
     traceConnectionId()
     workflowState.isDeleted = true
@@ -741,7 +795,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     workflowState.isUpdated = true
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun resetConnection() {
     traceConnectionId()
 
@@ -749,20 +803,24 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     // connection
     if (workflowState.isDoneWaiting) {
       workflowState.isCancelledForReset = true
-      cancelSyncChildWorkflow()
+      if (workflowState.isRunning) {
+        cancelSyncChildWorkflow()
+      }
     } else {
       workflowState.isSkipScheduling = true
     }
   }
 
-  @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun resetConnectionAndSkipNextScheduling() {
     traceConnectionId()
 
     if (workflowState.isDoneWaiting) {
       workflowState.isCancelledForReset = true
       workflowState.isSkipSchedulingNextWorkflow = true
-      cancelSyncChildWorkflow()
+      if (workflowState.isRunning) {
+        cancelSyncChildWorkflow()
+      }
     } else {
       workflowState.isSkipScheduling = true
       workflowState.isSkipSchedulingNextWorkflow = true
@@ -778,6 +836,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     return JobInformation(
       jobId,
       attemptNumber ?: ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID,
+      workflowInternalState.jobConfigType,
     )
   }
 
@@ -789,6 +848,12 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
    */
   private fun shouldInterruptWaiting(): Boolean =
     workflowState.isSkipScheduling || workflowState.isDeleted || workflowState.isUpdated || workflowState.isCancelled
+
+  private fun isWaitingForCapacity(): Boolean =
+    workflowState.isDoneWaiting &&
+      !workflowState.isRunning &&
+      workflowInternalState.jobId != null &&
+      workflowInternalState.attemptNumber == null
 
   private fun prepareForNextRunAndContinueAsNew(connectionUpdaterInput: ConnectionUpdaterInput) {
     // Continue the workflow as new
@@ -910,7 +975,9 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
    *
    * Wait time is infinite If the workflow is manual or disabled since we never want to schedule this.
    */
-  private fun getTimeTilScheduledRun(connectionId: UUID?): Duration? {
+  private fun getTimeTilScheduledRun(connectionId: UUID?): Duration? = getScheduleInfo(connectionId).timeToWait
+
+  private fun getScheduleInfo(connectionId: UUID?): ScheduleRetrieverOutput {
     // Scheduling
     val scheduleRetrieverInput = ScheduleRetrieverInput(connectionId)
 
@@ -920,7 +987,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         scheduleRetrieverInput,
       )!!
 
-    return scheduleRetrieverOutput.timeToWait
+    return scheduleRetrieverOutput
   }
 
   private fun ensureCleanJobState(connectionUpdaterInput: ConnectionUpdaterInput) {
@@ -971,12 +1038,17 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         { input: JobCreationInput? -> jobCreationAndStatusUpdateActivity?.createNewJob(input!!) },
         JobCreationInput(connectionUpdaterInput.connectionId, !workflowState.isSkipScheduling),
       )!!
+    workflowInternalState.jobId = jobCreationOutput.jobId
+    workflowInternalState.jobConfigType = jobCreationOutput.jobConfigType
     connectionUpdaterInput.jobId = jobCreationOutput.jobId
 
     return jobCreationOutput.jobId
   }
 
-  private fun getFeatureFlags(connectionId: UUID?): MutableMap<String?, Boolean?> {
+  private fun getFeatureFlags(
+    connectionId: UUID?,
+    organizationId: UUID?,
+  ): MutableMap<String?, Boolean?> {
     val getFeatureFlagsVersion =
       Workflow.getVersion(GET_FEATURE_FLAGS_TAG, Workflow.DEFAULT_VERSION, GET_FEATURE_FLAGS_CURRENT_VERSION)
 
@@ -987,9 +1059,195 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     val getFlagsOutput =
       runMandatoryActivityWithOutput<FeatureFlagFetchInput?, FeatureFlagFetchOutput>({ input: FeatureFlagFetchInput? ->
         featureFlagFetchActivity?.getFeatureFlags(input!!)
-      }, FeatureFlagFetchInput(connectionId))!!
+      }, FeatureFlagFetchInput(connectionId, organizationId))!!
     return getFlagsOutput.featureFlags!!
   }
+
+  /**
+   * Check Data Worker capacity and wait if necessary.
+   *
+   * This method checks if the organization has available committed capacity to run the job.
+   * If capacity is not available and on-demand is not enabled for the connection,
+   * the workflow will poll and wait for capacity to become available.
+   *
+   * Scheduled runs stop waiting when the next scheduled job time arrives. Connections configured
+   * with MANUAL scheduling stop waiting after 8 hours.
+   *
+   * @param connectionUpdaterInput The connection input containing connection and organization IDs
+   * @throws CapacityWaitExceededException if the wait exceeds the next scheduled job time
+   */
+  private fun waitForCapacityIfNeeded(
+    connectionUpdaterInput: ConnectionUpdaterInput,
+    featureFlags: Map<String?, Boolean?>,
+  ) {
+    val capacityCheckVersion =
+      Workflow.getVersion(CAPACITY_CHECK_TAG, Workflow.DEFAULT_VERSION, CAPACITY_CHECK_CURRENT_VERSION)
+
+    if (capacityCheckVersion < CAPACITY_CHECK_CURRENT_VERSION) {
+      return
+    }
+
+    val enforcementEnabled = featureFlags[EnforceDataWorkerCapacity.key] ?: false
+    if (!enforcementEnabled) {
+      return
+    }
+
+    val organizationId = connectionContext?.organizationId
+    if (organizationId == null) {
+      log.warn("Organization ID not available for capacity check, skipping")
+      return
+    }
+
+    val input = CapacityCheckInput(workflowInternalState.jobId, connectionUpdaterInput.connectionId, organizationId, enforcementEnabled)
+
+    // Initial capacity check
+    var capacityCheckOutput = checkCapacity(input)
+    throwIfCapacityWaitInterrupted()
+
+    // If capacity is already available, there is nothing to wait for.
+    if (capacityCheckOutput.capacityAvailable) {
+      if (capacityCheckOutput.useOnDemandCapacity) {
+        runAppendToAttemptLogActivity(
+          "Using on-demand capacity (committed capacity exhausted)",
+          AppendToAttemptLogActivity.LogLevel.INFO,
+        )
+      }
+      return
+    }
+
+    // No capacity available and on-demand not enabled - wait for capacity
+    runAppendToAttemptLogActivity(
+      "Waiting for Data Worker capacity (committed capacity exhausted, on-demand not enabled)",
+      AppendToAttemptLogActivity.LogLevel.INFO,
+    )
+
+    // Set the job status to QUEUED while waiting for capacity
+    setJobQueued(workflowInternalState.jobId!!)
+
+    val startTime = Workflow.currentTimeMillis()
+
+    // Get the time until the next scheduled run to ensure we don't wait past the next job time.
+    val scheduleInfo = getScheduleInfo(connectionUpdaterInput.connectionId)
+    val nextScheduledRunMs = getNextScheduledCapacityWaitMs(scheduleInfo)
+    val manualCapacityWaitMs = getManualCapacityWaitMs(scheduleInfo.scheduleType)
+
+    while (!capacityCheckOutput.capacityAvailable) {
+      throwIfCapacityWaitInterrupted()
+      val elapsedMs = Workflow.currentTimeMillis() - startTime
+
+      // Check if we've exceeded the next scheduled job time
+      if (elapsedMs >= nextScheduledRunMs) {
+        log.info(
+          "Next scheduled job time reached while waiting for capacity for connection ${connectionUpdaterInput.connectionId}. " +
+            "Cancelling queued job and proceeding with next scheduled run.",
+        )
+        runAppendToAttemptLogActivity(
+          "Next scheduled sync time reached while waiting for capacity. Cancelling this job to allow next scheduled sync.",
+          AppendToAttemptLogActivity.LogLevel.WARN,
+        )
+        // Throw exception to signal that this job should be cancelled and workflow should continue to next run
+        throw CapacityWaitExceededException(
+          "Capacity wait exceeded next scheduled job time for connection ${connectionUpdaterInput.connectionId}",
+          NEXT_SCHEDULED_CAPACITY_WAIT_CANCELLATION_REASON,
+        )
+      }
+
+      if (elapsedMs >= manualCapacityWaitMs) {
+        log.info(
+          "Manual capacity wait timeout reached for connection {} after {}. Cancelling queued job.",
+          connectionUpdaterInput.connectionId,
+          MANUAL_CAPACITY_WAIT_TIMEOUT,
+        )
+        runAppendToAttemptLogActivity(
+          "Manual sync waited 8 hours for Data Worker capacity. Cancelling queued job.",
+          AppendToAttemptLogActivity.LogLevel.WARN,
+        )
+        throw CapacityWaitExceededException(
+          "Manual capacity wait exceeded 8 hours for connection ${connectionUpdaterInput.connectionId}",
+          MANUAL_CAPACITY_WAIT_CANCELLATION_REASON,
+        )
+      }
+
+      // Wait before next capacity check
+      Workflow.await(CAPACITY_CHECK_POLL_INTERVAL) { getCapacityWaitInterruptionReason() != null }
+      throwIfCapacityWaitInterrupted()
+
+      // Re-check capacity
+      capacityCheckOutput = checkCapacity(input)
+      throwIfCapacityWaitInterrupted()
+
+      if (capacityCheckOutput.capacityAvailable) {
+        runAppendToAttemptLogActivity(
+          "Capacity now available, proceeding with job",
+          AppendToAttemptLogActivity.LogLevel.INFO,
+        )
+      }
+    }
+  }
+
+  private fun getManualCapacityWaitMs(scheduleType: ConnectionScheduleType?): Long =
+    if (scheduleType == ConnectionScheduleType.MANUAL) {
+      MANUAL_CAPACITY_WAIT_TIMEOUT.toMillis()
+    } else {
+      Long.MAX_VALUE
+    }
+
+  private fun getNextScheduledCapacityWaitMs(scheduleInfo: ScheduleRetrieverOutput): Long =
+    if (scheduleInfo.scheduleType == ConnectionScheduleType.MANUAL) {
+      Long.MAX_VALUE
+    } else {
+      scheduleInfo.timeToWait?.let { wait ->
+        if (wait.isNegative) {
+          0L
+        } else {
+          wait.toMillis()
+        }
+      } ?: 0L
+    }
+
+  private fun getCapacityWaitInterruptionReason(): CapacityWaitInterruptionReason? =
+    when {
+      workflowState.isDeleted -> CapacityWaitInterruptionReason.DELETED
+      workflowState.isCancelledForReset -> CapacityWaitInterruptionReason.RESET
+      workflowState.isCancelled -> CapacityWaitInterruptionReason.CANCELLED
+      workflowState.isUpdated -> CapacityWaitInterruptionReason.UPDATED
+      else -> null
+    }
+
+  private fun throwIfCapacityWaitInterrupted() {
+    val interruptionReason = getCapacityWaitInterruptionReason() ?: return
+    throw CapacityWaitInterruptedException(interruptionReason)
+  }
+
+  /**
+   * Exception thrown when capacity wait exceeds the allowed deadline for the queued job.
+   */
+  class CapacityWaitExceededException(
+    message: String,
+    val cancellationReason: String,
+  ) : RuntimeException(message)
+
+  private enum class CapacityWaitInterruptionReason(
+    val cancellationReason: String,
+  ) {
+    DELETED("Job cancelled: connection deleted while waiting for Data Worker capacity"),
+    RESET("Job cancelled: reset requested while waiting for Data Worker capacity"),
+    CANCELLED("Job cancelled: cancellation requested while waiting for Data Worker capacity"),
+    UPDATED("Job cancelled: connection updated while waiting for Data Worker capacity"),
+  }
+
+  private class CapacityWaitInterruptedException(
+    val interruptionReason: CapacityWaitInterruptionReason,
+  ) : RuntimeException(interruptionReason.cancellationReason)
+
+  /**
+   * Check Data Worker capacity via activity.
+   */
+  private fun checkCapacity(input: CapacityCheckInput): CapacityCheckOutput =
+    runMandatoryActivityWithOutput<CapacityCheckInput?, CapacityCheckOutput>(
+      { i: CapacityCheckInput? -> capacityCheckActivity?.checkCapacity(i!!) },
+      input,
+    )!!
 
   /**
    * Create a new attempt for a given jobId.
@@ -1023,6 +1281,18 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     )
 
     workflowState.isRunning = true
+  }
+
+  /**
+   * Set the job status to QUEUED when waiting for Data Worker capacity.
+   *
+   * @param jobId The job ID to mark as queued.
+   */
+  private fun setJobQueued(jobId: Long) {
+    runMandatoryActivity<SetJobQueuedInput?>(
+      { input: SetJobQueuedInput? -> jobCreationAndStatusUpdateActivity!!.setJobQueued(input!!) },
+      SetJobQueuedInput(jobId),
+    )
   }
 
   private fun runChildWorkflowV2(
@@ -1114,9 +1384,9 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     return summary != null && summary.status == StandardSyncSummary.ReplicationStatus.CANCELLED
   }
 
-    /*
-     * Set a job as cancel and continue to the next job if and continue as a reset if needed
-     */
+  /*
+   * Set a job as cancel and continue to the next job if and continue as a reset if needed
+   */
   private fun reportCancelledAndContinueWith(
     skipSchedulingNextRun: Boolean,
     connectionUpdaterInput: ConnectionUpdaterInput,
@@ -1146,6 +1416,33 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     )
 
     runEndOfSyncHooks(JobStatus.CANCELLED)
+  }
+
+  /**
+   * Cancel a job before any attempt has been created.
+   */
+  private fun cancelJobBeforeAttempt(
+    connectionUpdaterInput: ConnectionUpdaterInput,
+    reason: String,
+  ) {
+    val jobId = workflowInternalState.jobId
+
+    if (jobId == null) {
+      log.warn("Cannot cancel pre-attempt job - jobId is null")
+      return
+    }
+
+    runMandatoryActivity<CancelJobInput?>(
+      { input: CancelJobInput? -> jobCreationAndStatusUpdateActivity!!.cancelJob(input!!) },
+      CancelJobInput(
+        jobId,
+        connectionUpdaterInput.connectionId,
+        reason,
+      ),
+    )
+
+    // Note: We don't run end-of-sync hooks here because the job never actually started running.
+    log.info("Cancelled pre-attempt job {} with reason '{}'", jobId, reason)
   }
 
   private fun deleteResetJobStreams() {
@@ -1353,5 +1650,14 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
     private const val GET_FEATURE_FLAGS_TAG = "get_feature_flags"
     private const val GET_FEATURE_FLAGS_CURRENT_VERSION = 1
+
+    private const val CAPACITY_CHECK_TAG = "capacity_check"
+    private const val CAPACITY_CHECK_CURRENT_VERSION = 1
+    private val CAPACITY_CHECK_POLL_INTERVAL: Duration = Duration.ofMinutes(1)
+    private val MANUAL_CAPACITY_WAIT_TIMEOUT: Duration = Duration.ofHours(8)
+    private const val NEXT_SCHEDULED_CAPACITY_WAIT_CANCELLATION_REASON =
+      "Job cancelled: next scheduled sync time reached while waiting for Data Worker capacity"
+    private const val MANUAL_CAPACITY_WAIT_CANCELLATION_REASON =
+      "Job cancelled: manual sync waited 8 hours for Data Worker capacity"
   }
 }

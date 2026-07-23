@@ -3,20 +3,20 @@ import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 import { z } from "zod";
 
-import { THEMED_HEX_OPTIONS } from "components/connection/SelectConnectionTags/SelectConnectionTags";
-import { Form } from "components/forms/Form";
-import { FormControl } from "components/forms/FormControl";
-import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { FlexContainer } from "components/ui/Flex";
+import { Form } from "components/ui/forms/Form";
+import { FormControl } from "components/ui/forms/FormControl";
+import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { TagBadge } from "components/ui/TagBadge";
 
+import { THEMED_HEX_OPTIONS } from "area/connection/components/SelectConnectionTags/SelectConnectionTags";
+import { useCurrentWorkspace } from "area/workspace/utils/useWorkspace";
 import { useCreateTag, useUpdateTag } from "core/api";
 import { Tag } from "core/api/types/AirbyteClient";
 import { useFormatError } from "core/errors";
+import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
-import { useNotificationService } from "hooks/services/Notification";
-import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 
 import styles from "./TagFormModal.module.scss";
 

@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 import { CreateProjectContext, useCreateBuilderProject, useCreateSourceDefForkedBuilderProject } from "core/api";
 import { SourceDefinitionId } from "core/api/types/AirbyteClient";
-import { useNotificationService } from "hooks/services/Notification";
-import { useConnectorBuilderLocalStorage } from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
+import { useConnectorBuilderLocalStorage } from "core/services/connectorBuilder/ConnectorBuilderLocalStorageService";
+import { useNotificationService } from "core/services/Notification";
 
 import { getEditPath } from "../ConnectorBuilderRoutes";
 

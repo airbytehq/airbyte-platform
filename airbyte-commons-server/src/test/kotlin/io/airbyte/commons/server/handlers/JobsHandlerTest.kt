@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.model.generated.CheckDataWorkerCapacityRead
 import io.airbyte.api.model.generated.InternalOperationResult
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest
 import io.airbyte.commons.json.Jsons
@@ -23,10 +24,18 @@ import io.airbyte.config.JobConfig
 import io.airbyte.config.JobOutput
 import io.airbyte.config.JobStatus
 import io.airbyte.config.JobSyncConfig
+import io.airbyte.config.RefreshConfig
+import io.airbyte.config.ResourceRequirements
+import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.SyncMode
+import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.config.SyncStats
+import io.airbyte.data.services.ConnectionService
+import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.services.dataworker.CapacityCheckResult
+import io.airbyte.domain.services.dataworker.DataWorkerCapacityService
 import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
@@ -68,6 +77,8 @@ class JobsHandlerTest {
   private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var metricClient: MetricClient
   private lateinit var dataWorkerUsageService: DataWorkerUsageService
+  private lateinit var connectionService: ConnectionService
+  private lateinit var dataWorkerCapacityService: DataWorkerCapacityService
 
   private val jobId = 12L
   private val attemptNumber = 1
@@ -106,6 +117,8 @@ class JobsHandlerTest {
     featureFlagClient = mock<TestClient>()
     metricClient = mock()
     dataWorkerUsageService = mock()
+    connectionService = mock()
+    dataWorkerCapacityService = mock()
 
     jobsHandler =
       JobsHandler(
@@ -117,6 +130,8 @@ class JobsHandlerTest {
         featureFlagClient,
         metricClient,
         dataWorkerUsageService,
+        connectionService,
+        dataWorkerCapacityService,
       )
   }
 
@@ -163,7 +178,7 @@ class JobsHandlerTest {
     verify(jobNotifier).successJob(anyOrNull(), anyOrNull())
     verify(helper).trackCompletion(anyOrNull(), eq(io.airbyte.commons.server.JobStatus.SUCCEEDED))
     verify(connectionTimelineEventHelper).logJobSuccessEventInConnectionTimeline(job, connectionId, listOf(attemptStats))
-    verify(dataWorkerUsageService).subtractUsageForCompletedJob(any())
+    verify(dataWorkerUsageService).releaseReservedUsageForJob(eq(jobId))
   }
 
   @Test
@@ -233,6 +248,89 @@ class JobsHandlerTest {
   }
 
   @Test
+  fun checkDataWorkerCapacityUsesOnDemandWhenAvailable() {
+    val organizationId = UUID.randomUUID()
+    val job =
+      Job(
+        jobId,
+        JobConfig.ConfigType.SYNC,
+        connectionId.toString(),
+        JobConfig().withConfigType(JobConfig.ConfigType.SYNC).withSync(
+          JobSyncConfig()
+            .withUsedOnDemandCapacity(false)
+            .withSyncResourceRequirements(
+              SyncResourceRequirements()
+                .withSource(ResourceRequirements().withCpuRequest("2.0"))
+                .withDestination(ResourceRequirements().withCpuRequest("3.0"))
+                .withOrchestrator(ResourceRequirements().withCpuRequest("1.5")),
+            ),
+        ),
+        listOf(),
+        JobStatus.PENDING,
+        null,
+        0,
+        0,
+        false,
+      )
+    whenever(jobPersistence.getJob(jobId)).thenReturn(job)
+    whenever(connectionService.getStandardSync(connectionId)).thenReturn(StandardSync().withOnDemandEnabled(true))
+    whenever(
+      dataWorkerCapacityService.checkCapacityAndReserve(
+        OrganizationId(organizationId),
+        job,
+        0.8125,
+        true,
+      ),
+    ).thenReturn(
+      CapacityCheckResult(
+        hasAvailableCapacity = true,
+        currentDataWorkers = 5.0,
+        committedDataWorkers = 5,
+        requiredDataWorkers = 0.8125,
+        usedOnDemandCapacity = true,
+      ),
+    )
+
+    val result = jobsHandler.checkDataWorkerCapacity(jobId, connectionId, organizationId)
+
+    assertEquals(CheckDataWorkerCapacityRead().capacityAvailable(true).useOnDemandCapacity(true), result)
+    verify(dataWorkerCapacityService).checkCapacityAndReserve(
+      OrganizationId(organizationId),
+      job,
+      0.8125,
+      true,
+    )
+    verify(jobPersistence).updateSyncJobOnDemandCapacity(jobId, true)
+  }
+
+  @ParameterizedTest
+  @MethodSource("nonSyncJobConfigs")
+  fun checkDataWorkerCapacitySkipsNonSyncJobs(nonSyncJobConfig: JobConfig) {
+    val organizationId = UUID.randomUUID()
+    val nonSyncJob =
+      Job(
+        jobId,
+        nonSyncJobConfig.configType,
+        connectionId.toString(),
+        nonSyncJobConfig,
+        listOf(),
+        JobStatus.PENDING,
+        null,
+        0,
+        0,
+        false,
+      )
+    whenever(jobPersistence.getJob(jobId)).thenReturn(nonSyncJob)
+
+    val result = jobsHandler.checkDataWorkerCapacity(jobId, connectionId, organizationId)
+
+    assertEquals(CheckDataWorkerCapacityRead().capacityAvailable(true).useOnDemandCapacity(false), result)
+    verify(connectionService, never()).getStandardSync(any())
+    verify(dataWorkerCapacityService, never()).checkCapacityAndReserve(any(), any(), any(), any())
+    verify(jobPersistence, never()).updateSyncJobOnDemandCapacity(any(), any())
+  }
+
+  @Test
   fun persistJobCancellationSuccess() {
     val mockJob =
       Job(jobId, JobConfig.ConfigType.SYNC, connectionId.toString(), simpleConfig, listOf(), JobStatus.RUNNING, 0L, 0, 0, true)
@@ -244,7 +342,7 @@ class JobsHandlerTest {
     verify(jobPersistence).writeAttemptFailureSummary(jobId, attemptNumber, failureSummary)
     verify(jobPersistence).cancelJob(jobId)
     verify(helper).trackCompletion(anyOrNull(), eq(io.airbyte.commons.server.JobStatus.FAILED))
-    verify(dataWorkerUsageService).subtractUsageForCompletedJob(any())
+    verify(dataWorkerUsageService).releaseReservedUsageForJob(eq(jobId))
   }
 
   @Test
@@ -273,6 +371,22 @@ class JobsHandlerTest {
     verify(helper).reportJobStart(5L)
   }
 
+  @Test
+  fun testSetJobQueued() {
+    val result = jobsHandler.setJobQueued(5L)
+
+    assertEquals(InternalOperationResult().succeeded(true), result)
+    verify(helper).setJobQueued(5L)
+  }
+
+  @Test
+  fun testCancelQueuedJob() {
+    val result = jobsHandler.cancelQueuedJob(5L)
+
+    assertEquals(InternalOperationResult().succeeded(true), result)
+    verify(helper).cancelQueuedJob(5L)
+  }
+
   companion object {
     @JvmStatic
     fun randomObjects() =
@@ -282,6 +396,24 @@ class JobsHandlerTest {
         Arguments.of(listOf("123", "123")),
         Arguments.of("a string"),
         Arguments.of(543.0),
+      )
+
+    @JvmStatic
+    fun nonSyncJobConfigs() =
+      listOf(
+        Arguments.of(
+          JobConfig()
+            .withConfigType(JobConfig.ConfigType.REFRESH)
+            .withRefresh(RefreshConfig()),
+        ),
+        Arguments.of(
+          JobConfig()
+            .withConfigType(JobConfig.ConfigType.RESET_CONNECTION),
+        ),
+        Arguments.of(
+          JobConfig()
+            .withConfigType(JobConfig.ConfigType.CLEAR),
+        ),
       )
   }
 }

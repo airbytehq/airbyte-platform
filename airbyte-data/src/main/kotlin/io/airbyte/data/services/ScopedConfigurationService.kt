@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services
@@ -112,6 +112,13 @@ interface ScopedConfigurationService {
    * Insert multiple configurations.
    */
   fun insertScopedConfigurations(scopedConfigurations: List<ScopedConfiguration>): List<ScopedConfiguration>
+
+  /**
+   * Upsert multiple configurations by their natural key (key, resource_type, resource_id, scope_type, scope_id).
+   * If a configuration with the same natural key already exists, its value, origin_type, and origin will be updated.
+   * This is useful when replacing an existing pin (e.g., converting a CONNECTOR_ROLLOUT pin to a BREAKING_CHANGE pin).
+   */
+  fun upsertScopedConfigurations(scopedConfigurations: List<ScopedConfiguration>)
 
   /**
    * List all scoped configurations.

@@ -32,8 +32,6 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)
-  implementation(libs.bundles.datadog)
-
 
   testImplementation(libs.hamcrest.all)
   testImplementation(libs.platform.testcontainers.postgresql)

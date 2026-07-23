@@ -5,10 +5,10 @@ import { FormProvider, useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Navigate } from "react-router-dom";
 
-import { FormChangeTracker } from "components/forms/FormChangeTracker";
-import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { FormChangeTracker } from "components/ui/forms/FormChangeTracker";
+import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
@@ -35,9 +35,9 @@ import {
   useDiscoverDestinationSchemaMutation,
 } from "core/api";
 import { AirbyteCatalog, DestinationCatalog } from "core/api/types/AirbyteClient";
+import { ModalContentProps, useModalService } from "core/services/Modal";
+import { useNotificationService } from "core/services/Notification";
 import { links } from "core/utils/links";
-import { ModalContentProps, useModalService } from "hooks/services/Modal";
-import { useNotificationService } from "hooks/services/Notification";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
 export const EditDataActivationMappingsPageWrapper = () => {

@@ -923,6 +923,7 @@ components:
     JobStatusEnum:
       enum:
       - "pending"
+      - "queued"
       - "running"
       - "incomplete"
       - "failed"
@@ -932,7 +933,7 @@ components:
       x-speakeasy-component: true
     JobTypeEnum:
       description: "Enum that describes the different types of jobs that the platform\
-        \ runs."
+        \ runs. When not specified, all job types are returned."
       enum:
       - "sync"
       - "reset"

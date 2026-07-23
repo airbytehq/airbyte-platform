@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.init
@@ -96,17 +96,19 @@ internal class AirbyteCompatibleConnectorVersionsProviderTest {
   }
 
   @Test
-  internal fun testNullBodyResponseFromRemoteFile() {
+  internal fun testEmptyBodyResponseFromRemoteFile() {
     val okHttpClient: OkHttpClient = mockk()
     val call: Call = mockk()
     val response: Response = mockk()
+    val responseBody: ResponseBody = mockk()
     val airbyteCompatibleConnectorVersionsProvider =
       AirbyteCompatibleConnectorVersionsProvider(
         okHttpClient = okHttpClient,
       )
 
+    every { responseBody.string() } returns ""
     every { response.isSuccessful } returns true
-    every { response.body } returns null
+    every { response.body } returns responseBody
     every { response.code } returns HttpStatus.OK.code
     every { response.message } returns ""
     every { response.close() } returns Unit

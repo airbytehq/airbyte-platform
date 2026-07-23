@@ -50,14 +50,18 @@ spec:
           protocol: TCP
         {{- if .Values.airbyteBootloader.debug.enabled }}
         - name: debug
-          containerPort: {{ .Values.airbyteBootloader.debug.remoteDebugPort }}
+          containerPort: 5005
           protocol: TCP
         {{- end}}
+      envFrom:
+        - configMapRef:
+            name: {{ .Release.Name }}-airbyte-telemetry-env
       env:
         {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "enterprise")) }}
         {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }}
         {{- end }}
 
+        {{- include "airbyte.java_opts.envs" (list .Values.airbyteBootloader $) | nindent 8 }}
         {{- include "airbyte.auth.bootstrap.envs" . | nindent 8 }}
         {{- include "airbyte.common.version.env" . | nindent 8 }}
         {{- include "airbyte.connector.envs" . | nindent 8 }}
@@ -68,13 +72,7 @@ spec:
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.kube.namespace.env" . | nindent 8 }}
-
-        {{- if .Values.global.datadog.enabled }}
-        - name: DD_SERVICE 
-          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
-        {{- include "airbyte.datadog.envs" . | nindent 8 }}
-        {{- include "airbyte.otel.envs" . | nindent 8 }}
-        {{- end}}
+        {{- include "airbyte.datadog.envs" .Values.airbyteBootloader.datadog | nindent 8 }}
 
         {{- if (eq .Values.global.edition "cloud") }}
         {{- include "airbyte.secretsManager.envs" . | nindent 8 }}

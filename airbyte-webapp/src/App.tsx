@@ -2,7 +2,8 @@ import React, { Suspense } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import { DevToolsToggle } from "components/DevToolsToggle";
+import { DevToolsToggle } from "components/ui/DevToolsToggle";
+import LoadingPage from "components/ui/LoadingPage";
 
 import { QueryProvider, useGetInstanceConfiguration } from "core/api";
 import {
@@ -12,18 +13,17 @@ import {
 import { DefaultErrorBoundary } from "core/errors";
 import { AnalyticsProvider } from "core/services/analytics";
 import { OSSAuthService } from "core/services/auth";
+import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { defaultOssFeatures, defaultEnterpriseFeatures, FeatureService } from "core/services/features";
+import { FormChangeTrackerService } from "core/services/FormChangeTracker";
 import { I18nProvider } from "core/services/i18n";
+import { ModalServiceProvider } from "core/services/Modal";
 import { BlockerService } from "core/services/navigation";
+import { NotificationService } from "core/services/Notification";
 import { DrawerContextProvider } from "core/services/ui/DrawerService";
 import { isDevelopment } from "core/utils/isDevelopment";
-import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
-import { ModalServiceProvider } from "hooks/services/Modal";
-import { NotificationService } from "hooks/services/Notification";
-import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
+import { AirbyteThemeProvider } from "core/utils/useAirbyteTheme";
 
-import LoadingPage from "./components/LoadingPage";
 import { Routing } from "./pages/routes";
 
 const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {

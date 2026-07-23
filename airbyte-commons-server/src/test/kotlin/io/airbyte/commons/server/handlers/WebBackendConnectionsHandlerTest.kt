@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
@@ -100,7 +100,6 @@ import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
-import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.DestinationAndDefinition
@@ -177,7 +176,6 @@ internal class WebBackendConnectionsHandlerTest {
   private val apiPojoConverters = ApiPojoConverters(catalogConverter)
   private lateinit var connectionTimelineEventHelper: ConnectionTimelineEventHelper
   private lateinit var catalogConfigDiffHelper: CatalogConfigDiffHelper
-  private lateinit var partialUserConfigService: PartialUserConfigService
 
   @BeforeEach
   fun setup() {
@@ -199,7 +197,6 @@ internal class WebBackendConnectionsHandlerTest {
     catalogConfigDiffHelper = mockk(relaxed = true)
     licenseEntitlementChecker = mockk(relaxed = true)
     connectorConfigEntitlementService = mockk(relaxed = true)
-    partialUserConfigService = mockk(relaxed = true)
 
     val validator: JsonSchemaValidator = mockk(relaxed = true)
     val secretsProcessor: JsonSecretsProcessor = mockk(relaxed = true)
@@ -258,6 +255,7 @@ internal class WebBackendConnectionsHandlerTest {
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
         sourceService,
+        workspaceService,
         workspaceHelper,
         secretPersistenceService,
         actorDefinitionHandlerHelper,
@@ -271,7 +269,6 @@ internal class WebBackendConnectionsHandlerTest {
         secretStorageService,
         secretReferenceService,
         currentUserService,
-        partialUserConfigService,
       )
 
     wbHandler =
@@ -617,6 +614,7 @@ internal class WebBackendConnectionsHandlerTest {
           .memoryLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.memoryLimit),
       ).notifySchemaChanges(false)
       .notifySchemaChangesByEmail(true)
+      .onDemandEnabled(connectionRead.onDemandEnabled ?: false)
       .sourceActorDefinitionVersion(ActorDefinitionVersionRead())
       .destinationActorDefinitionVersion(ActorDefinitionVersionRead())
 
@@ -673,6 +671,33 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
+  fun testWebBackendGetConnectionStatusCounts() {
+    every { connectionService.getConnectionStatusCounts(sourceRead.workspaceId) } returns
+      ConnectionService.ConnectionStatusCounts(
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+      )
+
+    val requestBody =
+      io.airbyte.api.model.generated.WorkspaceIdRequestBody().apply {
+        workspaceId = sourceRead.workspaceId
+      }
+
+    val result = wbHandler.webBackendGetConnectionStatusCounts(requestBody)
+
+    Assertions.assertEquals(1, result.running)
+    Assertions.assertEquals(2, result.queued)
+    Assertions.assertEquals(3, result.healthy)
+    Assertions.assertEquals(4, result.failed)
+    Assertions.assertEquals(5, result.paused)
+    Assertions.assertEquals(6, result.notSynced)
+  }
+
+  @Test
   fun testWebBackendGetConnection() {
     val connectionIdRequestBody = ConnectionIdRequestBody()
     connectionIdRequestBody.connectionId = connectionRead.connectionId
@@ -689,6 +714,32 @@ internal class WebBackendConnectionsHandlerTest {
 
     Assertions.assertEquals(expectedListItem.source.icon, ICON_URL)
     Assertions.assertEquals(expectedListItem.destination.icon, ICON_URL)
+  }
+
+  @Test
+  fun testWebBackendGetConnectionIncludesOnDemandEnabled() {
+    val onDemandConnectionRead = clone(connectionRead).onDemandEnabled(true)
+    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(onDemandConnectionRead.connectionId)
+    val webBackendConnectionRequestBody = WebBackendConnectionRequestBody().connectionId(onDemandConnectionRead.connectionId)
+    val expectedConnectionRead =
+      expectedWebBackendConnectionReadObject(
+        onDemandConnectionRead,
+        sourceRead,
+        expected.destination,
+        operationReadList,
+        SchemaChange.NO_CHANGE,
+        Instant.ofEpochSecond(expected.latestSyncJobCreatedAt),
+        onDemandConnectionRead.syncCatalog,
+        onDemandConnectionRead.sourceCatalogId,
+      )
+
+    every { connectionsHandler.getConnection(onDemandConnectionRead.connectionId) } returns onDemandConnectionRead
+    every { operationsHandler.listOperationsForConnection(connectionIdRequestBody) } returns operationReadList
+
+    val webBackendConnectionRead = wbHandler.webBackendGetConnection(webBackendConnectionRequestBody)
+
+    Assertions.assertTrue(webBackendConnectionRead.onDemandEnabled)
+    Assertions.assertEquals(expectedConnectionRead, webBackendConnectionRead)
   }
 
   fun testWebBackendGetConnection(
@@ -948,6 +999,20 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
+  fun testWebBackendGetConnectionWithDiscoveryFailureFallsBackToExistingCatalog() {
+    every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns
+      Optional.of(ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID()))
+    every { catalogService.getActorCatalogById(any()) } returns ActorCatalog().withId(UUID.randomUUID())
+    // A failed discover job returns a SourceDiscoverSchemaRead with jobInfo but no catalog.
+    every { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) } returns SourceDiscoverSchemaRead().jobInfo(mockk())
+
+    val result = testWebBackendGetConnection(true, connectionRead, operationReadList)
+
+    verify(exactly = 1) { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) }
+    Assertions.assertEquals(expectedNoDiscoveryWithNewSchema, result)
+  }
+
+  @Test
   fun testWebBackendGetConnectionNoDiscoveryWithNewSchemaBreaking() {
     every { connectionsHandler.getConnection(brokenConnectionRead.connectionId) } returns brokenConnectionRead
     every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns
@@ -1106,6 +1171,7 @@ internal class WebBackendConnectionsHandlerTest {
         "tags",
         "addTagsItem",
         "removeTagsItem",
+        "onDemandEnabled",
       )
 
     val methods =
@@ -1155,6 +1221,7 @@ internal class WebBackendConnectionsHandlerTest {
         "tags",
         "addTagsItem",
         "removeTagsItem",
+        "onDemandEnabled",
       )
 
     val methods =
@@ -1727,6 +1794,7 @@ internal class WebBackendConnectionsHandlerTest {
 
     Assertions.assertNotNull(result)
     Assertions.assertNull(result!!.searchTerm)
+    Assertions.assertNull(result.onDemandEnabled)
 
     // Empty lists are returned instead of null for collection fields
     Assertions.assertTrue(result.sourceDefinitionIds!!.isEmpty())
@@ -1757,6 +1825,15 @@ internal class WebBackendConnectionsHandlerTest {
     Assertions.assertEquals(expectedStatuses, result.statuses!!.size)
     Assertions.assertEquals(expectedStates, result.states!!.size)
     Assertions.assertEquals(expectedTagIds, result.tagIds!!.size)
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun testBuildConnectionFiltersWithOnDemandEnabled(onDemandEnabled: Boolean) {
+    val result = buildFilters(WebBackendConnectionListFilters().onDemandEnabled(onDemandEnabled))
+
+    Assertions.assertNotNull(result)
+    Assertions.assertEquals(onDemandEnabled, result!!.onDemandEnabled)
   }
 
   companion object {

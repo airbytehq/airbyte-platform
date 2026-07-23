@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
@@ -176,7 +176,7 @@ open class SourcesController(
       .build()
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest): Response = sourceService.controllerInitiateOAuth(initiateOauthRequest)
 

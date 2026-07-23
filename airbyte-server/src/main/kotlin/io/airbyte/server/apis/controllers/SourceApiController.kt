@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.controllers
@@ -17,8 +17,10 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
+import io.airbyte.api.model.generated.SourceIdWithSecretCoordinatesRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceReadList
+import io.airbyte.api.model.generated.SourceReadWithMetadata
 import io.airbyte.api.model.generated.SourceSearch
 import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.commons.annotation.AuditLogging
@@ -111,6 +113,20 @@ open class SourceApiController(
   override fun getSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): SourceRead? = execute { sourceHandler.getSource(sourceIdRequestBody) }
+
+  @Post("/get_with_metadata")
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getSourceWithMetadata(
+    @Body sourceIdWithSecretCoordinatesRequestBody: SourceIdWithSecretCoordinatesRequestBody,
+  ): SourceReadWithMetadata? =
+    execute {
+      val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceIdWithSecretCoordinatesRequestBody.sourceId)
+      sourceHandler.getSourceWithMetadata(
+        sourceIdRequestBody,
+        sourceIdWithSecretCoordinatesRequestBody.includeSecretCoordinates ?: false,
+      )
+    }
 
   @Post("/most_recent_source_actor_catalog")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)

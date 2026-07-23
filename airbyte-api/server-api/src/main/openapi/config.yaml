@@ -93,10 +93,6 @@ tags:
     description: Scoped configuration store specific configuration for a given entity. e.g. Overriding a workspaces connector version.
   - name: public
     description: Public resources that are considered stable and are intended to be consumed as API by end users.
-  - name: config_templates
-    description: Interactions with config templates, used in conjunction with partial_user_configs to generate sources.
-  - name: partial_user_configs
-    description: Interactions with partial user configs, used in conjunction with config_templates to generate sources.
   - name: embedded
     description: Endpoints specific to workflows for Airbyte operators and their end-users.
   - name: dataplanes
@@ -111,8 +107,6 @@ tags:
     description: Job management endpoints.
   - name: entitlements
     description: Entitlement management endpoints
-  - name: orchestration
-    description: Orchestration related resources.
   - name: domain_verifications
     description: Organization domain verification endpoints.
 
@@ -460,6 +454,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkspaceUsageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/get_data_worker_availability:
+    post:
+      tags:
+        - workspace
+        - cloud-only
+      summary: Get Data Worker availability for a workspace
+      operationId: getWorkspaceDataWorkerAvailability
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceDataWorkerAvailabilityRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceDataWorkerAvailabilityRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -1676,6 +1693,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SourceRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sources/get_with_metadata:
+    post:
+      tags:
+        - source
+      summary: Get source with metadata
+      operationId: getSourceWithMetadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceIdWithSecretCoordinatesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceReadWithMetadata"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -3630,6 +3670,29 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/source_oauths/get_scopes:
+    post:
+      tags:
+        - source_oauth
+      summary: Given a source connector definition ID, return the default OAuth scopes.
+      operationId: getSourceOAuthScopes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceOAuthScopesRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceOAuthScopesRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/destination_oauths/get_consent_url:
     post:
       tags:
@@ -4269,6 +4332,90 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/setJobQueued:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Set a job status to QUEUED when waiting for Data Worker capacity.
+      operationId: setJobQueued
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: SetJobQueuedRequest
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/cancelQueuedJob:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Cancel a job that is still queued while waiting for capacity.
+      operationId: cancelQueuedJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: CancelQueuedJobRequest
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/checkDataWorkerCapacity:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Check and reserve Data Worker capacity for a queued job.
+      operationId: checkDataWorkerCapacity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: CheckDataWorkerCapacityRequest
+              type: object
+              required:
+                - jobId
+                - connectionId
+                - organizationId
+              properties:
+                jobId:
+                  $ref: "#/components/schemas/JobId"
+                connectionId:
+                  $ref: "#/components/schemas/ConnectionId"
+                organizationId:
+                  $ref: "#/components/schemas/OrganizationId"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckDataWorkerCapacityRead"
   /v1/jobs/getWebhookConfig:
     post:
       tags:
@@ -5636,6 +5783,28 @@ paths:
       responses:
         "200":
           description: Successfully updated organization info.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/agentic_status:
+    post:
+      summary: Set whether an organization is agentic
+      tags:
+        - organization
+        - cloud-only
+        - admin-api
+      operationId: setOrganizationAgenticStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationAgenticStatusUpdateRequestBody"
+      responses:
+        "200":
+          description: Successfully updated organization agentic status.
           content:
             application/json:
               schema:
@@ -7489,158 +7658,6 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-  /v1/config_templates/list:
-    post:
-      summary: List all config templates available to a workspace
-      tags:
-        - config_template
-        - embedded
-      operationId: listConfigTemplates
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ListConfigTemplatesRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successfully retrieved config template list
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConfigTemplateList"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-        "403":
-          description: Not allowed
-  /v1/config_templates/get:
-    post:
-      summary: Get details of a specific config template
-      tags:
-        - config_template
-        - embedded
-      operationId: getConfigTemplate
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConfigTemplateRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successfully retrieved config template
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConfigTemplateRead"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /v1/partial_user_configs/get:
-    post:
-      summary: Get details of a specific partial user config
-      tags:
-        - partial_user_configs
-        - embedded
-      operationId: getPartialUserConfig
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PartialUserConfigRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successfully retrieved partial user config
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PartialUserConfigRead"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /v1/partial_user_configs/create:
-    post:
-      summary: Create a partial user config
-      tags:
-        - partial_user_configs
-        - embedded
-      operationId: createPartialUserConfig
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PartialUserConfigCreate"
-        required: true
-      responses:
-        "200":
-          description: Successfully created partial user config + source
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SourceRead"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /v1/partial_user_configs/list:
-    post:
-      summary: List partial user configs
-      tags:
-        - partial_user_configs
-        - embedded
-      operationId: listPartialUserConfigs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ListPartialUserConfigsRequest"
-        required: true
-      responses:
-        "200":
-          description: Successfully retrieved partial user configs
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PartialUserConfigReadList"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /v1/partial_user_configs/update:
-    post:
-      summary: Update a partial user config
-      tags:
-        - partial_user_configs
-        - embedded
-      operationId: updatePartialUserConfig
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PartialUserConfigUpdate"
-        required: true
-      responses:
-        "200":
-          description: Successfully updated partial user config
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SourceRead"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /v1/partial_user_configs/delete:
-    post:
-      summary: Tombstone a partial user config
-      tags:
-        - partial_user_configs
-        - embedded
-      operationId: deletePartialUserConfig
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PartialUserConfigRequestBody"
-        required: true
-      responses:
-        "204":
-          description: The resource was deleted successfully.
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/sso_config/get:
     post:
       summary: Retrieve the sso config for an organization
@@ -7750,6 +7767,115 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/scim_config/get:
+    post:
+      summary: Retrieve the SCIM configuration for an organization
+      tags:
+        - scim_config
+      operationId: getScimConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: SCIM configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScimConfigResponse"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/scim_config/enable:
+    post:
+      summary: Enable SCIM for an organization
+      description: The bearer token is returned only for the initial enable. Clients must not automatically retry this operation.
+      tags:
+        - scim_config
+      operationId: enableScim
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnableScimRequestBody"
+        required: true
+      responses:
+        "200":
+          description: SCIM enabled or already enabled with the requested provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScimConfigResponse"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: SCIM configuration state conflicts with the requested enable operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownExceptionInfo"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/scim_config/rotate_token:
+    post:
+      summary: Rotate the SCIM bearer token for an organization
+      description: The previous token is invalidated and the replacement token is returned only once. Clients must not automatically retry this operation.
+      tags:
+        - scim_config
+      operationId: rotateScimToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: SCIM bearer token rotated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScimConfigResponse"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: SCIM must be enabled before its token can be rotated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnownExceptionInfo"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/scim_config/disable:
+    post:
+      summary: Disable SCIM for an organization
+      tags:
+        - scim_config
+      operationId: disableScim
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: SCIM disabled or already absent or disabled
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   # Airbyte API
   /public:
     get:
@@ -7780,150 +7906,6 @@ paths:
       security: []
       x-sdk-alias: getHealthCheck
       x-sdk-group: Health
-  /public/v1/config_templates/sources:
-    get:
-      description: List all config templates available to a workspace. This endpoint is only available when Airbyte Embedded is enabled.
-      tags:
-        - public_config_templates
-        - public
-        - ConfigTemplates
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConfigTemplateListResponse"
-          description: List all config templates a User has permission to view.
-        "403":
-          description: Not allowed
-      operationId: publicListConfigTemplate
-      summary: List config templates
-      x-sdk-alias: listConfigTemplates
-      x-sdk-group: ConfigTemplates
-      parameters:
-        - name: organizationId
-          description: ID of the organization
-          schema:
-            format: UUID
-            type: string
-          in: query
-          required: true
-    post:
-      description: Create a config template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConfigTemplateCreateRequestBody"
-        required: true
-      tags:
-        - public_config_templates
-        - public
-        - ConfigTemplates
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConfigTemplateCreateResponse"
-          description: Created a config template.
-        "403":
-          description: Not allowed
-      operationId: publicCreateConfigTemplate
-      summary: Create config template
-      x-sdk-alias: createConfigTemplate
-      x-sdk-group: ConfigTemplates
-  /public/v1/config_templates/connections:
-    post:
-      description: Create a connection template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConnectionTemplateCreateRequestBody"
-        required: true
-      tags:
-        - public_connection_templates
-        - public
-        - ConnectionTemplates
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConnectionTemplateCreateResponse"
-          description: Created a connection template.
-        "403":
-          description: Not allowed
-      operationId: publicCreateConnectionTemplate
-      summary: Create connection template
-      x-sdk-alias: createConnectionTemplate
-      x-sdk-group: ConnectionTemplates
-  /public/v1/config_templates/sources/{configTemplateId}:
-    patch:
-      description: Edit a config template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConfigTemplateUpdateRequestBody"
-        required: true
-      tags:
-        - public_config_templates
-        - public
-        - ConfigTemplates
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConfigTemplateUpdateResponse"
-          description: Successfully updated config template
-        "400":
-          description: Invalid data
-        "403":
-          description: Not allowed
-        "404":
-          description: Not found
-      operationId: publicUpdateConfigTemplate
-      x-sdk-alias: updateConfigTemplate
-      x-sdk-group: ConfigTemplates
-      summary: Update a config template
-      parameters:
-        - name: configTemplateId
-          schema:
-            type: string
-            format: uuid
-          in: path
-          required: true
-    get:
-      description: Get a config template. This endpoint is only available when Airbyte Embedded is enabled.
-      tags:
-        - public_config_templates
-        - public
-        - ConfigTemplates
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConfigTemplatePublicRead"
-          description: Get a Config Template by id.
-        "403":
-          description: Not allowed
-        "404":
-          description: Not found
-      operationId: publicGetConfigTemplate
-      x-sdk-alias: getConfigTemplate
-      x-sdk-group: ConfigTemplates
-      summary: Get a Config Template by id.
-      parameters:
-        - name: configTemplateId
-          schema:
-            type: string
-            format: uuid
-          in: path
-          required: true
   /public/v1/applications:
     get:
       tags:
@@ -9546,7 +9528,9 @@ paths:
           in: query
       responses:
         "302":
-          description: Redirect to the URL requested in the initiate call with the created secret ID.
+          description: >-
+            Redirect to the URL requested in the initiate call. In api mode, includes secret_id and
+            internal IDs. In webapp mode, forwards provider callback query params.
       operationId: oauthCallback
       x-sdk-alias: oauthCallback
       x-sdk-group: OAuth
@@ -9588,6 +9572,9 @@ paths:
 
 
         That secret ID can be used to create a source with credentials in place of actual tokens.
+        By default (`clientType=api` or omitted), callback behavior is unchanged. If
+        `clientType=webapp`, callback redirects with provider callback query params and does not
+        create a secret during callback.
   /public/v1/connections:
     post:
       requestBody:
@@ -10040,6 +10027,49 @@ paths:
           type: string
         in: path
         required: true
+  /public/v1/workspaces/{workspaceId}/oauthCredentials/{actorType}/{name}:
+    delete:
+      parameters:
+        - name: workspaceId
+          schema:
+            format: UUID
+            type: string
+          in: path
+          required: true
+        - name: actorType
+          schema:
+            $ref: "#/components/schemas/ActorTypeEnum"
+          in: path
+          required: true
+        - name: name
+          schema:
+            type: string
+          in: path
+          required: true
+          description: The name of the source or destination i.e. google-ads
+      tags:
+        - public_workspaces
+        - public
+        - Workspaces
+      responses:
+        "204":
+          description: OAuth credential override was deleted successfully.
+        "400":
+          description: A field in the path has not been set appropriately.
+        "403":
+          description: API key is invalid.
+      operationId: deleteWorkspaceOAuthCredentials
+      x-sdk-alias: deleteWorkspaceOAuthCredentials
+      x-sdk-group: Workspaces
+      summary: Delete OAuth override credentials for a workspace and source/destination type.
+      description: >-
+        Delete a set of OAuth credentials that overrides the Airbyte-provided OAuth credentials used for source/destination OAuth.
+
+
+        > 🚧Warning
+        >
+        > Deleting an override that is actively used by existing sources or destinations will cause those connectors to fail on
+        their next sync and require re-authentication.
 
   # Public APIs - Permissions
   /public/v1/permissions/{permissionId}:
@@ -10258,6 +10288,49 @@ paths:
 
         In order to determine what the credential configuration needs to be, please see the connector specification of the relevant
         source/destination.
+  /public/v1/organizations/{organizationId}/oauthCredentials/{actorType}/{name}:
+    delete:
+      parameters:
+        - name: organizationId
+          schema:
+            format: UUID
+            type: string
+          in: path
+          required: true
+        - name: actorType
+          schema:
+            $ref: "#/components/schemas/ActorTypeEnum"
+          in: path
+          required: true
+        - name: name
+          schema:
+            type: string
+          in: path
+          required: true
+          description: The name of the source or destination i.e. google-ads
+      tags:
+        - public_organizations
+        - public
+        - Organizations
+      responses:
+        "204":
+          description: OAuth credential override was deleted successfully.
+        "400":
+          description: A field in the path has not been set appropriately.
+        "403":
+          description: API key is invalid.
+      operationId: deleteOrganizationOAuthCredentials
+      x-sdk-alias: deleteOrganizationOAuthCredentials
+      x-sdk-group: Organizations
+      summary: Delete OAuth override credentials for an organization and source/destination type.
+      description: >-
+        Delete a set of OAuth credentials that overrides the Airbyte-provided OAuth credentials used for source/destination OAuth.
+
+
+        > 🚧Warning
+        >
+        > Deleting an override that is actively used by existing sources or destinations will cause those connectors to fail on
+        their next sync and require re-authentication.
 
   # Public APIs - Users
   /public/v1/users:
@@ -10903,143 +10976,6 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-  /v1/orchestrations/get:
-    post:
-      tags:
-        - orchestration
-      summary: Get a single orchestration by id
-      operationId: getOrchestration
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/OrchestrationGetRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OrchestrationRead"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-
-  /v1/orchestrations/list:
-    post:
-      tags:
-        - orchestration
-      summary: Returns all orchestrations for a workspace.
-      description: List orchestrations for workspace. Does not return deleted orchestrations.
-      operationId: listOrchestrationsForWorkspace
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/OrchestrationListRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OrchestrationReadList"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-
-  /v1/orchestrations/create:
-    post:
-      tags:
-        - orchestration
-      summary: Create an orchestration
-      operationId: createOrchestration
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/OrchestrationCreateRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OrchestrationRead"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-
-  /v1/orchestrations/delete:
-    post:
-      tags:
-        - orchestration
-      summary: Delete an orchestration
-      operationId: deleteOrchestration
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/OrchestrationDeleteRequestBody"
-        required: true
-      responses:
-        "204":
-          description: The resource was deleted successfully.
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-
-  /v1/orchestrations/update:
-    post:
-      tags:
-        - orchestration
-      summary: Update an orchestration
-      operationId: updateOrchestration
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/OrchestrationUpdateRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OrchestrationRead"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-
-  /v1/orchestrations/run:
-    post:
-      tags:
-        - orchestration
-      summary: Start an orchestration
-      operationId: runOrchestration
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/OrchestrationRunRequestBody"
-        required: true
-      responses:
-        "202":
-          description: The orchestration was started successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OrchestrationRunResponseBody"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-
   #domain_verifications
   /v1/domain_verifications/create:
     post:
@@ -11130,6 +11066,135 @@ paths:
       tags:
         - domain_verifications
       operationId: resetDomainVerification
+  /v1/private_link/create:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+      summary: Create a private link for a workspace
+      operationId: createPrivateLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkCreateRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateLinkRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/private_link/list:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+      summary: List private links for a workspace
+      operationId: listPrivateLinksForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkListRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateLinkReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/private_link/delete:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+      summary: Delete a private link
+      operationId: deletePrivateLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/private_link/get:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+        - internal
+      summary: Get a private link by id (internal — admin only)
+      operationId: getPrivateLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkInternalIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateLinkRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+  /v1/private_link/update:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+        - internal
+      summary: Partially update a private link (internal — admin only)
+      operationId: updatePrivateLink
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateLinkRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: Private link status cannot move backward
+  /v1/private_link/list_by_status:
+    post:
+      tags:
+        - private_link
+        - cloud-only
+        - internal
+      summary: List private links by status (internal — admin only)
+      operationId: listPrivateLinksByStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateLinkListByStatusRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateLinkReadList"
 
 components:
   securitySchemes:
@@ -11138,6 +11203,200 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    # Private Link
+    PrivateLinkStatus:
+      type: string
+      enum:
+        - creating
+        - pending_acceptance
+        - configuring
+        - available
+        - create_failed
+        - deleting
+        - delete_failed
+        - deleted
+    PrivateLinkServiceType:
+      type: string
+      enum:
+        - endpoint
+        - storage
+    PrivateLinkCreateRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - name
+        - serviceConfig
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: string
+          pattern: "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+          maxLength: 63
+        serviceConfig:
+          $ref: "#/components/schemas/PrivateLinkServiceConfig"
+    PrivateLinkListRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    PrivateLinkListByStatusRequestBody:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/PrivateLinkStatus"
+    PrivateLinkIdRequestBody:
+      type: object
+      required:
+        - privateLinkId
+        - workspaceId
+      properties:
+        privateLinkId:
+          type: string
+          format: uuid
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    PrivateLinkInternalIdRequestBody:
+      description: Internal-only — admin-authenticated lookups by private link id (e.g. infra-worker).
+      type: object
+      required:
+        - privateLinkId
+      properties:
+        privateLinkId:
+          type: string
+          format: uuid
+    PrivateLinkUpdateRequestBody:
+      description: |
+        Internal-only — partial update used by infra-worker activities. Only the supplied fields are written.
+        Set `clearScopedConfigurationId: true` to null out the existing scoped configuration reference
+        (mutually exclusive with `scopedConfigurationId`).
+      type: object
+      required:
+        - privateLinkId
+      properties:
+        privateLinkId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/PrivateLinkStatus"
+        endpointId:
+          type: string
+        dnsName:
+          type: string
+        scopedConfigurationId:
+          type: string
+          format: uuid
+        clearScopedConfigurationId:
+          type: boolean
+    PrivateLinkRead:
+      type: object
+      required:
+        - id
+        - workspaceId
+        - dataplaneGroupId
+        - name
+        - status
+        - serviceConfig
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        dataplaneGroupId:
+          type: string
+          format: uuid
+        dataplaneRegion:
+          type: string
+          description: Region where the private link's VPC endpoint is deployed.
+        name:
+          type: string
+        status:
+          $ref: "#/components/schemas/PrivateLinkStatus"
+        serviceConfig:
+          $ref: "#/components/schemas/PrivateLinkServiceConfig"
+        endpointId:
+          type: string
+        dnsName:
+          type: string
+        scopedConfigurationId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    # Polymorphic on the `type` field. This schema is schema-mapped to
+    # com.fasterxml.jackson.databind.JsonNode in build.gradle.kts (every generator
+    # block), so the code generator never renders it — discrimination is handled at
+    # runtime by Jackson @JsonTypeInfo(property = "type") on the domain sealed
+    # interface io.airbyte.domain.models.PrivateLinkServiceConfig. The oneOf below is
+    # documentation of the wire shapes only; do NOT add an OpenAPI `discriminator`
+    # or `allOf` here (that combination breaks kotlin-server/jaxrs-spec 7.10.0
+    # codegen and previously required global template overrides that caused an
+    # API-wide field-casing outage).
+    PrivateLinkServiceConfig:
+      description: Variant config selected by the `type` field (endpoint or storage).
+      oneOf:
+        - $ref: "#/components/schemas/EndpointPrivateLinkServiceConfig"
+        - $ref: "#/components/schemas/StoragePrivateLinkServiceConfig"
+    EndpointPrivateLinkServiceConfig:
+      type: object
+      required:
+        - type
+        - name
+        - region
+      properties:
+        type:
+          type: string
+          enum:
+            - endpoint
+        name:
+          type: string
+          maxLength: 255
+          pattern: "^com\\.amazonaws\\.vpce\\.[a-z0-9-]+\\.vpce-svc-[a-z0-9]+$"
+        region:
+          type: string
+          maxLength: 30
+          pattern: "^[a-z]{2,3}-[a-z]+(-[a-z]+)?-\\d+$"
+    StoragePrivateLinkServiceConfig:
+      type: object
+      required:
+        - type
+        - region
+        - bucket
+      properties:
+        type:
+          type: string
+          enum:
+            - storage
+        region:
+          type: string
+          maxLength: 30
+          pattern: "^[a-z]{2,3}-[a-z]+(-[a-z]+)?-\\d+$"
+        bucket:
+          type: string
+          minLength: 3
+          maxLength: 63
+          pattern: "^(?!.*\\.\\.)(?!\\d+\\.\\d+\\.\\d+\\.\\d+$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$"
+    PrivateLinkReadList:
+      type: object
+      required:
+        - privateLinks
+      properties:
+        privateLinks:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrivateLinkRead"
+
     # Scoped Configuration
     ScopedConfigurationRead:
       type: object
@@ -11442,10 +11701,8 @@ components:
       type: object
       properties:
         tierFilter:
-          type: object
           $ref: "#/components/schemas/ConnectorRolloutTierFilter"
         jobBypassFilter:
-          type: object
           $ref: "#/components/schemas/ConnectorRolloutJobBypassFilter"
 
     ConnectorRolloutTierFilter:
@@ -12117,6 +12374,8 @@ components:
           $ref: "#/components/schemas/NotificationItem"
         sendOnBreakingChangeSyncsDisabled:
           $ref: "#/components/schemas/NotificationItem"
+        sendOnConnectionSyncQueued:
+          $ref: "#/components/schemas/NotificationItem"
 
     Notification:
       type: object
@@ -12165,6 +12424,7 @@ components:
         - connection_update_action_required
         - breaking_change_warning
         - breaking_change_syncs_disabled
+        - connection_sync_queued
     NotificationRead:
       type: object
       required:
@@ -12468,6 +12728,44 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectionUsageRead"
+    WorkspaceDataWorkerAvailabilityRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - organizationId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+    WorkspaceDataWorkerAvailabilityRead:
+      type: object
+      required:
+        - workspaceId
+        - organizationId
+        - outOfDataWorkers
+        - enforcementEnabled
+        - currentDataWorkers
+        - committedDataWorkers
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+        outOfDataWorkers:
+          type: boolean
+          description: Whether the workspace's organization has exhausted committed Data Worker capacity.
+        enforcementEnabled:
+          type: boolean
+          description: Whether Data Worker capacity enforcement is enabled for the workspace's organization.
+        currentDataWorkers:
+          type: number
+          format: double
+          description: The current Data Worker usage reserved by the workspace's organization.
+        committedDataWorkers:
+          type: integer
+          format: int32
+          description: The committed Data Worker capacity for the workspace's organization.
     ConnectionUsageRead:
       type: object
       required:
@@ -12561,6 +12859,7 @@ components:
       type: object
       required:
         - running
+        - queued
         - healthy
         - failed
         - paused
@@ -12569,6 +12868,9 @@ components:
         running:
           type: integer
           description: Number of connections currently running/syncing
+        queued:
+          type: integer
+          description: Number of connections currently queued and waiting to start
         healthy:
           type: integer
           description: Number of connections with last sync succeeded
@@ -13619,6 +13921,17 @@ components:
       properties:
         sourceId:
           $ref: "#/components/schemas/SourceId"
+    SourceIdWithSecretCoordinatesRequestBody:
+      type: object
+      required:
+        - sourceId
+      properties:
+        sourceId:
+          $ref: "#/components/schemas/SourceId"
+        includeSecretCoordinates:
+          description: If true, the response will include secret coordinates in the connection configuration.
+          type: boolean
+          default: false
     SourceCloneRequestBody:
       description: The values required to configure the source. The schema for this should have an id of the existing source along with the configuration you want to change in case.
       type: object
@@ -13806,6 +14119,23 @@ components:
           additionalProperties:
             type: integer
           description: "Map of job status to count of connections whose latest job has that status"
+    SourceReadWithMetadata:
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/SourceRead"
+        - type: object
+          required:
+            - metadata
+          properties:
+            metadata:
+              $ref: "#/components/schemas/SourceMetadata"
+    SourceMetadata:
+      type: object
+      required:
+        - workspaceName
+      properties:
+        workspaceName:
+          type: string
     ActorStatus:
       description: An actor(source/destination) is active if it has at least one active or manual connection.
       type: string
@@ -14686,6 +15016,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          default: false
+          description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
     WebBackendConnectionCreate:
       type: object
       required:
@@ -14749,6 +15083,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          default: false
+          description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
     ConnectionStateCreateOrUpdate:
       type: object
       required:
@@ -14821,6 +15159,9 @@ components:
           nullable: true
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
     ConnectionUpdateWithReason:
       type: object
       required:
@@ -14895,6 +15236,9 @@ components:
           nullable: true
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
     ConnectionRead:
       type: object
       required:
@@ -14972,6 +15316,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          description: When enabled, this connection will use on-demand capacity if committed capacity is exhausted
     ConnectionStatusesRequestBody:
       type: object
       required:
@@ -15577,6 +15924,7 @@ components:
       description: >
         The first of the following that matches for a given connection:
           * `RUNNING` - a job is currently running
+          * `QUEUED` - a job is currently queued and waiting to start
           * `FAILED` - user action is required due to a breaking change or config error
           * `PAUSED` - connection is not active (inactive or deprecated)
           * `PENDING` - there is no previous sync job or the last completed job was a reset
@@ -15585,6 +15933,7 @@ components:
       type: string
       enum:
         - running
+        - queued
         - failed
         - paused
         - pending
@@ -15819,6 +16168,13 @@ components:
             - payment_method
             - setup
           default: portal
+        plan:
+          type: string
+          description: Requested self-serve plan when initiating setup checkout. Defaults to standard for backwards compatibility.
+          enum:
+            - standard
+            - plus
+          default: standard
     CustomerPortalRead:
       type: object
       required:
@@ -15945,7 +16301,6 @@ components:
           required:
             - currency
             - amount
-            - dueDate
           properties:
             currency:
               type: string
@@ -16083,185 +16438,6 @@ components:
         newGracePeriodReason:
           type: string
 
-    # Orchestration Config
-
-    OrchestrationId:
-      type: string
-      format: uuid
-
-    OrchestrationTaskId:
-      type: string
-      format: uuid
-
-    OrchestrationVersion:
-      type: string
-      format: uuid
-
-    OrchestrationTask:
-      type: object
-      required:
-        - taskId
-        - orchestrationId
-        - orchestrationVersion
-        - orchestrationTaskType
-        - taskDefinitionId
-        - dependsOn
-        - createdAt
-      properties:
-        taskId:
-          $ref: "#/components/schemas/OrchestrationTaskId"
-        orchestrationId:
-          $ref: "#/components/schemas/OrchestrationId"
-        orchestrationVersion:
-          $ref: "#/components/schemas/OrchestrationVersion"
-        orchestrationTaskType:
-          type: string
-          enum:
-            - sync
-        taskDefinitionId:
-          type: string
-          format: uuid
-        dependsOn:
-          type: array
-          items:
-            type: string
-            format: uuid
-        createdAt:
-          type: integer
-          format: int64
-
-    OrchestrationGetRequestBody:
-      type: object
-      required:
-        - workspaceId
-        - orchestrationId
-      properties:
-        workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        orchestrationId:
-          $ref: "#/components/schemas/OrchestrationId"
-
-    OrchestrationListRequestBody:
-      type: object
-      required:
-        - workspaceId
-        - pagination
-      properties:
-        workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        pagination:
-          $ref: "#/components/schemas/Pagination"
-
-    OrchestrationRunRequestBody:
-      type: object
-      required:
-        - workspaceId
-        - orchestrationId
-      properties:
-        workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        orchestrationId:
-          $ref: "#/components/schemas/OrchestrationId"
-
-    OrchestrationRunResponseBody:
-      type: object
-      required:
-        - orchestrationRunId
-      properties:
-        orchestrationRunId:
-          type: string
-          format: uuid
-
-    OrchestrationRead:
-      type: object
-      required:
-        - orchestrationId
-        - versionId
-        - workspaceId
-        - name
-        - tasks
-        - createdAt
-        - updatedAt
-        - tombstone
-      properties:
-        orchestrationId:
-          $ref: "#/components/schemas/OrchestrationId"
-        versionId:
-          type: string
-          format: uuid
-        workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        name:
-          type: string
-        tasks:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrchestrationTask"
-        createdAt:
-          type: integer
-          format: int64
-        updatedAt:
-          type: integer
-          format: int64
-        tombstone:
-          type: boolean
-
-    OrchestrationReadList:
-      type: object
-      required:
-        - orchestrations
-      properties:
-        orchestrations:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrchestrationRead"
-
-    OrchestrationCreateRequestBody:
-      type: object
-      required:
-        - workspaceId
-        - name
-        - tasks
-      properties:
-        workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        name:
-          type: string
-        tasks:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrchestrationTask"
-
-    OrchestrationDeleteRequestBody:
-      type: object
-      required:
-        - workspaceId
-        - orchestrationId
-      properties:
-        workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        orchestrationId:
-          $ref: "#/components/schemas/OrchestrationId"
-
-    OrchestrationUpdateRequestBody:
-      type: object
-      required:
-        - workspaceId
-        - orchestrationId
-        - name
-        - tasks
-      properties:
-        workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        orchestrationId:
-          $ref: "#/components/schemas/OrchestrationId"
-        name:
-          type: string
-        tasks:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrchestrationTask"
-
     # ORGANIZATIONS
     OrganizationId:
       type: string
@@ -16287,6 +16463,17 @@ components:
           type: string
         email:
           type: string
+    OrganizationAgenticStatusUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+        - isAgentic
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        isAgentic:
+          type: boolean
     OrganizationCreateRequestBody:
       type: object
       required:
@@ -16300,6 +16487,9 @@ components:
           type: string
         email:
           type: string
+        isAgentic:
+          type: boolean
+          default: false
     OrganizationRead:
       type: object
       required:
@@ -16316,6 +16506,8 @@ components:
           type: string
         ssoRealm:
           type: string
+        isAgentic:
+          type: boolean
         organizationLimits:
           $ref: "#/components/schemas/OrganizationLimits"
     OrganizationInfoRead:
@@ -16478,6 +16670,9 @@ components:
       properties:
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+        committedDataWorkers:
+          type: integer
+          description: The number of contracted/committed data workers for the organization. Null if not set or unlimited.
         regions:
           type: array
           items:
@@ -16683,6 +16878,13 @@ components:
         - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
         - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
       x-sdk-component: true
+    SSOConfigDefaultRole:
+      type: string
+      description: Default organization role granted to users provisioned by an SSO configuration. If omitted, defaults to organization_member.
+      enum:
+        - organization_admin
+        - organization_editor
+        - organization_member
     PublicPermissionType:
       type: string
       description: Subset of `PermissionType` (removing `instance_admin`), could be used in public-api.
@@ -16799,6 +17001,10 @@ components:
         metadata:
           type: object
           description: UI metadata required by frontend
+        agenticEnabledAt:
+          type: string
+          format: date-time
+          description: Timestamp when the user was enabled for agentic features. Null if user is data-replication-only.
 
     UserUpdate:
       type: object
@@ -16829,6 +17035,20 @@ components:
       properties:
         authUserId:
           type: string
+        isAgenticUser:
+          type: boolean
+          description: |
+            Indicates whether this user should have agentic features enabled.
+
+            Behavior:
+            - New user + true: User created with agenticEnabledAt timestamp
+            - New user + false/omitted: User created as non-agentic (agenticEnabledAt = null)
+            - Existing agentic user + any value: Timestamp preserved (immutable, cannot downgrade)
+            - Existing non-agentic user + true: User upgraded, agenticEnabledAt set to current time
+            - Existing non-agentic user + false/omitted: Remains non-agentic
+
+            Note: agenticEnabledAt is one-way - once set, it cannot be unset. Users can be upgraded
+            from non-agentic to agentic, but not downgraded.
 
     UserEmailRequestBody:
       type: object
@@ -17584,6 +17804,7 @@ components:
       type: string
       enum:
         - pending
+        - queued
         - running
         - incomplete
         - failed
@@ -17767,6 +17988,16 @@ components:
       properties:
         job:
           $ref: "#/components/schemas/JobRead"
+    CheckDataWorkerCapacityRead:
+      type: object
+      required:
+        - capacityAvailable
+        - useOnDemandCapacity
+      properties:
+        capacityAvailable:
+          type: boolean
+        useOnDemandCapacity:
+          type: boolean
     JobOptionalRead:
       type: object
       properties:
@@ -18532,6 +18763,20 @@ components:
           $ref: "#/components/schemas/OAuthInputConfiguration"
         sourceId:
           $ref: "#/components/schemas/SourceId"
+        requestedScopes:
+          type: array
+          description: >-
+            Optional OAuth scopes to request, overriding the connector's default scopes.
+            Only supported for connectors that define scopes as an array.
+          items:
+            type: string
+        requestedOptionalScopes:
+          type: array
+          description: >-
+            Optional OAuth optional_scopes to request, overriding the connector's default
+            optional_scopes. Only applied when requestedScopes is also provided.
+          items:
+            type: string
     BuilderProjectOauthConsentRequest:
       type: object
       required:
@@ -18615,6 +18860,20 @@ components:
           default: false
         sourceId:
           $ref: "#/components/schemas/SourceId"
+        requestedScopes:
+          type: array
+          description: >-
+            Optional OAuth scopes to request, overriding the connector's default scopes.
+            Only supported for connectors that define scopes as an array.
+          items:
+            type: string
+        requestedOptionalScopes:
+          type: array
+          description: >-
+            Optional OAuth optional_scopes to request, overriding the connector's default
+            optional_scopes. Only applied when requestedScopes is also provided.
+          items:
+            type: string
     RevokeSourceOauthTokensRequest:
       type: object
       required:
@@ -18628,6 +18887,45 @@ components:
           $ref: "#/components/schemas/SourceId"
         sourceDefinitionId:
           $ref: "#/components/schemas/SourceDefinitionId"
+    SourceOAuthScopesRequest:
+      type: object
+      required:
+        - sourceDefinitionId
+        - workspaceId
+      properties:
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+    SourceOAuthScopesRead:
+      type: object
+      required:
+        - scopes
+        - optionalScopes
+        - scopeJoinStrategy
+      properties:
+        scopes:
+          type: array
+          items:
+            $ref: "#/components/schemas/OAuthScopeItem"
+        optionalScopes:
+          type: array
+          items:
+            $ref: "#/components/schemas/OAuthScopeItem"
+        scopeJoinStrategy:
+          type: string
+          enum:
+            - space
+            - comma
+            - plus
+          default: "space"
+    OAuthScopeItem:
+      type: object
+      required:
+        - scope
+      properties:
+        scope:
+          type: string
     CompleteDestinationOAuthRequest:
       type: object
       required:
@@ -18894,6 +19192,9 @@ components:
         searchTerm:
           type: string
           description: Search term to filter connections by name, source name, destination name, etc.
+        onDemandEnabled:
+          type: boolean
+          description: Filter connections by whether on-demand capacity fallback is enabled
     WebBackendConnectionListItem:
       type: object
       description: Information about a connection that shows up in the connection list view.
@@ -18908,6 +19209,7 @@ components:
         - sourceActorDefinitionVersion
         - destinationActorDefinitionVersion
         - tags
+        - onDemandEnabled
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -18939,6 +19241,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          description: Whether this connection will use on-demand capacity if committed capacity is exhausted
     WebBackendConnectionRead:
       type: object
       required:
@@ -18958,6 +19263,7 @@ components:
         - sourceActorDefinitionVersion
         - destinationActorDefinitionVersion
         - tags
+        - onDemandEnabled
       properties:
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
@@ -19043,6 +19349,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        onDemandEnabled:
+          type: boolean
+          description: Whether this connection will use on-demand capacity if committed capacity is exhausted
     WebBackendDescribeCronExpressionRequestBody:
       type: object
       required:
@@ -19562,9 +19871,7 @@ components:
           type: string
         zendeskKey:
           type: string
-        posthogApiKey:
-          type: string
-        posthogHost:
+        fullstoryGuidesOrgId:
           type: string
     StreamStatusReadList:
       type: object
@@ -20438,6 +20745,7 @@ components:
     JobStatusEnum:
       enum:
         - pending
+        - queued
         - running
         - incomplete
         - failed
@@ -20446,7 +20754,7 @@ components:
       type: string
       x-sdk-component: true
     JobTypeEnum:
-      description: Enum that describes the different types of jobs that the platform runs.
+      description: Enum that describes the different types of jobs that the platform runs. When not specified, all job types are returned.
       enum:
         - sync
         - reset
@@ -20560,9 +20868,18 @@ components:
           type: string
         redirectUrl:
           description: >-
-            The URL to redirect the user to with the OAuth secret stored in the secret_id query
-            string parameter after authentication is complete.
+            Redirect target after OAuth callback. In `api` mode, callback includes `secret_id`,
+            `state`, `workspace_id`, and `definition_id`. In `webapp` mode, callback forwards all
+            provider callback query params.
           type: string
+        clientType:
+          description: >-
+            OAuth callback mode. `api` is default when omitted. `webapp` forwards provider callback
+            query params and does not create a secret during callback.
+          type: string
+          enum:
+            - api
+            - webapp
         workspaceId:
           format: uuid
           description: The workspace to create the secret and eventually the full source.
@@ -20570,6 +20887,20 @@ components:
         oAuthInputConfiguration:
           $ref: "#/components/schemas/OAuthInputConfiguration"
           description: Input configuration for OAuth required by some sources.
+        requestedScopes:
+          type: array
+          description: >-
+            Optional OAuth scopes to request, overriding the connector's default scopes.
+            Only supported for connectors that define scopes as an array.
+          items:
+            type: string
+        requestedOptionalScopes:
+          type: array
+          description: >-
+            Optional OAuth optional_scopes to request, overriding the connector's default
+            optional_scopes. Only applied when requestedScopes is also provided.
+          items:
+            type: string
       example:
         redirectUrl: "https://cloud.airbyte.io/v1/api/oauth/callback"
         workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
@@ -22105,8 +22436,8 @@ components:
             - UNHEALTHY
             - UNKNOWN
         last_heartbeat_timestamp:
-          type: string
-          format: date-time
+          type: integer
+          format: int64
         recent_heartbeats:
           type: array
           items:
@@ -22121,8 +22452,8 @@ components:
         - timestamp
       properties:
         timestamp:
-          type: string
-          format: date-time
+          type: integer
+          format: int64
     DataplaneInitRequestBody:
       required:
         - client_id
@@ -22310,278 +22641,6 @@ components:
             $ref: "#/components/schemas/DataplaneResponse"
       x-sdk-component: true
 
-    # CONFIG TEMPLATES
-    ConfigTemplateListResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: "#/components/schemas/ConfigTemplateListItem"
-      x-sdk-component: true
-    ConfigTemplateList:
-      type: object
-      required:
-        - configTemplates
-      properties:
-        configTemplates:
-          type: array
-          items:
-            $ref: "#/components/schemas/ConfigTemplateListItem"
-    ConfigTemplateListItem:
-      type: object
-      required:
-        - id
-        - name
-        - icon
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        icon:
-          type: string
-      x-sdk-component: true
-    ConfigTemplateRequestBody:
-      type: object
-      required:
-        - workspaceId
-        - configTemplateId
-      properties:
-        workspaceId:
-          type: string
-          format: uuid
-        configTemplateId:
-          type: string
-          format: uuid
-    ConfigTemplateRead:
-      type: object
-      required:
-        - id
-        - name
-        - icon
-        - sourceDefinitionId
-        - configTemplateSpec
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-          description: Name of the associated actor definition
-        icon:
-          type: string
-          description: url to icon in connector asset (svg) registry
-        sourceDefinitionId:
-          type: string
-          format: uuid
-        configTemplateSpec:
-          $ref: "#/components/schemas/SourceDefinitionSpecification"
-        advancedAuth:
-          $ref: "#/components/schemas/AdvancedAuth"
-        advancedAuthGlobalCredentialsAvailable:
-          type: boolean
-    ConfigTemplatePublicRead:
-      type: object
-      required:
-        - id
-        - name
-        - icon
-        - sourceDefinitionId
-        - configTemplateSpec
-        - partialDefaultConfig
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-          description: Name of the associated actor definition
-        icon:
-          type: string
-          description: url to icon in connector asset (svg) registry
-        sourceDefinitionId:
-          type: string
-          format: uuid
-        configTemplateSpec:
-          $ref: "#/components/schemas/SourceDefinitionSpecification"
-        partialDefaultConfig:
-          type: object
-      x-sdk-component: true
-    ListConfigTemplatesRequestBody:
-      type: object
-      required:
-        - workspaceId
-      properties:
-        workspaceId:
-          type: string
-          format: uuid
-    ConfigTemplateCreateRequestBody:
-      type: object
-      required:
-        - actorDefinitionId
-        - partialDefaultConfig
-        - organizationId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-        actorDefinitionId:
-          $ref: "#/components/schemas/ActorDefinitionId"
-        partialDefaultConfig:
-          $ref: "#/components/schemas/SourceConfiguration"
-        partialUserConfigSpec:
-          $ref: "#/components/schemas/SourceConfiguration"
-      x-sdk-component: true
-    ConfigTemplateSpec:
-      type: object
-    ConfigTemplateCreateResponse:
-      type: object
-      required:
-        - id
-      properties:
-        id:
-          type: string
-          format: uuid
-      x-sdk-component: true
-    ConfigTemplateUpdateRequestBody:
-      type: object
-      required:
-        - organizationId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-        partialDefaultConfig:
-          $ref: "#/components/schemas/SourceConfiguration"
-        partialUserConfigSpec:
-          $ref: "#/components/schemas/SourceConfiguration"
-      x-sdk-component: true
-    ConfigTemplateUpdateResponse:
-      type: object
-      required:
-        - id
-      properties:
-        id:
-          type: string
-          format: uuid
-      x-sdk-component: true
-
-    # PARTIAL USER CONFIGS
-    PartialUserConfigRequestBody:
-      type: object
-      required:
-        - partialUserConfigId
-        - workspaceId
-      properties:
-        partialUserConfigId:
-          type: string
-          format: uuid
-        workspaceId:
-          type: string
-          format: uuid
-    PartialUserConfigRead:
-      type: object
-      required:
-        - id
-        - connectionConfiguration
-        - configTemplate
-        - actorId
-      properties:
-        id:
-          type: string
-          format: uuid
-        configTemplate:
-          $ref: "#/components/schemas/ConfigTemplateRead"
-        actorId:
-          description: the actor that this partial user config is for
-          type: string
-          format: uuid
-        connectionConfiguration:
-          $ref: "#/components/schemas/SourceConfiguration"
-    PartialUserConfigCreate:
-      type: object
-      required:
-        - configTemplateId
-        - connectionConfiguration
-        - workspaceId
-      properties:
-        workspaceId:
-          type: string
-          format: uuid
-        configTemplateId:
-          description: the template that this user config is connected with
-          type: string
-          format: uuid
-        connectionConfiguration:
-          $ref: "#/components/schemas/SourceConfiguration"
-    PartialUserConfigWithSource:
-      type: object
-      description: the partial user config and its associated source
-      required:
-        - partialUserConfig
-        - source
-      properties:
-        partialUserConfig:
-          $ref: "#/components/schemas/PartialUserConfigRead"
-        source:
-          $ref: "#/components/schemas/SourceRead"
-    ListPartialUserConfigsRequest:
-      type: object
-      required:
-        - workspaceId
-      properties:
-        workspaceId:
-          type: string
-          format: uuid
-    PartialUserConfigUpdate:
-      type: object
-      required:
-        - partialUserConfigId
-        - workspaceId
-        - connectionConfiguration
-      properties:
-        partialUserConfigId:
-          type: string
-          format: uuid
-        workspaceId:
-          type: string
-          format: uuid
-        connectionConfiguration:
-          $ref: "#/components/schemas/SourceConfiguration"
-    PartialUserConfigReadList:
-      type: object
-      required:
-        - partialUserConfigs
-      properties:
-        partialUserConfigs:
-          type: array
-          items:
-            $ref: "#/components/schemas/PartialUserConfigListItem"
-    PartialUserConfigListItem:
-      type: object
-      required:
-        - partialUserConfigId
-        - configTemplateName
-        - configTemplateIcon
-        - configTemplateId
-      properties:
-        partialUserConfigId:
-          type: string
-          format: uuid
-        configTemplateName:
-          type: string
-          description: the display name for the template
-        configTemplateIcon:
-          type: string
-          description: url to icon in connector asset (svg) registry
-        configTemplateId:
-          type: string
-          format: uuid
-          description: config template corresponding to this partial config
     EmbeddedWidgetRequest:
       type: object
       required:
@@ -22623,52 +22682,6 @@ components:
       properties:
         token:
           type: string
-      x-sdk-component: true
-
-    ConnectionTemplateCreateRequestBody:
-      type: object
-      required:
-        - destinationConfiguration
-        - organizationId
-        - destinationName
-        - destinationActorDefinitionId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-        destinationName:
-          type: string
-        destinationConfiguration:
-          $ref: "#/components/schemas/DestinationConfiguration"
-        destinationActorDefinitionId:
-          $ref: "#/components/schemas/ActorDefinitionId"
-        namespaceDefinitionType:
-          $ref: "#/components/schemas/NamespaceDefinitionType"
-          description: The namespace definition type for the connection. This is used to determine how the namespace is defined for the connection. If none is provided, the namespace will be set to ${WORKSPACE_NAME}.
-        namespaceFormat:
-          type: string
-          default: null
-        prefix:
-          type: string
-        schedule:
-          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
-          description: The schedule for connections. If none is provided, syncs will run every hour.
-        resourceRequirements:
-          $ref: "#/components/schemas/ResourceRequirements"
-        nonBreakingChangesPreference:
-          $ref: "#/components/schemas/NonBreakingChangesPreference"
-        syncOnCreate:
-          type: boolean
-          default: true
-      x-sdk-component: true
-    ConnectionTemplateCreateResponse:
-      type: object
-      required:
-        - id
-      properties:
-        id:
-          type: string
-          format: uuid
       x-sdk-component: true
 
     ServiceAccountTokenRequestBody:
@@ -22743,6 +22756,8 @@ components:
             type: string
         status:
           $ref: "#/components/schemas/SSOConfigStatus"
+        defaultRole:
+          $ref: "#/components/schemas/SSOConfigDefaultRole"
 
     CreateSSOConfigRequestBody:
       type: object
@@ -22771,6 +22786,8 @@ components:
           type: string
         status:
           $ref: "#/components/schemas/SSOConfigStatus"
+        defaultRole:
+          $ref: "#/components/schemas/SSOConfigDefaultRole"
 
     DeleteSSOConfigRequestBody:
       type: object
@@ -22821,6 +22838,54 @@ components:
           format: uuid
         emailDomain:
           type: string
+
+    ScimIdpProvider:
+      type: string
+      enum:
+        - okta
+        - microsoft_entra_id
+
+    ScimConfigStatus:
+      type: string
+      enum:
+        - not_configured
+        - enabled
+        - disabled
+
+    EnableScimRequestBody:
+      type: object
+      required:
+        - organizationId
+        - idpProvider
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        idpProvider:
+          $ref: "#/components/schemas/ScimIdpProvider"
+
+    ScimConfigResponse:
+      type: object
+      required:
+        - status
+        - scimBaseUrl
+      properties:
+        status:
+          $ref: "#/components/schemas/ScimConfigStatus"
+        idpProvider:
+          $ref: "#/components/schemas/ScimIdpProvider"
+        scimBaseUrl:
+          type: string
+          description: Absolute Airbyte SCIM endpoint configured in the identity provider.
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+        token:
+          type: string
+          description: One-time bearer token returned only after initial enable or rotation.
 
   responses:
     NotFoundResponse:

@@ -2,13 +2,13 @@ import React from "react";
 import { useIntl } from "react-intl";
 import { z } from "zod";
 
-import { Form, FormControl } from "components/forms";
-import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
+import { Form, FormControl } from "components/ui/forms";
+import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useUpdateWorkspace } from "core/api";
+import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useNotificationService } from "hooks/services/Notification";
 
 const ValidationSchema = z.object({
   anonymousDataCollection: z.boolean(),

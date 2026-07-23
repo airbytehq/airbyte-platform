@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.data
@@ -156,8 +156,10 @@ class ScopedConfigurationServiceDataImpl(
           ).map { it.toConfigModel() }
           .toList()
 
-      // For each iteration, add or replace items to give a "sorted" values list
-      scopeConfigMap.putAll(scopedConfigs.associateBy({ it.resourceId }, { it }))
+      // For each iteration, add or replace items to give a "sorted" values list.
+      // Use the row's own id when resourceId is null so non-resource-scoped rows (e.g. workspace-wide
+      // tokens that allow multiple coexisting values) don't collapse on a shared null key.
+      scopeConfigMap.putAll(scopedConfigs.associateBy({ it.resourceId ?: it.id }, { it }))
     }
 
     // Return the values as they are now a list of scoped configs by precedence of supportedScopes.
@@ -215,13 +217,36 @@ class ScopedConfigurationServiceDataImpl(
     return repository.save(scopedConfiguration.toEntity()).toConfigModel()
   }
 
-  override fun insertScopedConfigurations(scopedConfigurations: List<ScopedConfiguration>): List<ScopedConfiguration> =
-    repository
+  override fun insertScopedConfigurations(scopedConfigurations: List<ScopedConfiguration>): List<ScopedConfiguration> {
+    if (scopedConfigurations.isEmpty()) return emptyList()
+    return repository
       .saveAll(
         scopedConfigurations.map {
           it.toEntity()
         },
       ).map { it.toConfigModel() }
+  }
+
+  override fun upsertScopedConfigurations(scopedConfigurations: List<ScopedConfiguration>) {
+    if (scopedConfigurations.isEmpty()) return
+    scopedConfigurations.forEach { config ->
+      val entity = config.toEntity()
+      repository.upsertByNaturalKey(
+        id = entity.id,
+        key = entity.key,
+        value = entity.value,
+        scopeType = entity.scopeType,
+        scopeId = entity.scopeId,
+        resourceType = entity.resourceType,
+        resourceId = entity.resourceId,
+        originType = entity.originType,
+        origin = entity.origin,
+        description = entity.description,
+        referenceUrl = entity.referenceUrl,
+        expiresAt = entity.expiresAt,
+      )
+    }
+  }
 
   override fun listScopedConfigurations(): List<ScopedConfiguration> = repository.findAll().map { it.toConfigModel() }.toList()
 

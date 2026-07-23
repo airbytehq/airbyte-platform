@@ -1,5 +1,4 @@
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
-
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import {
   AirbyteStream,
   AirbyteStreamAndConfiguration,

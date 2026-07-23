@@ -3,10 +3,10 @@ import React from "react";
 import { useFieldArray, useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
-import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { DropdownMenu } from "components/ui/DropdownMenu";
+import { EmptyState } from "components/ui/EmptyState";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 

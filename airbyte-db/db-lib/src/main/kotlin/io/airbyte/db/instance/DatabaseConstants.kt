@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.db.instance
@@ -79,5 +79,15 @@ object DatabaseConstants {
 
   const val SSO_CONFIG_TABLE: String = "sso_config"
 
+  const val SCIM_CONFIGURATION_TABLE: String = "scim_configuration"
+
+  const val SCIM_RESOURCE_MAPPING_TABLE: String = "scim_resource_mapping"
+
   const val ORGANIZATION_PAYMENT_CONFIG_TABLE: String = "organization_payment_config"
+
+  const val PRIVATE_LINK_TABLE: String = "private_link"
+
+  const val DATAPLANE_NETWORK_CONFIG_TABLE: String = "dataplane_network_config"
+
+  const val DATA_SUBJECT_DELETION_REQUEST_TABLE: String = "data_subject_deletion_request"
 }

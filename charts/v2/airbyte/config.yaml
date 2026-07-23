@@ -19,6 +19,22 @@ common:
       key: airbyteUrl
       defaultValue: http://localhost:8080
 
+    # Webapp host for agentic-org invitations (e.g. https://app.airbyte.ai).
+    # Intentionally NOT defaulted: when empty, WebUrlHelper falls back to airbyteUrl so
+    # OSS and local dev don't accidentally route agentic invite links to the prod
+    # Agents webapp. Real value is set per-cluster in deploy/envs/*/values.yaml.
+    - env: AIRBYTE_AGENTS_URL
+      key: airbyteAgentsUrl
+      defaultValue: ""
+
+    - env: AIRBYTE_AGENTS_VALID_REDIRECT_URIS
+      key: airbyteAgentsValidRedirectUris
+      valueExp: join "," .Values.global.airbyteAgentsValidRedirectUris
+
+    - env: AIRBYTE_AGENTS_WEB_ORIGINS
+      key: airbyteAgentsWebOrigins
+      valueExp: join "," .Values.global.airbyteAgentsWebOrigins
+
     - env: AIRBYTE_API_HOST
       key: api.host
       defaultValueExp: (ternary (printf "http://localhost:%d/api/public" (int .Values.server.service.port)) (printf "%s/api/public" .Values.global.airbyteUrl) (eq .Values.global.edition "community"))
@@ -396,6 +412,24 @@ database:
       key: name
       defaultValue: db-airbyte
 
+    # Replica database configuration (falls back to primary values if not configured)
+    - env: CONFIG_DATABASE_REPLICA_URL
+      key: replica.url
+      valueExp: (dig "replica" "url" "" .Values.global.database | default (include "airbyte.database.url" .))
+      includeIf: (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false")
+
+    - env: CONFIG_DATABASE_REPLICA_USER
+      key: replica.user
+      sensitive: true
+      valueExp: (dig "replica" "user" "" .Values.global.database | default (include "airbyte.database.user" .))
+      includeIf: (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false")
+
+    - env: CONFIG_DATABASE_REPLICA_PASSWORD
+      key: replica.password
+      sensitive: true
+      valueExp: (dig "replica" "password" "" .Values.global.database | default (include "airbyte.database.password" .))
+      includeIf: (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false")
+
 database.cloudSqlProxy:
   keyBasePath: global.cloudSqlProxy
   config:
@@ -417,78 +451,6 @@ database.migrations:
     - env: JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
       key: jobsDb.minimumFlywayMigrationVersion
       defaultValue: 0.29.15.001
-
-datadog:
-  keyBasePath: global.datadog
-  config:
-    - env: DD_AGENT_HOST
-      key: agentHost 
-      valueFrom: 
-        fieldRef:
-          fieldPath: status.hostIP
-
-    - env: DD_ENABLED
-      key: enabled
-      defaultValue: false
-
-    - env: DD_ENV
-      key: env
-
-    - env: DD_VERSION
-      key: version
-      valueExp: .Values.global.image.tag
-
-    - env: DD_DOGSTATSD_PORT
-      key: statsd.port
-      defaultValue: 8125
-
-    - env: DD_TRACE_AGENT_PORT
-      key: traceAgentPort
-      defaultValue: 8126
-
-    - env: DD_INTEGRATION_DBM_ENABLED
-      key: integrations.dbm.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_DBM_PROPAGATION_MODE
-      key: integrations.dbm.propagationMode
-      defaultValue: full
-
-    - env: DD_INTEGRATION_GOOGLE_HTTP_CLIENT_ENABLED
-      key: integrations.googleHttpClient.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_GRPC_ENABLED
-      key: integrations.grpc.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_GRPC_CLIENT_ENABLED
-      key: integrations.grpc.clientEnabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_GRPC_SERVER_ENABLED
-      key: integrations.grpc.serverEnabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_HTTPURLCONNECTION_ENABLED
-      key: integrations.httpUrlConnection.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_KOTLIN_COROUTINE_EXPERIMENTAL_ENABLED
-      key: integrations.kotlinCoroutineExperimental.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_NETTY_ENABLED
-      key: integrations.netty.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_NETTY_4_1_ENABLED
-      key: integrations.netty41.enabled
-      defaultValue: false
-
-    - env: DD_INTEGRATION_URLCONNECTION_ENABLED
-      key: integrations.urlConnection.enabled
-      defaultValue: false
 
 dataplaneGroups:
   keyBasePath: global.dataplaneGroups
@@ -525,13 +487,6 @@ featureFlags:
       discriminatorOpts: 
         - launchdarkly
       sensitive: true
-
-java:
-  keyBasePath: global.java
-  config:
-    - env: JAVA_TOOL_OPTIONS
-      key: opts
-      valueExp: join " " .Values.global.java.opts
 
 jobs:
   keyBasePath: global.jobs
@@ -801,33 +756,6 @@ minio:
       sensitive: true
       secretRef: airbyte.storage.secretName
 
-otel:
-  keyBasePath: global.metrics.otel
-  config:
-    - env: OTEL_EXPORTER_OTLP_ENDPOINT
-      key: exporter.endpoint
-      defaultValueExp: (ternary "http://${DD_AGENT_HOST}:4317" "" .Values.global.datadog.enabled)
-
-    - env: OTEL_EXPORTER_OTLP_PROTOCOL
-      key: exporter.protocol
-      defaultValue: grpc
-
-    - env: OTEL_EXPORTER_OTLP_TIMEOUT
-      key: exporter.timeout
-      defaultValue: 30000
-
-    - env: OTEL_METRIC_EXPORT_INTERVAL
-      key: exporter.metricExportInterval
-      defaultValue: 10000
-
-    - env: OTEL_METRICS_EXPORTER
-      key: exporter.name
-      defaultValue: otlp
-
-    - env: OTEL_RESOURCE_ATTRIBUTES
-      key: resourceAttributes
-      defaultValueExp: (printf "service.name=%s,deployment.environment=%s,service.version=%s" (include "airbyte.componentName" .) .Values.global.env (include "airbyte.common.version" .))
-
 secretsManager:
   keyBasePath: global.secretsManager
   discriminatorField: type
@@ -1001,9 +929,9 @@ server:
     - env: GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME
       key: warehouseExports.bucketName
 
-    - env: GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX
-      key: data.salesCustomerAttributesObjectPrefix
-      defaultValue: data/sales_customer_attributes
+    - env: GCS_DATA_ORGANIZATION_CUSTOMER_TIERS_OBJECT_PREFIX
+      key: data.organizationCustomerTiersObjectPrefix
+      defaultValue: data/organization_customer_tiers
 
     - env: HTTP_IDLE_TIMEOUT
       key: httpIdleTimeout
@@ -1044,12 +972,6 @@ server:
     - env: WEBAPP_DATADOG_SITE
       key: webapp.datadogSite
       defaultValue: datadoghq.com
-
-    - env: WEBAPP_POSTHOG_API_KEY
-      key: webapp.posthogApiKey
-
-    - env: WEBAPP_POSTHOG_HOST
-      key: webapp.posthogHost
 
     - env: WEBAPP_HOCKEYSTACK_API_KEY
       key: webapp.hockeystackApiKey
@@ -1306,6 +1228,16 @@ temporal.cloud.connectorRollout:
       key: host
 
     - env: TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT
+      key: namespace
+
+temporal.cloud.infra:
+  keyBasePath: global.temporal.cloud.infra
+  secretNamePath: global.temporal.secretName
+  config:
+    - env: TEMPORAL_CLOUD_INFRA_HOST
+      key: host
+
+    - env: TEMPORAL_CLOUD_INFRA_NAMESPACE
       key: namespace
 
 temporal.database:
@@ -1613,7 +1545,6 @@ workloads:
 
     - env: CONTAINER_ORCHESTRATOR_JAVA_OPTS
       key: containerOrchestrator.javaOpts
-      defaultValue: -XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=75.0 -javaagent:/app/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=0.5 -Ddd.trace.request_header.tags=User-Agent:http.useragent
 
     - env: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
       key: kubernetesClientMaxIdleConnections

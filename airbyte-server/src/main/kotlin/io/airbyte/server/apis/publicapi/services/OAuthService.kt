@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -18,6 +18,8 @@ interface OAuthService {
     definitionId: @NotBlank UUID?,
     redirectUrl: @NotBlank String,
     oauthInputConfiguration: JsonNode,
+    requestedScopes: List<String>? = null,
+    requestedOptionalScopes: List<String>? = null,
   ): OAuthConsentRead
 
   fun completeSourceOAuthReturnSecret(
@@ -26,6 +28,8 @@ interface OAuthService {
     redirectUrl: @NotBlank String,
     queryParameters: @NotBlank Map<String, String>,
     oauthInputConfiguration: JsonNode,
+    requestedScopes: List<String>? = null,
+    requestedOptionalScopes: List<String>? = null,
   ): HttpResponse<CompleteOAuthResponse>
 
   fun setWorkspaceOverrideOAuthParams(
@@ -33,5 +37,11 @@ interface OAuthService {
     actorType: ActorTypeEnum,
     definitionId: UUID,
     oauthCredentialsConfiguration: JsonNode,
+  )
+
+  fun deleteWorkspaceOverrideOAuthParams(
+    workspaceId: UUID,
+    actorType: ActorTypeEnum,
+    definitionId: UUID,
   )
 }

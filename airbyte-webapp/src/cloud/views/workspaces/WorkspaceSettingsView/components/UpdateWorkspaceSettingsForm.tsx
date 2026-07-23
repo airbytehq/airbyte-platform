@@ -1,0 +1,85 @@
+import React from "react";
+import { useIntl } from "react-intl";
+import { z } from "zod";
+
+import { Form, FormControl } from "components/ui/forms";
+import { DataResidencyDropdown } from "components/ui/forms/DataResidencyDropdown";
+import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
+
+import { useCurrentWorkspace, useInvalidateWorkspace, useUpdateWorkspace } from "core/api";
+import { FeatureItem, useFeature } from "core/services/features";
+import { useNotificationService } from "core/services/Notification";
+import { trackError } from "core/utils/datadog";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
+
+const ValidationSchema = z.object({
+  name: z.string().trim().nonempty("form.empty.error"),
+  dataplaneGroupId: z.string().optional(),
+});
+
+type WorkspaceFormValues = z.infer<typeof ValidationSchema>;
+
+export const UpdateWorkspaceSettingsForm: React.FC = () => {
+  const { formatMessage } = useIntl();
+  const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
+  const { registerNotification } = useNotificationService();
+  const { workspaceId, name, email, dataplaneGroupId } = useCurrentWorkspace();
+  const invalidateWorkspace = useInvalidateWorkspace(workspaceId);
+  const canUpdateWorkspace = useGeneratedIntent(Intent.UpdateWorkspace);
+  const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataplanes);
+
+  const onSubmit = async ({ name, dataplaneGroupId }: WorkspaceFormValues) => {
+    await updateWorkspace({
+      workspaceId,
+      name,
+      dataplaneGroupId,
+    });
+
+    await invalidateWorkspace();
+  };
+
+  const onSuccess = () => {
+    registerNotification({
+      id: "workspace_settings_update_success",
+      text: formatMessage({ id: "settings.workspaceSettings.update.success" }),
+      type: "success",
+    });
+  };
+
+  const onError = (e: Error, { name }: WorkspaceFormValues) => {
+    trackError(e, { name, email });
+
+    registerNotification({
+      id: "workspace_settings_update_error",
+      text: formatMessage({ id: "settings.workspaceSettings.update.error" }),
+      type: "error",
+    });
+  };
+
+  return (
+    <Form<WorkspaceFormValues>
+      defaultValues={{
+        name,
+        dataplaneGroupId,
+      }}
+      zodSchema={ValidationSchema}
+      onSubmit={onSubmit}
+      onSuccess={onSuccess}
+      onError={onError}
+      disabled={!canUpdateWorkspace}
+    >
+      <FormControl<WorkspaceFormValues>
+        name="name"
+        fieldType="input"
+        label={formatMessage({ id: "settings.workspaceSettings.updateWorkspaceNameForm.name.label" })}
+        placeholder={formatMessage({
+          id: "settings.workspaceSettings.updateWorkspaceNameForm.name.placeholder",
+        })}
+      />
+      {supportsDataResidency && dataplaneGroupId && (
+        <DataResidencyDropdown labelId="settings.region" name="dataplaneGroupId" />
+      )}
+      {canUpdateWorkspace && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
+    </Form>
+  );
+};

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.handler
@@ -9,7 +9,6 @@ import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseDeadlineInWorkloadMonitorQueries
-import io.airbyte.featureflag.UseWorkloadLabelsJsonbOnly
 import io.airbyte.micronaut.runtime.AirbyteWorkloadApiClientConfig
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
@@ -79,7 +78,11 @@ class WorkloadHandlerImpl(
     withWorkloadServiceExceptionConverter {
       workloadService.createWorkload(
         workloadId = workloadId,
-        labels = labels?.map { it.toDomain() },
+        labels =
+          labels?.map {
+            io.airbyte.workload.repository.domain
+              .WorkloadLabel(key = it.key, value = it.value)
+          },
         logPath = logPath,
         input = input,
         workspaceId = workspaceId,
@@ -195,23 +198,13 @@ class WorkloadHandlerImpl(
     priority: WorkloadPriority?,
     quantity: Int,
   ): List<Workload> {
-    val useJsonbLabelsOnly = featureFlagClient.boolVariation(UseWorkloadLabelsJsonbOnly, Empty)
     val domainWorkloads =
-      if (useJsonbLabelsOnly) {
-        workloadQueueRepository.pollWorkloadQueueWithoutLegacyLabels(
-          dataplaneGroup,
-          priority?.toInt(),
-          quantity,
-          redeliveryWindowSecs = airbyteWorkloadApiClientConfig.workloadRedeliveryWindowSeconds,
-        )
-      } else {
-        workloadQueueRepository.pollWorkloadQueue(
-          dataplaneGroup,
-          priority?.toInt(),
-          quantity,
-          redeliveryWindowSecs = airbyteWorkloadApiClientConfig.workloadRedeliveryWindowSeconds,
-        )
-      }
+      workloadQueueRepository.pollWorkloadQueue(
+        dataplaneGroup,
+        priority?.toInt(),
+        quantity,
+        redeliveryWindowSecs = airbyteWorkloadApiClientConfig.workloadRedeliveryWindowSeconds,
+      )
 
     return domainWorkloads.map { it.toApi() }
   }

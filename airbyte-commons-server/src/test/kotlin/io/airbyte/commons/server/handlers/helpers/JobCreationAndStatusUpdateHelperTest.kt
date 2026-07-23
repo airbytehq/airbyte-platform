@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers
@@ -16,6 +16,7 @@ import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.ReleaseStage
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
@@ -42,6 +43,7 @@ internal class JobCreationAndStatusUpdateHelperTest {
   lateinit var mJobPersistence: JobPersistence
 
   lateinit var mJobTracker: JobTracker
+  lateinit var dataWorkerUsageService: DataWorkerUsageService
 
   lateinit var helper: JobCreationAndStatusUpdateHelper
   lateinit var connectionTimelineEventHelper: ConnectionTimelineEventHelper
@@ -54,6 +56,7 @@ internal class JobCreationAndStatusUpdateHelperTest {
     mJobNotifier = Mockito.mock(JobNotifier::class.java)
     mJobPersistence = Mockito.mock(JobPersistence::class.java)
     mJobTracker = Mockito.mock(JobTracker::class.java)
+    dataWorkerUsageService = Mockito.mock(DataWorkerUsageService::class.java)
     connectionTimelineEventHelper = Mockito.mock(ConnectionTimelineEventHelper::class.java)
     metricClient = Mockito.mock(MetricClient::class.java)
 
@@ -66,6 +69,7 @@ internal class JobCreationAndStatusUpdateHelperTest {
         mJobTracker,
         connectionTimelineEventHelper,
         metricClient,
+        dataWorkerUsageService,
       )
   }
 
@@ -161,6 +165,8 @@ internal class JobCreationAndStatusUpdateHelperTest {
     )
     Mockito.verify(mJobPersistence).getJob(runningJob.id)
     Mockito.verify(mJobPersistence).getJob(pendingJob.id)
+    Mockito.verify(dataWorkerUsageService).releaseReservedUsageForJob(runningJob.id)
+    Mockito.verify(dataWorkerUsageService).releaseReservedUsageForJob(pendingJob.id)
     Mockito
       .verify(mJobNotifier)
       .failJob(eq(runningJob), anyOrNull())
@@ -172,7 +178,7 @@ internal class JobCreationAndStatusUpdateHelperTest {
     Mockito
       .verify(mJobPersistence)
       .listJobsForConnectionWithStatuses(Fixtures.CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES)
-    Mockito.verifyNoMoreInteractions(mJobPersistence, mJobNotifier, mJobTracker)
+    Mockito.verifyNoMoreInteractions(mJobPersistence, mJobNotifier, mJobTracker, dataWorkerUsageService)
   }
 
   @Test
@@ -183,6 +189,37 @@ internal class JobCreationAndStatusUpdateHelperTest {
 
     helper.reportJobStart(jobId)
     Mockito.verify(mJobTracker).trackSync(job, JobTracker.JobState.STARTED)
+  }
+
+  @Test
+  fun testSetJobQueued() {
+    val queuedJob = Fixtures.job(Fixtures.JOB_ID, mutableListOf(), JobStatus.QUEUED)
+    Mockito.`when`(mJobPersistence.queueJob(Fixtures.JOB_ID)).thenReturn(true)
+    Mockito.`when`(mJobPersistence.getJob(Fixtures.JOB_ID)).thenReturn(queuedJob)
+
+    helper.setJobQueued(Fixtures.JOB_ID)
+
+    Mockito.verify(mJobPersistence).queueJob(Fixtures.JOB_ID)
+    Mockito.verify(mJobPersistence).getJob(Fixtures.JOB_ID)
+    Mockito.verify(mJobNotifier).queuedJob(queuedJob)
+  }
+
+  @Test
+  fun testSetJobQueuedSkipsNotificationForExistingQueuedJob() {
+    Mockito.`when`(mJobPersistence.queueJob(Fixtures.JOB_ID)).thenReturn(false)
+
+    helper.setJobQueued(Fixtures.JOB_ID)
+
+    Mockito.verify(mJobPersistence).queueJob(Fixtures.JOB_ID)
+    Mockito.verify(mJobPersistence, Mockito.never()).getJob(Fixtures.JOB_ID)
+    Mockito.verify(mJobNotifier, Mockito.never()).queuedJob(anyOrNull())
+  }
+
+  @Test
+  fun testCancelQueuedJob() {
+    helper.cancelQueuedJob(Fixtures.JOB_ID)
+
+    Mockito.verify(mJobPersistence).cancelQueuedJob(Fixtures.JOB_ID)
   }
 
   @Test

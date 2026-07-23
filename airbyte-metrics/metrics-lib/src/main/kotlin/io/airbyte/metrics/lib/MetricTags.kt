@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics.lib
@@ -28,6 +28,7 @@ object MetricTags {
   const val CONNECTOR_IMAGE: String = "connector_image"
   const val CONNECTOR_TYPE: String = "connector_type"
   const val CRON_TYPE: String = "cron_type"
+  const val DRY_RUN: String = "dry_run"
   const val CRUD_OPERATION: String = "crud_operation"
   const val DESTINATION_DEFINITION_ID: String = "destination_definition_id"
   const val DESTINATION_ID: String = "destination_id"
@@ -35,6 +36,7 @@ object MetricTags {
   const val DESTINATION_IMAGE_TAG: String = "destination_image_tag"
   const val DESTINATION_IMAGE_IS_DEFAULT: String = "destination_image_is_default"
   const val ERROR: String = "error"
+  const val EXIT_CODE: String = "exit_code"
   const val EXPIRE_SECRET: String = "expire_secret"
   const val FAILURE: String = "failure"
   const val FAILURE_CAUSE: String = "failure_cause"
@@ -55,6 +57,14 @@ object MetricTags {
   const val PUBLIC: String = "public"
   const val DATA_WORKER_USAGE_OPERATION: String = "data_worker_usage_operation"
   const val ORB_PLAN: String = "orb_plan"
+  const val ORB_ENDPOINT: String = "orb_endpoint"
+
+  // Orb endpoint values
+  const val ORB_ENDPOINT_GET_SUBSCRIPTION_INFO: String = "get_subscription_info"
+  const val ORB_ENDPOINT_GET_TRIAL_STATUS: String = "get_trial_status"
+  const val ORB_ENDPOINT_LIST_SUBSCRIPTIONS: String = "list_subscriptions"
+  const val ORB_ENDPOINT_CANCEL_SUBSCRIPTION: String = "cancel_subscription"
+  const val ORB_ENDPOINT_UNSCHEDULE_CANCELLATION: String = "unschedule_cancellation"
 
   // the release stage of the highest release connector in the sync (GA > Beta > Alpha)
   const val MAX_CONNECTOR_RELEASE_STATE: String = "max_connector_release_stage"
@@ -67,6 +77,11 @@ object MetricTags {
   const val ORGANIZATION_ID: String = "organization_id"
   const val RELEASE_STAGE: String = "release_stage"
   const val SECRET_COORDINATES_UPDATED: String = "secret_coordinates_updated"
+
+  // Distinguishes what triggered a DELETE_SECRET: inline actor update/delete vs. the orphan-cleanup cron.
+  const val SECRET_DELETION_TRIGGER: String = "secret_deletion_trigger"
+  const val SECRET_DELETION_TRIGGER_INLINE: String = "inline"
+  const val SECRET_DELETION_TRIGGER_CRON: String = "cron"
   const val SOURCE_ID: String = "source_id"
   const val SOURCE_DEFINITION_ID: String = "source_definition_id"
   const val SOURCE_IMAGE_TAG: String = "source_image_tag"
@@ -74,8 +89,11 @@ object MetricTags {
   const val SOURCE_IMAGE: String = "source_image"
   const val SOURCE_IMAGE_IS_DEFAULT: String = "source_image_is_default"
   const val SKIPPED = "skipped"
+  const val SSO_OPERATION: String = "sso_operation"
+  const val SSO_DEFAULT_ROLE: String = "sso_default_role"
   const val STATUS: String = "status"
   const val SUCCESS: String = "success"
+  const val WEBHOOK_DOMAIN: String = "webhook_domain"
   const val WILL_RETRY: String = "will_retry"
   const val WORKSPACE_ID: String = "workspace_id"
   const val WORKFLOW_TYPE: String = "workflow_type"
@@ -83,6 +101,7 @@ object MetricTags {
   const val UNKNOWN: String = "unknown"
   const val USER_TYPE: String = "user_type" // real user, service account, data plane user, etc
   const val CLIENT_ID: String = "client_id"
+  const val TOKEN_SUBJECT: String = "token_subject" // JWT sub of a caller, e.g. for load-shedding
   const val LOG_CLIENT_TYPE: String = "log_client_type"
   const val MALFORMED_LOG_LINE_LENGTH: String = "malformed_log_line_length"
   const val PROMPT_LENGTH: String = "prompt_length"

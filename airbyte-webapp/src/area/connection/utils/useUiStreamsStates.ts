@@ -8,9 +8,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
-
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import { connectionsKeys, useCurrentConnection, useGetConnectionSyncProgress } from "core/api";
 import {
   AirbyteStreamAndConfiguration,

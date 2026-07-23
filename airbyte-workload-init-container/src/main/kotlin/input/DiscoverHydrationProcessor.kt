@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.initContainer.input
@@ -50,6 +50,9 @@ class DiscoverHydrationProcessor(
           )
         if (parsed.launcherConfig.connectionId != null) {
           attrs.add(MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()))
+        }
+        e.secretStoreType?.let { storeType ->
+          attrs.add(MetricAttribute("secret_store_type", storeType))
         }
 
         metricClient.count(

@@ -1,0 +1,20 @@
+import { SettingsRoutePaths } from "pages/routePaths";
+
+export const CloudSettingsRoutePaths = {
+  Usage: "usage",
+  Plan: "plan",
+  Billing: "billing",
+  OrganizationUsage: "organization-usage",
+  Notifications: SettingsRoutePaths.Notifications,
+  Account: SettingsRoutePaths.Account,
+  Advanced: SettingsRoutePaths.Advanced,
+  Source: SettingsRoutePaths.Source,
+  Destination: SettingsRoutePaths.Destination,
+  Workspace: SettingsRoutePaths.Workspace,
+  WorkspaceMembers: SettingsRoutePaths.WorkspaceMembers,
+  Organization: SettingsRoutePaths.Organization,
+  OrganizationMembers: SettingsRoutePaths.OrganizationMembers,
+  DbtCloud: "dbt-cloud",
+  PrivateLinks: "private-links",
+  Applications: SettingsRoutePaths.Applications,
+} as const;

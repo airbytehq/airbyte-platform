@@ -14,8 +14,8 @@ import {
   useDefaultWorkspaceInOrganization,
 } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useModalService } from "core/services/Modal";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useModalService } from "hooks/services/Modal";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { DestinationPaths, RoutePaths, SourcePaths } from "pages/routePaths";
 

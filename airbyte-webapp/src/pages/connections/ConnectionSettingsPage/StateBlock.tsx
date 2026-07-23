@@ -11,8 +11,8 @@ import { Message } from "components/ui/Message";
 
 import { useCreateOrUpdateState, useGetConnectionState } from "core/api";
 import { ConnectionState, StreamState } from "core/api/types/AirbyteClient";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { haveSameShape } from "core/utils/objects";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./StateBlock.module.scss";
 

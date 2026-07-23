@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.client.config
@@ -39,6 +39,7 @@ class ApiClientSupportFactory(
         httpClient =
           OkHttpClient
             .Builder()
+            .callTimeout(config.callTimeoutSeconds, TimeUnit.SECONDS)
             .readTimeout(config.readTimeoutSeconds, TimeUnit.SECONDS)
             .connectTimeout(config.connectTimeoutSeconds, TimeUnit.SECONDS)
             .build(),
@@ -72,6 +73,7 @@ class ApiClientSupportFactory(
 
           addInterceptor(UserAgentInterceptor(micronautApplicationConfiguration.name.get()))
           addInterceptor(AirbyteVersionInterceptor(airbyteConfig.version))
+          callTimeout(config.callTimeoutSeconds, TimeUnit.SECONDS)
           readTimeout(config.readTimeoutSeconds, TimeUnit.SECONDS)
           connectTimeout(config.connectTimeoutSeconds, TimeUnit.SECONDS)
         }.build()

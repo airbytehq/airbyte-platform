@@ -11,7 +11,7 @@ import { Text } from "components/ui/Text";
 import { useGetInstanceConfiguration } from "core/api";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useModalService } from "hooks/services/Modal";
+import { useModalService } from "core/services/Modal";
 
 import { useLocalStorage } from "./useLocalStorage";
 

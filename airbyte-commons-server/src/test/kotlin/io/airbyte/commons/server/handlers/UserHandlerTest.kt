@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
@@ -26,6 +26,7 @@ import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.config.InitialUserConfig
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver
 import io.airbyte.commons.enums.convertTo
+import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.config.Application
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthUser
@@ -45,6 +46,8 @@ import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.featureflag.BypassSsoDomainValidationEnforcement
+import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
 import io.airbyte.featureflag.TestClient
@@ -74,6 +77,7 @@ import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
 import java.util.stream.Stream
+import io.airbyte.featureflag.Organization as FeatureFlagOrganization
 
 class UserHandlerTest {
   private lateinit var uuidSupplier: Supplier<UUID>
@@ -121,6 +125,17 @@ class UserHandlerTest {
 
     whenever(featureFlagClient.boolVariation(eq(RestrictLoginsForSSODomains), any()))
       .thenReturn(true)
+    // ConfigurableSsoDefaultRole defaults ON in tests so existing assertions exercise the configured
+    // role; prod default is OFF (dark launch). Flag-off behavior is covered explicitly below.
+    whenever(featureFlagClient.boolVariation(eq(ConfigurableSsoDefaultRole), any()))
+      .thenReturn(true)
+    whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
+      .thenReturn(true)
+
+    // SEC-14: Most tests use an org without claimed domains and the bypass enabled above, preserving
+    // their pre-enforcement behavior. Domain-enforcement tests override both inputs explicitly.
+    whenever(organizationEmailDomainService.findByOrganizationId(any()))
+      .thenReturn(emptyList())
 
     userHandler =
       UserHandler(
@@ -250,6 +265,237 @@ class UserHandlerTest {
 
   @Nested
   internal inner class GetOrCreateUserByAuthIdTest {
+    @Test
+    fun testAgenticFeaturesEnabledDuringUserCreation() {
+      val authUserId = "test-auth-user-id"
+      val newUserId = UUID.randomUUID()
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("agentic@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.empty())
+      whenever(uuidSupplier.get()).thenReturn(newUserId)
+
+      val createdUser =
+        User()
+          .withUserId(newUserId)
+          .withEmail("agentic@test.com")
+          .withAgenticEnabledAt(java.time.OffsetDateTime.now())
+      whenever(userPersistence.getUser(newUserId)).thenReturn(Optional.of(createdUser))
+
+      val defaultWorkspace = WorkspaceRead().workspaceId(UUID.randomUUID())
+      whenever(resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any())).thenReturn(defaultWorkspace)
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(true)
+
+      userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that the user was written with agenticEnabledAt set to a timestamp
+      Mockito.verify(userPersistence).writeAuthenticatedUser(
+        argThat { user: AuthenticatedUser? ->
+          user!!.agenticEnabledAt != null
+        },
+      )
+    }
+
+    @Test
+    fun testNewUserWithoutAgenticFlagCreatesNonAgenticUser() {
+      val authUserId = "test-auth-user-id"
+      val newUserId = UUID.randomUUID()
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("nonagentic@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.empty())
+      whenever(uuidSupplier.get()).thenReturn(newUserId)
+
+      val createdUser =
+        User()
+          .withUserId(newUserId)
+          .withEmail("nonagentic@test.com")
+          .withAgenticEnabledAt(null)
+      whenever(userPersistence.getUser(newUserId)).thenReturn(Optional.of(createdUser))
+
+      val defaultWorkspace = WorkspaceRead().workspaceId(UUID.randomUUID())
+      whenever(resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any())).thenReturn(defaultWorkspace)
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(false)
+
+      userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that the user was written with agenticEnabledAt = null
+      Mockito.verify(userPersistence).writeAuthenticatedUser(
+        argThat { user: AuthenticatedUser? ->
+          user!!.agenticEnabledAt == null
+        },
+      )
+    }
+
+    @Test
+    fun testExistingNonAgenticUserUpgradedWhenFlagIsTrue() {
+      val authUserId = "test-auth-user-id"
+      val userId = UUID.randomUUID()
+      val originalTimestamp = java.time.OffsetDateTime.now()
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("upgrade@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      val existingNonAgenticUser =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withEmail("upgrade@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withAgenticEnabledAt(null) // Non-agentic user
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingNonAgenticUser))
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(true) // Request to upgrade
+
+      val response = userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that writeAuthenticatedUser was called (upgrading the user)
+      Mockito.verify(userPersistence).writeAuthenticatedUser(
+        argThat { user: AuthenticatedUser? ->
+          user!!.userId == userId && user.agenticEnabledAt != null
+        },
+      )
+
+      // Verify response indicates existing user (not new)
+      Assertions.assertFalse(response.newUserCreated)
+    }
+
+    @Test
+    fun testExistingNonAgenticUserStaysNonAgenticWhenFlagIsFalse() {
+      val authUserId = "test-auth-user-id"
+      val userId = UUID.randomUUID()
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("stay@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      val existingNonAgenticUser =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withEmail("stay@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withAgenticEnabledAt(null)
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingNonAgenticUser))
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(false)
+
+      val response = userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that writeAuthenticatedUser was NOT called (no upgrade)
+      Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+
+      // Verify user returned is non-agentic
+      Assertions.assertNull(response.userRead.agenticEnabledAt)
+    }
+
+    @Test
+    fun testExistingAgenticUserPreservesTimestampWhenFlagIsTrue() {
+      val authUserId = "test-auth-user-id"
+      val userId = UUID.randomUUID()
+      val originalTimestamp = java.time.OffsetDateTime.of(2024, 1, 15, 10, 0, 0, 0, java.time.ZoneOffset.UTC)
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("preserve@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      val existingAgenticUser =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withEmail("preserve@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withAgenticEnabledAt(originalTimestamp) // Already agentic
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingAgenticUser))
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(true)
+
+      val response = userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that writeAuthenticatedUser was NOT called (timestamp immutable)
+      Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+
+      // Verify original timestamp preserved
+      Assertions.assertEquals(originalTimestamp, response.userRead.agenticEnabledAt)
+    }
+
+    @Test
+    fun testExistingAgenticUserCannotBeDowngraded() {
+      val authUserId = "test-auth-user-id"
+      val userId = UUID.randomUUID()
+      val originalTimestamp = java.time.OffsetDateTime.of(2024, 1, 15, 10, 0, 0, 0, java.time.ZoneOffset.UTC)
+
+      val jwtUser =
+        AuthenticatedUser()
+          .withEmail("nodowngrade@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      val existingAgenticUser =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withEmail("nodowngrade@test.com")
+          .withAuthUserId(authUserId)
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withAgenticEnabledAt(originalTimestamp)
+
+      whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
+      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingAgenticUser))
+
+      val requestBody =
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(false) // Attempt to downgrade
+
+      val response = userHandler.getOrCreateUserByAuthId(requestBody)
+
+      // Verify that writeAuthenticatedUser was NOT called (cannot downgrade)
+      Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+
+      // Verify timestamp still present (downgrade rejected)
+      Assertions.assertEquals(originalTimestamp, response.userRead.agenticEnabledAt)
+    }
+
     @ParameterizedTest
     @EnumSource(AuthProvider::class)
     fun authIdExists(authProvider: AuthProvider) {
@@ -379,6 +625,15 @@ class UserHandlerTest {
             organization,
           ),
         )
+        // SEC-14: The email domain must be claimed by the SSO org for migration to proceed
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(
+            listOf(
+              OrganizationEmailDomain()
+                .withOrganizationId(organization.organizationId)
+                .withEmailDomain("airbyte.io"),
+            ),
+          )
 
         whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
         whenever(userPersistence.getUserByAuthId(newAuthUserId))
@@ -457,6 +712,225 @@ class UserHandlerTest {
         val userRead = res.userRead
         Assertions.assertEquals(userRead.userId, existingUserId)
         Assertions.assertEquals(userRead.email, email)
+      }
+
+      @Test
+      fun testSsoLoginWithInvalidDomainRejectedBeforeExistingUserMigration() {
+        whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
+          .thenReturn(false)
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(
+            listOf(
+              OrganizationEmailDomain()
+                .withOrganizationId(organization.organizationId)
+                .withEmailDomain("attacker.com"),
+            ),
+          )
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.empty<AuthenticatedUser>())
+        whenever(userPersistence.getUserByEmail(email)).thenReturn(Optional.of<User>(existingUser!!))
+        whenever(userPersistence.getUser(existingUserId)).thenReturn(Optional.of<User>(existingUser!!))
+        whenever(userPersistence.listAuthUsersForUser(existingUserId))
+          .thenReturn(
+            listOf(
+              AuthUser()
+                .withAuthUserId(existingAuthUserId)
+                .withAuthProvider(AuthProvider.KEYCLOAK),
+            ),
+          )
+        whenever(externalUserService.getRealmByAuthUserId(existingAuthUserId)).thenReturn(realm)
+        whenever(ssoConfigService.getSsoConfigByRealmName(realm)).thenReturn(null)
+
+        val existingAuthedUser =
+          AuthenticatedUserConverter.toAuthenticatedUser(existingUser!!, existingAuthUserId, AuthProvider.KEYCLOAK)
+        whenever(applicationService.listApplicationsByUser(existingAuthedUser))
+          .thenReturn(listOf(Application().withId("app_id")))
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf(WorkspaceRead().workspaceId(UUID.randomUUID()))))
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId))
+          .thenReturn(listOf(UserPermission().withUser(User().withUserId(UUID.randomUUID()))))
+
+        Assertions.assertThrows(OperationNotAllowedException::class.java) {
+          userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+        }
+
+        Mockito.verify(externalUserService, Mockito.never()).deleteUserByExternalId(newAuthUserId, ssoRealm)
+        Mockito
+          .verify(userPersistence, Mockito.never())
+          .replaceAuthUserForUserId(existingUserId, newAuthUserId, AuthProvider.KEYCLOAK)
+        Mockito.verify(externalUserService, Mockito.never()).deleteUserByEmailOnOtherRealms(email, ssoRealm)
+        Mockito.verify(applicationService, Mockito.never()).deleteApplication(existingAuthedUser, "app_id")
+        Mockito.verify(permissionHandler, Mockito.never()).createPermission(any())
+      }
+
+      @Test
+      fun testSsoLoginWithMismatchedDomainAllowedWhenOrganizationIsBypassed() {
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(
+            listOf(
+              OrganizationEmailDomain()
+                .withOrganizationId(organization.organizationId)
+                .withEmailDomain("attacker.com"),
+            ),
+          )
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        val result = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        // Login succeeds despite domain mismatch — no exception thrown
+        Assertions.assertNotNull(result)
+        Mockito.verify(featureFlagClient).boolVariation(
+          BypassSsoDomainValidationEnforcement,
+          FeatureFlagOrganization(organization.organizationId),
+        )
+      }
+
+      @Test
+      fun testSsoLoginWithMismatchedDomainRejectedWhenOrganizationIsNotBypassed() {
+        whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
+          .thenReturn(false)
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(
+            listOf(
+              OrganizationEmailDomain()
+                .withOrganizationId(organization.organizationId)
+                .withEmailDomain("attacker.com"),
+            ),
+          )
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        Assertions.assertThrows(OperationNotAllowedException::class.java) {
+          userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+        }
+        Mockito.verify(externalUserService, Mockito.never()).deleteUserByExternalId(newAuthUserId, ssoRealm)
+      }
+
+      @Test
+      fun testSsoLoginWithNoClaimedDomainsAllowedWhenOrganizationIsBypassed() {
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(emptyList())
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        val result = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        // Login succeeds — no exception thrown
+        Assertions.assertNotNull(result)
+      }
+
+      @Test
+      fun testSsoLoginWithNoClaimedDomainsRejectedWhenOrganizationIsNotBypassed() {
+        whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
+          .thenReturn(false)
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(emptyList())
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        Assertions.assertThrows(OperationNotAllowedException::class.java) {
+          userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+        }
+        Mockito.verify(externalUserService, Mockito.never()).deleteUserByExternalId(newAuthUserId, ssoRealm)
+      }
+
+      @Test
+      fun testSsoLoginWithMatchingDomainAllowedWhenOrganizationIsNotBypassed() {
+        whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
+          .thenReturn(false)
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(
+            listOf(
+              OrganizationEmailDomain()
+                .withOrganizationId(organization.organizationId)
+                .withEmailDomain("airbyte.io"),
+            ),
+          )
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        val result = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Assertions.assertNotNull(result)
+        Mockito.verify(featureFlagClient, Mockito.never()).boolVariation(
+          eq(BypassSsoDomainValidationEnforcement),
+          any(),
+        )
+      }
+
+      @Test
+      fun testSsoLoginWithInvalidDomainAllowedWhenBypassFlagIsAbsent() {
+        userHandler =
+          UserHandler(
+            userPersistence,
+            externalUserService,
+            organizationService,
+            ssoConfigService,
+            organizationEmailDomainService,
+            Optional.of(applicationService),
+            permissionHandler,
+            workspacesHandler,
+            uuidSupplier,
+            jwtUserAuthenticationResolver,
+            Optional.of(initialUserConfig),
+            resourceBootstrapHandler,
+            TestClient(emptyMap()),
+          )
+        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+          Optional.of<Organization>(organization),
+        )
+        whenever(organizationEmailDomainService.findByOrganizationId(organization.organizationId))
+          .thenReturn(emptyList())
+
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(ssoRealm)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.of<AuthenticatedUser>(jwtUser!!))
+
+        val result = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Assertions.assertNotNull(result)
+        Mockito.verify(externalUserService, Mockito.never()).deleteUserByExternalId(any(), any())
       }
 
       private val existingUserId: UUID = UUID.randomUUID()
@@ -628,6 +1102,137 @@ class UserHandlerTest {
         verifyInstanceAdminPermissionCreation(initialUserEmail, initialUserPresent)
         verifyOrganizationPermissionCreation(authRealm, isFirstOrgUser)
         verifyDefaultWorkspaceCreation(isDefaultWorkspaceForOrgPresent, userPersistenceInOrder)
+      }
+
+      @ParameterizedTest
+      @CsvSource(
+        "ORGANIZATION_MEMBER,ORGANIZATION_MEMBER",
+        "ORGANIZATION_EDITOR,ORGANIZATION_EDITOR",
+        "ORGANIZATION_ADMIN,ORGANIZATION_ADMIN",
+      )
+      fun testNewSsoUserCreationUsesConfiguredDefaultRole(
+        configuredDefaultRole: Permission.PermissionType,
+        expectedPermissionType: Permission.PermissionType,
+      ) {
+        newAuthedUser!!.authProvider = AuthProvider.KEYCLOAK
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn("airbyte-realm")
+        whenever(organizationService.getOrganizationBySsoConfigRealm("airbyte-realm")).thenReturn(Optional.of(organization))
+        whenever(ssoConfigService.getSsoConfig(organization.organizationId)).thenReturn(
+          SsoConfig().withDefaultRole(configuredDefaultRole),
+        )
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId)).thenReturn(
+          listOf(
+            UserPermission()
+              .withUser(existingUser)
+              .withPermission(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)),
+          ),
+        )
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf<@Valid WorkspaceRead?>(defaultWorkspace)))
+        newUser!!.defaultWorkspaceId = defaultWorkspace!!.workspaceId
+
+        userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Mockito.verify(permissionHandler).createPermission(
+          Permission()
+            .withPermissionType(expectedPermissionType)
+            .withOrganizationId(organization.organizationId)
+            .withUserId(newUserId),
+        )
+      }
+
+      @Test
+      fun testNewSsoUserCreationFallsBackToMemberWhenConfigurableSsoDefaultRoleFlagOff() {
+        // Flag OFF (dark launch): the configured EDITOR role must be ignored and provisioning must
+        // fall back to ORGANIZATION_MEMBER, preserving pre-feature behavior.
+        whenever(featureFlagClient.boolVariation(eq(ConfigurableSsoDefaultRole), any())).thenReturn(false)
+        newAuthedUser!!.authProvider = AuthProvider.KEYCLOAK
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn("airbyte-realm")
+        whenever(organizationService.getOrganizationBySsoConfigRealm("airbyte-realm")).thenReturn(Optional.of(organization))
+        whenever(ssoConfigService.getSsoConfig(organization.organizationId)).thenReturn(
+          SsoConfig().withDefaultRole(Permission.PermissionType.ORGANIZATION_EDITOR),
+        )
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId)).thenReturn(
+          listOf(
+            UserPermission()
+              .withUser(existingUser)
+              .withPermission(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)),
+          ),
+        )
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf<@Valid WorkspaceRead?>(defaultWorkspace)))
+        newUser!!.defaultWorkspaceId = defaultWorkspace!!.workspaceId
+
+        userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Mockito.verify(permissionHandler).createPermission(
+          Permission()
+            .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+            .withOrganizationId(organization.organizationId)
+            .withUserId(newUserId),
+        )
+      }
+
+      @Test
+      fun testNewSsoUserCreationDefaultsToMemberWhenConfiguredDefaultRoleIsNull() {
+        newAuthedUser!!.authProvider = AuthProvider.KEYCLOAK
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn("airbyte-realm")
+        whenever(organizationService.getOrganizationBySsoConfigRealm("airbyte-realm")).thenReturn(Optional.of(organization))
+        whenever(ssoConfigService.getSsoConfig(organization.organizationId)).thenReturn(SsoConfig())
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId)).thenReturn(
+          listOf(
+            UserPermission()
+              .withUser(existingUser)
+              .withPermission(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)),
+          ),
+        )
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf<@Valid WorkspaceRead?>(defaultWorkspace)))
+        newUser!!.defaultWorkspaceId = defaultWorkspace!!.workspaceId
+
+        userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Mockito.verify(permissionHandler).createPermission(
+          Permission()
+            .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+            .withOrganizationId(organization.organizationId)
+            .withUserId(newUserId),
+        )
+      }
+
+      @Test
+      fun testFirstNewSsoUserCreationAlwaysGrantsAdmin() {
+        newAuthedUser!!.authProvider = AuthProvider.KEYCLOAK
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn("airbyte-realm")
+        whenever(organizationService.getOrganizationBySsoConfigRealm("airbyte-realm")).thenReturn(Optional.of(organization))
+        whenever(ssoConfigService.getSsoConfig(organization.organizationId)).thenReturn(
+          SsoConfig().withDefaultRole(Permission.PermissionType.ORGANIZATION_EDITOR),
+        )
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId)).thenReturn(mutableListOf())
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf<@Valid WorkspaceRead?>(defaultWorkspace)))
+        newUser!!.defaultWorkspaceId = defaultWorkspace!!.workspaceId
+
+        userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Mockito.verify(permissionHandler).createPermission(
+          Permission()
+            .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+            .withOrganizationId(organization.organizationId)
+            .withUserId(newUserId),
+        )
       }
 
       private fun verifyCreatedUser(

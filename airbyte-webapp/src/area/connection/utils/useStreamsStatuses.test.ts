@@ -1,8 +1,8 @@
 import { renderHook } from "@testing-library/react";
 
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
-
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
+import { useSchemaChanges } from "area/connection/utils/useSchemaChanges";
 import { useListStreamsStatuses, useGetConnection } from "core/api";
 import {
   ConnectionSyncStatus,
@@ -10,14 +10,13 @@ import {
   StreamStatusJobType,
   StreamStatusRunState,
 } from "core/api/types/AirbyteClient";
-import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 
 import { useStreamsStatuses } from "./useStreamsStatuses";
 import { useStreamsSyncProgress } from "./useStreamsSyncProgress";
 
 jest.mock("core/api");
-jest.mock("hooks/connection/useSchemaChanges");
-jest.mock("components/connection/ConnectionStatus/useConnectionStatus");
+jest.mock("area/connection/utils/useSchemaChanges");
+jest.mock("area/connection/components/ConnectionStatus/useConnectionStatus");
 jest.mock("./useStreamsSyncProgress");
 
 describe("useStreamsStatuses", () => {

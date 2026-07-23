@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.controllers
@@ -44,7 +44,6 @@ class WorkloadOutputControllerTest {
         id = "workload 1",
         dataplaneId = null,
         status = WorkloadStatus.PENDING,
-        workloadLabels = null,
         inputPayload = "",
         workspaceId = null,
         organizationId = orgId,

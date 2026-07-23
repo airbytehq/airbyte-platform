@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.featureflag
@@ -36,8 +36,6 @@ object ShouldFailSyncIfHeartbeatFailure : Permanent<Boolean>(key = "heartbeat.fa
  */
 object HeartbeatDiagnosticLogsEnabled : Temporary<Boolean>(key = "heartbeat.diagnostic-logs-enabled", default = false)
 
-object DestinationTimeoutEnabled : Permanent<Boolean>(key = "destination-timeout-enabled", default = true)
-
 object ShouldFailSyncOnDestinationTimeout : Permanent<Boolean>(key = "destination-timeout.failSync", default = true)
 
 object DestinationTimeoutSeconds : Permanent<Int>(key = "destination-timeout.seconds", default = 7200)
@@ -51,6 +49,8 @@ object UseBreakingChangeScopes : Temporary<Boolean>(key = "connectors.useBreakin
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
 
 object UseResourceRequirementsVariant : Permanent<String>(key = "platform.resource-requirements-variant", default = "default")
+
+object ScimProvisioningPilot : Temporary<Boolean>(key = "platform.scim-provisioning-pilot", default = false)
 
 object SuccessiveCompleteFailureLimit : Temporary<Int>(key = "complete-failures.max-successive", default = -1)
 
@@ -97,6 +97,8 @@ object ShouldWaitForMainContainersOnReplication : Temporary<Boolean>(key = "plat
 object CheckImagePullBackoff : Temporary<Boolean>(key = "platform.check-image-pull-backoff", default = false)
 
 object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migrationMaintenance", default = false)
+
+object UseSubscriptionPriceIntervals : Temporary<Boolean>(key = "billing.use-subscription-price-intervals", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
@@ -192,6 +194,8 @@ object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.w
 
 object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-shed.scheduler-backoff-minutes", default = -1)
 
+object LoadShedPublicApi : Permanent<Boolean>(key = "platform.load-shed.public-api", default = false)
+
 object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platform.validate-conflicting-destination-streams", default = false)
 
 object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-sync-job-failure-explanation", default = false)
@@ -207,6 +211,8 @@ object EnableDefaultSecretStorage : Temporary<Boolean>(key = "platform.use-defau
 object EnableDataObservability : Temporary<Boolean>(key = "platform.enable-data-observability", default = false)
 
 object CleanupDanglingSecretConfigs : Temporary<Boolean>(key = "platform.cleanup-dangling-secret-configs", default = false)
+
+object OrphanedSecretCleanupLimit : Temporary<Int>(key = "platform.orphaned-secret-cleanup-limit", default = 100)
 
 object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)
 
@@ -225,12 +231,6 @@ object EnableSsoConfigUpdate : Permanent<Boolean>(key = "platform.can-change-sso
 object ReplicationDebugLogLevelEnabled : Permanent<Boolean>(key = "platform.replication-debug-log-level-enabled", default = false)
 
 object UseDeadlineInWorkloadMonitorQueries : Temporary<Boolean>(key = "platform.use-deadline-in-workload-monitor-queries", default = false)
-
-object UseWorkloadLabelsJsonbOnly : Temporary<Boolean>(key = "platform.use-workload-labels-jsonb-only", default = false)
-
-object DisableWorkloadLabelTableWrite : Temporary<Boolean>(key = "platform.disable-workload-label-table-write", default = false)
-
-object EnableOrchestration : Permanent<Boolean>(key = "platform.enable-orchestration", default = false)
 
 object ForceDdRemoteConfigVar : Temporary<Boolean>(key = "platform.force-dd-remote-config-var", default = false)
 
@@ -260,4 +260,32 @@ object BypassStiggEntitlementChecks : Permanent<Boolean>(key = "platform.bypass-
 
 object EnableDataWorkerUsage : Temporary<Boolean>(key = "platform.enable-data-worker-usage", default = false)
 
+object EnforceDataWorkerCapacity : Temporary<Boolean>(key = "platform.enforce-data-worker-capacity", default = false)
+
+// IMPORTANT: These defaults intentionally point in opposite directions. The code default is true so
+// a missing flag or failed LaunchDarkly evaluation fails open and preserves SSO access. The production
+// LaunchDarkly fallthrough must be false so organizations are enforced unless explicitly bypassed.
+object BypassSsoDomainValidationEnforcement : Temporary<Boolean>(
+  key = "platform.bypass-sso-domain-validation-enforcement",
+  default = true,
+)
+
 object UseVerifiedDomainsForSsoActivate : Temporary<Boolean>(key = "platform.use-verified-domains-for-sso-activate", default = false)
+
+object AutoGrantOrgPermissionsOnSsoActivation : Temporary<Boolean>(key = "platform.auto-grant-org-permissions-on-sso-activation", default = false)
+
+/**
+ * Gates the configurable-SSO-default-role rollout, which ships dark behind this flag. It serves two
+ * purposes for an organization:
+ *  1. SSO just-in-time provisioning grants each user the per-organization default role configured on
+ *     the SSO config (falling back to ORGANIZATION_MEMBER while disabled).
+ *  2. Registration of the Sonar webapp Keycloak client in newly created SSO realms (skipped while
+ *     disabled).
+ * Defaults off, preserving pre-feature behavior so the code can be released separately. Temporary —
+ * remove once the configurable-default-role rollout completes.
+ */
+object ConfigurableSsoDefaultRole : Temporary<Boolean>(key = "platform.configurable-sso-default-role", default = false)
+
+object UseOptimizedStreamStatusQuery : Temporary<Boolean>(key = "platform.use-optimized-stream-status-query", default = false)
+
+object UseReadReplicaForStreamStatus : Temporary<Boolean>(key = "platform.use-read-replica-for-stream-status", default = false)

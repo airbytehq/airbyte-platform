@@ -1,7 +1,6 @@
 import { FormattedMessage, useIntl } from "react-intl";
 import { match } from "ts-pattern";
 
-import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { Box } from "components/ui/Box";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
@@ -9,6 +8,7 @@ import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
+import { RadioButtonTiles } from "area/connection/components/CreateConnection/RadioButtonTiles";
 import { links } from "core/utils/links";
 
 import styles from "./ChangeWarningCard.module.scss";

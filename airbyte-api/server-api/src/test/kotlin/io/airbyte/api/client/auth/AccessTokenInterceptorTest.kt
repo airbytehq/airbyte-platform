@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.client.auth
@@ -120,7 +120,11 @@ internal class AccessTokenInterceptorTest {
     // will retrieve a fresh token.
     mockServer.enqueue(MockResponse().setResponseCode(403))
     doApiRequest()
-    assertEquals("/api", mockServer.takeRequest().path)
+    // The 403-triggering /api request must have been sent with the stale cached token (thirdToken).
+    mockServer.takeRequest().run {
+      assertEquals("/api", path)
+      assertEquals("Bearer $thirdToken", headers["Authorization"])
+    }
 
     val fourthToken = UnsignedJwtHelper.buildUnsignedJwtWithExpClaim(exp, interceptor.clock)
     mockServer.enqueue(MockResponse().setBody("""{"access_token": "$fourthToken"}"""))
@@ -131,6 +135,27 @@ internal class AccessTokenInterceptorTest {
     mockServer.takeRequest().run {
       assertEquals("/api", path)
       assertEquals("Bearer $fourthToken", headers["Authorization"])
+    }
+
+    // If a call to the API returns a 401, the current cached token will be invalidated, and the next call
+    // will retrieve a fresh token.
+    mockServer.enqueue(MockResponse().setResponseCode(401))
+    doApiRequest()
+    // The 401-triggering /api request must have been sent with the stale cached token (fourthToken).
+    mockServer.takeRequest().run {
+      assertEquals("/api", path)
+      assertEquals("Bearer $fourthToken", headers["Authorization"])
+    }
+
+    val fifthToken = UnsignedJwtHelper.buildUnsignedJwtWithExpClaim(exp, interceptor.clock)
+    mockServer.enqueue(MockResponse().setBody("""{"access_token": "$fifthToken"}"""))
+    mockServer.enqueue(MockResponse().setBody("ok"))
+    doApiRequest()
+
+    assertEquals("/token", mockServer.takeRequest().path)
+    mockServer.takeRequest().run {
+      assertEquals("/api", path)
+      assertEquals("Bearer $fifthToken", headers["Authorization"])
     }
   }
 }

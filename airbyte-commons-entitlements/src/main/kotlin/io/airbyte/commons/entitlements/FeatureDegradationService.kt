@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.entitlements
 
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.commons.entitlements.models.RbacRolesEntitlement
 import io.airbyte.config.ActorType
@@ -21,11 +22,13 @@ import io.airbyte.config.Permission.PermissionType.WORKSPACE_RUNNER
 import io.airbyte.config.ScopeType
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.StatusReason
+import io.airbyte.config.helpers.ScheduleHelpers.setBasicHourlySchedule
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.UserInvitationService
 import io.airbyte.domain.models.EntitlementPlan
+import io.airbyte.domain.models.EntitlementPlan.PLUS
 import io.airbyte.domain.models.EntitlementPlan.STANDARD
 import io.airbyte.domain.models.EntitlementPlan.UNIFIED_TRIAL
 import io.airbyte.domain.models.OrganizationId
@@ -51,7 +54,7 @@ internal class FeatureDegradationService(
   ) {
     logger.info { "Checking for feature downgrades. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
 
-    if (!(fromPlan == UNIFIED_TRIAL && toPlan == STANDARD)) {
+    if (!isSupportedFeatureDegradation(fromPlan, toPlan)) {
       logger.info { "Downgrade not supported from plan $fromPlan to $toPlan. Skipping downgrade." }
       return
     }
@@ -70,6 +73,7 @@ internal class FeatureDegradationService(
       val allEntitlementsToDowngrade = currentFeatureIds - newFeatureIds
 
       val connectionsToDowngrade = mutableSetOf<UUID>()
+      var shouldDowngradeSubHourSyncs = false
 
       val (connectorEntitlementsToDowngrade, entitlementsToDowngrade) =
         allEntitlementsToDowngrade.partition { Entitlements.isEnterpriseConnectorEntitlementId(it) }
@@ -89,10 +93,14 @@ internal class FeatureDegradationService(
           RbacRolesEntitlement.featureId -> downgradeRBAC(organizationId)
           MappersEntitlement.featureId ->
             connectionsToDowngrade.addAll(connectionService.listConnectionIdsForOrganizationWithMappers(organizationId.value))
-          FasterSyncFrequencyEntitlement.featureId ->
-            connectionsToDowngrade.addAll(entitlementHelper.findSubHourSyncIds(organizationId))
+          FasterSyncFrequencyEntitlement.featureId -> shouldDowngradeSubHourSyncs = true
+          FifteenMinuteSyncFrequencyEntitlement.featureId -> shouldDowngradeSubHourSyncs = true
           else -> logger.debug { "No downgrade flow defined for $entitlementToDowngrade" }
         }
+      }
+
+      if (shouldDowngradeSubHourSyncs) {
+        connectionsToDowngrade.addAll(downgradeSubHourSyncSchedulesToHourly(organizationId))
       }
 
       logger.info {
@@ -127,6 +135,34 @@ internal class FeatureDegradationService(
       // Don't fail the plan update if we can't check for downgrades
     }
   }
+
+  private fun downgradeSubHourSyncSchedulesToHourly(organizationId: OrganizationId): Set<UUID> {
+    val subHourSyncIds = entitlementHelper.findSubHourSyncIds(organizationId)
+    if (subHourSyncIds.isEmpty()) {
+      return emptySet()
+    }
+
+    logger.info {
+      "Downgrading ${subHourSyncIds.size} sub-hour connection schedules to hourly for organizationId=$organizationId"
+    }
+
+    val failedScheduleDowngrades = mutableSetOf<UUID>()
+    subHourSyncIds.forEach { connectionId ->
+      try {
+        val connection = connectionService.getStandardSync(connectionId)
+        connectionService.writeStandardSync(setBasicHourlySchedule(connection))
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to downgrade sub-hour connection schedule to hourly. organizationId=$organizationId connectionId=$connectionId" }
+        failedScheduleDowngrades.add(connectionId)
+      }
+    }
+    return failedScheduleDowngrades
+  }
+
+  private fun isSupportedFeatureDegradation(
+    fromPlan: EntitlementPlan,
+    toPlan: EntitlementPlan,
+  ): Boolean = toPlan == STANDARD && fromPlan in setOf(UNIFIED_TRIAL, PLUS)
 
   fun downgradeRBAC(
     organizationId: OrganizationId,

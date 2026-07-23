@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.repositories
@@ -33,6 +33,45 @@ interface SecretConfigRepository : PageableRepository<SecretConfig, UUID> {
     excludeCreatedAfter: java.time.OffsetDateTime,
     limit: Int,
   ): List<SecretConfig>
+
+  @Query(
+    """
+    SELECT DISTINCT sc.secret_storage_id FROM secret_config sc 
+    LEFT JOIN secret_reference sr ON sc.id = sr.secret_config_id 
+    WHERE sr.secret_config_id IS NULL
+    AND sc.created_at < :excludeCreatedBefore
+    AND sc.airbyte_managed = true
+  """,
+  )
+  fun findDistinctOrphanedStorageIds(excludeCreatedBefore: java.time.OffsetDateTime): List<UUID>
+
+  @Query(
+    """
+    SELECT sc.* FROM secret_config sc 
+    LEFT JOIN secret_reference sr ON sc.id = sr.secret_config_id 
+    WHERE sr.secret_config_id IS NULL
+    AND sc.created_at < :excludeCreatedBefore
+    AND sc.airbyte_managed = true
+    AND sc.secret_storage_id IN (:storageIds)
+    ORDER BY sc.created_at ASC
+    LIMIT :limit
+  """,
+  )
+  fun findAirbyteManagedConfigsWithoutReferencesByStorageIds(
+    excludeCreatedBefore: java.time.OffsetDateTime,
+    limit: Int,
+    storageIds: List<UUID>,
+  ): List<SecretConfig>
+
+  @Query(
+    """
+    SELECT COUNT(*) FROM secret_config sc
+    LEFT JOIN secret_reference sr ON sc.id = sr.secret_config_id
+    WHERE sr.secret_config_id IS NULL
+    AND sc.airbyte_managed = true
+  """,
+  )
+  fun countOrphanedAirbyteManagedConfigs(): Long
 
   fun deleteByIdIn(ids: List<UUID>)
 }

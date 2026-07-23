@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq
@@ -452,25 +452,31 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         .withStatus(StandardSync.Status.INACTIVE)
     connectionServiceJooqImpl.writeStandardSync(pausedConnection)
 
-    // Connection 5: Active with cancelled latest job (should count as failed)
+    // Connection 5: Active with queued latest job
+    val queuedConnection =
+      createStandardSync(source, destination, streams)
+        .withStatus(StandardSync.Status.ACTIVE)
+    connectionServiceJooqImpl.writeStandardSync(queuedConnection)
+
+    // Connection 6: Active with cancelled latest job (should count as failed)
     val cancelledConnection =
       createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.ACTIVE)
     connectionServiceJooqImpl.writeStandardSync(cancelledConnection)
 
-    // Connection 6: Active with incomplete latest job (should count as failed)
+    // Connection 7: Active with incomplete latest job (should count as failed)
     val incompleteConnection =
       createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.ACTIVE)
     connectionServiceJooqImpl.writeStandardSync(incompleteConnection)
 
-    // Connection 7: Deprecated (should be excluded from counts)
+    // Connection 8: Deprecated (should be excluded from counts)
     val deprecatedConnection =
       createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.DEPRECATED)
     connectionServiceJooqImpl.writeStandardSync(deprecatedConnection)
 
-    // Connection 8: Active but no sync jobs (should count as not synced)
+    // Connection 9: Active but no sync jobs (should count as not synced)
     val notSyncedConnection =
       createStandardSync(source, destination, streams)
         .withStatus(StandardSync.Status.ACTIVE)
@@ -527,10 +533,24 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         .set(Tables.JOBS.CONFIG, DSL.field("'{}'::jsonb", JSONB::class.java))
         .execute()
 
-      // Job for cancelled connection - cancelled (should count as failed)
+      // Job for queued connection - queued
       ctx
         .insertInto(Tables.JOBS)
         .set(Tables.JOBS.ID, 4L)
+        .set(
+          Tables.JOBS.CONFIG_TYPE,
+          JobConfigType.sync,
+        ).set(Tables.JOBS.SCOPE, queuedConnection.connectionId.toString())
+        .set(Tables.JOBS.STATUS, JobStatus.queued)
+        .set(Tables.JOBS.CREATED_AT, now.minusHours(4))
+        .set(Tables.JOBS.UPDATED_AT, now.minusHours(4))
+        .set(Tables.JOBS.CONFIG, DSL.field("'{}'::jsonb", JSONB::class.java))
+        .execute()
+
+      // Job for cancelled connection - cancelled (should count as failed)
+      ctx
+        .insertInto(Tables.JOBS)
+        .set(Tables.JOBS.ID, 5L)
         .set(
           Tables.JOBS.CONFIG_TYPE,
           JobConfigType.sync,
@@ -544,7 +564,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       // Job for incomplete connection - incomplete (should count as failed)
       ctx
         .insertInto(Tables.JOBS)
-        .set(Tables.JOBS.ID, 5L)
+        .set(Tables.JOBS.ID, 6L)
         .set(
           Tables.JOBS.CONFIG_TYPE,
           JobConfigType.sync,
@@ -558,7 +578,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       // Job for deprecated connection - should be excluded
       ctx
         .insertInto(Tables.JOBS)
-        .set(Tables.JOBS.ID, 6L)
+        .set(Tables.JOBS.ID, 7L)
         .set(
           Tables.JOBS.CONFIG_TYPE,
           JobConfigType.sync,
@@ -572,7 +592,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       // Add older job for healthy connection to ensure we get the latest
       ctx
         .insertInto(Tables.JOBS)
-        .set(Tables.JOBS.ID, 7L)
+        .set(Tables.JOBS.ID, 8L)
         .set(
           Tables.JOBS.CONFIG_TYPE,
           JobConfigType.sync,
@@ -586,7 +606,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       // Job for successful sync but paused connection
       ctx
         .insertInto(Tables.JOBS)
-        .set(Tables.JOBS.ID, 8L)
+        .set(Tables.JOBS.ID, 9L)
         .set(
           Tables.JOBS.CONFIG_TYPE,
           JobConfigType.sync,
@@ -602,6 +622,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val result = connectionServiceJooqImpl.getConnectionStatusCounts(workspaceId)
 
     assertEquals(1, result.running)
+    assertEquals(1, result.queued)
     assertEquals(1, result.healthy)
     // failedConnection + cancelledConnection + incompleteConnection
     assertEquals(3, result.failed)
@@ -637,6 +658,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val result = connectionServiceJooqImpl.getConnectionStatusCounts(workspaceId)
 
     assertEquals(0, result.running)
+    assertEquals(0, result.queued)
     assertEquals(0, result.healthy)
     assertEquals(0, result.failed)
     assertEquals(1, result.paused)
@@ -651,6 +673,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val result = connectionServiceJooqImpl.getConnectionStatusCounts(nonExistentWorkspaceId)
 
     assertEquals(0, result.running)
+    assertEquals(0, result.queued)
     assertEquals(0, result.healthy)
     assertEquals(0, result.failed)
     assertEquals(0, result.paused)
@@ -1123,6 +1146,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
           createStandardSync(sourceConnection, destinationConnection, mutableListOf())
             .withName("conn-" + ('a'.code + connectionCounter).toChar() + "-test-" + connectionCounter)
             .withStatus(if (connectionCounter % 3 == 0) StandardSync.Status.INACTIVE else StandardSync.Status.ACTIVE)
+            .withOnDemandEnabled(connectionCounter % 2 == 0)
 
         // Add tags and jobs to some connections
         if (connectionCounter % 2 == 0 && !tags.isEmpty()) {
@@ -1144,6 +1168,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         createStandardSync(source, destination, mutableListOf())
           .withName("conn-no-job-$i")
           .withStatus(StandardSync.Status.ACTIVE)
+          .withOnDemandEnabled(i % 2 == 0)
       connectionServiceJooqImpl.writeStandardSync(syncWithoutJobs)
       connectionIds.add(syncWithoutJobs.connectionId)
     }
@@ -1601,6 +1626,14 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
             " for connection: " + result.connection().name,
         )
       }
+
+      if (filters.onDemandEnabled != null) {
+        assertEquals(
+          filters.onDemandEnabled,
+          result.connection().onDemandEnabled ?: false,
+          testDescription + " - Result should match on-demand filter for connection: " + result.connection().name,
+        )
+      }
     }
   }
 
@@ -1609,7 +1642,7 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       JobStatus.succeeded -> ConnectionJobStatus.HEALTHY
       JobStatus.failed, JobStatus.cancelled, JobStatus.incomplete -> ConnectionJobStatus.FAILED
       JobStatus.running -> ConnectionJobStatus.RUNNING
-      JobStatus.pending -> ConnectionJobStatus.RUNNING
+      JobStatus.pending, JobStatus.queued -> ConnectionJobStatus.RUNNING
     }
 
   private fun getSourceDefinitionId(sourceId: UUID?): UUID? {
@@ -1811,18 +1844,18 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
       listOf<Arguments?>(
         Arguments.of(mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.HEALTHY), mutableListOf<String?>("status")),
         Arguments.of(mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.FAILED), mutableListOf<String?>("status", "failed")),
-        Arguments.of(mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.RUNNING), mutableListOf<String?>("status", "running")),
+        Arguments.of(mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.RUNNING), mutableListOf<String?>("status", "running", "queued")),
         Arguments.of(
           mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.HEALTHY, ConnectionJobStatus.FAILED),
           mutableListOf<String?>("status"),
         ),
         Arguments.of(
           mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.FAILED, ConnectionJobStatus.RUNNING),
-          mutableListOf<String?>("status", "failed", "running"),
+          mutableListOf<String?>("status", "failed", "running", "queued"),
         ),
         Arguments.of(
           mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.HEALTHY, ConnectionJobStatus.RUNNING),
-          mutableListOf<String?>("status", "running"),
+          mutableListOf<String?>("status", "running", "queued"),
         ),
         Arguments.of(
           mutableListOf<ConnectionJobStatus?>(ConnectionJobStatus.HEALTHY, ConnectionJobStatus.FAILED, ConnectionJobStatus.RUNNING),
@@ -1966,6 +1999,23 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
           ),
           mutableListOf<String?>("workspace_id", "tag_id"),
           "Tag filter",
+        ),
+        Arguments.of(
+          StandardSyncQuery(workspaceId, null, null, false),
+          Cursor(
+            SortKey.CONNECTION_NAME,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true,
+            Filters(onDemandEnabled = true),
+          ),
+          mutableListOf<String?>("workspace_id", "on_demand_enabled"),
+          "On-demand filter",
         ), // Combined filters
         Arguments.of(
           StandardSyncQuery(workspaceId, mutableListOf(sourceId), mutableListOf(destinationId), false),
@@ -2187,6 +2237,18 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
           true,
           Filters(null, null, null, null, listOf(ActorStatus.INACTIVE), null),
           "State filter - INACTIVE",
+        ),
+        Arguments.of(
+          SortKey.CONNECTION_NAME,
+          true,
+          Filters(onDemandEnabled = true),
+          "On-demand filter - enabled",
+        ),
+        Arguments.of(
+          SortKey.CONNECTION_NAME,
+          true,
+          Filters(onDemandEnabled = false),
+          "On-demand filter - disabled",
         ), // Test combined filters
         Arguments.of(
           SortKey.CONNECTION_NAME,
@@ -2392,6 +2454,49 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         io.airbyte.config.ActorType.SOURCE,
       )
     assertEquals(listOf(sync2.connectionId), otherOrgLookup)
+  }
+
+  @Test
+  fun testListConnectionIdsForWorkspaceIncludesDestinationSideConnections() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
+
+    val destinationInWorkspace = jooqTestDbSetupHelper.destination!!
+
+    val org2 = jooqTestDbSetupHelper.createOrganization(UUID.randomUUID(), "org2", "org2@airbyte.io")
+    val dataplaneGroup2 = jooqTestDbSetupHelper.createDataplaneGroup(UUID.randomUUID(), org2.organizationId)
+    val workspace2 =
+      jooqTestDbSetupHelper.createWorkspace(
+        UUID.randomUUID(),
+        org2.organizationId,
+        dataplaneGroup2.id,
+        "workspace2",
+        "workspace2-slug",
+      )
+    val sourceInOtherWorkspace =
+      jooqTestDbSetupHelper.createActorForActorDefinition(
+        jooqTestDbSetupHelper.sourceDefinition!!,
+        workspaceId = workspace2.workspaceId,
+      )
+    val sync =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("cross-workspace destination connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(sourceInOtherWorkspace.sourceId)
+        .withDestinationId(destinationInWorkspace.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+    connectionServiceJooqImpl.writeStandardSync(sync)
+
+    assertEquals(
+      listOf(sync.connectionId),
+      connectionServiceJooqImpl.listConnectionIdsForWorkspace(destinationInWorkspace.workspaceId),
+    )
   }
 
   @Test
@@ -2728,108 +2833,5 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val result2 = connectionServiceJooqImpl.getStandardSync(standardSyncWithFastCronSchedule.connectionId)
     assertEquals(result2.status, StandardSync.Status.LOCKED)
     assertEquals(result2.statusReason, StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
-  }
-
-  @Test
-  fun testCountConnectionsForOrganization() {
-    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
-    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
-
-    val organization = jooqTestDbSetupHelper.organization
-    val destination = jooqTestDbSetupHelper.destination
-    val source = jooqTestDbSetupHelper.source
-
-    // Create multiple connections for the organization
-    val connection1 =
-      StandardSync()
-        .withConnectionId(UUID.randomUUID())
-        .withName("test connection 1")
-        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
-        .withSourceId(source!!.sourceId)
-        .withDestinationId(destination!!.destinationId)
-        .withOperationIds(mutableListOf())
-        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
-        .withStatus(StandardSync.Status.ACTIVE)
-        .withScheduleType(StandardSync.ScheduleType.MANUAL)
-        .withManual(true)
-        .withBreakingChange(false)
-
-    connectionServiceJooqImpl.writeStandardSync(connection1)
-
-    val connection2 =
-      StandardSync()
-        .withConnectionId(UUID.randomUUID())
-        .withName("test connection 2")
-        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
-        .withSourceId(source.sourceId)
-        .withDestinationId(destination.destinationId)
-        .withOperationIds(mutableListOf())
-        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
-        .withStatus(StandardSync.Status.ACTIVE)
-        .withScheduleType(StandardSync.ScheduleType.MANUAL)
-        .withManual(true)
-        .withBreakingChange(false)
-
-    connectionServiceJooqImpl.writeStandardSync(connection2)
-
-    val connection3 =
-      StandardSync()
-        .withConnectionId(UUID.randomUUID())
-        .withName("test connection 3")
-        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
-        .withSourceId(source.sourceId)
-        .withDestinationId(destination.destinationId)
-        .withOperationIds(mutableListOf())
-        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
-        .withStatus(StandardSync.Status.INACTIVE)
-        .withScheduleType(StandardSync.ScheduleType.MANUAL)
-        .withManual(true)
-        .withBreakingChange(false)
-
-    connectionServiceJooqImpl.writeStandardSync(connection3)
-
-    // Create a deprecated connection (should not be counted)
-    val deprecatedConnection =
-      StandardSync()
-        .withConnectionId(UUID.randomUUID())
-        .withName("deprecated connection")
-        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
-        .withSourceId(source.sourceId)
-        .withDestinationId(destination.destinationId)
-        .withOperationIds(mutableListOf())
-        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
-        .withStatus(StandardSync.Status.DEPRECATED)
-        .withScheduleType(StandardSync.ScheduleType.MANUAL)
-        .withManual(true)
-        .withBreakingChange(false)
-
-    connectionServiceJooqImpl.writeStandardSync(deprecatedConnection)
-
-    // Count connections for the organization
-    val count = connectionServiceJooqImpl.countConnectionsForOrganization(organization!!.organizationId)
-
-    // Should count 3 non-deprecated connections
-    assertEquals(3, count)
-  }
-
-  @Test
-  fun testCountConnectionsForOrganizationEmpty() {
-    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
-    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
-
-    val organization = jooqTestDbSetupHelper.organization
-
-    // Count connections for organization with no connections
-    val count = connectionServiceJooqImpl.countConnectionsForOrganization(organization!!.organizationId)
-
-    assertEquals(0, count)
-  }
-
-  @Test
-  fun testCountConnectionsForNonExistentOrganization() {
-    // Count connections for a non-existent organization
-    val count = connectionServiceJooqImpl.countConnectionsForOrganization(UUID.randomUUID())
-
-    assertEquals(0, count)
   }
 }

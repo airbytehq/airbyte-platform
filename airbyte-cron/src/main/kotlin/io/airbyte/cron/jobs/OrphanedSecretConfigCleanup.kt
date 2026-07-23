@@ -1,19 +1,18 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.cron.jobs
 
-import datadog.trace.api.Trace
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.persistence.SecretPersistence
-import io.airbyte.cron.SCHEDULED_TRACE_OPERATION_NAME
 import io.airbyte.data.services.SecretConfigService
 import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.featureflag.CleanupDanglingSecretConfigs
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.OrphanedSecretCleanupLimit
 import io.airbyte.featureflag.SecretStorage
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
@@ -21,6 +20,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.scheduling.annotation.Scheduled
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -38,7 +38,7 @@ class OrphanedSecretConfigCleanup(
     log.info { "Creating orphaned secret config cleanup job" }
   }
 
-  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
+  @WithSpan
   @Scheduled(fixedRate = "30m", initialDelay = "5m")
   fun cleanupOrphanedSecrets() {
     log.info { "Starting orphaned secret config cleanup" }
@@ -48,17 +48,60 @@ class OrphanedSecretConfigCleanup(
       attributes = arrayOf(MetricAttribute(MetricTags.CRON_TYPE, "orphaned_secret_cleanup")),
     )
 
+    // Emit total orphan count every run for Datadog visibility
+    val totalOrphaned = secretConfigService.countOrphanedAirbyteManagedConfigs()
+    log.info { "Total orphaned secret configs across all storages: $totalOrphaned" }
+    metricClient.count(
+      metric = OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_TOTAL,
+      value = totalOrphaned,
+    )
+
     // Find orphaned configs that were created more than 1 hour ago
     // This gives a grace period for recently created configs that might not have references yet
     val oneHourAgo = OffsetDateTime.now().minusHours(1)
-    val orphanedConfigs = secretConfigService.findAirbyteManagedConfigsWithoutReferences(oneHourAgo, 10000)
 
-    if (orphanedConfigs.isEmpty()) {
+    // First, find distinct storage IDs that have orphaned configs
+    val orphanedStorageIds = secretConfigService.findDistinctOrphanedStorageIds(excludeCreatedBefore = oneHourAgo)
+    if (orphanedStorageIds.isEmpty()) {
       log.info { "No orphaned secret configs found" }
       return
     }
 
+    // Filter to only storage IDs where the feature flag is enabled
+    val enabledStorageIds =
+      orphanedStorageIds.filter { storageId ->
+        featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(storageId.toString()))
+      }
+
+    if (enabledStorageIds.isEmpty()) {
+      log.info { "Found orphaned configs in ${orphanedStorageIds.size} storage(s) but cleanup is not enabled for any of them" }
+      return
+    }
+
+    log.info { "Found orphaned configs in ${orphanedStorageIds.size} storage(s), cleanup enabled for ${enabledStorageIds.size}" }
+
+    val cleanupLimit = featureFlagClient.intVariation(OrphanedSecretCleanupLimit, SecretStorage(enabledStorageIds.first().toString()))
+    log.info { "Orphaned secret cleanup limit: $cleanupLimit" }
+
+    // Now fetch orphaned configs only for enabled storage IDs
+    val orphanedConfigs =
+      secretConfigService.findAirbyteManagedConfigsWithoutReferencesByStorageIds(
+        excludeCreatedBefore = oneHourAgo,
+        limit = cleanupLimit,
+        storageIds = enabledStorageIds,
+      )
+
+    if (orphanedConfigs.isEmpty()) {
+      log.info { "No orphaned secret configs found for enabled storages" }
+      return
+    }
+
     log.info { "Found ${orphanedConfigs.size} orphaned secret configs to cleanup" }
+
+    metricClient.count(
+      metric = OssMetricsRegistry.ORPHANED_SECRET_CONFIGS_FOUND,
+      value = orphanedConfigs.size.toLong(),
+    )
 
     val deletedIds = mutableListOf<SecretConfigId>()
     val secretPersistenceMap = mutableMapOf<UUID, SecretPersistence>()
@@ -66,10 +109,6 @@ class OrphanedSecretConfigCleanup(
     // Delete secrets from secret storage
     for (secretConfig in orphanedConfigs) {
       try {
-        if (!featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(secretConfig.secretStorageId.toString()))) {
-          continue
-        }
-
         val secretPersistence =
           secretPersistenceMap.getOrPut(secretConfig.secretStorageId) {
             log.info { "Fetching persistence for storage ID: ${secretConfig.secretStorageId}" }
@@ -89,7 +128,10 @@ class OrphanedSecretConfigCleanup(
         log.info {
           "Deleting: ${coordinate.fullCoordinate} from storage ID ${secretConfig.secretStorageId} (persistence: ${secretPersistence::class.simpleName})"
         }
-        secretPersistence.delete(coordinate)
+        // In AWS this will deprecate the secret and mark it for deletion after the recovery window time has passed. For
+        // other secret managers where the recovery time is not supported this call simply executes the delete call
+        // to remove the secret immediately.
+        secretPersistence.deleteWithRecoveryWindow(coordinate, SECRET_DELETION_RECOVERY_WINDOW_IN_DAYS)
         deletedIds.add(secretConfig.id)
 
         metricClient.count(
@@ -98,6 +140,7 @@ class OrphanedSecretConfigCleanup(
             arrayOf(
               MetricAttribute(MetricTags.SUCCESS, "true"),
               MetricAttribute(MetricTags.SECRET_STORAGE_ID, secretConfig.secretStorageId.toString()),
+              MetricAttribute(MetricTags.SECRET_DELETION_TRIGGER, MetricTags.SECRET_DELETION_TRIGGER_CRON),
             ),
         )
       } catch (e: Exception) {
@@ -108,13 +151,18 @@ class OrphanedSecretConfigCleanup(
             arrayOf(
               MetricAttribute(MetricTags.SUCCESS, "false"),
               MetricAttribute(MetricTags.SECRET_STORAGE_ID, secretConfig.secretStorageId.toString()),
+              MetricAttribute(MetricTags.SECRET_DELETION_TRIGGER, MetricTags.SECRET_DELETION_TRIGGER_CRON),
             ),
         )
       }
     }
 
-    // Delete the orphaned secret configs from the database
     secretConfigService.deleteByIds(deletedIds)
+
     log.info { "Cleaned up ${deletedIds.size} orphaned secret configs" }
+  }
+
+  companion object {
+    private const val SECRET_DELETION_RECOVERY_WINDOW_IN_DAYS = 7L
   }
 }

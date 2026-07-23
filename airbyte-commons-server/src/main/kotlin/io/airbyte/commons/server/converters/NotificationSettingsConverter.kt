@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.converters
@@ -48,6 +48,9 @@ object NotificationSettingsConverter {
     if (notification.sendOnBreakingChangeSyncsDisabled != null) {
       configNotificationSettings.sendOnBreakingChangeSyncsDisabled =
         toConfig(notification.sendOnBreakingChangeSyncsDisabled)
+    }
+    if (notification.sendOnConnectionSyncQueued != null) {
+      configNotificationSettings.sendOnConnectionSyncQueued = toConfig(notification.sendOnConnectionSyncQueued)
     }
 
     return configNotificationSettings
@@ -121,6 +124,9 @@ object NotificationSettingsConverter {
       apiNotificationSetings.sendOnBreakingChangeSyncsDisabled =
         toApi(notificationSettings.sendOnBreakingChangeSyncsDisabled)
     }
+    if (notificationSettings.sendOnConnectionSyncQueued != null) {
+      apiNotificationSetings.sendOnConnectionSyncQueued = toApi(notificationSettings.sendOnConnectionSyncQueued)
+    }
     return apiNotificationSetings
   }
 
@@ -157,7 +163,7 @@ object NotificationSettingsConverter {
   fun toClientApi(notificationSettings: io.airbyte.config.NotificationSettings?): io.airbyte.api.client.model.generated.NotificationSettings {
     if (notificationSettings == null) {
       return io.airbyte.api.client.model.generated
-        .NotificationSettings(null, null, null, null, null, null, null, null)
+        .NotificationSettings(null, null, null, null, null, null, null, null, null)
     }
 
     val apiClientNotificationSettings =
@@ -170,6 +176,7 @@ object NotificationSettingsConverter {
         toClientApi(notificationSettings.sendOnConnectionUpdateActionRequired),
         toClientApi(notificationSettings.sendOnBreakingChangeWarning),
         toClientApi(notificationSettings.sendOnBreakingChangeSyncsDisabled),
+        toClientApi(notificationSettings.sendOnConnectionSyncQueued),
       )
 
     return apiClientNotificationSettings

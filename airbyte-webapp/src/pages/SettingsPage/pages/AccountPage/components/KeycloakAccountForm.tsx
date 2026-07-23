@@ -2,7 +2,7 @@ import React from "react";
 import { useIntl } from "react-intl";
 import { z } from "zod";
 
-import { Form, FormControl } from "components/forms";
+import { Form, FormControl } from "components/ui/forms";
 
 import { useCurrentUser } from "core/services/auth";
 

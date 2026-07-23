@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher
@@ -257,6 +257,7 @@ class ArchitectureDeciderTest {
     every { input.isReset } returns isReset
     every { input.syncResourceRequirements } returns syncRes
     every { input.connectionContext } returns ConnectionContext()
+    every { input.destinationLauncherConfig } returns null
     return input
   }
 

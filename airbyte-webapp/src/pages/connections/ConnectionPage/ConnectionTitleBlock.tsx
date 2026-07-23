@@ -1,10 +1,6 @@
 import { FormattedMessage } from "react-intl";
 import { useParams } from "react-router-dom";
 
-import { ConnectionHeaderControls } from "components/connection/ConnectionHeaderControls";
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { ConnectionStatusIndicator } from "components/connection/ConnectionStatusIndicator";
-import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
@@ -13,6 +9,10 @@ import { Message } from "components/ui/Message";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
+import { ConnectionHeaderControls } from "area/connection/components/ConnectionHeaderControls";
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
+import { ConnectionStatusIndicator } from "area/connection/components/ConnectionStatusIndicator";
+import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import {
   useCurrentConnection,
   useDestinationDefinition,

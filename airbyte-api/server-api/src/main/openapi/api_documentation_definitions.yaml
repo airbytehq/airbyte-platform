@@ -1062,6 +1062,7 @@ components:
     JobStatusEnum:
       enum:
         - "pending"
+        - "queued"
         - "running"
         - "incomplete"
         - "failed"

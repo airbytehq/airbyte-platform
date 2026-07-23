@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.keycloak
@@ -8,6 +8,10 @@ import com.auth0.jwt.algorithms.Algorithm
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigStatus
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
+import io.airbyte.featureflag.ConfigurableSsoDefaultRole
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.mockk.clearMocks
@@ -21,6 +25,8 @@ import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -31,16 +37,28 @@ import org.keycloak.admin.client.resource.IdentityProviderResource
 import org.keycloak.admin.client.resource.IdentityProvidersResource
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.admin.client.resource.RealmsResource
+import org.keycloak.representations.idm.ClientRepresentation
 import org.keycloak.representations.idm.IdentityProviderRepresentation
 import java.util.UUID
 
 class AirbyteKeycloakClientTest {
   private val airbyteUrl: String = "https://cloud.airbyte.com"
-  private val airbyteConfig: AirbyteConfig = AirbyteConfig(airbyteUrl = airbyteUrl)
+  private val airbyteAgentsUrl: String = "https://app.airbyte.ai"
+  private val airbyteAgentsValidRedirectUris = listOf("$airbyteAgentsUrl/*", "https://staging-app.airbyte.ai/*")
+  private val airbyteAgentsWebOrigins = listOf(airbyteAgentsUrl, "https://staging-app.airbyte.ai")
+  private val airbyteConfig: AirbyteConfig =
+    AirbyteConfig(
+      airbyteUrl = airbyteUrl,
+      airbyteAgentsUrl = airbyteAgentsUrl,
+      airbyteAgentsValidRedirectUris = airbyteAgentsValidRedirectUris,
+      airbyteAgentsWebOrigins = airbyteAgentsWebOrigins,
+    )
   private val keycloakConfiguration: AirbyteKeycloakConfig = mockk<AirbyteKeycloakConfig>(relaxed = true)
   private lateinit var airbyteKeycloakAdminClientProvider: AirbyteKeycloakAdminClientProvider
   private lateinit var airbyteKeycloakClient: AirbyteKeycloakClient
   private lateinit var mockHttpClient: OkHttpClient
+  private lateinit var mockMetricClient: MetricClient
+  private lateinit var mockFeatureFlagClient: FeatureFlagClient
 
   private var keycloakClientMock = mockk<Keycloak>(relaxed = true)
 
@@ -48,13 +66,25 @@ class AirbyteKeycloakClientTest {
   fun setup() {
     airbyteKeycloakAdminClientProvider = mockk<AirbyteKeycloakAdminClientProvider>(relaxed = true)
     mockHttpClient = mockk<OkHttpClient>()
+    mockMetricClient = mockk<MetricClient>(relaxed = true)
+    mockFeatureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
+    // ConfigurableSsoDefaultRole defaults to ON in tests so the existing Sonar client assertions run.
+    every { mockFeatureFlagClient.boolVariation(ConfigurableSsoDefaultRole, any()) } returns true
     every { airbyteKeycloakAdminClientProvider.createKeycloakAdminClient() } returns keycloakClientMock
-    airbyteKeycloakClient = AirbyteKeycloakClient(airbyteKeycloakAdminClientProvider, airbyteConfig, keycloakConfiguration, mockHttpClient)
+    airbyteKeycloakClient =
+      AirbyteKeycloakClient(
+        airbyteKeycloakAdminClientProvider,
+        airbyteConfig,
+        keycloakConfiguration,
+        mockHttpClient,
+        mockMetricClient,
+        mockFeatureFlagClient,
+      )
   }
 
   @AfterEach
   fun tearDown() {
-    clearMocks(keycloakClientMock)
+    clearMocks(keycloakClientMock, mockMetricClient)
   }
 
   @Test
@@ -81,7 +111,8 @@ class AirbyteKeycloakClientTest {
 
     val clientsMock = mockk<ClientsResource>(relaxed = true)
     every { realmMock.clients() } returns clientsMock
-    every { clientsMock.create(any()) } returns mockResponse
+    val capturedClientRepresentations = mutableListOf<ClientRepresentation>()
+    every { clientsMock.create(capture(capturedClientRepresentations)) } returns mockResponse
 
     val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
     every { realmMock.identityProviders() } returns idpMock
@@ -95,12 +126,201 @@ class AirbyteKeycloakClientTest {
 
     airbyteKeycloakClient.createOidcSsoConfig(config)
 
-    verify(exactly = 4) { keycloakClientMock.realms() }
+    verify(exactly = 5) { keycloakClientMock.realms() }
     verify(exactly = 1) { realmsMock.create(any()) }
     verify(exactly = 2) { realmMock.identityProviders() }
     verify(exactly = 1) { idpMock.create(any()) }
-    verify(exactly = 1) { realmMock.clients() }
+    verify(exactly = 2) { realmMock.clients() }
+    verify(exactly = 2) { clientsMock.create(any()) }
+
+    val createdClients = capturedClientRepresentations.associateBy { it.clientId }
+    assertWebappClient(
+      createdClients.getValue("airbyte-webapp"),
+      "Airbyte Webapp",
+      airbyteUrl,
+      listOf("$airbyteUrl/*"),
+      listOf(airbyteUrl),
+    )
+    assertWebappClient(
+      createdClients.getValue("sonar-webapp"),
+      "Sonar Webapp",
+      airbyteAgentsUrl,
+      airbyteAgentsValidRedirectUris,
+      airbyteAgentsWebOrigins,
+    )
+  }
+
+  @Test
+  fun `createOidcSsoConfig does not create the sonar webapp client when ConfigurableSsoDefaultRole is off`() {
+    every { mockFeatureFlagClient.boolVariation(ConfigurableSsoDefaultRole, any()) } returns false
+
+    val config =
+      SsoConfig(
+        organizationId = UUID.randomUUID(),
+        emailDomain = "testdomain",
+        companyIdentifier = "airbyte",
+        clientId = "client-id",
+        clientSecret = "client-secret",
+        discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+        status = SsoConfigStatus.ACTIVE,
+      )
+
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(any()) } returns realmMock
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    val capturedClientRepresentations = mutableListOf<ClientRepresentation>()
+    every { clientsMock.create(capture(capturedClientRepresentations)) } returns mockResponse
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { realmMock.identityProviders() } returns idpMock
+    every { idpMock.create(any()) } returns mockResponse
+    every { idpMock.importFrom(any()) } returns
+      mapOf(
+        "authorizationUrl" to "https://auth.airbyte.com/authorize",
+        "tokenUrl" to "https://auth.airbyte.com/token",
+      )
+
+    airbyteKeycloakClient.createOidcSsoConfig(config)
+
+    // Only the airbyte-webapp client should be created while the flag is off.
     verify(exactly = 1) { clientsMock.create(any()) }
+    val createdClients = capturedClientRepresentations.associateBy { it.clientId }
+    assertTrue(createdClients.containsKey("airbyte-webapp"))
+    assertFalse(createdClients.containsKey("sonar-webapp"))
+  }
+
+  @Test
+  fun `createOidcSsoConfig trims trailing slash from sonar webapp URL`() {
+    val config =
+      SsoConfig(
+        organizationId = UUID.randomUUID(),
+        emailDomain = "testdomain",
+        companyIdentifier = "airbyte",
+        clientId = "client-id",
+        clientSecret = "client-secret",
+        discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+        status = SsoConfigStatus.ACTIVE,
+      )
+    val airbyteConfigWithTrailingSlash =
+      AirbyteConfig(
+        airbyteUrl = airbyteUrl,
+        airbyteAgentsUrl = "$airbyteAgentsUrl/",
+        airbyteAgentsValidRedirectUris = airbyteAgentsValidRedirectUris,
+        airbyteAgentsWebOrigins = airbyteAgentsWebOrigins,
+      )
+    val airbyteKeycloakClientWithTrailingSlash =
+      AirbyteKeycloakClient(
+        airbyteKeycloakAdminClientProvider,
+        airbyteConfigWithTrailingSlash,
+        keycloakConfiguration,
+        mockHttpClient,
+        mockMetricClient,
+        mockFeatureFlagClient,
+      )
+
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(any()) } returns realmMock
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    val capturedClientRepresentations = mutableListOf<ClientRepresentation>()
+    every { clientsMock.create(capture(capturedClientRepresentations)) } returns mockResponse
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { realmMock.identityProviders() } returns idpMock
+    every { idpMock.create(any()) } returns mockResponse
+    every { idpMock.importFrom(any()) } returns
+      mapOf(
+        "authorizationUrl" to "https://auth.airbyte.com/authorize",
+        "tokenUrl" to "https://auth.airbyte.com/token",
+      )
+
+    airbyteKeycloakClientWithTrailingSlash.createOidcSsoConfig(config)
+
+    val createdClients = capturedClientRepresentations.associateBy { it.clientId }
+    assertWebappClient(
+      createdClients.getValue("sonar-webapp"),
+      "Sonar Webapp",
+      airbyteAgentsUrl,
+      airbyteAgentsValidRedirectUris,
+      airbyteAgentsWebOrigins,
+    )
+  }
+
+  @Test
+  fun `createOidcSsoConfig falls back to sonar base URL when redirect URIs and web origins are not configured`() {
+    val config =
+      SsoConfig(
+        organizationId = UUID.randomUUID(),
+        emailDomain = "testdomain",
+        companyIdentifier = "airbyte",
+        clientId = "client-id",
+        clientSecret = "client-secret",
+        discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+        status = SsoConfigStatus.ACTIVE,
+      )
+    val airbyteConfigWithoutSonarLists =
+      AirbyteConfig(
+        airbyteUrl = airbyteUrl,
+        airbyteAgentsUrl = airbyteAgentsUrl,
+      )
+    val airbyteKeycloakClientWithoutSonarLists =
+      AirbyteKeycloakClient(
+        airbyteKeycloakAdminClientProvider,
+        airbyteConfigWithoutSonarLists,
+        keycloakConfiguration,
+        mockHttpClient,
+        mockMetricClient,
+        mockFeatureFlagClient,
+      )
+
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(any()) } returns realmMock
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    val capturedClientRepresentations = mutableListOf<ClientRepresentation>()
+    every { clientsMock.create(capture(capturedClientRepresentations)) } returns mockResponse
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { realmMock.identityProviders() } returns idpMock
+    every { idpMock.create(any()) } returns mockResponse
+    every { idpMock.importFrom(any()) } returns
+      mapOf(
+        "authorizationUrl" to "https://auth.airbyte.com/authorize",
+        "tokenUrl" to "https://auth.airbyte.com/token",
+      )
+
+    airbyteKeycloakClientWithoutSonarLists.createOidcSsoConfig(config)
+
+    val createdClients = capturedClientRepresentations.associateBy { it.clientId }
+    assertWebappClient(
+      createdClients.getValue("sonar-webapp"),
+      "Sonar Webapp",
+      airbyteAgentsUrl,
+      listOf("$airbyteAgentsUrl/*"),
+      listOf(airbyteAgentsUrl),
+    )
   }
 
   @Test
@@ -282,6 +502,21 @@ class AirbyteKeycloakClientTest {
   }
 
   @Test
+  fun `validateToken throws InvalidTokenException for token with issuer URL but no realm`() {
+    val token =
+      com.auth0.jwt.JWT
+        .create()
+        .withIssuer("https://cloud.airbyte.com")
+        .sign(Algorithm.none())
+
+    assertThrows<InvalidTokenException> {
+      airbyteKeycloakClient.validateToken(token)
+    }
+
+    verify(exactly = 1) { mockMetricClient.count(OssMetricsRegistry.KEYCLOAK_TOKEN_INVALID_REALM, 1) }
+  }
+
+  @Test
   fun `validateToken throws TokenExpiredException for 401 response from userinfo endpoint`() {
     val validToken = VALID_ACCESS_TOKEN
     val userInfoEndpoint = "http://localhost/realms/master/protocol/openid-connect/userinfo"
@@ -305,6 +540,28 @@ class AirbyteKeycloakClientTest {
     assertThrows<TokenExpiredException> {
       airbyteKeycloakClient.validateToken(validToken)
     }
+  }
+
+  private fun assertWebappClient(
+    client: ClientRepresentation,
+    name: String,
+    baseUrl: String,
+    redirectUris: List<String>,
+    webOrigins: List<String>,
+  ) {
+    assertEquals(name, client.name)
+    assertEquals("openid-connect", client.protocol)
+    assertEquals(baseUrl, client.baseUrl)
+    assertEquals(redirectUris, client.redirectUris)
+    assertEquals(webOrigins, client.webOrigins)
+    assertTrue(client.isEnabled)
+    assertTrue(client.isPublicClient)
+    assertTrue(client.isStandardFlowEnabled)
+    assertFalse(client.isDirectAccessGrantsEnabled)
+    assertFalse(client.isServiceAccountsEnabled)
+    assertFalse(client.authorizationServicesEnabled)
+    assertFalse(client.isFrontchannelLogout)
+    assertFalse(client.isImplicitFlowEnabled)
   }
 
   companion object {

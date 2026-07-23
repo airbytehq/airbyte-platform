@@ -39,7 +39,7 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut.light)
-  implementation(libs.bundles.micronaut.kotlin)  // Explicitly needed for getBean extension (was leaked through api() before)
+  implementation(libs.bundles.micronaut.kotlin) // Explicitly needed for getBean extension (was leaked through api() before)
   implementation(libs.google.cloud.storage)
   implementation(libs.java.jwt)
   implementation(libs.kotlin.logging)
@@ -88,7 +88,7 @@ dependencies {
 airbyte {
   application {
     mainClass.set("io.airbyte.connectorSidecar.ApplicationKt")
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
+
     localEnvVars.putAll(
       mapOf(
         "AIRBYTE_VERSION" to "dev",

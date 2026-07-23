@@ -49,11 +49,6 @@ spec:
           image: {{ include "imageUrl" (list .Values.keycloakSetup.image $) }}
           imagePullPolicy: "{{ .Values.keycloakSetup.image.pullPolicy }}"
           env:
-            {{- if .Values.keycloakSetup.debug.enabled }}
-            - name: JAVA_TOOL_OPTIONS
-              value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.keycloakSetup.debug.remoteDebugPort }},server=y,suspend=y"
-            {{- end}}
-
             {{- include "airbyte.common.envs" . | nindent 12 }}
             {{- include "airbyte.database.envs" . | nindent 12 }}
             {{- include "airbyte.keycloak.envs" . | nindent 12 }}
@@ -93,7 +88,7 @@ spec:
           {{- if .Values.keycloakSetup.debug.enabled }}
           ports:
           - name: debug
-            containerPort: {{ .Values.keycloakSetup.debug.remoteDebugPort }}
+            containerPort: 5005
             protocol: TCP
           {{- end}}
 

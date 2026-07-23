@@ -25,6 +25,7 @@ export const Badge: React.FC<React.PropsWithChildren<BadgeProps>> = ({
         [styles["badge--darkBlue"]]: variant === "darkBlue",
         [styles["badge--yellow"]]: variant === "yellow",
         [styles["badge--red"]]: variant === "red",
+        [styles["badge--yellow"]]: variant === "yellow",
         [styles["badge--uppercase"]]: uppercase,
       })}
       data-testid={testId}

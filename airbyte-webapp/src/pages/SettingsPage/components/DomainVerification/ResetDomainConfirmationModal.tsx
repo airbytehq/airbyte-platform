@@ -1,10 +1,10 @@
 import { FormattedMessage } from "react-intl";
 
-import { ConfirmationModal } from "components/ConfirmationModal";
+import { ConfirmationModal } from "components/ui/ConfirmationModal";
 
 import { useResetDomainVerification } from "core/api";
 import { DomainVerificationResponse } from "core/api/types/AirbyteClient";
-import { useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 interface ResetDomainConfirmationModalProps {
   domain: DomainVerificationResponse;

@@ -222,6 +222,46 @@ paths:
         type: "string"
       in: "path"
       required: true
+  /workspaces/{workspaceId}/oauthCredentials/{actorType}/{name}:
+    delete:
+      parameters:
+      - name: "workspaceId"
+        schema:
+          format: "UUID"
+          type: "string"
+        in: "path"
+        required: true
+      - name: "actorType"
+        schema:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        in: "path"
+        required: true
+      - name: "name"
+        schema:
+          type: "string"
+        in: "path"
+        required: true
+        description: "The name of the source or destination i.e. google-ads"
+      tags:
+      - "public_workspaces"
+      - "public"
+      - "Workspaces"
+      responses:
+        "204":
+          description: "OAuth credential override was deleted successfully."
+        "400":
+          description: "A field in the path has not been set appropriately."
+        "403":
+          description: "API key is invalid."
+      operationId: "deleteWorkspaceOAuthCredentials"
+      x-speakeasy-alias: "deleteWorkspaceOAuthCredentials"
+      x-speakeasy-group: "Workspaces"
+      summary: "Delete OAuth override credentials for a workspace and source/destination type."
+      description:
+        "Delete a set of OAuth credentials that overrides the Airbyte-provided\
+        \ OAuth credentials used for source/destination OAuth.\n\n> \U0001F6A7 Warning\n\
+        >\n> Deleting an override that is actively used by existing sources or destinations\
+        \ will cause those connectors to fail on their next sync and require re-authentication."
 components:
   responses:
     InitiateOauthResponse:
@@ -929,6 +969,7 @@ components:
     JobStatusEnum:
       enum:
       - "pending"
+      - "queued"
       - "running"
       - "incomplete"
       - "failed"
@@ -2400,7 +2441,7 @@ components:
               description: "The Client Secret of your Drift developer application."
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "Drift Spec"
     snapchat-marketing:
       properties:
         client_id:
@@ -2415,7 +2456,7 @@ components:
           order: 1
           title: "Client Secret"
           type: "string"
-      title: null
+      title: "Snapchat Marketing Spec"
     gitlab:
       properties:
         credentials:
@@ -2491,7 +2532,7 @@ components:
               description: "Client Secret"
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "Zendesk Talk Spec"
     linkedin-ads:
       properties:
         credentials:
@@ -2575,7 +2616,7 @@ components:
               airbyte_secret: true
               description: "The Client Secret the Typeform developer application."
               type: "string"
-      title: null
+      title: "Typeform Spec"
     facebook-pages:
       title: "Facebook Pages Spec"
     surveymonkey:
@@ -2594,7 +2635,7 @@ components:
               order: 2
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "SurveyMonkey Spec"
     amazon-ads:
       properties:
         client_id:
@@ -2707,9 +2748,9 @@ components:
                 >here</a>."
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "TickTick Spec"
     trello:
-      title: null
+      title: "Trello Spec"
     sharepoint-enterprise:
       properties:
         credentials:
@@ -2949,7 +2990,7 @@ components:
               type: "string"
       title: "Google Analytics (Data API) Spec"
     intercom:
-      title: null
+      title: "Intercom Spec"
     facebook-marketing:
       properties:
         credentials:
@@ -3028,7 +3069,7 @@ components:
               description: "The client secret of the Airtable developer application."
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "Airtable Spec"
 
     OAuthCredentialsConfiguration:
       description: The values required to configure the source.

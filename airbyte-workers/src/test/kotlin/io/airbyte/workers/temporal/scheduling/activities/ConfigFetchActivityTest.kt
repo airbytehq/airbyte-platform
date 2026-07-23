@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities
@@ -136,6 +136,9 @@ internal class ConfigFetchActivityTest {
         Assertions
           .assertThat(output.timeToWait)
           .hasDays((100 * 365).toLong())
+        Assertions
+          .assertThat(output.scheduleType)
+          .isNull()
       }
 
       @Test
@@ -151,6 +154,9 @@ internal class ConfigFetchActivityTest {
         Assertions
           .assertThat(output.timeToWait)
           .hasDays((100 * 365).toLong())
+        Assertions
+          .assertThat(output.scheduleType)
+          .isNull()
       }
 
       @Test
@@ -182,6 +188,9 @@ internal class ConfigFetchActivityTest {
         Assertions
           .assertThat(output.timeToWait)
           .isZero()
+        Assertions
+          .assertThat(output.scheduleType)
+          .isEqualTo(ConnectionScheduleType.BASIC)
       }
 
       @Test

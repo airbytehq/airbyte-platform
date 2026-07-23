@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services
@@ -18,9 +18,9 @@ interface DataWorkerUsageDataService {
 
   fun insertNewDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage)
 
-  fun incrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage)
+  fun incrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage): Int
 
-  fun decrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage)
+  fun decrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage): Int
 
   fun getDataWorkerUsageByOrganizationAndTimeRange(
     organizationId: UUID,

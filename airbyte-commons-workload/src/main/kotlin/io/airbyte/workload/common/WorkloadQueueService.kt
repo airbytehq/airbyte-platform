@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.common
 
-import datadog.trace.api.Trace
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.metrics.MetricAttribute
@@ -13,6 +12,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.repository.WorkloadQueueRepository
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -29,7 +29,7 @@ open class WorkloadQueueService(
     const val WORKLOAD_PUBLISHER_OPERATION_NAME: String = "workload_publisher"
   }
 
-  @Trace(operationName = WORKLOAD_PUBLISHER_OPERATION_NAME)
+  @WithSpan(WORKLOAD_PUBLISHER_OPERATION_NAME)
   open fun create(
     workloadId: String,
     workloadInput: String,

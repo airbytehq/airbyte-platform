@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container.orchestrator.worker
@@ -191,6 +191,13 @@ class SourceReader(
             message.trace.type == AirbyteTraceMessage.Type.STREAM_STATUS
           ) {
             streamStatusCompletionTracker.track(message.trace.streamStatus)
+          }
+          if (message.type == Type.CONTROL) {
+            try {
+              replicationWorkerHelper.persistSourceConfiguration(message)
+            } catch (e: Exception) {
+              logger.error(e) { "Failed to eagerly persist source connector config." }
+            }
           }
           missingStateInjector?.trackMessage(message)
           messagesFromSourceQueue.send(message)

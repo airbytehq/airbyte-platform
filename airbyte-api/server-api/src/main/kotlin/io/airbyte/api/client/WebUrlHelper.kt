@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.api.client
@@ -22,6 +22,16 @@ class WebUrlHelper(
 ) {
   // Original Java-based class exposed the base url, so preserving that functionality here
   val baseUrl: String = airbyteConfig.airbyteUrl.trimEnd('/')
+
+  /**
+   * Base URL for agentic-organization-facing surfaces (e.g. Airbyte Agents at app.airbyte.ai).
+   * Falls back to [baseUrl] when [AirbyteConfig.airbyteAgentsUrl] is unset so that OSS and local
+   * deployments keep working without an extra env var.
+   */
+  val agentsBaseUrl: String =
+    airbyteConfig.airbyteAgentsUrl
+      .trimEnd('/')
+      .ifEmpty { baseUrl }
 
   /**
    * Get the url for a workspace.

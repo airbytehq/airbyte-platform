@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal
@@ -19,6 +19,7 @@ import io.airbyte.config.ActorContext
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.JobCheckConnectionConfig
+import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobDiscoverCatalogConfig
 import io.airbyte.config.JobGetSpecConfig
 import io.airbyte.config.RefreshStream
@@ -444,6 +445,167 @@ internal class TemporalClientTest {
       Assertions.assertNotNull(result.jobId)
       Assertions.assertEquals(JOB_ID, result.jobId)
       Assertions.assertNull(result.failingReason)
+      verify { mConnectionManagerWorkflow.submitManualSync() }
+    }
+
+    @Test
+    @DisplayName("Test startNewManualSyncAndWaitForJobId returns once job id exists")
+    fun testStartNewManualSyncAndWaitForJobIdReturnsWhenJobIdExistsBeforeWorkflowRunning() {
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      val oldJobId = JOB_ID - 1
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns false
+      every { mConnectionManagerWorkflow.getJobInformation() } returnsMany
+        listOf(
+          JobInformation(oldJobId, ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID),
+          JobInformation(oldJobId, ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID),
+          JobInformation(JOB_ID, ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID),
+        )
+      every { mConnectionManagerWorkflow.submitManualSync() } just Runs
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
+
+      val result = temporalClient.startNewManualSyncAndWaitForJobId(CONNECTION_ID)
+
+      Assertions.assertEquals(JOB_ID, result.jobId)
+      Assertions.assertNull(result.failingReason)
+      verify { mConnectionManagerWorkflow.submitManualSync() }
+    }
+
+    @Test
+    @DisplayName("Test startNewManualSyncAndWaitForJobId returns existing queued job id")
+    fun testStartNewManualSyncAndWaitForJobIdReturnsExistingQueuedJobId() {
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns false
+      every { mWorkflowState.isDoneWaiting } returns true
+      every { mConnectionManagerWorkflow.getJobInformation() } returns
+        JobInformation(JOB_ID, ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID, ConfigType.SYNC)
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
+
+      val result = temporalClient.startNewManualSyncAndWaitForJobId(CONNECTION_ID, waitTimeoutMs = 25)
+
+      Assertions.assertEquals(JOB_ID, result.jobId)
+      Assertions.assertNull(result.failingReason)
+      verify(exactly = 0) { mConnectionManagerWorkflow.submitManualSync() }
+    }
+
+    @Test
+    @DisplayName("Test startNewManualSyncAndWaitForJobId does not return queued non-sync job id")
+    fun testStartNewManualSyncAndWaitForJobIdDoesNotReturnQueuedNonSyncJobId() {
+      val jobConfigTypes = listOf(ConfigType.RESET_CONNECTION, ConfigType.REFRESH, null)
+
+      jobConfigTypes.forEach { jobConfigType ->
+        val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+        val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+        every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+        every { mWorkflowState.isDeleted } returns false
+        every { mWorkflowState.isRunning } returns false
+        every { mWorkflowState.isDoneWaiting } returns true
+        every { mConnectionManagerWorkflow.getJobInformation() } returns
+          JobInformation(JOB_ID, ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID, jobConfigType)
+        every { mConnectionManagerWorkflow.submitManualSync() } just Runs
+        every {
+          workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+        } returns mConnectionManagerWorkflow
+
+        val result = temporalClient.startNewManualSyncAndWaitForJobId(CONNECTION_ID, waitTimeoutMs = 25)
+
+        Assertions.assertNull(result.jobId, "should not return queued $jobConfigType job id")
+        Assertions.assertEquals(ErrorCode.UNKNOWN, result.errorCode, "should wait for a new sync job id for $jobConfigType")
+        verify { mConnectionManagerWorkflow.submitManualSync() }
+      }
+    }
+
+    @Test
+    @DisplayName("Test startNewManualSyncAndWaitForJobId does not return interrupted queued job id")
+    fun testStartNewManualSyncAndWaitForJobIdDoesNotReturnInterruptedQueuedJobId() {
+      val interruptionCases =
+        listOf<Pair<String, (WorkflowState) -> Unit>>(
+          "deleted" to { every { it.isDeleted } returns true },
+          "updated" to { every { it.isUpdated } returns true },
+          "cancelled" to { every { it.isCancelled } returns true },
+          "reset" to { every { it.isCancelledForReset } returns true },
+        )
+
+      interruptionCases.forEach { (interruption, stubInterruption) ->
+        val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+        val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+        every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+        every { mWorkflowState.isDeleted } returns false
+        every { mWorkflowState.isRunning } returns false
+        every { mWorkflowState.isDoneWaiting } returns true
+        stubInterruption(mWorkflowState)
+        every { mConnectionManagerWorkflow.getJobInformation() } returns
+          JobInformation(JOB_ID, ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID, ConfigType.SYNC)
+        every { mConnectionManagerWorkflow.submitManualSync() } just Runs
+        every {
+          workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+        } returns mConnectionManagerWorkflow
+
+        val result = temporalClient.startNewManualSyncAndWaitForJobId(CONNECTION_ID, waitTimeoutMs = 25)
+
+        Assertions.assertNull(result.jobId, "should not return queued job id for $interruption interruption")
+        Assertions.assertEquals(ErrorCode.UNKNOWN, result.errorCode, "should wait for a new job id for $interruption interruption")
+        verify { mConnectionManagerWorkflow.submitManualSync() }
+      }
+    }
+
+    @Test
+    @DisplayName("Test startNewManualSyncAndWaitForJobId times out when job id does not change")
+    fun testStartNewManualSyncAndWaitForJobIdTimesOutWhenJobIdDoesNotChange() {
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      val oldJobId = JOB_ID - 1
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns false
+      every { mConnectionManagerWorkflow.getJobInformation() } returns JobInformation(oldJobId, ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID)
+      every { mConnectionManagerWorkflow.submitManualSync() } just Runs
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
+
+      val result = temporalClient.startNewManualSyncAndWaitForJobId(CONNECTION_ID, waitTimeoutMs = 25)
+
+      Assertions.assertNull(result.jobId)
+      Assertions.assertEquals(ErrorCode.UNKNOWN, result.errorCode)
+      Assertions.assertEquals("Timed out waiting for a sync job to be created for: $CONNECTION_ID", result.failingReason)
+      verify { mConnectionManagerWorkflow.submitManualSync() }
+    }
+
+    @Test
+    @DisplayName("Test startNewManualSyncAndWaitForJobId preserves interrupt status")
+    fun testStartNewManualSyncAndWaitForJobIdPreservesInterruptStatus() {
+      val mConnectionManagerWorkflow = mockk<ConnectionManagerWorkflow>()
+      val mWorkflowState = mockk<WorkflowState>(relaxed = true)
+      every { mConnectionManagerWorkflow.getState() } returns mWorkflowState
+      every { mWorkflowState.isDeleted } returns false
+      every { mWorkflowState.isRunning } returns false
+      every { mConnectionManagerWorkflow.getJobInformation() } returns JobInformation(JOB_ID, ConnectionManagerWorkflow.NON_RUNNING_ATTEMPT_ID)
+      every { mConnectionManagerWorkflow.submitManualSync() } just Runs
+      every {
+        workflowClient.newWorkflowStub(any<Class<ConnectionManagerWorkflow>>(), any<String>())
+      } returns mConnectionManagerWorkflow
+
+      Thread.currentThread().interrupt()
+      try {
+        val result = temporalClient.startNewManualSyncAndWaitForJobId(CONNECTION_ID, waitTimeoutMs = 1_000)
+
+        Assertions.assertNull(result.jobId)
+        Assertions.assertEquals(ErrorCode.UNKNOWN, result.errorCode)
+        Assertions.assertEquals("Didn't manage to start a sync for: $CONNECTION_ID", result.failingReason)
+        Assertions.assertTrue(Thread.currentThread().isInterrupted)
+      } finally {
+        Thread.interrupted()
+      }
       verify { mConnectionManagerWorkflow.submitManualSync() }
     }
 

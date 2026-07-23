@@ -2,26 +2,24 @@ import React, { useMemo } from "react";
 import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
-import { EnterpriseStubConnectorPage } from "components/EnterpriseStubConnectorPage/EnterpriseStubConnectorPage";
-
+import { EnterpriseStubConnectorPage } from "area/connector/components/EnterpriseStubConnectorPage/EnterpriseStubConnectorPage";
 import MainLayout from "area/layout/MainLayout";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCurrentWorkspace } from "area/workspace/utils/useWorkspace";
 import { useGetInstanceConfiguration, useInvalidateAllWorkspaceScopeOnChange } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useApiHealthPoll } from "core/services/Health";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { useBuildUpdateCheck } from "core/utils/useBuildUpdateCheck";
 import { useEnterpriseLicenseCheck } from "core/utils/useEnterpriseLicenseCheck";
+import { useQuery } from "core/utils/useQuery";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useApiHealthPoll } from "hooks/services/Health";
-import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
-import { useCurrentWorkspace } from "hooks/services/useWorkspace";
-import { useQuery } from "hooks/useQuery";
 import { LoginPage } from "pages/login/LoginPage";
 
-import { EmbeddedSourceCreatePage } from "./embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { OnboardingPage } from "./OnboardingPage/OnboardingPage";
 import { OrganizationRoutes } from "./organization/OrganizationRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
@@ -58,8 +56,9 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
     () => ({
       workspace_id: workspace.workspaceId,
       customer_id: workspace.customerId,
+      organization_id: workspace.organizationId,
     }),
-    [workspace.workspaceId, workspace.customerId]
+    [workspace.workspaceId, workspace.customerId, workspace.organizationId]
   );
   useAnalyticsRegisterValues(analyticsContext);
   const userTraits = useMemo(
@@ -203,7 +202,6 @@ const AuthenticatedRoutes = () => {
 
   return (
     <Routes>
-      <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
       {!initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
       ) : (

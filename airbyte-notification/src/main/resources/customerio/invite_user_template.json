@@ -6,7 +6,8 @@
   },
   "message_data": {
     "name": "%s",
-    "invite_url": "%s"
+    "invite_url": "%s",
+    "organization_name": "%s"
   },
   "disable_message_retention": false,
   "send_to_unsubscribed": true,

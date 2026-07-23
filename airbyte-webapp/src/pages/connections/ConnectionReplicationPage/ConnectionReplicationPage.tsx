@@ -6,19 +6,23 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import { useUnmount } from "react-use";
 
-import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
-import { useRefreshSourceSchemaWithConfirmationOnDirty } from "components/connection/ConnectionForm/refreshSourceSchemaWithConfirmationOnDirty";
-import { SchemaChangeBackdrop } from "components/connection/ConnectionForm/SchemaChangeBackdrop";
-import { SchemaRefreshing } from "components/connection/ConnectionForm/SchemaRefreshing";
-import { useReplicationConnectionValidationZodSchema } from "components/connection/ConnectionForm/schemas/connectionSchema";
-import { SyncCatalogTable } from "components/connection/SyncCatalogTable";
-import { Form } from "components/forms";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Form } from "components/ui/forms";
 import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message/Message";
 import { ScrollParent } from "components/ui/ScrollParent";
 
+import { FormConnectionFormValues, useInitialFormValues } from "area/connection/components/ConnectionForm/formConfig";
+import { useRefreshSourceSchemaWithConfirmationOnDirty } from "area/connection/components/ConnectionForm/refreshSourceSchemaWithConfirmationOnDirty";
+import { SchemaChangeBackdrop } from "area/connection/components/ConnectionForm/SchemaChangeBackdrop";
+import { SchemaRefreshing } from "area/connection/components/ConnectionForm/SchemaRefreshing";
+import { useReplicationConnectionValidationZodSchema } from "area/connection/components/ConnectionForm/schemas/connectionSchema";
+import { SyncCatalogTable } from "area/connection/components/SyncCatalogTable";
+import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
+import { useConnectionFormService } from "area/connection/utils/ConnectionForm/ConnectionFormService";
+import { useConfirmCatalogDiff } from "area/connection/utils/useConfirmCatalogDiff";
+import { useSchemaChanges } from "area/connection/utils/useSchemaChanges";
 import {
   ConnectionValues,
   HttpError,
@@ -27,16 +31,12 @@ import {
   useGetStateTypeQuery,
 } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useExperiment } from "core/services/Experiment";
+import { ModalResult, useModalService } from "core/services/Modal";
+import { useNotificationService } from "core/services/Notification";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { useIsCloudApp } from "core/utils/app";
 import { trackError } from "core/utils/datadog";
-import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
-import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
-import { ModalResult, useModalService } from "hooks/services/Modal";
-import { useNotificationService } from "hooks/services/Notification";
 
 import { ChangesReviewModal } from "./ChangesReviewModal";
 import { ClearDataWarningModal } from "./ClearDataWarningModal";

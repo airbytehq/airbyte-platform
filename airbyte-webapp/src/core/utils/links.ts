@@ -9,8 +9,9 @@ export const links = {
   dbtCloud: "https://cloud.getdbt.com/",
   dbtCloudIntegrationDocs: `${BASE_DOCS_LINK}/cloud/dbt-cloud-integration`,
   technicalSupport: `${BASE_DOCS_LINK}/troubleshooting`,
-  termsLink: "https://airbyte.com/terms",
-  privacyLink: "https://airbyte.com/privacy-policy",
+  termsLinkCloud: "https://airbyte.com/company/terms",
+  termsLinkAgentEngine: "https://airbyte.com/company/terms-agent-engine",
+  privacyLink: "https://airbyte.com/company/privacy-policy",
   updateLink: `${BASE_DOCS_LINK}/operator-guides/upgrading-airbyte`,
   slackLink: "https://slack.airbyte.com",
   supportPortal: "https://support.airbyte.com",
@@ -45,6 +46,7 @@ export const links = {
   connectorSpecificationReference: `${BASE_DOCS_LINK}/connector-development/connector-specification-reference`,
   connectorSpecificationDocs: `${BASE_DOCS_LINK}/connector-development/connector-specification-reference/#airbyte-modifications-to-jsonschema`,
   schemaChangeManagement: `${BASE_DOCS_LINK}/using-airbyte/schema-change-management`,
+  agentEngineApp: "https://app.airbyte.ai",
   apiAccess: `${BASE_DOCS_LINK}/using-airbyte/configuring-api-access`,
   deployingViaHttp: `${BASE_DOCS_LINK}/using-airbyte/getting-started/oss-quickstart#running-over-http`,
   ossAuthentication: `${BASE_DOCS_LINK}/deploying-airbyte/integrations/authentication`,
@@ -56,9 +58,9 @@ export const links = {
   connectionMappings: `${BASE_DOCS_LINK}/using-airbyte/mappings`,
   dataActivationDocs: `${BASE_DOCS_LINK}/platform/move-data/elt-data-activation`,
   ssoDocs: `${BASE_DOCS_LINK}/platform/access-management/sso`,
-  embeddedOnboardingDocs: `${BASE_DOCS_LINK}/ai-agents/embedded/widget/tutorials/develop-your-app`,
   fixIngress1_7: `${BASE_DOCS_LINK}/platform/deploying-airbyte/integrations/ingress-1-7`,
   refreshes: `${BASE_DOCS_LINK}/platform/operator-guides/refreshes`,
+  privateLinkDocs: `${BASE_DOCS_LINK}/platform/operating-airbyte/privatelink`,
 } as const;
 
 export type OutboundLinks = typeof links;

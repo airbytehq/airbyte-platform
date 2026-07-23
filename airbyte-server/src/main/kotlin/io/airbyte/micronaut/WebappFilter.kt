@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.micronaut
@@ -125,6 +125,8 @@ internal val pathPrefixes =
     "/fonts",
     // routes is a special endpoint
     "/routes",
+    // SCIM endpoints are handled by backend controllers
+    "/scim",
   )
 
 @InternalForTesting

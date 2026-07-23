@@ -2,11 +2,11 @@ import React, { useEffect } from "react";
 import { useIntl } from "react-intl";
 import { z } from "zod";
 
-import { Form, FormControl } from "components/forms";
-import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
+import { Form, FormControl } from "components/ui/forms";
+import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useUpdateWorkspace } from "core/api";
-import { useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 const ACCOUNT_UPDATE_NOTIFICATION_ID = "account-update-notification";
 

@@ -1,8 +1,8 @@
 import { FormattedMessage } from "react-intl";
 
-import { InitialBadge } from "components/InitialBadge/InitialBadge";
 import { Badge } from "components/ui/Badge";
 import { FlexContainer } from "components/ui/Flex";
+import { InitialBadge } from "components/ui/InitialBadge/InitialBadge";
 import { Text } from "components/ui/Text";
 export const UserCell: React.FC<{ name?: string; email: string; isCurrentUser: boolean; uniqueId: string }> = ({
   name,

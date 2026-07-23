@@ -1,0 +1,16 @@
+@use "scss/variables";
+@use "scss/colors";
+
+$min-width-card-row: 650px;
+
+.subscribe {
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-lg;
+  container-type: inline-size;
+
+  &__cards {
+    @container (max-width: #{$min-width-card-row}) {
+      flex-direction: column;
+    }
+  }
+}

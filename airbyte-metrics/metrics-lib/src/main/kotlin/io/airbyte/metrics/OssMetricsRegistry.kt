@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.metrics
@@ -75,6 +75,10 @@ enum class OssMetricsRegistry(
     metricName = "api-trace",
     metricDescription = "",
   ),
+  PUBLIC_API_LOAD_SHED(
+    metricName = "public-api.load-shed",
+    metricDescription = "increments once per public API request shed by PublicApiLoadShedFilter, tagged by token_subject",
+  ),
   ATTEMPTS_CREATED(
     metricName = "attempt_created",
     metricDescription = "increments when a new attempt is created. one is emitted per attempt",
@@ -125,6 +129,22 @@ enum class OssMetricsRegistry(
     metricName = "keycloak_token_validation",
     metricDescription = "increments when a keycloak auth token validation occurs",
   ),
+  KEYCLOAK_TOKEN_INVALID_REALM(
+    metricName = "keycloak_token_invalid_realm",
+    metricDescription = "increments when a keycloak auth token validation fails because of an invalid realm",
+  ),
+  SSO_CONFIG_OPERATION(
+    metricName = "sso_config_operation",
+    metricDescription = "SSO config lifecycle operation result; operation (create_active|create_draft|activate) and status (success|failure) tags",
+  ),
+  SSO_SETUP_COMPENSATION(
+    metricName = "sso_setup_compensation",
+    metricDescription = "active SSO config persistence failed and the Keycloak realm was compensated; status tag = cleanup success|failure",
+  ),
+  SSO_PERMISSION_GRANTED(
+    metricName = "sso_permission_granted",
+    metricDescription = "users auto-granted an org permission during SSO setup/activation; tagged by the default role applied",
+  ),
   OIDC_TOKEN_VALIDATION(
     metricName = "oidc_token_validation",
     metricDescription = "increments when a oidc auth token validation occurs",
@@ -136,6 +156,10 @@ enum class OssMetricsRegistry(
   CRON_JOB_RUN_BY_CRON_TYPE(
     metricName = "cron_jobs_run",
     metricDescription = "number of cron runs by cron type",
+  ),
+  CONNECTOR_EXIT_CODE(
+    metricName = "connector_exit_code",
+    metricDescription = "connector container process exit code",
   ),
   CONNECTOR_REGISTRY_DEFINITION_PROCESSED(
     // Actually `cron` or `bootloader` based on which metric client calls the code
@@ -411,6 +435,10 @@ enum class OssMetricsRegistry(
   JOB_OUTPUT_READ(
     metricName = "job_output_read",
     metricDescription = "Read a job output from the output folder",
+  ),
+  CONNECTOR_CONFIG_PERSISTENCE_FAILURE(
+    metricName = "connector_config_persistence_failure",
+    metricDescription = "Failed to persist updated connector config (e.g. refreshed OAuth token) via the platform API",
   ),
   DESTINATION_DESERIALIZATION_ERROR(
     metricName = "destination_deserialization_error",
@@ -711,6 +739,78 @@ enum class OssMetricsRegistry(
   DOMAIN_VERIFICATION_DURATION(
     metricName = "domain_verification_duration",
     metricDescription = "duration of a run of the domain verification cron",
+  ),
+  OAUTH_CONSENT_URL_REQUEST(
+    metricName = "oauth_consent_url_request",
+    metricDescription = "count of OAuth consent URL requests",
+  ),
+  OAUTH_COMPLETE_REQUEST(
+    metricName = "oauth_complete_request",
+    metricDescription = "count of OAuth complete flow requests",
+  ),
+  OAUTH_GET_SCOPES_REQUEST(
+    metricName = "oauth_get_scopes_request",
+    metricDescription = "count of OAuth get scopes requests",
+  ),
+  OAUTH_REVOKE_TOKEN_REQUEST(
+    metricName = "oauth_revoke_token_request",
+    metricDescription = "count of OAuth token revocation requests",
+  ),
+  ORPHANED_SECRET_CONFIGS_FOUND(
+    metricName = "orphaned_secret_configs_found",
+    metricDescription = "count of orphaned secret configs found in cleanup batch",
+  ),
+  ORPHANED_SECRET_CONFIGS_TOTAL(
+    metricName = "orphaned_secret_configs_total",
+    metricDescription = "total orphaned secret configs across all storages, emitted as counter each cron run",
+  ),
+  DSR_DELETION_PREPARED(
+    metricName = "dsr_deletion_prepared",
+    metricDescription = "Count of DSR / GDPR deletion requests that have been prepared (Phase 1, soft delete).",
+  ),
+  DSR_DELETION_COMPLETED(
+    metricName = "dsr_deletion_completed",
+    metricDescription = "Count of DSR / GDPR deletion requests that have been hard-deleted successfully (Phase 2).",
+  ),
+  DSR_DELETION_FAILED(
+    metricName = "dsr_deletion_failed",
+    metricDescription = "Count of DSR / GDPR deletion confirmations that finished with at least one error.",
+  ),
+  DSR_DELETION_EXECUTION_STARTED(
+    metricName = "dsr_deletion_execution_started",
+    metricDescription = "Count of DSR / GDPR deletion background workers that started claimed execution.",
+  ),
+  DSR_DELETION_EXECUTION_DURATION_MS(
+    metricName = "dsr_deletion_execution_duration_ms",
+    metricDescription = "Distribution of total DSR / GDPR deletion execution duration in milliseconds.",
+  ),
+  DSR_DELETION_EXECUTION_PHASE(
+    metricName = "dsr_deletion_execution_phase",
+    metricDescription = "Count of DSR / GDPR deletion execution phases by phase and status.",
+  ),
+  DSR_DELETION_EXECUTION_PHASE_DURATION_MS(
+    metricName = "dsr_deletion_execution_phase_duration_ms",
+    metricDescription = "Distribution of DSR / GDPR deletion execution phase duration in milliseconds by phase and status.",
+  ),
+  DSR_DELETION_HEARTBEAT(
+    metricName = "dsr_deletion_heartbeat",
+    metricDescription = "Count of DSR / GDPR deletion worker heartbeat attempts by status.",
+  ),
+  DSR_DELETION_TIMEOUT_SWEEP(
+    metricName = "dsr_deletion_timeout_sweep",
+    metricDescription = "Count of DSR / GDPR deletion timeout recovery sweeps by status.",
+  ),
+  DSR_DELETION_TIMEOUT_RECOVERED(
+    metricName = "dsr_deletion_timeout_recovered",
+    metricDescription = "Count of DSR / GDPR deletion requests recovered or terminalized after timing out.",
+  ),
+  ORGANIZATION_ATTRIBUTE_AGE_HOURS(
+    metricName = "organization_attribute_age_hours",
+    metricDescription = "age in hours between now and the timestamp of the most recent organization customer attributes file in GCS",
+  ),
+  ORGANIZATION_ATTRIBUTE_COUNT(
+    metricName = "organization_attribute_count",
+    metricDescription = "number of organizations present in organization customer attributes file from GCS",
   ),
   ;
 

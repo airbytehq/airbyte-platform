@@ -1,0 +1,69 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.regionCard {
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-md;
+  overflow: hidden;
+  margin-bottom: variables.$spacing-md;
+}
+
+.regionHeader {
+  padding: variables.$spacing-lg;
+  background-color: colors.$grey-50;
+}
+
+.tabContainer {
+  border-bottom: variables.$border-thin solid colors.$grey-200;
+  padding: 0;
+  gap: 0;
+  background-color: colors.$grey-50;
+}
+
+.tab {
+  flex: 0 0 auto;
+  padding: variables.$spacing-md variables.$spacing-lg;
+  background: none;
+  border: none;
+  border-bottom: variables.$border-thick solid transparent;
+  font-size: variables.$font-size-sm;
+  color: colors.$grey-400;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: variables.$spacing-xs;
+
+  &:hover {
+    color: colors.$grey-600;
+  }
+}
+
+.tabIcon {
+  color: inherit;
+}
+
+.tabActive {
+  color: colors.$grey-600;
+  font-weight: normal;
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: variables.$spacing-sm;
+    right: variables.$spacing-sm;
+    height: 2px;
+    background-color: colors.$grey-600;
+  }
+}
+
+.tabContent {
+  padding: 0;
+}
+
+.emptyRow {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  min-height: 44px;
+}

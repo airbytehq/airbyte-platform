@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.api.client.ApiException
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
+import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
@@ -37,6 +38,7 @@ class WorkloadHeartbeatSender(
   private val destinationTimeoutMonitor: DestinationTimeoutMonitor,
   private val sourceTimeoutMonitor: HeartbeatMonitor,
   private val source: AirbyteSource,
+  private val destination: AirbyteDestination,
   @Named("workloadHeartbeatInterval") private val heartbeatInterval: Duration,
   @Named("workloadHeartbeatTimeout") private val heartbeatTimeoutDuration: Duration,
   @Named("hardExitCallable") private val hardExitCallable: () -> Unit,
@@ -111,6 +113,18 @@ class WorkloadHeartbeatSender(
               )
             logger.warn(e) { "Destination has timed out; failing the workload." }
             failWorkload(e)
+
+            // Cancel the destination to unblock any threads stuck reading from destination pipes.
+            // The DestinationReader may be blocked in a native read0() call on the stdout FIFO,
+            // which ignores Thread.interrupt() and coroutine cancellation. Cancelling the destination
+            // triggers ContainerIOHandle.terminate() which closes the underlying streams, causing
+            // the blocked read to throw IOException and allowing shutdown to proceed.
+            try {
+              destination.cancel()
+            } catch (e: Exception) {
+              logger.warn(e) { "Destination cancel failed after destination timeout." }
+            }
+
             break
           }
 
@@ -135,7 +149,13 @@ class WorkloadHeartbeatSender(
             logger.warn(e) { "Source has timed out; failing the workload." }
             failWorkload(e)
 
-            // BUG: this is a hack to work around a bug where the source reader hangs
+            // Close the source to unblock any threads stuck reading from source pipes.
+            // The SourceReader may be blocked in a native read0() call on the stdout FIFO,
+            // which ignores Thread.interrupt() and coroutine cancellation. Closing the source
+            // triggers ContainerIOHandle.terminate() which closes the underlying streams, causing
+            // the blocked read to throw IOException and allowing shutdown to proceed.
+            // We only do this if sourceIsHanging is true, which indicates that checking
+            // source.isFinished itself timed out (meaning the source is definitely stuck).
             if (sourceIsHanging) {
               source.close()
             }

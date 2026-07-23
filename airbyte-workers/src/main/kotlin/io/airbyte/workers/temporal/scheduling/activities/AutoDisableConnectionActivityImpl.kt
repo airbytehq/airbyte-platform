@@ -1,21 +1,20 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities
 
-import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.temporal.exception.RetryableException
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionActivityInput
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity.AutoDisableConnectionOutput
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpStatus
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
@@ -32,7 +31,7 @@ class AutoDisableConnectionActivityImpl(
   // to INACTIVE if auto-disable conditions defined by the API are met.
   // The api call will also send notifications if a connection is disabled or warned if it has reached
   // halfway to disable limits
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun autoDisableFailingConnection(input: AutoDisableConnectionActivityInput): AutoDisableConnectionOutput =
     input.connectionId?.let {
       ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to it))

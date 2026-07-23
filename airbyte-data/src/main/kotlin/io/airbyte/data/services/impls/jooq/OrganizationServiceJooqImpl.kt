@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.jooq
@@ -112,6 +112,12 @@ class OrganizationServiceJooqImpl(
   }
 
   @Throws(IOException::class)
+  override fun setOrganizationAgenticStatus(
+    organizationId: UUID,
+    isAgentic: Boolean,
+  ): Optional<Organization> = throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")
+
+  @Throws(IOException::class)
   override fun getOrganizationForConnectionId(connectionId: UUID): Optional<Organization> =
     throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")
 
@@ -131,6 +137,19 @@ class OrganizationServiceJooqImpl(
 
   @Throws(IOException::class)
   override fun listOrganizationsByUserIdPaginated(
+    query: ResourcesByUserQueryPaginated,
+    keyword: Optional<String>,
+  ): List<Organization> = throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")
+
+  @Throws(IOException::class)
+  override fun listAllOrganizationsByUserId(
+    userId: UUID,
+    keyword: Optional<String>,
+    includeDeleted: Boolean,
+  ): List<Organization> = throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")
+
+  @Throws(IOException::class)
+  override fun listAllOrganizationsByUserIdPaginated(
     query: ResourcesByUserQueryPaginated,
     keyword: Optional<String>,
   ): List<Organization> = throw UnsupportedOperationException("Use OrganizationServiceDataImpl instead")

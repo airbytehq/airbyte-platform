@@ -24,10 +24,29 @@ Renders the logging.level environment variable
 {{- end }}
 
 {{/*
+Renders the logging.platformLogFormat value
+*/}}
+{{- define "airbyte-data-plane.logging.platformLogFormat" }}
+    {{- .Values.logging.platformLogFormat | default "json" }}
+{{- end }}
+
+{{/*
+Renders the logging.platformLogFormat environment variable
+*/}}
+{{- define "airbyte-data-plane.logging.platformLogFormat.env" }}
+- name: PLATFORM_LOG_FORMAT
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-data-plane-env
+      key: PLATFORM_LOG_FORMAT
+{{- end }}
+
+{{/*
 Renders the set of all logging environment variables
 */}}
 {{- define "airbyte-data-plane.logging.envs" }}
 {{- include "airbyte-data-plane.logging.level.env" . }}
+{{- include "airbyte-data-plane.logging.platformLogFormat.env" . }}
 {{- end }}
 
 {{/*
@@ -35,4 +54,5 @@ Renders the set of all logging config map variables
 */}}
 {{- define "airbyte-data-plane.logging.configVars" }}
 LOG_LEVEL: {{ include "airbyte-data-plane.logging.level" . | quote }}
+PLATFORM_LOG_FORMAT: {{ include "airbyte-data-plane.logging.platformLogFormat" . | quote }}
 {{- end }}

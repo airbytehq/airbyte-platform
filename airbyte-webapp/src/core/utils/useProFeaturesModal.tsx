@@ -1,11 +1,10 @@
 import { useCallback, useMemo } from "react";
 
-import { ORG_PLAN_IDS } from "components/ui/BrandingBadge/BrandingBadge";
+import { ProFeaturesWarnModal } from "area/organization/components/ProFeaturesWarnModal";
+import { ORG_PLAN_IDS, useOrganizationPlan } from "area/organization/utils";
+import { useModalService } from "core/services/Modal";
 
 import { useLocalStorage } from "./useLocalStorage";
-import { useOrganizationSubscriptionStatus } from "./useOrganizationSubscriptionStatus";
-import { ProFeaturesWarnModal } from "../../components/ProFeaturesWarnModal";
-import { useModalService } from "../../hooks/services/Modal";
 
 /**
  * Custom hook to manage ProFeaturesWarnModal display logic for unified trial users and standard plan users.
@@ -13,7 +12,7 @@ import { useModalService } from "../../hooks/services/Modal";
  * - Standard Plan: Shows modal every time for ANY pro feature
  */
 export const useProFeaturesModal = (featureId: string) => {
-  const { isUnifiedTrialPlan, isStandardPlan } = useOrganizationSubscriptionStatus();
+  const { isUnifiedTrialPlan, isStandardPlan } = useOrganizationPlan();
   const { openModal } = useModalService();
   const [shownFeatures, setShownFeatures] = useLocalStorage("airbyte_pro-features-shown", {});
 
@@ -71,7 +70,7 @@ export const useProFeaturesModal = (featureId: string) => {
     await openModal({
       title: null,
       content: ({ onComplete }) => (
-        <ProFeaturesWarnModal onContinue={() => onComplete("success")} variant={modalVariant} />
+        <ProFeaturesWarnModal onContinue={() => onComplete("success")} variant={modalVariant} featureId={featureId} />
       ),
       preventCancel: true,
       size: "xl",

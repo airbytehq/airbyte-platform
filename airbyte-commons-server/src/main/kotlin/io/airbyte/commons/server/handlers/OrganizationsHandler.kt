@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
 
-import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
 import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody
+import io.airbyte.api.model.generated.OrganizationAgenticStatusUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.model.generated.OrganizationInfoRead
@@ -34,6 +34,7 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UnifiedTrial
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.tools.StringUtils
@@ -55,18 +56,28 @@ open class OrganizationsHandler(
   private val featureFlagClient: FeatureFlagClient,
 ) {
   companion object {
-    private fun buildOrganizationRead(organization: Organization): OrganizationRead =
-      OrganizationRead()
-        .organizationId(organization.organizationId)
-        .organizationName(organization.name)
-        .email(organization.email)
-        .ssoRealm(organization.ssoRealm)
+    private fun buildOrganizationRead(
+      organization: Organization,
+      serializeIsAgentic: Boolean = false,
+    ): OrganizationRead {
+      val read =
+        OrganizationRead()
+          .organizationId(organization.organizationId)
+          .organizationName(organization.name)
+          .email(organization.email)
+          .ssoRealm(organization.ssoRealm)
+      if (serializeIsAgentic || organization.isAgentic) {
+        read.isAgentic(organization.isAgentic)
+      }
+      return read
+    }
   }
 
   fun createOrganization(request: OrganizationCreateRequestBody): OrganizationRead {
     val organizationName = request.organizationName
     val email = request.email
     val userId = request.userId
+    val isAgentic = request.isAgentic ?: false
     val orgId = uuidGenerator.get()
 
     try {
@@ -96,6 +107,7 @@ open class OrganizationsHandler(
         .withName(organizationName)
         .withEmail(email)
         .withUserId(userId)
+        .withIsAgentic(isAgentic)
     organizationService.writeOrganization(organization)
 
     // Also create an OrgAdmin permission.
@@ -136,6 +148,16 @@ open class OrganizationsHandler(
     return buildOrganizationRead(organization)
   }
 
+  fun setOrganizationAgenticStatus(request: OrganizationAgenticStatusUpdateRequestBody): OrganizationRead {
+    val organizationId = request.organizationId
+    val organization =
+      organizationService
+        .setOrganizationAgenticStatus(organizationId, request.isAgentic)
+        .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId) }
+
+    return buildOrganizationRead(organization, serializeIsAgentic = true)
+  }
+
   fun getOrganization(request: OrganizationIdRequestBody): OrganizationRead {
     val organizationId = request.organizationId
     val organization =
@@ -146,7 +168,29 @@ open class OrganizationsHandler(
     return buildOrganizationRead(organization)
   }
 
-  fun listOrganizationsByUser(request: ListOrganizationsByUserRequestBody): OrganizationReadList {
+  /**
+   * List organizations accessible to a user, excluding agentic (ADP-managed) orgs for
+   * non-instance-admins. Used by the Airbyte Cloud / Data Replication webapp paths.
+   *
+   * Public-API and Embedded-API callers must use [listAllOrganizationsByUser] instead so
+   * ADP customers can still see their own agentic orgs.
+   */
+  fun listOrganizationsByUser(request: ListOrganizationsByUserRequestBody): OrganizationReadList =
+    doListOrganizationsByUser(request, includeAgentic = false)
+
+  /**
+   * List every organization accessible to a user, including agentic (ADP-managed) ones.
+   * Used by the public API ([io.airbyte.server.apis.publicapi.services.OrganizationService.getOrganizationsByUser])
+   * and the Embedded API ([io.airbyte.server.apis.publicapi.controllers.EmbeddedController.listEmbeddedOrganizationsByUser]),
+   * where the caller (e.g. Sonar) is itself the ADP product and needs its agentic orgs visible.
+   */
+  fun listAllOrganizationsByUser(request: ListOrganizationsByUserRequestBody): OrganizationReadList =
+    doListOrganizationsByUser(request, includeAgentic = true)
+
+  private fun doListOrganizationsByUser(
+    request: ListOrganizationsByUserRequestBody,
+    includeAgentic: Boolean,
+  ): OrganizationReadList {
     val nameContains =
       if (StringUtils.isBlank(request.nameContains)) {
         Optional.empty<String>()
@@ -156,20 +200,24 @@ open class OrganizationsHandler(
 
     val organizationReadList =
       if (request.pagination != null) {
-        organizationService
-          .listOrganizationsByUserIdPaginated(
-            ResourcesByUserQueryPaginated(
-              request.userId,
-              false,
-              request.pagination.pageSize,
-              request.pagination.rowOffset,
-            ),
-            nameContains,
-          ).map { buildOrganizationRead(it) }
+        val query =
+          ResourcesByUserQueryPaginated(
+            request.userId,
+            false,
+            request.pagination.pageSize,
+            request.pagination.rowOffset,
+          )
+        if (includeAgentic) {
+          organizationService.listAllOrganizationsByUserIdPaginated(query, nameContains)
+        } else {
+          organizationService.listOrganizationsByUserIdPaginated(query, nameContains)
+        }.map { buildOrganizationRead(it) }
       } else {
-        organizationService
-          .listOrganizationsByUserId(request.userId, nameContains)
-          .map { buildOrganizationRead(it) }
+        if (includeAgentic) {
+          organizationService.listAllOrganizationsByUserId(request.userId, nameContains)
+        } else {
+          organizationService.listOrganizationsByUserId(request.userId, nameContains)
+        }.map { buildOrganizationRead(it) }
       }
 
     return OrganizationReadList().organizations(organizationReadList)
@@ -194,7 +242,7 @@ open class OrganizationsHandler(
    *   3. get member counts by org id
    *   4. get workspaces by org id
    */
-  @Trace
+  @WithSpan
   fun getOrganizationSummaries(request: ListOrganizationSummariesRequestBody): ListOrganizationSummariesResponse {
     val orgListReq =
       ListOrganizationsByUserRequestBody()
@@ -222,8 +270,21 @@ open class OrganizationsHandler(
         .map { it.organizationId }
         .toSet()
 
+    // The workspace fallback can pull in agentic (ADP-managed) orgs that the initial
+    // listOrganizationsByUser call deliberately filtered out. Skip them here for non-instance-admins
+    // so they never re-enter orgListResp — keeps the SQL-level page-size contract intact, since
+    // post-fetch filtering would shrink page sizes below pageSize and break the infinite-scroll
+    // end-of-list heuristic.
+    val isInstanceAdmin =
+      permissionService
+        .getPermissionsForUser(request.userId)
+        .any { it.permissionType == Permission.PermissionType.INSTANCE_ADMIN }
+
     for (orgId in orgIdsToRetrieve) {
       val retrieved = this.getOrganization(OrganizationIdRequestBody().organizationId(orgId))
+      if (retrieved.isAgentic == true && !isInstanceAdmin) {
+        continue
+      }
       orgListResp.addOrganizationsItem(retrieved)
     }
 
@@ -280,6 +341,7 @@ open class OrganizationsHandler(
       .organizationName(organization.name)
       .sso(organization.ssoRealm != null && organization.ssoRealm.isNotEmpty())
 
+  @WithSpan
   fun getOrganizationInfo(organizationId: UUID): OrganizationInfoRead {
     val organization = organizationService.getOrganization(organizationId)
     if (organization.isEmpty) {

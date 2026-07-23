@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.container.orchestrator.worker.io
@@ -9,6 +9,9 @@ import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.EXIT_CODE_CHECK_EXISTS_FAILURE
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
@@ -33,6 +36,7 @@ import java.util.stream.Stream
 internal class LocalContainerAirbyteDestinationTest {
   private lateinit var destinationTimeoutMonitor: DestinationTimeoutMonitor
   private lateinit var exitValueFile: File
+  private lateinit var metricClient: MetricClient
   private lateinit var jobRoot: Path
   private lateinit var containerIOHandle: ContainerIOHandle
   private lateinit var containerLogMdcBuilder: MdcScope.Builder
@@ -70,6 +74,7 @@ internal class LocalContainerAirbyteDestinationTest {
         .setExtraMdcEntriesNonNullable(LogSource.DESTINATION.toMdc())
     randomConnectionId = UUID.randomUUID()
     destinationTimeoutMonitor = mockk<DestinationTimeoutMonitor>()
+    metricClient = mockk<MetricClient>(relaxed = true)
     jobRoot = Path.of(".")
     message =
       mockk<AirbyteMessage> {
@@ -114,6 +119,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -141,6 +147,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -170,6 +177,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -199,6 +207,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -228,6 +237,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -254,6 +264,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -277,6 +288,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -299,6 +311,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -320,7 +333,7 @@ internal class LocalContainerAirbyteDestinationTest {
     val exitValue = 0
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
-        every { terminate() } returns true
+        every { waitForExitCode(any(), any()) } returns true
         every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
       }
@@ -335,13 +348,14 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
     destination.setInputHasEnded(newValue = true)
 
     assertDoesNotThrow { destination.close() }
-    verify(exactly = 1) { mockedContainerIOHandle.terminate() }
+    verify(exactly = 1) { mockedContainerIOHandle.waitForExitCode(any(), any()) }
   }
 
   @Test
@@ -350,7 +364,7 @@ internal class LocalContainerAirbyteDestinationTest {
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
         every { getErrInputStream() } returns mockk<InputStream>()
-        every { terminate() } returns true
+        every { waitForExitCode(any(), any()) } returns true
         every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
         every { getInputStream() } returns mockk<InputStream>()
@@ -371,6 +385,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -381,7 +396,7 @@ internal class LocalContainerAirbyteDestinationTest {
     destination.setInputHasEnded(newValue = false)
 
     assertDoesNotThrow { destination.close() }
-    verify(exactly = 1) { mockedContainerIOHandle.terminate() }
+    verify(exactly = 1) { mockedContainerIOHandle.waitForExitCode(any(), any()) }
   }
 
   @Test
@@ -389,7 +404,7 @@ internal class LocalContainerAirbyteDestinationTest {
     val exitValue = -122
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
-        every { terminate() } returns true
+        every { waitForExitCode(any(), any()) } returns true
         every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
       }
@@ -403,6 +418,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -410,7 +426,7 @@ internal class LocalContainerAirbyteDestinationTest {
 
     val error = assertThrows(WorkerException::class.java, destination::close)
     assertEquals("Destination process exit with code $exitValue. This warning is normal if the job was cancelled.", error.message)
-    verify(exactly = 1) { mockedContainerIOHandle.terminate() }
+    verify(exactly = 1) { mockedContainerIOHandle.waitForExitCode(any(), any()) }
   }
 
   @Test
@@ -418,7 +434,8 @@ internal class LocalContainerAirbyteDestinationTest {
     val exitValue = 0
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
-        every { terminate() } returns false
+        every { waitForExitCode(any(), any()) } returns false
+        every { terminate(any(), any()) } returns false
         every { exitCodeExists() } returns true
         every { getExitCode() } returns exitValue
       }
@@ -432,6 +449,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -439,17 +457,15 @@ internal class LocalContainerAirbyteDestinationTest {
 
     val error = assertThrows(WorkerException::class.java, destination::close)
     assertEquals("Destination has not terminated.  This warning is normal if the job was cancelled.", error.message)
-    verify(exactly = 1) { mockedContainerIOHandle.terminate() }
+    verify(exactly = 1) { mockedContainerIOHandle.waitForExitCode(any(), any()) }
+    verify(exactly = 1) { mockedContainerIOHandle.terminate(any(), any()) }
   }
 
   @Test
   internal fun testDestinationCancel() {
-    val exitValue = 0
     val mockedContainerIOHandle =
       mockk<ContainerIOHandle> {
-        every { terminate() } returns false
-        every { exitCodeExists() } returns true
-        every { getExitCode() } returns exitValue
+        every { terminate(any(), any()) } returns false
       }
     every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
     every { messageMetricsTracker.flushDestSentCountMetric() } returns Unit
@@ -461,6 +477,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = mockedContainerIOHandle,
         containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -468,7 +485,37 @@ internal class LocalContainerAirbyteDestinationTest {
 
     val error = assertThrows(WorkerException::class.java, destination::cancel)
     assertEquals("Destination has not terminated.  This warning is normal if the job was cancelled.", error.message)
-    verify(exactly = 1) { mockedContainerIOHandle.terminate() }
+    verify(exactly = 0) { mockedContainerIOHandle.waitForExitCode(any(), any()) }
+    verify(exactly = 1) { mockedContainerIOHandle.terminate(any(), any()) }
+  }
+
+  @Test
+  internal fun testDestinationCancelIsForcefulNotGraceful() {
+    val mockedContainerIOHandle =
+      mockk<ContainerIOHandle> {
+        every { terminate(any(), any()) } returns true
+        every { exitCodeExists() } returns true
+        every { getExitCode() } returns 0
+      }
+    every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
+    every { messageMetricsTracker.flushDestSentCountMetric() } returns Unit
+
+    val destination =
+      LocalContainerAirbyteDestination(
+        streamFactory = streamFactory,
+        messageMetricsTracker = messageMetricsTracker,
+        messageWriterFactory = messageWriterFactory,
+        containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
+        destinationTimeoutMonitor = destinationTimeoutMonitor,
+      )
+
+    destination.setInputHasEnded(newValue = true)
+
+    assertDoesNotThrow { destination.cancel() }
+    verify(exactly = 0) { mockedContainerIOHandle.waitForExitCode(any(), any()) }
+    verify(exactly = 1) { mockedContainerIOHandle.terminate(any(), any()) }
   }
 
   @Test
@@ -484,7 +531,8 @@ internal class LocalContainerAirbyteDestinationTest {
         mockk(relaxed = true),
         mockk(relaxed = true),
         containerLogMdcBuilder = containerLogMdcBuilder,
-        true,
+        metricClient = metricClient,
+        flushImmediately = true,
       )
 
     val message =
@@ -501,5 +549,194 @@ internal class LocalContainerAirbyteDestinationTest {
       writer.write(message)
       writer.flush()
     }
+  }
+
+  @Test
+  internal fun testDestinationCloseEmitsExitCodeMetricOnNonIgnoredExitCode() {
+    val mockedContainerIOHandle =
+      mockk<ContainerIOHandle> {
+        every { waitForExitCode(any(), any()) } returns true
+        every { exitCodeExists() } returns true
+        every { getExitCode() } returns 3
+      }
+    every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
+    every { messageMetricsTracker.flushDestSentCountMetric() } returns Unit
+
+    val testImage = "airbyte/destination-bigquery:2.0.1"
+    val destination =
+      LocalContainerAirbyteDestination(
+        streamFactory = streamFactory,
+        messageMetricsTracker = messageMetricsTracker,
+        messageWriterFactory = messageWriterFactory,
+        containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
+        dockerImage = testImage,
+        destinationTimeoutMonitor = destinationTimeoutMonitor,
+      )
+
+    destination.setInputHasEnded(newValue = true)
+
+    assertThrows(WorkerException::class.java, destination::close)
+    verify(exactly = 1) {
+      metricClient.count(
+        OssMetricsRegistry.CONNECTOR_EXIT_CODE,
+        1,
+        match<MetricAttribute> { it.key == "connector_type" && it.value == "destination" },
+        match<MetricAttribute> { it.key == "exit_code" && it.value == "3" },
+        match<MetricAttribute> { it.key == "connector_image" && it.value == testImage },
+      )
+    }
+  }
+
+  @Test
+  internal fun testDestinationCloseDoesNotEmitExitCodeMetricOnIgnoredExitCodes() {
+    val mockedContainerIOHandle =
+      mockk<ContainerIOHandle> {
+        every { waitForExitCode(any(), any()) } returns true
+        every { exitCodeExists() } returns true
+        every { getExitCode() } returns 0
+      }
+    every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
+    every { messageMetricsTracker.flushDestSentCountMetric() } returns Unit
+
+    val destination =
+      LocalContainerAirbyteDestination(
+        streamFactory = streamFactory,
+        messageMetricsTracker = messageMetricsTracker,
+        messageWriterFactory = messageWriterFactory,
+        containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
+        destinationTimeoutMonitor = destinationTimeoutMonitor,
+      )
+
+    destination.setInputHasEnded(newValue = true)
+
+    destination.close()
+    verify(exactly = 0) { metricClient.count(OssMetricsRegistry.CONNECTOR_EXIT_CODE, any(), *anyVararg()) }
+  }
+
+  @Test
+  internal fun testDestinationCloseGracefulShutdownSuccess() {
+    val mockedContainerIOHandle =
+      mockk<ContainerIOHandle> {
+        every { waitForExitCode(any(), any()) } returns true
+        every { exitCodeExists() } returns true
+        every { getExitCode() } returns 0
+      }
+
+    every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
+    every { messageMetricsTracker.flushDestSentCountMetric() } returns Unit
+
+    val destination =
+      LocalContainerAirbyteDestination(
+        streamFactory = streamFactory,
+        messageMetricsTracker = messageMetricsTracker,
+        messageWriterFactory = messageWriterFactory,
+        containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
+        destinationTimeoutMonitor = destinationTimeoutMonitor,
+      )
+
+    destination.setInputHasEnded(newValue = true)
+
+    assertDoesNotThrow { destination.close() }
+    verify(exactly = 1) { mockedContainerIOHandle.waitForExitCode(any(), any()) }
+    verify(exactly = 0) { mockedContainerIOHandle.terminate(any(), any()) }
+  }
+
+  @Test
+  internal fun testDestinationCloseGracefulShutdownFailsFallsBackToTerminate() {
+    val mockedContainerIOHandle =
+      mockk<ContainerIOHandle> {
+        every { waitForExitCode(any(), any()) } returns false
+        every { terminate(any(), any()) } returns true
+        every { exitCodeExists() } returns true
+        every { getExitCode() } returns 0
+      }
+
+    every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
+    every { messageMetricsTracker.flushDestSentCountMetric() } returns Unit
+
+    val destination =
+      LocalContainerAirbyteDestination(
+        streamFactory = streamFactory,
+        messageMetricsTracker = messageMetricsTracker,
+        messageWriterFactory = messageWriterFactory,
+        containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
+        destinationTimeoutMonitor = destinationTimeoutMonitor,
+      )
+
+    destination.setInputHasEnded(newValue = true)
+
+    assertDoesNotThrow { destination.close() }
+    verify(exactly = 1) { mockedContainerIOHandle.waitForExitCode(any(), any()) }
+    verify(exactly = 1) { mockedContainerIOHandle.terminate(any(), any()) }
+  }
+
+  @Test
+  internal fun testDestinationCloseGracefulShutdownWithNonZeroExitCode() {
+    val exitValue = -122
+    val mockedContainerIOHandle =
+      mockk<ContainerIOHandle> {
+        every { waitForExitCode(any(), any()) } returns true
+        every { exitCodeExists() } returns true
+        every { getExitCode() } returns exitValue
+      }
+
+    every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
+    every { messageMetricsTracker.flushDestSentCountMetric() } returns Unit
+
+    val destination =
+      LocalContainerAirbyteDestination(
+        streamFactory = streamFactory,
+        messageMetricsTracker = messageMetricsTracker,
+        messageWriterFactory = messageWriterFactory,
+        containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
+        destinationTimeoutMonitor = destinationTimeoutMonitor,
+      )
+
+    destination.setInputHasEnded(newValue = true)
+
+    val error = assertThrows(WorkerException::class.java, destination::close)
+    assertEquals("Destination process exit with code $exitValue. This warning is normal if the job was cancelled.", error.message)
+    verify(exactly = 1) { mockedContainerIOHandle.waitForExitCode(any(), any()) }
+    verify(exactly = 0) { mockedContainerIOHandle.terminate(any(), any()) }
+  }
+
+  @Test
+  internal fun testDestinationCloseGracefulShutdownFailsAndTerminateFails() {
+    val mockedContainerIOHandle =
+      mockk<ContainerIOHandle> {
+        every { waitForExitCode(any(), any()) } returns false
+        every { terminate(any(), any()) } returns false
+      }
+
+    every { messageMetricsTracker.flushDestReadCountMetric() } returns Unit
+    every { messageMetricsTracker.flushDestSentCountMetric() } returns Unit
+
+    val destination =
+      LocalContainerAirbyteDestination(
+        streamFactory = streamFactory,
+        messageMetricsTracker = messageMetricsTracker,
+        messageWriterFactory = messageWriterFactory,
+        containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
+        metricClient = metricClient,
+        destinationTimeoutMonitor = destinationTimeoutMonitor,
+      )
+
+    destination.setInputHasEnded(newValue = true)
+
+    val error = assertThrows(WorkerException::class.java, destination::close)
+    assertEquals("Destination has not terminated.  This warning is normal if the job was cancelled.", error.message)
+    verify(exactly = 1) { mockedContainerIOHandle.waitForExitCode(any(), any()) }
+    verify(exactly = 1) { mockedContainerIOHandle.terminate(any(), any()) }
   }
 }

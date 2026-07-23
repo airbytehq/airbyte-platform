@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.repositories
@@ -7,6 +7,7 @@ package io.airbyte.data.repositories
 import io.airbyte.data.repositories.entities.SsoConfig
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
+import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SsoConfigStatus
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.assertj.core.api.Assertions.assertThat
@@ -14,6 +15,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.util.UUID
 
 @MicronautTest
@@ -156,5 +159,42 @@ class SsoConfigRepositoryTest : AbstractConfigRepositoryTest() {
     assertThat(retrieved).hasSize(1)
     assertThat(retrieved[0].organizationId).isEqualTo(orgId)
     assertThat(retrieved[0].keycloakRealm).isEqualTo("single-realm")
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+    value = PermissionType::class,
+    names = ["organization_admin", "organization_editor", "organization_member"],
+  )
+  fun `defaultRole round-trips through the database for each supported sso default role`(role: PermissionType) {
+    val ssoConfig =
+      SsoConfig(
+        id = UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        keycloakRealm = "realm-${role.literal}",
+        status = SsoConfigStatus.active,
+        defaultRole = role,
+      )
+
+    val saved = ssoConfigRepository.save(ssoConfig)
+    val retrieved = ssoConfigRepository.findById(saved.id).get()
+
+    assertThat(retrieved.defaultRole).isEqualTo(role)
+  }
+
+  @Test
+  fun `defaultRole round-trips as null when omitted on save`() {
+    val ssoConfig =
+      SsoConfig(
+        id = UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        keycloakRealm = "realm-null-default-role",
+        status = SsoConfigStatus.active,
+      )
+
+    val saved = ssoConfigRepository.save(ssoConfig)
+    val retrieved = ssoConfigRepository.findById(saved.id).get()
+
+    assertThat(retrieved.defaultRole).isNull()
   }
 }

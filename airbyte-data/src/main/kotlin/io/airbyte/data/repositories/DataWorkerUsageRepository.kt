@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.repositories
@@ -71,7 +71,7 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
     sourceCpuRequest: Double,
     destinationCpuRequest: Double,
     orchestratorCpuRequest: Double,
-  )
+  ): Int
 
   @Query(
     """
@@ -134,5 +134,5 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
     sourceCpuRequest: Double,
     destinationCpuRequest: Double,
     orchestratorCpuRequest: Double,
-  )
+  ): Int
 }

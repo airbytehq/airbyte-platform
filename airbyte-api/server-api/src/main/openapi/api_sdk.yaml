@@ -1642,6 +1642,45 @@ paths:
         type: "string"
       in: "path"
       required: true
+  /workspaces/{workspaceId}/oauthCredentials/{actorType}/{name}:
+    delete:
+      parameters:
+      - name: "workspaceId"
+        schema:
+          format: "UUID"
+          type: "string"
+        in: "path"
+        required: true
+      - name: "actorType"
+        schema:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        in: "path"
+        required: true
+      - name: "name"
+        schema:
+          type: "string"
+        in: "path"
+        required: true
+        description: "The name of the source or destination i.e. google-ads"
+      tags:
+      - "public_workspaces"
+      - "public"
+      - "Workspaces"
+      responses:
+        "204":
+          description: "OAuth credential override was deleted successfully."
+        "400":
+          description: "A field in the path has not been set appropriately."
+        "403":
+          description: "API key is invalid."
+      operationId: "deleteWorkspaceOAuthCredentials"
+      x-speakeasy-alias: "deleteWorkspaceOAuthCredentials"
+      x-speakeasy-group: "Workspaces"
+      summary: "Delete OAuth override credentials for a workspace and source/destination type."
+      description: "Delete a set of OAuth credentials that overrides the Airbyte-provided\
+        \ OAuth credentials used for source/destination OAuth.\n\n> \U0001F6A7 Warning\n\
+        >\n> Deleting an override that is actively used by existing sources or destinations\
+        \ will cause those connectors to fail on their next sync and require re-authentication."
   /permissions/{permissionId}:
     parameters:
     - name: "permissionId"
@@ -1855,6 +1894,45 @@ paths:
         \ OAuth credentials used for source/destination OAuth.\nIn order to determine\
         \ what the credential configuration needs to be, please see the connector\
         \ specification of the relevant source/destination."
+  /organizations/{organizationId}/oauthCredentials/{actorType}/{name}:
+    delete:
+      parameters:
+      - name: "organizationId"
+        schema:
+          format: "UUID"
+          type: "string"
+        in: "path"
+        required: true
+      - name: "actorType"
+        schema:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        in: "path"
+        required: true
+      - name: "name"
+        schema:
+          type: "string"
+        in: "path"
+        required: true
+        description: "The name of the source or destination i.e. google-ads"
+      tags:
+      - "public_organizations"
+      - "public"
+      - "Organizations"
+      responses:
+        "204":
+          description: "OAuth credential override was deleted successfully."
+        "400":
+          description: "A field in the path has not been set appropriately."
+        "403":
+          description: "API key is invalid."
+      operationId: "deleteOrganizationOAuthCredentials"
+      x-speakeasy-alias: "deleteOrganizationOAuthCredentials"
+      x-speakeasy-group: "Organizations"
+      summary: "Delete OAuth override credentials for an organization and source/destination type."
+      description: "Delete a set of OAuth credentials that overrides the Airbyte-provided\
+        \ OAuth credentials used for source/destination OAuth.\n\n> \U0001F6A7 Warning\n\
+        >\n> Deleting an override that is actively used by existing sources or destinations\
+        \ will cause those connectors to fail on their next sync and require re-authentication."
   /users:
     get:
       tags:
@@ -2742,6 +2820,7 @@ components:
     JobStatusEnum:
       enum:
       - "pending"
+      - "queued"
       - "running"
       - "incomplete"
       - "failed"
@@ -3949,106 +4028,6 @@ components:
           items:
             $ref: "#/components/schemas/DataplaneResponse"
       x-speakeasy-component: true
-    ConfigTemplateListResponse:
-      type: "object"
-      required:
-      - "data"
-      properties:
-        data:
-          type: "array"
-          items:
-            $ref: "#/components/schemas/ConfigTemplateListItem"
-      x-speakeasy-component: true
-    ConfigTemplateListItem:
-      type: "object"
-      required:
-      - "id"
-      - "name"
-      - "icon"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
-        name:
-          type: "string"
-        icon:
-          type: "string"
-      x-speakeasy-component: true
-    ConfigTemplatePublicRead:
-      type: "object"
-      required:
-      - "id"
-      - "name"
-      - "icon"
-      - "sourceDefinitionId"
-      - "configTemplateSpec"
-      - "partialDefaultConfig"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
-        name:
-          type: "string"
-          description: "Name of the associated actor definition"
-        icon:
-          type: "string"
-          description: "url to icon in connector asset (svg) registry"
-        sourceDefinitionId:
-          type: "string"
-          format: "uuid"
-        configTemplateSpec:
-          $ref: "#/components/schemas/SourceDefinitionSpecification"
-        partialDefaultConfig:
-          type: "object"
-      x-speakeasy-component: true
-    ConfigTemplateCreateRequestBody:
-      type: "object"
-      required:
-      - "actorDefinitionId"
-      - "partialDefaultConfig"
-      - "organizationId"
-      properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
-        actorDefinitionId:
-          $ref: "#/components/schemas/ActorDefinitionId"
-        partialDefaultConfig:
-          $ref: "#/components/schemas/SourceConfiguration"
-        partialUserConfigSpec:
-          $ref: "#/components/schemas/SourceConfiguration"
-      x-speakeasy-component: true
-    ConfigTemplateCreateResponse:
-      type: "object"
-      required:
-      - "id"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
-      x-speakeasy-component: true
-    ConfigTemplateUpdateRequestBody:
-      type: "object"
-      required:
-      - "organizationId"
-      properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
-        partialDefaultConfig:
-          $ref: "#/components/schemas/SourceConfiguration"
-        partialUserConfigSpec:
-          $ref: "#/components/schemas/SourceConfiguration"
-      x-speakeasy-component: true
-    ConfigTemplateUpdateResponse:
-      type: "object"
-      required:
-      - "id"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
-      x-speakeasy-component: true
     EmbeddedWidgetRequest:
       type: "object"
       required:
@@ -4088,54 +4067,6 @@ components:
       properties:
         token:
           type: "string"
-      x-speakeasy-component: true
-    ConnectionTemplateCreateRequestBody:
-      type: "object"
-      required:
-      - "destinationConfiguration"
-      - "organizationId"
-      - "destinationName"
-      - "destinationActorDefinitionId"
-      properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
-        destinationName:
-          type: "string"
-        destinationConfiguration:
-          $ref: "#/components/schemas/DestinationConfiguration"
-        destinationActorDefinitionId:
-          $ref: "#/components/schemas/ActorDefinitionId"
-        namespaceDefinitionType:
-          $ref: "#/components/schemas/NamespaceDefinitionType"
-          description: "The namespace definition type for the connection. This is\
-            \ used to determine how the namespace is defined for the connection. If\
-            \ none is provided, the namespace will be set to ${WORKSPACE_NAME}."
-        namespaceFormat:
-          type: "string"
-          default: null
-        prefix:
-          type: "string"
-        schedule:
-          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
-          description: "The schedule for connections. If none is provided, syncs will\
-            \ run every hour."
-        resourceRequirements:
-          $ref: "#/components/schemas/ResourceRequirements"
-        nonBreakingChangesPreference:
-          $ref: "#/components/schemas/NonBreakingChangesPreference"
-        syncOnCreate:
-          type: "boolean"
-          default: true
-      x-speakeasy-component: true
-    ConnectionTemplateCreateResponse:
-      type: "object"
-      required:
-      - "id"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
       x-speakeasy-component: true
     EmbeddedOrganizationsList:
       required:
@@ -5029,7 +4960,7 @@ components:
           maximum: 50
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -5086,7 +5017,7 @@ components:
           maximum: 50
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -15614,7 +15545,7 @@ components:
           maximum: 20
           minimum: 1
           order: 5
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         slice_range:
           default: 365
@@ -15707,7 +15638,7 @@ components:
           maximum: 20
           minimum: 1
           order: 5
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         slice_range:
           default: 365
@@ -21138,7 +21069,7 @@ components:
           maximum: 40
           minimum: 1
           order: 6
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         projects:
           description: "List of Jira project keys to replicate data for, or leave\
@@ -21228,7 +21159,7 @@ components:
           maximum: 40
           minimum: 1
           order: 6
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         projects:
           description: "List of Jira project keys to replicate data for, or leave\
@@ -21462,7 +21393,7 @@ components:
           - 3
           maximum: 40
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -21571,7 +21502,7 @@ components:
           - 3
           maximum: 40
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -21949,7 +21880,7 @@ components:
           maximum: 50
           minimum: 1
           order: 4
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         product_catalog:
           default: "2.0"
@@ -22017,7 +21948,7 @@ components:
           maximum: 50
           minimum: 1
           order: 4
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         product_catalog:
           default: "2.0"
@@ -23694,7 +23625,7 @@ components:
           - 3
           maximum: 20
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         report_ids:
           description: "Report IDs can be found by clicking the three dots on the\
@@ -23763,7 +23694,7 @@ components:
           - 3
           maximum: 20
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         report_ids:
           description: "Report IDs can be found by clicking the three dots on the\
@@ -25099,7 +25030,7 @@ components:
           maximum: 10
           minimum: 2
           order: 9
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         profiles:
           description: "Profile IDs you want to fetch data for. The Amazon Ads source\
@@ -25211,7 +25142,7 @@ components:
           maximum: 10
           minimum: 2
           order: 9
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         profiles:
           description: "Profile IDs you want to fetch data for. The Amazon Ads source\
@@ -37727,7 +37658,7 @@ components:
           maximum: 20
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         sourceType:
           title: "recurly"
@@ -37795,7 +37726,7 @@ components:
           maximum: 20
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
       required:
       - "api_key"
@@ -41931,7 +41862,7 @@ components:
           maximum: 40
           minimum: 1
           order: 5
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2020-10-01T00:00:00Z. Any\
@@ -41991,7 +41922,7 @@ components:
           maximum: 40
           minimum: 1
           order: 5
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2020-10-01T00:00:00Z. Any\
@@ -42554,7 +42485,7 @@ components:
           maximum: 100
           minimum: 2
           order: 7
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         site_urls:
           description: "The URLs of the website property attached to your GSC account.\
@@ -42759,7 +42690,7 @@ components:
           maximum: 100
           minimum: 2
           order: 7
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         site_urls:
           description: "The URLs of the website property attached to your GSC account.\
@@ -44329,7 +44260,7 @@ components:
           - 3
           maximum: 40
           minimum: 2
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "The date from which you'd like to replicate data for User\
@@ -44383,7 +44314,7 @@ components:
           - 3
           maximum: 40
           minimum: 2
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "The date from which you'd like to replicate data for User\
@@ -50815,7 +50746,7 @@ components:
           maximum: 10
           minimum: 2
           order: 7
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -50957,7 +50888,7 @@ components:
           maximum: 10
           minimum: 2
           order: 7
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "UTC date and time in the format 2017-01-25T00:00:00Z. Any\
@@ -52359,7 +52290,7 @@ components:
           - 3
           maximum: 25
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         organization_export_ids:
           description: "Globally unique identifiers for the organization exports"
@@ -52440,7 +52371,7 @@ components:
           - 3
           maximum: 25
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         organization_export_ids:
           description: "Globally unique identifiers for the organization exports"
@@ -55141,7 +55072,7 @@ components:
           maximum: 25
           minimum: 1
           order: 11
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         page_size:
           default: 1000
@@ -55315,7 +55246,7 @@ components:
           maximum: 25
           minimum: 1
           order: 11
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         page_size:
           default: 1000
@@ -55632,7 +55563,7 @@ components:
           maximum: 40
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "The UTC date and time from which you'd like to replicate data,\
@@ -55744,7 +55675,7 @@ components:
           maximum: 40
           minimum: 1
           order: 3
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "The UTC date and time from which you'd like to replicate data,\
@@ -67156,7 +67087,7 @@ components:
           - 3
           maximum: 50
           minimum: 2
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         sourceType:
           title: "monday"
@@ -67245,7 +67176,7 @@ components:
           - 3
           maximum: 50
           minimum: 2
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
       required: []
       title: "Monday Spec"
@@ -68845,7 +68776,7 @@ components:
           - 3
           maximum: 50
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "Rows after this date will be synced, default 2 years ago."
@@ -68905,7 +68836,7 @@ components:
           - 3
           maximum: 50
           minimum: 1
-          title: "Number of concurrent workers"
+          title: "Number of concurrent threads"
           type: "integer"
         start_date:
           description: "Rows after this date will be synced, default 2 years ago."
@@ -71342,7 +71273,7 @@ components:
               description: "The Client Secret of your Drift developer application."
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "Drift Spec"
     snapchat-marketing:
       properties:
         client_id:
@@ -71357,7 +71288,7 @@ components:
           order: 1
           title: "Client Secret"
           type: "string"
-      title: null
+      title: "Snapchat Marketing Spec"
     gitlab:
       properties:
         credentials:
@@ -71433,7 +71364,7 @@ components:
               description: "Client Secret"
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "Zendesk Talk Spec"
     linkedin-ads:
       properties:
         credentials:
@@ -71517,7 +71448,7 @@ components:
               airbyte_secret: true
               description: "The Client Secret the Typeform developer application."
               type: "string"
-      title: null
+      title: "Typeform Spec"
     facebook-pages:
       title: "Facebook Pages Spec"
     surveymonkey:
@@ -71536,7 +71467,7 @@ components:
               order: 2
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "SurveyMonkey Spec"
     amazon-ads:
       properties:
         client_id:
@@ -71649,9 +71580,9 @@ components:
                 >here</a>."
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "TickTick Spec"
     trello:
-      title: null
+      title: "Trello Spec"
     sharepoint-enterprise:
       properties:
         credentials:
@@ -71891,7 +71822,7 @@ components:
               type: "string"
       title: "Google Analytics (Data API) Spec"
     intercom:
-      title: null
+      title: "Intercom Spec"
     facebook-marketing:
       properties:
         credentials:
@@ -71970,7 +71901,7 @@ components:
               description: "The client secret of the Airtable developer application."
               title: "Client Secret"
               type: "string"
-      title: null
+      title: "Airtable Spec"
     destination-hubspot:
       properties:
         credentials:
@@ -90974,6 +90905,20 @@ components:
           description: Input configuration for OAuth required by some sources.
         sourceType:
           $ref: "#/components/schemas/OAuthActorNames"
+        requestedScopes:
+          type: array
+          description: >-
+            Optional OAuth scopes to request, overriding the connector's default scopes.
+            Only supported for connectors that define scopes as an array.
+          items:
+            type: string
+        requestedOptionalScopes:
+          type: array
+          description: >-
+            Optional OAuth optional_scopes to request, overriding the connector's default
+            optional_scopes. Only applied when requestedScopes is also provided.
+          items:
+            type: string
     WorkspaceOAuthCredentialsRequest:
       title: "Root Type for WorkspaceOAuthCredentials"
       description: "POST body for creating/updating workspace level OAuth credentials"

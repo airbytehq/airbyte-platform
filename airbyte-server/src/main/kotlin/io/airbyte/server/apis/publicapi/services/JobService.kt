@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -12,7 +12,6 @@ import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByFie
 import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody.OrderByMethodEnum
 import io.airbyte.api.model.generated.JobListRequestBody
 import io.airbyte.api.model.generated.Pagination
-import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.support.CurrentUserService
@@ -31,7 +30,11 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 interface JobService {
-  fun sync(connectionId: UUID): JobResponse
+  fun sync(
+    connectionId: UUID,
+    organizationId: UUID? = null,
+    returnAfterJobId: Boolean = false,
+  ): JobResponse
 
   fun reset(connectionId: UUID): JobResponse
 
@@ -68,11 +71,15 @@ class JobServiceImpl(
   /**
    * Starts a sync job for the given connection ID.
    */
-  override fun sync(connectionId: UUID): JobResponse {
+  override fun sync(
+    connectionId: UUID,
+    organizationId: UUID?,
+    returnAfterJobId: Boolean,
+  ): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val result =
       kotlin
-        .runCatching { schedulerHandler.syncConnection(connectionIdRequestBody) }
+        .runCatching { schedulerHandler.syncConnection(connectionIdRequestBody, organizationId, returnAfterJobId) }
         .onFailure { ConfigClientErrorHandler.handleError(it) }
 
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
@@ -220,14 +227,13 @@ class JobServiceImpl(
   private fun getJobConfigTypes(jobType: JobTypeEnum?): List<JobConfigType> {
     val configTypes: MutableList<JobConfigType> = ArrayList()
     if (jobType == null) {
-      configTypes.addAll(listOf(JobConfigType.SYNC, JobConfigType.RESET_CONNECTION))
+      configTypes.addAll(listOf(JobConfigType.SYNC, JobConfigType.RESET_CONNECTION, JobConfigType.CLEAR, JobConfigType.REFRESH))
     } else {
       when (jobType) {
         JobTypeEnum.SYNC -> configTypes.add(JobConfigType.SYNC)
         JobTypeEnum.RESET -> configTypes.add(JobConfigType.RESET_CONNECTION)
         JobTypeEnum.CLEAR -> configTypes.add(JobConfigType.CLEAR)
         JobTypeEnum.REFRESH -> configTypes.add(JobConfigType.REFRESH)
-        else -> throw UnprocessableEntityProblem()
       }
     }
     return configTypes

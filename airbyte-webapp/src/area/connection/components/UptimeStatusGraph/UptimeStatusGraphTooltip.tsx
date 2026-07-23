@@ -1,12 +1,12 @@
 import { FormattedMessage, FormattedTime, useIntl } from "react-intl";
 import { ContentType } from "recharts/types/component/Tooltip";
 
-import { StreamStatusIndicator, StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
+import { StreamStatusIndicator, StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import { useFormatLengthOfTime } from "core/utils/time";
 
 import styles from "./UptimeStatusGraphTooltip.module.scss";

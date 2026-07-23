@@ -14,5 +14,5 @@ helm.publish:
 		--name airbyte/airbyte-data-plane \
 		--source-path oss/charts/v2/airbyte-data-plane \
 		--src-repo https://github.com/airbytehq/airbyte-platform-internal.git \
-		--dst-repo https://github.com/airbytehq/helm-charts.git \
+		--dst-repo https://github.com/airbytehq/charts.git \
 		--ref $(GIT_REF)

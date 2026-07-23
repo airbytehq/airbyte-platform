@@ -3,16 +3,16 @@ import { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } 
 import { FormattedMessage, useIntl } from "react-intl";
 import { AuthProvider, useAuth } from "react-oidc-context";
 
-import LoadingPage from "components/LoadingPage";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import LoadingPage from "components/ui/LoadingPage";
 import { Text } from "components/ui/Text";
 
+import { createUriWithoutSsoParams } from "cloud/services/auth/CloudAuthService";
 import { useGetInstanceConfiguration, useGetOrCreateUser } from "core/api";
 import { AuthConfigurationMode, UserRead } from "core/api/types/AirbyteClient";
 import { useFormatError } from "core/errors";
-import { useNotificationService } from "hooks/services/Notification";
-import { createUriWithoutSsoParams } from "packages/cloud/services/auth/CloudAuthService";
+import { useNotificationService } from "core/services/Notification";
 
 import { AuthContext, AuthContextApi } from "./AuthContext";
 

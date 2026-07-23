@@ -2,9 +2,8 @@ import { Dispatch, SetStateAction } from "react";
 // eslint-disable-next-line no-restricted-imports
 import { useLocalStorage as useLocalStorageWithUndefinedBug } from "react-use";
 
-import { BuilderState } from "components/connectorBuilder/types";
-
-import { Theme } from "hooks/theme/useAirbyteTheme";
+import { BuilderState } from "area/connectorBuilder/components/types";
+import { Theme } from "core/utils/useAirbyteTheme";
 
 export interface AssistLocalStorageProject {
   sessionId: string;
@@ -29,8 +28,12 @@ interface AirbyteLocalStorage {
   "airbyte_connector-builder-modes": Record<string, BuilderState["mode"]>;
   "airbyte_license-check-dismissed-at": string | null;
   "airbyte_organization-workspace-map": Record<string, string>;
+  "airbyte_last-visited-organization-id": string;
   "airbyte_new-signup": boolean;
   "airbyte_pro-features-shown": Record<string, string>;
+  "airbyte_support-chat-autoscroll": boolean;
+  "airbyte_support-chat-thread-id": string;
+  "airbyte_capacity-reached-banner-dismissed": Record<string, boolean>;
 }
 
 /*

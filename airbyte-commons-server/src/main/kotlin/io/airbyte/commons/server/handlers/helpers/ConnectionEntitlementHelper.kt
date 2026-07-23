@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers
@@ -9,9 +9,11 @@ import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.config.StandardSync
 import io.airbyte.config.helpers.CronExpressionHelper
+import io.airbyte.config.helpers.ScheduleHelpers.setBasicHourlySchedule
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
@@ -34,6 +36,7 @@ class ConnectionEntitlementHelper(
 ) {
   companion object {
     private val logger = KotlinLogging.logger {}
+    private const val FIFTEEN_MINUTE_SYNC_FLOOR_MINUTES = 15L
   }
 
   /**
@@ -54,10 +57,8 @@ class ConnectionEntitlementHelper(
     val sourceIsEntitled = isEntitledToConnector(sourceDefinitionId, organizationId)
     val destinationIsEntitled = isEntitledToConnector(destinationDefinitionId, organizationId)
 
-    if (subHourSyncIds.contains(connection.connectionId)) {
-      if (!entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement).isEntitled) {
-        return false
-      }
+    if (!hasRequiredSyncFrequencyEntitlement(connection, subHourSyncIds, organizationId)) {
+      return false
     }
 
     if (connection.catalog.streams.any { it.mappers.isNotEmpty() }) {
@@ -67,6 +68,57 @@ class ConnectionEntitlementHelper(
     }
 
     return sourceIsEntitled && destinationIsEntitled
+  }
+
+  private fun hasRequiredSyncFrequencyEntitlement(
+    connection: StandardSync,
+    subHourSyncIds: Collection<UUID>,
+    organizationId: OrganizationId,
+  ): Boolean {
+    if (!subHourSyncIds.contains(connection.connectionId)) {
+      return true
+    }
+
+    if (entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement).isEntitled) {
+      return true
+    }
+
+    if (!entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement).isEntitled) {
+      return false
+    }
+
+    return !requiresLegacyFasterSyncEntitlement(connection)
+  }
+
+  private fun requiresLegacyFasterSyncEntitlement(connection: StandardSync): Boolean {
+    val basicSchedule = connection.scheduleData?.basicSchedule
+    if (basicSchedule != null) {
+      return basicSchedule.timeUnit == io.airbyte.config.BasicSchedule.TimeUnit.MINUTES &&
+        basicSchedule.units < FIFTEEN_MINUTE_SYNC_FLOOR_MINUTES
+    }
+
+    val cronSchedule = connection.scheduleData?.cron
+    if (cronSchedule != null) {
+      return try {
+        cronExpressionHelper.executesMoreThanOncePerFifteenMinutes(cronSchedule.cronExpression)
+      } catch (e: IllegalArgumentException) {
+        logger.warn(e) {
+          "Invalid cron expression while validating connection ${connection.connectionId} for 15-minute sync entitlement"
+        }
+        true
+      }
+    }
+
+    val legacySchedule = connection.schedule
+    if (legacySchedule != null) {
+      return legacySchedule.timeUnit == io.airbyte.config.Schedule.TimeUnit.MINUTES &&
+        legacySchedule.units < FIFTEEN_MINUTE_SYNC_FLOOR_MINUTES
+    }
+
+    logger.warn {
+      "Unable to determine sub-hour sync cadence for connection ${connection.connectionId}; requiring legacy faster-sync entitlement to unlock it"
+    }
+    return true
   }
 
   private fun isEntitledToConnector(
@@ -81,6 +133,10 @@ class ConnectionEntitlementHelper(
     }
   }
 
+  private fun lacksSubHourSyncEntitlement(organizationId: OrganizationId): Boolean =
+    !entitlementService.checkEntitlement(organizationId, FasterSyncFrequencyEntitlement).isEntitled &&
+      !entitlementService.checkEntitlement(organizationId, FifteenMinuteSyncFrequencyEntitlement).isEntitled
+
   /**
    * Unlocks all LOCKED connections for an organization that they are entitled to use.
    * For each entitled connection, updates the status to INACTIVE and removes the statusReason.
@@ -91,7 +147,8 @@ class ConnectionEntitlementHelper(
     logger.info { "Unlocking entitled connections for organization: $organizationId" }
 
     val connectionIds = connectionService.listConnectionIdsForOrganization(organizationId.value)
-    val subHourSyncIds = entitlementHelper.findSubHourSyncIds(organizationId)
+    val subHourSyncIds = entitlementHelper.findSubHourSyncIds(organizationId).toSet()
+    val shouldDowngradeSubHourSyncs = subHourSyncIds.isNotEmpty() && lacksSubHourSyncEntitlement(organizationId)
 
     logger.debug { "Found ${connectionIds.size} connections for organization $organizationId" }
 
@@ -102,13 +159,22 @@ class ConnectionEntitlementHelper(
         if (connection.status == StandardSync.Status.LOCKED) {
           logger.debug { "Checking entitlement for locked connection: $connectionId" }
 
+          val effectiveSubHourSyncIds =
+            if (shouldDowngradeSubHourSyncs && subHourSyncIds.contains(connectionId)) {
+              logger.info { "Downgrading locked sub-hour connection $connectionId to an hourly schedule before entitlement recheck" }
+              connectionService.writeStandardSync(setBasicHourlySchedule(connection))
+              subHourSyncIds - connectionId
+            } else {
+              subHourSyncIds
+            }
+
           val sourceDefinition = sourceService.getSourceDefinitionFromSource(connection.sourceId)
           val destinationDefinition = destinationService.getDestinationDefinitionFromDestination(connection.destinationId)
 
           val isEntitled =
             isEntitledToConnection(
               connection,
-              subHourSyncIds,
+              effectiveSubHourSyncIds,
               sourceDefinition.sourceDefinitionId,
               destinationDefinition.destinationDefinitionId,
               organizationId,

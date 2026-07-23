@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services
@@ -57,7 +57,7 @@ class OrganizationDomainVerificationServiceTest {
         createdAt = OffsetDateTime.now(),
       )
 
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns null
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns emptyList()
     every { organizationDomainVerificationRepository.save(any()) } returns savedEntity
 
     val result =
@@ -84,7 +84,7 @@ class OrganizationDomainVerificationServiceTest {
         status = EntityDomainVerificationStatus.verified,
       )
 
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns existingEntity
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns listOf(existingEntity)
 
     val exception =
       assertThrows<IllegalArgumentException> {
@@ -107,7 +107,7 @@ class OrganizationDomainVerificationServiceTest {
         status = EntityDomainVerificationStatus.expired,
       )
 
-    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns existingEntity
+    every { organizationDomainVerificationRepository.findByOrganizationIdAndDomain(testOrgId, testDomain, false) } returns listOf(existingEntity)
 
     val exception =
       assertThrows<IllegalArgumentException> {

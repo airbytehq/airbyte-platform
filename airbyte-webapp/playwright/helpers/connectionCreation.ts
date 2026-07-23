@@ -67,7 +67,9 @@ export const navigateToConnectionConfig = async (
   await page.goto(configUrl, { timeout });
 
   // Wait for the streams table to load
-  await page.waitForSelector('table[data-testid="sync-catalog-table"]', { timeout: 90000 });
+  const streamsTable = page.locator('table[data-testid="sync-catalog-table"]');
+  await streamsTable.waitFor({ state: "visible", timeout: 90000 });
+  await streamsTable.scrollIntoViewIfNeeded();
   // Also wait for actual stream content to ensure the table is fully populated
   await page.waitForSelector('[data-testid^="row-depth-1-stream"]', { timeout: 15000 });
 };

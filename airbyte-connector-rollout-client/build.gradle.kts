@@ -47,7 +47,7 @@ tasks.withType<JavaCompile> {
 airbyte {
   application {
     mainClass.set("io.airbyte.connector.rollout.client.ConnectorRolloutCLI")
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
+
     localEnvVars.putAll(
       mapOf(
         "AIRBYTE_VERSION" to "dev",

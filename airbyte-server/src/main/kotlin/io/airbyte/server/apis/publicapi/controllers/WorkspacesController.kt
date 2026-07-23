@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
@@ -10,6 +10,7 @@ import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.publicApi.server.generated.apis.PublicWorkspacesApi
+import io.airbyte.publicApi.server.generated.models.ActorTypeEnum
 import io.airbyte.publicApi.server.generated.models.WorkspaceCreateRequest
 import io.airbyte.publicApi.server.generated.models.WorkspaceOAuthCredentialsRequest
 import io.airbyte.publicApi.server.generated.models.WorkspaceUpdateRequest
@@ -49,6 +50,25 @@ open class WorkspacesController(
     return workspaceService.controllerSetWorkspaceOverrideOAuthParams(
       UUID.fromString(workspaceId),
       workspaceOAuthCredentialsRequest,
+    )
+  }
+
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  override fun deleteWorkspaceOAuthCredentials(
+    workspaceId: String,
+    actorType: ActorTypeEnum,
+    name: String,
+  ): Response {
+    roleResolver
+      .newRequest()
+      .withCurrentUser()
+      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
+      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+
+    return workspaceService.controllerDeleteWorkspaceOverrideOAuthParams(
+      UUID.fromString(workspaceId),
+      actorType,
+      name,
     )
   }
 

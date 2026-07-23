@@ -5,8 +5,8 @@ import { v4 as uuidv4 } from "uuid";
 import { ConnectionConfiguration } from "area/connector/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useExperiment } from "core/services/Experiment";
 import { isDefined } from "core/utils/common";
-import { useExperiment } from "hooks/services/Experiment";
 import { SourceSetupFlow } from "pages/source/CreateSourcePage/SourceFormWithAgent";
 
 import { useCancelCommand, pollCommandUntilResolved } from "./commands";
@@ -151,18 +151,13 @@ export const useCreateSource = () => {
     },
     {
       onSuccess: (_data, ctx) => {
-        analyticsService.track(
-          Namespace.SOURCE,
-          Action.CREATE,
-          {
-            actionDescription: "Source created",
-            connector_source_definition_id: ctx.sourceConnector.sourceDefinitionId,
-            connector_source: ctx.sourceConnector.name,
-            source_name: ctx.values.name,
-            setup_flow: ctx.values.setupFlow ?? "form",
-          },
-          { sendToPosthog: true }
-        );
+        analyticsService.track(Namespace.SOURCE, Action.CREATE, {
+          actionDescription: "Source created",
+          connector_source_definition_id: ctx.sourceConnector.sourceDefinitionId,
+          connector_source: ctx.sourceConnector.name,
+          source_name: ctx.values.name,
+          setup_flow: ctx.values.setupFlow ?? "form",
+        });
         queryClient.resetQueries(sourcesKeys.lists());
       },
       onError,

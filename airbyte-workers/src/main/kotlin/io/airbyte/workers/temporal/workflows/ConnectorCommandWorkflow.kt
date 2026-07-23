@@ -1,11 +1,10 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.workflows
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import datadog.trace.api.Trace
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
 import io.airbyte.commons.temporal.scheduling.CheckCommandApiInput
@@ -25,7 +24,6 @@ import io.airbyte.config.SignalInput
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
@@ -46,6 +44,7 @@ import io.airbyte.workers.models.SpecApiInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.workload.WorkspaceNotFoundException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import io.temporal.activity.Activity
 import io.temporal.activity.ActivityExecutionContext
 import io.temporal.activity.ActivityInterface
@@ -150,7 +149,7 @@ class ConnectorCommandActivityImpl(
     val logger = KotlinLogging.logger {}
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun startCommand(activityInput: ConnectorCommandActivityInput): String =
     withInstrumentation(activityInput) {
       when (activityInput.input) {
@@ -164,19 +163,19 @@ class ConnectorCommandActivityImpl(
       }
     }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun isCommandTerminal(activityInput: ConnectorCommandActivityInput): Boolean =
     withInstrumentation(activityInput) {
       getCommand(activityInput.input).isTerminal(id = activityInput.id ?: throw IllegalStateException("id must exist"))
     }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun getCommandOutput(activityInput: ConnectorCommandActivityInput): ConnectorJobOutput =
     withInstrumentation(activityInput, reportCommandSummaryMetrics = true) {
       getCommand(activityInput.input).getOutput(id = activityInput.id ?: throw IllegalStateException("id must exist"))
     }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun cancelCommand(activityInput: ConnectorCommandActivityInput) {
     withInstrumentation(activityInput, reportCommandSummaryMetrics = true) {
       getCommand(activityInput.input).cancel(id = activityInput.id ?: throw IllegalStateException("id must exist"))

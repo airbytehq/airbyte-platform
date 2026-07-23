@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.config
@@ -9,7 +9,6 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteKubernetesConfig
-import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -29,8 +28,7 @@ class ApplicationBeanFactory {
   @Named("kubeHttpErrorRetryPredicate")
   fun kubeHttpErrorRetryPredicate(): (Throwable) -> Boolean =
     { e: Throwable ->
-      e is KubernetesClientTimeoutException ||
-        e.cause is SocketTimeoutException ||
+      e.cause is SocketTimeoutException ||
         e.cause?.cause is StreamResetException ||
         (e.cause is IOException && e.cause?.message == "timeout")
     }

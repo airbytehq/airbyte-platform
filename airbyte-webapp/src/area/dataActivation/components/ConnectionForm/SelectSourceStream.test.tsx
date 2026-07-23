@@ -7,7 +7,7 @@ import { mockSource, render } from "test-utils";
 
 import { DataActivationConnectionFormValues, DataActivationField } from "area/dataActivation/types";
 import { AirbyteCatalog, AirbyteStreamAndConfiguration, SyncMode } from "core/api/types/AirbyteClient";
-import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
+import { AirbyteThemeProvider } from "core/utils/useAirbyteTheme";
 
 import { SelectSourceStream } from "./SelectSourceStream";
 

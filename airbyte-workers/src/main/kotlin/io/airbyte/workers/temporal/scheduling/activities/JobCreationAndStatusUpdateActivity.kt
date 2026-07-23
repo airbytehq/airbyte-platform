@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities
 
 import io.airbyte.config.AttemptFailureSummary
+import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.StandardSyncOutput
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
@@ -64,10 +65,18 @@ interface JobCreationAndStatusUpdateActivity {
     @JvmField
     var jobId: Long? = null
 
+    @JvmField
+    var jobConfigType: ConfigType? = null
+
     constructor()
 
     constructor(jobId: Long?) {
       this.jobId = jobId
+    }
+
+    constructor(jobId: Long?, jobConfigType: ConfigType?) {
+      this.jobId = jobId
+      this.jobConfigType = jobConfigType
     }
 
     override fun equals(o: Any?): Boolean {
@@ -75,12 +84,12 @@ interface JobCreationAndStatusUpdateActivity {
         return false
       }
       val that = o as JobCreationOutput
-      return jobId == that.jobId
+      return jobId == that.jobId && jobConfigType == that.jobConfigType
     }
 
-    override fun hashCode(): Int = Objects.hashCode(jobId)
+    override fun hashCode(): Int = Objects.hash(jobId, jobConfigType)
 
-    override fun toString(): String = "JobCreationOutput{jobId=" + jobId + '}'
+    override fun toString(): String = "JobCreationOutput{jobId=" + jobId + ", jobConfigType=" + jobConfigType + '}'
   }
 
   /**
@@ -483,4 +492,76 @@ interface JobCreationAndStatusUpdateActivity {
 
   @ActivityMethod
   fun shouldRunDestinationCheck(input: JobCheckFailureInput): Boolean
+
+  /**
+   * SetJobQueuedInput.
+   */
+  class SetJobQueuedInput {
+    @JvmField
+    var jobId: Long? = null
+
+    constructor()
+
+    constructor(jobId: Long?) {
+      this.jobId = jobId
+    }
+
+    override fun equals(o: Any?): Boolean {
+      if (o == null || javaClass != o.javaClass) {
+        return false
+      }
+      val that = o as SetJobQueuedInput
+      return jobId == that.jobId
+    }
+
+    override fun hashCode(): Int = Objects.hashCode(jobId)
+
+    override fun toString(): String = "SetJobQueuedInput{jobId=$jobId}"
+  }
+
+  /**
+   * Set a job status to QUEUED, indicating it is waiting for Data Worker capacity.
+   */
+  @ActivityMethod
+  fun setJobQueued(input: SetJobQueuedInput)
+
+  /**
+   * CancelJobInput.
+   */
+  class CancelJobInput {
+    @JvmField
+    var jobId: Long? = null
+
+    @JvmField
+    var connectionId: UUID? = null
+
+    @JvmField
+    var reason: String? = null
+
+    constructor()
+
+    constructor(jobId: Long?, connectionId: UUID?, reason: String?) {
+      this.jobId = jobId
+      this.connectionId = connectionId
+      this.reason = reason
+    }
+
+    override fun equals(o: Any?): Boolean {
+      if (o == null || javaClass != o.javaClass) {
+        return false
+      }
+      val that = o as CancelJobInput
+      return jobId == that.jobId && connectionId == that.connectionId && reason == that.reason
+    }
+
+    override fun hashCode(): Int = Objects.hash(jobId, connectionId, reason)
+
+    override fun toString(): String = "CancelJobInput{jobId=$jobId, connectionId=$connectionId, reason=$reason}"
+  }
+
+  /**
+   * Cancel a job that has no attempts (e.g., when cancelled while waiting for capacity).
+   */
+  @ActivityMethod
+  fun cancelJob(input: CancelJobInput)
 }

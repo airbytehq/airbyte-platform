@@ -1,12 +1,11 @@
 import isEqual from "lodash/isEqual";
 import { useEffect, useRef } from "react";
 
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
+import { useConnectionFormService } from "area/connection/utils/ConnectionForm/ConnectionFormService";
 import { useGetConnectionSyncProgress } from "core/api";
 import { ConnectionSyncProgressRead, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 export const useTrackSyncProgress = (connectionId: string, trackCountRef: React.MutableRefObject<number>) => {
   const { connection } = useConnectionFormService();

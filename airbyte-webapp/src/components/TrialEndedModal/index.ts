@@ -1,1 +1,0 @@
-export { TrialEndedModal } from "./TrialEndedModal";

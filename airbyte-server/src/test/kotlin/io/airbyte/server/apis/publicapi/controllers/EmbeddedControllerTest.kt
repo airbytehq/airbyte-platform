@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
@@ -65,7 +65,7 @@ class EmbeddedControllerTest {
         organizationsHandler =
           mockk {
             every {
-              listOrganizationsByUser(ListOrganizationsByUserRequestBody())
+              listAllOrganizationsByUser(ListOrganizationsByUserRequestBody())
             } returns
               OrganizationReadList().organizations(
                 mutableListOf(
@@ -174,7 +174,7 @@ class EmbeddedControllerTest {
         organizationsHandler =
           mockk {
             every {
-              listOrganizationsByUser(ListOrganizationsByUserRequestBody())
+              listAllOrganizationsByUser(ListOrganizationsByUserRequestBody())
             } returns
               OrganizationReadList().organizations(
                 mutableListOf(
@@ -576,7 +576,7 @@ class EmbeddedControllerTest {
       },
       mockk {
         every {
-          listOrganizationsByUser(
+          listAllOrganizationsByUser(
             match<ListOrganizationsByUserRequestBody> { it.userId == userId },
           )
         } returns OrganizationReadList().organizations(organizations)

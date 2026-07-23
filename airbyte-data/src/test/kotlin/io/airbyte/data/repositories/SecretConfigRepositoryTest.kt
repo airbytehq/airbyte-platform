@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.repositories
@@ -338,6 +338,99 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
       val result = secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(OffsetDateTime.now(), 1000)
 
       assertEquals(0, result.size)
+    }
+  }
+
+  @Nested
+  inner class CountOrphanedAirbyteManagedConfigs {
+    @Test
+    fun `returns zero when no configs exist`() {
+      assertEquals(0L, secretConfigRepository.countOrphanedAirbyteManagedConfigs())
+    }
+
+    @Test
+    fun `counts only airbyte-managed configs without references`() {
+      // Orphan: airbyte-managed, no reference
+      secretConfigRepository.save(
+        SecretConfig(
+          secretStorageId = persistedSecretStorage.id!!,
+          descriptor = "orphan-1",
+          externalCoordinate = "orphan.1",
+          airbyteManaged = true,
+          createdBy = userId,
+          updatedBy = userId,
+        ),
+      )
+
+      // Orphan: airbyte-managed, no reference
+      secretConfigRepository.save(
+        SecretConfig(
+          secretStorageId = persistedSecretStorage.id!!,
+          descriptor = "orphan-2",
+          externalCoordinate = "orphan.2",
+          airbyteManaged = true,
+          createdBy = userId,
+          updatedBy = userId,
+        ),
+      )
+
+      // Not orphan: airbyte-managed, has reference
+      val configWithRef =
+        secretConfigRepository.save(
+          SecretConfig(
+            secretStorageId = persistedSecretStorage.id!!,
+            descriptor = "with-ref",
+            externalCoordinate = "with.ref",
+            airbyteManaged = true,
+            createdBy = userId,
+            updatedBy = userId,
+          ),
+        )
+      secretReferenceRepository.save(
+        SecretReference(
+          secretConfigId = configWithRef.id!!,
+          scopeType = SecretReferenceScopeType.actor,
+          scopeId = UUID.randomUUID(),
+        ),
+      )
+
+      // Not counted: user-managed, no reference
+      secretConfigRepository.save(
+        SecretConfig(
+          secretStorageId = persistedSecretStorage.id!!,
+          descriptor = "user-managed",
+          externalCoordinate = "user.managed",
+          airbyteManaged = false,
+          createdBy = userId,
+          updatedBy = userId,
+        ),
+      )
+
+      assertEquals(2L, secretConfigRepository.countOrphanedAirbyteManagedConfigs())
+    }
+
+    @Test
+    fun `returns zero when all airbyte-managed configs have references`() {
+      val config =
+        secretConfigRepository.save(
+          SecretConfig(
+            secretStorageId = persistedSecretStorage.id!!,
+            descriptor = "referenced",
+            externalCoordinate = "referenced.config",
+            airbyteManaged = true,
+            createdBy = userId,
+            updatedBy = userId,
+          ),
+        )
+      secretReferenceRepository.save(
+        SecretReference(
+          secretConfigId = config.id!!,
+          scopeType = SecretReferenceScopeType.actor,
+          scopeId = UUID.randomUUID(),
+        ),
+      )
+
+      assertEquals(0L, secretConfigRepository.countOrphanedAirbyteManagedConfigs())
     }
   }
 

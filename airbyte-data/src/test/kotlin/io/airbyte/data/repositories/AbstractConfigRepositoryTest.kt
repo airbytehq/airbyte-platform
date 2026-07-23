@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.repositories
@@ -101,6 +101,7 @@ abstract class AbstractConfigRepositoryTest {
   val dataplaneGroupRepository = context.getBean(DataplaneGroupRepository::class.java)!!
   val dataplaneRepository = context.getBean(DataplaneRepository::class.java)!!
   val dataplaneHeartbeatLogRepository = context.getBean(DataplaneHeartbeatLogRepository::class.java)!!
+  val dataWorkerUsageReservationRepository = context.getBean(DataWorkerUsageReservationRepository::class.java)!!
   val secretConfigRepository = context.getBean(SecretConfigRepository::class.java)!!
   val secretStorageRepository = context.getBean(SecretStorageRepository::class.java)!!
   val secretReferenceRepository = context.getBean(SecretReferenceRepository::class.java)!!
@@ -109,4 +110,6 @@ abstract class AbstractConfigRepositoryTest {
   val actorDefinitionRepository = context.getBean(ActorDefinitionRepository::class.java)!!
   val ssoConfigRepository = context.getBean(SsoConfigRepository::class.java)!!
   val organizationDomainVerificationRepository = context.getBean(OrganizationDomainVerificationRepository::class.java)!!
+  val privateLinkRepository = context.getBean(PrivateLinkRepository::class.java)!!
+  val dataplaneNetworkConfigRepository = context.getBean(DataplaneNetworkConfigRepository::class.java)!!
 }

@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal.scheduling
 
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState
+import io.airbyte.config.JobConfig.ConfigType
 import io.temporal.workflow.QueryMethod
 import io.temporal.workflow.SignalMethod
 import io.temporal.workflow.WorkflowInterface
@@ -73,6 +74,7 @@ interface ConnectionManagerWorkflow {
   data class JobInformation(
     var jobId: Long = 0,
     var attemptId: Int = 0,
+    var configType: ConfigType? = null,
   )
 
   companion object {

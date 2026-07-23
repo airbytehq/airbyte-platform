@@ -2,11 +2,11 @@ import dayjs from "dayjs";
 import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
-import { StreamStatusType } from "components/connection/StreamStatusIndicator";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { StreamStatusType } from "area/connection/components/StreamStatusIndicator";
 import { activeStatuses } from "area/connection/utils";
 import { formatBytes } from "core/utils/numberHelper";
 

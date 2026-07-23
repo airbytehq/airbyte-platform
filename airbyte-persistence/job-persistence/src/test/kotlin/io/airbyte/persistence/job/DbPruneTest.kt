@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job
@@ -20,6 +20,7 @@ import io.airbyte.test.utils.Databases
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.SQLDialect
+import org.jooq.impl.DSL
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -111,6 +112,11 @@ class DbPruneTest {
       // Clear connection timeline events table
       try {
         ctx.truncateTable(ConfigTables.CONNECTION_TIMELINE_EVENT).cascade().execute()
+      } catch (e: Exception) {
+        // Table may not exist in test setup
+      }
+      try {
+        ctx.execute("DROP TABLE IF EXISTS data_worker_usage_reservation")
       } catch (e: Exception) {
         // Table may not exist in test setup
       }
@@ -242,6 +248,31 @@ class DbPruneTest {
   }
 
   @Test
+  @DisplayName("Should delete old data worker usage reservations when jobs are pruned")
+  fun testDeleteDataWorkerUsageReservationsForPrunedJobs() {
+    ensureDataWorkerUsageReservationTableExists()
+
+    val connectionId = UUID.randomUUID()
+    val scope = connectionId.toString()
+    val now = Instant.now()
+    val sevenMonthsAgo = now.minusSeconds(7L * 30 * 24 * 60 * 60)
+
+    val oldJobId = createJob(scope, sevenMonthsAgo)
+    val attemptNumber = jobPersistence.createAttempt(oldJobId, LOG_PATH)
+    jobPersistence.succeedAttempt(oldJobId, attemptNumber)
+    createDataWorkerUsageReservation(oldJobId)
+
+    createJob(scope, now)
+
+    assertEquals(1, countDataWorkerUsageReservations())
+
+    val deletedCount = dbPrune.pruneJobs()
+
+    assertEquals(1, deletedCount)
+    assertEquals(0, countDataWorkerUsageReservations())
+  }
+
+  @Test
   @DisplayName("Should provide accurate statistics without deleting")
   fun testGetDeletionStatistics() {
     val connectionId = UUID.randomUUID()
@@ -276,6 +307,163 @@ class DbPruneTest {
     // Verify no errors and nothing deleted
     assertEquals(0, deletedCount)
     assertEquals(0L, dbPrune.getEligibleJobCount())
+  }
+
+  @Test
+  @DisplayName("pruneJobsByScopes hard-deletes every job + attempt + child row for the given scopes")
+  fun testPruneJobsByScopesDeletesAllForGivenScopes() {
+    val targetConnectionA = UUID.randomUUID()
+    val targetConnectionB = UUID.randomUUID()
+    val otherConnection = UUID.randomUUID()
+    val now = Instant.now()
+
+    // Two jobs for connection A, one for connection B (these should all be purged), and one for
+    // an unrelated connection (which must be preserved).
+    val jobA1 = createJob(targetConnectionA.toString(), now)
+    val attemptA1 = jobPersistence.createAttempt(jobA1, LOG_PATH)
+    createStatsForAttempt(jobA1, attemptA1)
+    jobPersistence.succeedAttempt(jobA1, attemptA1)
+
+    val jobA2 = createJob(targetConnectionA.toString(), now)
+    val attemptA2 = jobPersistence.createAttempt(jobA2, LOG_PATH)
+    createStatsForAttempt(jobA2, attemptA2)
+    jobPersistence.succeedAttempt(jobA2, attemptA2)
+
+    val jobB = createJob(targetConnectionB.toString(), now)
+    val attemptB = jobPersistence.createAttempt(jobB, LOG_PATH)
+    createStatsForAttempt(jobB, attemptB)
+    jobPersistence.succeedAttempt(jobB, attemptB)
+
+    val jobOther = createJob(otherConnection.toString(), now)
+    val attemptOther = jobPersistence.createAttempt(jobOther, LOG_PATH)
+    createStatsForAttempt(jobOther, attemptOther)
+    jobPersistence.succeedAttempt(jobOther, attemptOther)
+
+    assertEquals(4, countJobs())
+    assertEquals(4, countAttempts())
+    assertEquals(4, countSyncStats())
+
+    // Purge only A and B.
+    val deleted =
+      dbPrune.pruneJobsByScopes(
+        listOf(targetConnectionA.toString(), targetConnectionB.toString()),
+      )
+
+    assertEquals(3, deleted)
+    assertEquals(1, countJobs(), "the unrelated job must survive")
+    assertEquals(1, countAttempts(), "only the unrelated attempt must survive")
+    assertEquals(1, countSyncStats(), "only the unrelated sync stats must survive")
+    assertNotNull(getJob(jobOther))
+  }
+
+  @Test
+  @DisplayName("pruneJobsByScopes returns 0 when given an empty list, and is a no-op")
+  fun testPruneJobsByScopesNoOpOnEmpty() {
+    val connectionId = UUID.randomUUID()
+    val jobId = createJob(connectionId.toString(), Instant.now())
+    jobPersistence.createAttempt(jobId, LOG_PATH)
+    assertEquals(1, countJobs())
+
+    assertEquals(0, dbPrune.pruneJobsByScopes(emptyList()))
+    assertEquals(1, countJobs())
+  }
+
+  @Test
+  @DisplayName("countJobsAndAttemptsByScopes returns preview counts without deleting")
+  fun testCountJobsAndAttemptsByScopes() {
+    val targetConnection = UUID.randomUUID()
+    val otherConnection = UUID.randomUUID()
+    val now = Instant.now()
+
+    val targetJob1 = createJob(targetConnection.toString(), now)
+    val targetAttempt1 = jobPersistence.createAttempt(targetJob1, LOG_PATH)
+    jobPersistence.succeedAttempt(targetJob1, targetAttempt1)
+
+    val targetJob2 = createJob(targetConnection.toString(), now.plusSeconds(1))
+    val targetAttempt2 = jobPersistence.createAttempt(targetJob2, LOG_PATH)
+    jobPersistence.succeedAttempt(targetJob2, targetAttempt2)
+
+    val otherJob = createJob(otherConnection.toString(), now)
+    val otherAttempt = jobPersistence.createAttempt(otherJob, LOG_PATH)
+    jobPersistence.succeedAttempt(otherJob, otherAttempt)
+
+    val counts = dbPrune.countJobsAndAttemptsByScopes(listOf(targetConnection.toString()))
+
+    assertEquals(DbPrune.JobScopeCounts(jobCount = 2L, attemptCount = 2L), counts)
+    assertEquals(3, countJobs())
+    assertEquals(3, countAttempts())
+  }
+
+  @Test
+  @DisplayName("listSyncWorkloadIdsByScopes derives exact workload ids from jobs and attempts")
+  fun testListSyncWorkloadIdsByScopes() {
+    val targetConnection = UUID.randomUUID()
+    val otherConnection = UUID.randomUUID()
+    val now = Instant.now()
+
+    val targetJob1 = createJob(targetConnection.toString(), now)
+    val targetAttempt1 = jobPersistence.createAttempt(targetJob1, LOG_PATH)
+    jobPersistence.succeedAttempt(targetJob1, targetAttempt1)
+
+    val targetJob2 = createJob(targetConnection.toString(), now.plusSeconds(1))
+    val targetAttempt2 = jobPersistence.createAttempt(targetJob2, LOG_PATH)
+    jobPersistence.succeedAttempt(targetJob2, targetAttempt2)
+
+    val otherJob = createJob(otherConnection.toString(), now)
+    val otherAttempt = jobPersistence.createAttempt(otherJob, LOG_PATH)
+    jobPersistence.succeedAttempt(otherJob, otherAttempt)
+
+    val workloadIds = dbPrune.listSyncWorkloadIdsByScopes(listOf(targetConnection.toString()))
+
+    assertEquals(
+      setOf(
+        "${targetConnection}_${targetJob1}_${targetAttempt1}_sync",
+        "${targetConnection}_${targetJob2}_${targetAttempt2}_sync",
+      ),
+      workloadIds.toSet(),
+    )
+  }
+
+  @Test
+  @DisplayName("pruneJobsAndAttemptsByScopes returns job and attempt deletion counts")
+  fun testPruneJobsAndAttemptsByScopesReturnsBothCounts() {
+    val targetConnection = UUID.randomUUID()
+    val now = Instant.now()
+
+    val job1 = createJob(targetConnection.toString(), now)
+    val attempt1 = jobPersistence.createAttempt(job1, LOG_PATH)
+    jobPersistence.succeedAttempt(job1, attempt1)
+
+    val job2 = createJob(targetConnection.toString(), now.plusSeconds(1))
+    val attempt2 = jobPersistence.createAttempt(job2, LOG_PATH)
+    jobPersistence.succeedAttempt(job2, attempt2)
+
+    val deleted = dbPrune.pruneJobsAndAttemptsByScopes(listOf(targetConnection.toString()))
+
+    assertEquals(DbPrune.JobDeletionCounts(deletedJobsCount = 2, deletedAttemptsCount = 2), deleted)
+    assertEquals(0, countJobs())
+    assertEquals(0, countAttempts())
+  }
+
+  @Test
+  @DisplayName("pruneJobsByScopes batches across multiple iterations when there are more than batchSize jobs")
+  fun testPruneJobsByScopesBatches() {
+    // jobPersistence.enqueueJob refuses to enqueue a new pending job while one already exists for
+    // the same scope. To create 5 jobs for a single scope we need to terminate each one first.
+    val scope = UUID.randomUUID().toString()
+    val now = Instant.now()
+    for (i in 1..5) {
+      val jobId = createJob(scope, now.minusSeconds(i.toLong()))
+      val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+      jobPersistence.succeedAttempt(jobId, attemptNumber)
+    }
+    assertEquals(5, countJobs())
+
+    val smallBatchDbPrune = DbPrune(jobDatabase, batchSize = 2)
+    val deleted = smallBatchDbPrune.pruneJobsByScopes(listOf(scope))
+
+    assertEquals(5, deleted)
+    assertEquals(0, countJobs())
   }
 
   // Helper methods
@@ -440,6 +628,8 @@ class DbPruneTest {
   private fun countStreamStatuses(): Int = countRecords(Tables.STREAM_STATUSES.name)
 
   private fun countRetryStates(): Int = countRecords(Tables.RETRY_STATES.name)
+
+  private fun countDataWorkerUsageReservations(): Int = countRecords("data_worker_usage_reservation")
 
   private fun countRecords(tableName: String): Int =
     jobDatabase.query { ctx: DSLContext ->
@@ -661,6 +851,54 @@ class DbPruneTest {
           .set(ConfigTables.CONNECTION.NON_BREAKING_CHANGE_PREFERENCE, NonBreakingChangePreferenceType.ignore)
           .execute()
       }
+    }
+  }
+
+  private fun ensureDataWorkerUsageReservationTableExists() {
+    jobDatabase.query { ctx: DSLContext ->
+      ctx.execute(
+        """
+        CREATE TABLE IF NOT EXISTS data_worker_usage_reservation(
+          job_id BIGINT PRIMARY KEY,
+          organization_id UUID NOT NULL,
+          workspace_id UUID NOT NULL,
+          dataplane_group_id UUID NOT NULL,
+          source_cpu_request REAL NOT NULL,
+          destination_cpu_request REAL NOT NULL,
+          orchestrator_cpu_request REAL NOT NULL,
+          used_on_demand_capacity BOOLEAN NOT NULL DEFAULT FALSE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """.trimIndent(),
+      )
+    }
+  }
+
+  private fun createDataWorkerUsageReservation(jobId: Long) {
+    jobDatabase.query { ctx: DSLContext ->
+      ctx
+        .insertInto(DSL.table(DSL.name("data_worker_usage_reservation")))
+        .columns(
+          DSL.field(DSL.name("job_id"), Long::class.java),
+          DSL.field(DSL.name("organization_id"), UUID::class.java),
+          DSL.field(DSL.name("workspace_id"), UUID::class.java),
+          DSL.field(DSL.name("dataplane_group_id"), UUID::class.java),
+          DSL.field(DSL.name("source_cpu_request"), Float::class.java),
+          DSL.field(DSL.name("destination_cpu_request"), Float::class.java),
+          DSL.field(DSL.name("orchestrator_cpu_request"), Float::class.java),
+          DSL.field(DSL.name("used_on_demand_capacity"), Boolean::class.java),
+          DSL.field(DSL.name("created_at"), OffsetDateTime::class.java),
+        ).values(
+          jobId,
+          UUID.randomUUID(),
+          UUID.randomUUID(),
+          UUID.randomUUID(),
+          1.0f,
+          1.0f,
+          1.0f,
+          false,
+          OffsetDateTime.now(ZoneOffset.UTC),
+        ).execute()
     }
   }
 

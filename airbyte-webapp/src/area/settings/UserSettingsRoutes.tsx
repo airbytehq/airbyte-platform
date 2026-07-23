@@ -1,19 +1,19 @@
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useAuthService } from "core/services/auth";
-import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { SettingsRoutePaths } from "pages/routePaths";
 
 import { UserSettingsLayout } from "./components/UserSettingsLayout";
 
 const AccountSettingsView = React.lazy(() =>
-  import("packages/cloud/views/users/AccountSettingsView/AccountSettingsView").then((module) => ({
+  import("cloud/views/users/AccountSettingsView/AccountSettingsView").then((module) => ({
     default: module.AccountSettingsView,
   }))
 );
 const ApplicationsView = React.lazy(() =>
-  import("packages/cloud/views/users/ApplicationSettingsView/ApplicationSettingsView").then((module) => ({
+  import("cloud/views/users/ApplicationSettingsView/ApplicationSettingsView").then((module) => ({
     default: module.ApplicationSettingsView,
   }))
 );

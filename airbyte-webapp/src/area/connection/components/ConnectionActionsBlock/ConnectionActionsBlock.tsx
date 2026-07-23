@@ -1,9 +1,6 @@
 import React, { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { FormFieldLayout } from "components/connection/ConnectionForm/FormFieldLayout";
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { useConnectionSyncContext } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -11,16 +8,19 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
+import { FormFieldLayout } from "area/connection/components/ConnectionForm/FormFieldLayout";
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
+import { useConnectionSyncContext } from "area/connection/components/ConnectionSync/ConnectionSyncContext";
+import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { useIsDataActivationConnection } from "area/connection/utils/useIsDataActivationConnection";
 import { useDeleteConnection, useDestinationDefinitionVersion } from "core/api";
 import { ConnectionStatus, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
+import { useModalService } from "core/services/Modal";
+import { useNotificationService } from "core/services/Notification";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useModalService } from "hooks/services/Modal";
-import { useNotificationService } from "hooks/services/Notification";
-import { useDeleteModal } from "hooks/useDeleteModal";
+import { useDeleteModal } from "core/utils/useDeleteModal";
 import { ConnectionRefreshModal } from "pages/connections/ConnectionSettingsPage/ConnectionRefreshModal";
 
 export const ConnectionActionsBlock: React.FC = () => {

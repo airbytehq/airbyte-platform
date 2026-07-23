@@ -33,6 +33,7 @@ import CommunityIcon from "./icons/communityIcon.svg?react";
 import ConnectionIcon from "./icons/connectionIcon.svg?react";
 import ContractIcon from "./icons/contractIcon.svg?react";
 import CopyIcon from "./icons/copyIcon.svg?react";
+import CreditCardIcon from "./icons/creditCardIcon.svg?react";
 import CreditsIcon from "./icons/creditsIcon.svg?react";
 import CrossIcon from "./icons/crossIcon.svg?react";
 import CursorIcon from "./icons/cursorIcon.svg?react";
@@ -67,6 +68,7 @@ import GlobeIcon from "./icons/globeIcon.svg?react";
 import GoogleIcon from "./icons/googleIcon.svg?react";
 import GridIcon from "./icons/gridIcon.svg?react";
 import HelpIcon from "./icons/helpIcon.svg?react";
+import HourglassIcon from "./icons/hourglassIcon.svg?react";
 import HouseIcon from "./icons/houseIcon.svg?react";
 import IdCardIcon from "./icons/idCardIcon.svg?react";
 import ImportIcon from "./icons/importIcon.svg?react";
@@ -131,6 +133,7 @@ import StatusCancelledIcon from "./icons/statusCancelledIcon.svg?react";
 import StatusErrorIcon from "./icons/statusErrorIcon.svg?react";
 import StatusInactiveIcon from "./icons/statusInactiveIcon.svg?react";
 import StatusInProgressIcon from "./icons/statusInProgressIcon.svg?react";
+import StatusQueuedConnectionIcon from "./icons/statusQueuedConnectionIcon.svg?react";
 import StatusQueuedIcon from "./icons/statusQueuedIcon.svg?react";
 import StatusSleepIcon from "./icons/statusSleepIcon.svg?react";
 import StatusSuccessIcon from "./icons/statusSuccessIcon.svg?react";
@@ -203,6 +206,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   contract: ContractIcon,
   collapseAll: CollapseAllIcon,
   copy: CopyIcon,
+  creditCard: CreditCardIcon,
   credits: CreditsIcon,
   cross: CrossIcon,
   cursor: CursorIcon,
@@ -237,6 +241,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   google: GoogleIcon,
   grid: GridIcon,
   help: HelpIcon,
+  hourglass: HourglassIcon,
   house: HouseIcon,
   idCard: IdCardIcon,
   import: ImportIcon,
@@ -302,6 +307,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   statusInactive: StatusInactiveIcon,
   statusInProgress: StatusInProgressIcon,
   statusQueued: StatusQueuedIcon,
+  statusQueuedConnection: StatusQueuedConnectionIcon,
   statusSleep: StatusSleepIcon,
   statusSuccess: StatusSuccessIcon,
   statusWarning: StatusWarningIcon,

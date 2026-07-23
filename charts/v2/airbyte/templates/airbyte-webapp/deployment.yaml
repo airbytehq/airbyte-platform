@@ -65,13 +65,6 @@ spec:
         {{ include "airbyte.tracking.envs" . | nindent 8 }}
         {{ include "airbyte.webapp.envs" . | nindent 8 }}
 
-        {{- if .Values.global.datadog.enabled }}
-        - name: DD_SERVICE 
-          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
-        {{- include "airbyte.datadog.envs" . | nindent 8 }}
-        {{- include "airbyte.otel.envs" . | nindent 8 }}
-        {{- end}}
-
         # Values from secret
         {{- if .Values.webapp.secrets }}
         {{- range $k, $v := .Values.webapp.secrets }}

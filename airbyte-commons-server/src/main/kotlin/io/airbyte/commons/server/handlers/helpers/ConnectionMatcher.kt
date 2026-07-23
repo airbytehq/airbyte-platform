@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers.helpers
@@ -41,6 +41,7 @@ class ConnectionMatcher(
       notifySchemaChanges(query.notifySchemaChanges)
       notifySchemaChangesByEmail(query.notifySchemaChangesByEmail)
       backfillPreference(query.backfillPreference)
+      onDemandEnabled(query.onDemandEnabled)
     }
   }
 }

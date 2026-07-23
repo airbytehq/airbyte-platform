@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.persistence.job
@@ -29,8 +29,11 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.MetricTags.NOTIFICATION_CLIENT
 import io.airbyte.metrics.lib.MetricTags.NOTIFICATION_TRIGGER
+import io.airbyte.metrics.lib.MetricTags.STATUS
+import io.airbyte.metrics.lib.MetricTags.WEBHOOK_DOMAIN
 import io.airbyte.notification.CustomerioNotificationClient
 import io.airbyte.notification.NotificationClient
 import io.airbyte.notification.SlackNotificationClient
@@ -149,6 +152,7 @@ class JobNotifier(
     }
   }
 
+  // NOTE: NotificationType.SLACK is a legacy name -- it covers ALL webhooks, not just Slack.
   fun getNotificationClientsFromNotificationItem(item: NotificationItem): List<NotificationClient> {
     return item.notificationType
       .stream()
@@ -193,15 +197,21 @@ class JobNotifier(
   private fun submitToMetricClient(
     action: String,
     notificationClient: String,
+    status: String,
+    webhookDomain: String,
   ) {
     val metricTriggerAttribute = MetricAttribute(NOTIFICATION_TRIGGER, action)
     val metricClientAttribute = MetricAttribute(NOTIFICATION_CLIENT, notificationClient)
+    val metricStatusAttribute = MetricAttribute(STATUS, status)
+    val metricWebhookDomainAttribute = MetricAttribute(WEBHOOK_DOMAIN, webhookDomain)
 
     metricClient.count(
       OssMetricsRegistry.NOTIFICATIONS_SENT,
       1L,
       metricClientAttribute,
       metricTriggerAttribute,
+      metricStatusAttribute,
+      metricWebhookDomainAttribute,
     )
   }
 
@@ -217,6 +227,10 @@ class JobNotifier(
     attemptStats: List<JobPersistence.AttemptStats>,
   ) {
     notifyJob(SUCCESS_NOTIFICATION, job, attemptStats)
+  }
+
+  fun queuedJob(job: Job) {
+    notifyJob(QUEUED_NOTIFICATION, job, emptyList())
   }
 
   fun autoDisableConnection(
@@ -244,16 +258,27 @@ class JobNotifier(
       log.info { "No notification item found for the desired notification event found. Skipping notification for workspaceId $workspaceId." }
       return
     }
+    val webhookDomain =
+      try {
+        val host = java.net.URI(notificationItem.slackConfiguration?.webhook ?: "").host ?: ""
+        if (host in KNOWN_WEBHOOK_DOMAINS) host else MetricTags.UNKNOWN
+      } catch (_: Exception) {
+        MetricTags.UNKNOWN
+      }
     val notificationClients = getNotificationClientsFromNotificationItem(notificationItem)
     for (notificationClient in notificationClients) {
+      var status = MetricTags.FAILURE
       try {
-        if (!executeNotification.apply(notificationClient)) {
+        if (executeNotification.apply(notificationClient)) {
+          status = MetricTags.SUCCESS
+        } else {
           log.warn { "Failed to successfully notify workspaceId {}: $workspaceId, notificationItem" }
         }
-        submitToMetricClient(notificationTrigger, notificationClient.getNotificationClientType())
       } catch (ex: Exception) {
         log.error(ex) { "Failed to notify workspaceId $workspaceId due to an exception. Not blocking." }
         // Do not block.
+      } finally {
+        submitToMetricClient(notificationTrigger, notificationClient.getNotificationClientType(), status, webhookDomain)
       }
     }
   }
@@ -354,6 +379,14 @@ class JobNotifier(
           { notificationClient: NotificationClient -> notificationClient.notifyJobSuccess(summary, workspace.email) },
           workspace.workspaceId,
         )
+      } else if (QUEUED_NOTIFICATION.equals(action, ignoreCase = true)) {
+        notificationItem = notificationSettings.sendOnConnectionSyncQueued
+        sendNotification(
+          notificationItem,
+          QUEUED_NOTIFICATION,
+          { notificationClient: NotificationClient -> notificationClient.notifyJobQueued(summary, workspace.email) },
+          workspace.workspaceId,
+        )
       } else if (CONNECTION_DISABLED_NOTIFICATION.equals(action, ignoreCase = true)) {
         notificationItem = notificationSettings.sendOnSyncDisabled
         sendNotification(
@@ -383,7 +416,16 @@ class JobNotifier(
 
     const val FAILURE_NOTIFICATION: String = "Failure Notification"
     const val SUCCESS_NOTIFICATION: String = "Success Notification"
+    const val QUEUED_NOTIFICATION: String = "Queued Notification"
     const val CONNECTION_DISABLED_WARNING_NOTIFICATION: String = "Connection Disabled Warning Notification"
     const val CONNECTION_DISABLED_NOTIFICATION: String = "Connection Disabled Notification"
+
+    // Allow-listed to prevent metric tag cardinality explosion. Other or unparsable domains emit "unknown".
+    private val KNOWN_WEBHOOK_DOMAINS =
+      setOf(
+        "hooks.slack.com",
+        "chat.googleapis.com",
+        "api.airbyte.ai", // Airbyte Embedded (Sonar)
+      )
   }
 }

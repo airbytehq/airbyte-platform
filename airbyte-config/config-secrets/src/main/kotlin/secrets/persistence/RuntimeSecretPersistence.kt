@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
@@ -90,6 +90,17 @@ class RuntimeSecretPersistence(
   }
 
   override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
-    return
+    log.debug { "Deleting secret from secret persistence: $coordinate" }
+    val secretPersistence: SecretPersistence = buildSecretPersistence(secretPersistenceConfig)
+    secretPersistence.delete(coordinate)
+  }
+
+  override fun deleteWithRecoveryWindow(
+    coordinate: AirbyteManagedSecretCoordinate,
+    recoveryWindowInDays: Long,
+  ) {
+    log.debug { "Deleting secret from secret persistence with a $recoveryWindowInDays day recovery window: $coordinate" }
+    val secretPersistence: SecretPersistence = buildSecretPersistence(secretPersistenceConfig)
+    secretPersistence.deleteWithRecoveryWindow(coordinate, recoveryWindowInDays)
   }
 }

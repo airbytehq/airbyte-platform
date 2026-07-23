@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.micronaut.runtime
@@ -20,6 +20,7 @@ internal class AirbyteLoggingConfigDefaultTest {
   fun testLoadingValuesFromConfig() {
     assertEquals(DEFAULT_LOG_TAIL_SIZE, airbyteLoggingConfig.client.logTailSize)
     assertEquals(LogLevel.INFO, airbyteLoggingConfig.logLevel)
+    assertEquals("", airbyteLoggingConfig.platformLogFormat)
     assertEquals("", airbyteLoggingConfig.s3PathStyleAccess)
   }
 }
@@ -33,6 +34,7 @@ internal class AirbyteLoggingConfigTest {
   fun testLoadingValuesFromConfig() {
     assertEquals(50, airbyteLoggingConfig.client.logTailSize)
     assertEquals(LogLevel.DEBUG, airbyteLoggingConfig.logLevel)
+    assertEquals("json", airbyteLoggingConfig.platformLogFormat)
     assertEquals("test", airbyteLoggingConfig.s3PathStyleAccess)
   }
 }

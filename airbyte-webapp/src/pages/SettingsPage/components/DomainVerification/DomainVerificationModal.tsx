@@ -12,7 +12,7 @@ import { Text } from "components/ui/Text";
 import { HttpProblem, useCreateDomainVerification } from "core/api";
 import { DomainVerificationResponse } from "core/api/types/AirbyteClient";
 import { useFormatError } from "core/errors";
-import { useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 import styles from "./DomainVerification.module.scss";
 

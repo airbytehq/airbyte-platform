@@ -58,12 +58,11 @@ spec:
       - name: airbyte-worker-container
         image: {{ include "imageUrl" (list .Values.worker.image $) }}
         imagePullPolicy: "{{ .Values.worker.image.pullPolicy }}"
+        envFrom:
+          - configMapRef:
+              name: {{ .Release.Name }}-airbyte-telemetry-env
         env:
-        {{- if .Values.worker.debug.enabled }}
-        - name: JAVA_TOOL_OPTIONS
-          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.worker.debug.remoteDebugPort }},server=y,suspend=n"
-        {{- end}}
-
+        {{- include "airbyte.java_opts.envs" (list .Values.worker $) | nindent 8 }}
         {{- include "airbyte.auth.jwt.envs" . | nindent 8 }}
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
@@ -82,18 +81,7 @@ spec:
         {{- include "airbyte.worker.envs" . | nindent 8 }}
         {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
         {{- include "airbyte.workloadApiServer.envs" . | nindent 8 }}
-
-        {{- if .Values.global.datadog.enabled }}
-        {{- if (eq .Values.global.edition "cloud") }}
-        - name: DD_SERVICE 
-          value: airbyte-cloud-workers
-        {{- else }}
-        - name: DD_SERVICE 
-          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
-        {{- end }}
-        {{- include "airbyte.datadog.envs" . | nindent 8 }}
-        {{- include "airbyte.otel.envs" . | nindent 8 }}
-        {{- end}}
+        {{- include "airbyte.datadog.envs" .Values.worker.datadog | nindent 8 }}
 
         {{- if (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
@@ -158,7 +146,7 @@ spec:
           protocol: TCP
         {{- if .Values.worker.debug.enabled }}
         - name: debug
-          containerPort: {{ .Values.worker.debug.remoteDebugPort }}
+          containerPort: 5005
           protocol: TCP
         {{- end }}
         - name: heartbeat

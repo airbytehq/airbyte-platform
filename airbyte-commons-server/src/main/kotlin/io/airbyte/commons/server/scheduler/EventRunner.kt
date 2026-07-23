@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.scheduler
@@ -16,6 +16,8 @@ interface EventRunner {
   fun createConnectionManagerWorkflow(connectionId: UUID)
 
   fun startNewManualSync(connectionId: UUID): ManualOperationResult
+
+  fun startNewManualSyncAndWaitForJobId(connectionId: UUID): ManualOperationResult
 
   fun startNewCancellation(connectionId: UUID): ManualOperationResult
 

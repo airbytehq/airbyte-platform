@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.domain.services.llm
@@ -8,9 +8,9 @@ import com.openai.client.OpenAIClient
 import com.openai.client.okhttp.OpenAIOkHttpClient
 import com.openai.models.ChatModel
 import com.openai.models.chat.completions.ChatCompletionCreateParams
-import datadog.trace.api.Trace
 import io.airbyte.micronaut.runtime.AirbyteOpenAiConfig
 import io.micronaut.cache.annotation.Cacheable
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 
 @Singleton
@@ -34,7 +34,7 @@ open class OpenAIChatCompletionService(
     }
   }
 
-  @Trace
+  @WithSpan
   @Cacheable("openai-chat-completion-service")
   open fun getChatResponse(
     projectId: OpenAIProjectId,

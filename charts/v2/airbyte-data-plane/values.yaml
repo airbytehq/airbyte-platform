@@ -63,6 +63,7 @@ enterprise:
 
 logging:
   level: info
+  platformLogFormat: "json"
   httpAccessLogsEnabled: false
   log4jConfigFile: ""
 
@@ -258,7 +259,6 @@ workloadLauncher:
 
   debug:
     enabled: false
-    remoteDebugPort: 5005
 
   management:
     port: 8085
@@ -388,3 +388,55 @@ workloadLauncher:
   affinity: {}
 
     
+# AWS assume-role credentials for the infra-worker (Pulumi S3 state access).
+# Defaults match the control-plane chart: both keys come from `airbyte-secrets`
+# under the plain `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` names already
+# present in the data-plane clusters' synced secret.
+aws:
+  secretName: ""
+  assumeRole:
+    accessKeyIdSecretKey: ""
+    secretAccessKeySecretKey: ""
+    secretName: ""
+
+# Dataplane infra-worker. Off by default. only enabled on privatelink dataplane
+# clusters that need to create per-customer Kubernetes NetworkPolicies via Pulumi.
+# When enabled, runs in DATAPLANE mode and polls the per-dataplane Temporal task
+# queue for NetworkPolicy create/delete activities dispatched from the control plane.
+infraWorker:
+  enabled: false
+
+  # KSA the infra-worker pod runs under. Matches the control-plane convention
+  # (`infra-worker-sa`). Pre-create the KSA in the release namespace before
+  # deploy — the chart does not create it.
+  serviceAccountName: infra-worker-sa
+
+  replicaCount: 1
+
+  image:
+    registry: ""
+    repository: airbyte/infra-worker
+    pullPolicy: IfNotPresent
+    tag: ""
+
+  management:
+    port: 8085
+
+  # Namespace whose NetworkPolicies the worker may CRUD via Pulumi.
+  networkPolicyNamespace: jobs
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 3Gi
+
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+
+  # Additional env vars merged into the container env. Used in prod to wire
+  # Pulumi state bucket + AWS assume-role creds + PULUMI_CONFIG_PASSPHRASE.
+  extraEnv: []

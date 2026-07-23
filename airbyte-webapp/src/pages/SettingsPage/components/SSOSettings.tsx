@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { FormControl } from "components/forms/FormControl";
-import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { FormControl } from "components/ui/forms/FormControl";
+import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
 import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.handlers
@@ -17,6 +17,7 @@ import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.InvitationStatus
+import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.config.ScopeType
 import io.airbyte.config.StandardWorkspace
@@ -87,6 +88,7 @@ internal class UserInvitationHandlerTest {
     private val currentUser: AuthenticatedUser =
       AuthenticatedUser().withUserId(UUID.randomUUID()).withEmail("current-user@airbyte.io").withName("Current User")
     private val webappBaseUrl = "https://test.airbyte.io"
+    private val agenticBaseUrl = "https://app.test.airbyte.ai"
     private val invitedEmail = "invited@airbyte.io"
     private val workspaceId: UUID = UUID.randomUUID()
     private val workspaceName = "workspace-name"
@@ -106,11 +108,15 @@ internal class UserInvitationHandlerTest {
 
     @Nested
     internal inner class CreateAndSendInvitation {
-      private fun setupSendInvitationMocks() {
+      private fun setupSendInvitationMocks(isAgentic: Boolean = false) {
         every { webUrlHelper.baseUrl } returns webappBaseUrl
+        every { webUrlHelper.agentsBaseUrl } returns agenticBaseUrl
         every { service.createUserInvitation(userInvitation) } returns userInvitation
         every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns StandardWorkspace().withName(workspaceName)
-        every { customerIoEmailNotificationSender.sendInviteToUser(any(), any(), any()) } returns Unit
+        every { customerIoEmailNotificationSender.sendInviteToUser(any(), any(), any(), any(), any()) } returns Unit
+        every {
+          organizationService.getOrganization(orgId)
+        } returns Optional.of(Organization().withOrganizationId(orgId).withIsAgentic(isAgentic))
       }
 
       @BeforeEach
@@ -118,9 +124,10 @@ internal class UserInvitationHandlerTest {
         every { mapper.toDomain(userInvitationCreateRequestBody) } returns userInvitation
       }
 
-      @Test
-      fun testNewEmailWorkspaceInOrg() {
-        setupSendInvitationMocks()
+      @ParameterizedTest
+      @ValueSource(booleans = [false, true])
+      fun testNewEmailWorkspaceInOrg(isAgentic: Boolean) {
+        setupSendInvitationMocks(isAgentic = isAgentic)
 
         // the workspace is in an org.
         every { workspaceService.getOrganizationIdFromWorkspaceId(workspaceId) } returns Optional.of(orgId)
@@ -137,14 +144,14 @@ internal class UserInvitationHandlerTest {
           )
 
         // make sure correct invite was created, email was sent, and result is correct.
-        verifyInvitationCreatedAndEmailSentResult(result)
+        verifyInvitationCreatedAndEmailSentResult(result, expectedIsAgentic = isAgentic)
       }
 
       @Test
       fun testWorkspaceNotInAnyOrg() {
         setupSendInvitationMocks()
 
-        // the workspace is not in any org.
+        // the workspace is not in any org — no org lookup, never agentic.
         every { workspaceService.getOrganizationIdFromWorkspaceId(workspaceId) } returns Optional.empty()
 
         // call the handler method under test.
@@ -155,12 +162,13 @@ internal class UserInvitationHandlerTest {
           )
 
         // make sure correct invite was created, email was sent, and result is correct.
-        verifyInvitationCreatedAndEmailSentResult(result)
+        verifyInvitationCreatedAndEmailSentResult(result, expectedIsAgentic = false)
       }
 
-      @Test
-      fun testExistingEmailButNotInWorkspaceOrg() {
-        setupSendInvitationMocks()
+      @ParameterizedTest
+      @ValueSource(booleans = [false, true])
+      fun testExistingEmailButNotInWorkspaceOrg(isAgentic: Boolean) {
+        setupSendInvitationMocks(isAgentic = isAgentic)
 
         // the workspace is in an org.
         every { workspaceService.getOrganizationIdFromWorkspaceId(workspaceId) } returns Optional.of(orgId)
@@ -181,7 +189,7 @@ internal class UserInvitationHandlerTest {
           )
 
         // make sure correct invite was created, email was sent, and result is correct.
-        verifyInvitationCreatedAndEmailSentResult(result)
+        verifyInvitationCreatedAndEmailSentResult(result, expectedIsAgentic = isAgentic)
       }
 
       @Test
@@ -199,7 +207,10 @@ internal class UserInvitationHandlerTest {
         }
       }
 
-      private fun verifyInvitationCreatedAndEmailSentResult(result: UserInvitationCreateResponse) {
+      private fun verifyInvitationCreatedAndEmailSentResult(
+        result: UserInvitationCreateResponse,
+        expectedIsAgentic: Boolean,
+      ) {
         verify(exactly = 1) { mapper.toDomain(userInvitationCreateRequestBody) }
 
         // capture and verify the invitation that is saved by the service.
@@ -223,15 +234,19 @@ internal class UserInvitationHandlerTest {
             capture(emailConfigSlot),
             currentUser.name,
             capture(inviteLinkSlot),
+            workspaceName,
+            isAgentic = expectedIsAgentic,
           )
         }
 
         val capturedEmailConfig = emailConfigSlot.captured
         Assertions.assertEquals(invitedEmail, capturedEmailConfig.to)
 
+        // agentic orgs route to the agents host (app.airbyte.ai), everything else to the cloud host.
+        val expectedHost = if (expectedIsAgentic) agenticBaseUrl else webappBaseUrl
         val capturedInviteLink = inviteLinkSlot.captured
         Assertions.assertEquals(
-          webappBaseUrl + UserInvitationHandler.ACCEPT_INVITE_PATH + capturedUserInvitation.inviteCode,
+          "$expectedHost/accept-invite?inviteCode=${capturedUserInvitation.inviteCode}",
           capturedInviteLink,
         )
 

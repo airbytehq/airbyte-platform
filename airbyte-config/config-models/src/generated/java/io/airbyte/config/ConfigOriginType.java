@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config;
@@ -19,7 +19,8 @@ public enum ConfigOriginType {
 
   USER("user"),
   BREAKING_CHANGE("breaking_change"),
-  CONNECTOR_ROLLOUT("connector_rollout");
+  CONNECTOR_ROLLOUT("connector_rollout"),
+  PRIVATE_LINK("private_link");
 
   private final String value;
   private final static Map<String, ConfigOriginType> CONSTANTS = new HashMap<String, ConfigOriginType>();

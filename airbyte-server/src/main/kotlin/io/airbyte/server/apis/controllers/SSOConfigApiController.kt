@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.controllers
@@ -47,12 +47,13 @@ open class SSOConfigApiController(
       clientSecret = ssoConfig.clientSecret,
       emailDomains = ssoConfig.emailDomains,
       status = ssoConfig.status.toApi(),
+      defaultRole = ssoConfig.defaultRole.toApi(),
     )
   }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.SSO)
   override fun createSsoConfig(createSSOConfigRequestBody: CreateSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(createSSOConfigRequestBody.organizationId), SsoEntitlement)
 
@@ -66,6 +67,9 @@ open class SSOConfigApiController(
           createSSOConfigRequestBody.discoveryUrl,
           createSSOConfigRequestBody.emailDomain,
           createSSOConfigRequestBody.status.toDomain(),
+          // Pass through null when the caller omits the role so the domain layer can tell
+          // "unspecified" (leave a stored role unchanged on update) from an explicit choice.
+          createSSOConfigRequestBody.defaultRole?.toDomain(),
         ),
       )
       null
@@ -74,7 +78,7 @@ open class SSOConfigApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.SSO)
   override fun deleteSsoConfig(deleteSSOConfigRequestBody: DeleteSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(deleteSSOConfigRequestBody.organizationId), SsoEntitlement)
 
@@ -88,7 +92,7 @@ open class SSOConfigApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.SSO)
   override fun updateSsoCredentials(updateSSOCredentialsRequestBody: UpdateSSOCredentialsRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(updateSSOCredentialsRequestBody.organizationId), SsoEntitlement)
 
@@ -105,7 +109,7 @@ open class SSOConfigApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.SSO)
   override fun activateSsoConfig(activateSSOConfigRequestBody: ActivateSSOConfigRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(activateSSOConfigRequestBody.organizationId), SsoEntitlement)
 
@@ -119,7 +123,7 @@ open class SSOConfigApiController(
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.SSO)
   override fun validateSsoToken(validateSSOTokenRequestBody: ValidateSSOTokenRequestBody) {
     entitlementService.ensureEntitled(OrganizationId(validateSSOTokenRequestBody.organizationId), SsoEntitlement)
 

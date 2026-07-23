@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.controllers
@@ -197,7 +197,6 @@ open class WebBackendApiController(
       sonarApiUrl = airbyteWebappConfig.sonarApiUrl
       coralAgentsApiUrl = airbyteWebappConfig.coralAgentsApiUrl
       zendeskKey = airbyteWebappConfig.zendeskKey
-      posthogApiKey = airbyteWebappConfig.posthogApiKey
-      posthogHost = airbyteWebappConfig.posthogHost
+      fullstoryGuidesOrgId = airbyteWebappConfig.fullstoryGuidesOrgId
     }
 }

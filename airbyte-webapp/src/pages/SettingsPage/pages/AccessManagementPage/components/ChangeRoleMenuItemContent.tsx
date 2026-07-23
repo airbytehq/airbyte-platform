@@ -6,8 +6,8 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { useOrganizationPlan } from "area/organization/utils";
 import { PermissionType } from "core/api/types/AirbyteClient";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import { permissionDescriptionDictionary, permissionStringDictionary, isTeamsFeaturePermissionType } from "./util";
 
@@ -22,7 +22,7 @@ export const ChangeRoleMenuItemContent: React.FC<ChangeRoleMenuItemContentProps>
   permissionType,
   roleIsInvalid,
 }) => {
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
+  const { isUnifiedTrialPlan } = useOrganizationPlan();
   return (
     <Box px="md" py="lg">
       <FlexContainer alignItems="center" justifyContent="space-between">

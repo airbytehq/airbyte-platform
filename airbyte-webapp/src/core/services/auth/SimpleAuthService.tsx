@@ -3,11 +3,10 @@
 import React, { PropsWithChildren, useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { useIntl } from "react-intl";
 
-import { SimpleAuthLoginFormValues } from "components/login/SimpleAuthLoginForm";
-
+import { SimpleAuthLoginFormValues } from "area/auth/components/SimpleAuthLoginForm";
 import { useGetDefaultUserAsync, useSimpleAuthLogin, useSimpleAuthLogout } from "core/api";
 import { UserRead } from "core/api/types/AirbyteClient";
-import { useNotificationService } from "hooks/services/Notification";
+import { useNotificationService } from "core/services/Notification";
 
 import { AuthContext, AuthContextApi } from "./AuthContext";
 import { SimpleAuthTokenRefresher } from "./SimpleAuthTokenRefresher";

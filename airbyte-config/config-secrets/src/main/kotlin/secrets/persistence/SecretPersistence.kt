@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.secrets.persistence
@@ -52,6 +52,19 @@ interface SecretPersistence : ReadOnlySecretPersistence {
   }
 
   fun delete(coordinate: AirbyteManagedSecretCoordinate)
+
+  /**
+   * Deletes a secret but retains it in the backing store for [recoveryWindowInDays] days before it is
+   * permanently removed, where the provider supports a recovery window. The default implementation
+   * does not support a recovery window and deletes the secret immediately via [delete].
+   */
+  fun deleteWithRecoveryWindow(
+    coordinate: AirbyteManagedSecretCoordinate,
+    recoveryWindowInDays: Long,
+  ) {
+    // Default implementation does not support a recovery window.
+    delete(coordinate)
+  }
 
   fun disable(coordinate: AirbyteManagedSecretCoordinate) {
     println("secret persistence has not implemented disable.")

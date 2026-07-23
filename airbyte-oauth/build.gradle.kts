@@ -9,7 +9,7 @@ dependencies {
   implementation(libs.google.cloud.storage)
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.aws.java.sdk.sts)
-  implementation("com.hubspot.jinjava:jinjava:2.8.1")
+  implementation(libs.jinjava)
 
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons"))

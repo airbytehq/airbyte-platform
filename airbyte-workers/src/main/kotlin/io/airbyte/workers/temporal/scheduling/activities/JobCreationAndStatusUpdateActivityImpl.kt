@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities
 
-import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.CancelQueuedJobRequest
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionJobRequestBody
 import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest
@@ -17,8 +17,10 @@ import io.airbyte.api.client.model.generated.JobIdRequestBody
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest
 import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody
 import io.airbyte.api.client.model.generated.ReportJobStartRequest
+import io.airbyte.api.client.model.generated.SetJobQueuedRequest
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.temporal.exception.RetryableException
+import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.State
 import io.airbyte.featureflag.AlwaysRunCheckBeforeSync
 import io.airbyte.featureflag.Connection
@@ -26,13 +28,13 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.SkipCheckBeforeSync
 import io.airbyte.featureflag.Workspace
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceUtils.addExceptionToTrace
 import io.airbyte.workers.context.AttemptContext
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput
+import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.CancelJobInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCheckFailureInput
@@ -41,8 +43,11 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobFailureInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.ReportJobStartInput
+import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.SetJobQueuedInput
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpStatus
+import io.opentelemetry.instrumentation.annotations.WithSpan
+import io.temporal.failure.ApplicationFailure
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
@@ -62,12 +67,12 @@ class JobCreationAndStatusUpdateActivityImpl(
   private val featureFlagClient: FeatureFlagClient,
   @param:Named("outputStateClient") private val stateClient: OutputStorageClient<State>?,
 ) : JobCreationAndStatusUpdateActivity {
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun createNewJob(input: JobCreationInput): JobCreationOutput {
     AttemptContext(input.connectionId, null, null).addTagsToTrace()
     try {
       val jobInfoRead = airbyteApiClient.jobsApi.createJob(JobCreate(input.connectionId!!, input.isScheduled))
-      return JobCreationOutput(jobInfoRead.job.id)
+      return JobCreationOutput(jobInfoRead.job.id, jobInfoRead.job.configType.toConfigType())
     } catch (e: ClientException) {
       if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
         throw e
@@ -81,7 +86,19 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  private fun JobConfigType.toConfigType(): ConfigType =
+    when (this) {
+      JobConfigType.CHECK_CONNECTION_SOURCE -> ConfigType.CHECK_CONNECTION_SOURCE
+      JobConfigType.CHECK_CONNECTION_DESTINATION -> ConfigType.CHECK_CONNECTION_DESTINATION
+      JobConfigType.DISCOVER_SCHEMA -> ConfigType.DISCOVER_SCHEMA
+      JobConfigType.GET_SPEC -> ConfigType.GET_SPEC
+      JobConfigType.SYNC -> ConfigType.SYNC
+      JobConfigType.RESET_CONNECTION -> ConfigType.RESET_CONNECTION
+      JobConfigType.REFRESH -> ConfigType.REFRESH
+      JobConfigType.CLEAR -> ConfigType.CLEAR
+    }
+
+  @WithSpan
   override fun createNewAttemptNumber(input: AttemptCreationInput): AttemptNumberCreationOutput {
     AttemptContext(null, input.jobId, null).addTagsToTrace()
 
@@ -92,7 +109,17 @@ class JobCreationAndStatusUpdateActivityImpl(
     } catch (e: ClientException) {
       if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
         throw e
+      } else if (e.statusCode == HttpStatus.CONFLICT.getCode()) {
+        // 409 (job already terminal or has a running attempt) are terminal
+        // conditions. Throw a NON-RETRYABLE failure: the shortRetryOptions policy retries every
+        // exception (except WorkspaceNotFoundException) up to maxAttempts, so a bare throw would
+        // still be retried.
+        throw ApplicationFailure.newNonRetryableFailure(
+          "createNewAttemptNumber for job ${input.jobId} failed with non-retryable status ${e.statusCode}: ${e.message}",
+          e::class.java.name,
+        )
       }
+
       log.error("createNewAttemptNumber for job {} failed with exception: {}", input.jobId, e.message, e)
       throw RetryableException(e)
     } catch (e: Exception) {
@@ -102,7 +129,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun jobSuccessWithAttemptNumber(input: JobSuccessInputWithAttemptNumber) {
     AttemptContext(input.connectionId, input.jobId, input.attemptNumber).addTagsToTrace()
 
@@ -133,7 +160,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun jobFailure(input: JobFailureInput) {
     AttemptContext(input.connectionId, input.jobId, input.attemptNumber).addTagsToTrace()
 
@@ -161,7 +188,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun attemptFailureWithAttemptNumber(input: AttemptNumberFailureInput) {
     AttemptContext(input.connectionId, input.jobId, input.attemptNumber).addTagsToTrace()
 
@@ -192,7 +219,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun jobCancelledWithAttemptNumber(input: JobCancelledInputWithAttemptNumber) {
     AttemptContext(input.connectionId, input.jobId, input.attemptNumber).addTagsToTrace()
 
@@ -216,7 +243,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun reportJobStart(input: ReportJobStartInput) {
     AttemptContext(input.connectionId, input.jobId, null).addTagsToTrace()
 
@@ -232,7 +259,36 @@ class JobCreationAndStatusUpdateActivityImpl(
     }
   }
 
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
+  override fun setJobQueued(input: SetJobQueuedInput) {
+    try {
+      airbyteApiClient.jobsApi.setJobQueued(SetJobQueuedRequest(input.jobId!!))
+    } catch (e: ClientException) {
+      if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
+        throw e
+      }
+      throw RetryableException(e)
+    } catch (e: IOException) {
+      throw RetryableException(e)
+    }
+  }
+
+  @WithSpan
+  override fun cancelJob(input: CancelJobInput) {
+    AttemptContext(input.connectionId, input.jobId, null).addTagsToTrace()
+    try {
+      airbyteApiClient.jobsApi.cancelQueuedJob(CancelQueuedJobRequest(input.jobId!!))
+    } catch (e: ClientException) {
+      if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
+        throw e
+      }
+      throw RetryableException(e)
+    } catch (e: IOException) {
+      throw RetryableException(e)
+    }
+  }
+
+  @WithSpan
   override fun ensureCleanJobState(input: EnsureCleanJobStateInput) {
     AttemptContext(input.connectionId, null, null).addTagsToTrace()
     try {
@@ -303,18 +359,22 @@ class JobCreationAndStatusUpdateActivityImpl(
    * @param input - JobCheckFailureInput.
    * @return - boolean.
    */
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun shouldRunSourceCheck(input: JobCheckFailureInput): Boolean =
     when {
       isResetJob(input.jobId!!) -> {
         log.info("Skipping source check for reset job")
         false
       }
+
       shouldSkipSourceCheck(input.connectionId!!) -> {
         log.info("Skipping source check due to feature flag for connection ${input.connectionId}")
         false
       }
-      else -> isLastJobOrAttemptFailure(input)
+
+      else -> {
+        isLastJobOrAttemptFailure(input)
+      }
     }
 
   /**
@@ -324,14 +384,17 @@ class JobCreationAndStatusUpdateActivityImpl(
    * @param input - JobCheckFailureInput.
    * @return - boolean.
    */
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun shouldRunDestinationCheck(input: JobCheckFailureInput): Boolean =
     when {
       shouldSkipDestinationCheck(input.connectionId!!) -> {
         log.info("Skipping destination check due to feature flag for connection ${input.connectionId}")
         false
       }
-      else -> isLastJobOrAttemptFailure(input)
+
+      else -> {
+        isLastJobOrAttemptFailure(input)
+      }
     }
 
   private fun isResetJob(jobId: Long): Boolean =

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.repository
@@ -10,34 +10,14 @@ import io.airbyte.workload.repository.domain.WorkloadSummaryDTO
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micronaut.data.annotation.Expandable
 import io.micronaut.data.annotation.Id
-import io.micronaut.data.annotation.Join
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
 import java.time.OffsetDateTime
-import java.util.Optional
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface WorkloadRepository : PageableRepository<Workload, String> {
-  @Join(value = "workloadLabels", type = Join.Type.LEFT_FETCH)
-  override fun findById(
-    @Id id: String,
-  ): Optional<Workload>
-
-  /**
-   * Find workload by ID without joining on workload_label table.
-   * Uses only the labels JSONB column from the workload table for better performance.
-   */
-  @Query(
-    """
-      SELECT * FROM workload WHERE id = :id
-    """,
-  )
-  fun findByIdWithoutLegacyLabels(
-    @Id id: String,
-  ): Optional<Workload>
-
   @Query(
     """
       SELECT * FROM workload
@@ -125,7 +105,7 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
 
   /**
    * Find workloads by connection ID and statuses.
-   * Filters using the labels JSONB column or legacy workload_label table.
+   * Filters using the labels JSONB column.
    * Used for administrative operations like force cleanup.
    *
    * IMPORTANT: This method is NOT optimized for high-frequency production use.
@@ -137,10 +117,8 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
   @Query(
     """
       SELECT DISTINCT w.* FROM workload w
-      LEFT JOIN workload_label wl ON w.id = wl.workload_id
       WHERE ((:statuses) IS NULL OR w.status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
-      AND (w.labels->>'connection_id' = :connectionId
-           OR (wl.key = 'connection_id' AND wl.value = :connectionId))
+      AND (w.labels->>'connection_id' = :connectionId)
     """,
   )
   fun findByConnectionIdAndStatuses(

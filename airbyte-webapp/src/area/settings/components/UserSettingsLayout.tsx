@@ -2,8 +2,8 @@ import React, { Suspense } from "react";
 import { useIntl } from "react-intl";
 import { Outlet } from "react-router-dom";
 
-import { HeadTitle } from "components/HeadTitle";
-import LoadingPage from "components/LoadingPage";
+import { HeadTitle } from "components/ui/HeadTitle";
+import LoadingPage from "components/ui/LoadingPage";
 
 import {
   SettingsButton,
@@ -12,8 +12,8 @@ import {
   SettingsNavigationBlock,
 } from "area/settings/components/SettingsNavigation";
 import { useAuthService } from "core/services/auth";
+import { useExperiment } from "core/services/Experiment";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
-import { useExperiment } from "hooks/services/Experiment";
 import { SettingsRoutePaths } from "pages/routePaths";
 
 import { SettingsLayoutContent } from "./SettingsLayout";

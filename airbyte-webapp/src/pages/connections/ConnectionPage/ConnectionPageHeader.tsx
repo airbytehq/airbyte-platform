@@ -2,15 +2,15 @@ import { useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useParams } from "react-router-dom";
 
-import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
-import { ChangesStatusIcon } from "components/EntityTable/components/ChangesStatusIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { Tabs, LinkTab } from "components/ui/Tabs";
 
+import { ConnectionSyncContextProvider } from "area/connection/components/ConnectionSync/ConnectionSyncContext";
+import { ChangesStatusIcon } from "area/connection/components/EntityTable/components/ChangesStatusIcon";
+import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { useIsDataActivationConnection } from "area/connection/utils/useIsDataActivationConnection";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionTitleBlock } from "./ConnectionTitleBlock";

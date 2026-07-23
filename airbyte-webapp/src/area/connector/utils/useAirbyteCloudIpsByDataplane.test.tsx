@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import React from "react";
 
 import { useCurrentWorkspace, useListDataplaneGroups } from "core/api";
-import { useExperiment } from "hooks/services/Experiment";
+import { useExperiment } from "core/services/Experiment";
 
 import { useAirbyteCloudIpsByDataplane } from "./useAirbyteCloudIpsByDataplane";
 
@@ -10,7 +10,7 @@ jest.mock("core/api", () => ({
   useCurrentWorkspace: jest.fn(),
   useListDataplaneGroups: jest.fn(),
 }));
-jest.mock("hooks/services/Experiment", () => ({
+jest.mock("core/services/Experiment", () => ({
   useExperiment: jest.fn(),
 }));
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.init
@@ -46,8 +46,8 @@ open class AirbyteCompatibleConnectorVersionsProvider(
     try {
       val responseSupplier = { okHttpClient.newCall(request).execute() }
       failsafe.get(responseSupplier).use { response ->
-        if (response.isSuccessful && response.body != null) {
-          val responseBody = response.body!!.string()
+        if (response.isSuccessful) {
+          val responseBody = response.body.string()
           val compatibleConnectorVersionsMatrix = Jsons.deserialize(responseBody, AirbyteCompatibleConnectorVersionsMatrix::class.java)
           return compatibleConnectorVersionsMatrix?.convertToMap() ?: emptyMap()
         } else {

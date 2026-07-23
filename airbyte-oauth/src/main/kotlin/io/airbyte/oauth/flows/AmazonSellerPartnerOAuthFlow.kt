@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.oauth.flows
@@ -138,6 +138,7 @@ class AmazonSellerPartnerOAuthFlow : BaseOAuth2Flow {
         "MX" to "https://vendorcentral.amazon.com.mx",
         "JP" to "https://vendorcentral.amazon.co.jp",
         "IT" to "https://vendorcentral.amazon.it",
+        "IE" to "https://vendorcentral.amazon.ie",
         "AU" to "https://vendorcentral.amazon.com.au",
         "BR" to "https://vendorcentral.amazon.com.br",
         "BE" to "https://vendorcentral.amazon.com.be",
@@ -170,6 +171,7 @@ class AmazonSellerPartnerOAuthFlow : BaseOAuth2Flow {
         "NL" to "https://sellercentral.amazon.nl",
         "DE" to SELLER_EUROPE_URL,
         "IT" to SELLER_EUROPE_URL,
+        "IE" to SELLER_EUROPE_URL,
         "SE" to "https://sellercentral.amazon.se",
         "ZA" to "https://sellercentral.amazon.co.za",
         "PL" to "https://sellercentral.amazon.pl",

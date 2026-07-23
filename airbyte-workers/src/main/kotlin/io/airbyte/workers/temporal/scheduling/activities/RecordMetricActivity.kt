@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities
@@ -23,6 +23,7 @@ interface RecordMetricActivity {
   enum class FailureCause {
     ACTIVITY,
     CANCELED,
+    CAPACITY_WAIT_EXCEEDED,
     CONNECTION,
     UNKNOWN,
     WORKFLOW,

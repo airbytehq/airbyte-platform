@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.micronaut.runtime
@@ -380,6 +380,9 @@ data class AirbyteCloudPubSubConfig(
 data class AirbyteConfig(
   val acceptanceTestEnabled: Boolean = false,
   val airbyteUrl: String = "",
+  val airbyteAgentsUrl: String = "",
+  val airbyteAgentsValidRedirectUris: List<String> = emptyList(),
+  val airbyteAgentsWebOrigins: List<String> = emptyList(),
   val deploymentEnvironment: String = DEFAULT_AIRBYTE_DEPLOYMENT_ENVIRONMENT,
   val installationId: UUID? = null, // Used to track abctl installations and defined/set by abctl
   val licenseKey: String = "",
@@ -634,6 +637,7 @@ data class AirbyteInternalApiClientConfig(
   val connectorBuilderApiHost: String = "",
   val connectTimeoutSeconds: Long = 30,
   val readTimeoutSeconds: Long = 600,
+  val callTimeoutSeconds: Long = 0,
   val throwsOn5xx: Boolean = true,
   val retries: RetryConfig = RetryConfig(),
   val auth: AuthConfig = AuthConfig(),
@@ -727,6 +731,7 @@ data class AirbyteKubernetesConfig(
 data class AirbyteLoggingConfig(
   val client: AirbyteLoggingClientConfig = AirbyteLoggingClientConfig(),
   val logLevel: LogLevel = LogLevel.INFO,
+  val platformLogFormat: String = "",
   val s3PathStyleAccess: String = "",
 ) {
   @ConfigurationProperties("client")
@@ -750,7 +755,18 @@ data class AirbyteNotificationConfig(
   @ConfigurationProperties("customerio")
   data class AirbyteNotificationCustomerIoConfig(
     val apiKey: String = "",
-  )
+    val transactional: AirbyteNotificationCustomerIoTransactionalConfig = AirbyteNotificationCustomerIoTransactionalConfig(),
+  ) {
+    /**
+     * Optional Customer.io transactional message IDs used when sending invitations for agentic
+     * organizations (Airbyte Agents). When empty, [CustomerIoEmailNotificationSender] falls back
+     * to the non-agentic (Cloud) template IDs so existing behavior is unchanged.
+     */
+    @ConfigurationProperties("transactional")
+    data class AirbyteNotificationCustomerIoTransactionalConfig(
+      val inviteUserAgenticId: String = "",
+    )
+  }
 }
 
 @ConfigurationProperties(OPENAI_PREFIX)
@@ -1077,6 +1093,7 @@ data class AirbyteTemporalConfig(
     val billing: AirbyteTemporalBillingConfig = AirbyteTemporalBillingConfig(),
     val client: AirbyteTemporalCloudClientConfig = AirbyteTemporalCloudClientConfig(),
     val connectorRollout: AirbyteTemporalCloudConnectorRolloutConfig = AirbyteTemporalCloudConnectorRolloutConfig(),
+    val infra: AirbyteTemporalCloudInfraConfig = AirbyteTemporalCloudInfraConfig(),
     val enabled: Boolean = false,
     val host: String = "",
     val namespace: String = "",
@@ -1095,6 +1112,12 @@ data class AirbyteTemporalConfig(
 
     @ConfigurationProperties("connector-rollout")
     data class AirbyteTemporalCloudConnectorRolloutConfig(
+      val host: String = "",
+      val namespace: String = "",
+    )
+
+    @ConfigurationProperties("infra")
+    data class AirbyteTemporalCloudInfraConfig(
       val host: String = "",
       val namespace: String = "",
     )
@@ -1123,11 +1146,10 @@ data class AirbyteWebappConfig(
   val hockeystackApiKey: String = "",
   val launchdarklyKey: String = "",
   val osanoKey: String = "",
-  val posthogApiKey: String = "",
-  val posthogHost: String = "",
   val segmentToken: String = "",
   val sonarApiUrl: String = "",
   val coralAgentsApiUrl: String = "",
+  val fullstoryGuidesOrgId: String = "",
   val url: String = "",
   val zendeskKey: String = "",
 )

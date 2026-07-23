@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.helpers
@@ -182,6 +182,7 @@ object ConnectionHelpers {
     notifySchemaChangeByEmail: Boolean?,
     backfillPreference: SchemaChangeBackfillPreference?,
     tags: MutableList<Tag?>?,
+    onDemandEnabled: Boolean = false,
   ): ConnectionRead =
     ConnectionRead()
       .connectionId(connectionId)
@@ -209,6 +210,7 @@ object ConnectionHelpers {
       .notifySchemaChangesByEmail(notifySchemaChangeByEmail)
       .backfillPreference(backfillPreference)
       .tags(tags)
+      .onDemandEnabled(onDemandEnabled)
 
   @JvmStatic
   fun generateExpectedConnectionRead(standardSync: StandardSync): ConnectionRead {
@@ -228,6 +230,7 @@ object ConnectionHelpers {
           .stream()
           .map<Tag?> { tag: io.airbyte.config.Tag? -> apiPojoConverters.toApiTag(tag!!) }
           .toList(),
+        standardSync.getOnDemandEnabled(),
       )
 
     if (standardSync.getSchedule() == null) {
@@ -268,6 +271,7 @@ object ConnectionHelpers {
       .breakingChange(standardSync.getBreakingChange())
       .notifySchemaChanges(standardSync.getNotifySchemaChanges())
       .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail())
+      .onDemandEnabled(standardSync.getOnDemandEnabled())
 
     if (standardSync.getNamespaceDefinition() != null) {
       connectionRead
@@ -328,6 +332,7 @@ object ConnectionHelpers {
         .scheduleType(apiPojoConverters.toApiConnectionScheduleType(standardSync))
         .scheduleData(apiPojoConverters.toApiConnectionScheduleData(standardSync))
         .schemaChange(schemaChange)
+        .onDemandEnabled(standardSync.getOnDemandEnabled() ?: false)
         .tags(mutableListOf())
         .sourceActorDefinitionVersion(ActorDefinitionVersionRead())
         .destinationActorDefinitionVersion(ActorDefinitionVersionRead())

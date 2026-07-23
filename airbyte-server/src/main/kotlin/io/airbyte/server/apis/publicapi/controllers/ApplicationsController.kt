@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
@@ -10,6 +10,8 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.services.ApplicationService
+import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.publicApi.server.generated.apis.PublicApplicationsApi
 import io.airbyte.publicApi.server.generated.models.ApplicationCreate
@@ -97,8 +99,9 @@ open class ApplicationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Secured(SecurityRule.IS_ANONYMOUS)
-  override fun publicGetAccessToken(applicationTokenRequestWithGrant: ApplicationTokenRequestWithGrant): Response =
-    Response
+  override fun publicGetAccessToken(applicationTokenRequestWithGrant: ApplicationTokenRequestWithGrant): Response {
+    ApmTraceUtils.addTagsToTrace(mapOf(MetricTags.CLIENT_ID to applicationTokenRequestWithGrant.clientId))
+    return Response
       .status(Response.Status.OK.statusCode)
       .entity(
         PublicAccessTokenResponse(
@@ -112,6 +115,7 @@ open class ApplicationsController(
           airbyteAuthConfig.tokenExpiration.applicationTokenExpirationInMinutes.minutes.inWholeSeconds,
         ),
       ).build()
+  }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetApplication(applicationId: String): Response {

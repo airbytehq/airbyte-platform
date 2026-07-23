@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.pods.factories
@@ -161,6 +161,8 @@ class RuntimeEnvVarFactory(
 
   /**
    * Env vars to enable APM metrics for the connector if enabled.
+   * When APM is disabled, still sets JAVA_OPTS with OOM safety flags
+   * so the JVM exits immediately (code 3) on OutOfMemoryError.
    */
   @InternalForTesting
   internal fun getConnectorApmEnvVars(
@@ -171,6 +173,8 @@ class RuntimeEnvVarFactory(
     if (featureFlagClient.boolVariation(ConnectorApmEnabled, context)) {
       connectorApmSupportHelper.addApmEnvVars(connectorApmEnvVars)
       connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, connectorApmEnvVars)
+    } else {
+      connectorApmEnvVars.add(EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, CONNECTOR_BASE_JVM_OPTS, null))
     }
     return connectorApmEnvVars.toList()
   }
@@ -295,5 +299,12 @@ class RuntimeEnvVarFactory(
 
   companion object {
     internal const val MYSQL_SOURCE_NAME = "airbyte/source-mysql"
+
+    /**
+     * Base JVM flags applied to all connector containers unconditionally.
+     * ExitOnOutOfMemoryError ensures the JVM exits immediately (code 3) on OOM
+     * rather than hanging, allowing the orchestrator to detect failure via pipe closure.
+     */
+    internal const val CONNECTOR_BASE_JVM_OPTS = "-XX:+ExitOnOutOfMemoryError"
   }
 }

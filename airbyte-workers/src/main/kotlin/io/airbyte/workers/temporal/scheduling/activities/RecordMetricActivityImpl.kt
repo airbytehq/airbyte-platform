@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.temporal.scheduling.activities
 
-import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.commons.micronaut.EnvConstants
@@ -12,7 +11,6 @@ import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.JOB_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY
@@ -23,6 +21,7 @@ import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity.Re
 import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpStatus
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
 import org.slf4j.Logger
@@ -47,7 +46,7 @@ open class RecordMetricActivityImpl(
    *
    * @param metricInput The information about the metric to record.
    */
-  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
+  @WithSpan
   override fun recordWorkflowCountMetric(metricInput: RecordMetricInput) {
     ApmTraceUtils.addTagsToTrace(generateTags(metricInput.connectionUpdaterInput))
     val baseMetricAttributes = generateMetricAttributes(metricInput.connectionUpdaterInput!!)

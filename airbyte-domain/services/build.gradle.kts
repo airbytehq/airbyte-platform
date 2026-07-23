@@ -8,6 +8,8 @@ dependencies {
   ksp(libs.micronaut.openapi)
 
   implementation(libs.bundles.micronaut.annotation)
+  implementation(libs.bundles.jackson)
+  implementation(libs.jooq)
   implementation(libs.micronaut.cache.caffeine)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(project(":oss:airbyte-config:config-models"))
@@ -15,11 +17,12 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-commons-entitlements"))
   implementation(project(":oss:airbyte-data"))
+  implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-api:problems-api")) // TODO remove this once api-problems are refactored into domain-problems
   implementation(libs.openai.java)
-  implementation(libs.bundles.datadog)
+  implementation(libs.otel.annotations)
 
   testImplementation(libs.mockk)
   testImplementation(libs.bundles.kotest)

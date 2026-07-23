@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services
@@ -140,8 +140,6 @@ interface ConnectionService {
 
   fun listConnectionIdsForOrganization(organizationId: UUID): List<UUID>
 
-  fun countConnectionsForOrganization(organizationId: UUID): Int
-
   fun listConnectionIdsForOrganizationAndActorDefinitions(
     organizationId: UUID,
     actorDefinitionIds: Collection<UUID>,
@@ -174,6 +172,7 @@ interface ConnectionService {
 
   data class ConnectionStatusCounts(
     val running: Int,
+    val queued: Int,
     val healthy: Int,
     val failed: Int,
     val paused: Int,

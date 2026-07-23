@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.handlers
@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionReadList
+import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.ResourceRequirements
 import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.model.generated.SourceCreate
@@ -28,8 +29,10 @@ import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.emptyObject
+import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.ConfigurationUpdate
+import io.airbyte.commons.server.errors.BadObjectSchemaKnownException
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
@@ -42,10 +45,12 @@ import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.Configs
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
+import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SuggestedStreams
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus
+import io.airbyte.config.secrets.ConfigWithProcessedSecrets
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
@@ -58,11 +63,12 @@ import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
-import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
+import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.SourceConnectionWithCount
 import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination
 import io.airbyte.domain.models.ActorId
+import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.models.SecretStorage
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.WorkspaceId
@@ -109,9 +115,8 @@ internal class SourceHandlerTest {
   lateinit var oAuthConfigSupplier: OAuthConfigSupplier
   lateinit var actorDefinitionVersionHelper: ActorDefinitionVersionHelper
   lateinit var actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater
-  lateinit var partialUserConfigService: PartialUserConfigService
-
   lateinit var sourceService: SourceService
+  lateinit var workspaceService: WorkspaceService
   lateinit var workspaceHelper: WorkspaceHelper
   lateinit var actorDefinitionHandlerHelper: ActorDefinitionHandlerHelper
   lateinit var licenseEntitlementChecker: LicenseEntitlementChecker
@@ -139,6 +144,7 @@ internal class SourceHandlerTest {
     oAuthConfigSupplier = mockk(relaxed = true)
     actorDefinitionVersionHelper = mockk(relaxed = true)
     sourceService = mockk(relaxed = true)
+    workspaceService = mockk(relaxed = true)
     workspaceHelper = mockk(relaxed = true)
     secretPersistenceService = mockk(relaxed = true)
     actorDefinitionHandlerHelper = mockk(relaxed = true)
@@ -150,8 +156,6 @@ internal class SourceHandlerTest {
     secretReferenceService = mockk(relaxed = true)
     currentUserService = mockk(relaxed = true)
     secretPersistence = mockk(relaxed = true)
-    partialUserConfigService = mockk(relaxed = true)
-
     every {
       licenseEntitlementChecker.checkEntitlement(
         any(),
@@ -207,6 +211,7 @@ internal class SourceHandlerTest {
         oAuthConfigSupplier = oAuthConfigSupplier,
         actorDefinitionVersionHelper = actorDefinitionVersionHelper,
         sourceService = sourceService,
+        workspaceService = workspaceService,
         workspaceHelper = workspaceHelper,
         secretPersistenceService = secretPersistenceService,
         actorDefinitionHandlerHelper = actorDefinitionHandlerHelper,
@@ -220,7 +225,6 @@ internal class SourceHandlerTest {
         secretStorageService = secretStorageService,
         secretReferenceService = secretReferenceService,
         currentUserService = currentUserService,
-        partialUserConfigService = partialUserConfigService,
       )
   }
 
@@ -457,6 +461,7 @@ internal class SourceHandlerTest {
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
         sourceService,
+        workspaceService,
         workspaceHelper,
         secretPersistenceService,
         actorDefinitionHandlerHelper,
@@ -470,7 +475,6 @@ internal class SourceHandlerTest {
         secretStorageService,
         secretReferenceService,
         currentUserService,
-        partialUserConfigService,
       )
 
     val sourceCreate =
@@ -791,6 +795,7 @@ internal class SourceHandlerTest {
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
         sourceService,
+        workspaceService,
         workspaceHelper,
         secretPersistenceService,
         actorDefinitionHandlerHelper,
@@ -804,7 +809,6 @@ internal class SourceHandlerTest {
         secretStorageService,
         secretReferenceService,
         currentUserService,
-        partialUserConfigService,
       )
 
     val updatedSourceName = "my updated source name"
@@ -907,6 +911,71 @@ internal class SourceHandlerTest {
         sourceDefinitionSpecificationRead.connectionSpecification,
       )
     }
+  }
+
+  @Test
+  fun testGetSourceWithMetadata() {
+    val workspaceName = "My Test Workspace"
+    val expectedSourceRead =
+      SourceHelpers.getSourceRead(
+        sourceConnection,
+        standardSourceDefinition,
+        IS_VERSION_OVERRIDE_APPLIED,
+        IS_ENTITLED,
+        SUPPORT_STATE,
+        RESOURCE_ALLOCATION,
+      )
+    val sourceIdRequestBody = SourceIdRequestBody().sourceId(expectedSourceRead.sourceId)
+
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
+    every {
+      actorDefinitionVersionHelper.getSourceVersion(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
+      )
+    } returns sourceDefinitionVersion
+    every { sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId) } returns standardSourceDefinition
+    every {
+      secretsProcessor.prepareSecretsForOutput(
+        sourceConnection.configuration,
+        sourceDefinitionSpecificationRead.connectionSpecification,
+      )
+    } returns sourceConnection.configuration
+    every {
+      actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
+      )
+    } returns sourceDefinitionVersionWithOverrideStatus
+    every {
+      secretReferenceService.getConfigWithSecretReferences(
+        any(),
+        any(),
+        any(),
+      )
+    } answers {
+      ConfigWithSecretReferences(
+        secondArg(),
+        mapOf(),
+      )
+    }
+
+    val workspace = StandardWorkspace().withWorkspaceId(sourceConnection.workspaceId).withName(workspaceName)
+    every { workspaceService.getStandardWorkspaceNoSecrets(sourceConnection.workspaceId, false) } returns workspace
+
+    val result = sourceHandler.getSourceWithMetadata(sourceIdRequestBody)
+
+    Assertions.assertEquals(expectedSourceRead.sourceId, result.sourceId)
+    Assertions.assertEquals(expectedSourceRead.sourceDefinitionId, result.sourceDefinitionId)
+    Assertions.assertEquals(expectedSourceRead.workspaceId, result.workspaceId)
+    Assertions.assertEquals(expectedSourceRead.name, result.name)
+    Assertions.assertEquals(expectedSourceRead.sourceName, result.sourceName)
+    Assertions.assertEquals(expectedSourceRead.connectionConfiguration, result.connectionConfiguration)
+    Assertions.assertEquals(expectedSourceRead.icon, result.icon)
+    Assertions.assertEquals(workspaceName, result.metadata.workspaceName)
   }
 
   @Test
@@ -1443,9 +1512,171 @@ internal class SourceHandlerTest {
     verify { sourceHandlerSpy.hydrateOAuthResponseSecret(any(), any()) }
   }
 
+  @Test
+  fun `updateSourceWithOptionalSecret hydrates secretId when inline OAuth server output secrets are disallowed`() {
+    verifyUpdateSourceWithOptionalSecretHydratesSecretId(allowInlineOAuthServerOutputSecrets = false)
+  }
+
+  @Test
+  fun `updateSourceWithOptionalSecret hydrates secretId when inline OAuth server output secrets are allowed`() {
+    verifyUpdateSourceWithOptionalSecretHydratesSecretId(allowInlineOAuthServerOutputSecrets = true)
+  }
+
+  @Test
+  fun `updateSourceWithOptionalSecret allows inline OAuth server output secrets when opted in`() {
+    val sourceHandlerSpy = spyk(sourceHandler)
+    val oauthDefinitionVersion = sourceDefinitionVersion.withSpec(generateLwaAdvancedAuthConnectorSpecification())
+    val inlineSecretConfiguration = jsonNode(mapOf(LWA_APP_ID_FIELD to "lwa-app-id"))
+    val partialSourceUpdate =
+      PartialSourceUpdate()
+        .sourceId(sourceConnection.sourceId)
+        .connectionConfiguration(inlineSecretConfiguration)
+
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.getStandardSourceDefinition(sourceConnection.sourceDefinitionId) } returns standardSourceDefinition
+    every {
+      actorDefinitionVersionHelper.getSourceVersion(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
+      )
+    } returns oauthDefinitionVersion
+    every { sourceHandlerSpy.partialUpdateSource(partialSourceUpdate) } returns SourceRead()
+
+    sourceHandlerSpy.updateSourceWithOptionalSecret(partialSourceUpdate, allowInlineOAuthServerOutputSecrets = true)
+
+    verify { sourceHandlerSpy.partialUpdateSource(partialSourceUpdate) }
+  }
+
+  @Test
+  fun `updateSourceWithOptionalSecret rejects inline OAuth server output secrets by default`() {
+    val sourceHandlerSpy = spyk(sourceHandler)
+    val oauthDefinitionVersion = sourceDefinitionVersion.withSpec(generateLwaAdvancedAuthConnectorSpecification())
+    val inlineSecretConfiguration = jsonNode(mapOf(LWA_APP_ID_FIELD to "lwa-app-id"))
+    val partialSourceUpdate =
+      PartialSourceUpdate()
+        .sourceId(sourceConnection.sourceId)
+        .connectionConfiguration(inlineSecretConfiguration)
+
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.getStandardSourceDefinition(sourceConnection.sourceDefinitionId) } returns standardSourceDefinition
+    every {
+      actorDefinitionVersionHelper.getSourceVersion(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
+      )
+    } returns oauthDefinitionVersion
+    every { sourceHandlerSpy.partialUpdateSource(any()) } returns SourceRead()
+
+    Assertions.assertThrows(BadObjectSchemaKnownException::class.java) {
+      sourceHandlerSpy.updateSourceWithOptionalSecret(partialSourceUpdate, allowInlineOAuthServerOutputSecrets = false)
+    }
+
+    verify(exactly = 0) { sourceHandlerSpy.partialUpdateSource(any()) }
+  }
+
+  @Test
+  fun testFailedConfigWriteDoesNotDeleteOldSecretReferences() {
+    val sourceCreate =
+      SourceCreate()
+        .name(sourceConnection.name)
+        .workspaceId(sourceConnection.workspaceId)
+        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
+        .connectionConfiguration(sourceConnection.configuration)
+
+    every { uuidGenerator.get() } returns sourceConnection.sourceId
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
+    every {
+      actorDefinitionVersionHelper.getSourceVersion(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+      )
+    } returns sourceDefinitionVersion
+
+    val secretStorage = mockk<SecretStorage>()
+    val secretStorageId = SecretStorageId(UUID.randomUUID())
+    every { secretStorage.id } returns secretStorageId
+    every { secretStorageService.getByWorkspaceId(WorkspaceId(sourceConnection.workspaceId)) } returns secretStorage
+    every { currentUserService.getCurrentUserIdIfExists() } returns Optional.of(UUID.randomUUID())
+
+    // simulate config write failure — e.g. process killed during pod rollout
+    every { sourceService.writeSourceConnectionNoSecrets(any()) } throws RuntimeException("connection lost")
+
+    Assertions.assertThrows(RuntimeException::class.java) {
+      sourceHandler.createSource(sourceCreate)
+    }
+
+    // old secret references must not be deleted if the config write failed
+    verify(exactly = 0) {
+      secretReferenceService.cleanupDanglingSecretReferences(any(), any<SecretReferenceScopeType>(), any<ConfigWithProcessedSecrets>())
+    }
+  }
+
+  private fun verifyUpdateSourceWithOptionalSecretHydratesSecretId(allowInlineOAuthServerOutputSecrets: Boolean) {
+    val oauthDefinitionVersion =
+      sourceDefinitionVersion.withSpec(ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification())
+    val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test", 1)
+    val connectionConfiguration = jsonNode(mapOf("refresh_token" to "refresh-token"))
+    val partialSourceUpdate =
+      PartialSourceUpdate()
+        .sourceId(sourceConnection.sourceId)
+        .secretId(secretCoordinate.fullCoordinate)
+        .connectionConfiguration(connectionConfiguration)
+    val hydratedSecret =
+      jsonNode(
+        mapOf(
+          "refresh_token" to "hydrated-refresh-token",
+          "client_id" to "client-id",
+          "client_secret" to "client-secret",
+        ),
+      )
+    val expectedConnectionConfiguration =
+      jsonNode(
+        mapOf(
+          "refresh_token" to "hydrated-refresh-token",
+          "client_id" to "client-id",
+          "client_secret" to "client-secret",
+        ),
+      )
+    val sourceHandlerSpy = spyk(sourceHandler)
+
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.getStandardSourceDefinition(sourceConnection.sourceDefinitionId) } returns standardSourceDefinition
+    every {
+      actorDefinitionVersionHelper.getSourceVersion(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
+      )
+    } returns oauthDefinitionVersion
+    every { sourceHandlerSpy.hydrateOAuthResponseSecret(secretCoordinate.fullCoordinate, sourceConnection.workspaceId) } returns hydratedSecret
+    every { sourceHandlerSpy.partialUpdateSource(partialSourceUpdate) } returns SourceRead()
+
+    sourceHandlerSpy.updateSourceWithOptionalSecret(partialSourceUpdate, allowInlineOAuthServerOutputSecrets = allowInlineOAuthServerOutputSecrets)
+
+    Assertions.assertEquals(expectedConnectionConfiguration, partialSourceUpdate.connectionConfiguration)
+    verify { sourceHandlerSpy.hydrateOAuthResponseSecret(secretCoordinate.fullCoordinate, sourceConnection.workspaceId) }
+    verify { sourceHandlerSpy.partialUpdateSource(partialSourceUpdate) }
+  }
+
+  private fun generateLwaAdvancedAuthConnectorSpecification(): ConnectorSpecification {
+    val spec = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification()!!
+    (
+      spec
+        .advancedAuth
+        .oauthConfigSpecification
+        .completeOauthServerOutputSpecification
+        .get("properties")
+        .get("client_id") as ObjectNode
+    ).set<JsonNode>("path_in_connector_config", jsonNode(listOf(LWA_APP_ID_FIELD)))
+    return spec
+  }
+
   companion object {
     private const val API_KEY_FIELD = "apiKey"
     private const val API_KEY_VALUE = "987-xyz"
+    private const val LWA_APP_ID_FIELD = "lwa_app_id"
     private const val SHOES = "shoes"
     private const val SKU = "sku"
     private val airbyteCatalog: AirbyteCatalog =

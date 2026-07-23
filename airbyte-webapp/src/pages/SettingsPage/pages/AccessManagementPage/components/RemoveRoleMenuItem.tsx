@@ -6,7 +6,7 @@ import { Text } from "components/ui/Text";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceOrUndefined, useDeletePermissions, useOrganization } from "core/api";
 import { useCurrentUser } from "core/services/auth";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
 
 import styles from "./RemoveRoleMenuItem.module.scss";
 import { ResourceType, UnifiedUserModel } from "./util";

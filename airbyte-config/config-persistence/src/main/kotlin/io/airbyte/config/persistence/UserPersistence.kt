@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.config.persistence
@@ -87,6 +87,7 @@ open class UserPersistence(
       .set(Tables.USER.EMAIL, user.email)
       .set(Tables.USER.NEWS, user.news)
       .set(Tables.USER.UI_METADATA, JSONB.valueOf(Jsons.serialize(user.uiMetadata)))
+      .set(Tables.USER.AGENTIC_ENABLED_AT, user.agenticEnabledAt)
       .set(Tables.USER.UPDATED_AT, timestamp)
       .where(Tables.USER.ID.eq(user.userId))
       .execute()
@@ -113,6 +114,7 @@ open class UserPersistence(
       .set(Tables.USER.EMAIL, user.email)
       .set(Tables.USER.NEWS, user.news)
       .set(Tables.USER.UI_METADATA, JSONB.valueOf(Jsons.serialize(user.uiMetadata)))
+      .set(Tables.USER.AGENTIC_ENABLED_AT, user.agenticEnabledAt)
       .set(Tables.USER.CREATED_AT, timestamp)
       .set(Tables.USER.UPDATED_AT, timestamp)
       .execute()
@@ -291,7 +293,7 @@ open class UserPersistence(
             JsonNode::class.java,
           )
         },
-      )
+      ).withAgenticEnabledAt(record.get(Tables.USER.AGENTIC_ENABLED_AT))
 
   private fun createAuthenticatedUserFromRecord(record: Record): AuthenticatedUser {
     val user = createUserFromRecord(record)
@@ -304,6 +306,7 @@ open class UserPersistence(
       .withEmail(user.email)
       .withNews(user.news)
       .withUiMetadata(user.uiMetadata)
+      .withAgenticEnabledAt(user.agenticEnabledAt)
       .withAuthUserId(record.get(Tables.AUTH_USER.AUTH_USER_ID))
       .withAuthProvider(
         if (record.get(Tables.AUTH_USER.AUTH_PROVIDER) == null) {
@@ -340,6 +343,7 @@ open class UserPersistence(
             Tables.USER.EMAIL,
             Tables.USER.NEWS,
             Tables.USER.UI_METADATA,
+            Tables.USER.AGENTIC_ENABLED_AT,
           ).from(Tables.AUTH_USER)
           .innerJoin(Tables.USER)
           .on(Tables.AUTH_USER.USER_ID.eq(Tables.USER.ID))
@@ -518,6 +522,36 @@ open class UserPersistence(
           Tables.PERMISSION.ORGANIZATION_ID.isNull
             .or(Tables.PERMISSION.ORGANIZATION_ID.ne(organizationId)),
         ).groupBy(Tables.USER.ID)
+        .fetch(Tables.USER.ID)
+    }
+
+  /**
+   * Find users with emails matching the given domain who do NOT have any permission to the specified organization.
+   * This is used during SSO activation to find users who need to be granted organization membership.
+   *
+   * @param emailDomain the email domain to check (e.g., "example.com")
+   * @param organizationId the organization ID to check permissions against
+   * @return list of user IDs with the email domain who do not have permission to the organization
+   */
+  fun findUsersWithEmailDomainWithoutOrgPermission(
+    emailDomain: String,
+    organizationId: UUID,
+  ): List<UUID> =
+    database.query { ctx: DSLContext ->
+      // Subquery to find users who DO have permission to this org
+      val usersWithOrgPermission =
+        ctx
+          .select(Tables.PERMISSION.USER_ID)
+          .from(Tables.PERMISSION)
+          .where(Tables.PERMISSION.ORGANIZATION_ID.eq(organizationId))
+          .and(Tables.PERMISSION.USER_ID.isNotNull)
+
+      // Find users with matching email domain who are NOT in the subquery
+      ctx
+        .select(Tables.USER.ID)
+        .from(Tables.USER)
+        .where(Tables.USER.EMAIL.likeIgnoreCase("%@$emailDomain"))
+        .and(Tables.USER.ID.notIn(usersWithOrgPermission))
         .fetch(Tables.USER.ID)
     }
 

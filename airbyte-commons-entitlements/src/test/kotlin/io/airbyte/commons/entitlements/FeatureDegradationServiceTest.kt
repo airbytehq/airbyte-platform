@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.entitlements
@@ -7,11 +7,15 @@ package io.airbyte.commons.entitlements
 import io.airbyte.commons.entitlements.models.DestinationSalesforceEnterpriseConnector
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.commons.entitlements.models.RbacRolesEntitlement
 import io.airbyte.commons.entitlements.models.SourceNetsuiteEnterpriseConnector
 import io.airbyte.commons.entitlements.models.SourceOracleEnterpriseConnector
 import io.airbyte.config.ActorType
+import io.airbyte.config.BasicSchedule
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.Cron
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType.ORGANIZATION_ADMIN
 import io.airbyte.config.Permission.PermissionType.ORGANIZATION_EDITOR
@@ -19,7 +23,10 @@ import io.airbyte.config.Permission.PermissionType.ORGANIZATION_MEMBER
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_ADMIN
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_EDITOR
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_READER
+import io.airbyte.config.Schedule
+import io.airbyte.config.ScheduleData
 import io.airbyte.config.ScopeType
+import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.StatusReason
 import io.airbyte.config.UserInvitation
@@ -61,9 +68,11 @@ class FeatureDegradationServiceTest {
   private val cronTimezoneUtc = "UTC"
 
   @Test
-  fun `downgradeFeaturesIfRequired only executes downgrades when going from UNIFIED_TRIAL to STANDARD`() {
+  fun `downgradeFeaturesIfRequired executes non-schedule downgrades when going from UNIFIED_TRIAL to STANDARD`() {
     val orgId = OrganizationId(UUID.randomUUID())
-    val connectionId = UUID.randomUUID()
+    val subHourConnectionId = UUID.randomUUID()
+    val mapperConnectionId = UUID.randomUUID()
+    val subHourConnection = basicMinutesConnection(subHourConnectionId, 30L)
 
     // Even for upgrades, the function is called (it just checks if it needs to do anything)
     every { entitlementClient.getEntitlements(orgId) } returns
@@ -77,8 +86,10 @@ class FeatureDegradationServiceTest {
     every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
     every { entitlementClient.updateOrganization(orgId, EntitlementPlan.STANDARD) } just Runs
     every { featureDegradationServiceStubbed.downgradeRBAC(orgId) } just Runs
-    every { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) } returns emptyList()
-    every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(connectionId)
+    every { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) } returns listOf(mapperConnectionId)
+    every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(subHourConnectionId)
+    every { connectionService.getStandardSync(subHourConnectionId) } returns subHourConnection
+    every { connectionService.writeStandardSync(any()) } just Runs
     every {
       connectionService.listConnectionIdsForOrganizationAndActorDefinitions(
         orgId.value,
@@ -93,11 +104,11 @@ class FeatureDegradationServiceTest {
         ActorType.DESTINATION,
       )
     } returns emptyList()
-    every { connectionService.lockConnectionsById(any(), any()) } returns setOf(connectionId)
+    every { connectionService.lockConnectionsById(any(), any()) } returns setOf(mapperConnectionId)
 
     featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.STANDARD)
 
-    // Verify downgrade RBAC function is called only when going from UNIFIED_TRIAL to STANDARD
+    // Verify downgrade side effects are applied for UNIFIED_TRIAL to STANDARD.
     verify { featureDegradationServiceStubbed.downgradeRBAC(orgId) }
     verify { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) }
     verify {
@@ -115,9 +126,10 @@ class FeatureDegradationServiceTest {
       )
     }
     verify { connectionEntitlementHelper.findSubHourSyncIds(orgId) }
+    verifyHourlyScheduleWrite(subHourConnectionId)
     verify {
       connectionService.lockConnectionsById(
-        match { it.contains(connectionId) },
+        match { it.contains(mapperConnectionId) && !it.contains(subHourConnectionId) },
         StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value,
       )
     }
@@ -135,7 +147,7 @@ class FeatureDegradationServiceTest {
 
     featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.PRO, EntitlementPlan.STANDARD)
 
-    // Verify downgrade RBAC function is not called if not going from UNIFIED_TRIAL to STANDARD
+    // Verify downgrade RBAC function is not called if degradation is not supported.
     verify(exactly = 0) { featureDegradationServiceStubbed.downgradeRBAC(orgId) }
     verify { connectionService wasNot Called }
   }
@@ -161,6 +173,9 @@ class FeatureDegradationServiceTest {
     val connectionIds = listOf(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
     every { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) } returns listOf(connectionIds[0], connectionIds[1])
     every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(connectionIds[1], connectionIds[2])
+    every { connectionService.getStandardSync(connectionIds[1]) } returns basicMinutesConnection(connectionIds[1], 30L)
+    every { connectionService.getStandardSync(connectionIds[2]) } returns basicMinutesConnection(connectionIds[2], 30L)
+    every { connectionService.writeStandardSync(any()) } just Runs
     every {
       connectionService.listConnectionIdsForOrganizationAndActorDefinitions(
         orgId.value,
@@ -185,8 +200,160 @@ class FeatureDegradationServiceTest {
     // Verify downgrade RBAC function is not called if not going from UNIFIED_TRIAL to STANDARD
     verify {
       connectionService.lockConnectionsById(
-        match { it.containsAll(connectionIds.slice(0..4)) },
+        match {
+          it.containsAll(listOf(connectionIds[0], connectionIds[1], connectionIds[3], connectionIds[4])) &&
+            !it.contains(connectionIds[2])
+        },
         StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value,
+      )
+    }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired downgrades sub-hour connections to hourly for fifteen-minute entitlement downgrade`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val connectionId = UUID.randomUUID()
+    val subHourConnection = basicMinutesConnection(connectionId, 30L)
+
+    every { entitlementClient.getEntitlements(orgId) } returns
+      listOf(
+        EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true),
+      )
+    every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
+    every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(connectionId)
+    every { connectionService.getStandardSync(connectionId) } returns subHourConnection
+    every { connectionService.writeStandardSync(any()) } just Runs
+
+    featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.STANDARD)
+
+    verify { connectionEntitlementHelper.findSubHourSyncIds(orgId) }
+    verifyHourlyScheduleWrite(connectionId)
+    verify(exactly = 0) { connectionService.lockConnectionsById(any(), any()) }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired downgrades sub-hour cron connections to basic hourly schedules`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val connectionId = UUID.randomUUID()
+    val subHourConnection = cronConnection(connectionId, "0 */30 * * * ?")
+
+    every { entitlementClient.getEntitlements(orgId) } returns
+      listOf(
+        EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true),
+      )
+    every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
+    every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(connectionId)
+    every { connectionService.getStandardSync(connectionId) } returns subHourConnection
+    every { connectionService.writeStandardSync(any()) } just Runs
+
+    featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.STANDARD)
+
+    verify { connectionEntitlementHelper.findSubHourSyncIds(orgId) }
+    verifyHourlyScheduleWrite(connectionId)
+    verify(exactly = 0) { connectionService.lockConnectionsById(any(), any()) }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired locks sub-hour connection when schedule downgrade write fails`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val downgradedConnectionId = UUID.randomUUID()
+    val failedConnectionId = UUID.randomUUID()
+    val downgradedConnection = basicMinutesConnection(downgradedConnectionId, 30L)
+    val failedConnection = basicMinutesConnection(failedConnectionId, 30L)
+
+    every { entitlementClient.getEntitlements(orgId) } returns
+      listOf(
+        EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true),
+      )
+    every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
+    every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(downgradedConnectionId, failedConnectionId)
+    every { connectionService.getStandardSync(downgradedConnectionId) } returns downgradedConnection
+    every { connectionService.getStandardSync(failedConnectionId) } returns failedConnection
+    every { connectionService.writeStandardSync(match { it.connectionId == downgradedConnectionId }) } just Runs
+    every { connectionService.writeStandardSync(match { it.connectionId == failedConnectionId }) } throws RuntimeException("write failed")
+    every { connectionService.lockConnectionsById(any(), any()) } returns setOf(failedConnectionId)
+
+    featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.STANDARD)
+
+    verifyHourlyScheduleWrite(downgradedConnectionId)
+    verifyHourlyScheduleWrite(failedConnectionId)
+    verify {
+      connectionService.lockConnectionsById(
+        match { it.contains(failedConnectionId) && !it.contains(downgradedConnectionId) },
+        StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value,
+      )
+    }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired locks non-schedule Plus-only connections and downgrades sub-hour schedules when going from PLUS to STANDARD`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val mapperConnectionId = UUID.randomUUID()
+    val subHourConnectionId = UUID.randomUUID()
+    val subHourConnection = basicMinutesConnection(subHourConnectionId, 30L)
+
+    every { entitlementClient.getEntitlements(orgId) } returns
+      listOf(
+        EntitlementResult(MappersEntitlement.featureId, true),
+        EntitlementResult(FifteenMinuteSyncFrequencyEntitlement.featureId, true),
+      )
+    every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
+    every { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) } returns listOf(mapperConnectionId)
+    every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(subHourConnectionId)
+    every { connectionService.getStandardSync(subHourConnectionId) } returns subHourConnection
+    every { connectionService.writeStandardSync(any()) } just Runs
+    every { connectionService.lockConnectionsById(any(), any()) } returns setOf(mapperConnectionId)
+
+    featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.PLUS, EntitlementPlan.STANDARD)
+
+    verify { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) }
+    verify { connectionEntitlementHelper.findSubHourSyncIds(orgId) }
+    verifyHourlyScheduleWrite(subHourConnectionId)
+    verify {
+      connectionService.lockConnectionsById(
+        match { it.contains(mapperConnectionId) && !it.contains(subHourConnectionId) },
+        StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value,
+      )
+    }
+  }
+
+  private fun basicMinutesConnection(
+    connectionId: UUID,
+    minutes: Long,
+  ): StandardSync =
+    StandardSync()
+      .withConnectionId(connectionId)
+      .withCatalog(ConfiguredAirbyteCatalog().withStreams(emptyList()))
+      .withStatus(StandardSync.Status.ACTIVE)
+      .withScheduleType(StandardSync.ScheduleType.BASIC_SCHEDULE)
+      .withScheduleData(ScheduleData().withBasicSchedule(BasicSchedule().withTimeUnit(BasicSchedule.TimeUnit.MINUTES).withUnits(minutes)))
+      .withSchedule(Schedule().withTimeUnit(Schedule.TimeUnit.MINUTES).withUnits(minutes))
+      .withManual(false)
+
+  private fun cronConnection(
+    connectionId: UUID,
+    cronExpression: String,
+  ): StandardSync =
+    StandardSync()
+      .withConnectionId(connectionId)
+      .withCatalog(ConfiguredAirbyteCatalog().withStreams(emptyList()))
+      .withStatus(StandardSync.Status.ACTIVE)
+      .withScheduleType(StandardSync.ScheduleType.CRON)
+      .withScheduleData(ScheduleData().withCron(Cron().withCronExpression(cronExpression).withCronTimeZone(cronTimezoneUtc)))
+      .withManual(false)
+
+  private fun verifyHourlyScheduleWrite(connectionId: UUID) {
+    verify {
+      connectionService.writeStandardSync(
+        match {
+          it.connectionId == connectionId &&
+            it.scheduleType == StandardSync.ScheduleType.BASIC_SCHEDULE &&
+            it.scheduleData.basicSchedule.timeUnit == BasicSchedule.TimeUnit.HOURS &&
+            it.scheduleData.basicSchedule.units == 1L &&
+            it.schedule.timeUnit == Schedule.TimeUnit.HOURS &&
+            it.schedule.units == 1L &&
+            !it.manual
+        },
       )
     }
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.test.utils
@@ -140,29 +140,29 @@ open class BaseConfigDatabaseTest {
               connection_tag,
               connector_builder_project,
               connector_rollout,
-              config_template,
-              connection_template,
               dataplane,
               dataplane_client_credentials,
               dataplane_group,
+              dataplane_network_config,
               dataplane_heartbeat_log,
               data_worker_usage,
+              data_worker_usage_reservation,
               declarative_manifest,
               "group",
               group_member,
               notification_configuration,
+              observability_jobs_stats,
+              observability_stream_stats,
               operation,
-              orchestration,
-              orchestration_task,
-              orchestration_run,
-              orchestration_task_run,
               organization,
               organization_domain_verification,
               organization_email_domain,
               organization_payment_config,
-              partial_user_config,
               permission,
+              private_link,
               schema_management,
+              scim_configuration,
+              scim_resource_mapping,
               sso_config,
               state,
               stream_generation,
@@ -171,6 +171,8 @@ open class BaseConfigDatabaseTest {
               tag,
               ${'"'}user${'"'},
               user_invitation,
+              workload,
+              workload_queue,
               workspace,
               workspace_service_account
             

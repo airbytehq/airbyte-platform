@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.data
@@ -40,7 +40,7 @@ class OrganizationEmailDomainServiceDataImpl(
   override fun existsByOrganizationIdAndDomain(
     organizationId: UUID,
     domain: String,
-  ): Boolean = repository.existsByOrganizationIdAndEmailDomain(organizationId, domain)
+  ): Boolean = repository.existsByOrganizationIdAndEmailDomainIgnoreCase(organizationId, domain)
 
   override fun deleteByOrganizationIdAndDomain(
     organizationId: UUID,

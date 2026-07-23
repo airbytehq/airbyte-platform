@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.server.support
@@ -28,12 +28,28 @@ open class AuthorizationServerHandler(
     var updatedMessage = message
 
     if (message is FullHttpRequest) {
-      if (!SKIP_HEADER_UPDATE.contains(message.uri())) {
+      // Always strip client-supplied authentication headers, even for skip-listed URIs.
+      // These headers are internal and must only be derived from the request body.
+      // Stripping does no JSON parsing, so the non-JSON reason for the skip list does not apply.
+      for (authenticationId in AuthenticationId.entries) {
+        message.headers().remove(authenticationId.httpHeader)
+      }
+
+      if (!shouldSkipHeaderUpdate(message.uri())) {
         updatedMessage = updateHeaders(message)
       }
     }
 
     context.fireChannelRead(updatedMessage)
+  }
+
+  private fun shouldSkipHeaderUpdate(uri: String): Boolean {
+    if (SKIP_HEADER_UPDATE.contains(uri)) {
+      return true
+    }
+
+    val path = uri.substringBefore('?')
+    return path == SCIM_BASE_PATH || path.startsWith("$SCIM_BASE_PATH/")
   }
 
   /**
@@ -62,8 +78,8 @@ open class AuthorizationServerHandler(
   }
 
   /**
-   * Adds the provided header and value to the HTTP request represented by the [FullHttpRequest]
-   * if the header is not already present.
+   * Sets the provided header and value on the HTTP request represented by the [FullHttpRequest],
+   * always overwriting any existing value to prevent client-supplied header spoofing.
    *
    * @param headerName The name of the header.
    * @param headerValue The value of the header.
@@ -75,14 +91,13 @@ open class AuthorizationServerHandler(
     httpRequest: FullHttpRequest,
   ) {
     val httpHeaders = httpRequest.headers()
-    if (!httpHeaders.contains(headerName)) {
-      log.trace("Adding HTTP header '{}' with value '{}' to request...", headerName, headerValue)
-      httpHeaders.add(headerName, headerValue.toString())
-    }
+    httpHeaders.set(headerName, headerValue.toString())
+    log.trace("Set HTTP header '{}' with value '{}' on request.", headerName, headerValue)
   }
 
   companion object {
     private val log = KotlinLogging.logger {}
+    private const val SCIM_BASE_PATH = "/scim/v2"
 
     private val SKIP_HEADER_UPDATE =
       setOf(

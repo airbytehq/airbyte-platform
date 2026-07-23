@@ -3,10 +3,10 @@ import { useIntl } from "react-intl";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 
 import { LoadingPage } from "components";
-import { CreateConnectionForm } from "components/connection/CreateConnectionForm/CreateConnectionForm";
-import { HeadTitle } from "components/HeadTitle";
+import { HeadTitle } from "components/ui/HeadTitle";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 
+import { CreateConnectionForm } from "area/connection/components/CreateConnectionForm/CreateConnectionForm";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConfigureConnectionPage.module.scss";

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.keycloak
@@ -10,6 +10,11 @@ import io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM
 import io.airbyte.commons.auth.support.JwtTokenParser.tokenToAttributes
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
+import io.airbyte.featureflag.ConfigurableSsoDefaultRole
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -34,6 +39,8 @@ class AirbyteKeycloakClient(
   private val airbyteConfig: AirbyteConfig,
   private val keycloakConfiguration: AirbyteKeycloakConfig,
   @Named("keycloakHttpClient") private val httpClient: OkHttpClient,
+  private val metricClient: MetricClient,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   private val keycloakAdminClient: Keycloak = keycloakAdminClientProvider.createKeycloakAdminClient()
 
@@ -67,7 +74,8 @@ class AirbyteKeycloakClient(
 
   /**
    * Creates a complete OIDC SSO configuration including realm, identity provider, and client.
-   * Sets up the full authentication flow for an organization's SSO integration.
+   * Sets up the full authentication flow for an organization's SSO integration. The Sonar webapp
+   * client is only registered when ConfigurableSsoDefaultRole is enabled for the organization.
    * If any step fails after the realm is created, the realm is deleted before throwing the exception.
    * @throws RealmCreationException, IdpCreationException, CreateClientException, or ImportConfigException on failures.
    */
@@ -107,24 +115,30 @@ class AirbyteKeycloakClient(
         }
       createIdpForRealm(request.companyIdentifier, idp)
 
-      val airbyteWebappClient =
-        ClientRepresentation().apply {
-          clientId = AIRBYTE_WEBAPP_CLIENT_ID
-          name = AIRBYTE_WEBAPP_CLIENT_NAME
-          protocol = "openid-connect"
-          redirectUris = listOf("${airbyteConfig.airbyteUrl}/*")
-          webOrigins = listOf(airbyteConfig.airbyteUrl)
-          baseUrl = airbyteConfig.airbyteUrl
-          isEnabled = true
-          isDirectAccessGrantsEnabled = false
-          isStandardFlowEnabled = true
-          isServiceAccountsEnabled = false
-          authorizationServicesEnabled = false
-          isFrontchannelLogout = false
-          isImplicitFlowEnabled = false
-          isPublicClient = true
-        }
-      createClientForRealm(request.companyIdentifier, airbyteWebappClient)
+      createWebappClient(
+        realmName = request.companyIdentifier,
+        clientId = AIRBYTE_WEBAPP_CLIENT_ID,
+        name = AIRBYTE_WEBAPP_CLIENT_NAME,
+        baseUrl = airbyteConfig.airbyteUrl,
+        redirectUris = listOf("${airbyteConfig.airbyteUrl}/*"),
+        webOrigins = listOf(airbyteConfig.airbyteUrl),
+      )
+
+      // Registration of the Sonar webapp client is dark-launched behind ConfigurableSsoDefaultRole.
+      // While the flag is off for an organization we skip it, preserving pre-feature behavior.
+      if (featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, Organization(request.organizationId))) {
+        val sonarWebappUrl = airbyteConfig.airbyteAgentsUrl.ifBlank { airbyteConfig.airbyteUrl }.trimEnd('/')
+        val sonarRedirectUris = airbyteConfig.airbyteAgentsValidRedirectUris.withoutBlankValues().ifEmpty { listOf("$sonarWebappUrl/*") }
+        val sonarWebOrigins = airbyteConfig.airbyteAgentsWebOrigins.withoutBlankValues().ifEmpty { listOf(sonarWebappUrl) }
+        createWebappClient(
+          realmName = request.companyIdentifier,
+          clientId = SONAR_WEBAPP_CLIENT_ID,
+          name = SONAR_WEBAPP_CLIENT_NAME,
+          baseUrl = sonarWebappUrl,
+          redirectUris = sonarRedirectUris,
+          webOrigins = sonarWebOrigins,
+        )
+      }
     } catch (e: Exception) {
       try {
         deleteRealm(request.companyIdentifier)
@@ -252,6 +266,36 @@ class AirbyteKeycloakClient(
       throw CreateClientException("Create client request failed! Server error: $e")
     }
   }
+
+  private fun createWebappClient(
+    realmName: String,
+    clientId: String,
+    name: String,
+    baseUrl: String,
+    redirectUris: List<String>,
+    webOrigins: List<String>,
+  ) {
+    val webappClient =
+      ClientRepresentation().apply {
+        this.clientId = clientId
+        this.name = name
+        protocol = "openid-connect"
+        this.redirectUris = redirectUris
+        this.webOrigins = webOrigins
+        this.baseUrl = baseUrl
+        isEnabled = true
+        isDirectAccessGrantsEnabled = false
+        isStandardFlowEnabled = true
+        isServiceAccountsEnabled = false
+        authorizationServicesEnabled = false
+        isFrontchannelLogout = false
+        isImplicitFlowEnabled = false
+        isPublicClient = true
+      }
+    createClientForRealm(realmName, webappClient)
+  }
+
+  private fun List<String>.withoutBlankValues(): List<String> = map { it.trim() }.filter { it.isNotBlank() }
 
   /**
    * Checks if a Keycloak realm exists with the given name.
@@ -440,8 +484,18 @@ class AirbyteKeycloakClient(
     try {
       val jwtAttributes = tokenToAttributes(token)
       val realm = jwtAttributes[JWT_SSO_REALM] as String?
-      logger.debug { "Extracted realm $realm" }
-      realm
+
+      // For Keycloak, the realm should be a simple name, not a URL.
+      // If JwtTokenParser cannot extract the realm (e.g. missing "auth/realms/"),
+      // it returns the full issuer URL. We should ignore such values here.
+      if (realm != null && (realm.startsWith("http://") || realm.startsWith("https://"))) {
+        logger.error { "Extracted realm $realm appears to be a URL, ignoring." }
+        metricClient.count(OssMetricsRegistry.KEYCLOAK_TOKEN_INVALID_REALM, 1)
+        null
+      } else {
+        logger.debug { "Extracted realm $realm" }
+        realm
+      }
     } catch (e: Exception) {
       logger.debug(e) { "Failed to parse realm from JWT token" }
       null
@@ -470,6 +524,8 @@ class AirbyteKeycloakClient(
     private const val CLIENT_AUTH_METHOD = "client_secret_post"
     private const val AIRBYTE_WEBAPP_CLIENT_ID = "airbyte-webapp"
     private const val AIRBYTE_WEBAPP_CLIENT_NAME = "Airbyte Webapp"
+    private const val SONAR_WEBAPP_CLIENT_ID = "sonar-webapp"
+    private const val SONAR_WEBAPP_CLIENT_NAME = "Sonar Webapp"
 
     private val objectMapper = ObjectMapper()
   }

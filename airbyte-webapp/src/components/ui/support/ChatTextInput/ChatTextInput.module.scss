@@ -1,0 +1,57 @@
+@use "scss/colors";
+@use "scss/variables";
+
+$button-size: 35px;
+
+.chatTextInput {
+  flex: 0 0 auto;
+  background-color: colors.$foreground;
+  border-top: variables.$border-thin solid colors.$grey-200;
+  padding: variables.$spacing-lg;
+}
+
+.inputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: colors.$grey-50;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-xl;
+  transition: border-color variables.$transition;
+
+  &:focus-within {
+    border-color: colors.$blue-400;
+  }
+}
+
+.textarea {
+  flex: 1;
+  padding: variables.$spacing-md variables.$spacing-lg;
+  border: none;
+  background: transparent;
+  font-size: variables.$font-size-lg;
+  line-height: variables.$default-line-height;
+  resize: none;
+  outline: none;
+  scrollbar-width: thin;
+  color: colors.$dark-blue-900;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.button {
+  width: $button-size;
+  height: $button-size;
+  min-width: $button-size;
+  margin: variables.$spacing-xs;
+}
+
+.helperText {
+  margin-top: variables.$spacing-md;
+  font-size: variables.$font-size-xs;
+  color: colors.$grey-400;
+  text-align: center;
+}

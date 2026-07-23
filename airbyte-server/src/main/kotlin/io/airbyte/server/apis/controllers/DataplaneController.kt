@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.controllers
@@ -305,11 +305,11 @@ open class DataplaneController(
           .dataplaneGroupId(dataplane.dataplaneGroupId)
           .organizationId(dataplaneGroup.organizationId)
           .status(DataplaneHealthRead.StatusEnum.fromValue(healthInfo.status.name))
-          .lastHeartbeatTimestamp(healthInfo.lastHeartbeatTimestamp)
+          .lastHeartbeatTimestamp(healthInfo.lastHeartbeatTimestamp?.toInstant()?.toEpochMilli())
           .recentHeartbeats(
             healthInfo.recentHeartbeats.map { hb ->
               HeartbeatRecord()
-                .timestamp(hb.timestamp)
+                .timestamp(hb.timestamp.toInstant().toEpochMilli())
             },
           ).controlPlaneVersion(healthInfo.controlPlaneVersion)
           .dataplaneVersion(healthInfo.dataplaneVersion)

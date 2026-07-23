@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification
@@ -33,6 +33,9 @@ import java.util.UUID
 private val log = KotlinLogging.logger { }
 
 /**
+ * ATTENTION: Despite the name, this client handles ALL webhook notifications -- Slack, Google Chat,
+ * and custom URLs (e.g., Airbyte Embedded). The name is a legacy artifact.
+ *
  * Notification client that uses Slack API for Incoming Webhook to send messages. This class also
  * reads a resource YAML file that defines the template message to send. It is stored as a YAML so
  * that we can easily change the structure of the JSON data expected by the API that we are posting
@@ -130,6 +133,53 @@ class SlackNotificationClient : NotificationClient {
       notifyJson(notification.toJsonNode(), summary.workspace.id)
     } catch (e: IOException) {
       log.error(e) { "Error sending job success Slack notification for workspaceId ${summary.workspace.id} jobId ${summary.jobId}" }
+      false
+    }
+  }
+
+  override fun notifyJobQueued(
+    summary: SyncSummary,
+    receiverEmail: String?,
+  ): Boolean {
+    val legacyMessage: String
+    try {
+      legacyMessage =
+        renderTemplate(
+          "slack/queued_sync_slack_notification_template.txt",
+          summary.connection.name,
+          summary.source.name,
+          summary.destination.name,
+          summary.connection.url,
+          summary.jobId.toString(),
+        )
+    } catch (e: IOException) {
+      log.error(e) {
+        "Error rendering slack notification template, queued sync notification not sent for workspaceId ${summary.workspace.id} jobId ${summary.jobId}"
+      }
+      return false
+    }
+    val message =
+      """
+      This sync is queued because your organization is currently using all committed Data Worker capacity.
+      Airbyte will start it automatically when capacity becomes available.
+
+      """.trimIndent()
+    val notification =
+      buildJobQueuedNotification(
+        summary,
+        "Sync queued",
+        legacyMessage,
+        Optional.of(message),
+        tag,
+      )
+    notification.setData(summary)
+    return try {
+      notifyJson(
+        notification.toJsonNode(),
+        summary.workspace.id,
+      )
+    } catch (e: IOException) {
+      log.error(e) { "Error sending queued sync Slack notification for workspaceId ${summary.workspace.id} jobId ${summary.jobId}" }
       false
     }
   }
@@ -378,8 +428,7 @@ class SlackNotificationClient : NotificationClient {
   }
 
   private fun notify(message: String): Boolean {
-    val mapper = ObjectMapper()
-    val node = mapper.createObjectNode()
+    val node = MAPPER.createObjectNode()
     node.put("text", message)
     return notifyJson(node, null)
   }
@@ -391,7 +440,7 @@ class SlackNotificationClient : NotificationClient {
     if (StringUtils.isEmpty(config.webhook)) {
       return false
     }
-    val mapper = ObjectMapper()
+    val outboundNode = sanitizePayloadForWebhook(node, config.webhook)
     val httpClient =
       HttpClient
         .newBuilder()
@@ -400,7 +449,7 @@ class SlackNotificationClient : NotificationClient {
     val request =
       HttpRequest
         .newBuilder()
-        .POST(HttpRequest.BodyPublishers.ofByteArray(mapper.writeValueAsBytes(node)))
+        .POST(HttpRequest.BodyPublishers.ofByteArray(MAPPER.writeValueAsBytes(outboundNode)))
         .uri(URI.create(config.webhook))
         .header("Content-Type", "application/json")
         .build()
@@ -421,7 +470,7 @@ class SlackNotificationClient : NotificationClient {
           workspaceId,
           response.statusCode(),
           response.body(),
-          node.toString(),
+          outboundNode.toString(),
         )
       throw IOException(errorMessage)
     }
@@ -451,13 +500,44 @@ class SlackNotificationClient : NotificationClient {
   companion object {
     private const val SLACK_CLIENT = "slack"
     private const val MRKDOWN_TYPE_LABEL = "mrkdwn"
+    private const val GOOGLE_CHAT_WEBHOOK_HOST = "chat.googleapis.com"
+    private val MAPPER = ObjectMapper()
 
-    fun buildJobCompletedNotification(
+    @InternalForTesting
+    fun sanitizePayloadForWebhook(
+      node: JsonNode,
+      webhookUrl: String?,
+    ): JsonNode {
+      if (!isGoogleChatWebhook(webhookUrl) || !node.has("text")) {
+        return node
+      }
+
+      // Google Chat incoming webhooks reject Slack-specific fields like `blocks` and `data`.
+      val sanitizedNode = MAPPER.createObjectNode()
+      sanitizedNode.set<JsonNode>("text", node["text"])
+      return sanitizedNode
+    }
+
+    @InternalForTesting
+    fun isGoogleChatWebhook(webhookUrl: String?): Boolean {
+      if (webhookUrl.isNullOrBlank()) {
+        return false
+      }
+
+      return try {
+        URI.create(webhookUrl).host?.lowercase() == GOOGLE_CHAT_WEBHOOK_HOST
+      } catch (_: IllegalArgumentException) {
+        false
+      }
+    }
+
+    private fun buildBaseJobNotification(
       summary: SyncSummary,
       titleText: String?,
       legacyText: String?,
       topContent: Optional<String>,
       tag: String?,
+      includeDuration: Boolean,
     ): Notification {
       val notification = Notification()
       notification.setText(legacyText)
@@ -487,7 +567,7 @@ class SlackNotificationClient : NotificationClient {
       destinationValue.setType(MRKDOWN_TYPE_LABEL)
       destinationValue.setText(Notification.createLink(summary.destination.name, summary.destination.url))
 
-      if (summary.startedAt != null && summary.finishedAt != null) {
+      if (includeDuration && summary.startedAt != null && summary.finishedAt != null) {
         val durationLabel = description.addField()
         durationLabel.setType(MRKDOWN_TYPE_LABEL)
         durationLabel.setText("*Duration:*")
@@ -495,6 +575,26 @@ class SlackNotificationClient : NotificationClient {
         durationValue.setType(MRKDOWN_TYPE_LABEL)
         durationValue.setText(summary.getDurationFormatted())
       }
+
+      return notification
+    }
+
+    fun buildJobCompletedNotification(
+      summary: SyncSummary,
+      titleText: String?,
+      legacyText: String?,
+      topContent: Optional<String>,
+      tag: String?,
+    ): Notification {
+      val notification =
+        buildBaseJobNotification(
+          summary,
+          titleText,
+          legacyText,
+          topContent,
+          tag,
+          includeDuration = true,
+        )
 
       if (!summary.isSuccess && summary.errorMessage != null) {
         val failureSection = notification.addSection()
@@ -529,6 +629,27 @@ class SlackNotificationClient : NotificationClient {
         ),
       )
 
+      return notification
+    }
+
+    private fun buildJobQueuedNotification(
+      summary: SyncSummary,
+      titleText: String?,
+      legacyText: String?,
+      topContent: Optional<String>,
+      tag: String?,
+    ): Notification {
+      val notification =
+        buildBaseJobNotification(
+          summary,
+          titleText,
+          legacyText,
+          topContent,
+          tag,
+          includeDuration = false,
+        )
+      val jobIdSection = notification.addSection()
+      jobIdSection.setText("*Job ID:* ${summary.jobId}")
       return notification
     }
 

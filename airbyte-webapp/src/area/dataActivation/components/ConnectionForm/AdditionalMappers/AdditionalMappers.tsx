@@ -2,9 +2,9 @@ import classnames from "classnames";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { FormControl } from "components/forms";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { FormControl } from "components/ui/forms";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 

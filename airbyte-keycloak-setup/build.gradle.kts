@@ -12,7 +12,7 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.keycloak.client)
-  implementation(libs.kotlin.logging)  // Explicitly needed for KotlinLogging (was leaked through api() before)
+  implementation(libs.kotlin.logging) // Explicitly needed for KotlinLogging (was leaked through api() before)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
@@ -24,7 +24,6 @@ dependencies {
   implementation(project(":oss:airbyte-db:jooq"))
 
   runtimeOnly(libs.bundles.logback)
-
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.bundles.junit)
@@ -38,7 +37,6 @@ dependencies {
 airbyte {
   application {
     mainClass = "io.airbyte.keycloak.setup.ApplicationKt"
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
   }
   docker {
     imageName = "keycloak-setup"

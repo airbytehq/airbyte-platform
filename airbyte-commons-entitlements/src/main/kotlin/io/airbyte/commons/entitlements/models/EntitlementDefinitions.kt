@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.entitlements.models
@@ -14,12 +14,12 @@ object FasterSyncFrequencyEntitlement : FeatureEntitlement(
   featureId = "feature-faster-sync-frequency",
 )
 
-object SsoEntitlement : FeatureEntitlement(
-  featureId = "feature-sso",
+object FifteenMinuteSyncFrequencyEntitlement : FeatureEntitlement(
+  featureId = "feature-15-minute-sync-frequency",
 )
 
-object OrchestrationEntitlement : FeatureEntitlement(
-  featureId = "feature-orchestration",
+object SsoEntitlement : FeatureEntitlement(
+  featureId = "feature-sso",
 )
 
 object SelfManagedRegionsEntitlement : FeatureEntitlement(
@@ -28,6 +28,10 @@ object SelfManagedRegionsEntitlement : FeatureEntitlement(
 
 object PrivateLinkEntitlement : FeatureEntitlement(
   featureId = "feature-privatelink",
+)
+
+object PrivateLinkLimitEntitlement : FeatureEntitlement(
+  featureId = "feature-privatelink-limit",
 )
 
 object AiCopilotEntitlement : FeatureEntitlement(
@@ -52,10 +56,6 @@ object RejectedRecordsStorage : FeatureEntitlement(
 
 object ConfigTemplateEntitlement : FeatureEntitlement(
   featureId = "feature-embedded",
-)
-
-object UnimitedConnectionsEntitlement : FeatureEntitlement(
-  featureId = "feature-unlimited-n-connections",
 )
 
 object DestinationSalesforceEnterpriseConnector : ConnectorEntitlement(
@@ -106,26 +106,44 @@ object SourceDb2EnterpriseConnector : ConnectorEntitlement(
   override val name: String = "source-db2"
 }
 
+object SourceSharepointEnterpriseListsConnector : ConnectorEntitlement(
+  actorDefinitionId = UUID.fromString("ab26f98b-e0cd-4513-9975-0741a97441dc"),
+) {
+  override val name: String = "source-sharepoint-lists"
+}
+
 object GroupsEntitlement : FeatureEntitlement(
   featureId = "feature-groups",
+)
+
+object ScimEntitlement : FeatureEntitlement(
+  featureId = "feature-scim",
+)
+
+object OnDemandCapacityEnabledEntitlement : FeatureEntitlement(
+  featureId = "feature-on-demand-capacity-enabled",
+)
+
+object CommittedDataWorkersEntitlement : FeatureEntitlement(
+  featureId = "feature-committed-data-workers",
 )
 
 object Entitlements {
   private val ALL: List<Entitlement> =
     listOf(
       FasterSyncFrequencyEntitlement,
+      FifteenMinuteSyncFrequencyEntitlement,
       DestinationObjectStorageEntitlement,
       SsoEntitlement,
-      OrchestrationEntitlement,
       SelfManagedRegionsEntitlement,
       PrivateLinkEntitlement,
+      PrivateLinkLimitEntitlement,
       AiCopilotEntitlement,
       MultipleWorkspacesEntitlement,
       MappersEntitlement,
       RbacRolesEntitlement,
       RejectedRecordsStorage,
       ConfigTemplateEntitlement,
-      UnimitedConnectionsEntitlement,
       DestinationSalesforceEnterpriseConnector,
       SourceNetsuiteEnterpriseConnector,
       SourceOracleEnterpriseConnector,
@@ -134,7 +152,11 @@ object Entitlements {
       SourceSharepointEnterpriseConnector,
       SourceWorkdayEnterpriseConnector,
       SourceDb2EnterpriseConnector,
+      SourceSharepointEnterpriseListsConnector,
       GroupsEntitlement,
+      ScimEntitlement,
+      OnDemandCapacityEnabledEntitlement,
+      CommittedDataWorkersEntitlement,
     )
 
   private val BY_FEATURE_ID: Map<String, Entitlement> =

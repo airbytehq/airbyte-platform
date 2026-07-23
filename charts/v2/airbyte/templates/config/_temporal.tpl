@@ -555,6 +555,69 @@ TEMPORAL_CLOUD_CLIENT_KEY: {{ include "airbyte.temporal.cloud.credentials.client
 {{- end }}
 
 {{/*
+Renders the temporal.cloud.infra secret name
+*/}}
+{{- define "airbyte.temporal.cloud.infra.secretName" }}
+{{- if .Values.global.temporal.secretName }}
+    {{- .Values.global.temporal.secretName }}
+{{- else }}
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
+{{- end }}
+{{- end }}
+
+{{/*
+Renders the global.temporal.cloud.infra.host value
+*/}}
+{{- define "airbyte.temporal.cloud.infra.host" }}
+    {{- .Values.global.temporal.cloud.infra.host }}
+{{- end }}
+
+{{/*
+Renders the temporal.cloud.infra.host environment variable
+*/}}
+{{- define "airbyte.temporal.cloud.infra.host.env" }}
+- name: TEMPORAL_CLOUD_INFRA_HOST
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: TEMPORAL_CLOUD_INFRA_HOST
+{{- end }}
+
+{{/*
+Renders the global.temporal.cloud.infra.namespace value
+*/}}
+{{- define "airbyte.temporal.cloud.infra.namespace" }}
+    {{- .Values.global.temporal.cloud.infra.namespace }}
+{{- end }}
+
+{{/*
+Renders the temporal.cloud.infra.namespace environment variable
+*/}}
+{{- define "airbyte.temporal.cloud.infra.namespace.env" }}
+- name: TEMPORAL_CLOUD_INFRA_NAMESPACE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: TEMPORAL_CLOUD_INFRA_NAMESPACE
+{{- end }}
+
+{{/*
+Renders the set of all temporal.cloud.infra environment variables
+*/}}
+{{- define "airbyte.temporal.cloud.infra.envs" }}
+{{- include "airbyte.temporal.cloud.infra.host.env" . }}
+{{- include "airbyte.temporal.cloud.infra.namespace.env" . }}
+{{- end }}
+
+{{/*
+Renders the set of all temporal.cloud.infra config map variables
+*/}}
+{{- define "airbyte.temporal.cloud.infra.configVars" }}
+TEMPORAL_CLOUD_INFRA_HOST: {{ include "airbyte.temporal.cloud.infra.host" . | quote }}
+TEMPORAL_CLOUD_INFRA_NAMESPACE: {{ include "airbyte.temporal.cloud.infra.namespace" . | quote }}
+{{- end }}
+
+{{/*
 Renders the temporal.database secret name
 */}}
 {{- define "airbyte.temporal.database.secretName" }}

@@ -1,10 +1,9 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workers.config
 
-import io.airbyte.featureflag.DestinationTimeoutEnabled
 import io.airbyte.featureflag.DestinationTimeoutSeconds
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
 import io.airbyte.featureflag.LogConnectorMessages
@@ -43,7 +42,6 @@ class ApplicationBeanFactory {
   fun replicationFeatureFlags(): ReplicationFeatureFlags {
     val featureFlags =
       listOf(
-        DestinationTimeoutEnabled,
         DestinationTimeoutSeconds,
         FailSyncOnInvalidChecksum,
         LogConnectorMessages,

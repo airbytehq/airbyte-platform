@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
@@ -61,7 +61,7 @@ class EmbeddedController(
     val currentUserId = currentUserService.getCurrentUser().userId
     val organizations =
       organizationsHandler
-        .listOrganizationsByUser(
+        .listAllOrganizationsByUser(
           ListOrganizationsByUserRequestBody().userId(currentUserId),
         )
 

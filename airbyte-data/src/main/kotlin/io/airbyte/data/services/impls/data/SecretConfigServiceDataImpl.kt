@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.data
@@ -14,6 +14,7 @@ import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.domain.models.SecretStorageId
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
+import java.util.UUID
 
 @Singleton
 class SecretConfigServiceDataImpl(
@@ -36,6 +37,20 @@ class SecretConfigServiceDataImpl(
     secretConfigRepository
       .findAirbyteManagedConfigsWithoutReferences(excludeCreatedAfter, limit)
       .map { it.toConfigModel() }
+
+  override fun findDistinctOrphanedStorageIds(excludeCreatedBefore: OffsetDateTime): List<UUID> =
+    secretConfigRepository.findDistinctOrphanedStorageIds(excludeCreatedBefore)
+
+  override fun findAirbyteManagedConfigsWithoutReferencesByStorageIds(
+    excludeCreatedBefore: OffsetDateTime,
+    limit: Int,
+    storageIds: List<UUID>,
+  ): List<SecretConfig> =
+    secretConfigRepository
+      .findAirbyteManagedConfigsWithoutReferencesByStorageIds(excludeCreatedBefore, limit, storageIds)
+      .map { it.toConfigModel() }
+
+  override fun countOrphanedAirbyteManagedConfigs(): Long = secretConfigRepository.countOrphanedAirbyteManagedConfigs()
 
   override fun deleteByIds(ids: List<SecretConfigId>) {
     if (ids.isNotEmpty()) {

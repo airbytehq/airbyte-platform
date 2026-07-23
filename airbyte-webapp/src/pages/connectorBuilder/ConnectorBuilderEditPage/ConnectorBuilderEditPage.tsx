@@ -4,7 +4,12 @@ import { DefaultValues, useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 import { z } from "zod";
 
-import { Builder } from "components/connectorBuilder/Builder/Builder";
+import { FlexContainer } from "components/ui/Flex";
+import { SchemaForm } from "components/ui/forms/SchemaForm/SchemaForm";
+import { HeadTitle } from "components/ui/HeadTitle";
+import { ResizablePanels } from "components/ui/ResizablePanels";
+
+import { Builder } from "area/connectorBuilder/components/Builder/Builder";
 import {
   RequestBodyGraphQL,
   RequestOptionFieldPath,
@@ -16,18 +21,17 @@ import {
   BackoffStrategies,
   CursorField,
   CursorDatetimeFormats,
-} from "components/connectorBuilder/Builder/overrides";
-import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
-import { MenuBar } from "components/connectorBuilder/MenuBar";
-import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
-import { BuilderState } from "components/connectorBuilder/types";
-import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
-import { YamlManifestEditor } from "components/connectorBuilder/YamlEditor";
-import { SchemaForm } from "components/forms/SchemaForm/SchemaForm";
-import { HeadTitle } from "components/HeadTitle";
-import { FlexContainer } from "components/ui/Flex";
-import { ResizablePanels } from "components/ui/ResizablePanels";
-
+} from "area/connectorBuilder/components/Builder/overrides";
+import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "area/connectorBuilder/components/constants";
+import { MenuBar } from "area/connectorBuilder/components/MenuBar";
+import { StreamTestingPanel } from "area/connectorBuilder/components/StreamTestingPanel";
+import { BuilderState } from "area/connectorBuilder/components/types";
+import { useBuilderWatch } from "area/connectorBuilder/components/useBuilderWatch";
+import { YamlManifestEditor } from "area/connectorBuilder/components/YamlEditor";
+import {
+  ConnectorBuilderLocalStorageProvider,
+  useConnectorBuilderLocalStorage,
+} from "core/services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import {
   ConnectorBuilderResolveProvider,
   useConnectorBuilderResolve,
@@ -36,17 +40,13 @@ import {
   ConnectorBuilderSchemaProvider,
   useConnectorBuilderSchema,
 } from "core/services/connectorBuilder/ConnectorBuilderSchemaContext";
-import { useExperiment } from "hooks/services/Experiment";
-import {
-  ConnectorBuilderLocalStorageProvider,
-  useConnectorBuilderLocalStorage,
-} from "services/connectorBuilder/ConnectorBuilderLocalStorageService";
 import {
   ConnectorBuilderTestReadProvider,
   ConnectorBuilderFormStateProvider,
   ConnectorBuilderFormManagementStateProvider,
   ConnectorBuilderMainRHFContext,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+} from "core/services/connectorBuilder/ConnectorBuilderStateService";
+import { useExperiment } from "core/services/Experiment";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
 

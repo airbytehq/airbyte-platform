@@ -4,13 +4,13 @@ import { Virtuoso } from "react-virtuoso";
 import { z } from "zod";
 
 import { LoadingPage } from "components";
-import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
-import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
+import { EmptyState } from "components/ui/EmptyState";
 import { FlexContainer } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { ScrollParentContext } from "components/ui/ScrollParent";
 
+import { useConnectionStatus } from "area/connection/components/ConnectionStatus/useConnectionStatus";
 import { useCurrentConnection, useGetConnectionSyncProgress, useListConnectionEventsInfinite } from "core/api";
 import { ConnectionEvent, ConnectionEventSummary, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.temporal
@@ -160,6 +160,24 @@ class ConnectionManagerUtils(
     safeTerminateWorkflow(getConnectionManagerName(connectionId), reason)
   }
 
+  /**
+   * Terminate a connection-manager workflow and propagate failures to the caller.
+   */
+  fun terminateWorkflow(
+    workflowId: String,
+    reason: String,
+  ) {
+    log.info { "Terminating existing workflow for workflowId $workflowId." }
+    workflowClientWrapped.terminateWorkflow(workflowId, reason)
+  }
+
+  fun terminateWorkflow(
+    connectionId: UUID,
+    reason: String,
+  ) {
+    terminateWorkflow(getConnectionManagerName(connectionId), reason)
+  }
+
   // todo (cgardens) - what does no signal mean in this context?
 
   /**
@@ -265,12 +283,14 @@ class ConnectionManagerUtils(
    * @param connectionId connection id
    * @return current job id
    */
-  fun getCurrentJobId(connectionId: UUID): Long {
+  fun getCurrentJobId(connectionId: UUID): Long = getJobInformation(connectionId)?.jobId ?: ConnectionManagerWorkflow.NON_RUNNING_JOB_ID
+
+  fun getJobInformation(connectionId: UUID): ConnectionManagerWorkflow.JobInformation? {
     try {
       val connectionManagerWorkflow = getConnectionManagerWorkflow(connectionId)
-      return connectionManagerWorkflow.getJobInformation().jobId
+      return connectionManagerWorkflow.getJobInformation()
     } catch (e: Exception) {
-      return ConnectionManagerWorkflow.NON_RUNNING_JOB_ID
+      return null
     }
   }
 

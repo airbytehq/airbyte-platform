@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services
 
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigStatus
+import io.airbyte.domain.models.SsoDefaultRole
 import java.util.UUID
 
 interface SsoConfigService {
@@ -22,5 +23,10 @@ interface SsoConfigService {
   fun updateSsoConfigStatus(
     organizationId: UUID,
     status: SsoConfigStatus,
+  )
+
+  fun updateSsoConfigDefaultRole(
+    organizationId: UUID,
+    defaultRole: SsoDefaultRole,
   )
 }

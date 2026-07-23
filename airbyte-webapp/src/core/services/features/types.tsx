@@ -6,13 +6,14 @@
 export enum FeatureItem {
   AICopilot = "AI_COPILOT",
   AllowAllRBACRoles = "ALLOW_ALL_RBAC_ROLES", // corresponds to the feature-rbac-roles entitlement
-  AllowDataWorkerCapacity = "ALLOW_DATA_WORKER_CAPACITY", // corresponds to the feature-data-worker-capacity entitlement
+  AllowDataWorkerCapacity = "ALLOW_DATA_WORKER_CAPACITY", // corresponds to the feature-committed-data-workers entitlement (legacy: feature-data-worker-capacity)
   AllowAutoDetectSchema = "ALLOW_AUTO_DETECT_SCHEMA",
-  AllowSyncFrequencyUnderOneHour = "ALLOW_SYNC_FREQUENCY_UNDER_ONE_HOUR", // corresponds to the feature-faster-sync-frequency entitlement
+  AllowSyncFrequencyUnderOneHour = "ALLOW_SYNC_FREQUENCY_UNDER_ONE_HOUR", // corresponds to the sync-frequency entitlements (legacy: feature-faster-sync-frequency, Plus: feature-15-minute-sync-frequency)
   AllowUploadCustomImage = "ALLOW_UPLOAD_CUSTOM_IMAGE",
   AllowUpdateSSOConfig = "ALLOW_UPDATE_SSO_CONFIG", // corresponds to the feature-sso entitlement
   AllowUpdateConnectors = "ALLOW_UPDATE_CONNECTORS",
   AllowChangeDataplanes = "ALLOW_CHANGE_DATAPLANES",
+  SelfManagedRegions = "SELF_MANAGED_REGIONS", // corresponds to the feature-self-managed-regions entitlement
   AllowDBTCloudIntegration = "ALLOW_DBT_CLOUD_INTEGRATION",
   CloudForTeamsBranding = "CLOUD_FOR_TEAMS_BRANDING",
   CloudForTeamsUpsell = "CLOUD_FOR_TEAMS_UPSELLING",
@@ -29,7 +30,9 @@ export enum FeatureItem {
   IndicateGuestUsers = "INDICATE_GUEST_USERS", // corresponds to the feature-fe-indicate-guest-users entitlement
   MappingsUI = "MAPPINGS_UI", // corresponds to the feature-mappers entitlement, which also covers the connection.mappingsUI FF referenced here https://github.com/airbytehq/airbyte-platform-internal/blob/32a4284748a6881945a5a519c6cbc626e851399a/oss/airbyte-webapp/src/hooks/services/Experiment/experiments.ts#L16
   CreateMultipleWorkspaces = "CREATE_MULTIPLE_WORKSPACES_V2", // corresponds to the feature-multiple-workspaces entitlement
+  OnDemandCapacity = "ON_DEMAND_CAPACITY", // corresponds to the feature-on-demand-capacity-enabled entitlement
   OrganizationUI = "ORGANIZATION_UI",
+  PrivateLinks = "PRIVATE_LINKS", // corresponds to the feature-privatelink entitlement
   OrganizationConnectorSettings = "ORGANIZATION_CONNECTOR_SETTINGS", // show sources and destinations in organization settings
   RBAC = "RBAC",
   RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",

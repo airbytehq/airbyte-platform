@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services
 
+import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.domain.models.SecretReference
 import io.airbyte.domain.models.SecretReferenceCreate
 import io.airbyte.domain.models.SecretReferenceId
@@ -31,6 +32,12 @@ interface SecretReferenceService {
     scopeType: SecretReferenceScopeType,
     scopeId: UUID,
   ): List<SecretReference>
+
+  /**
+   * Returns true if any secret reference still points at the given secret config. Used to determine
+   * whether an Airbyte-managed secret config has become orphaned and is safe to delete.
+   */
+  fun existsBySecretConfigId(secretConfigId: SecretConfigId): Boolean
 
   fun listWithConfigByScopeTypeAndScopeId(
     scopeType: SecretReferenceScopeType,

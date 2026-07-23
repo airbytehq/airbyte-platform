@@ -1,0 +1,445 @@
+import { act, cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { IntlProvider } from "react-intl";
+
+import {
+  AirbyteCatalog,
+  CatalogDiff,
+  DestinationSyncMode,
+  StreamTransform,
+  SyncMode,
+} from "core/api/types/AirbyteClient";
+import { ModalServiceProvider } from "core/services/Modal";
+import messages from "locales/en.json";
+
+import { CatalogDiffModal } from "./CatalogDiffModal";
+
+const mockCatalogDiff: CatalogDiff = {
+  transforms: [],
+};
+
+const removedItems: StreamTransform[] = [
+  {
+    transformType: "remove_stream",
+    streamDescriptor: { namespace: "apple", name: "dragonfruit" },
+  },
+  {
+    transformType: "remove_stream",
+    streamDescriptor: { namespace: "apple", name: "eclair" },
+  },
+  {
+    transformType: "remove_stream",
+    streamDescriptor: { namespace: "apple", name: "fishcake" },
+  },
+  {
+    transformType: "remove_stream",
+    streamDescriptor: { namespace: "apple", name: "gelatin_mold" },
+  },
+];
+
+const addedItems: StreamTransform[] = [
+  {
+    transformType: "add_stream",
+    streamDescriptor: { namespace: "apple", name: "banana" },
+  },
+  {
+    transformType: "add_stream",
+    streamDescriptor: { namespace: "apple", name: "carrot" },
+  },
+];
+
+const updatedItems: StreamTransform[] = [
+  {
+    transformType: "update_stream",
+    streamDescriptor: { namespace: "apple", name: "harissa_paste" },
+    updateStream: {
+      streamAttributeTransforms: [],
+      fieldTransforms: [
+        { transformType: "add_field", fieldName: ["users", "phone"], breaking: false },
+        { transformType: "add_field", fieldName: ["users", "email"], breaking: false },
+        { transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false },
+
+        {
+          transformType: "update_field_schema",
+          fieldName: ["users", "address"],
+          breaking: false,
+          updateFieldSchema: { oldSchema: { type: "number" }, newSchema: { type: "string" } },
+        },
+      ],
+    },
+  },
+];
+
+const mockCatalog: AirbyteCatalog = {
+  streams: [
+    {
+      stream: {
+        namespace: "apple",
+        name: "banana",
+      },
+      config: {
+        syncMode: SyncMode.full_refresh,
+        destinationSyncMode: DestinationSyncMode.overwrite,
+      },
+    },
+    {
+      stream: {
+        namespace: "apple",
+        name: "carrot",
+      },
+      config: {
+        syncMode: SyncMode.full_refresh,
+        destinationSyncMode: DestinationSyncMode.overwrite,
+      },
+    },
+    {
+      stream: {
+        namespace: "apple",
+        name: "dragonfruit",
+      },
+      config: {
+        syncMode: SyncMode.full_refresh,
+        destinationSyncMode: DestinationSyncMode.overwrite,
+      },
+    },
+    {
+      stream: {
+        namespace: "apple",
+        name: "eclair",
+      },
+      config: {
+        syncMode: SyncMode.full_refresh,
+        destinationSyncMode: DestinationSyncMode.overwrite,
+      },
+    },
+    {
+      stream: {
+        namespace: "apple",
+        name: "fishcake",
+      },
+      config: {
+        syncMode: SyncMode.incremental,
+        destinationSyncMode: DestinationSyncMode.append_dedup,
+      },
+    },
+    {
+      stream: {
+        namespace: "apple",
+        name: "gelatin_mold",
+      },
+      config: {
+        syncMode: SyncMode.incremental,
+        destinationSyncMode: DestinationSyncMode.append_dedup,
+      },
+    },
+    {
+      stream: {
+        namespace: "apple",
+        name: "harissa_paste",
+      },
+      config: {
+        syncMode: SyncMode.full_refresh,
+        destinationSyncMode: DestinationSyncMode.overwrite,
+      },
+    },
+  ],
+};
+
+describe("catalog diff modal", () => {
+  afterEach(cleanup);
+  beforeEach(() => {
+    mockCatalogDiff.transforms = [];
+  });
+
+  it("renders the correct section for each type of transform", () => {
+    mockCatalogDiff.transforms.push(...addedItems, ...removedItems, ...updatedItems);
+
+    render(
+      <IntlProvider messages={messages} locale="en">
+        <ModalServiceProvider>
+          <CatalogDiffModal
+            catalogDiff={mockCatalogDiff}
+            catalog={mockCatalog}
+            onComplete={() => {
+              return null;
+            }}
+          />
+        </ModalServiceProvider>
+      </IntlProvider>
+    );
+
+    /**
+     * tests for:
+     * - proper sections being created
+     * - syncmode string is only rendered for removed streams
+     */
+
+    const newStreamsTable = screen.getByRole("table", { name: /new streams/ });
+    expect(newStreamsTable).toBeInTheDocument();
+
+    const newStreamRow = screen.getByRole("row", { name: "apple banana" });
+    expect(newStreamRow).toBeInTheDocument();
+
+    const newStreamRowWithSyncMode = screen.queryByRole("row", { name: "apple carrot incremental | append_dedup" });
+    expect(newStreamRowWithSyncMode).not.toBeInTheDocument();
+
+    const removedStreamsTable = screen.getByRole("table", { name: /removed streams/ });
+    expect(removedStreamsTable).toBeInTheDocument();
+
+    const removedStreamRowWithSyncMode = screen.getByRole("row", {
+      name: "apple dragonfruit full_refresh | overwrite",
+    });
+    expect(removedStreamRowWithSyncMode).toBeInTheDocument();
+
+    const updatedStreamsSection = screen.getByRole("list", { name: /stream with changes/ });
+    expect(updatedStreamsSection).toBeInTheDocument();
+
+    const updatedStreamRowWithSyncMode = screen.queryByRole("row", {
+      name: "apple harissa_paste full_refresh | overwrite",
+    });
+    expect(updatedStreamRowWithSyncMode).not.toBeInTheDocument();
+  });
+
+  it("added fields are not rendered when not in the diff", () => {
+    mockCatalogDiff.transforms.push(...removedItems, ...updatedItems);
+
+    render(
+      <IntlProvider messages={messages} locale="en">
+        <ModalServiceProvider>
+          <CatalogDiffModal
+            catalogDiff={mockCatalogDiff}
+            catalog={mockCatalog}
+            onComplete={() => {
+              return null;
+            }}
+          />
+        </ModalServiceProvider>
+      </IntlProvider>
+    );
+
+    const newStreamsTable = screen.queryByRole("table", { name: /new streams/ });
+    expect(newStreamsTable).not.toBeInTheDocument();
+  });
+
+  it("removed fields are not rendered when not in the diff", () => {
+    mockCatalogDiff.transforms.push(...addedItems, ...updatedItems);
+
+    render(
+      <IntlProvider messages={messages} locale="en">
+        <ModalServiceProvider>
+          <CatalogDiffModal
+            catalogDiff={mockCatalogDiff}
+            catalog={mockCatalog}
+            onComplete={() => {
+              return null;
+            }}
+          />
+        </ModalServiceProvider>
+      </IntlProvider>
+    );
+
+    const removedStreamsTable = screen.queryByRole("table", { name: /removed streams/ });
+    expect(removedStreamsTable).not.toBeInTheDocument();
+  });
+
+  it("changed streams accordion opens/closes on clicking the description row", async () => {
+    mockCatalogDiff.transforms.push(...addedItems, ...updatedItems);
+
+    render(
+      <IntlProvider messages={messages} locale="en">
+        <ModalServiceProvider>
+          <CatalogDiffModal
+            catalogDiff={mockCatalogDiff}
+            catalog={mockCatalog}
+            onComplete={() => {
+              return null;
+            }}
+          />
+        </ModalServiceProvider>
+      </IntlProvider>
+    );
+
+    const accordionHeader = screen.getByTestId(`toggle-accordion-harissa_paste-stream`);
+
+    expect(accordionHeader).toBeInTheDocument();
+
+    const nullAccordionBody = screen.queryByRole("table", { name: /removed fields/ });
+    expect(nullAccordionBody).not.toBeInTheDocument();
+
+    await userEvent.click(accordionHeader);
+    const openAccordionBody = screen.getByRole("table", { name: /removed fields/ });
+    expect(openAccordionBody).toBeInTheDocument();
+
+    await userEvent.click(accordionHeader);
+    const nullAccordionBodyAgain = screen.queryByRole("table", { name: /removed fields/ });
+    expect(nullAccordionBodyAgain).not.toBeInTheDocument();
+  });
+
+  it("renders breaking a breaking change icon on streams with braeking changes", async () => {
+    mockCatalogDiff.transforms.push(
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "stream1" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: true,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [],
+        },
+      },
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "stream2" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: false,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [{ transformType: "remove_field", fieldName: ["users", "lastName"], breaking: true }],
+        },
+      },
+      {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "stream3" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: false,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [{ transformType: "remove_field", fieldName: ["users", "lastName"], breaking: false }],
+        },
+      }
+    );
+
+    render(
+      <IntlProvider messages={messages} locale="en">
+        <ModalServiceProvider>
+          <CatalogDiffModal
+            catalogDiff={mockCatalogDiff}
+            catalog={mockCatalog}
+            onComplete={() => {
+              return null;
+            }}
+          />
+        </ModalServiceProvider>
+      </IntlProvider>
+    );
+
+    expect(
+      within(screen.getByTestId(`toggle-accordion-stream1-stream`)).queryByTestId("breakingChangeStream")
+    ).toBeInTheDocument();
+
+    expect(
+      within(screen.getByTestId(`toggle-accordion-stream2-stream`)).queryByTestId("breakingChangeStream")
+    ).toBeInTheDocument();
+
+    expect(
+      within(screen.getByTestId(`toggle-accordion-stream3-stream`)).queryByTestId("breakingChangeStream")
+    ).not.toBeInTheDocument();
+  });
+
+  describe("source defined key changes", () => {
+    it("renders source defined primary key changes", async () => {
+      const updateWithPrimaryKeyChange: StreamTransform = {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "harissa_paste" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: true,
+              updatePrimaryKey: {
+                oldPrimaryKey: [["old_key"]],
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [],
+        },
+      };
+      mockCatalogDiff.transforms.push(updateWithPrimaryKeyChange);
+
+      render(
+        <IntlProvider messages={messages} locale="en">
+          <ModalServiceProvider>
+            <CatalogDiffModal
+              catalogDiff={mockCatalogDiff}
+              catalog={mockCatalog}
+              onComplete={() => {
+                return null;
+              }}
+            />
+          </ModalServiceProvider>
+        </IntlProvider>
+      );
+
+      act(() => {
+        screen.getByTestId(`toggle-accordion-harissa_paste-stream`).click();
+      });
+
+      const primaryKeyTable = screen.queryByTestId("streamAttributeTable-update_primary_key");
+      expect(primaryKeyTable).toBeInTheDocument();
+
+      expect(within(primaryKeyTable!).getByTestId("fieldRow")).toHaveAttribute("title", "old_key -> [prefix, new.key]");
+    });
+
+    it("renders source defined primary key changes without old primary key", async () => {
+      const updateWithPrimaryKeyChange: StreamTransform = {
+        transformType: "update_stream",
+        streamDescriptor: { namespace: "apple", name: "harissa_paste" },
+        updateStream: {
+          streamAttributeTransforms: [
+            {
+              transformType: "update_primary_key",
+              breaking: true,
+              updatePrimaryKey: {
+                newPrimaryKey: [["prefix"], ["new", "key"]],
+              },
+            },
+          ],
+          fieldTransforms: [],
+        },
+      };
+      mockCatalogDiff.transforms.push(updateWithPrimaryKeyChange);
+
+      render(
+        <IntlProvider messages={messages} locale="en">
+          <ModalServiceProvider>
+            <CatalogDiffModal
+              catalogDiff={mockCatalogDiff}
+              catalog={mockCatalog}
+              onComplete={() => {
+                return null;
+              }}
+            />
+          </ModalServiceProvider>
+        </IntlProvider>
+      );
+
+      act(() => {
+        screen.getByTestId(`toggle-accordion-harissa_paste-stream`).click();
+      });
+
+      const primaryKeyTable = screen.queryByTestId("streamAttributeTable-update_primary_key");
+      expect(primaryKeyTable).toBeInTheDocument();
+
+      expect(within(primaryKeyTable!).getByTestId("fieldRow")).toHaveAttribute("title", "(none) -> [prefix, new.key]");
+    });
+  });
+});

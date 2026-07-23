@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services.impls.data.mappers
@@ -55,6 +55,7 @@ fun EntityConfigOriginType.toConfigModel(): ModelConfigOriginType =
     EntityConfigOriginType.user -> ModelConfigOriginType.USER
     EntityConfigOriginType.breaking_change -> ModelConfigOriginType.BREAKING_CHANGE
     EntityConfigOriginType.connector_rollout -> ModelConfigOriginType.CONNECTOR_ROLLOUT
+    EntityConfigOriginType.private_link -> ModelConfigOriginType.PRIVATE_LINK
   }
 
 fun ModelConfigOriginType.toEntity(): EntityConfigOriginType =
@@ -62,6 +63,7 @@ fun ModelConfigOriginType.toEntity(): EntityConfigOriginType =
     ModelConfigOriginType.USER -> EntityConfigOriginType.user
     ModelConfigOriginType.BREAKING_CHANGE -> EntityConfigOriginType.breaking_change
     ModelConfigOriginType.CONNECTOR_ROLLOUT -> EntityConfigOriginType.connector_rollout
+    ModelConfigOriginType.PRIVATE_LINK -> EntityConfigOriginType.private_link
   }
 
 fun EntityScopedConfiguration.toConfigModel(): ModelScopedConfiguration =
@@ -86,7 +88,7 @@ fun ModelScopedConfiguration.toEntity(): EntityScopedConfiguration =
     value = this.value,
     scopeType = this.scopeType.toEntity(),
     scopeId = this.scopeId,
-    resourceType = this.resourceType.toEntity(),
+    resourceType = this.resourceType?.toEntity(),
     resourceId = this.resourceId,
     originType = this.originType.toEntity(),
     origin = this.origin,

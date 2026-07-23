@@ -12,7 +12,7 @@ import {
 
 import { DataActivationConnectionFormValues, DataActivationField } from "area/dataActivation/types";
 import { DestinationOperation, DestinationSyncMode } from "core/api/types/AirbyteClient";
-import { AirbyteThemeProvider } from "hooks/theme/useAirbyteTheme";
+import { AirbyteThemeProvider } from "core/utils/useAirbyteTheme";
 
 import { SelectDestinationObjectName } from "./SelectDestinationObjectName";
 

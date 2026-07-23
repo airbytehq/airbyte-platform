@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.notification
@@ -7,6 +7,11 @@ package io.airbyte.notification
 import jakarta.inject.Singleton
 import java.util.UUID
 
+/**
+ * Newer enum that correctly names the webhook channel. Legacy equivalent is
+ * Notification.NotificationType.SLACK. This newer enum is currently only used
+ * by [NotificationHandler].
+ */
 enum class NotificationType {
   WEBHOOK,
   CUSTOMERIO,

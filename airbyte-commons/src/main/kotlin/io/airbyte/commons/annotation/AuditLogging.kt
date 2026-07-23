@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.commons.annotation
@@ -43,6 +43,8 @@ class AuditLoggingProvider {
   companion object {
     const val BASIC = "basicAudit"
     const val ONLY_ACTOR = "onlyActorAudit"
+    const val SCIM = "scimAudit"
+    const val SSO = "ssoAudit"
     const val CREATE_PERMISSION = "createPermission"
     const val UPDATE_PERMISSION = "updatePermission"
     const val DELETE_PERMISSION = "deletePermission"

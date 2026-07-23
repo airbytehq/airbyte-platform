@@ -2,11 +2,11 @@ import { useEffect, useMemo } from "react";
 import { Controller, FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
-import { hashingMapperConfiguration } from "components/connection/ConnectionForm/schemas/mapperSchema";
 import { FlexContainer } from "components/ui/Flex";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { hashingMapperConfiguration } from "area/connection/components/ConnectionForm/schemas/mapperSchema";
 import {
   HashingMapperConfiguration,
   HashingMapperConfigurationMethod,

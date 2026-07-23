@@ -107,6 +107,60 @@ Renders the common.airbyteUrl environment variable
 {{- end }}
 
 {{/*
+Renders the global.airbyteAgentsUrl value
+*/}}
+{{- define "airbyte.common.airbyteAgentsUrl" }}
+    {{- .Values.global.airbyteAgentsUrl | default "" }}
+{{- end }}
+
+{{/*
+Renders the common.airbyteAgentsUrl environment variable
+*/}}
+{{- define "airbyte.common.airbyteAgentsUrl.env" }}
+- name: AIRBYTE_AGENTS_URL
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AIRBYTE_AGENTS_URL
+{{- end }}
+
+{{/*
+Renders the global.airbyteAgentsValidRedirectUris value
+*/}}
+{{- define "airbyte.common.airbyteAgentsValidRedirectUris" }}
+    {{- join "," .Values.global.airbyteAgentsValidRedirectUris }}
+{{- end }}
+
+{{/*
+Renders the common.airbyteAgentsValidRedirectUris environment variable
+*/}}
+{{- define "airbyte.common.airbyteAgentsValidRedirectUris.env" }}
+- name: AIRBYTE_AGENTS_VALID_REDIRECT_URIS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AIRBYTE_AGENTS_VALID_REDIRECT_URIS
+{{- end }}
+
+{{/*
+Renders the global.airbyteAgentsWebOrigins value
+*/}}
+{{- define "airbyte.common.airbyteAgentsWebOrigins" }}
+    {{- join "," .Values.global.airbyteAgentsWebOrigins }}
+{{- end }}
+
+{{/*
+Renders the common.airbyteAgentsWebOrigins environment variable
+*/}}
+{{- define "airbyte.common.airbyteAgentsWebOrigins.env" }}
+- name: AIRBYTE_AGENTS_WEB_ORIGINS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AIRBYTE_AGENTS_WEB_ORIGINS
+{{- end }}
+
+{{/*
 Renders the global.api.host value
 */}}
 {{- define "airbyte.common.api.host" }}
@@ -270,6 +324,9 @@ Renders the set of all common environment variables
 {{- include "airbyte.common.cluster.type.env" . }}
 {{- include "airbyte.common.cluster.name.env" . }}
 {{- include "airbyte.common.airbyteUrl.env" . }}
+{{- include "airbyte.common.airbyteAgentsUrl.env" . }}
+{{- include "airbyte.common.airbyteAgentsValidRedirectUris.env" . }}
+{{- include "airbyte.common.airbyteAgentsWebOrigins.env" . }}
 {{- include "airbyte.common.api.host.env" . }}
 {{- include "airbyte.common.server.host.env" . }}
 {{- include "airbyte.common.auth.enabled.env" . }}
@@ -289,6 +346,9 @@ AIRBYTE_VERSION: {{ include "airbyte.common.version" . | quote }}
 AIRBYTE_CLUSTER_TYPE: {{ include "airbyte.common.cluster.type" . | quote }}
 AIRBYTE_CLUSTER_NAME: {{ include "airbyte.common.cluster.name" . | quote }}
 AIRBYTE_URL: {{ include "airbyte.common.airbyteUrl" . | quote }}
+AIRBYTE_AGENTS_URL: {{ include "airbyte.common.airbyteAgentsUrl" . | quote }}
+AIRBYTE_AGENTS_VALID_REDIRECT_URIS: {{ include "airbyte.common.airbyteAgentsValidRedirectUris" . | quote }}
+AIRBYTE_AGENTS_WEB_ORIGINS: {{ include "airbyte.common.airbyteAgentsWebOrigins" . | quote }}
 AIRBYTE_API_HOST: {{ include "airbyte.common.api.host" . | quote }}
 AIRBYTE_SERVER_HOST: {{ include "airbyte.common.server.host" . | quote }}
 API_AUTHORIZATION_ENABLED: {{ include "airbyte.common.auth.enabled" . | quote }}

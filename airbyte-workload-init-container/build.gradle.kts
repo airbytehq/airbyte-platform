@@ -65,7 +65,7 @@ dependencies {
 airbyte {
   application {
     mainClass.set("io.airbyte.initContainer.ApplicationKt")
-    defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
+
     localEnvVars.putAll(
       mapOf(
         "AIRBYTE_VERSION" to "dev",

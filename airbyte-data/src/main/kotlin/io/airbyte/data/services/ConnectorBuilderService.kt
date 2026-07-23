@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.data.services
@@ -31,6 +31,11 @@ interface ConnectorBuilderService {
   ): ConnectorBuilderProjectVersionedManifest
 
   fun getConnectorBuilderProjectsByWorkspace(workspaceId: UUID): Stream<ConnectorBuilderProject>
+
+  fun getConnectorBuilderProjectsByWorkspace(
+    workspaceId: UUID,
+    includeDeleted: Boolean,
+  ): Stream<ConnectorBuilderProject>
 
   fun deleteBuilderProject(builderProjectId: UUID): Boolean
 
@@ -79,6 +84,7 @@ interface ConnectorBuilderService {
     configInjections: List<ActorDefinitionConfigInjection>,
     connectorSpecification: ConnectorSpecification,
     cdkVersion: String,
+    supportsFileTransfer: Boolean = false,
   )
 
   fun setDeclarativeSourceActiveVersion(
@@ -87,6 +93,7 @@ interface ConnectorBuilderService {
     configInjections: List<ActorDefinitionConfigInjection>,
     connectorSpecification: ConnectorSpecification,
     cdkVersion: String,
+    supportsFileTransfer: Boolean = false,
   )
 
   fun getActorDefinitionConfigInjections(actorDefinitionId: UUID): Stream<ActorDefinitionConfigInjection>

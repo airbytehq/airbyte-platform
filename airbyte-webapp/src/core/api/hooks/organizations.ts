@@ -20,11 +20,6 @@ import {
   getOrganizationDataWorkerUsage,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
-import {
-  listInternalAccountOrganizations,
-  getEmbeddedOrganizationsCurrentScoped,
-  createInternalAccountOrganizationsIdOnboardingProgress,
-} from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
@@ -40,7 +35,6 @@ import {
   WorkspaceRead,
   OrganizationDataWorkerUsageRequestBody,
 } from "../types/AirbyteClient";
-import { OnboardingStatusEnum, Organization } from "../types/SonarClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 export const organizationKeys = {
@@ -69,11 +63,13 @@ export const organizationKeys = {
   scopedTokenOrganization: () => [...organizationKeys.all, "scopedTokenOrganization"] as const,
 };
 
-export const useCurrentOrganizationInfo = () => {
+export const useCurrentOrganizationInfo = (): OrganizationInfoRead | undefined => {
   const requestOptions = useRequestOptions();
   const organizationId = useCurrentOrganizationId();
 
-  return useSuspenseQuery(organizationKeys.info(organizationId), () => getOrgInfo({ organizationId }, requestOptions));
+  return useSuspenseQuery(organizationKeys.info(organizationId), () => getOrgInfo({ organizationId }, requestOptions), {
+    enabled: Boolean(organizationId),
+  });
 };
 
 export const useOrganization = (organizationId: string) => {
@@ -101,7 +97,7 @@ export const useOrgInfo = (organizationId: string, enabled?: boolean): Organizat
       return getOrgInfo({ organizationId }, requestOptions);
     },
     {
-      enabled,
+      enabled: Boolean(organizationId) && enabled,
     }
   );
 };
@@ -264,13 +260,19 @@ export const useListWorkspacesInOrganization = ({
   });
 };
 
-export const useListOrganizationsByUser = (requestBody: ListOrganizationsByUserRequestBody) => {
+export const useListOrganizationsByUser = (
+  requestBody: ListOrganizationsByUserRequestBody,
+  options?: {
+    enabled?: boolean;
+  }
+) => {
   const requestOptions = useRequestOptions();
   return useSuspenseQuery(
     organizationKeys.listByUser(requestBody),
     () => listOrganizationsByUser(requestBody, requestOptions),
     {
       staleTime: 30_0000,
+      enabled: options?.enabled,
     }
   );
 };
@@ -372,50 +374,5 @@ export const useOrganizationUserCount = (organizationId: string): number | null 
         select: (data) => data.users.length,
       }
     ).data ?? null
-  );
-};
-
-export const useGetScopedOrganization = () => {
-  const requestOptions = useRequestOptions();
-
-  return useSuspenseQuery(
-    organizationKeys.scopedTokenOrganization(),
-    () => getEmbeddedOrganizationsCurrentScoped(requestOptions),
-    {
-      staleTime: Infinity,
-    }
-  );
-};
-
-export const useListEmbeddedOrganizations = () => {
-  const requestOptions = useRequestOptions();
-  return useSuspenseQuery(organizationKeys.list(["embedded"]), () => listInternalAccountOrganizations(requestOptions));
-};
-
-export const useUpdateEmbeddedOnboardingStatus = () => {
-  const requestOptions = useRequestOptions();
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    ({ organizationId, status }: { organizationId: string; status: OnboardingStatusEnum }) => {
-      return createInternalAccountOrganizationsIdOnboardingProgress(
-        organizationId,
-        { onboarding_status: status },
-        requestOptions
-      );
-    },
-    {
-      onSuccess: (data) => {
-        queryClient.setQueryData<Organization | undefined>(organizationKeys.detail(data.organization_id), (old) => {
-          if (!old) {
-            return undefined;
-          }
-          return {
-            ...old,
-            onboarding_status: data.onboarding_progress ?? old.onboarding_status,
-          };
-        });
-      },
-    }
   );
 };
