@@ -12,6 +12,7 @@ import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.validation.json.JsonSchemaValidator
@@ -61,6 +62,9 @@ class ConfigClientErrorHandlerTest {
     assertThrows<ResourceNotFoundProblem> { ConfigClientErrorHandler.handleError(ConfigNotFoundException("test", "test")) }
 
     assertThrows<TryAgainLaterConflictProblem> { ConfigClientErrorHandler.handleError(ValueConflictKnownException("test")) }
+
+    val conflict = assertThrows<StateConflictProblem> { ConfigClientErrorHandler.handleError(ConflictException("test")) }
+    assert(conflict.problem.getStatus() == 409)
 
     assertThrows<StateConflictProblem> { ConfigClientErrorHandler.handleError(IllegalStateException()) }
 

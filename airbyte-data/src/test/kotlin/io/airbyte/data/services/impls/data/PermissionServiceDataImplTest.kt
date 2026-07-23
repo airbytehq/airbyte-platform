@@ -4,15 +4,22 @@
 
 package io.airbyte.data.services.impls.data
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.repositories.OrgMemberCount
 import io.airbyte.data.repositories.PermissionRepository
+import io.airbyte.data.repositories.ScimConfigurationRepository
+import io.airbyte.data.repositories.ScimResourceMappingRepository
+import io.airbyte.data.repositories.entities.ScimConfiguration
+import io.airbyte.data.repositories.entities.ScimResourceMapping
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.db.instance.configs.jooq.generated.enums.ScimResourceType
 import io.mockk.Runs
 import io.mockk.confirmVerified
 import io.mockk.every
@@ -33,13 +40,24 @@ class PermissionServiceDataImplTest {
 
   private lateinit var workspaceService: WorkspaceService
   private lateinit var permissionRepository: PermissionRepository
+  private lateinit var scimConfigurationRepository: ScimConfigurationRepository
+  private lateinit var scimResourceMappingRepository: ScimResourceMappingRepository
   private lateinit var permissionService: PermissionServiceDataImpl
 
   @BeforeEach
   fun setUp() {
     workspaceService = mockk()
     permissionRepository = mockk()
-    permissionService = PermissionServiceDataImpl(workspaceService, permissionRepository)
+    scimConfigurationRepository = mockk()
+    scimResourceMappingRepository = mockk()
+    every { scimConfigurationRepository.findByOrganizationIdForUpdate(any()) } returns null
+    permissionService =
+      PermissionServiceDataImpl(
+        workspaceService,
+        permissionRepository,
+        scimConfigurationRepository,
+        scimResourceMappingRepository,
+      )
   }
 
   @Nested
@@ -493,6 +511,146 @@ class PermissionServiceDataImplTest {
 
   @Nested
   inner class CreatePermission {
+    @Test
+    fun `createPermission rejects a permission with both workspace and organization scope`() {
+      val workspaceId = UUID.randomUUID()
+      val organizationId = UUID.randomUUID()
+      val newPermission =
+        Permission().apply {
+          permissionId = UUID.randomUUID()
+          userId = testUserId
+          this.workspaceId = workspaceId
+          this.organizationId = organizationId
+          permissionType = PermissionType.WORKSPACE_READER
+        }
+      every { permissionRepository.findByUserId(testUserId) } returns emptyList()
+      every { workspaceService.getOrganizationIdFromWorkspaceId(workspaceId) } returns Optional.of(organizationId)
+      every { permissionRepository.save(newPermission.toEntity()) } returns newPermission.toEntity()
+
+      assertThrows<IllegalArgumentException> { permissionService.createPermission(newPermission) }
+
+      verify(exactly = 0) { permissionRepository.save(any()) }
+    }
+
+    @Test
+    fun `createPermission rejects an organization grant to an inactive mapped User while SCIM is enabled`() {
+      val organizationId = UUID.randomUUID()
+      val configurationId = UUID.randomUUID()
+      val newPermission =
+        Permission().apply {
+          permissionId = UUID.randomUUID()
+          userId = testUserId
+          this.organizationId = organizationId
+          permissionType = PermissionType.ORGANIZATION_MEMBER
+        }
+      val mapping =
+        ScimResourceMapping(
+          id = UUID.randomUUID(),
+          scimConfigurationId = configurationId,
+          organizationId = organizationId,
+          resourceType = ScimResourceType.USER,
+          userId = testUserId,
+          userName = "inactive@example.com",
+          primaryEmail = "inactive@example.com",
+          userActive = false,
+          attributes = JsonNodeFactory.instance.objectNode(),
+        )
+
+      every {
+        scimResourceMappingRepository.findUserByUserIdAndOrganizationIdForUpdate(testUserId, organizationId)
+      } returns mapping
+      every { scimConfigurationRepository.findByOrganizationIdForUpdate(organizationId) } returns
+        ScimConfiguration(
+          id = configurationId,
+          organizationId = organizationId,
+          enabled = true,
+        )
+
+      assertThrows<InactiveUserAccessException> { permissionService.createPermission(newPermission) }
+
+      verify(exactly = 0) { permissionRepository.save(any()) }
+    }
+
+    @Test
+    fun `createPermission rejects a workspace grant to an inactive mapped User while SCIM is enabled`() {
+      val organizationId = UUID.randomUUID()
+      val workspaceId = UUID.randomUUID()
+      val configurationId = UUID.randomUUID()
+      val newPermission =
+        Permission().apply {
+          permissionId = UUID.randomUUID()
+          userId = testUserId
+          this.workspaceId = workspaceId
+          permissionType = PermissionType.WORKSPACE_READER
+        }
+
+      every { workspaceService.getOrganizationIdFromWorkspaceId(workspaceId) } returns Optional.of(organizationId)
+      every {
+        scimResourceMappingRepository.findUserByUserIdAndOrganizationIdForUpdate(testUserId, organizationId)
+      } returns
+        ScimResourceMapping(
+          id = UUID.randomUUID(),
+          scimConfigurationId = configurationId,
+          organizationId = organizationId,
+          resourceType = ScimResourceType.USER,
+          userId = testUserId,
+          userName = "inactive@example.com",
+          primaryEmail = "inactive@example.com",
+          userActive = false,
+          attributes = JsonNodeFactory.instance.objectNode(),
+        )
+      every { scimConfigurationRepository.findByOrganizationIdForUpdate(organizationId) } returns
+        ScimConfiguration(
+          id = configurationId,
+          organizationId = organizationId,
+          enabled = true,
+        )
+
+      assertThrows<InactiveUserAccessException> { permissionService.createPermission(newPermission) }
+
+      verify(exactly = 0) { permissionRepository.save(any()) }
+    }
+
+    @Test
+    fun `createPermission allows a grant to an inactive mapped User after SCIM is disabled`() {
+      val organizationId = UUID.randomUUID()
+      val configurationId = UUID.randomUUID()
+      val newPermission =
+        Permission().apply {
+          permissionId = UUID.randomUUID()
+          userId = testUserId
+          this.organizationId = organizationId
+          permissionType = PermissionType.ORGANIZATION_MEMBER
+        }
+
+      every {
+        scimResourceMappingRepository.findUserByUserIdAndOrganizationIdForUpdate(testUserId, organizationId)
+      } returns
+        ScimResourceMapping(
+          id = UUID.randomUUID(),
+          scimConfigurationId = configurationId,
+          organizationId = organizationId,
+          resourceType = ScimResourceType.USER,
+          userId = testUserId,
+          userName = "inactive@example.com",
+          primaryEmail = "inactive@example.com",
+          userActive = false,
+          attributes = JsonNodeFactory.instance.objectNode(),
+        )
+      every { scimConfigurationRepository.findByOrganizationIdForUpdate(organizationId) } returns
+        ScimConfiguration(
+          id = configurationId,
+          organizationId = organizationId,
+          enabled = false,
+        )
+      every { permissionRepository.findByUserId(testUserId) } returns emptyList()
+      every { permissionRepository.save(newPermission.toEntity()) } returns newPermission.toEntity()
+
+      assertEquals(newPermission, permissionService.createPermission(newPermission))
+
+      verify(exactly = 1) { permissionRepository.save(newPermission.toEntity()) }
+    }
+
     @Test
     fun `createPermission should save permission when no redundant permissions exist`() {
       val existingOrgPermission =

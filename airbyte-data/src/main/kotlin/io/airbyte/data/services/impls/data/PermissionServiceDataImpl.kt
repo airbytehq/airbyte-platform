@@ -11,6 +11,9 @@ import io.airbyte.config.Permission
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.OrgMemberCount
 import io.airbyte.data.repositories.PermissionRepository
+import io.airbyte.data.repositories.ScimConfigurationRepository
+import io.airbyte.data.repositories.ScimResourceMappingRepository
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.InvalidGroupPermissionRequestException
 import io.airbyte.data.services.InvalidServiceAccountPermissionRequestException
 import io.airbyte.data.services.PermissionRedundantException
@@ -28,6 +31,8 @@ import java.util.UUID
 open class PermissionServiceDataImpl(
   private val workspaceService: WorkspaceService,
   private val permissionRepository: PermissionRepository,
+  private val scimConfigurationRepository: ScimConfigurationRepository,
+  private val scimResourceMappingRepository: ScimResourceMappingRepository,
 ) : PermissionService {
   override fun getPermission(permissionId: UUID): Permission =
     permissionRepository
@@ -94,6 +99,10 @@ open class PermissionServiceDataImpl(
 
   @Transactional("config")
   override fun createPermission(permission: Permission): Permission {
+    require(permission.workspaceId == null || permission.organizationId == null) {
+      "Permission cannot target both a workspace and an organization"
+    }
+    throwIfGrantingAccessToInactiveScimUser(permission)
     val existingUserPermissions = getPermissionsForUser(permission.userId).toSet()
 
     // throw if new permission would be redundant
@@ -107,6 +116,24 @@ open class PermissionServiceDataImpl(
     deletePermissionsMadeRedundantByPermission(permission, existingUserPermissions)
 
     return permissionRepository.save(permission.toEntity()).toConfigModel()
+  }
+
+  private fun throwIfGrantingAccessToInactiveScimUser(permission: Permission) {
+    val userId = permission.userId ?: return
+    val organizationId =
+      permission.workspaceId?.let { workspaceService.getOrganizationIdFromWorkspaceId(it).orElse(null) }
+        ?: permission.organizationId
+        ?: return
+    val configuration = scimConfigurationRepository.findByOrganizationIdForUpdate(organizationId)
+    if (configuration?.enabled != true) {
+      return
+    }
+    val mapping =
+      scimResourceMappingRepository.findUserByUserIdAndOrganizationIdForUpdate(userId, organizationId)
+        ?: return
+    if (mapping.userActive == false) {
+      throw InactiveUserAccessException("Cannot grant access to an inactive SCIM User")
+    }
   }
 
   @Transactional("config")

@@ -1,0 +1,135 @@
+{
+  "supported": [
+    {
+      "resourceType": "User",
+      "filter": "userName eq \"Alice@Example.com\"",
+      "expected": [
+        {
+          "attribute": "USER_NAME",
+          "value": "Alice@Example.com",
+          "caseExact": false
+        }
+      ]
+    },
+    {
+      "resourceType": "User",
+      "filter": "externalId eq \"Case-Exact\"",
+      "expected": [
+        { "attribute": "EXTERNAL_ID", "value": "Case-Exact", "caseExact": true }
+      ]
+    },
+    {
+      "resourceType": "User",
+      "filter": "emails.value eq \"alice@example.com\"",
+      "expected": [
+        {
+          "attribute": "EMAIL",
+          "value": "alice@example.com",
+          "caseExact": false
+        }
+      ]
+    },
+    {
+      "resourceType": "User",
+      "filter": "emails[type eq \"work\"].value eq \"alice@example.com\"",
+      "expected": [
+        {
+          "attribute": "WORK_EMAIL",
+          "value": "alice@example.com",
+          "caseExact": false
+        }
+      ]
+    },
+    {
+      "resourceType": "User",
+      "filter": "userName eq \"alice@example.com\" and externalId eq \"employee-1\"",
+      "expected": [
+        {
+          "attribute": "USER_NAME",
+          "value": "alice@example.com",
+          "caseExact": false
+        },
+        { "attribute": "EXTERNAL_ID", "value": "employee-1", "caseExact": true }
+      ]
+    },
+    {
+      "resourceType": "User",
+      "filter": "UrN:ieTf:PaRaMs:ScIm:ScHeMaS:CoRe:2.0:uSeR:UsErNaMe EQ \"Alice@Example.com\" AnD urn:ietf:params:scim:schemas:core:2.0:User:EMAILS[TyPe eQ \"WORK\"].VaLuE eq \"alice@example.com\"",
+      "expected": [
+        {
+          "attribute": "USER_NAME",
+          "value": "Alice@Example.com",
+          "caseExact": false
+        },
+        {
+          "attribute": "WORK_EMAIL",
+          "value": "alice@example.com",
+          "caseExact": false
+        }
+      ]
+    },
+    {
+      "resourceType": "Group",
+      "filter": "displayName eq \"Engineering\"",
+      "expected": [
+        {
+          "attribute": "DISPLAY_NAME",
+          "value": "Engineering",
+          "caseExact": false
+        }
+      ]
+    },
+    {
+      "resourceType": "Group",
+      "filter": "members[value eq \"mapping-id\"]",
+      "expected": [
+        { "attribute": "MEMBER", "value": "mapping-id", "caseExact": true }
+      ]
+    },
+    {
+      "resourceType": "Group",
+      "filter": "uRn:IeTf:pArAmS:sCiM:sChEmAs:cOrE:2.0:gRoUp:MeMbErS[VaLuE eQ \"mapping-id\"]",
+      "expected": [
+        { "attribute": "MEMBER", "value": "mapping-id", "caseExact": true }
+      ]
+    }
+  ],
+  "unsupported": [
+    { "resourceType": "User", "filter": "userName co \"alice\"" },
+    {
+      "resourceType": "User",
+      "filter": "userName eq \"alice\" or externalId eq \"employee-1\""
+    },
+    {
+      "resourceType": "User",
+      "filter": "emails[type eq \"home\"].value eq \"alice@example.com\""
+    },
+    { "resourceType": "Group", "filter": "members[value ne \"mapping-id\"]" },
+    {
+      "resourceType": "User",
+      "filter": "userName eq\"alice\"and externalId eq\"employee-1\""
+    },
+    {
+      "resourceType": "Group",
+      "filter": "members[value eq\"mapping-id\"]"
+    },
+    {
+      "resourceType": "User",
+      "filter": "urn:ietf:params:scim:schemas:core:2.0:Group:userName eq \"alice\""
+    },
+    {
+      "resourceType": "User",
+      "filter": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:userName eq \"alice\""
+    },
+    { "resourceType": "User", "filter": " userName eq \"alice\"" },
+    { "resourceType": "User", "filter": "userName  eq \"alice\"" },
+    {
+      "resourceType": "User",
+      "filter": "emails[type eq \"work\"] .value eq \"alice@example.com\""
+    },
+    {
+      "resourceType": "Group",
+      "filter": "members[value eq \"mapping-id\" ]"
+    }
+  ]
+}

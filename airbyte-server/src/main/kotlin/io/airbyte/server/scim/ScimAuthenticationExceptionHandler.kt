@@ -4,13 +4,13 @@
 
 package io.airbyte.server.scim
 
+import io.airbyte.api.scim.generated.models.ScimError
 import io.airbyte.domain.models.scim.ScimAuthenticationException
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Produces
 import io.micronaut.http.server.exceptions.ExceptionHandler
 import jakarta.inject.Singleton
@@ -24,12 +24,12 @@ class ScimAuthenticationExceptionHandler : ExceptionHandler<ScimAuthenticationEx
     exception: ScimAuthenticationException,
   ): HttpResponse<*> =
     HttpResponse
-      .status<ScimErrorResponse>(HttpStatus.UNAUTHORIZED)
-      .contentType(MediaType.of("application/scim+json"))
+      .status<ScimError>(HttpStatus.UNAUTHORIZED)
+      .contentType(SCIM_MEDIA_TYPE)
       .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
       .body(
-        ScimErrorResponse(
-          status = HttpStatus.UNAUTHORIZED.code.toString(),
+        scimError(
+          status = HttpStatus.UNAUTHORIZED,
           detail = "Invalid bearer token",
         ),
       )

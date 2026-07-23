@@ -15,6 +15,8 @@ import io.airbyte.api.server.generated.models.UpdateSSOCredentialsRequestBody
 import io.airbyte.api.server.generated.models.ValidateSSOTokenRequestBody
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SsoEntitlement
+import io.airbyte.commons.server.errors.ConflictException
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.impls.data.mappers.toDomain
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SsoConfigRetrieval
@@ -118,6 +120,28 @@ class SsoConfigApiControllerTest {
 
     verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
     verify(exactly = 1) { ssoConfigDomainService.createAndStoreSsoConfig(any()) }
+  }
+
+  @Test
+  fun `createSsoConfig translates an inactive SCIM User auto-grant conflict to 409`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
+    every { ssoConfigDomainService.createAndStoreSsoConfig(any()) } throws
+      InactiveUserAccessException("Cannot grant access to an inactive SCIM User")
+
+    assertThrows<ConflictException> {
+      ssoConfigController.createSsoConfig(
+        CreateSSOConfigRequestBody(
+          organizationId = orgId.value,
+          companyIdentifier = "id",
+          clientId = "client-id",
+          clientSecret = "client-secret",
+          discoveryUrl = "https://www.airbyte.io",
+          emailDomain = "domain",
+          status = SSOConfigStatus.ACTIVE,
+        ),
+      )
+    }
   }
 
   @ParameterizedTest
@@ -236,6 +260,24 @@ class SsoConfigApiControllerTest {
 
     verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
     verify(exactly = 1) { ssoConfigDomainService.activateSsoConfig(orgId.value, emailDomain) }
+  }
+
+  @Test
+  fun `activateSsoConfig translates an inactive SCIM User auto-grant conflict to 409`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val emailDomain = "airbyte.com"
+    every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
+    every { ssoConfigDomainService.activateSsoConfig(orgId.value, emailDomain) } throws
+      InactiveUserAccessException("Cannot grant access to an inactive SCIM User")
+
+    assertThrows<ConflictException> {
+      ssoConfigController.activateSsoConfig(
+        ActivateSSOConfigRequestBody(
+          organizationId = orgId.value,
+          emailDomain = emailDomain,
+        ),
+      )
+    }
   }
 
   @Test

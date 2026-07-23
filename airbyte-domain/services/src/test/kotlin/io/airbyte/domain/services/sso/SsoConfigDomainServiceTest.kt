@@ -11,6 +11,7 @@ import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.OrganizationDomainVerificationService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
@@ -1129,6 +1130,34 @@ class SsoConfigDomainServiceTest {
   }
 
   @Test
+  fun `activateSsoConfig preserves inactive User auto-grant conflict for transactional rollback`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val outsideUserId = UUID.randomUUID()
+    val existingConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("test-realm")
+        .withStatus(ConfigSsoConfigStatus.DRAFT)
+
+    every { featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, any()) } returns false
+    every { featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, any()) } returns true
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
+    every { organizationService.getOrganization(orgId) } returns Optional.of(buildTestOrganization(orgId, "admin@airbyte.com"))
+    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
+    every { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) } returns listOf(outsideUserId)
+    every { permissionService.createPermission(any()) } throws
+      InactiveUserAccessException("Cannot grant access to an inactive SCIM User")
+
+    assertThrows<InactiveUserAccessException> {
+      ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+    }
+
+    verify(exactly = 0) { ssoConfigService.updateSsoConfigStatus(any(), any()) }
+    verify(exactly = 0) { organizationEmailDomainService.createEmailDomain(any()) }
+  }
+
+  @Test
   fun `activateSsoConfig with AutoGrantOrgPermissionsOnSsoActivation OFF - blocks on users outside org`() {
     val orgId = UUID.randomUUID()
     val emailDomain = "airbyte.com"
@@ -1255,6 +1284,33 @@ class SsoConfigDomainServiceTest {
         MetricAttribute(MetricTags.SSO_DEFAULT_ROLE, SsoDefaultRole.ORGANIZATION_EDITOR.name),
       )
     }
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig preserves inactive User auto-grant conflict and compensates the realm`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val outsideUserId = UUID.randomUUID()
+    val config = buildTestSsoConfig(orgId, emailDomain)
+
+    every { featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, any()) } returns true
+    every { airbyteKeycloakClient.createOidcSsoConfig(config) } just Runs
+    every { airbyteKeycloakClient.deleteRealm(config.companyIdentifier) } just Runs
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+    every { ssoConfigService.getSsoConfigByCompanyIdentifier(any()) } returns null
+    every { ssoConfigService.createSsoConfig(any()) } returns mockk()
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
+    every { organizationService.getOrganization(orgId) } returns Optional.of(buildTestOrganization(orgId, "admin@airbyte.com"))
+    every { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) } returns listOf(outsideUserId)
+    every { permissionService.createPermission(any()) } throws
+      InactiveUserAccessException("Cannot grant access to an inactive SCIM User")
+
+    assertThrows<InactiveUserAccessException> {
+      ssoConfigDomainService.createAndStoreSsoConfig(config)
+    }
+
+    verify(exactly = 1) { airbyteKeycloakClient.deleteRealm(config.companyIdentifier) }
   }
 
   @Test

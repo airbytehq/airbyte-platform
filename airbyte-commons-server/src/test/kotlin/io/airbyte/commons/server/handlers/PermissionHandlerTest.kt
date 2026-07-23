@@ -17,6 +17,7 @@ import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.PermissionPersistence
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
 import io.airbyte.data.services.WorkspaceService
@@ -96,6 +97,33 @@ internal class PermissionHandlerTest {
       Assertions.assertThrows(
         JsonValidationException::class.java,
       ) { permissionHandler.createPermission(permissionCreate) }
+    }
+
+    @Test
+    fun `permission with both workspace and organization scope is rejected before delegation`() {
+      val permissionCreate =
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
+          .withUserId(userId)
+          .withWorkspaceId(workspaceId)
+          .withOrganizationId(UUID.randomUUID())
+
+      Assertions.assertThrows(JsonValidationException::class.java) {
+        permissionHandler.createPermission(permissionCreate)
+      }
+
+      verify(permissionService, times(0)).createPermission(anyOrNull())
+    }
+
+    @Test
+    fun `inactive SCIM User grant becomes an HTTP conflict`() {
+      whenever(permissionService.getPermissionsForUser(userId)).thenReturn(emptyList())
+      whenever(permissionService.createPermission(anyOrNull()))
+        .thenThrow(InactiveUserAccessException("inactive"))
+
+      Assertions.assertThrows(ConflictException::class.java) {
+        permissionHandler.createPermission(permission)
+      }
     }
   }
 

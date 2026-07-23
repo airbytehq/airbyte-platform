@@ -10516,7 +10516,7 @@ paths:
         "404":
           description: Not found
         "409":
-          description: Group name conflict
+          description: Group name conflict or group is managed by SCIM
       operationId: publicUpdateGroup
       x-sdk-alias: updateGroup
       x-sdk-group: Groups
@@ -10534,6 +10534,8 @@ paths:
           description: Not allowed
         "404":
           description: Not found
+        "409":
+          description: Group is managed by SCIM
       operationId: publicDeleteGroup
       x-sdk-alias: deleteGroup
       x-sdk-group: Groups
@@ -10613,7 +10615,7 @@ paths:
         "404":
           description: Not found
         "409":
-          description: User is already a member of this group
+          description: User is already a member of this group or group is managed by SCIM
       operationId: publicAddGroupMember
       x-sdk-alias: addGroupMember
       x-sdk-group: Groups
@@ -10648,6 +10650,8 @@ paths:
           description: Not allowed
         "404":
           description: Not found
+        "409":
+          description: Group is managed by SCIM
       operationId: publicRemoveGroupMember
       x-sdk-alias: removeGroupMember
       x-sdk-group: Groups

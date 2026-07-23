@@ -13,6 +13,8 @@ import io.airbyte.data.repositories.entities.UserInvitation
 import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationPermissionOverlapException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
+import io.airbyte.data.services.PermissionRedundantException
+import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.impls.data.mappers.EntityInvitationStatus
 import io.airbyte.data.services.impls.data.mappers.EntityPermissionType
 import io.airbyte.data.services.impls.data.mappers.EntityScopeType
@@ -35,7 +37,8 @@ import java.util.UUID
 internal class UserInvitationServiceDataImplTest {
   private val userInvitationRepository = mockk<UserInvitationRepository>()
   private val permissionRepository = mockk<PermissionRepository>()
-  private val userInvitationService = UserInvitationServiceDataImpl(userInvitationRepository, permissionRepository)
+  private val permissionService = mockk<PermissionService>()
+  private val userInvitationService = UserInvitationServiceDataImpl(userInvitationRepository, permissionRepository, permissionService)
 
   private val invitation =
     UserInvitation(
@@ -128,16 +131,16 @@ internal class UserInvitationServiceDataImplTest {
 
     every { userInvitationRepository.findByInviteCode(invitation.inviteCode) } returns Optional.of(invitation)
     every { userInvitationRepository.update(expectedUpdatedInvitation) } returns expectedUpdatedInvitation
-    every { permissionRepository.save(any()) } returns mockk()
+    every { permissionService.createPermission(any()) } answers { firstArg() }
 
     userInvitationService.acceptUserInvitation(invitation.inviteCode, invitedUserId)
 
     // verify the expected permission is created for the invited user
     verify {
-      permissionRepository.save(
-        match<Permission> {
+      permissionService.createPermission(
+        match<io.airbyte.config.Permission> {
           it.userId == invitedUserId &&
-            it.permissionType == invitation.permissionType &&
+            it.permissionType == io.airbyte.config.Permission.PermissionType.WORKSPACE_ADMIN &&
             it.workspaceId == invitation.scopeId &&
             it.organizationId == null
         },
@@ -145,6 +148,25 @@ internal class UserInvitationServiceDataImplTest {
     }
 
     // verify the invitation status is updated to accepted
+    verify { userInvitationRepository.update(expectedUpdatedInvitation) }
+  }
+
+  @Test
+  fun `test accept user invitation succeeds if permission is redundant`() {
+    val invitedUserId = UUID.randomUUID()
+    val expectedUpdatedInvitation =
+      invitation.copy(
+        status = EntityInvitationStatus.accepted,
+        acceptedByUserId = invitedUserId,
+      )
+
+    every { userInvitationRepository.findByInviteCode(invitation.inviteCode) } returns Optional.of(invitation)
+    every { userInvitationRepository.update(expectedUpdatedInvitation) } returns expectedUpdatedInvitation
+    every { permissionService.createPermission(any()) } throws PermissionRedundantException("redundant")
+
+    val result = userInvitationService.acceptUserInvitation(invitation.inviteCode, invitedUserId)
+
+    assert(result == expectedUpdatedInvitation.toConfigModel())
     verify { userInvitationRepository.update(expectedUpdatedInvitation) }
   }
 

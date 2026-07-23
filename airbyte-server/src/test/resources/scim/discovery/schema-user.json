@@ -1,0 +1,296 @@
+{
+  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
+  "id": "urn:ietf:params:scim:schemas:core:2.0:User",
+  "name": "User",
+  "description": "User Account",
+  "meta": {
+    "resourceType": "Schema",
+    "location": "/scim/v2/Schemas/urn:ietf:params:scim:schemas:core:2.0:User"
+  },
+  "attributes": [
+    {
+      "name": "userName",
+      "type": "string",
+      "multiValued": false,
+      "description": "Unique identifier for the User.",
+      "required": true,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "server"
+    },
+    {
+      "name": "name",
+      "type": "complex",
+      "multiValued": false,
+      "description": "Components of the User's name.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none",
+      "subAttributes": [
+        {
+          "name": "formatted",
+          "type": "string",
+          "multiValued": false,
+          "description": "Full formatted name.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readWrite",
+          "returned": "default",
+          "uniqueness": "none"
+        },
+        {
+          "name": "familyName",
+          "type": "string",
+          "multiValued": false,
+          "description": "Family name.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readWrite",
+          "returned": "default",
+          "uniqueness": "none"
+        },
+        {
+          "name": "givenName",
+          "type": "string",
+          "multiValued": false,
+          "description": "Given name.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readWrite",
+          "returned": "default",
+          "uniqueness": "none"
+        },
+        {
+          "name": "middleName",
+          "type": "string",
+          "multiValued": false,
+          "description": "Middle name.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readWrite",
+          "returned": "default",
+          "uniqueness": "none"
+        },
+        {
+          "name": "honorificPrefix",
+          "type": "string",
+          "multiValued": false,
+          "description": "Honorific prefix.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readWrite",
+          "returned": "default",
+          "uniqueness": "none"
+        },
+        {
+          "name": "honorificSuffix",
+          "type": "string",
+          "multiValued": false,
+          "description": "Honorific suffix.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readWrite",
+          "returned": "default",
+          "uniqueness": "none"
+        }
+      ]
+    },
+    {
+      "name": "displayName",
+      "type": "string",
+      "multiValued": false,
+      "description": "Display name for the User.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none"
+    },
+    {
+      "name": "nickName",
+      "type": "string",
+      "multiValued": false,
+      "description": "Casual name for the User.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none"
+    },
+    {
+      "name": "profileUrl",
+      "type": "reference",
+      "multiValued": false,
+      "description": "URL for the User's profile.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none",
+      "referenceTypes": ["external"]
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "multiValued": false,
+      "description": "Title of the User.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none"
+    },
+    {
+      "name": "userType",
+      "type": "string",
+      "multiValued": false,
+      "description": "Classification of the User.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none"
+    },
+    {
+      "name": "preferredLanguage",
+      "type": "string",
+      "multiValued": false,
+      "description": "Preferred written or spoken language for the User.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none"
+    },
+    {
+      "name": "locale",
+      "type": "string",
+      "multiValued": false,
+      "description": "Locale for the User.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none"
+    },
+    {
+      "name": "timezone",
+      "type": "string",
+      "multiValued": false,
+      "description": "Time zone for the User.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none"
+    },
+    {
+      "name": "active",
+      "type": "boolean",
+      "multiValued": false,
+      "description": "Whether the User is active in the SCIM organization.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none"
+    },
+    {
+      "name": "emails",
+      "type": "complex",
+      "multiValued": true,
+      "description": "Email addresses for the User.",
+      "required": true,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none",
+      "subAttributes": [
+        {
+          "name": "value",
+          "type": "string",
+          "multiValued": false,
+          "description": "Email address value.",
+          "required": true,
+          "caseExact": false,
+          "mutability": "readWrite",
+          "returned": "default",
+          "uniqueness": "none"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "multiValued": false,
+          "description": "Email address type.",
+          "required": false,
+          "canonicalValues": ["work", "home", "other"],
+          "caseExact": false,
+          "mutability": "readWrite",
+          "returned": "default",
+          "uniqueness": "none"
+        },
+        {
+          "name": "primary",
+          "type": "boolean",
+          "multiValued": false,
+          "description": "Whether this is the primary email address.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readWrite",
+          "returned": "default",
+          "uniqueness": "none"
+        }
+      ]
+    },
+    {
+      "name": "groups",
+      "type": "complex",
+      "multiValued": true,
+      "description": "Direct SCIM-managed Group memberships.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readOnly",
+      "returned": "default",
+      "uniqueness": "none",
+      "subAttributes": [
+        {
+          "name": "value",
+          "type": "string",
+          "multiValued": false,
+          "description": "Group mapping identifier.",
+          "required": true,
+          "caseExact": false,
+          "mutability": "readOnly",
+          "returned": "always",
+          "uniqueness": "none"
+        },
+        {
+          "name": "$ref",
+          "type": "reference",
+          "multiValued": false,
+          "description": "Canonical Group resource URL.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readOnly",
+          "returned": "default",
+          "uniqueness": "none",
+          "referenceTypes": ["Group"]
+        },
+        {
+          "name": "display",
+          "type": "string",
+          "multiValued": false,
+          "description": "Group display name.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readOnly",
+          "returned": "default",
+          "uniqueness": "none"
+        }
+      ]
+    }
+  ]
+}

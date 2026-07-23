@@ -1,0 +1,1176 @@
+openapi: 3.0.0
+info:
+  title: Airbyte SCIM v2 API
+  version: 2.0.0
+  description: Organization-scoped SCIM v2 provisioning API.
+servers:
+  - url: https://cloud.airbyte.com/scim/v2
+  - url: http://localhost:8000/scim/v2
+security:
+  - ScimBearerAuth: []
+tags:
+  - name: ScimDiscovery
+    description: SCIM v2 discovery resources.
+  - name: ScimUsers
+    description: SCIM v2 User provisioning resources.
+  - name: ScimGroups
+    description: SCIM v2 Group provisioning resources.
+paths:
+  /ServiceProviderConfig:
+    get:
+      tags:
+        - ScimDiscovery
+      operationId: getServiceProviderConfig
+      summary: Get supported SCIM protocol features
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      responses:
+        "200":
+          description: Supported SCIM protocol features.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimServiceProviderConfig"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+  /ResourceTypes:
+    get:
+      tags:
+        - ScimDiscovery
+      operationId: listResourceTypes
+      summary: List supported SCIM resource types
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      responses:
+        "200":
+          description: Supported SCIM resource types.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimResourceTypeListResponse"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+  /ResourceTypes/{id}:
+    get:
+      tags:
+        - ScimDiscovery
+      operationId: getResourceType
+      summary: Get a supported SCIM resource type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      responses:
+        "200":
+          description: A supported SCIM resource type.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimResourceType"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "404":
+          $ref: "#/components/responses/ScimNotFound"
+  /Schemas:
+    get:
+      tags:
+        - ScimDiscovery
+      operationId: listSchemas
+      summary: List supported SCIM schemas
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      responses:
+        "200":
+          description: Supported SCIM schemas.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimSchemaListResponse"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+  /Schemas/{schemaUri}:
+    get:
+      tags:
+        - ScimDiscovery
+      operationId: getSchema
+      summary: Get a supported SCIM schema
+      parameters:
+        - name: schemaUri
+          in: path
+          required: true
+          allowReserved: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      responses:
+        "200":
+          description: A supported SCIM schema.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimSchema"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "404":
+          $ref: "#/components/responses/ScimNotFound"
+  /Users:
+    get:
+      tags:
+        - ScimUsers
+      operationId: listUsers
+      summary: List or filter SCIM Users
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: startIndex
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      responses:
+        "200":
+          description: A deterministic page of Users in the authenticated SCIM tenant.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimUserListResponse"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+    post:
+      tags:
+        - ScimUsers
+      operationId: createUser
+      summary: Create a SCIM User mapping
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: "#/components/schemas/ScimUserRequest"
+      responses:
+        "201":
+          description: The created User. Location and Content-Location contain its canonical URI.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+            Content-Location:
+              schema:
+                type: string
+                format: uri
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimUser"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "409":
+          $ref: "#/components/responses/ScimConflict"
+  /Users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - ScimUsers
+      operationId: getUser
+      summary: Get a SCIM User by mapping id
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      responses:
+        "200":
+          description: The requested User.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimUser"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "404":
+          $ref: "#/components/responses/ScimNotFound"
+    put:
+      tags:
+        - ScimUsers
+      operationId: replaceUser
+      summary: Replace a SCIM User by mapping id
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: "#/components/schemas/ScimUserRequest"
+      responses:
+        "200":
+          description: The replaced User.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimUser"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "404":
+          $ref: "#/components/responses/ScimNotFound"
+        "409":
+          $ref: "#/components/responses/ScimConflict"
+    patch:
+      tags:
+        - ScimUsers
+      operationId: patchUser
+      summary: Patch a SCIM User by mapping id
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: "#/components/schemas/ScimPatchRequest"
+      responses:
+        "200":
+          description: The patched User.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimUser"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "404":
+          $ref: "#/components/responses/ScimNotFound"
+        "409":
+          $ref: "#/components/responses/ScimConflict"
+    delete:
+      tags:
+        - ScimUsers
+      operationId: deleteUser
+      summary: Delete a SCIM User mapping
+      responses:
+        "204":
+          description: User mapping deleted.
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "404":
+          $ref: "#/components/responses/ScimNotFound"
+  /Groups:
+    get:
+      tags:
+        - ScimGroups
+      operationId: listGroups
+      summary: List or filter SCIM Groups
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: startIndex
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      responses:
+        "200":
+          description: A deterministic page of Groups in the authenticated SCIM tenant.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimGroupListResponse"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+    post:
+      tags:
+        - ScimGroups
+      operationId: createGroup
+      summary: Create a SCIM Group mapping
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: "#/components/schemas/ScimGroupRequest"
+      responses:
+        "201":
+          description: The created Group. Location and Content-Location contain its canonical URI.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+            Content-Location:
+              schema:
+                type: string
+                format: uri
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimGroup"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "409":
+          $ref: "#/components/responses/ScimConflict"
+  /Groups/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - ScimGroups
+      operationId: getGroup
+      summary: Get a SCIM Group by mapping id
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      responses:
+        "200":
+          description: The requested Group.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimGroup"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "404":
+          $ref: "#/components/responses/ScimNotFound"
+    put:
+      tags:
+        - ScimGroups
+      operationId: replaceGroup
+      summary: Replace a SCIM Group by mapping id
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: "#/components/schemas/ScimGroupRequest"
+      responses:
+        "200":
+          description: The replaced Group.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimGroup"
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "404":
+          $ref: "#/components/responses/ScimNotFound"
+        "409":
+          $ref: "#/components/responses/ScimConflict"
+    patch:
+      tags:
+        - ScimGroups
+      operationId: patchGroup
+      summary: Patch a SCIM Group by mapping id
+      parameters:
+        - $ref: "#/components/parameters/ScimAttributes"
+        - $ref: "#/components/parameters/ScimExcludedAttributes"
+      requestBody:
+        required: true
+        content:
+          application/scim+json:
+            schema:
+              $ref: "#/components/schemas/ScimPatchRequest"
+      responses:
+        "200":
+          description: The patched Group when a response projection is requested.
+          content:
+            application/scim+json:
+              schema:
+                $ref: "#/components/schemas/ScimGroup"
+        "204":
+          description: Group patched with no response body.
+        "400":
+          $ref: "#/components/responses/ScimBadRequest"
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "404":
+          $ref: "#/components/responses/ScimNotFound"
+        "409":
+          $ref: "#/components/responses/ScimConflict"
+    delete:
+      tags:
+        - ScimGroups
+      operationId: deleteGroup
+      summary: Delete a SCIM Group mapping and its memberships
+      responses:
+        "204":
+          description: Group mapping and direct memberships deleted; underlying Group retained.
+        "401":
+          $ref: "#/components/responses/ScimUnauthorized"
+        "403":
+          $ref: "#/components/responses/ScimForbidden"
+        "404":
+          $ref: "#/components/responses/ScimNotFound"
+components:
+  parameters:
+    ScimAttributes:
+      name: attributes
+      in: query
+      required: false
+      schema:
+        type: string
+    ScimExcludedAttributes:
+      name: excludedAttributes
+      in: query
+      required: false
+      schema:
+        type: string
+  securitySchemes:
+    ScimBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Airbyte SCIM token
+  responses:
+    ScimBadRequest:
+      description: The SCIM request is malformed or unsupported.
+      content:
+        application/scim+json:
+          schema:
+            $ref: "#/components/schemas/ScimError"
+    ScimUnauthorized:
+      description: Missing or invalid SCIM bearer credentials.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/scim+json:
+          schema:
+            $ref: "#/components/schemas/ScimError"
+    ScimForbidden:
+      description: SCIM access is not enabled for the organization.
+      content:
+        application/scim+json:
+          schema:
+            $ref: "#/components/schemas/ScimError"
+    ScimNotFound:
+      description: The requested SCIM discovery resource is not supported.
+      content:
+        application/scim+json:
+          schema:
+            $ref: "#/components/schemas/ScimError"
+    ScimConflict:
+      description: A SCIM uniqueness constraint was violated.
+      content:
+        application/scim+json:
+          schema:
+            $ref: "#/components/schemas/ScimError"
+  schemas:
+    ScimSupportedFeature:
+      type: object
+      required:
+        - supported
+      properties:
+        supported:
+          type: boolean
+    ScimBulkConfiguration:
+      type: object
+      properties:
+        supported:
+          type: boolean
+        maxOperations:
+          type: integer
+          format: int32
+          minimum: 0
+        maxPayloadSize:
+          type: integer
+          format: int32
+          minimum: 0
+    ScimFilterConfiguration:
+      type: object
+      properties:
+        supported:
+          type: boolean
+        maxResults:
+          type: integer
+          format: int32
+          minimum: 0
+    ScimAuthenticationScheme:
+      type: object
+      properties:
+        type:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        specUri:
+          type: string
+          format: uri
+        documentationUri:
+          type: string
+          format: uri
+        primary:
+          type: boolean
+    ScimServiceProviderConfig:
+      type: object
+      required:
+        - schemas
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig
+        documentationUri:
+          type: string
+          format: uri
+        patch:
+          $ref: "#/components/schemas/ScimSupportedFeature"
+        bulk:
+          $ref: "#/components/schemas/ScimBulkConfiguration"
+        filter:
+          $ref: "#/components/schemas/ScimFilterConfiguration"
+        changePassword:
+          $ref: "#/components/schemas/ScimSupportedFeature"
+        sort:
+          $ref: "#/components/schemas/ScimSupportedFeature"
+        etag:
+          $ref: "#/components/schemas/ScimSupportedFeature"
+        authenticationSchemes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimAuthenticationScheme"
+    ScimResourceType:
+      type: object
+      required:
+        - schemas
+        - id
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:schemas:core:2.0:ResourceType
+        id:
+          type: string
+        name:
+          type: string
+        endpoint:
+          type: string
+        description:
+          type: string
+        schema:
+          type: string
+    ScimResourceTypeListResponse:
+      type: object
+      required:
+        - schemas
+        - totalResults
+        - Resources
+        - startIndex
+        - itemsPerPage
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:api:messages:2.0:ListResponse
+        totalResults:
+          type: integer
+          format: int32
+          minimum: 0
+        Resources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimResourceType"
+        startIndex:
+          type: integer
+          format: int32
+          minimum: 1
+        itemsPerPage:
+          type: integer
+          format: int32
+          minimum: 0
+    ScimSchema:
+      type: object
+      required:
+        - schemas
+        - id
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:schemas:core:2.0:Schema
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        meta:
+          $ref: "#/components/schemas/ScimDiscoveryMeta"
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimSchemaAttribute"
+    ScimDiscoveryMeta:
+      type: object
+      properties:
+        resourceType:
+          type: string
+        location:
+          type: string
+          format: uri-reference
+    ScimSchemaAttribute:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - string
+            - boolean
+            - decimal
+            - integer
+            - dateTime
+            - reference
+            - complex
+            - binary
+        multiValued:
+          type: boolean
+        description:
+          type: string
+        required:
+          type: boolean
+        canonicalValues:
+          type: array
+          items:
+            type: string
+        caseExact:
+          type: boolean
+        mutability:
+          type: string
+          enum:
+            - readOnly
+            - readWrite
+            - immutable
+            - writeOnly
+        returned:
+          type: string
+          enum:
+            - always
+            - never
+            - default
+            - request
+        uniqueness:
+          type: string
+          enum:
+            - none
+            - server
+            - global
+        referenceTypes:
+          type: array
+          items:
+            type: string
+        subAttributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimSchemaAttribute"
+    ScimSchemaListResponse:
+      type: object
+      required:
+        - schemas
+        - totalResults
+        - Resources
+        - startIndex
+        - itemsPerPage
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:api:messages:2.0:ListResponse
+        totalResults:
+          type: integer
+          format: int32
+          minimum: 0
+        Resources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimSchema"
+        startIndex:
+          type: integer
+          format: int32
+          minimum: 1
+        itemsPerPage:
+          type: integer
+          format: int32
+          minimum: 0
+    ScimMeta:
+      type: object
+      properties:
+        resourceType:
+          type: string
+        created:
+          type: string
+          format: date-time
+        lastModified:
+          type: string
+          format: date-time
+        location:
+          type: string
+          format: uri
+    ScimName:
+      type: object
+      properties:
+        formatted:
+          type: string
+        familyName:
+          type: string
+        givenName:
+          type: string
+        middleName:
+          type: string
+        honorificPrefix:
+          type: string
+        honorificSuffix:
+          type: string
+    ScimEmail:
+      type: object
+      properties:
+        value:
+          type: string
+        type:
+          type: string
+        primary:
+          type: boolean
+    ScimEmailRequest:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+        type:
+          type: string
+        primary:
+          type: boolean
+    ScimGroupReference:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+        $ref:
+          type: string
+          format: uri
+          x-scim-dollar-ref: true
+          readOnly: true
+        display:
+          type: string
+          readOnly: true
+    ScimUserReference:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+        $ref:
+          type: string
+          format: uri
+          x-scim-dollar-ref: true
+          readOnly: true
+        display:
+          type: string
+          readOnly: true
+    ScimUserReferenceRequest:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+    ScimUserRequest:
+      type: object
+      required:
+        - schemas
+        - userName
+        - emails
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:schemas:core:2.0:User
+        externalId:
+          type: string
+          nullable: true
+        userName:
+          type: string
+        name:
+          $ref: "#/components/schemas/ScimName"
+        displayName:
+          type: string
+        nickName:
+          type: string
+        profileUrl:
+          type: string
+          format: uri
+        title:
+          type: string
+        userType:
+          type: string
+        preferredLanguage:
+          type: string
+        locale:
+          type: string
+        timezone:
+          type: string
+        active:
+          type: boolean
+        emails:
+          type: array
+          minItems: 1
+          description: Email addresses for the User. At least one entry must have primary set to true or type set to work.
+          items:
+            $ref: "#/components/schemas/ScimEmailRequest"
+    ScimUser:
+      type: object
+      required:
+        - schemas
+        - id
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:schemas:core:2.0:User
+        id:
+          type: string
+        externalId:
+          type: string
+        userName:
+          type: string
+        name:
+          $ref: "#/components/schemas/ScimName"
+        displayName:
+          type: string
+        nickName:
+          type: string
+        profileUrl:
+          type: string
+          format: uri
+        title:
+          type: string
+        userType:
+          type: string
+        preferredLanguage:
+          type: string
+        locale:
+          type: string
+        timezone:
+          type: string
+        active:
+          type: boolean
+        emails:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimEmail"
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimGroupReference"
+        meta:
+          $ref: "#/components/schemas/ScimMeta"
+    ScimGroupRequest:
+      type: object
+      required:
+        - schemas
+        - displayName
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:schemas:core:2.0:Group
+        externalId:
+          type: string
+          nullable: true
+        displayName:
+          type: string
+          maxLength: 256
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimUserReferenceRequest"
+    ScimGroup:
+      type: object
+      required:
+        - schemas
+        - id
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:schemas:core:2.0:Group
+        id:
+          type: string
+        externalId:
+          type: string
+        displayName:
+          type: string
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimUserReference"
+        meta:
+          $ref: "#/components/schemas/ScimMeta"
+    ScimPatchRequest:
+      type: object
+      required:
+        - schemas
+        - Operations
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:api:messages:2.0:PatchOp
+        Operations:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ScimPatchOperation"
+    ScimPatchOperation:
+      type: object
+      required:
+        - op
+      properties:
+        op:
+          type: string
+          pattern: "^([Aa][Dd][Dd]|[Rr][Ee][Pp][Ll][Aa][Cc][Ee]|[Rr][Ee][Mm][Oo][Vv][Ee])$"
+        path:
+          type: string
+        value: {}
+    ScimUserListResponse:
+      type: object
+      required:
+        - schemas
+        - totalResults
+        - Resources
+        - startIndex
+        - itemsPerPage
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:api:messages:2.0:ListResponse
+        totalResults:
+          type: integer
+          format: int32
+          minimum: 0
+        Resources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimUser"
+        startIndex:
+          type: integer
+          format: int32
+          minimum: 1
+        itemsPerPage:
+          type: integer
+          format: int32
+          minimum: 0
+    ScimGroupListResponse:
+      type: object
+      required:
+        - schemas
+        - totalResults
+        - Resources
+        - startIndex
+        - itemsPerPage
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:api:messages:2.0:ListResponse
+        totalResults:
+          type: integer
+          format: int32
+          minimum: 0
+        Resources:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScimGroup"
+        startIndex:
+          type: integer
+          format: int32
+          minimum: 1
+        itemsPerPage:
+          type: integer
+          format: int32
+          minimum: 0
+    ScimError:
+      type: object
+      required:
+        - schemas
+        - status
+      properties:
+        schemas:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            type: string
+            enum:
+              - urn:ietf:params:scim:api:messages:2.0:Error
+        status:
+          type: string
+        scimType:
+          type: string
+        detail:
+          type: string

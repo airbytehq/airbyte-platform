@@ -26,4 +26,5 @@ dependencies {
 
   testImplementation(libs.mockk)
   testImplementation(libs.bundles.kotest)
+  testImplementation(libs.assertj.core)
 }

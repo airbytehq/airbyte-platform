@@ -24,6 +24,7 @@ import io.airbyte.config.User
 import io.airbyte.config.UserInvitation
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationPermissionOverlapException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
@@ -353,6 +354,8 @@ class UserInvitationHandler(
       val accepted = service.acceptUserInvitation(req.inviteCode, currentUser.userId)
       return mapper.toApi(accepted)
     } catch (e: InvitationStatusUnexpectedException) {
+      throw ConflictException(e.message)
+    } catch (e: InactiveUserAccessException) {
       throw ConflictException(e.message)
     }
   }

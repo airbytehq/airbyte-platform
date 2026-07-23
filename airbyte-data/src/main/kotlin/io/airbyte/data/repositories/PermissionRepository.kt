@@ -37,6 +37,32 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
 
   @Query(
     """
+    DELETE FROM permission
+    WHERE user_id = :userId
+      AND organization_id = :organizationId
+    """,
+  )
+  fun deleteByUserIdAndOrganizationId(
+    userId: UUID,
+    organizationId: UUID,
+  ): Long
+
+  @Query(
+    """
+    DELETE FROM permission scoped_permission
+    USING workspace scoped_workspace
+    WHERE scoped_permission.user_id = :userId
+      AND scoped_permission.workspace_id = scoped_workspace.id
+      AND scoped_workspace.organization_id = :organizationId
+    """,
+  )
+  fun deleteWorkspacePermissionsByUserIdAndOrganizationId(
+    userId: UUID,
+    organizationId: UUID,
+  ): Long
+
+  @Query(
+    """
     select * from permission p
     join auth_user au on p.user_id = au.user_id
     where au.auth_user_id = :authUserId

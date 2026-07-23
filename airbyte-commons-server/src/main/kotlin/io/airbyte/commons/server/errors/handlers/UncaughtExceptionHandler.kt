@@ -33,12 +33,16 @@ class UncaughtExceptionHandler : ExceptionHandler<Throwable, HttpResponse<*>> {
     exception: Throwable,
   ): HttpResponse<*> {
     val errorId = UUID.randomUUID()
-    // Log full error details
-    log.error {
-      "Uncaught exception [errorId: $errorId]: ${KnownException.infoFromThrowableWithMessageAndStackTrace(
-        exception,
-        "Internal Server Error: ${exception.message}",
-      )}"
+    if (request.path == SCIM_PATH_PREFIX || request.path.startsWith("$SCIM_PATH_PREFIX/")) {
+      log.error { "Uncaught SCIM exception [errorId: $errorId, exceptionType: ${exception.javaClass.name}]" }
+    } else {
+      // Log full error details
+      log.error {
+        "Uncaught exception [errorId: $errorId]: ${KnownException.infoFromThrowableWithMessageAndStackTrace(
+          exception,
+          "Internal Server Error: ${exception.message}",
+        )}"
+      }
     }
 
     // Return only errorId in response
@@ -46,5 +50,9 @@ class UncaughtExceptionHandler : ExceptionHandler<Throwable, HttpResponse<*>> {
       .status<Any>(HttpStatus.INTERNAL_SERVER_ERROR)
       .body(Jsons.serialize(mapOf("errorId" to errorId)))
       .contentType(MediaType.APPLICATION_JSON)
+  }
+
+  private companion object {
+    const val SCIM_PATH_PREFIX = "/scim/v2"
   }
 }

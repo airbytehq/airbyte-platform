@@ -28,6 +28,7 @@ import org.jooq.Record3
 import org.jooq.impl.DSL
 import java.io.IOException
 import java.time.OffsetDateTime
+import java.util.Locale
 import java.util.Optional
 import java.util.UUID
 
@@ -49,21 +50,7 @@ open class UserPersistence(
    * @throws IOException in case of a db error
    */
   fun writeUser(user: User) {
-    database.transaction<Any?> { ctx: DSLContext ->
-      val isExistingConfig =
-        ctx.fetchExists(
-          DSL
-            .select()
-            .from(Tables.USER)
-            .where(Tables.USER.ID.eq(user.userId)),
-        )
-      if (isExistingConfig) {
-        updateUser(ctx, user)
-      } else {
-        createUser(ctx, user)
-      }
-      null
-    }
+    writeUser(user, null)
   }
 
   private fun updateUser(
@@ -126,23 +113,59 @@ open class UserPersistence(
    * @param user user to create or update.
    */
   fun writeAuthenticatedUser(user: AuthenticatedUser) {
-    database.transaction<Any?> { ctx: DSLContext ->
-      val isExistingConfig =
-        ctx.fetchExists(
-          DSL
-            .select()
-            .from(Tables.USER)
-            .where(Tables.USER.ID.eq(user.userId)),
-        )
-      if (isExistingConfig) {
-        updateUser(ctx, toUser(user))
-      } else {
-        createUser(ctx, toUser(user))
-        writeAuthUser(ctx, user.userId, user.authUserId, user.authProvider)
+    writeUser(toUser(user), user)
+  }
+
+  private fun writeUser(
+    user: User,
+    authenticatedUser: AuthenticatedUser?,
+  ) {
+    while (true) {
+      try {
+        database.transaction<Any?> { ctx: DSLContext ->
+          val observedUser =
+            ctx
+              .select(Tables.USER.EMAIL)
+              .from(Tables.USER)
+              .where(Tables.USER.ID.eq(user.userId))
+              .fetchOne()
+          listOfNotNull(observedUser?.value1(), user.email)
+            .distinct()
+            .sortedWith(compareBy<String> { it.lowercase(Locale.ROOT) }.thenBy { it })
+            .forEach { email ->
+              ctx.fetch("SELECT pg_advisory_xact_lock(hashtextextended(lower(?), 0))", email)
+            }
+          val lockedUser =
+            ctx
+              .select(Tables.USER.EMAIL)
+              .from(Tables.USER)
+              .where(Tables.USER.ID.eq(user.userId))
+              .forUpdate()
+              .fetchOne()
+          if (
+            (observedUser == null) != (lockedUser == null) ||
+            observedUser?.value1() != lockedUser?.value1()
+          ) {
+            throw RetryUserWriteException()
+          }
+          if (lockedUser == null) {
+            createUser(ctx, user)
+            authenticatedUser?.let {
+              writeAuthUser(ctx, it.userId, it.authUserId, it.authProvider)
+            }
+          } else {
+            updateUser(ctx, user)
+          }
+          null
+        }
+        return
+      } catch (_: RetryUserWriteException) {
+        // Retry with the current stored email so every identity key remains locked until commit.
       }
-      null
     }
   }
+
+  private class RetryUserWriteException : RuntimeException(null, null, false, false)
 
   fun writeAuthUser(
     userId: UUID,

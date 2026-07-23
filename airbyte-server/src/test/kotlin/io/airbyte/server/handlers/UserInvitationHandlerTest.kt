@@ -25,6 +25,7 @@ import io.airbyte.config.User
 import io.airbyte.config.UserInvitation
 import io.airbyte.config.UserPermission
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
 import io.airbyte.data.services.OrganizationService
@@ -420,6 +421,22 @@ internal class UserInvitationHandlerTest {
 
       every { service.getUserInvitationByInviteCode(inviteCode) } returns invitation
       every { service.acceptUserInvitation(inviteCode, currentUser.userId) } answers { throw InvitationStatusUnexpectedException("expired") }
+
+      Assertions.assertThrows(
+        ConflictException::class.java,
+      ) { handler.accept(inviteCodeRequestBody, currentUser) }
+    }
+
+    @Test
+    fun testInactiveScimUser() {
+      val invitation =
+        UserInvitation()
+          .withInviteCode(inviteCode)
+          .withInvitedEmail(CURRENT_USER_EMAIL)
+
+      every { service.getUserInvitationByInviteCode(inviteCode) } returns invitation
+      every { service.acceptUserInvitation(inviteCode, currentUser.userId) } throws
+        InactiveUserAccessException("inactive")
 
       Assertions.assertThrows(
         ConflictException::class.java,
