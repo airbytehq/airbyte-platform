@@ -139,7 +139,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          id: "code1",
+          id: "invitation1",
           invitationPermissionType: "workspace_reader",
           invitationStatus: "pending",
           userEmail: "userInvite1@example.com",
@@ -238,7 +238,7 @@ describe("#useListUsersToAdd", () => {
           },
         },
         {
-          id: "code1",
+          id: "invitation1",
           invitationPermissionType: "workspace_reader",
           invitationStatus: "pending",
           userEmail: "userInvite1@example.com",

@@ -6,6 +6,7 @@ package io.airbyte.server.handlers.apidomainmapping
 
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.ScopeType
+import io.airbyte.api.model.generated.UserInvitationAdminRead
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
 import io.airbyte.api.model.generated.UserInvitationRead
 import io.airbyte.api.model.generated.UserInvitationStatus
@@ -41,6 +42,18 @@ class UserInvitationMapper {
     UserInvitationRead()
       .id(domain.id)
       .inviteCode(domain.inviteCode)
+      .inviterUserId(domain.inviterUserId)
+      .invitedEmail(domain.invitedEmail)
+      .scopeId(domain.scopeId)
+      .scopeType(toApi(domain.scopeType))
+      .permissionType(toApi(domain.permissionType))
+      .status(toApi(domain.status))
+      .createdAt(domain.createdAt)
+      .updatedAt(domain.updatedAt)
+
+  fun toAdminApi(domain: UserInvitation): UserInvitationAdminRead =
+    UserInvitationAdminRead()
+      .id(domain.id)
       .inviterUserId(domain.inviterUserId)
       .invitedEmail(domain.invitedEmail)
       .scopeId(domain.scopeId)

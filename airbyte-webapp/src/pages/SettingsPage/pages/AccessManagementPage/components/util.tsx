@@ -2,7 +2,7 @@ import {
   OrganizationUserRead,
   PermissionType,
   ScopeType,
-  UserInvitationRead,
+  UserInvitationAdminRead,
   WorkspaceUserAccessInfoRead,
 } from "core/api/types/AirbyteClient";
 import { RbacRole, RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
@@ -58,7 +58,7 @@ export const permissionsByResourceType: Record<ResourceType, PermissionType[]> =
 
 /**
  * a unified typing to allow listing invited and current users together in WorkspaceUsersTable
- * using this custom union rather than a union of WorkspaceUserAccessInfoRead | UserInvitationRead
+ * using this custom union rather than a union of WorkspaceUserAccessInfoRead | UserInvitationAdminRead
  * allows us to handle intentionally missing properties more gracefully.
  */
 export type UnifiedUserModel =
@@ -77,13 +77,13 @@ export type UnifiedUserModel =
       userName?: string;
       organizationPermission?: never; // Explicitly marking these as never when invitation fields are present
       workspacePermission?: never;
-      invitationStatus: UserInvitationRead["status"];
-      invitationPermissionType: UserInvitationRead["permissionType"];
+      invitationStatus: UserInvitationAdminRead["status"];
+      invitationPermissionType: UserInvitationAdminRead["permissionType"];
     };
 
 export const unifyWorkspaceUserData = (
   workspaceAccessUsers: WorkspaceUserAccessInfoRead[],
-  workspaceInvitations: UserInvitationRead[]
+  workspaceInvitations: UserInvitationAdminRead[]
 ): UnifiedUserModel[] => {
   const normalizedUsers = workspaceAccessUsers.map((user) => {
     return {
@@ -97,7 +97,7 @@ export const unifyWorkspaceUserData = (
 
   const normalizedInvitations = workspaceInvitations.map((invitation) => {
     return {
-      id: invitation.inviteCode,
+      id: invitation.id,
       userEmail: invitation.invitedEmail,
       invitationStatus: invitation.status,
       invitationPermissionType: invitation.permissionType,
@@ -109,7 +109,7 @@ export const unifyWorkspaceUserData = (
 
 export const unifyOrganizationUserData = (
   organizationUsers: OrganizationUserRead[],
-  organizationInvitations: UserInvitationRead[]
+  organizationInvitations: UserInvitationAdminRead[]
 ): UnifiedUserModel[] => {
   const normalizedUsers = organizationUsers.map((user) => {
     return {
@@ -127,7 +127,7 @@ export const unifyOrganizationUserData = (
 
   const normalizedInvitations = organizationInvitations.map((invitation) => {
     return {
-      id: invitation.inviteCode,
+      id: invitation.id,
       userEmail: invitation.invitedEmail,
       invitationStatus: invitation.status,
       invitationPermissionType: invitation.permissionType,

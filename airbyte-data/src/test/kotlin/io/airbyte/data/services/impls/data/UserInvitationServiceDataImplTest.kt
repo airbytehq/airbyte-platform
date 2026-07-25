@@ -237,10 +237,10 @@ internal class UserInvitationServiceDataImplTest {
   @Test
   fun `test cancel invitation`() {
     val expectedUpdatedInvitation = invitation.copy(status = EntityInvitationStatus.cancelled)
-    every { userInvitationRepository.findByInviteCode(invitation.inviteCode) } returns Optional.of(invitation)
+    every { userInvitationRepository.findById(invitation.id!!) } returns Optional.of(invitation)
     every { userInvitationRepository.update(expectedUpdatedInvitation) } returns expectedUpdatedInvitation
 
-    userInvitationService.cancelUserInvitation(invitation.inviteCode)
+    userInvitationService.cancelUserInvitation(invitation.id!!)
 
     verify { userInvitationRepository.update(expectedUpdatedInvitation) }
   }

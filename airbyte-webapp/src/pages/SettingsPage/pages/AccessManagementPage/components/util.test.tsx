@@ -59,7 +59,7 @@ describe("unifyWorkspaceUserData", () => {
         },
       },
       {
-        id: "code1",
+        id: "invitation1",
         invitationPermissionType: "workspace_reader",
         invitationStatus: "pending",
         userEmail: "userInvite1@example.com",
@@ -123,7 +123,7 @@ describe("unifyOrganizationUserData", () => {
         userName: "Org And Workspace User",
       },
       {
-        id: "code1",
+        id: "invitation1",
         invitationPermissionType: "organization_reader",
         invitationStatus: "pending",
         userEmail: "userInvite1@example.com",

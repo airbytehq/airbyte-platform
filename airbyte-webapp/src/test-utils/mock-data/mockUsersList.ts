@@ -1,7 +1,7 @@
 import {
   OrganizationUserRead,
   OrganizationUserReadList,
-  UserInvitationRead,
+  UserInvitationAdminRead,
   WorkspaceUserAccessInfoRead,
   WorkspaceUserReadList,
 } from "core/api/types/AirbyteClient";
@@ -129,9 +129,8 @@ export const mockWorkspaceAccessUsers: WorkspaceUserAccessInfoRead[] = [
   },
 ];
 
-export const mockWorkspaceUserInvitations: UserInvitationRead[] = [
+export const mockWorkspaceUserInvitations: UserInvitationAdminRead[] = [
   {
-    inviteCode: "code1",
     invitedEmail: "userInvite1@example.com",
     status: "pending",
     permissionType: "workspace_reader",
@@ -144,9 +143,8 @@ export const mockWorkspaceUserInvitations: UserInvitationRead[] = [
   },
 ];
 
-export const mockOrganizationUserInvitations: UserInvitationRead[] = [
+export const mockOrganizationUserInvitations: UserInvitationAdminRead[] = [
   {
-    inviteCode: "code1",
     invitedEmail: "userInvite1@example.com",
     status: "pending",
     permissionType: "organization_reader",

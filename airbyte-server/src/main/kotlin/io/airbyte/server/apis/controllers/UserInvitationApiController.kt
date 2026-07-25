@@ -6,11 +6,14 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.UserInvitationApi
 import io.airbyte.api.model.generated.InviteCodeRequestBody
+import io.airbyte.api.model.generated.UserInvitationAdminRead
+import io.airbyte.api.model.generated.UserInvitationCancelRequestBody
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
 import io.airbyte.api.model.generated.UserInvitationCreateResponse
 import io.airbyte.api.model.generated.UserInvitationListRequestBody
 import io.airbyte.api.model.generated.UserInvitationRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.server.apis.execute
@@ -24,6 +27,7 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
+import java.util.UUID
 import java.util.concurrent.Callable
 
 @Controller("/api/v1/user_invitations")
@@ -50,7 +54,7 @@ class UserInvitationApiController(
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   override fun listPendingInvitations(
     @Body invitationListRequestBody: UserInvitationListRequestBody,
-  ): List<io.airbyte.api.model.generated.UserInvitationRead> = userInvitationHandler.getPendingInvitations(invitationListRequestBody)
+  ): List<UserInvitationAdminRead> = userInvitationHandler.getPendingInvitations(invitationListRequestBody)
 
   @Secured(AuthRoleConstants.WORKSPACE_ADMIN, AuthRoleConstants.ORGANIZATION_ADMIN)
   override fun createUserInvitation(
@@ -78,13 +82,26 @@ class UserInvitationApiController(
     }
 
   override fun cancelUserInvitation(
-    @Body inviteCodeRequestBody: InviteCodeRequestBody,
-  ): io.airbyte.api.model.generated.UserInvitationRead? {
+    @Body invitationRequestBody: UserInvitationCancelRequestBody,
+  ): UserInvitationAdminRead? {
     // note: this endpoint is accessible to all authenticated users, but `authorizeInvitationAdmin`
     // throws a 403 if a non-admin user of the invitation's scope tries to cancel it.
     return execute {
-      authorizeInvitationAdmin(inviteCodeRequestBody.inviteCode)
-      userInvitationHandler.cancel(inviteCodeRequestBody)
+      when {
+        invitationRequestBody.id != null -> authorizeInvitationAdmin(invitationRequestBody.id)
+        invitationRequestBody.inviteCode != null -> authorizeInvitationAdmin(invitationRequestBody.inviteCode)
+        else -> throw BadRequestException("Either id or inviteCode must be provided.")
+      }
+      userInvitationHandler.cancel(invitationRequestBody)
+    }
+  }
+
+  private fun authorizeInvitationAdmin(id: UUID) {
+    val currentUserId = currentUserService.getCurrentUser().userId
+    try {
+      userInvitationAuthorizationHelper.authorizeInvitationAdmin(id, currentUserId)
+    } catch (e: Exception) {
+      throw OperationNotAllowedException("Admin authorization failed for invitation id: $id and user id: $currentUserId", e)
     }
   }
 

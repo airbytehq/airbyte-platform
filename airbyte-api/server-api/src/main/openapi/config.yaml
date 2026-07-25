@@ -6665,7 +6665,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/UserInvitationRead"
+                  $ref: "#/components/schemas/UserInvitationAdminRead"
 
   /v1/user_invitations/accept:
     post:
@@ -6715,14 +6715,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InviteCodeRequestBody"
+              $ref: "#/components/schemas/UserInvitationCancelRequestBody"
       responses:
         "201":
           description: Successfully cancelled user invitation.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserInvitationRead"
+                $ref: "#/components/schemas/UserInvitationAdminRead"
 
   # Tags
   /v1/tags/list:
@@ -20500,12 +20500,46 @@ components:
     UserInvitationCreateResponse:
       type: object
       properties:
-        inviteCode:
-          type: string
-          description: The created invite code, if the request resulted in a new invitation being created.
         directlyAdded:
           type: boolean
           description: True if the request resulted in the user being directly added, without a created invitation.
+    UserInvitationAdminRead:
+      type: object
+      required:
+        - id
+        - inviterUserId
+        - invitedEmail
+        - scopeId
+        - scopeType
+        - permissionType
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        inviterUserId:
+          type: string
+          format: uuid
+        invitedEmail:
+          type: string
+          format: email
+        scopeId:
+          type: string
+          format: uuid
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        status:
+          $ref: "#/components/schemas/UserInvitationStatus"
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
     UserInvitationListRequestBody:
       type: object
       required:
@@ -20569,6 +20603,15 @@ components:
       required:
         - inviteCode
       properties:
+        inviteCode:
+          type: string
+    UserInvitationCancelRequestBody:
+      type: object
+      minProperties: 1
+      properties:
+        id:
+          type: string
+          format: uuid
         inviteCode:
           type: string
 

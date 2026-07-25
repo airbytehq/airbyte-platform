@@ -40,6 +40,13 @@ open class UserInvitationServiceDataImpl(
         ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, inviteCode)
       }.toConfigModel()
 
+  override fun getUserInvitationById(id: UUID): UserInvitation =
+    userInvitationRepository
+      .findById(id)
+      .orElseThrow {
+        ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, id)
+      }.toConfigModel()
+
   override fun getPendingInvitations(
     scopeType: ScopeType,
     scopeId: UUID,
@@ -126,12 +133,25 @@ open class UserInvitationServiceDataImpl(
     TODO("Not yet implemented")
   }
 
+  override fun cancelUserInvitation(id: UUID): UserInvitation {
+    val invitation =
+      userInvitationRepository.findById(id).orElseThrow {
+        ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, id)
+      }
+
+    return cancelInvitation(invitation)
+  }
+
   override fun cancelUserInvitation(inviteCode: String): UserInvitation {
     val invitation =
       userInvitationRepository.findByInviteCode(inviteCode).orElseThrow {
         ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, inviteCode)
       }
 
+    return cancelInvitation(invitation)
+  }
+
+  private fun cancelInvitation(invitation: EntityUserInvitation): UserInvitation {
     throwIfNotPending(invitation)
 
     invitation.status = EntityInvitationStatus.cancelled

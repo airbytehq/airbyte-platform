@@ -17,6 +17,8 @@ interface UserInvitationService {
    */
   fun getUserInvitationByInviteCode(inviteCode: String): UserInvitation
 
+  fun getUserInvitationById(id: UUID): UserInvitation
+
   /**
    * Get a list of pending invitations for a given scope type and scope id.
    */
@@ -49,6 +51,8 @@ interface UserInvitationService {
   /**
    * Cancel a user invitation.
    */
+  fun cancelUserInvitation(id: UUID): UserInvitation
+
   fun cancelUserInvitation(inviteCode: String): UserInvitation
 
   fun updateUserInvitations(invitations: List<UserInvitation>)
