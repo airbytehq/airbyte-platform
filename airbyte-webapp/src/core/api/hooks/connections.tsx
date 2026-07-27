@@ -7,6 +7,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import omit from "lodash/omit";
 import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -345,7 +346,7 @@ export const useCreateConnection = () => {
           {
             sourceId: source.sourceId,
             destinationId: destination.destinationId,
-            ...values,
+            ...omit(values, "geography"),
             status: "active",
             sourceCatalogId,
             destinationCatalogId,
@@ -526,7 +527,8 @@ export const useUpdateConnection = () => {
   const { registerNotification } = useNotificationService();
 
   return useMutation(
-    (connectionUpdate: WebBackendConnectionUpdate) => webBackendUpdateConnection(connectionUpdate, requestOptions),
+    (connectionUpdate: WebBackendConnectionUpdate) =>
+      webBackendUpdateConnection(omit(connectionUpdate, "geography"), requestOptions),
     {
       onSuccess: (updatedConnection) => {
         queryClient.setQueryData(connectionsKeys.detail(updatedConnection.connectionId), updatedConnection);

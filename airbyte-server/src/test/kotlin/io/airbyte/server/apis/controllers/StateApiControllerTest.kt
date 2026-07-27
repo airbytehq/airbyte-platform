@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionState
 import io.airbyte.api.model.generated.ConnectionStateCreateOrUpdate
 import io.airbyte.commons.server.handlers.StateHandler
@@ -53,6 +54,6 @@ internal class StateApiControllerTest {
     every { stateHandler.getState(any()) } returns ConnectionState()
 
     val path = "/api/v1/state/get"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionState())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionIdRequestBody())))
   }
 }
