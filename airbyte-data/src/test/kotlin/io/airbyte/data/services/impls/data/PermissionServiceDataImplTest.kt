@@ -111,6 +111,35 @@ class PermissionServiceDataImplTest {
       verify { permissionRepository.findByServiceAccountId(eq(testServiceAccountId)) }
       confirmVerified(permissionRepository)
     }
+
+    @Test
+    fun `getPermissionsByAuthUserId should return direct and group permissions from repository`() {
+      val authUserId = "auth-user-1"
+      val groupId = UUID.randomUUID()
+      val permissions =
+        listOf(
+          Permission().apply {
+            permissionId = UUID.randomUUID()
+            userId = testUserId
+            organizationId = UUID.randomUUID()
+            permissionType = PermissionType.ORGANIZATION_READER
+          },
+          Permission().apply {
+            permissionId = UUID.randomUUID()
+            this.groupId = groupId
+            organizationId = UUID.randomUUID()
+            permissionType = PermissionType.ORGANIZATION_ADMIN
+          },
+        )
+
+      every { permissionRepository.queryByAuthUser(authUserId) } returns permissions.map { it.toEntity() }
+
+      val result = permissionService.getPermissionsByAuthUserId(authUserId)
+
+      assertEquals(permissions.toSet(), result.toSet())
+      verify { permissionRepository.queryByAuthUser(authUserId) }
+      confirmVerified(permissionRepository)
+    }
   }
 
   @Nested
