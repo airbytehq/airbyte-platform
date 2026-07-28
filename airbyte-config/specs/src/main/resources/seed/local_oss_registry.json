@@ -19720,15 +19720,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           }
         },
@@ -23514,15 +23514,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-akeneo/0.0.46.spdx.json",
@@ -30000,15 +30000,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           }
         },
@@ -31144,15 +31144,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -36095,6 +36095,104 @@
       },
       "allowedHosts": {
         "hosts": [
+          "api.anthropic.com"
+        ]
+      },
+      "connectorBuildOptions": {
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.23.4@sha256:f63c39a8a6f28ec20ada2ddf5861f3b1fb7b6a1ef1a8a8d1d537ff684ee3f9bd"
+      },
+      "custom": false,
+      "dockerImageTag": "0.0.1",
+      "dockerRepository": "airbyte/source-claude",
+      "documentationUrl": "https://docs.airbyte.com/integrations/sources/claude",
+      "generated": {
+        "git": {
+          "commit_author": "Ella6882",
+          "commit_author_email": "64746286+Ella6882@users.noreply.github.com",
+          "commit_sha": "b61c5fd568ec64743d868cbb4db37e2362fa3ecd",
+          "commit_timestamp": "2026-07-27T14:12:45-06:00"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-claude/0.0.1.spdx.json",
+        "source_file_info": {
+          "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+          "metadata_file_path": "metadata/airbyte/source-claude/latest/metadata.yaml",
+          "metadata_last_modified": "2026-07-27T20:16:42.997441+00:00",
+          "registry_entry_generated_at": "2026-07-27T20:16:42.997441+00:00"
+        }
+      },
+      "githubIssueLabel": "source-claude",
+      "icon": "icon.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-claude/latest/icon.svg",
+      "language": "manifest-only",
+      "license": "ELv2",
+      "name": "Claude",
+      "packageInfo": {},
+      "public": true,
+      "releaseDate": "2026-07-02",
+      "releaseStage": "alpha",
+      "releases": {},
+      "remoteRegistries": {
+        "pypi": {
+          "enabled": false,
+          "packageName": "airbyte-source-claude"
+        }
+      },
+      "sourceDefinitionId": "c4654197-3155-4a8a-95e2-a1dd1f8cff5b",
+      "sourceType": "api",
+      "spec": {
+        "connectionSpecification": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": true,
+          "properties": {
+            "api_key": {
+              "airbyte_secret": true,
+              "description": "Claude organization-level Analytics API key (read:analytics scope)",
+              "order": 2,
+              "title": "API Key",
+              "type": "string"
+            },
+            "end_date": {
+              "description": "Optional end date override in YYYY-MM-DD format (capped at 3 days ago UTC for engagement streams; cost/usage default to today UTC)",
+              "order": 1,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+              "title": "End Date",
+              "type": "string"
+            },
+            "start_date": {
+              "default": "2026-01-01",
+              "description": "Start date for data extraction in YYYY-MM-DD format",
+              "order": 0,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+              "title": "Start Date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "api_key"
+          ],
+          "type": "object"
+        },
+        "supportsDBT": false,
+        "supportsNormalization": false
+      },
+      "supportLevel": "community",
+      "supportsDataActivation": false,
+      "supportsFileTransfer": false,
+      "tags": [
+        "language:manifest-only",
+        "cdk:low-code"
+      ],
+      "tombstone": false
+    },
+    {
+      "ab_internal": {
+        "isEnterprise": false,
+        "ql": 100,
+        "requireVersionIncrementsInPullRequests": true,
+        "sl": 100
+      },
+      "allowedHosts": {
+        "hosts": [
           "api.clazar.io"
         ]
       },
@@ -38165,16 +38263,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "cloud": {
-            "sync_success_rate": "low",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "oss": {
-            "sync_success_rate": "low",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-coinmarketcap/0.2.41.spdx.json",
@@ -38559,6 +38657,105 @@
       },
       "allowedHosts": {
         "hosts": [
+          "commissions.api.cj.com"
+        ]
+      },
+      "connectorBuildOptions": {
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.23.4@sha256:f63c39a8a6f28ec20ada2ddf5861f3b1fb7b6a1ef1a8a8d1d537ff684ee3f9bd"
+      },
+      "custom": false,
+      "dockerImageTag": "0.0.1",
+      "dockerRepository": "airbyte/source-commission-junction",
+      "documentationUrl": "https://docs.airbyte.com/integrations/sources/commission-junction",
+      "generated": {
+        "git": {
+          "commit_author": "Ella6882",
+          "commit_author_email": "64746286+Ella6882@users.noreply.github.com",
+          "commit_sha": "1c3063316f1787878fd838e737f7687c207dd3d0",
+          "commit_timestamp": "2026-07-27T14:09:48-06:00"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-commission-junction/0.0.1.spdx.json",
+        "source_file_info": {
+          "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+          "metadata_file_path": "metadata/airbyte/source-commission-junction/latest/metadata.yaml",
+          "metadata_last_modified": "2026-07-27T20:14:44.225870+00:00",
+          "registry_entry_generated_at": "2026-07-27T20:14:44.225870+00:00"
+        }
+      },
+      "githubIssueLabel": "source-commission-junction",
+      "icon": "icon.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-commission-junction/latest/icon.svg",
+      "language": "manifest-only",
+      "license": "ELv2",
+      "name": "Commission Junction (CJ Affiliate)",
+      "packageInfo": {},
+      "public": true,
+      "releaseDate": "2026-06-30",
+      "releaseStage": "alpha",
+      "releases": {},
+      "remoteRegistries": {
+        "pypi": {
+          "enabled": false,
+          "packageName": "airbyte-source-commission-junction"
+        }
+      },
+      "sourceDefinitionId": "b2ad3cc6-5d5d-4a81-96b9-58d4bc4be9b9",
+      "sourceType": "api",
+      "spec": {
+        "connectionSpecification": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": true,
+          "properties": {
+            "cid": {
+              "airbyte_secret": true,
+              "order": 1,
+              "title": "CID",
+              "type": "string"
+            },
+            "personal_access_token": {
+              "airbyte_secret": true,
+              "description": "Your CJ API personal access token. You can create and manage tokens at https://developers.cj.com/account/personal-access-tokens. Make sure to keep this token secure and do not share it publicly.",
+              "name": "personal_access_token",
+              "order": 0,
+              "title": "Personal Access Token",
+              "type": "string"
+            },
+            "start_date": {
+              "default": "2025-02-01T00:00:00Z",
+              "order": 2,
+              "title": "start_date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "personal_access_token",
+            "cid",
+            "start_date"
+          ],
+          "type": "object"
+        },
+        "documentationUrl": "https://developers.cj.com/graphql/reference/Commission%20Detail",
+        "supportsDBT": false,
+        "supportsNormalization": false
+      },
+      "supportLevel": "community",
+      "supportsDataActivation": false,
+      "supportsFileTransfer": false,
+      "tags": [
+        "language:manifest-only",
+        "cdk:low-code"
+      ],
+      "tombstone": false
+    },
+    {
+      "ab_internal": {
+        "isEnterprise": false,
+        "ql": 100,
+        "requireVersionIncrementsInPullRequests": true,
+        "sl": 100
+      },
+      "allowedHosts": {
+        "hosts": [
           "https://*.concordnow.com/api/rest/1/"
         ]
       },
@@ -38735,15 +38932,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -38884,15 +39081,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           }
         },
@@ -39239,15 +39436,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-convex/0.4.51.spdx.json",
@@ -39481,16 +39678,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "cloud": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "oss": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-couchbase/0.1.8.spdx.json",
@@ -40565,16 +40762,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "high",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "cloud": {
-            "sync_success_rate": "high",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "oss": {
-            "sync_success_rate": "high",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-datascope/0.2.25.spdx.json",
@@ -42570,15 +42767,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           }
         },
@@ -43309,6 +43506,109 @@
       },
       "allowedHosts": {
         "hosts": [
+          "dust.tt"
+        ]
+      },
+      "connectorBuildOptions": {
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.23.4@sha256:f63c39a8a6f28ec20ada2ddf5861f3b1fb7b6a1ef1a8a8d1d537ff684ee3f9bd"
+      },
+      "custom": false,
+      "dockerImageTag": "0.0.1",
+      "dockerRepository": "airbyte/source-dust",
+      "documentationUrl": "https://docs.airbyte.com/integrations/sources/dust",
+      "generated": {
+        "git": {
+          "commit_author": "Ella6882",
+          "commit_author_email": "64746286+Ella6882@users.noreply.github.com",
+          "commit_sha": "f7eb4ed8641fc030417d3103d3c116da15f7535d",
+          "commit_timestamp": "2026-07-27T14:10:05-06:00"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-dust/0.0.1.spdx.json",
+        "source_file_info": {
+          "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+          "metadata_file_path": "metadata/airbyte/source-dust/latest/metadata.yaml",
+          "metadata_last_modified": "2026-07-27T20:15:00.905782+00:00",
+          "registry_entry_generated_at": "2026-07-27T20:15:00.905782+00:00"
+        }
+      },
+      "githubIssueLabel": "source-dust",
+      "icon": "icon.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-dust/latest/icon.svg",
+      "language": "manifest-only",
+      "license": "ELv2",
+      "name": "Dust",
+      "packageInfo": {},
+      "public": true,
+      "releaseDate": "2026-07-02",
+      "releaseStage": "alpha",
+      "releases": {},
+      "remoteRegistries": {
+        "pypi": {
+          "enabled": false,
+          "packageName": "airbyte-source-dust"
+        }
+      },
+      "sourceDefinitionId": "897ba953-4c86-4e5e-a7a6-e7a006087233",
+      "sourceType": "api",
+      "spec": {
+        "connectionSpecification": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": true,
+          "properties": {
+            "bearer_token": {
+              "airbyte_secret": true,
+              "description": "Token needed for authentication to dust",
+              "order": 3,
+              "title": "Bearer Token",
+              "type": "string"
+            },
+            "end_date": {
+              "description": "The end date for the extracted data in YYYY-MM-DD format",
+              "order": 1,
+              "title": "End Date",
+              "type": "string"
+            },
+            "start_date": {
+              "description": "The start date for data extraction in YYYY-MM-DD format",
+              "order": 0,
+              "title": "Start Date",
+              "type": "string"
+            },
+            "workspace_id": {
+              "description": "Unique string identifier for the workspace",
+              "order": 2,
+              "title": "Workspace ID",
+              "type": "string"
+            }
+          },
+          "required": [
+            "bearer_token",
+            "workspace_id",
+            "start_date"
+          ],
+          "type": "object"
+        },
+        "supportsDBT": false,
+        "supportsNormalization": false
+      },
+      "supportLevel": "community",
+      "supportsDataActivation": false,
+      "supportsFileTransfer": false,
+      "tags": [
+        "language:manifest-only",
+        "cdk:low-code"
+      ],
+      "tombstone": false
+    },
+    {
+      "ab_internal": {
+        "isEnterprise": false,
+        "ql": 100,
+        "requireVersionIncrementsInPullRequests": true,
+        "sl": 100
+      },
+      "allowedHosts": {
+        "hosts": [
           "https://*.dwolla.com"
         ]
       },
@@ -43735,15 +44035,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           }
         },
@@ -50106,15 +50406,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-fleetio/0.2.57.spdx.json",
@@ -55279,15 +55579,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           }
         },
@@ -56185,7 +56485,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.3.0",
+      "dockerImageTag": "1.3.1",
       "dockerRepository": "airbyte/source-gong",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/gong",
       "externalDocumentationUrls": [
@@ -56207,10 +56507,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Ruchin",
-          "commit_author_email": "56113982+ruchin-kumar@users.noreply.github.com",
-          "commit_sha": "98a8212f3f483f2230200e80cd2919fb0724df56",
-          "commit_timestamp": "2026-07-22T07:57:28-05:00"
+          "commit_author": "Ella6882",
+          "commit_author_email": "64746286+Ella6882@users.noreply.github.com",
+          "commit_sha": "3f9b25423dc3daf9b50ee833066224959c0ddb43",
+          "commit_timestamp": "2026-07-27T03:36:10-06:00"
         },
         "metrics": {
           "all": {
@@ -56226,12 +56526,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-gong/1.3.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-gong/1.3.1.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-gong/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-22T13:01:31.968204+00:00",
-          "registry_entry_generated_at": "2026-07-22T13:01:31.968204+00:00"
+          "metadata_last_modified": "2026-07-27T09:40:35.383646+00:00",
+          "registry_entry_generated_at": "2026-07-27T09:40:35.383646+00:00"
         }
       },
       "githubIssueLabel": "source-gong",
@@ -62796,16 +63096,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "high",
-            "usage": "high"
+            "sync_success_rate": "medium",
+            "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "high",
-            "usage": "high"
+            "sync_success_rate": "medium",
+            "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "high",
-            "usage": "high"
+            "sync_success_rate": "medium",
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-granola/0.2.8.spdx.json",
@@ -63089,15 +63389,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           }
         },
@@ -66513,15 +66813,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-incident-io/0.1.33.spdx.json",
@@ -68785,7 +69085,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "6.0.0",
+      "dockerImageTag": "6.0.1",
       "dockerRepository": "airbyte/source-jira",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/jira",
       "erdUrl": "https://dbdocs.io/airbyteio/source-jira?view=relationships",
@@ -68815,8 +69115,8 @@
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "c1369fb31514487ec29d416ea7b4b981fe22b259",
-          "commit_timestamp": "2026-06-24T19:11:10+03:00"
+          "commit_sha": "4e6942ffaf179ad0c8fab0179814701d1c6bd142",
+          "commit_timestamp": "2026-07-27T14:29:02-04:00"
         },
         "metrics": {
           "all": {
@@ -68832,12 +69132,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-jira/6.0.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-jira/6.0.1.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-jira/latest/metadata.yaml",
-          "metadata_last_modified": "2026-06-24T16:15:39.411727+00:00",
-          "registry_entry_generated_at": "2026-06-24T16:15:39.411727+00:00"
+          "metadata_last_modified": "2026-07-27T18:33:47.976893+00:00",
+          "registry_entry_generated_at": "2026-07-27T18:33:47.976893+00:00"
         }
       },
       "githubIssueLabel": "source-jira",
@@ -69670,15 +69970,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           }
         },
@@ -73751,15 +74051,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -74459,15 +74759,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           }
         },
@@ -75946,7 +76246,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "2.0.1",
+      "dockerImageTag": "2.1.1",
       "dockerRepository": "airbyte/source-marketo",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/marketo",
       "externalDocumentationUrls": [
@@ -75968,10 +76268,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Daryna Ishchenko",
-          "commit_author_email": "darina.ishchenko17@gmail.com",
-          "commit_sha": "e9200b49e6e9231603e9f7d1d0ebb49be8bdae33",
-          "commit_timestamp": "2026-06-04T18:48:58+03:00"
+          "commit_author": "Ella6882",
+          "commit_author_email": "64746286+Ella6882@users.noreply.github.com",
+          "commit_sha": "699618d17f8e46b59f52f4618f82c0f1dadea87b",
+          "commit_timestamp": "2026-07-27T14:09:12-06:00"
         },
         "metrics": {
           "all": {
@@ -75987,12 +76287,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-marketo/2.0.1.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-marketo/2.1.1.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-marketo/latest/metadata.yaml",
-          "metadata_last_modified": "2026-06-04T15:54:35.016151+00:00",
-          "registry_entry_generated_at": "2026-06-04T15:54:35.016151+00:00"
+          "metadata_last_modified": "2026-07-27T20:15:13.345810+00:00",
+          "registry_entry_generated_at": "2026-07-27T20:15:13.345810+00:00"
         }
       },
       "githubIssueLabel": "source-marketo",
@@ -76073,6 +76373,20 @@
               "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
               "title": "Start Date",
               "type": "string"
+            },
+            "window_in_days": {
+              "default": 30,
+              "description": "The number of days included in each Marketo Bulk Extract job for incremental streams. Smaller windows create more export jobs with less data per job, which can help large Leads syncs complete without exhausting memory or processing very large Marketo export files. The minimum is 1 day and the maximum is 31 days.",
+              "examples": [
+                1,
+                7,
+                31
+              ],
+              "maximum": 31,
+              "minimum": 1,
+              "order": 4,
+              "title": "Bulk Export Window in Days",
+              "type": "integer"
             }
           },
           "required": [
@@ -76821,15 +77135,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-metabase/2.1.52.spdx.json",
@@ -79418,16 +79732,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "cloud": {
-            "sync_success_rate": "low",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "oss": {
-            "sync_success_rate": "low",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-miro/0.0.60.spdx.json",
@@ -80109,6 +80423,95 @@
       "supportsFileTransfer": false,
       "tags": [
         "language:python",
+        "cdk:low-code"
+      ],
+      "tombstone": false
+    },
+    {
+      "ab_internal": {
+        "isEnterprise": false,
+        "ql": 100,
+        "requireVersionIncrementsInPullRequests": true,
+        "sl": 100
+      },
+      "allowedHosts": {
+        "hosts": [
+          "api3.mountain.com"
+        ]
+      },
+      "connectorBuildOptions": {
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.23.4@sha256:f63c39a8a6f28ec20ada2ddf5861f3b1fb7b6a1ef1a8a8d1d537ff684ee3f9bd"
+      },
+      "custom": false,
+      "dockerImageTag": "0.0.1",
+      "dockerRepository": "airbyte/source-mntn",
+      "documentationUrl": "https://docs.airbyte.com/integrations/sources/mntn",
+      "generated": {
+        "git": {
+          "commit_author": "Ella6882",
+          "commit_author_email": "64746286+Ella6882@users.noreply.github.com",
+          "commit_sha": "c408d22703006f3c697954ee77666e0ac38b68e2",
+          "commit_timestamp": "2026-07-27T17:28:19-06:00"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mntn/0.0.1.spdx.json",
+        "source_file_info": {
+          "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+          "metadata_file_path": "metadata/airbyte/source-mntn/latest/metadata.yaml",
+          "metadata_last_modified": "2026-07-27T23:32:44.206742+00:00",
+          "registry_entry_generated_at": "2026-07-27T23:32:44.206742+00:00"
+        }
+      },
+      "githubIssueLabel": "source-mntn",
+      "icon": "icon.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-mntn/latest/icon.svg",
+      "language": "manifest-only",
+      "license": "ELv2",
+      "name": "MNTN",
+      "packageInfo": {},
+      "public": true,
+      "releaseDate": "2026-06-30",
+      "releaseStage": "alpha",
+      "releases": {},
+      "remoteRegistries": {
+        "pypi": {
+          "enabled": false,
+          "packageName": "airbyte-source-mntn"
+        }
+      },
+      "sourceDefinitionId": "a3a24742-a9f3-44f5-90b6-82a888063466",
+      "sourceType": "api",
+      "spec": {
+        "connectionSpecification": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": true,
+          "properties": {
+            "api_key": {
+              "airbyte_secret": true,
+              "order": 0,
+              "title": "API Key",
+              "type": "string"
+            },
+            "start_time": {
+              "default": "2023-01-01",
+              "order": 1,
+              "title": "start_time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "api_key",
+            "start_time"
+          ],
+          "type": "object"
+        },
+        "supportsDBT": false,
+        "supportsNormalization": false
+      },
+      "supportLevel": "community",
+      "supportsDataActivation": false,
+      "supportsFileTransfer": false,
+      "tags": [
+        "language:manifest-only",
         "cdk:low-code"
       ],
       "tombstone": false
@@ -95844,16 +96247,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "cloud": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "oss": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-poplar/0.0.44.spdx.json",
@@ -96015,7 +96418,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "3.8.1",
+      "dockerImageTag": "3.8.2",
       "dockerRepository": "airbyte/source-postgres",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/postgres",
       "externalDocumentationUrls": [
@@ -96037,10 +96440,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Matt Bayley",
-          "commit_author_email": "matt.bayley@airbyte.io",
-          "commit_sha": "b48853ae61525fa908102cd367c9836b362defba",
-          "commit_timestamp": "2026-06-04T12:01:59-07:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "45d4970751e2d4e3dbd43a738acf1fb85fb9e0de",
+          "commit_timestamp": "2026-07-27T13:24:52-07:00"
         },
         "metrics": {
           "all": {
@@ -96056,12 +96459,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-postgres/3.8.1.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-postgres/3.8.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-postgres/latest/metadata.yaml",
-          "metadata_last_modified": "2026-06-04T19:06:12.594120+00:00",
-          "registry_entry_generated_at": "2026-06-04T19:06:12.594120+00:00"
+          "metadata_last_modified": "2026-07-27T20:30:08.551311+00:00",
+          "registry_entry_generated_at": "2026-07-27T20:30:08.551311+00:00"
         }
       },
       "githubIssueLabel": "source-postgres",
@@ -97518,15 +97921,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-productboard/0.0.63.spdx.json",
@@ -98731,15 +99134,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           }
         },
@@ -99691,6 +100094,128 @@
     {
       "ab_internal": {
         "isEnterprise": false,
+        "ql": 100,
+        "requireVersionIncrementsInPullRequests": true,
+        "sl": 100
+      },
+      "allowedHosts": {
+        "hosts": [
+          "ads-api.reddit.com",
+          "www.reddit.com"
+        ]
+      },
+      "connectorBuildOptions": {
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.23.4@sha256:f63c39a8a6f28ec20ada2ddf5861f3b1fb7b6a1ef1a8a8d1d537ff684ee3f9bd"
+      },
+      "custom": false,
+      "dockerImageTag": "0.0.1",
+      "dockerRepository": "airbyte/source-reddit-ads",
+      "documentationUrl": "https://docs.airbyte.com/integrations/sources/reddit-ads",
+      "generated": {
+        "git": {
+          "commit_author": "Ella6882",
+          "commit_author_email": "64746286+Ella6882@users.noreply.github.com",
+          "commit_sha": "6a15d1ca53f348e3e574294a010340d23f85e2da",
+          "commit_timestamp": "2026-07-27T17:27:33-06:00"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-reddit-ads/0.0.1.spdx.json",
+        "source_file_info": {
+          "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+          "metadata_file_path": "metadata/airbyte/source-reddit-ads/latest/metadata.yaml",
+          "metadata_last_modified": "2026-07-27T23:31:39.441574+00:00",
+          "registry_entry_generated_at": "2026-07-27T23:31:39.441574+00:00"
+        }
+      },
+      "githubIssueLabel": "source-reddit-ads",
+      "icon": "icon.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-reddit-ads/latest/icon.svg",
+      "language": "manifest-only",
+      "license": "ELv2",
+      "name": "Reddit Ads",
+      "packageInfo": {},
+      "public": true,
+      "releaseDate": "2026-07-02",
+      "releaseStage": "alpha",
+      "releases": {},
+      "remoteRegistries": {
+        "pypi": {
+          "enabled": false,
+          "packageName": "airbyte-source-reddit-ads"
+        }
+      },
+      "sourceDefinitionId": "c876992b-877e-4bb3-946b-4678c82bb7ac",
+      "sourceType": "api",
+      "spec": {
+        "connectionSpecification": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": true,
+          "properties": {
+            "ad_account_id": {
+              "airbyte_secret": true,
+              "order": 2,
+              "title": "ad_account_id",
+              "type": "string"
+            },
+            "client_id": {
+              "airbyte_secret": true,
+              "order": 0,
+              "title": "OAuth Client ID",
+              "type": "string"
+            },
+            "client_secret": {
+              "airbyte_secret": true,
+              "name": "client_secret",
+              "order": 3,
+              "title": "OAuth Client Secret",
+              "type": "string"
+            },
+            "refresh_token": {
+              "airbyte_secret": true,
+              "name": "refresh_token",
+              "order": 4,
+              "title": "OAuth Refresh Token",
+              "type": "string"
+            },
+            "start_time": {
+              "default": "2024-05-11T00:00:00Z",
+              "order": 5,
+              "title": "start_time",
+              "type": "string"
+            },
+            "user_agent": {
+              "airbyte_secret": true,
+              "description": "A unique and descriptive user agent string in the format: platform:app_id:version (by /u/yourusername). Required for all requests.",
+              "order": 1,
+              "title": "User Agent",
+              "type": "string"
+            }
+          },
+          "required": [
+            "client_id",
+            "user_agent",
+            "ad_account_id",
+            "client_secret",
+            "refresh_token",
+            "start_time"
+          ],
+          "type": "object"
+        },
+        "documentationUrl": "https://ads-api.reddit.com/docs/v3/",
+        "supportsDBT": false,
+        "supportsNormalization": false
+      },
+      "supportLevel": "community",
+      "supportsDataActivation": false,
+      "supportsFileTransfer": false,
+      "tags": [
+        "language:manifest-only",
+        "cdk:low-code"
+      ],
+      "tombstone": false
+    },
+    {
+      "ab_internal": {
+        "isEnterprise": false,
         "ql": 200,
         "requireVersionIncrementsInPullRequests": true,
         "sl": 100
@@ -99746,15 +100271,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           }
         },
@@ -101865,7 +102390,7 @@
         ]
       },
       "connectorBuildOptions": {
-        "baseImage": "docker.io/airbyte/python-connector-base:4.1.0@sha256:1d1aa21d34e851df4e8a87b391c27724c06e2597608e7161f4d167be853bd7b6"
+        "baseImage": "docker.io/airbyte/python-connector-base:4.1.1@sha256:a268b44c733ae699a60f5fbc06a324945dba98945c6e2ab7f8609f2f895b0d28"
       },
       "connectorTestSuitesOptions": [
         {
@@ -102387,7 +102912,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "4.15.14",
+      "dockerImageTag": "4.15.15",
       "dockerRepository": "airbyte/source-s3",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/s3",
       "externalDocumentationUrls": [
@@ -102399,10 +102924,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "9efee9c09a9b9fa419e38168053d9b716f2c3446",
-          "commit_timestamp": "2026-07-21T08:02:57+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "8d00f06716bc1529bb7513c5a16137a2a61fb111",
+          "commit_timestamp": "2026-07-27T14:42:51+03:00"
         },
         "metrics": {
           "all": {
@@ -102418,12 +102943,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-s3/4.15.14.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-s3/4.15.15.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-s3/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-21T08:11:55.369546+00:00",
-          "registry_entry_generated_at": "2026-07-21T08:11:55.369546+00:00"
+          "metadata_last_modified": "2026-07-27T11:51:11.076904+00:00",
+          "registry_entry_generated_at": "2026-07-27T11:51:11.076904+00:00"
         }
       },
       "githubIssueLabel": "source-s3",
@@ -112253,15 +112778,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           }
         },
@@ -113090,15 +113615,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -120470,15 +120995,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "high"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "high"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "high"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-trustpilot/0.4.12.spdx.json",
@@ -125749,16 +126274,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "high",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "high",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "high",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-wrike/0.3.61.spdx.json",
@@ -126224,15 +126749,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           }
         },
