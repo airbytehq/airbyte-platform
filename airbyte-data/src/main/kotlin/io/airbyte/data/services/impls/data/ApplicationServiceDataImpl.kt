@@ -8,6 +8,7 @@ import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.repositories.ApplicationRepository
 import io.airbyte.data.repositories.entities.Application
 import io.airbyte.data.services.ApplicationService
+import io.airbyte.data.services.ScimAuthUserOwnershipService
 import io.airbyte.data.services.impls.keycloak.ApplicationServiceKeycloakImpl
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -29,11 +30,14 @@ class ApplicationServiceDataImpl(
   private val applicationRepository: ApplicationRepository,
   private val airbyteAuthConfig: AirbyteAuthConfig,
   private val jwtTokenGenerator: JwtTokenGenerator,
+  private val authUserOwnershipService: ScimAuthUserOwnershipService,
 ) : ApplicationService {
   companion object {
     const val SECRET_LENGTH = 2096
     private val logger = KotlinLogging.logger {}
   }
+
+  override fun deletesApplicationsTransactionally(): Boolean = true
 
   /**
    * Create the application with the name provided for the user.
@@ -47,17 +51,19 @@ class ApplicationServiceDataImpl(
   ): ApplicationDomain {
     logger.debug { "Creating application $name" }
 
-    val application =
-      applicationRepository.save(
-        Application(
-          id = UUID.randomUUID(),
-          authUserId = user.authUserId,
-          name = name,
-          clientId = generateClientId(),
-          clientSecret = generateClientSecret(),
-        ),
-      )
-    return toDomain(application)
+    return authUserOwnershipService.withUniqueOwner(user.authUserId, user.userId) {
+      val application =
+        applicationRepository.save(
+          Application(
+            id = UUID.randomUUID(),
+            authUserId = user.authUserId,
+            name = name,
+            clientId = generateClientId(),
+            clientSecret = generateClientSecret(),
+          ),
+        )
+      toDomain(application)
+    }
   }
 
   /**
@@ -67,10 +73,12 @@ class ApplicationServiceDataImpl(
    */
   override fun listApplicationsByUser(user: AuthenticatedUser): List<ApplicationDomain> {
     logger.debug { "Listing applications" }
-    return applicationRepository
-      .findByAuthUserId(authUserId = user.authUserId)
-      .map { application -> toDomain(application) }
-      .toList()
+    return authUserOwnershipService.withUniqueOwner(user.authUserId, user.userId) {
+      applicationRepository
+        .findByAuthUserId(authUserId = user.authUserId)
+        .map { application -> toDomain(application) }
+        .toList()
+    }
   }
 
   /**
@@ -84,15 +92,17 @@ class ApplicationServiceDataImpl(
     applicationId: String,
   ): ApplicationDomain {
     logger.debug { "Deleting application $applicationId" }
-    val application: Application =
-      applicationRepository.findByAuthUserIdAndId(
-        authUserId = user.authUserId,
-        applicationId = UUID.fromString(applicationId),
-      )
-        ?: throw IllegalArgumentException("application was not found with the userId and applicationId provided")
-    if (application.authUserId != user.authUserId) throw IllegalArgumentException("applicationId must be owned by the user")
-    applicationRepository.delete(application)
-    return toDomain(application)
+    return authUserOwnershipService.withUniqueOwner(user.authUserId, user.userId) {
+      val application: Application =
+        applicationRepository.findByAuthUserIdAndId(
+          authUserId = user.authUserId,
+          applicationId = UUID.fromString(applicationId),
+        )
+          ?: throw IllegalArgumentException("application was not found with the userId and applicationId provided")
+      if (application.authUserId != user.authUserId) throw IllegalArgumentException("applicationId must be owned by the user")
+      applicationRepository.delete(application)
+      toDomain(application)
+    }
   }
 
   /**
@@ -109,28 +119,40 @@ class ApplicationServiceDataImpl(
     val application =
       applicationRepository.findByClientIdAndClientSecret(clientId, clientSecret)
         ?: throw IllegalArgumentException("application was not found with the clientId and clientSecret provided")
-
-    return jwtTokenGenerator
-      .generateToken(
-        mapOf(
-          "iss" to airbyteAuthConfig.tokenIssuer,
-          "aud" to "airbyte-server",
-          "sub" to application.authUserId,
-          "exp" to
-            Instant
-              .now()
-              .plus(
-                airbyteAuthConfig.tokenExpiration.applicationTokenExpirationInMinutes,
-                ChronoUnit.MINUTES,
-              ).epochSecond,
-        ),
-      ) // Necessary now that this is no longer optional, but I don't know under what conditions we could
-      // end up here.
-      .orElseThrow {
-        IllegalStateException(
-          "Could not generate token",
-        )
+    val authUserId =
+      checkNotNull(application.authUserId) {
+        "Application $clientId has no authentication identity owner."
       }
+
+    return authUserOwnershipService.withUniqueOwner(authUserId) {
+      val lockedApplication =
+        applicationRepository.findByClientIdAndClientSecret(clientId, clientSecret)
+          ?: throw IllegalArgumentException("application was not found with the clientId and clientSecret provided")
+      check(lockedApplication.authUserId == authUserId) {
+        "Application $clientId ownership changed while acquiring its authentication identity lock."
+      }
+      jwtTokenGenerator
+        .generateToken(
+          mapOf(
+            "iss" to airbyteAuthConfig.tokenIssuer,
+            "aud" to "airbyte-server",
+            "sub" to authUserId,
+            "exp" to
+              Instant
+                .now()
+                .plus(
+                  airbyteAuthConfig.tokenExpiration.applicationTokenExpirationInMinutes,
+                  ChronoUnit.MINUTES,
+                ).epochSecond,
+          ),
+        ) // Necessary now that this is no longer optional, but I don't know under what conditions we could
+        // end up here.
+        .orElseThrow {
+          IllegalStateException(
+            "Could not generate token",
+          )
+        }
+    }
   }
 
   /**

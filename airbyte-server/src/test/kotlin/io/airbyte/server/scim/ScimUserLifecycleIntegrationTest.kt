@@ -6,16 +6,35 @@ package io.airbyte.server.scim
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import io.airbyte.api.model.generated.UserAuthIdRequestBody
+import io.airbyte.api.model.generated.WorkspaceRead
+import io.airbyte.api.model.generated.WorkspaceReadList
+import io.airbyte.commons.auth.config.InitialUserConfig
+import io.airbyte.commons.auth.resolvers.GenericOidcUserAuthenticationResolver
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_EMAIL_VERIFIED
+import io.airbyte.commons.auth.support.UserAuthenticationResolver
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.PermissionHandler
+import io.airbyte.commons.server.handlers.ResourceBootstrapHandler
+import io.airbyte.commons.server.handlers.ResourceBootstrapHandlerInterface
+import io.airbyte.commons.server.handlers.UserHandler
+import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.commons.server.support.SecurityAwareCurrentUserService
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthenticatedUser
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.User
+import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.data.auth.TokenType
 import io.airbyte.data.repositories.ApplicationRepository
+import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.GroupMemberRepository
 import io.airbyte.data.repositories.GroupMemberWithUserInfoRepository
 import io.airbyte.data.repositories.GroupRepository
@@ -23,9 +42,11 @@ import io.airbyte.data.repositories.GroupWithMemberCountRepository
 import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.ScimAirbyteUserRepository
+import io.airbyte.data.repositories.ScimAuthUserRepository
 import io.airbyte.data.repositories.ScimConfigurationRepository
 import io.airbyte.data.repositories.ScimResourceMappingRepository
 import io.airbyte.data.repositories.UserInvitationRepository
+import io.airbyte.data.repositories.entities.DataplaneGroup
 import io.airbyte.data.repositories.entities.GroupMember
 import io.airbyte.data.repositories.entities.Organization
 import io.airbyte.data.repositories.entities.Permission
@@ -33,14 +54,24 @@ import io.airbyte.data.repositories.entities.ScimAirbyteUser
 import io.airbyte.data.repositories.entities.ScimConfiguration
 import io.airbyte.data.repositories.entities.ScimResourceMapping
 import io.airbyte.data.services.ApplicationService
+import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.GroupService
 import io.airbyte.data.services.InactiveUserAccessException
+import io.airbyte.data.services.OrganizationEmailDomainService
+import io.airbyte.data.services.OrganizationPaymentConfigService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
+import io.airbyte.data.services.ScimAuthUserOwnershipService
+import io.airbyte.data.services.SecretPersistenceConfigService
+import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.impls.data.ApplicationServiceDataImpl
 import io.airbyte.data.services.impls.data.GroupServiceDataImpl
 import io.airbyte.data.services.impls.data.PermissionServiceDataImpl
 import io.airbyte.data.services.impls.data.UserInvitationServiceDataImpl
+import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
+import io.airbyte.db.Database
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.jooq.generated.Tables
@@ -58,20 +89,30 @@ import io.airbyte.domain.models.scim.ScimUserFilterClause
 import io.airbyte.domain.models.scim.ScimUserNotFoundException
 import io.airbyte.domain.models.scim.ScimUserWrite
 import io.airbyte.domain.services.scim.ScimAuthenticationContext
+import io.airbyte.domain.services.scim.ScimFirstLoginAttachmentResult
+import io.airbyte.domain.services.scim.ScimFirstLoginService
 import io.airbyte.domain.services.scim.ScimMutationService
 import io.airbyte.domain.services.scim.ScimUserLifecycleService
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig.AirbyteAuthIdentityProviderConfig
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig.AirbyteAuthIdentityProviderConfig.OidcIdentityProviderConfig
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig.AirbyteAuthIdentityProviderConfig.OidcIdentityProviderConfig.GenericOidcFieldMappingConfig
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.env.PropertySource
 import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
 import io.micronaut.http.HttpRequest
 import io.micronaut.inject.qualifiers.Qualifiers
+import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import io.micronaut.security.token.jwt.validator.ReactiveJsonWebTokenValidator
+import io.micronaut.security.utils.SecurityService
 import io.micronaut.transaction.TransactionOperations
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
+import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jooq.DSLContext
@@ -92,7 +133,9 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Supplier
 import javax.sql.DataSource
 
 class ScimUserLifecycleIntegrationTest {
@@ -110,6 +153,2387 @@ class ScimUserLifecycleIntegrationTest {
     jooq.deleteFrom(Tables.ORGANIZATION).execute()
     jooq.deleteFrom(Tables.AUTH_USER).execute()
     jooq.deleteFrom(Tables.USER).execute()
+  }
+
+  @Test
+  fun `verified current mapping email attaches one User across active and inactive organizations without side effects`() {
+    val usersBefore = jooq.fetchCount(Tables.USER)
+    val tenantA = tenant("first-login-a")
+    val tenantB = tenant("first-login-b")
+    val oldEmail = "pre-provisioned-old@example.com"
+    val currentEmail = "pre-provisioned-current@example.com"
+    val createdA =
+      mutationService.execute(tenantA.context) {
+        lifecycleService.create(tenantA.configurationId, tenantA.organizationId, input(true, userName = oldEmail))
+      }
+    val createdB =
+      mutationService.execute(tenantB.context) {
+        lifecycleService.create(tenantB.configurationId, tenantB.organizationId, input(false, userName = oldEmail))
+      }
+    mutationService.execute(tenantA.context) {
+      lifecycleService.replace(
+        tenantA.configurationId,
+        tenantA.organizationId,
+        createdA.id,
+        input(true, userName = currentEmail),
+      )
+    }
+    mutationService.execute(tenantB.context) {
+      lifecycleService.replace(
+        tenantB.configurationId,
+        tenantB.organizationId,
+        createdB.id,
+        input(false, userName = currentEmail),
+      )
+    }
+    val permissionsBefore = jooq.fetchCount(Tables.PERMISSION)
+    val membershipsBefore = jooq.fetchCount(Tables.GROUP_MEMBER)
+    val authUserId = "verified-first-login"
+
+    val first =
+      firstLoginService.attachIfPreProvisioned(
+        currentEmail.uppercase(),
+        currentEmail,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+      )
+    val second =
+      firstLoginService.attachIfPreProvisioned(
+        currentEmail,
+        currentEmail,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+      )
+
+    assertThat(first).isEqualTo(ScimFirstLoginAttachmentResult.Attached(createdA.userId))
+    assertThat(second).isEqualTo(ScimFirstLoginAttachmentResult.AlreadyAttached(createdA.userId))
+    assertThat(createdB.userId).isEqualTo(createdA.userId)
+    assertThat(jooq.fetchCount(Tables.USER)).isEqualTo(usersBefore + 1)
+    assertThat(
+      jooq
+        .select(Tables.USER.EMAIL)
+        .from(Tables.USER)
+        .where(Tables.USER.ID.eq(createdA.userId))
+        .fetchOne(Tables.USER.EMAIL),
+    ).isEqualTo(oldEmail)
+    assertThat(
+      jooq
+        .select(Tables.USER.STATUS)
+        .from(Tables.USER)
+        .where(Tables.USER.ID.eq(createdA.userId))
+        .fetchOne(Tables.USER.STATUS),
+    ).isNull()
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isEqualTo(1)
+    assertThat(jooq.fetchCount(Tables.PERMISSION)).isEqualTo(permissionsBefore)
+    assertThat(jooq.fetchCount(Tables.GROUP_MEMBER)).isEqualTo(membershipsBefore)
+    assertThat(mappingRepository.findUser(createdA.id, tenantA.configurationId, tenantA.organizationId)?.userActive).isTrue()
+    assertThat(mappingRepository.findUser(createdB.id, tenantB.configurationId, tenantB.organizationId)?.userActive).isFalse()
+  }
+
+  @Test
+  fun `generic OIDC rejects a verified attachment email outside the source SSO organization domains`() {
+    val sourceTenant = tenant("generic-oidc-domain-source")
+    val mappedTenant = tenant("generic-oidc-domain-mapped")
+    val configuredEmail = "generic-oidc@claimed.example"
+    val verifiedEmail = "generic-oidc@restricted.example"
+    val authUserId = "generic-oidc-domain-subject"
+    val realm = "generic-oidc-domain-realm"
+    val mapped =
+      mutationService.execute(mappedTenant.context) {
+        lifecycleService.create(
+          mappedTenant.configurationId,
+          mappedTenant.organizationId,
+          input(true, verifiedEmail, "generic-oidc-domain", "Generic OIDC Domain User"),
+        )
+      }
+    val securityService = mockk<SecurityService>()
+    every { securityService.username() } returns Optional.of(authUserId)
+    every { securityService.authentication } returns
+      Optional.of(
+        Authentication.build(
+          authUserId,
+          mapOf(
+            "upn" to configuredEmail,
+            "email" to verifiedEmail,
+            JWT_USER_EMAIL_VERIFIED to true,
+            "iss" to realm,
+          ),
+        ),
+      )
+    val authenticationResolver =
+      GenericOidcUserAuthenticationResolver(
+        securityService,
+        AirbyteAuthConfig(
+          identityProvider =
+            AirbyteAuthIdentityProviderConfig(
+              oidc =
+                OidcIdentityProviderConfig(
+                  fields = GenericOidcFieldMappingConfig(email = "upn"),
+                ),
+            ),
+        ),
+      )
+    val organizationService = mockk<OrganizationService>()
+    every { organizationService.getOrganizationBySsoConfigRealm(realm) } returns
+      Optional.of(
+        io.airbyte.config
+          .Organization()
+          .withOrganizationId(sourceTenant.organizationId)
+          .withName("Generic OIDC Domain Source")
+          .withEmail("source@claimed.example"),
+      )
+    val organizationEmailDomainService = mockk<OrganizationEmailDomainService>()
+    every { organizationEmailDomainService.findByOrganizationId(sourceTenant.organizationId) } returns
+      listOf(
+        io.airbyte.config
+          .OrganizationEmailDomain()
+          .withOrganizationId(sourceTenant.organizationId)
+          .withEmailDomain("claimed.example"),
+      )
+    every { organizationEmailDomainService.findByEmailDomain("claimed.example") } returns
+      listOf(
+        io.airbyte.config
+          .OrganizationEmailDomain()
+          .withOrganizationId(sourceTenant.organizationId)
+          .withEmailDomain("claimed.example"),
+      )
+    every { organizationEmailDomainService.findByEmailDomain("restricted.example") } returns
+      listOf(
+        io.airbyte.config
+          .OrganizationEmailDomain()
+          .withOrganizationId(mappedTenant.organizationId)
+          .withEmailDomain("restricted.example"),
+      )
+    val featureFlagClient = mockk<FeatureFlagClient>()
+    every { featureFlagClient.boolVariation(any(), any()) } returns false
+    every {
+      featureFlagClient.boolVariation(
+        io.airbyte.featureflag.RestrictLoginsForSSODomains,
+        any(),
+      )
+    } returns true
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        organizationService = organizationService,
+        organizationEmailDomainService = organizationEmailDomainService,
+        featureFlagClient = featureFlagClient,
+      )
+
+    val login =
+      runCatching {
+        handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+      }
+
+    assertThat(login.exceptionOrNull())
+      .isInstanceOf(io.airbyte.commons.server.errors.OperationNotAllowedException::class.java)
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isZero()
+    assertThat(mappingRepository.findUser(mapped.id, mappedTenant.configurationId, mappedTenant.organizationId)).isNotNull()
+  }
+
+  @Test
+  fun `new login commits User before production workspace and organization bootstrap`() {
+    val dataplaneGroupId = UUID.randomUUID()
+    val infrastructureOrganizationId = UUID.randomUUID()
+    val authUserId = "committed-bootstrap-user"
+    val email = "committed-bootstrap@example.com"
+    organizationRepository.save(
+      Organization(
+        id = infrastructureOrganizationId,
+        name = "Infrastructure Organization",
+        email = "infrastructure@example.com",
+      ),
+    )
+    context.getBean(DataplaneGroupRepository::class.java).save(
+      DataplaneGroup(
+        id = dataplaneGroupId,
+        organizationId = infrastructureOrganizationId,
+        name = "Default Test Dataplane Group",
+        enabled = true,
+        tombstone = false,
+      ),
+    )
+
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(authUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Committed Bootstrap User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns null
+    val securityService = mockk<SecurityService>()
+    every { securityService.username() } returns Optional.of(authUserId)
+    val currentUserService = SecurityAwareCurrentUserService(userPersistence, securityService, transactions)
+    val secretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    every {
+      secretsRepositoryWriter.createFromConfigLegacy(any(), any(), any(), any())
+    } answers {
+      secondArg()
+    }
+    val workspaceService =
+      WorkspaceServiceJooqImpl(
+        database,
+        mockk(relaxed = true),
+        mockk<SecretsRepositoryReader>(relaxed = true),
+        secretsRepositoryWriter,
+        mockk<SecretPersistenceConfigService>(relaxed = true),
+        mockk<MetricClient>(relaxed = true),
+      )
+    var workspaceWriteObservedCommittedUser = false
+    val transactionCheckingWorkspaceService =
+      object : WorkspaceService by workspaceService {
+        override fun writeWorkspaceWithSecrets(workspace: io.airbyte.config.StandardWorkspace) {
+          assertThat(transactions.hasConnection()).isFalse()
+          assertThat(userPersistence.getUserByAuthId(authUserId)).isPresent
+          workspaceWriteObservedCommittedUser = true
+          workspaceService.writeWorkspaceWithSecrets(workspace)
+        }
+      }
+    val uuidSupplier = Supplier { UUID.randomUUID() }
+    val productionPermissionService =
+      PermissionServiceDataImpl(
+        transactionCheckingWorkspaceService,
+        permissionRepository,
+        configurationRepository,
+        mappingRepository,
+      )
+    val permissionHandler =
+      PermissionHandler(
+        permissionPersistence,
+        transactionCheckingWorkspaceService,
+        uuidSupplier,
+        productionPermissionService,
+      )
+    val organizationService = context.getBean(OrganizationService::class.java)
+    val roleResolver =
+      RoleResolver(
+        context.getBean(AuthenticationHeaderResolver::class.java),
+        currentUserService,
+        null,
+        permissionHandler,
+      )
+    val resourceBootstrapHandler =
+      ResourceBootstrapHandler(
+        uuidSupplier,
+        transactionCheckingWorkspaceService,
+        organizationService,
+        permissionHandler,
+        currentUserService,
+        roleResolver,
+        mockk<OrganizationPaymentConfigService>(relaxed = true),
+        AirbyteEdition.COMMUNITY,
+        mockk<DataplaneGroupService> {
+          every { getDefaultDataplaneGroup() } returns
+            io.airbyte.config
+              .DataplaneGroup()
+              .withId(dataplaneGroupId)
+              .withOrganizationId(infrastructureOrganizationId)
+              .withName("Default Test Dataplane Group")
+              .withEnabled(true)
+              .withTombstone(false)
+        },
+        mockk<EntitlementService>(relaxed = true),
+        mockk<FeatureFlagClient>(relaxed = true),
+      )
+
+    assertThat(organizationRepository.findByEmailIgnoreCase(email)).isEmpty()
+
+    val response =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        organizationService = organizationService,
+        permissionHandler = permissionHandler,
+        resourceBootstrapHandler = resourceBootstrapHandler,
+        uuidSupplier = uuidSupplier,
+      ).getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+
+    assertThat(response.newUserCreated).isTrue()
+    assertThat(workspaceWriteObservedCommittedUser).isTrue()
+    val createdOrganization = organizationRepository.findByEmailIgnoreCase(email).single()
+    assertThat(createdOrganization.userId).isEqualTo(response.userRead.userId)
+    assertThat(jooq.fetchCount(Tables.WORKSPACE, Tables.WORKSPACE.ORGANIZATION_ID.eq(createdOrganization.id))).isEqualTo(1)
+    assertThat(response.userRead.defaultWorkspaceId).isNotNull()
+  }
+
+  @Test
+  fun `SSO migration persists incoming identity before production workspace bootstrap`() {
+    val tenant = tenant("sso-migration-bootstrap")
+    val dataplaneGroupId = UUID.randomUUID()
+    val email = "sso-migration-bootstrap@example.com"
+    val oldAuthUserId = "sso-migration-bootstrap-old"
+    val incomingAuthUserId = "sso-migration-bootstrap-incoming"
+    val existingUser = ordinaryUser(email)
+    userPersistence.writeUser(existingUser)
+    userPersistence.writeAuthUser(existingUser.userId, oldAuthUserId, AuthProvider.KEYCLOAK)
+    context.getBean(DataplaneGroupRepository::class.java).save(
+      DataplaneGroup(
+        id = dataplaneGroupId,
+        organizationId = tenant.organizationId,
+        name = "SSO Migration Bootstrap Dataplane Group",
+        enabled = true,
+        tombstone = false,
+      ),
+    )
+
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(incomingAuthUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("SSO Migration Bootstrap")
+        .withAuthUserId(incomingAuthUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "sso-migration-bootstrap-realm"
+    val securityService = mockk<SecurityService>()
+    every { securityService.username() } returns Optional.of(incomingAuthUserId)
+    val currentUserService = SecurityAwareCurrentUserService(userPersistence, securityService, transactions)
+    val secretsRepositoryWriter = mockk<SecretsRepositoryWriter>(relaxed = true)
+    every {
+      secretsRepositoryWriter.createFromConfigLegacy(any(), any(), any(), any())
+    } answers {
+      secondArg()
+    }
+    val workspaceService =
+      WorkspaceServiceJooqImpl(
+        database,
+        mockk(relaxed = true),
+        mockk<SecretsRepositoryReader>(relaxed = true),
+        secretsRepositoryWriter,
+        mockk<SecretPersistenceConfigService>(relaxed = true),
+        mockk<MetricClient>(relaxed = true),
+      )
+    var workspaceWriteObservedIncomingIdentity = false
+    val identityCheckingWorkspaceService =
+      object : WorkspaceService by workspaceService {
+        override fun writeWorkspaceWithSecrets(workspace: io.airbyte.config.StandardWorkspace) {
+          assertThat(transactions.hasConnection()).isTrue()
+          assertThat(currentUserService.getCurrentUser().authUserId).isEqualTo(incomingAuthUserId)
+          workspaceWriteObservedIncomingIdentity = true
+          workspaceService.writeWorkspaceWithSecrets(workspace)
+        }
+
+        override fun writeWorkspaceWithSecrets(
+          ctx: DSLContext,
+          workspace: io.airbyte.config.StandardWorkspace,
+        ) {
+          assertThat(transactions.hasConnection()).isTrue()
+          assertThat(currentUserService.getCurrentUser().authUserId).isEqualTo(incomingAuthUserId)
+          workspaceWriteObservedIncomingIdentity = true
+          workspaceService.writeWorkspaceWithSecrets(ctx, workspace)
+        }
+      }
+    val uuidSupplier = Supplier { UUID.randomUUID() }
+    val productionPermissionService =
+      PermissionServiceDataImpl(
+        identityCheckingWorkspaceService,
+        permissionRepository,
+        configurationRepository,
+        mappingRepository,
+      )
+    val permissionHandler =
+      PermissionHandler(
+        permissionPersistence,
+        identityCheckingWorkspaceService,
+        uuidSupplier,
+        productionPermissionService,
+      )
+    val organization =
+      io.airbyte.config
+        .Organization()
+        .withOrganizationId(tenant.organizationId)
+        .withName("SSO Migration Bootstrap")
+        .withEmail("sso-migration-bootstrap-org@example.com")
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("sso-migration-bootstrap-realm") } returns Optional.of(organization)
+    every { organizationService.getOrganization(tenant.organizationId) } returns Optional.of(organization)
+    val roleResolver =
+      RoleResolver(
+        context.getBean(AuthenticationHeaderResolver::class.java),
+        currentUserService,
+        null,
+        permissionHandler,
+      )
+    val resourceBootstrapHandler =
+      ResourceBootstrapHandler(
+        uuidSupplier,
+        identityCheckingWorkspaceService,
+        organizationService,
+        permissionHandler,
+        currentUserService,
+        roleResolver,
+        mockk<OrganizationPaymentConfigService>(relaxed = true),
+        AirbyteEdition.COMMUNITY,
+        mockk<DataplaneGroupService> {
+          every { getDefaultDataplaneGroup() } returns
+            io.airbyte.config
+              .DataplaneGroup()
+              .withId(dataplaneGroupId)
+              .withOrganizationId(tenant.organizationId)
+              .withName("SSO Migration Bootstrap Dataplane Group")
+              .withEnabled(true)
+              .withTombstone(false)
+        },
+        mockk<EntitlementService>(relaxed = true),
+        mockk<FeatureFlagClient>(relaxed = true),
+      )
+    val workspacesHandler = mockk<WorkspacesHandler>()
+    every { workspacesHandler.listWorkspacesInOrganization(any()) } returns WorkspaceReadList().workspaces(emptyList())
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    every { externalUserService.getRealmByAuthUserId(oldAuthUserId) } returns "sso-migration-bootstrap-legacy-realm"
+    val ssoConfigService = mockk<SsoConfigService>(relaxed = true)
+    every { ssoConfigService.getSsoConfigByRealmName("sso-migration-bootstrap-legacy-realm") } returns null
+    val featureFlagClient = mockk<FeatureFlagClient>()
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+
+    val response =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        ssoConfigService = ssoConfigService,
+        permissionHandler = permissionHandler,
+        workspacesHandler = workspacesHandler,
+        resourceBootstrapHandler = resourceBootstrapHandler,
+        featureFlagClient = featureFlagClient,
+        uuidSupplier = uuidSupplier,
+      ).getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+
+    assertThat(response.userRead.userId).isEqualTo(existingUser.userId)
+    assertThat(response.newUserCreated).isFalse()
+    assertThat(workspaceWriteObservedIncomingIdentity).isTrue()
+    assertThat(userPersistence.getUserByAuthId(incomingAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+    assertThat(userPersistence.getUserByAuthId(oldAuthUserId)).isEmpty()
+    assertThat(jooq.fetchCount(Tables.WORKSPACE, Tables.WORKSPACE.ORGANIZATION_ID.eq(tenant.organizationId))).isEqualTo(1)
+    assertThat(response.userRead.defaultWorkspaceId).isNotNull()
+  }
+
+  @Test
+  fun `SSO login and SCIM POST acquire configuration before email without deadlock`() {
+    val tenant = tenant("sso-login-lock-order")
+    val email = "sso-login-lock-order@example.com"
+    val authUserId = "sso-login-lock-order-subject"
+    val loginUserId = UUID.randomUUID()
+    val loginReachedDecision = CountDownLatch(1)
+    val releaseLogin = CountDownLatch(1)
+    val concurrentFirstLoginService =
+      spyk(
+        ScimFirstLoginService(
+          mappingRepository,
+          userRepository,
+          context.getBean(ScimAuthUserRepository::class.java),
+        ),
+      )
+    every {
+      concurrentFirstLoginService.attachIfPreProvisioned(
+        email,
+        email,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+        tenant.organizationId,
+      )
+    } answers {
+      callOriginal().also {
+        check(it == ScimFirstLoginAttachmentResult.NoMatch)
+        loginReachedDecision.countDown()
+        check(releaseLogin.await(10, TimeUnit.SECONDS))
+      }
+    }
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(authUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("SSO Login User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "sso-login-lock-order-realm"
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("sso-login-lock-order-realm") } returns
+      Optional.of(
+        io.airbyte.config
+          .Organization()
+          .withOrganizationId(tenant.organizationId)
+          .withName("SSO Login Lock Order")
+          .withEmail(email),
+      )
+    val permissionHandler =
+      PermissionHandler(
+        permissionPersistence,
+        mockk<WorkspaceService>(relaxed = true),
+        Supplier { UUID.randomUUID() },
+        permissionService,
+      )
+    val workspacesHandler = mockk<WorkspacesHandler>()
+    every { workspacesHandler.listWorkspacesInOrganization(any()) } returns
+      WorkspaceReadList().workspaces(listOf(WorkspaceRead().workspaceId(UUID.randomUUID())))
+    val featureFlagClient = mockk<FeatureFlagClient>()
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = loginUserId,
+        organizationService = organizationService,
+        permissionHandler = permissionHandler,
+        workspacesHandler = workspacesHandler,
+        featureFlagClient = featureFlagClient,
+        attachmentService = concurrentFirstLoginService,
+      )
+    val initialWaiters = lockWaiterCount()
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val loginFuture =
+        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+          runCatching {
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+          }
+        }
+      check(loginReachedDecision.await(10, TimeUnit.SECONDS))
+
+      val scimFuture =
+        executor.submit<Result<io.airbyte.domain.models.scim.ScimUserRead>> {
+          runCatching {
+            mutationService.execute(tenant.context) {
+              lifecycleService.create(
+                tenant.configurationId,
+                tenant.organizationId,
+                input(true, email, "sso-login-lock-order", "SSO Login User"),
+              )
+            }
+          }
+        }
+      check(waitForLockWaiters(initialWaiters + 1))
+      releaseLogin.countDown()
+
+      val login = loginFuture.get(30, TimeUnit.SECONDS).getOrThrow()
+      val mapping = scimFuture.get(30, TimeUnit.SECONDS).getOrThrow()
+      assertThat(login.newUserCreated).isTrue()
+      assertThat(mapping.userId).isEqualTo(login.userRead.userId)
+      assertThat(userPersistence.getUserByAuthId(authUserId).orElseThrow().userId).isEqualTo(loginUserId)
+    } finally {
+      releaseLogin.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `DSR deletion winning after SSO realm resolution prevents cross-organization attachment`() {
+    val sourceTenant = tenant("dsr-login-source")
+    val mappedTenant = tenant("dsr-login-mapped")
+    val email = "dsr-login-race@example.com"
+    val authUserId = "dsr-login-race-subject"
+    val mapped =
+      mutationService.execute(mappedTenant.context) {
+        lifecycleService.create(
+          mappedTenant.configurationId,
+          mappedTenant.organizationId,
+          input(true, email, "dsr-login-race", "DSR Login Race"),
+        )
+      }
+    val attachmentStarted = CountDownLatch(1)
+    val allowAttachment = CountDownLatch(1)
+    val concurrentFirstLoginService =
+      spyk(
+        ScimFirstLoginService(
+          mappingRepository,
+          userRepository,
+          context.getBean(ScimAuthUserRepository::class.java),
+        ),
+      )
+    every {
+      concurrentFirstLoginService.attachIfPreProvisioned(
+        email,
+        email,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+        sourceTenant.organizationId,
+      )
+    } answers {
+      attachmentStarted.countDown()
+      check(allowAttachment.await(10, TimeUnit.SECONDS))
+      callOriginal()
+    }
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(authUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("DSR Login Race")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "dsr-login-race-realm"
+    val organizationService = mockk<OrganizationService>()
+    every { organizationService.getOrganizationBySsoConfigRealm("dsr-login-race-realm") } returns
+      Optional.of(
+        io.airbyte.config
+          .Organization()
+          .withOrganizationId(sourceTenant.organizationId)
+          .withName("DSR Login Source")
+          .withEmail("dsr-login-source@example.com"),
+      )
+    val featureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
+    every {
+      featureFlagClient.boolVariation(
+        io.airbyte.featureflag.BypassSsoDomainValidationEnforcement,
+        any(),
+      )
+    } returns true
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        organizationService = organizationService,
+        featureFlagClient = featureFlagClient,
+        attachmentService = concurrentFirstLoginService,
+      )
+    val executor = Executors.newSingleThreadExecutor()
+
+    try {
+      val loginFuture =
+        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+          runCatching {
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+          }
+        }
+      check(attachmentStarted.await(10, TimeUnit.SECONDS))
+
+      database.transaction { ctx ->
+        ctx
+          .deleteFrom(Tables.SCIM_CONFIGURATION)
+          .where(Tables.SCIM_CONFIGURATION.ID.eq(sourceTenant.configurationId))
+          .execute()
+        ctx
+          .deleteFrom(Tables.ORGANIZATION)
+          .where(Tables.ORGANIZATION.ID.eq(sourceTenant.organizationId))
+          .execute()
+      }
+      allowAttachment.countDown()
+
+      val login = loginFuture.get(30, TimeUnit.SECONDS)
+      assertThat(login.exceptionOrNull())
+        .isInstanceOf(io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem::class.java)
+      assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isZero()
+      assertThat(mappingRepository.findUser(mapped.id, mappedTenant.configurationId, mappedTenant.organizationId)).isNotNull()
+    } finally {
+      allowAttachment.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `multi-owner raw SSO subject fails before application or external identity deletion`() {
+    val tenant = tenant("multi-owner-sso-subject")
+    val email = "multi-owner-sso-subject@example.com"
+    val incomingAuthUserId = "multi-owner-sso-subject"
+    val existingAuthUserId = "multi-owner-sso-existing-subject"
+    val existingUser = ordinaryUser(email)
+    userPersistence.writeUser(existingUser)
+    userPersistence.writeAuthUser(existingUser.userId, existingAuthUserId, AuthProvider.KEYCLOAK)
+    val firstOwner = ordinaryUser("multi-owner-sso-first@example.com")
+    val secondOwner = ordinaryUser("multi-owner-sso-second@example.com")
+    userPersistence.writeUser(firstOwner)
+    userPersistence.writeUser(secondOwner)
+    insertAuthUser(firstOwner.userId, incomingAuthUserId, AuthProvider.KEYCLOAK)
+    insertAuthUser(secondOwner.userId, incomingAuthUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(incomingAuthUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Multi-owner SSO Subject")
+        .withAuthUserId(incomingAuthUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "multi-owner-new-sso-realm"
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("multi-owner-new-sso-realm") } returns
+      Optional.of(
+        io.airbyte.config
+          .Organization()
+          .withOrganizationId(tenant.organizationId),
+      )
+    val ssoConfigService = mockk<SsoConfigService>(relaxed = true)
+    every { ssoConfigService.getSsoConfigByRealmName("multi-owner-legacy-realm") } returns null
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    every { externalUserService.getRealmByAuthUserId(existingAuthUserId) } returns "multi-owner-legacy-realm"
+    val applicationService = mockk<ApplicationService>(relaxed = true)
+    every { applicationService.listApplicationsByUser(any()) } returns
+      listOf(
+        io.airbyte.config
+          .Application()
+          .withId("multi-owner-legacy-application"),
+      )
+    val featureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
+    every {
+      featureFlagClient.boolVariation(
+        io.airbyte.featureflag.BypassSsoDomainValidationEnforcement,
+        any(),
+      )
+    } returns true
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        ssoConfigService = ssoConfigService,
+        applicationService = Optional.of(applicationService),
+        featureFlagClient = featureFlagClient,
+      )
+
+    assertThatThrownBy {
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+    }.isInstanceOf(io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem::class.java)
+
+    verify(exactly = 0) { applicationService.deleteApplication(any(), any()) }
+    verify(exactly = 0) { externalUserService.deleteUserByEmailOnOtherRealms(any(), any()) }
+    verify(exactly = 0) { externalUserService.deleteUserByExternalId(any(), any()) }
+    assertThat(userPersistence.getUserByAuthId(existingAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(incomingAuthUserId))).isEqualTo(2)
+  }
+
+  @Test
+  fun `SSO migration preserves applications when an old raw subject has another owner`() {
+    val tenant = tenant("old-subject-collision")
+    val email = "old-subject-collision@example.com"
+    val oldAuthUserId = "old-subject-collision"
+    val incomingAuthUserId = "old-subject-collision-incoming"
+    val existingUser = ordinaryUser(email)
+    userPersistence.writeUser(existingUser)
+    userPersistence.writeAuthUser(existingUser.userId, oldAuthUserId, AuthProvider.KEYCLOAK)
+    val application =
+      applicationService.createApplication(
+        io.airbyte.config.helpers.AuthenticatedUserConverter.toAuthenticatedUser(
+          existingUser,
+          oldAuthUserId,
+          AuthProvider.KEYCLOAK,
+        ),
+        "Preserved Application",
+      )
+    val otherOwner = ordinaryUser("old-subject-other-owner@example.com")
+    userPersistence.writeUser(otherOwner)
+    insertAuthUser(otherOwner.userId, oldAuthUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(incomingAuthUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Old Subject Collision")
+        .withAuthUserId(incomingAuthUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "old-subject-sso-realm"
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("old-subject-sso-realm") } returns
+      Optional.of(
+        io.airbyte.config
+          .Organization()
+          .withOrganizationId(tenant.organizationId),
+      )
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    every { externalUserService.getRealmByAuthUserId(oldAuthUserId) } returns "old-subject-legacy-realm"
+    val ssoConfigService = mockk<SsoConfigService>(relaxed = true)
+    every { ssoConfigService.getSsoConfigByRealmName("old-subject-legacy-realm") } returns null
+    val featureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
+    every {
+      featureFlagClient.boolVariation(
+        io.airbyte.featureflag.BypassSsoDomainValidationEnforcement,
+        any(),
+      )
+    } returns true
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        ssoConfigService = ssoConfigService,
+        applicationService = Optional.of(applicationService),
+        featureFlagClient = featureFlagClient,
+      )
+
+    assertThatThrownBy {
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+    }.isInstanceOf(IllegalStateException::class.java)
+
+    assertThat(jooq.fetchCount(Tables.APPLICATION, Tables.APPLICATION.ID.eq(UUID.fromString(application.id)))).isEqualTo(1)
+    verify(exactly = 0) { externalUserService.deleteUserByEmailOnOtherRealms(any(), any()) }
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(oldAuthUserId))).isEqualTo(2)
+    assertThat(userPersistence.getUserByAuthId(incomingAuthUserId)).isEmpty()
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(incomingAuthUserId))).isZero()
+  }
+
+  @Test
+  fun `SSO migration cleanup failure retains durable pending identities and retry completes migration`() {
+    val tenant = tenant("sso-cleanup-retry")
+    val email = "sso-cleanup-retry@example.com"
+    val oldAuthUserId = "sso-cleanup-retry-old"
+    val incomingAuthUserId = "sso-cleanup-retry-incoming"
+    val existingUser = ordinaryUser(email)
+    userPersistence.writeUser(existingUser)
+    userPersistence.writeAuthUser(existingUser.userId, oldAuthUserId, AuthProvider.KEYCLOAK)
+    val existingApplication =
+      applicationService.createApplication(
+        io.airbyte.config.helpers.AuthenticatedUserConverter.toAuthenticatedUser(
+          existingUser,
+          oldAuthUserId,
+          AuthProvider.KEYCLOAK,
+        ),
+        "SSO Cleanup Retry Application",
+      )
+
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(incomingAuthUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("SSO Cleanup Retry")
+        .withAuthUserId(incomingAuthUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "sso-cleanup-retry-realm"
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("sso-cleanup-retry-realm") } returns
+      Optional.of(
+        io.airbyte.config
+          .Organization()
+          .withOrganizationId(tenant.organizationId),
+      )
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    every { externalUserService.getRealmByAuthUserId(oldAuthUserId) } returns "sso-cleanup-retry-legacy-realm"
+    every { externalUserService.deleteUserByEmailOnOtherRealms(email, "sso-cleanup-retry-realm") } throws
+      ExpectedFailure() andThen
+      Unit
+    val ssoConfigService = mockk<SsoConfigService>(relaxed = true)
+    every { ssoConfigService.getSsoConfigByRealmName("sso-cleanup-retry-legacy-realm") } returns null
+    val permissionHandler = mockk<PermissionHandler>(relaxed = true)
+    every { permissionHandler.listPermissionsForOrganization(tenant.organizationId) } returns
+      listOf(
+        io.airbyte.config
+          .UserPermission()
+          .withUser(existingUser),
+      )
+    val workspacesHandler = mockk<WorkspacesHandler>()
+    every {
+      workspacesHandler.listWorkspacesInOrganization(
+        io.airbyte.api.model.generated
+          .ListWorkspacesInOrganizationRequestBody()
+          .organizationId(tenant.organizationId),
+      )
+    } returns WorkspaceReadList().workspaces(listOf(WorkspaceRead().workspaceId(UUID.randomUUID())))
+    val featureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
+    every {
+      featureFlagClient.boolVariation(
+        io.airbyte.featureflag.BypassSsoDomainValidationEnforcement,
+        any(),
+      )
+    } returns true
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        ssoConfigService = ssoConfigService,
+        applicationService = Optional.of(applicationService),
+        permissionHandler = permissionHandler,
+        workspacesHandler = workspacesHandler,
+        featureFlagClient = featureFlagClient,
+      )
+
+    assertThatThrownBy {
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+    }.isInstanceOf(ExpectedFailure::class.java)
+
+    assertThat(userPersistence.getUserByAuthId(incomingAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+    assertThat(userPersistence.getUserByAuthId(oldAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+    assertThat(jooq.fetchCount(Tables.APPLICATION, Tables.APPLICATION.ID.eq(UUID.fromString(existingApplication.id)))).isZero()
+
+    val result = handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+
+    assertThat(result.userRead.userId).isEqualTo(existingUser.userId)
+    assertThat(userPersistence.getUserByAuthId(incomingAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+    assertThat(userPersistence.getUserByAuthId(oldAuthUserId)).isEmpty()
+    verify(exactly = 2) { externalUserService.deleteUserByEmailOnOtherRealms(email, "sso-cleanup-retry-realm") }
+  }
+
+  @Test
+  fun `concurrent SSO cleanup retries finalize authentication once`() {
+    val tenant = tenant("sso-cleanup-concurrent-retry")
+    val email = "sso-cleanup-concurrent-retry@example.com"
+    val oldAuthUserId = "sso-cleanup-concurrent-retry-old"
+    val incomingAuthUserId = "sso-cleanup-concurrent-retry-incoming"
+    val existingUser = ordinaryUser(email)
+    userPersistence.writeUser(existingUser)
+    userPersistence.writeAuthUser(existingUser.userId, oldAuthUserId, AuthProvider.KEYCLOAK)
+    userPersistence.writeAuthUser(existingUser.userId, incomingAuthUserId, AuthProvider.KEYCLOAK)
+
+    val secondLoginResolved = CountDownLatch(1)
+    val resolveCount = AtomicInteger()
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(incomingAuthUserId) } answers {
+      if (resolveCount.incrementAndGet() == 2) {
+        secondLoginResolved.countDown()
+      }
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Concurrent SSO Cleanup Retry")
+        .withAuthUserId(incomingAuthUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    }
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "sso-cleanup-concurrent-retry-realm"
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("sso-cleanup-concurrent-retry-realm") } returns
+      Optional.of(
+        io.airbyte.config
+          .Organization()
+          .withOrganizationId(tenant.organizationId),
+      )
+    val cleanupStarted = CountDownLatch(1)
+    val releaseCleanup = CountDownLatch(1)
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    every {
+      externalUserService.deleteUserByEmailOnOtherRealms(email, "sso-cleanup-concurrent-retry-realm")
+    } answers {
+      cleanupStarted.countDown()
+      check(releaseCleanup.await(10, TimeUnit.SECONDS))
+    }
+    val featureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
+    every {
+      featureFlagClient.boolVariation(
+        io.airbyte.featureflag.BypassSsoDomainValidationEnforcement,
+        any(),
+      )
+    } returns true
+    val firstHandler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        featureFlagClient = featureFlagClient,
+      )
+    val secondHandler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        featureFlagClient = featureFlagClient,
+      )
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val firstLogin =
+        executor.submit<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse> {
+          firstHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+        }
+      assertThat(cleanupStarted.await(10, TimeUnit.SECONDS)).isTrue()
+      val secondLogin =
+        executor.submit<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse> {
+          secondHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+        }
+      assertThat(secondLoginResolved.await(10, TimeUnit.SECONDS)).isTrue()
+      assertThat(secondLogin.isDone).isFalse()
+
+      releaseCleanup.countDown()
+
+      assertThat(firstLogin.get(30, TimeUnit.SECONDS).userRead.userId).isEqualTo(existingUser.userId)
+      assertThat(secondLogin.get(30, TimeUnit.SECONDS).userRead.userId).isEqualTo(existingUser.userId)
+    } finally {
+      releaseCleanup.countDown()
+      executor.shutdownNow()
+    }
+
+    verify(exactly = 1) {
+      externalUserService.deleteUserByEmailOnOtherRealms(email, "sso-cleanup-concurrent-retry-realm")
+    }
+    assertThat(userPersistence.getUserByAuthId(incomingAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+    assertThat(userPersistence.getUserByAuthId(oldAuthUserId)).isEmpty()
+  }
+
+  @Test
+  fun `SSO migration bootstrap failure rolls back incoming identity`() {
+    val tenant = tenant("sso-bootstrap-rollback")
+    val email = "sso-bootstrap-rollback@example.com"
+    val oldAuthUserId = "sso-bootstrap-rollback-old"
+    val incomingAuthUserId = "sso-bootstrap-rollback-incoming"
+    val existingUser = ordinaryUser(email)
+    userPersistence.writeUser(existingUser)
+    userPersistence.writeAuthUser(existingUser.userId, oldAuthUserId, AuthProvider.KEYCLOAK)
+    val existingApplication =
+      applicationService.createApplication(
+        io.airbyte.config.helpers.AuthenticatedUserConverter.toAuthenticatedUser(
+          existingUser,
+          oldAuthUserId,
+          AuthProvider.KEYCLOAK,
+        ),
+        "SSO Bootstrap Rollback Application",
+      )
+
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(incomingAuthUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("SSO Bootstrap Rollback")
+        .withAuthUserId(incomingAuthUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "sso-bootstrap-rollback-realm"
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("sso-bootstrap-rollback-realm") } returns
+      Optional.of(
+        io.airbyte.config
+          .Organization()
+          .withOrganizationId(tenant.organizationId),
+      )
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    every { externalUserService.getRealmByAuthUserId(oldAuthUserId) } returns "sso-bootstrap-rollback-legacy-realm"
+    val ssoConfigService = mockk<SsoConfigService>(relaxed = true)
+    every { ssoConfigService.getSsoConfigByRealmName("sso-bootstrap-rollback-legacy-realm") } returns null
+    val permissionHandler = mockk<PermissionHandler>(relaxed = true)
+    every { permissionHandler.listPermissionsForOrganization(tenant.organizationId) } returns
+      listOf(
+        io.airbyte.config
+          .UserPermission()
+          .withUser(existingUser),
+      )
+    val workspacesHandler = mockk<WorkspacesHandler>()
+    every { workspacesHandler.listWorkspacesInOrganization(any()) } returns WorkspaceReadList().workspaces(emptyList())
+    val resourceBootstrapHandler = mockk<ResourceBootstrapHandlerInterface>()
+    every { resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any(), any()) } throws ExpectedFailure()
+    val featureFlagClient = mockk<FeatureFlagClient>()
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        ssoConfigService = ssoConfigService,
+        applicationService = Optional.of(applicationService),
+        permissionHandler = permissionHandler,
+        workspacesHandler = workspacesHandler,
+        resourceBootstrapHandler = resourceBootstrapHandler,
+        featureFlagClient = featureFlagClient,
+      )
+
+    assertThatThrownBy {
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+    }.isInstanceOf(ExpectedFailure::class.java)
+
+    assertThat(userPersistence.getUserByAuthId(oldAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+    assertThat(userPersistence.getUserByAuthId(incomingAuthUserId)).isEmpty()
+    assertThat(jooq.fetchCount(Tables.APPLICATION, Tables.APPLICATION.ID.eq(UUID.fromString(existingApplication.id)))).isEqualTo(1)
+    verify(exactly = 0) { externalUserService.deleteUserByEmailOnOtherRealms(email, "sso-bootstrap-rollback-realm") }
+  }
+
+  @Test
+  fun `inactive SCIM POST between SSO migration phases prevents identity cleanup`() {
+    val tenant = tenant("sso-migration-inactive-gap")
+    val email = "sso-migration-inactive-gap@example.com"
+    val oldAuthUserId = "sso-migration-inactive-gap-old"
+    val incomingAuthUserId = "sso-migration-inactive-gap-incoming"
+    val existingUser = ordinaryUser(email)
+    userPersistence.writeUser(existingUser)
+    userPersistence.writeAuthUser(existingUser.userId, oldAuthUserId, AuthProvider.KEYCLOAK)
+    val existingApplication =
+      applicationService.createApplication(
+        io.airbyte.config.helpers.AuthenticatedUserConverter.toAuthenticatedUser(
+          existingUser,
+          oldAuthUserId,
+          AuthProvider.KEYCLOAK,
+        ),
+        "SSO Migration Gap Application",
+      )
+    val cleanupApplicationService = spyk(applicationService)
+
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(incomingAuthUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("SSO Migration Inactive Gap")
+        .withAuthUserId(incomingAuthUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "sso-migration-inactive-gap-realm"
+    val organization =
+      io.airbyte.config
+        .Organization()
+        .withOrganizationId(tenant.organizationId)
+        .withName("SSO Migration Inactive Gap")
+        .withEmail("sso-migration-inactive-gap-org@example.com")
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("sso-migration-inactive-gap-realm") } returns Optional.of(organization)
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    every { externalUserService.getRealmByAuthUserId(oldAuthUserId) } returns "sso-migration-inactive-gap-legacy-realm"
+    val ssoConfigService = mockk<SsoConfigService>(relaxed = true)
+    every { ssoConfigService.getSsoConfigByRealmName("sso-migration-inactive-gap-legacy-realm") } returns null
+    val permissionHandler =
+      PermissionHandler(
+        permissionPersistence,
+        mockk<WorkspaceService>(relaxed = true),
+        Supplier { UUID.randomUUID() },
+        permissionService,
+      )
+    val workspacesHandler = mockk<WorkspacesHandler>()
+    every { workspacesHandler.listWorkspacesInOrganization(any()) } returns
+      WorkspaceReadList().workspaces(listOf(WorkspaceRead().workspaceId(UUID.randomUUID())))
+    val featureFlagClient = mockk<FeatureFlagClient>()
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+    val phaseOneCommitted = CountDownLatch(1)
+    val releaseMigration = CountDownLatch(1)
+    val transactionExecutions = AtomicInteger()
+    val boundaryTransactions =
+      object : TransactionOperations<Connection> {
+        override fun getConnection(): Connection = transactions.connection
+
+        override fun hasConnection(): Boolean = transactions.hasConnection()
+
+        override fun findTransactionStatus(): Optional<out io.micronaut.transaction.TransactionStatus<*>> = transactions.findTransactionStatus()
+
+        override fun <R> execute(
+          definition: io.micronaut.transaction.TransactionDefinition,
+          callback: io.micronaut.transaction.TransactionCallback<Connection, R>,
+        ): R {
+          val result = transactions.execute(definition, callback)
+          if (transactionExecutions.incrementAndGet() == 1) {
+            phaseOneCommitted.countDown()
+            check(releaseMigration.await(10, TimeUnit.SECONDS))
+          }
+          return result
+        }
+      }
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        ssoConfigService = ssoConfigService,
+        applicationService = Optional.of(cleanupApplicationService),
+        permissionHandler = permissionHandler,
+        workspacesHandler = workspacesHandler,
+        featureFlagClient = featureFlagClient,
+        transactionOperations = boundaryTransactions,
+      )
+    val executor = Executors.newSingleThreadExecutor()
+
+    try {
+      val loginFuture =
+        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+          runCatching {
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+          }
+        }
+      check(phaseOneCommitted.await(10, TimeUnit.SECONDS))
+
+      val mapping =
+        mutationService.execute(tenant.context) {
+          lifecycleService.create(
+            tenant.configurationId,
+            tenant.organizationId,
+            input(false, email, "sso-migration-inactive-gap", "SSO Migration Inactive Gap"),
+          )
+        }
+      releaseMigration.countDown()
+      val loginResult = loginFuture.get(30, TimeUnit.SECONDS)
+
+      assertThat(loginResult.isFailure).isTrue()
+      verify(exactly = 0) { cleanupApplicationService.deleteApplication(any(), any()) }
+      verify(exactly = 0) { externalUserService.deleteUserByEmailOnOtherRealms(any(), any()) }
+      assertThat(jooq.fetchCount(Tables.APPLICATION, Tables.APPLICATION.ID.eq(UUID.fromString(existingApplication.id)))).isEqualTo(1)
+      assertThat(userPersistence.getUserByAuthId(oldAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+      assertThat(userPersistence.getUserByAuthId(incomingAuthUserId)).isEmpty()
+      assertThat(mapping.userId).isEqualTo(existingUser.userId)
+      assertThat(mapping.active).isFalse()
+    } finally {
+      releaseMigration.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `restricted domain rejects an absent raw subject without deleting the external identity`() {
+    val authUserId = "restricted-domain-absent-subject"
+    val email = "restricted-domain-absent@example.com"
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(authUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Restricted Domain User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "restricted-domain-realm"
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    val organizationEmailDomainService = mockk<OrganizationEmailDomainService>()
+    every { organizationEmailDomainService.findByEmailDomain("example.com") } returns
+      listOf(
+        io.airbyte.config
+          .OrganizationEmailDomain()
+          .withOrganizationId(UUID.randomUUID())
+          .withEmailDomain("example.com"),
+      )
+    val featureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
+    every {
+      featureFlagClient.boolVariation(
+        io.airbyte.featureflag.RestrictLoginsForSSODomains,
+        any(),
+      )
+    } returns true
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("restricted-domain-realm") } returns Optional.empty()
+
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        organizationEmailDomainService = organizationEmailDomainService,
+        featureFlagClient = featureFlagClient,
+      )
+
+    assertThatThrownBy {
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+    }.isInstanceOf(io.airbyte.api.problems.throwable.generated.SSORequiredProblem::class.java)
+
+    verify(exactly = 0) { externalUserService.deleteUserByExternalId(any(), any()) }
+    assertThat(jooq.fetchCount(Tables.USER, Tables.USER.EMAIL.equalIgnoreCase(email))).isZero()
+  }
+
+  @Test
+  fun `no-match login conflict does not delete an unowned external subject`() {
+    val email = "no-match-conflict@example.com"
+    val existingAuthUserId = "no-match-existing-subject"
+    val incomingAuthUserId = "no-match-incoming-subject"
+    val existingUser = ordinaryUser(email)
+    userPersistence.writeUser(existingUser)
+    userPersistence.writeAuthUser(existingUser.userId, existingAuthUserId, AuthProvider.KEYCLOAK)
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(incomingAuthUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("No Match Conflict")
+        .withAuthUserId(incomingAuthUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns "no-match-incoming-realm"
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    every { externalUserService.getRealmByAuthUserId(existingAuthUserId) } returns "no-match-existing-realm"
+    val ssoConfigService = mockk<SsoConfigService>(relaxed = true)
+    every { ssoConfigService.getSsoConfigByRealmName("no-match-existing-realm") } returns null
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("no-match-incoming-realm") } returns Optional.empty()
+
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        ssoConfigService = ssoConfigService,
+      )
+
+    assertThatThrownBy {
+      handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+    }.isInstanceOf(io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem::class.java)
+
+    verify(exactly = 0) { externalUserService.deleteUserByExternalId(any(), any()) }
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(incomingAuthUserId))).isZero()
+    assertThat(userPersistence.getUserByAuthId(existingAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+  }
+
+  @Test
+  fun `old global email cannot attach active or inactive SCIM Users with or without verification`() {
+    listOf(true, false).forEach { active ->
+      listOf(true, false).forEach { verified ->
+        val suffix = "${if (active) "active" else "inactive"}-${if (verified) "verified" else "unverified"}"
+        val tenant = tenant("old-email-$suffix")
+        val oldEmail = "old-$suffix@example.com"
+        val currentEmail = "current-$suffix@example.com"
+        val mapped =
+          mutationService.execute(tenant.context) {
+            lifecycleService.create(
+              tenant.configurationId,
+              tenant.organizationId,
+              input(active, oldEmail, "old-email-$suffix", "Mapped User"),
+            )
+          }
+        mutationService.execute(tenant.context) {
+          lifecycleService.replace(
+            tenant.configurationId,
+            tenant.organizationId,
+            mapped.id,
+            input(active, currentEmail, "old-email-$suffix", "Mapped User"),
+          )
+        }
+        val authUserId = "old-email-$suffix-subject"
+        val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+        every { authenticationResolver.resolveUser(authUserId) } returns
+          AuthenticatedUser()
+            .withEmail(oldEmail)
+            .withName("Mapped User")
+            .withAuthUserId(authUserId)
+            .withAuthProvider(AuthProvider.KEYCLOAK)
+        every { authenticationResolver.resolveVerifiedEmail() } returns oldEmail.takeIf { verified }
+        every { authenticationResolver.resolveRealm() } returns null
+        val handler =
+          loginHandler(
+            authenticationResolver = authenticationResolver,
+            userId = UUID.randomUUID(),
+          )
+
+        assertThatThrownBy {
+          handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+        }.isInstanceOf(io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem::class.java)
+
+        assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isZero()
+        assertThat(jooq.fetchCount(Tables.USER, Tables.USER.ID.eq(mapped.userId))).isEqualTo(1)
+        assertThat(
+          mappingRepository
+            .findUser(mapped.id, tenant.configurationId, tenant.organizationId)
+            ?.primaryEmail,
+        ).isEqualTo(currentEmail)
+      }
+    }
+  }
+
+  @Test
+  fun `raw authentication subject with different User owners fails closed for user and permission reads`() {
+    val tenantA = tenant("raw-subject-owner-a")
+    val tenantB = tenant("raw-subject-owner-b")
+    val userA = userRepository.save(ScimAirbyteUser(name = "Owner A", email = "owner-a@example.com"))
+    val userB = userRepository.save(ScimAirbyteUser(name = "Owner B", email = "owner-b@example.com"))
+    permissionRepository.save(
+      Permission(
+        userId = userA.id,
+        organizationId = tenantA.organizationId,
+        permissionType = PermissionType.organization_admin,
+      ),
+    )
+    permissionRepository.save(
+      Permission(
+        userId = userB.id,
+        organizationId = tenantB.organizationId,
+        permissionType = PermissionType.organization_admin,
+      ),
+    )
+    val authUserId = "schema-valid-cross-provider-collision"
+    insertAuthUser(userA.id!!, authUserId, AuthProvider.KEYCLOAK)
+    insertAuthUser(userB.id!!, authUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+
+    assertThat(userPersistence.getUserByAuthId(authUserId)).isEmpty()
+    assertThat(permissionService.getPermissionsByAuthUserId(authUserId)).isEmpty()
+    assertThat(
+      permissionPersistence.findPermissionTypeForUserAndOrganization(tenantA.organizationId, authUserId),
+    ).isNull()
+    assertThat(
+      permissionPersistence.findPermissionTypeForUserAndOrganization(tenantB.organizationId, authUserId),
+    ).isNull()
+
+    val roleResolver = roleResolver()
+    assertThat(
+      roleResolver
+        .newRequest()
+        .withSubject(authUserId, TokenType.USER)
+        .withOrg(tenantA.organizationId)
+        .roles(),
+    ).containsExactly(AuthRoleConstants.AUTHENTICATED_USER)
+    assertThat(
+      roleResolver
+        .newRequest()
+        .withSubject(authUserId, TokenType.USER)
+        .withOrg(tenantB.organizationId)
+        .roles(),
+    ).containsExactly(AuthRoleConstants.AUTHENTICATED_USER)
+  }
+
+  @Test
+  fun `same User cross-provider authentication rows do not duplicate permission reads`() {
+    val tenant = tenant("same-owner-cross-provider")
+    val user = userRepository.save(ScimAirbyteUser(name = "Same Owner", email = "same-owner@example.com"))
+    val permission =
+      permissionRepository.save(
+        Permission(
+          userId = user.id,
+          organizationId = tenant.organizationId,
+          permissionType = PermissionType.organization_admin,
+        ),
+      )
+    val authUserId = "schema-valid-same-owner-cross-provider"
+    insertAuthUser(user.id!!, authUserId, AuthProvider.KEYCLOAK)
+    insertAuthUser(user.id!!, authUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+
+    assertThat(userPersistence.getUserByAuthId(authUserId).orElseThrow().userId).isEqualTo(user.id)
+    assertThat(permissionService.getPermissionsByAuthUserId(authUserId).map { it.permissionId })
+      .containsExactly(permission.id)
+    assertThat(
+      permissionPersistence.findPermissionTypeForUserAndOrganization(tenant.organizationId, authUserId),
+    ).isEqualTo(io.airbyte.config.Permission.PermissionType.ORGANIZATION_ADMIN)
+  }
+
+  @Test
+  fun `cross-provider first-login repeat preserves one identity and permission resolution`() {
+    val tenant = tenant("cross-provider-first-login")
+    val email = "cross-provider-first-login@example.com"
+    val mapped =
+      mutationService.execute(tenant.context) {
+        lifecycleService.create(tenant.configurationId, tenant.organizationId, input(true, userName = email))
+      }
+    val workspaceId = workspace(tenant.organizationId, "cross-provider-first-login-workspace")
+    permissionRepository.save(
+      Permission(
+        userId = mapped.userId,
+        workspaceId = workspaceId,
+        permissionType = PermissionType.workspace_admin,
+      ),
+    )
+    val authUserId = "cross-provider-first-login-subject"
+    userPersistence.writeAuthUser(mapped.userId, authUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+
+    val unverifiedRepeat =
+      firstLoginService.attachIfPreProvisioned(
+        email,
+        null,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+      )
+    val verifiedRepeat =
+      firstLoginService.attachIfPreProvisioned(
+        email,
+        email,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+      )
+
+    assertThat(unverifiedRepeat).isEqualTo(ScimFirstLoginAttachmentResult.AlreadyAttached(mapped.userId))
+    assertThat(verifiedRepeat).isEqualTo(ScimFirstLoginAttachmentResult.AlreadyAttached(mapped.userId))
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isEqualTo(1)
+    assertThat(
+      permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, authUserId),
+    ).isEqualTo(io.airbyte.config.Permission.PermissionType.WORKSPACE_ADMIN)
+    assertThat(
+      permissionPersistence.findPermissionTypeForUserAndOrganization(tenant.organizationId, authUserId),
+    ).isEqualTo(io.airbyte.config.Permission.PermissionType.ORGANIZATION_MEMBER)
+  }
+
+  @Test
+  fun `unverified and absent verification claims never attach a matching pre-provisioned User`() {
+    val tenant = tenant("first-login-unverified")
+    val email = "unverified-mapped@example.com"
+    val created =
+      mutationService.execute(tenant.context) {
+        lifecycleService.create(tenant.configurationId, tenant.organizationId, input(true, userName = email))
+      }
+
+    val unverified =
+      firstLoginService.attachIfPreProvisioned(
+        email,
+        null,
+        "unverified-auth-user",
+        AuthProvider.KEYCLOAK,
+      )
+    val absent =
+      firstLoginService.attachIfPreProvisioned(
+        email,
+        null,
+        "absent-verification-auth-user",
+        AuthProvider.KEYCLOAK,
+      )
+
+    assertThat(unverified).isEqualTo(ScimFirstLoginAttachmentResult.EmailNotVerified)
+    assertThat(absent).isEqualTo(ScimFirstLoginAttachmentResult.EmailNotVerified)
+    assertThat(jooq.fetchCount(Tables.AUTH_USER)).isZero()
+    assertThat(jooq.fetchCount(Tables.USER)).isEqualTo(1)
+    assertThat(userRepository.findById(created.userId)).isPresent
+  }
+
+  @Test
+  fun `matching mappings for different Users fail closed with no identity write`() {
+    val tenantA = tenant("first-login-conflict-a")
+    val tenantB = tenant("first-login-conflict-b")
+    val email = "mapping-conflict@example.com"
+    val createdA =
+      mutationService.execute(tenantA.context) {
+        lifecycleService.create(tenantA.configurationId, tenantA.organizationId, input(true, userName = email))
+      }
+    val otherUser = userRepository.save(ScimAirbyteUser(name = "Other User", email = "other-user@example.com"))
+    mappingRepository.save(
+      ScimResourceMapping(
+        scimConfigurationId = tenantB.configurationId,
+        organizationId = tenantB.organizationId,
+        resourceType = ScimResourceType.USER,
+        userId = otherUser.id,
+        externalId = "other-user",
+        userName = email,
+        primaryEmail = email,
+        userActive = false,
+        attributes = objectMapper.createObjectNode(),
+      ),
+    )
+
+    val result =
+      firstLoginService.attachIfPreProvisioned(
+        email.uppercase(),
+        email,
+        "conflicting-mapping-auth-user",
+        AuthProvider.KEYCLOAK,
+      )
+
+    assertThat(result).isEqualTo(ScimFirstLoginAttachmentResult.Conflict)
+    assertThat(jooq.fetchCount(Tables.AUTH_USER)).isZero()
+    assertThat(jooq.fetchCount(Tables.USER)).isEqualTo(2)
+    assertThat(userRepository.findById(createdA.userId)).isPresent
+    assertThat(userRepository.findById(otherUser.id)).isPresent
+  }
+
+  @Test
+  fun `identity already attached to another User fails closed without replacing it`() {
+    val tenant = tenant("first-login-identity-conflict")
+    val email = "identity-conflict@example.com"
+    val mapped =
+      mutationService.execute(tenant.context) {
+        lifecycleService.create(tenant.configurationId, tenant.organizationId, input(true, userName = email))
+      }
+    val otherUser = userRepository.save(ScimAirbyteUser(name = "Other User", email = "identity-owner@example.com"))
+    val authUserId = "identity-owned-elsewhere"
+    userPersistence.writeAuthUser(otherUser.id, authUserId, AuthProvider.KEYCLOAK)
+
+    val result =
+      firstLoginService.attachIfPreProvisioned(
+        email,
+        email,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+      )
+
+    assertThat(result).isEqualTo(ScimFirstLoginAttachmentResult.Conflict)
+    assertThat(jooq.fetchCount(Tables.AUTH_USER)).isEqualTo(1)
+    assertThat(
+      jooq
+        .select(Tables.AUTH_USER.USER_ID)
+        .from(Tables.AUTH_USER)
+        .where(Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))
+        .fetchOne(Tables.AUTH_USER.USER_ID),
+    ).isEqualTo(otherUser.id)
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.USER_ID.eq(mapped.userId))).isZero()
+  }
+
+  @Test
+  fun `same authentication id cannot attach different Users across providers or combine their roles`() {
+    val tenant = tenant("first-login-shared-provider-mapped")
+    val ownerTenant = tenant("first-login-shared-provider-owner")
+    val email = "provider-aware-identity@example.com"
+    val mapped =
+      mutationService.execute(tenant.context) {
+        lifecycleService.create(tenant.configurationId, tenant.organizationId, input(true, userName = email))
+      }
+    val otherUser = userRepository.save(ScimAirbyteUser(name = "Other User", email = "other-provider@example.com"))
+    permissionRepository.save(
+      Permission(
+        userId = otherUser.id,
+        organizationId = ownerTenant.organizationId,
+        permissionType = PermissionType.organization_admin,
+      ),
+    )
+    val sharedAuthUserId = "shared-provider-auth-user-id"
+    val mappedAuthUserId = "mapped-provider-auth-user-id"
+    userPersistence.writeAuthUser(otherUser.id, sharedAuthUserId, AuthProvider.KEYCLOAK)
+    userPersistence.writeAuthUser(mapped.userId, mappedAuthUserId, AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+
+    val conflict =
+      firstLoginService.attachIfPreProvisioned(
+        email,
+        email,
+        sharedAuthUserId,
+        AuthProvider.GOOGLE_IDENTITY_PLATFORM,
+      )
+
+    assertThat(conflict).isEqualTo(ScimFirstLoginAttachmentResult.Conflict)
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(sharedAuthUserId))).isEqualTo(1)
+    assertThat(userPersistence.getUserByAuthId(sharedAuthUserId).orElseThrow().userId).isEqualTo(otherUser.id)
+    assertThat(userPersistence.getUserByAuthId(mappedAuthUserId).orElseThrow().userId).isEqualTo(mapped.userId)
+
+    val permissionHandler = PermissionHandler(null, mockk<WorkspaceService>(), null, permissionService)
+    val roleResolver =
+      RoleResolver(
+        context.getBean(AuthenticationHeaderResolver::class.java),
+        mockk<CurrentUserService>(),
+        null,
+        permissionHandler,
+      )
+    assertThat(
+      roleResolver
+        .newRequest()
+        .withSubject(sharedAuthUserId, TokenType.USER)
+        .withOrg(tenant.organizationId)
+        .roles(),
+    ).containsExactly(AuthRoleConstants.AUTHENTICATED_USER)
+    assertThat(
+      roleResolver
+        .newRequest()
+        .withSubject(sharedAuthUserId, TokenType.USER)
+        .withOrg(ownerTenant.organizationId)
+        .roles(),
+    ).contains(AuthRoleConstants.ORGANIZATION_ADMIN)
+    assertThat(
+      roleResolver
+        .newRequest()
+        .withSubject(mappedAuthUserId, TokenType.USER)
+        .withOrg(tenant.organizationId)
+        .roles(),
+    ).contains(AuthRoleConstants.ORGANIZATION_MEMBER)
+    assertThat(
+      roleResolver
+        .newRequest()
+        .withSubject(mappedAuthUserId, TokenType.USER)
+        .withOrg(ownerTenant.organizationId)
+        .roles(),
+    ).containsExactly(AuthRoleConstants.AUTHENTICATED_USER)
+  }
+
+  @Test
+  fun `repeating the same normal authentication identity write is idempotent`() {
+    val user = userRepository.save(ScimAirbyteUser(name = "Identity Owner", email = "identity-owner@example.com"))
+    val authUserId = "idempotent-normal-auth-user"
+
+    assertThat(userPersistence.writeAuthUser(user.id, authUserId, AuthProvider.KEYCLOAK)).isTrue()
+    assertThat(userPersistence.writeAuthUser(user.id, authUserId, AuthProvider.KEYCLOAK)).isTrue()
+
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isEqualTo(1)
+    assertThat(userPersistence.getUserByAuthId(authUserId).orElseThrow().userId).isEqualTo(user.id)
+  }
+
+  @Test
+  fun `normal authentication replacement rejects a raw subject owned by another User across providers`() {
+    val owner = userRepository.save(ScimAirbyteUser(name = "Identity Owner", email = "replacement-owner@example.com"))
+    val target = userRepository.save(ScimAirbyteUser(name = "Replacement Target", email = "replacement-target@example.com"))
+    val authUserId = "replacement-owned-auth-user"
+    val targetAuthUserId = "replacement-target-auth-user"
+    userPersistence.writeAuthUser(owner.id, authUserId, AuthProvider.KEYCLOAK)
+    userPersistence.writeAuthUser(target.id, targetAuthUserId, AuthProvider.KEYCLOAK)
+
+    assertThat(
+      userPersistence.replaceAuthUserForUserId(
+        target.id,
+        authUserId,
+        AuthProvider.GOOGLE_IDENTITY_PLATFORM,
+      ),
+    ).isFalse()
+
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isEqualTo(1)
+    assertThat(userPersistence.getUserByAuthId(authUserId).orElseThrow().userId).isEqualTo(owner.id)
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(targetAuthUserId))).isEqualTo(1)
+    assertThat(userPersistence.getUserByAuthId(targetAuthUserId).orElseThrow().userId).isEqualTo(target.id)
+  }
+
+  @Test
+  fun `concurrent different mapped Users cannot claim the same authentication identity`() {
+    val tenantA = tenant("first-login-race-a")
+    val tenantB = tenant("first-login-race-b")
+    val emailA = "identity-race-a@example.com"
+    val emailB = "identity-race-b@example.com"
+    val createdA =
+      mutationService.execute(tenantA.context) {
+        lifecycleService.create(tenantA.configurationId, tenantA.organizationId, input(true, userName = emailA))
+      }
+    val createdB =
+      mutationService.execute(tenantB.context) {
+        lifecycleService.create(tenantB.configurationId, tenantB.organizationId, input(true, userName = emailB))
+      }
+    val authUserId = "concurrent-first-login-identity"
+    val start = CountDownLatch(1)
+    val executor = Executors.newFixedThreadPool(2)
+
+    val futures =
+      listOf(emailA, emailB).map { email ->
+        executor.submit<ScimFirstLoginAttachmentResult> {
+          start.await()
+          firstLoginService.attachIfPreProvisioned(email, email, authUserId, AuthProvider.KEYCLOAK)
+        }
+      }
+    start.countDown()
+    val results = futures.map { it.get(30, TimeUnit.SECONDS) }
+    executor.shutdownNow()
+
+    assertThat(results.filterIsInstance<ScimFirstLoginAttachmentResult.Attached>()).hasSize(1)
+    assertThat(results.count { it == ScimFirstLoginAttachmentResult.Conflict }).isEqualTo(1)
+    assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isEqualTo(1)
+    val attachedUserId =
+      jooq
+        .select(Tables.AUTH_USER.USER_ID)
+        .from(Tables.AUTH_USER)
+        .where(Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))
+        .fetchOne(Tables.AUTH_USER.USER_ID)
+    assertThat(attachedUserId).isIn(createdA.userId, createdB.userId)
+    assertThat(jooq.fetchCount(Tables.USER)).isEqualTo(2)
+  }
+
+  @Test
+  fun `first-login attachment winning a cross-provider race resolves the normal login to the attached User`() {
+    val tenant = tenant("first-login-normal-race")
+    val mappedEmail = "first-login-race-mapped@example.com"
+    val normalEmail = "first-login-race-normal@example.com"
+    val mapped =
+      mutationService.execute(tenant.context) {
+        lifecycleService.create(tenant.configurationId, tenant.organizationId, input(true, userName = mappedEmail))
+      }
+    val authUserId = "first-login-normal-race-subject"
+    val ownershipChecked = CountDownLatch(1)
+    val releaseAttachment = CountDownLatch(1)
+    val pauseFirstOwnershipCheck = AtomicBoolean(true)
+    val concurrentAuthUserRepository = spyk(context.getBean(ScimAuthUserRepository::class.java))
+    every { concurrentAuthUserRepository.findByAuthUserIdForUpdate(authUserId) } answers {
+      callOriginal().also {
+        if (pauseFirstOwnershipCheck.compareAndSet(true, false)) {
+          check(it.isEmpty())
+          ownershipChecked.countDown()
+          check(releaseAttachment.await(10, TimeUnit.SECONDS))
+        }
+      }
+    }
+    val concurrentFirstLoginService =
+      ScimFirstLoginService(
+        mappingRepository,
+        userRepository,
+        concurrentAuthUserRepository,
+      )
+    val normalUserId = UUID.randomUUID()
+    val defaultWorkspaceId = workspace(tenant.organizationId, "first-login-normal-race-workspace")
+    val incomingUser =
+      AuthenticatedUser()
+        .withEmail(normalEmail)
+        .withName("Normal Login User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(authUserId) } returns incomingUser
+    every { authenticationResolver.resolveVerifiedEmail() } returns normalEmail
+    every { authenticationResolver.resolveRealm() } returns null
+    val resourceBootstrapHandler = mockk<ResourceBootstrapHandlerInterface>()
+    every { resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any()) } returns
+      WorkspaceRead().workspaceId(defaultWorkspaceId)
+    val handler =
+      UserHandler(
+        userPersistence,
+        mockk<ExternalUserService>(relaxed = true),
+        mockk<OrganizationService>(relaxed = true),
+        mockk<SsoConfigService>(relaxed = true),
+        mockk<OrganizationEmailDomainService>(relaxed = true),
+        Optional.empty(),
+        mockk<PermissionHandler>(relaxed = true),
+        mockk<WorkspacesHandler>(relaxed = true),
+        Supplier { normalUserId },
+        authenticationResolver,
+        Optional.empty<InitialUserConfig>(),
+        resourceBootstrapHandler,
+        mockk<FeatureFlagClient>(relaxed = true),
+        concurrentFirstLoginService,
+        transactions,
+      )
+    val normalCompleted = CountDownLatch(1)
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val attachmentFuture =
+        executor.submit<ScimFirstLoginAttachmentResult> {
+          transactions.executeWrite {
+            concurrentFirstLoginService.attachIfPreProvisioned(
+              mappedEmail,
+              mappedEmail,
+              authUserId,
+              AuthProvider.KEYCLOAK,
+            )
+          }
+        }
+      check(ownershipChecked.await(10, TimeUnit.SECONDS))
+
+      val normalLoginFuture =
+        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+          runCatching {
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+          }.also { normalCompleted.countDown() }
+        }
+
+      assertThat(normalCompleted.await(1, TimeUnit.SECONDS)).isFalse()
+      releaseAttachment.countDown()
+
+      assertThat(attachmentFuture.get(30, TimeUnit.SECONDS))
+        .isEqualTo(ScimFirstLoginAttachmentResult.Attached(mapped.userId))
+      val normalLogin = normalLoginFuture.get(30, TimeUnit.SECONDS).getOrThrow()
+      assertThat(normalLogin.newUserCreated).isFalse()
+      assertThat(normalLogin.userRead.userId).isEqualTo(mapped.userId)
+      assertThat(userPersistence.getUser(normalUserId)).isEmpty()
+      assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isEqualTo(1)
+      assertThat(userPersistence.getUserByAuthId(authUserId).orElseThrow().userId).isEqualTo(mapped.userId)
+    } finally {
+      releaseAttachment.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `normal login winning a cross-provider race makes first-login attachment fail closed`() {
+    val tenant = tenant("normal-first-login-race")
+    val mappedEmail = "normal-first-login-race-mapped@example.com"
+    val normalEmail = "normal-first-login-race-normal@example.com"
+    val mapped =
+      mutationService.execute(tenant.context) {
+        lifecycleService.create(tenant.configurationId, tenant.organizationId, input(true, userName = mappedEmail))
+      }
+    val authUserId = "normal-first-login-race-subject"
+    val normalCreateAttempted = CountDownLatch(1)
+    val releaseNormalCreate = CountDownLatch(1)
+    val concurrentUserPersistence = spyk(userPersistence)
+    every { concurrentUserPersistence.createAuthenticatedUserIfNoScimMapping(any(), any()) } answers {
+      normalCreateAttempted.countDown()
+      check(releaseNormalCreate.await(10, TimeUnit.SECONDS))
+      callOriginal()
+    }
+    val normalUserId = UUID.randomUUID()
+    val defaultWorkspaceId = workspace(tenant.organizationId, "normal-first-login-race-workspace")
+    val incomingUser =
+      AuthenticatedUser()
+        .withEmail(normalEmail)
+        .withName("Normal Login User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.GOOGLE_IDENTITY_PLATFORM)
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(authUserId) } returns incomingUser
+    every { authenticationResolver.resolveVerifiedEmail() } returns normalEmail
+    every { authenticationResolver.resolveRealm() } returns null
+    val resourceBootstrapHandler = mockk<ResourceBootstrapHandlerInterface>()
+    every { resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any()) } returns
+      WorkspaceRead().workspaceId(defaultWorkspaceId)
+    val handler =
+      UserHandler(
+        concurrentUserPersistence,
+        mockk<ExternalUserService>(relaxed = true),
+        mockk<OrganizationService>(relaxed = true),
+        mockk<SsoConfigService>(relaxed = true),
+        mockk<OrganizationEmailDomainService>(relaxed = true),
+        Optional.empty(),
+        mockk<PermissionHandler>(relaxed = true),
+        mockk<WorkspacesHandler>(relaxed = true),
+        Supplier { normalUserId },
+        authenticationResolver,
+        Optional.empty<InitialUserConfig>(),
+        resourceBootstrapHandler,
+        mockk<FeatureFlagClient>(relaxed = true),
+        firstLoginService,
+        transactions,
+      )
+    val initialWaiters = advisoryLockWaiterCount()
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val normalLoginFuture =
+        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+          runCatching {
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+          }
+        }
+      check(normalCreateAttempted.await(10, TimeUnit.SECONDS))
+
+      val attachmentFuture =
+        executor.submit<ScimFirstLoginAttachmentResult> {
+          firstLoginService.attachIfPreProvisioned(
+            mappedEmail,
+            mappedEmail,
+            authUserId,
+            AuthProvider.KEYCLOAK,
+          )
+        }
+      check(waitForAdvisoryLockWaiters(initialWaiters + 1))
+      releaseNormalCreate.countDown()
+
+      val normalResult = normalLoginFuture.get(30, TimeUnit.SECONDS).getOrThrow()
+      assertThat(normalResult.newUserCreated).isTrue()
+      assertThat(normalResult.userRead.userId).isEqualTo(normalUserId)
+      assertThat(attachmentFuture.get(30, TimeUnit.SECONDS)).isEqualTo(ScimFirstLoginAttachmentResult.Conflict)
+      assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isEqualTo(1)
+      assertThat(userPersistence.getUserByAuthId(authUserId).orElseThrow().userId).isEqualTo(normalUserId)
+      assertThat(userRepository.findById(mapped.userId)).isPresent
+    } finally {
+      releaseNormalCreate.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `concurrent SCIM POST cannot interleave between NoMatch and orphan relink`() {
+    val tenant = tenant("orphan-relink-post-race")
+    val email = "orphan-relink-post-race@example.com"
+    val existingUser = ordinaryUser(email)
+    userPersistence.writeUser(existingUser)
+    val authUserId = "orphan-relink-post-race-subject"
+    val decisionComplete = CountDownLatch(1)
+    val releaseFallback = CountDownLatch(1)
+    val attachmentCalls = AtomicInteger()
+    val concurrentFirstLoginService =
+      spyk(
+        ScimFirstLoginService(
+          mappingRepository,
+          userRepository,
+          context.getBean(ScimAuthUserRepository::class.java),
+        ),
+      )
+    every {
+      concurrentFirstLoginService.attachIfPreProvisioned(
+        email,
+        email,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+      )
+    } answers {
+      callOriginal().also {
+        if (attachmentCalls.getAndIncrement() == 0) {
+          check(it == ScimFirstLoginAttachmentResult.NoMatch)
+          decisionComplete.countDown()
+          check(releaseFallback.await(10, TimeUnit.SECONDS))
+        }
+      }
+    }
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(authUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Orphan User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns null
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        attachmentService = concurrentFirstLoginService,
+      )
+    val initialWaiters = advisoryLockWaiterCount()
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val loginFuture =
+        executor.submit<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse> {
+          handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+        }
+      check(decisionComplete.await(10, TimeUnit.SECONDS))
+
+      val scimFuture =
+        executor.submit<io.airbyte.domain.models.scim.ScimUserRead> {
+          mutationService.execute(tenant.context) {
+            lifecycleService.create(
+              tenant.configurationId,
+              tenant.organizationId,
+              input(true, email, "orphan-relink-post-race", "Orphan User"),
+            )
+          }
+        }
+      check(waitForAdvisoryLockWaiters(initialWaiters + 1))
+
+      assertThat(scimFuture.isDone).isFalse()
+      assertThat(jooq.fetchCount(Tables.AUTH_USER, Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))).isZero()
+      releaseFallback.countDown()
+
+      val login = loginFuture.get(30, TimeUnit.SECONDS)
+      val mapping = scimFuture.get(30, TimeUnit.SECONDS)
+      assertThat(login.newUserCreated).isFalse()
+      assertThat(login.userRead.userId).isEqualTo(existingUser.userId)
+      assertThat(mapping.userId).isEqualTo(existingUser.userId)
+      assertThat(userPersistence.getUserByAuthId(authUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+      assertThat(jooq.fetchCount(Tables.USER, Tables.USER.EMAIL.equalIgnoreCase(email))).isEqualTo(1)
+    } finally {
+      releaseFallback.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `orphan relink revokes existing and concurrent applications before old subject reassignment`() {
+    val email = "orphan-relink-application-race@example.com"
+    val existingUser = ordinaryUser(email)
+    val oldAuthUserId = "orphan-relink-application-old"
+    val incomingAuthUserId = "orphan-relink-application-incoming"
+    userPersistence.writeUser(existingUser)
+    userPersistence.writeAuthUser(existingUser.userId, oldAuthUserId, AuthProvider.KEYCLOAK)
+    val oldAuthedUser =
+      io.airbyte.config.helpers.AuthenticatedUserConverter.toAuthenticatedUser(
+        existingUser,
+        oldAuthUserId,
+        AuthProvider.KEYCLOAK,
+      )
+    val existingApplication = applicationService.createApplication(oldAuthedUser, "Existing Orphan Application")
+
+    val applicationCreationHasIdentityLock = CountDownLatch(1)
+    val releaseApplicationCreation = CountDownLatch(1)
+    val pauseFirstApplicationOperation = AtomicBoolean(true)
+    val concurrentOwnershipService =
+      object : ScimAuthUserOwnershipService(context.getBean(ScimAuthUserRepository::class.java)) {
+        override fun <T> withUniqueOwner(
+          authUserId: String,
+          expectedUserId: UUID?,
+          operation: () -> T,
+        ): T =
+          super.withUniqueOwner(authUserId, expectedUserId) {
+            if (authUserId == oldAuthUserId && pauseFirstApplicationOperation.compareAndSet(true, false)) {
+              applicationCreationHasIdentityLock.countDown()
+              check(releaseApplicationCreation.await(10, TimeUnit.SECONDS))
+            }
+            operation()
+          }
+      }
+    val concurrentApplicationService =
+      ApplicationServiceDataImpl(
+        context.getBean(ApplicationRepository::class.java),
+        context.getBean(AirbyteAuthConfig::class.java),
+        jwtTokenGenerator,
+        concurrentOwnershipService,
+      )
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(incomingAuthUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Orphan Relink Application")
+        .withAuthUserId(incomingAuthUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns email
+    every { authenticationResolver.resolveRealm() } returns null
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    every { externalUserService.getRealmByAuthUserId(oldAuthUserId) } returns null
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        applicationService = Optional.of(concurrentApplicationService),
+      )
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val applicationFuture =
+        executor.submit<io.airbyte.config.Application> {
+          transactions.executeWrite {
+            concurrentApplicationService.createApplication(oldAuthedUser, "Concurrent Orphan Application")
+          }
+        }
+      check(applicationCreationHasIdentityLock.await(10, TimeUnit.SECONDS))
+
+      val loginFuture =
+        executor.submit<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse> {
+          handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+        }
+      assertThat(loginFuture.isDone).isFalse()
+
+      releaseApplicationCreation.countDown()
+      val concurrentApplication = applicationFuture.get(30, TimeUnit.SECONDS)
+      val login = loginFuture.get(30, TimeUnit.SECONDS)
+
+      assertThat(login.userRead.userId).isEqualTo(existingUser.userId)
+      assertThat(jooq.fetchCount(Tables.APPLICATION, Tables.APPLICATION.AUTH_USER_ID.eq(oldAuthUserId))).isZero()
+      assertThat(userPersistence.getUserByAuthId(oldAuthUserId)).isEmpty()
+      assertThat(userPersistence.getUserByAuthId(incomingAuthUserId).orElseThrow().userId).isEqualTo(existingUser.userId)
+
+      val laterOwner = ordinaryUser("orphan-relink-later-owner@example.com")
+      userPersistence.writeUser(laterOwner)
+      assertThat(userPersistence.writeAuthUser(laterOwner.userId, oldAuthUserId, AuthProvider.KEYCLOAK)).isTrue()
+      assertThatThrownBy {
+        concurrentApplicationService.getToken(existingApplication.clientId, existingApplication.clientSecret)
+      }.isInstanceOf(IllegalArgumentException::class.java)
+      assertThatThrownBy {
+        concurrentApplicationService.getToken(concurrentApplication.clientId, concurrentApplication.clientSecret)
+      }.isInstanceOf(IllegalArgumentException::class.java)
+    } finally {
+      releaseApplicationCreation.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `SCIM POST winning the email lock prevents default User clearing and login side effects`() {
+    val tenant = tenant("default-user-post-race")
+    val email = "default-user-post-race@example.com"
+    userPersistence.writeUser(ordinaryUser(email).withUserId(io.airbyte.commons.DEFAULT_USER_ID))
+    val mappingHasLock = CountDownLatch(1)
+    val releaseMapping = CountDownLatch(1)
+    val concurrentUserRepository = spyk(userRepository)
+    every { concurrentUserRepository.acquireGlobalEmailLock(email) } answers {
+      callOriginal().also {
+        mappingHasLock.countDown()
+        check(releaseMapping.await(10, TimeUnit.SECONDS))
+      }
+    }
+    val concurrentLifecycle =
+      ScimUserLifecycleService(
+        mappingRepository,
+        concurrentUserRepository,
+        permissionRepository,
+        groupMemberRepository,
+      )
+    val authUserId = "default-user-post-race-subject"
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(authUserId) } returns
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Default User Login")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns null
+    every { authenticationResolver.resolveRealm() } returns null
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+      )
+    val initialWaiters = advisoryLockWaiterCount()
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val scimFuture =
+        executor.submit<io.airbyte.domain.models.scim.ScimUserRead> {
+          mutationService.execute(tenant.context) {
+            concurrentLifecycle.create(
+              tenant.configurationId,
+              tenant.organizationId,
+              input(true, email, "default-user-post-race", "Default User"),
+            )
+          }
+        }
+      check(mappingHasLock.await(10, TimeUnit.SECONDS))
+
+      val loginFuture =
+        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+          runCatching {
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+          }
+        }
+      check(waitForAdvisoryLockWaiters(initialWaiters + 1))
+
+      assertThat(loginFuture.isDone).isFalse()
+      assertThat(userPersistence.getUser(io.airbyte.commons.DEFAULT_USER_ID).orElseThrow().email).isEqualTo(email)
+      assertThat(jooq.fetchCount(Tables.AUTH_USER)).isZero()
+      releaseMapping.countDown()
+
+      val mapping = scimFuture.get(30, TimeUnit.SECONDS)
+      val login = loginFuture.get(30, TimeUnit.SECONDS)
+      assertThat(login.exceptionOrNull())
+        .isInstanceOf(io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem::class.java)
+      assertThat(mapping.userId).isEqualTo(io.airbyte.commons.DEFAULT_USER_ID)
+      assertThat(userPersistence.getUser(io.airbyte.commons.DEFAULT_USER_ID).orElseThrow().email).isEqualTo(email)
+      assertThat(jooq.fetchCount(Tables.USER)).isEqualTo(1)
+      assertThat(jooq.fetchCount(Tables.AUTH_USER)).isZero()
+    } finally {
+      releaseMapping.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `concurrent mapping email transition cannot interleave before SSO migration side effects`() {
+    val tenant = tenant("sso-transition-race")
+    val loginEmail = "sso-transition-stale-global@example.com"
+    val currentMappingEmail = "sso-transition-current@example.com"
+    val mapped =
+      mutationService.execute(tenant.context) {
+        lifecycleService.create(
+          tenant.configurationId,
+          tenant.organizationId,
+          input(true, loginEmail, "sso-transition-race", "Mapped User"),
+        )
+      }
+    mutationService.execute(tenant.context) {
+      lifecycleService.replace(
+        tenant.configurationId,
+        tenant.organizationId,
+        mapped.id,
+        input(true, currentMappingEmail, "sso-transition-race", "Mapped User"),
+      )
+    }
+    val existingAuthUserId = "sso-transition-existing-subject"
+    userPersistence.writeAuthUser(mapped.userId, existingAuthUserId, AuthProvider.KEYCLOAK)
+    val incomingAuthUserId = "sso-transition-incoming-subject"
+    val decisionComplete = CountDownLatch(1)
+    val releaseFallback = CountDownLatch(1)
+    val concurrentFirstLoginService =
+      spyk(
+        ScimFirstLoginService(
+          mappingRepository,
+          userRepository,
+          context.getBean(ScimAuthUserRepository::class.java),
+        ),
+      )
+    every {
+      concurrentFirstLoginService.attachIfPreProvisioned(
+        loginEmail,
+        loginEmail,
+        incomingAuthUserId,
+        AuthProvider.KEYCLOAK,
+        tenant.organizationId,
+      )
+    } answers {
+      callOriginal().also {
+        check(it == ScimFirstLoginAttachmentResult.NoMatch)
+        decisionComplete.countDown()
+        check(releaseFallback.await(10, TimeUnit.SECONDS))
+      }
+    }
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(incomingAuthUserId) } returns
+      AuthenticatedUser()
+        .withEmail(loginEmail)
+        .withName("Mapped User")
+        .withAuthUserId(incomingAuthUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    every { authenticationResolver.resolveVerifiedEmail() } returns loginEmail
+    every { authenticationResolver.resolveRealm() } returns "new-sso-realm"
+    val organizationService = mockk<OrganizationService>(relaxed = true)
+    every { organizationService.getOrganizationBySsoConfigRealm("new-sso-realm") } returns
+      Optional.of(
+        io.airbyte.config
+          .Organization()
+          .withOrganizationId(tenant.organizationId),
+      )
+    val externalUserService = mockk<ExternalUserService>(relaxed = true)
+    every { externalUserService.getRealmByAuthUserId(existingAuthUserId) } returns "legacy-realm"
+    val featureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
+    every {
+      featureFlagClient.boolVariation(
+        io.airbyte.featureflag.BypassSsoDomainValidationEnforcement,
+        any(),
+      )
+    } returns true
+    val handler =
+      loginHandler(
+        authenticationResolver = authenticationResolver,
+        userId = UUID.randomUUID(),
+        externalUserService = externalUserService,
+        organizationService = organizationService,
+        featureFlagClient = featureFlagClient,
+        attachmentService = concurrentFirstLoginService,
+      )
+    val initialWaiters = lockWaiterCount()
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val loginFuture =
+        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+          runCatching {
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(incomingAuthUserId))
+          }
+        }
+      check(decisionComplete.await(10, TimeUnit.SECONDS))
+
+      val transitionFuture =
+        executor.submit<io.airbyte.domain.models.scim.ScimUserRead> {
+          mutationService.execute(tenant.context) {
+            lifecycleService.replace(
+              tenant.configurationId,
+              tenant.organizationId,
+              mapped.id,
+              input(true, loginEmail, "sso-transition-race", "Mapped User"),
+            )
+          }
+        }
+      check(waitForLockWaiters(initialWaiters + 1))
+
+      assertThat(transitionFuture.isDone).isFalse()
+      verify(exactly = 0) { externalUserService.deleteUserByEmailOnOtherRealms(any(), any()) }
+      releaseFallback.countDown()
+
+      val login = loginFuture.get(30, TimeUnit.SECONDS)
+      val transitioned = transitionFuture.get(30, TimeUnit.SECONDS)
+      assertThat(login.exceptionOrNull())
+        .isInstanceOf(io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem::class.java)
+      assertThat(transitioned.primaryEmail).isEqualTo(loginEmail)
+      verify(exactly = 0) { externalUserService.deleteUserByEmailOnOtherRealms(any(), any()) }
+      assertThat(userPersistence.getUserByAuthId(existingAuthUserId).orElseThrow().userId).isEqualTo(mapped.userId)
+      assertThat(userPersistence.getUserByAuthId(incomingAuthUserId)).isEmpty()
+    } finally {
+      releaseFallback.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
+  fun `email-shaped identity cannot deadlock with a reversed global email transition`() {
+    val tenant = tenant("email-identity-lock-domain")
+    val originalMappedEmail = "middle@example.com"
+    val targetMappedEmail = "zulu@example.com"
+    val authUserId = "alpha@example.com"
+    val mapped =
+      mutationService.execute(tenant.context) {
+        lifecycleService.create(
+          tenant.configurationId,
+          tenant.organizationId,
+          input(true, userName = originalMappedEmail),
+        )
+      }
+    mutationService.execute(tenant.context) {
+      lifecycleService.replace(
+        tenant.configurationId,
+        tenant.organizationId,
+        mapped.id,
+        input(true, userName = targetMappedEmail),
+      )
+    }
+    val ordinaryUser = ordinaryUser(authUserId)
+    userPersistence.writeUser(ordinaryUser)
+    val identityLockAttempted = CountDownLatch(1)
+    val releaseIdentityLock = CountDownLatch(1)
+    val concurrentAuthUserRepository = spyk(context.getBean(ScimAuthUserRepository::class.java))
+    every { concurrentAuthUserRepository.acquireIdentityLock(authUserId) } answers {
+      identityLockAttempted.countDown()
+      check(releaseIdentityLock.await(10, TimeUnit.SECONDS))
+      callOriginal()
+    }
+    val concurrentFirstLoginService =
+      ScimFirstLoginService(
+        mappingRepository,
+        userRepository,
+        concurrentAuthUserRepository,
+      )
+    val initialWaiters = advisoryLockWaiterCount()
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val attachmentFuture =
+        executor.submit<Result<ScimFirstLoginAttachmentResult>> {
+          runCatching {
+            transactions.executeWrite {
+              concurrentFirstLoginService.attachIfPreProvisioned(
+                targetMappedEmail,
+                targetMappedEmail,
+                authUserId,
+                AuthProvider.KEYCLOAK,
+              )
+            }
+          }
+        }
+      check(identityLockAttempted.await(10, TimeUnit.SECONDS))
+
+      val emailUpdateFuture =
+        executor.submit<Result<Unit>> {
+          runCatching {
+            userPersistence.writeUser(ordinaryUser.withEmail(targetMappedEmail))
+          }
+        }
+      check(waitForAdvisoryLockWaiters(initialWaiters + 1))
+      releaseIdentityLock.countDown()
+
+      assertThat(attachmentFuture.get(30, TimeUnit.SECONDS).getOrThrow())
+        .isEqualTo(ScimFirstLoginAttachmentResult.Attached(mapped.userId))
+      assertThat(emailUpdateFuture.get(30, TimeUnit.SECONDS).isSuccess).isTrue()
+      assertThat(userPersistence.getUser(ordinaryUser.userId).orElseThrow().email).isEqualTo(targetMappedEmail)
+    } finally {
+      releaseIdentityLock.countDown()
+      executor.shutdownNow()
+    }
   }
 
   @Test
@@ -1210,6 +3634,122 @@ class ScimUserLifecycleIntegrationTest {
   }
 
   @Test
+  fun `full login racing a mapping email transition cannot create an identity for a different User`() {
+    val tenant = tenant("first-login-email-transition")
+    val oldEmail = "transition-old@example.com"
+    val loginEmail = "transition-current@example.com"
+    val mapped =
+      mutationService.execute(tenant.context) {
+        lifecycleService.create(
+          tenant.configurationId,
+          tenant.organizationId,
+          input(true, oldEmail, "transition-external", "Mapped User"),
+        )
+      }
+    val defaultWorkspaceId = workspace(tenant.organizationId, "transition-workspace")
+    val lifecycleReachedTargetEmailLock = CountDownLatch(1)
+    val allowLifecycleTargetEmailLock = CountDownLatch(1)
+    val concurrentUserRepository = spyk(userRepository)
+    every { concurrentUserRepository.acquireGlobalEmailLock(loginEmail) } answers {
+      callOriginal().also {
+        lifecycleReachedTargetEmailLock.countDown()
+        check(allowLifecycleTargetEmailLock.await(10, TimeUnit.SECONDS))
+      }
+    }
+    val concurrentLifecycle =
+      ScimUserLifecycleService(
+        mappingRepository,
+        concurrentUserRepository,
+        permissionRepository,
+        groupMemberRepository,
+      )
+    val authUserId = "transition-login-auth-user"
+    val incomingUser =
+      AuthenticatedUser()
+        .withEmail(loginEmail)
+        .withName("Login User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    val authenticationResolver = mockk<UserAuthenticationResolver>(relaxed = true)
+    every { authenticationResolver.resolveUser(authUserId) } returns incomingUser
+    every { authenticationResolver.resolveVerifiedEmail() } returns loginEmail
+    every { authenticationResolver.resolveRealm() } returns null
+    val resourceBootstrapHandler = mockk<ResourceBootstrapHandlerInterface>()
+    every { resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(any()) } returns
+      WorkspaceRead().workspaceId(defaultWorkspaceId)
+    val loginUserId = UUID.randomUUID()
+    val handler =
+      UserHandler(
+        userPersistence,
+        mockk<ExternalUserService>(relaxed = true),
+        mockk<OrganizationService>(relaxed = true),
+        mockk<SsoConfigService>(relaxed = true),
+        mockk<OrganizationEmailDomainService>(relaxed = true),
+        Optional.empty(),
+        mockk<PermissionHandler>(relaxed = true),
+        mockk<WorkspacesHandler>(relaxed = true),
+        Supplier { loginUserId },
+        authenticationResolver,
+        Optional.empty<InitialUserConfig>(),
+        resourceBootstrapHandler,
+        mockk<FeatureFlagClient>(relaxed = true),
+        firstLoginService,
+        transactions,
+      )
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val lifecycleFuture =
+        executor.submit<Result<Unit>> {
+          runCatching {
+            mutationService.execute(tenant.context) {
+              concurrentLifecycle.replace(
+                tenant.configurationId,
+                tenant.organizationId,
+                mapped.id,
+                input(true, loginEmail, "transition-external", "Mapped User"),
+              )
+              Unit
+            }
+          }
+        }
+      check(lifecycleReachedTargetEmailLock.await(10, TimeUnit.SECONDS))
+
+      val initialWaiters = advisoryLockWaiterCount()
+      val loginFuture =
+        executor.submit<Result<io.airbyte.api.model.generated.UserGetOrCreateByAuthIdResponse>> {
+          runCatching {
+            handler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+          }
+        }
+      check(waitForAdvisoryLockWaiters(initialWaiters + 1))
+      assertThat(loginFuture.isDone).isFalse()
+      allowLifecycleTargetEmailLock.countDown()
+
+      val loginResult = loginFuture.get(15, TimeUnit.SECONDS)
+      val lifecycleResult = lifecycleFuture.get(15, TimeUnit.SECONDS)
+
+      assertThat(lifecycleResult.isSuccess).isTrue()
+      assertThat(loginResult.getOrThrow().newUserCreated).isFalse()
+      assertThat(loginResult.getOrThrow().userRead.userId).isEqualTo(mapped.userId)
+      assertThat(
+        mappingRepository
+          .findUser(
+            mapped.id,
+            tenant.configurationId,
+            tenant.organizationId,
+          )?.primaryEmail,
+      ).isEqualTo(loginEmail)
+      assertThat(userPersistence.getUserByAuthId(authUserId).orElseThrow().userId).isEqualTo(mapped.userId)
+      assertThat(userPersistence.getUser(loginUserId)).isEmpty()
+      assertThat(jooq.fetchCount(Tables.USER, Tables.USER.EMAIL.equalIgnoreCase(loginEmail))).isZero()
+    } finally {
+      allowLifecycleTargetEmailLock.countDown()
+      executor.shutdownNow()
+    }
+  }
+
+  @Test
   fun `concurrent cross organization POST serializes update identity resolution and leaves a conflicting target unchanged`() {
     val tenantA = tenant("concurrent-update-a")
     val tenantB = tenant("concurrent-update-b")
@@ -1740,6 +4280,66 @@ class ScimUserLifecycleIntegrationTest {
   private fun rawUserWithDuplicateEmails(email: String): String =
     """{"schemas":["$SCIM_USER_SCHEMA"],"userName":"$email","emails":[{"value":"$email","type":"work"},{"value":" ${email.uppercase()} ","type":"home"}]}"""
 
+  private fun loginHandler(
+    authenticationResolver: UserAuthenticationResolver,
+    userId: UUID,
+    persistence: UserPersistence = userPersistence,
+    externalUserService: ExternalUserService = mockk(relaxed = true),
+    organizationService: OrganizationService = mockk(relaxed = true),
+    organizationEmailDomainService: OrganizationEmailDomainService = mockk(relaxed = true),
+    ssoConfigService: SsoConfigService = mockk(relaxed = true),
+    applicationService: Optional<ApplicationService> = Optional.empty(),
+    permissionHandler: PermissionHandler = mockk(relaxed = true),
+    workspacesHandler: WorkspacesHandler = mockk(relaxed = true),
+    resourceBootstrapHandler: ResourceBootstrapHandlerInterface = mockk(relaxed = true),
+    featureFlagClient: FeatureFlagClient = mockk(relaxed = true),
+    attachmentService: ScimFirstLoginService = firstLoginService,
+    uuidSupplier: Supplier<UUID> = Supplier { userId },
+    transactionOperations: TransactionOperations<Connection> = transactions,
+  ): UserHandler =
+    UserHandler(
+      persistence,
+      externalUserService,
+      organizationService,
+      ssoConfigService,
+      organizationEmailDomainService,
+      applicationService,
+      permissionHandler,
+      workspacesHandler,
+      uuidSupplier,
+      authenticationResolver,
+      Optional.empty<InitialUserConfig>(),
+      resourceBootstrapHandler,
+      featureFlagClient,
+      attachmentService,
+      transactionOperations,
+    )
+
+  private fun roleResolver(): RoleResolver =
+    RoleResolver(
+      context.getBean(AuthenticationHeaderResolver::class.java),
+      mockk<CurrentUserService>(),
+      null,
+      PermissionHandler(null, mockk<WorkspaceService>(), null, permissionService),
+    )
+
+  private fun insertAuthUser(
+    userId: UUID,
+    authUserId: String,
+    authProvider: AuthProvider,
+  ) {
+    jooq
+      .insertInto(Tables.AUTH_USER)
+      .set(Tables.AUTH_USER.ID, UUID.randomUUID())
+      .set(Tables.AUTH_USER.USER_ID, userId)
+      .set(Tables.AUTH_USER.AUTH_USER_ID, authUserId)
+      .set(
+        Tables.AUTH_USER.AUTH_PROVIDER,
+        io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider
+          .lookupLiteral(authProvider.value()),
+      ).execute()
+  }
+
   private fun ordinaryUser(email: String): User =
     User()
       .withUserId(UUID.randomUUID())
@@ -1747,6 +4347,53 @@ class ScimUserLifecycleIntegrationTest {
       .withEmail(email)
       .withNews(false)
       .withUiMetadata(objectMapper.createObjectNode())
+
+  private fun advisoryLockWaiterCount(): Int =
+    jooq
+      .fetchOne(
+        """
+        SELECT COUNT(*)
+        FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND wait_event_type = 'Lock'
+          AND wait_event = 'advisory'
+        """,
+      )!!
+      .get(0, Int::class.java)
+
+  private fun lockWaiterCount(): Int =
+    jooq
+      .fetchOne(
+        """
+        SELECT COUNT(*)
+        FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND wait_event_type = 'Lock'
+        """,
+      )!!
+      .get(0, Int::class.java)
+
+  private fun waitForAdvisoryLockWaiters(expected: Int): Boolean {
+    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+    while (System.nanoTime() < deadline) {
+      if (advisoryLockWaiterCount() >= expected) {
+        return true
+      }
+      Thread.sleep(20)
+    }
+    return false
+  }
+
+  private fun waitForLockWaiters(expected: Int): Boolean {
+    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+    while (System.nanoTime() < deadline) {
+      if (lockWaiterCount() >= expected) {
+        return true
+      }
+      Thread.sleep(20)
+    }
+    return false
+  }
 
   private fun tenant(name: String): Tenant {
     val organization = organizationRepository.save(Organization(name = name, email = "$name@example.com"))
@@ -1940,8 +4587,12 @@ class ScimUserLifecycleIntegrationTest {
     private lateinit var permissionService: PermissionService
     private lateinit var groupService: GroupService
     private lateinit var lifecycleService: ScimUserLifecycleService
+    private lateinit var firstLoginService: ScimFirstLoginService
     private lateinit var mutationService: ScimMutationService
     private lateinit var userPersistence: UserPersistence
+    private lateinit var permissionPersistence: PermissionPersistence
+    private lateinit var dataSource: DataSource
+    private lateinit var database: Database
     private lateinit var transactions: TransactionOperations<Connection>
     private lateinit var jwtTokenGenerator: JwtTokenGenerator
     private lateinit var jwtTokenValidator: ReactiveJsonWebTokenValidator<*, HttpRequest<*>>
@@ -1975,12 +4626,13 @@ class ScimUserLifecycleIntegrationTest {
             ),
           ),
         )
-      val dataSource =
+      dataSource =
         (context.getBean(DataSource::class.java, Qualifiers.byName("config")) as DelegatingDataSource)
           .targetDataSource
       jooq = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES)
-      val database = TestDatabaseProviders(dataSource, jooq).createNewConfigsDatabase()
+      database = TestDatabaseProviders(dataSource, jooq).createNewConfigsDatabase()
       userPersistence = UserPersistence(database)
+      permissionPersistence = PermissionPersistence(database)
 
       objectMapper = context.getBean(ObjectMapper::class.java)
       organizationRepository = context.getBean(OrganizationRepository::class.java)
@@ -1998,6 +4650,7 @@ class ScimUserLifecycleIntegrationTest {
           context.getBean(ApplicationRepository::class.java),
           context.getBean(AirbyteAuthConfig::class.java),
           jwtTokenGenerator,
+          context.getBean(ScimAuthUserOwnershipService::class.java),
         )
       @Suppress("UNCHECKED_CAST")
       jwtTokenValidator =
@@ -2006,6 +4659,7 @@ class ScimUserLifecycleIntegrationTest {
       transactions =
         context.getBean(TransactionOperations::class.java, Qualifiers.byName("config")) as TransactionOperations<Connection>
       lifecycleService = ScimUserLifecycleService(mappingRepository, userRepository, permissionRepository, groupMemberRepository)
+      firstLoginService = context.getBean(ScimFirstLoginService::class.java)
       mutationService = ScimMutationService(organizationRepository, configurationRepository, transactions)
     }
 

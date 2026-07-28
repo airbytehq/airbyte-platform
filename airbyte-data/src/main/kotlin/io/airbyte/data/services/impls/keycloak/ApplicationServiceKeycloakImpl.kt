@@ -10,6 +10,7 @@ import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.services.ApplicationService
+import io.airbyte.data.services.ScimAuthUserOwnershipService
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -39,6 +40,7 @@ class ApplicationServiceKeycloakImpl(
   private val keycloakConfiguration: AirbyteKeycloakConfig,
   private val clientScopeConfigurator: ClientScopeConfigurator,
   private val airbyteAuthConfig: AirbyteAuthConfig,
+  private val authUserOwnershipService: ScimAuthUserOwnershipService,
 ) : ApplicationService {
   /**
    * An ID that uniquely identifies the Application in the downstream service. Is used for deletion.
@@ -50,55 +52,56 @@ class ApplicationServiceKeycloakImpl(
   override fun createApplication(
     user: AuthenticatedUser,
     name: String,
-  ): Application {
-    val realmResource =
-      keycloakAdminClient.realm(keycloakConfiguration.clientRealm)
-        ?: throw BadRequestException("Could not retrieve a realm for ${keycloakConfiguration.clientRealm}")
-    val clientsResource = realmResource.clients() ?: throw BadRequestException("No clients found for ${keycloakConfiguration.clientRealm}")
-    val usersResource = realmResource.users() ?: throw BadRequestException("No users found for ${keycloakConfiguration.clientRealm}")
+  ): Application =
+    authUserOwnershipService.withUniqueOwner(user.authUserId, user.userId) {
+      val realmResource =
+        keycloakAdminClient.realm(keycloakConfiguration.clientRealm)
+          ?: throw BadRequestException("Could not retrieve a realm for ${keycloakConfiguration.clientRealm}")
+      val clientsResource = realmResource.clients() ?: throw BadRequestException("No clients found for ${keycloakConfiguration.clientRealm}")
+      val usersResource = realmResource.users() ?: throw BadRequestException("No users found for ${keycloakConfiguration.clientRealm}")
 
-    // Ensure realm is configured with the correct client scopes and mappers. For now,
-    // we call this every time a new application is created, even if the realm is already
-    // configured. It is an idempotent operation.
-    clientScopeConfigurator.configureClientScope(realmResource)
+      // Ensure realm is configured with the correct client scopes and mappers. For now,
+      // we call this every time a new application is created, even if the realm is already
+      // configured. It is an idempotent operation.
+      clientScopeConfigurator.configureClientScope(realmResource)
 
-    val existingClients = listApplicationsByUser(user)
-    if (existingClients.size >= MAX_CREDENTIALS) {
-      throw BadRequestException("User already has $MAX_CREDENTIALS Applications")
-    }
-    if (existingClients
-        .any { clientRepresentation: Application -> clientRepresentation.name == name }
-    ) {
-      throw BadRequestException("User already has a key with this name")
-    }
-    val clientRepresentation = buildClientRepresentation(name)
-
-    realmResource.clients().create(clientRepresentation).use { response ->
-      if (response.status != Response.Status.CREATED.statusCode) {
-        throw BadRequestException("Unable to create Application")
+      val existingClients = listApplicationsByAuthUserId(user.authUserId)
+      if (existingClients.size >= MAX_CREDENTIALS) {
+        throw BadRequestException("User already has $MAX_CREDENTIALS Applications")
       }
+      if (existingClients
+          .any { clientRepresentation: Application -> clientRepresentation.name == name }
+      ) {
+        throw BadRequestException("User already has a key with this name")
+      }
+      val clientRepresentation = buildClientRepresentation(name)
+
+      realmResource.clients().create(clientRepresentation).use { response ->
+        if (response.status != Response.Status.CREATED.statusCode) {
+          throw BadRequestException("Unable to create Application")
+        }
+      }
+      val client =
+        realmResource
+          .clients()
+          .findByClientId(clientRepresentation.clientId)
+          .first()
+
+      val serviceAccountUser =
+        clientsResource[client.id]
+          .serviceAccountUser
+
+      serviceAccountUser.attributes =
+        mapOf(
+          USER_ID to listOf(user.authUserId.toString()),
+          CLIENT_ID to listOf(client.clientId),
+        )
+
+      usersResource[serviceAccountUser.id]
+        .update(serviceAccountUser)
+
+      toApplication(client)
     }
-    val client =
-      realmResource
-        .clients()
-        .findByClientId(clientRepresentation.clientId)
-        .first()
-
-    val serviceAccountUser =
-      clientsResource[client.id]
-        .serviceAccountUser
-
-    serviceAccountUser.attributes =
-      mapOf(
-        USER_ID to listOf(user.authUserId.toString()),
-        CLIENT_ID to listOf(client.clientId),
-      )
-
-    usersResource[serviceAccountUser.id]
-      .update(serviceAccountUser)
-
-    return toApplication(client)
-  }
 
   /**
    * List all Applications for a user.
@@ -106,13 +109,18 @@ class ApplicationServiceKeycloakImpl(
    * @param user The user to list Applications for.
    * @return The list of Applications for the user.
    */
-  override fun listApplicationsByUser(user: AuthenticatedUser): List<Application> {
+  override fun listApplicationsByUser(user: AuthenticatedUser): List<Application> =
+    authUserOwnershipService.withUniqueOwner(user.authUserId, user.userId) {
+      listApplicationsByAuthUserId(user.authUserId)
+    }
+
+  private fun listApplicationsByAuthUserId(authUserId: String): List<Application> {
     val clientRealm = keycloakConfiguration.clientRealm
     val clientUsers =
       keycloakAdminClient
         .realm(clientRealm)
         .users()
-        .searchByAttributes(USER_ID + ":" + user.authUserId)
+        .searchByAttributes(USER_ID + ":" + authUserId)
 
     val existingClient = ArrayList<ClientRepresentation>()
     for (clientUser in clientUsers) {
@@ -143,29 +151,30 @@ class ApplicationServiceKeycloakImpl(
   override fun deleteApplication(
     user: AuthenticatedUser,
     applicationId: String,
-  ): Application {
-    val clientRealm = keycloakConfiguration.clientRealm
-    val client =
+  ): Application =
+    authUserOwnershipService.withUniqueOwner(user.authUserId, user.userId) {
+      val clientRealm = keycloakConfiguration.clientRealm
+      val client =
+        keycloakAdminClient
+          .realm(clientRealm)
+          .clients()
+          .findByClientId(applicationId)
+          .first()
+
+      val userApplications = listApplicationsByAuthUserId(user.authUserId)
+
+      // Only allow the user to delete their own Applications.
+      if (userApplications.none { application: Application -> application.clientId == applicationId }) {
+        throw BadRequestException("You do not have permission to delete this Application")
+      }
+
       keycloakAdminClient
         .realm(clientRealm)
-        .clients()
-        .findByClientId(applicationId)
-        .first()
+        .clients()[client.id]
+        .remove()
 
-    val userApplications = listApplicationsByUser(user)
-
-    // Only allow the user to delete their own Applications.
-    if (userApplications.none { application: Application -> application.clientId == applicationId }) {
-      throw BadRequestException("You do not have permission to delete this Application")
+      toApplication(client)
     }
-
-    keycloakAdminClient
-      .realm(clientRealm)
-      .clients()[client.id]
-      .remove()
-
-    return toApplication(client)
-  }
 
   /**
    * Build a JWT for a clientId and clientSecret.
@@ -178,23 +187,38 @@ class ApplicationServiceKeycloakImpl(
     clientId: String,
     clientSecret: String,
   ): String {
-    try {
-      KeycloakBuilder
-        .builder()
-        .serverUrl(keycloakConfiguration.getServerUrl())
-        .realm(keycloakConfiguration.clientRealm)
-        .grantType("client_credentials")
-        .clientId(clientId)
-        .clientSecret(clientSecret)
-        .build()
-        .use {
-          return it
-            .tokenManager()
-            .accessTokenString
-        }
-    } catch (e: NotAuthorizedException) {
-      throw InvalidClientCredentialsException("Invalid client_id or client_secret", e)
+    val authUserId = authUserIdForClient(clientId)
+    return authUserOwnershipService.withUniqueOwner(authUserId) {
+      try {
+        KeycloakBuilder
+          .builder()
+          .serverUrl(keycloakConfiguration.getServerUrl())
+          .realm(keycloakConfiguration.clientRealm)
+          .grantType("client_credentials")
+          .clientId(clientId)
+          .clientSecret(clientSecret)
+          .build()
+          .use {
+            it
+              .tokenManager()
+              .accessTokenString
+          }
+      } catch (e: NotAuthorizedException) {
+        throw InvalidClientCredentialsException("Invalid client_id or client_secret", e)
+      }
     }
+  }
+
+  private fun authUserIdForClient(clientId: String): String {
+    val clients = keycloakAdminClient.realm(keycloakConfiguration.clientRealm).clients()
+    val client =
+      clients.findByClientId(clientId).singleOrNull()
+        ?: throw InvalidClientCredentialsException("Invalid client_id or client_secret")
+    return clients[client.id]
+      .serviceAccountUser
+      .attributes[USER_ID]
+      ?.singleOrNull()
+      ?: throw InvalidClientCredentialsException("Invalid client_id or client_secret")
   }
 
   /**

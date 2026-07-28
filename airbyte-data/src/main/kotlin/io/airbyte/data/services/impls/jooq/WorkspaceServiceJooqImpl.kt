@@ -249,118 +249,124 @@ class WorkspaceServiceJooqImpl
      * @throws IOException - you never know when you IO
      */
     override fun writeStandardWorkspaceNoSecrets(workspace: StandardWorkspace) {
-      database.transaction<Any?> { ctx: DSLContext ->
-        val timestamp = OffsetDateTime.now()
-        val isExistingConfig =
-          ctx.fetchExists(
-            DSL
-              .select()
-              .from(Tables.WORKSPACE)
-              .where(Tables.WORKSPACE.ID.eq(workspace.workspaceId)),
-          )
+      database.transaction<Any?> { ctx ->
+        writeStandardWorkspaceNoSecrets(ctx, workspace)
+      }
+    }
 
-        if (isExistingConfig) {
-          ctx
-            .update(Tables.WORKSPACE)
-            .set(Tables.WORKSPACE.ID, workspace.workspaceId)
-            .set(Tables.WORKSPACE.CUSTOMER_ID, workspace.customerId)
-            .set(Tables.WORKSPACE.NAME, workspace.name)
-            .set(Tables.WORKSPACE.SLUG, workspace.slug)
-            .set(Tables.WORKSPACE.EMAIL, workspace.email)
-            .set(
-              Tables.WORKSPACE.INITIAL_SETUP_COMPLETE,
-              workspace.initialSetupComplete,
-            ).set(
-              Tables.WORKSPACE.ANONYMOUS_DATA_COLLECTION,
-              workspace.anonymousDataCollection,
-            ).set(Tables.WORKSPACE.SEND_NEWSLETTER, workspace.news)
-            .set(
-              Tables.WORKSPACE.SEND_SECURITY_UPDATES,
-              workspace.securityUpdates,
-            ).set(
-              Tables.WORKSPACE.DISPLAY_SETUP_WIZARD,
-              workspace.displaySetupWizard,
-            ).set(
-              Tables.WORKSPACE.TOMBSTONE,
-              workspace.tombstone != null && workspace.tombstone,
-            ).set(
-              Tables.WORKSPACE.NOTIFICATIONS,
-              JSONB.valueOf(
-                Jsons.serialize(workspace.notifications),
-              ),
-            ).set(
-              Tables.WORKSPACE.NOTIFICATION_SETTINGS,
-              JSONB.valueOf(Jsons.serialize(workspace.notificationSettings)),
-            ).set(
-              Tables.WORKSPACE.FIRST_SYNC_COMPLETE,
-              workspace.firstCompletedSync,
-            ).set(Tables.WORKSPACE.FEEDBACK_COMPLETE, workspace.feedbackDone)
-            .set(
-              Tables.WORKSPACE.DATAPLANE_GROUP_ID,
-              workspace.dataplaneGroupId,
-            ).set(Tables.WORKSPACE.UPDATED_AT, timestamp)
-            .set(
-              Tables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS,
-              if (workspace.webhookOperationConfigs == null) {
-                null
-              } else {
-                JSONB.valueOf(Jsons.serialize(workspace.webhookOperationConfigs))
-              },
-            ).set(Tables.WORKSPACE.ORGANIZATION_ID, workspace.organizationId)
-            .where(Tables.WORKSPACE.ID.eq(workspace.workspaceId))
-            .execute()
-        } else {
-          ctx
-            .insertInto(Tables.WORKSPACE)
-            .set(Tables.WORKSPACE.ID, workspace.workspaceId)
-            .set(Tables.WORKSPACE.CUSTOMER_ID, workspace.customerId)
-            .set(Tables.WORKSPACE.NAME, workspace.name)
-            .set(Tables.WORKSPACE.SLUG, workspace.slug)
-            .set(Tables.WORKSPACE.EMAIL, workspace.email)
-            .set(
-              Tables.WORKSPACE.INITIAL_SETUP_COMPLETE,
-              workspace.initialSetupComplete,
-            ).set(
-              Tables.WORKSPACE.ANONYMOUS_DATA_COLLECTION,
-              workspace.anonymousDataCollection,
-            ).set(Tables.WORKSPACE.SEND_NEWSLETTER, workspace.news)
-            .set(
-              Tables.WORKSPACE.SEND_SECURITY_UPDATES,
-              workspace.securityUpdates,
-            ).set(
-              Tables.WORKSPACE.DISPLAY_SETUP_WIZARD,
-              workspace.displaySetupWizard,
-            ).set(
-              Tables.WORKSPACE.TOMBSTONE,
-              workspace.tombstone != null && workspace.tombstone,
-            ).set(
-              Tables.WORKSPACE.NOTIFICATIONS,
-              JSONB.valueOf(
-                Jsons.serialize(workspace.notifications),
-              ),
-            ).set(
-              Tables.WORKSPACE.NOTIFICATION_SETTINGS,
-              JSONB.valueOf(Jsons.serialize(workspace.notificationSettings)),
-            ).set(
-              Tables.WORKSPACE.FIRST_SYNC_COMPLETE,
-              workspace.firstCompletedSync,
-            ).set(Tables.WORKSPACE.FEEDBACK_COMPLETE, workspace.feedbackDone)
-            .set(Tables.WORKSPACE.CREATED_AT, timestamp)
-            .set(Tables.WORKSPACE.UPDATED_AT, timestamp)
-            .set(
-              Tables.WORKSPACE.DATAPLANE_GROUP_ID,
-              workspace.dataplaneGroupId,
-            ).set(Tables.WORKSPACE.ORGANIZATION_ID, workspace.organizationId)
-            .set(
-              Tables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS,
-              if (workspace.webhookOperationConfigs == null) {
-                null
-              } else {
-                JSONB.valueOf(Jsons.serialize(workspace.webhookOperationConfigs))
-              },
-            ).execute()
-        }
-        null
+    override fun writeStandardWorkspaceNoSecrets(
+      ctx: DSLContext,
+      workspace: StandardWorkspace,
+    ) {
+      val timestamp = OffsetDateTime.now()
+      val isExistingConfig =
+        ctx.fetchExists(
+          DSL
+            .select()
+            .from(Tables.WORKSPACE)
+            .where(Tables.WORKSPACE.ID.eq(workspace.workspaceId)),
+        )
+
+      if (isExistingConfig) {
+        ctx
+          .update(Tables.WORKSPACE)
+          .set(Tables.WORKSPACE.ID, workspace.workspaceId)
+          .set(Tables.WORKSPACE.CUSTOMER_ID, workspace.customerId)
+          .set(Tables.WORKSPACE.NAME, workspace.name)
+          .set(Tables.WORKSPACE.SLUG, workspace.slug)
+          .set(Tables.WORKSPACE.EMAIL, workspace.email)
+          .set(
+            Tables.WORKSPACE.INITIAL_SETUP_COMPLETE,
+            workspace.initialSetupComplete,
+          ).set(
+            Tables.WORKSPACE.ANONYMOUS_DATA_COLLECTION,
+            workspace.anonymousDataCollection,
+          ).set(Tables.WORKSPACE.SEND_NEWSLETTER, workspace.news)
+          .set(
+            Tables.WORKSPACE.SEND_SECURITY_UPDATES,
+            workspace.securityUpdates,
+          ).set(
+            Tables.WORKSPACE.DISPLAY_SETUP_WIZARD,
+            workspace.displaySetupWizard,
+          ).set(
+            Tables.WORKSPACE.TOMBSTONE,
+            workspace.tombstone != null && workspace.tombstone,
+          ).set(
+            Tables.WORKSPACE.NOTIFICATIONS,
+            JSONB.valueOf(
+              Jsons.serialize(workspace.notifications),
+            ),
+          ).set(
+            Tables.WORKSPACE.NOTIFICATION_SETTINGS,
+            JSONB.valueOf(Jsons.serialize(workspace.notificationSettings)),
+          ).set(
+            Tables.WORKSPACE.FIRST_SYNC_COMPLETE,
+            workspace.firstCompletedSync,
+          ).set(Tables.WORKSPACE.FEEDBACK_COMPLETE, workspace.feedbackDone)
+          .set(
+            Tables.WORKSPACE.DATAPLANE_GROUP_ID,
+            workspace.dataplaneGroupId,
+          ).set(Tables.WORKSPACE.UPDATED_AT, timestamp)
+          .set(
+            Tables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS,
+            if (workspace.webhookOperationConfigs == null) {
+              null
+            } else {
+              JSONB.valueOf(Jsons.serialize(workspace.webhookOperationConfigs))
+            },
+          ).set(Tables.WORKSPACE.ORGANIZATION_ID, workspace.organizationId)
+          .where(Tables.WORKSPACE.ID.eq(workspace.workspaceId))
+          .execute()
+      } else {
+        ctx
+          .insertInto(Tables.WORKSPACE)
+          .set(Tables.WORKSPACE.ID, workspace.workspaceId)
+          .set(Tables.WORKSPACE.CUSTOMER_ID, workspace.customerId)
+          .set(Tables.WORKSPACE.NAME, workspace.name)
+          .set(Tables.WORKSPACE.SLUG, workspace.slug)
+          .set(Tables.WORKSPACE.EMAIL, workspace.email)
+          .set(
+            Tables.WORKSPACE.INITIAL_SETUP_COMPLETE,
+            workspace.initialSetupComplete,
+          ).set(
+            Tables.WORKSPACE.ANONYMOUS_DATA_COLLECTION,
+            workspace.anonymousDataCollection,
+          ).set(Tables.WORKSPACE.SEND_NEWSLETTER, workspace.news)
+          .set(
+            Tables.WORKSPACE.SEND_SECURITY_UPDATES,
+            workspace.securityUpdates,
+          ).set(
+            Tables.WORKSPACE.DISPLAY_SETUP_WIZARD,
+            workspace.displaySetupWizard,
+          ).set(
+            Tables.WORKSPACE.TOMBSTONE,
+            workspace.tombstone != null && workspace.tombstone,
+          ).set(
+            Tables.WORKSPACE.NOTIFICATIONS,
+            JSONB.valueOf(
+              Jsons.serialize(workspace.notifications),
+            ),
+          ).set(
+            Tables.WORKSPACE.NOTIFICATION_SETTINGS,
+            JSONB.valueOf(Jsons.serialize(workspace.notificationSettings)),
+          ).set(
+            Tables.WORKSPACE.FIRST_SYNC_COMPLETE,
+            workspace.firstCompletedSync,
+          ).set(Tables.WORKSPACE.FEEDBACK_COMPLETE, workspace.feedbackDone)
+          .set(Tables.WORKSPACE.CREATED_AT, timestamp)
+          .set(Tables.WORKSPACE.UPDATED_AT, timestamp)
+          .set(
+            Tables.WORKSPACE.DATAPLANE_GROUP_ID,
+            workspace.dataplaneGroupId,
+          ).set(Tables.WORKSPACE.ORGANIZATION_ID, workspace.organizationId)
+          .set(
+            Tables.WORKSPACE.WEBHOOK_OPERATION_CONFIGS,
+            if (workspace.webhookOperationConfigs == null) {
+              null
+            } else {
+              JSONB.valueOf(Jsons.serialize(workspace.webhookOperationConfigs))
+            },
+          ).execute()
       }
     }
 
@@ -751,6 +757,17 @@ class WorkspaceServiceJooqImpl
     }
 
     override fun writeWorkspaceWithSecrets(workspace: StandardWorkspace) {
+      writeStandardWorkspaceNoSecrets(workspaceWithSecretCoordinates(workspace))
+    }
+
+    override fun writeWorkspaceWithSecrets(
+      ctx: DSLContext,
+      workspace: StandardWorkspace,
+    ) {
+      writeStandardWorkspaceNoSecrets(ctx, workspaceWithSecretCoordinates(workspace))
+    }
+
+    private fun workspaceWithSecretCoordinates(workspace: StandardWorkspace): StandardWorkspace {
       // Get the schema for the webhook config, so we can split out any secret fields.
       val webhookConfigSchema = Yamls.deserialize(Resources.read("types/WebhookOperationConfigs.yaml"))
       // Check if there's an existing config, so we can re-use the secret coordinates.
@@ -792,7 +809,7 @@ class WorkspaceServiceJooqImpl
         partialWorkspace.withWebhookOperationConfigs(partialConfig)
       }
 
-      writeStandardWorkspaceNoSecrets(partialWorkspace)
+      return partialWorkspace
     }
 
     private fun getWorkspaceIfExists(workspaceId: UUID): Optional<StandardWorkspace> {

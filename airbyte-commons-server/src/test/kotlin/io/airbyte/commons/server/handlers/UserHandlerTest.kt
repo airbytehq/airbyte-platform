@@ -46,11 +46,17 @@ import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.domain.services.scim.ScimFirstLoginAttachmentResult
+import io.airbyte.domain.services.scim.ScimFirstLoginService
 import io.airbyte.featureflag.BypassSsoDomainValidationEnforcement
 import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
 import io.airbyte.featureflag.TestClient
+import io.micronaut.transaction.TransactionCallback
+import io.micronaut.transaction.TransactionDefinition
+import io.micronaut.transaction.TransactionOperations
+import io.micronaut.transaction.TransactionStatus
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.validation.Valid
@@ -66,13 +72,17 @@ import org.junit.jupiter.params.provider.ArgumentsSource
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.NullSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.InOrder
 import org.mockito.Mockito
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.sql.Connection
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
@@ -95,6 +105,20 @@ class UserHandlerTest {
   lateinit var externalUserService: ExternalUserService
   lateinit var applicationService: ApplicationService
   lateinit var featureFlagClient: FeatureFlagClient
+  lateinit var scimFirstLoginService: ScimFirstLoginService
+  private val transactionOperations =
+    object : TransactionOperations<Connection> {
+      override fun getConnection(): Connection = mock()
+
+      override fun hasConnection(): Boolean = false
+
+      override fun findTransactionStatus(): Optional<out TransactionStatus<*>> = Optional.empty()
+
+      override fun <R> execute(
+        definition: TransactionDefinition,
+        callback: TransactionCallback<Connection, R>,
+      ): R = callback.call(mock())
+    }
 
   private val user: AuthenticatedUser =
     AuthenticatedUser()
@@ -122,6 +146,7 @@ class UserHandlerTest {
     externalUserService = mock()
     applicationService = mock()
     featureFlagClient = mock<TestClient>()
+    scimFirstLoginService = mock()
 
     whenever(featureFlagClient.boolVariation(eq(RestrictLoginsForSSODomains), any()))
       .thenReturn(true)
@@ -136,6 +161,18 @@ class UserHandlerTest {
     // their pre-enforcement behavior. Domain-enforcement tests override both inputs explicitly.
     whenever(organizationEmailDomainService.findByOrganizationId(any()))
       .thenReturn(emptyList())
+    whenever(
+      scimFirstLoginService.attachIfPreProvisioned(
+        any(),
+        anyOrNull(),
+        any(),
+        anyOrNull(),
+        anyOrNull(),
+      ),
+    ).thenReturn(ScimFirstLoginAttachmentResult.NoMatch)
+    whenever(userPersistence.createAuthenticatedUserIfNoScimMapping(any())).thenReturn(true)
+    whenever(userPersistence.writeAuthUser(any(), any(), anyOrNull())).thenReturn(true)
+    whenever(userPersistence.replaceAuthUserForUserId(any(), any(), anyOrNull())).thenReturn(true)
 
     userHandler =
       UserHandler(
@@ -152,7 +189,264 @@ class UserHandlerTest {
         Optional.of(initialUserConfig),
         resourceBootstrapHandler,
         featureFlagClient,
+        scimFirstLoginService,
+        transactionOperations,
       )
+  }
+
+  @Test
+  fun `verified current SCIM mapping attaches login to the mapped User without bootstrap side effects`() {
+    val authUserId = "first-login-auth-user"
+    val mappedUserId = UUID.randomUUID()
+    val currentMappingEmail = "current-mapping@example.com"
+    val staleGlobalEmail = "stale-global@example.com"
+    val incomingUser =
+      AuthenticatedUser()
+        .withEmail(currentMappingEmail)
+        .withName("Mapped User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    val attachedUser =
+      AuthenticatedUser()
+        .withUserId(mappedUserId)
+        .withEmail(staleGlobalEmail)
+        .withName("Mapped User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(incomingUser)
+    whenever(jwtUserAuthenticationResolver.resolveVerifiedEmail()).thenReturn(currentMappingEmail)
+    whenever(userPersistence.getUserByAuthId(authUserId))
+      .thenReturn(Optional.empty(), Optional.of(attachedUser))
+    whenever(
+      scimFirstLoginService.attachIfPreProvisioned(
+        currentMappingEmail,
+        currentMappingEmail,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+        null,
+      ),
+    ).thenReturn(ScimFirstLoginAttachmentResult.Attached(mappedUserId))
+
+    val result = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+
+    Assertions.assertFalse(result.newUserCreated)
+    Assertions.assertEquals(mappedUserId, result.userRead.userId)
+    Assertions.assertEquals(staleGlobalEmail, result.userRead.email)
+    Mockito.verify(userPersistence, Mockito.never()).getUserByEmail(any())
+    Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+    Mockito.verify(userPersistence, Mockito.never()).replaceAuthUserForUserId(any(), any(), anyOrNull())
+    Mockito.verifyNoInteractions(resourceBootstrapHandler)
+  }
+
+  @Test
+  fun `new SCIM attachment upgrades the mapped User when agentic login is requested`() {
+    val authUserId = "agentic-first-login-auth-user"
+    val mappedUserId = UUID.randomUUID()
+    val email = "agentic-mapped@example.com"
+    val incomingUser =
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Mapped User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    val attachedUser =
+      AuthenticatedUser()
+        .withUserId(mappedUserId)
+        .withEmail("stale-global@example.com")
+        .withName("Mapped User")
+        .withStatus(User.Status.INVITED)
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(incomingUser)
+    whenever(jwtUserAuthenticationResolver.resolveVerifiedEmail()).thenReturn(email)
+    whenever(userPersistence.getUserByAuthId(authUserId))
+      .thenReturn(Optional.empty(), Optional.of(attachedUser))
+    whenever(
+      scimFirstLoginService.attachIfPreProvisioned(
+        email,
+        email,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+        null,
+      ),
+    ).thenReturn(ScimFirstLoginAttachmentResult.Attached(mappedUserId))
+
+    val result =
+      userHandler.getOrCreateUserByAuthId(
+        UserAuthIdRequestBody()
+          .authUserId(authUserId)
+          .isAgenticUser(true),
+      )
+
+    Assertions.assertFalse(result.newUserCreated)
+    Assertions.assertEquals(mappedUserId, result.userRead.userId)
+    Assertions.assertNotNull(result.userRead.agenticEnabledAt)
+    Mockito.verify(userPersistence).writeAuthenticatedUser(
+      argThat { upgraded: AuthenticatedUser? ->
+        upgraded?.userId == mappedUserId &&
+          upgraded.agenticEnabledAt != null &&
+          upgraded.status == User.Status.INVITED
+      },
+    )
+    Mockito.verify(userPersistence, Mockito.never()).getUserByEmail(any())
+    Mockito.verifyNoInteractions(permissionHandler, workspacesHandler, resourceBootstrapHandler)
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(booleans = [false])
+  fun `new SCIM attachment preserves non-agentic mapped User without bootstrap side effects`(isAgenticUser: Boolean?) {
+    val authUserId = "non-agentic-first-login-auth-user"
+    val mappedUserId = UUID.randomUUID()
+    val email = "non-agentic-mapped@example.com"
+    val incomingUser =
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Mapped User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    val attachedUser =
+      AuthenticatedUser()
+        .withUserId(mappedUserId)
+        .withEmail("stale-global@example.com")
+        .withName("Mapped User")
+        .withStatus(User.Status.INVITED)
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(incomingUser)
+    whenever(jwtUserAuthenticationResolver.resolveVerifiedEmail()).thenReturn(email)
+    whenever(userPersistence.getUserByAuthId(authUserId))
+      .thenReturn(Optional.empty(), Optional.of(attachedUser))
+    whenever(
+      scimFirstLoginService.attachIfPreProvisioned(
+        email,
+        email,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+        null,
+      ),
+    ).thenReturn(ScimFirstLoginAttachmentResult.Attached(mappedUserId))
+    val request = UserAuthIdRequestBody().authUserId(authUserId)
+    if (isAgenticUser != null) {
+      request.isAgenticUser(isAgenticUser)
+    }
+
+    val result = userHandler.getOrCreateUserByAuthId(request)
+
+    Assertions.assertFalse(result.newUserCreated)
+    Assertions.assertEquals(mappedUserId, result.userRead.userId)
+    Assertions.assertEquals(io.airbyte.api.model.generated.UserStatus.INVITED, result.userRead.status)
+    Assertions.assertNull(result.userRead.agenticEnabledAt)
+    Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+    Mockito.verify(userPersistence, Mockito.never()).getUserByEmail(any())
+    Mockito.verifyNoInteractions(permissionHandler, workspacesHandler, resourceBootstrapHandler)
+  }
+
+  @Test
+  fun `already attached mapped identity follows the existing login path idempotently`() {
+    val authUserId = "existing-mapped-auth-user"
+    val mappedUserId = UUID.randomUUID()
+    val email = "mapped-existing@example.com"
+    val incomingUser =
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Mapped User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    val existingUser =
+      AuthenticatedUser()
+        .withUserId(mappedUserId)
+        .withEmail("stale-global@example.com")
+        .withName("Mapped User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(incomingUser)
+    whenever(jwtUserAuthenticationResolver.resolveVerifiedEmail()).thenReturn(null)
+    whenever(userPersistence.getUserByAuthId(authUserId))
+      .thenReturn(Optional.of(existingUser))
+    whenever(
+      scimFirstLoginService.attachIfPreProvisioned(
+        email,
+        null,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+        null,
+      ),
+    ).thenReturn(ScimFirstLoginAttachmentResult.AlreadyAttached(mappedUserId))
+
+    val result = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+
+    Assertions.assertFalse(result.newUserCreated)
+    Assertions.assertEquals(mappedUserId, result.userRead.userId)
+    Mockito.verify(userPersistence, Mockito.never()).getUserByEmail(any())
+    Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+    Mockito.verify(userPersistence, Mockito.never()).replaceAuthUserForUserId(any(), any(), anyOrNull())
+  }
+
+  @Test
+  fun `matching SCIM mapping with unverified email fails before duplicate User creation`() {
+    val authUserId = "unverified-first-login"
+    val email = "mapped@example.com"
+    val incomingUser =
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Mapped User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(incomingUser)
+    whenever(jwtUserAuthenticationResolver.resolveVerifiedEmail()).thenReturn(null)
+    whenever(userPersistence.getUserByAuthId(authUserId))
+      .thenReturn(Optional.empty())
+    whenever(
+      scimFirstLoginService.attachIfPreProvisioned(
+        email,
+        null,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+        null,
+      ),
+    ).thenReturn(ScimFirstLoginAttachmentResult.EmailNotVerified)
+
+    Assertions.assertThrows(UserAlreadyExistsProblem::class.java) {
+      userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+    }
+
+    Mockito.verify(userPersistence, Mockito.never()).getUserByEmail(any())
+    Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+    Mockito.verify(userPersistence, Mockito.never()).replaceAuthUserForUserId(any(), any(), anyOrNull())
+  }
+
+  @Test
+  fun `conflicting SCIM first-login resolution fails without normal login writes`() {
+    val authUserId = "conflicting-first-login"
+    val email = "mapped@example.com"
+    val incomingUser =
+      AuthenticatedUser()
+        .withEmail(email)
+        .withName("Mapped User")
+        .withAuthUserId(authUserId)
+        .withAuthProvider(AuthProvider.KEYCLOAK)
+    whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(incomingUser)
+    whenever(jwtUserAuthenticationResolver.resolveVerifiedEmail()).thenReturn(email)
+    whenever(userPersistence.getUserByAuthId(authUserId))
+      .thenReturn(Optional.empty())
+    whenever(
+      scimFirstLoginService.attachIfPreProvisioned(
+        email,
+        email,
+        authUserId,
+        AuthProvider.KEYCLOAK,
+        null,
+      ),
+    ).thenReturn(ScimFirstLoginAttachmentResult.Conflict)
+
+    Assertions.assertThrows(UserAlreadyExistsProblem::class.java) {
+      userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(authUserId))
+    }
+
+    Mockito.verify(userPersistence, Mockito.never()).getUserByEmail(any())
+    Mockito.verify(userPersistence, Mockito.never()).writeAuthenticatedUser(any())
+    Mockito.verify(userPersistence, Mockito.never()).replaceAuthUserForUserId(any(), any(), anyOrNull())
   }
 
   @Test
@@ -277,7 +571,8 @@ class UserHandlerTest {
           .withAuthProvider(AuthProvider.KEYCLOAK)
 
       whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
-      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.empty())
+      whenever(userPersistence.getUserByAuthId(authUserId))
+        .thenReturn(Optional.empty())
       whenever(uuidSupplier.get()).thenReturn(newUserId)
 
       val createdUser =
@@ -298,7 +593,7 @@ class UserHandlerTest {
       userHandler.getOrCreateUserByAuthId(requestBody)
 
       // Verify that the user was written with agenticEnabledAt set to a timestamp
-      Mockito.verify(userPersistence).writeAuthenticatedUser(
+      Mockito.verify(userPersistence).createAuthenticatedUserIfNoScimMapping(
         argThat { user: AuthenticatedUser? ->
           user!!.agenticEnabledAt != null
         },
@@ -317,7 +612,8 @@ class UserHandlerTest {
           .withAuthProvider(AuthProvider.KEYCLOAK)
 
       whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
-      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.empty())
+      whenever(userPersistence.getUserByAuthId(authUserId))
+        .thenReturn(Optional.empty())
       whenever(uuidSupplier.get()).thenReturn(newUserId)
 
       val createdUser =
@@ -338,7 +634,7 @@ class UserHandlerTest {
       userHandler.getOrCreateUserByAuthId(requestBody)
 
       // Verify that the user was written with agenticEnabledAt = null
-      Mockito.verify(userPersistence).writeAuthenticatedUser(
+      Mockito.verify(userPersistence).createAuthenticatedUserIfNoScimMapping(
         argThat { user: AuthenticatedUser? ->
           user!!.agenticEnabledAt == null
         },
@@ -366,7 +662,8 @@ class UserHandlerTest {
           .withAgenticEnabledAt(null) // Non-agentic user
 
       whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
-      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingNonAgenticUser))
+      whenever(userPersistence.getUserByAuthId(authUserId))
+        .thenReturn(Optional.of(existingNonAgenticUser))
 
       val requestBody =
         UserAuthIdRequestBody()
@@ -406,7 +703,8 @@ class UserHandlerTest {
           .withAgenticEnabledAt(null)
 
       whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
-      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingNonAgenticUser))
+      whenever(userPersistence.getUserByAuthId(authUserId))
+        .thenReturn(Optional.of(existingNonAgenticUser))
 
       val requestBody =
         UserAuthIdRequestBody()
@@ -443,7 +741,8 @@ class UserHandlerTest {
           .withAgenticEnabledAt(originalTimestamp) // Already agentic
 
       whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
-      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingAgenticUser))
+      whenever(userPersistence.getUserByAuthId(authUserId))
+        .thenReturn(Optional.of(existingAgenticUser))
 
       val requestBody =
         UserAuthIdRequestBody()
@@ -480,7 +779,8 @@ class UserHandlerTest {
           .withAgenticEnabledAt(originalTimestamp)
 
       whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(jwtUser)
-      whenever(userPersistence.getUserByAuthId(authUserId)).thenReturn(Optional.of(existingAgenticUser))
+      whenever(userPersistence.getUserByAuthId(authUserId))
+        .thenReturn(Optional.of(existingAgenticUser))
 
       val requestBody =
         UserAuthIdRequestBody()
@@ -580,7 +880,7 @@ class UserHandlerTest {
         Mockito.verify(userPersistence).writeUser(defaultUser.withEmail(""))
         Mockito
           .verify(userPersistence)
-          .writeAuthenticatedUser(
+          .createAuthenticatedUserIfNoScimMapping(
             argThat { user: AuthenticatedUser? ->
               user!!.email ==
                 jwtUser!!.email &&
@@ -602,16 +902,64 @@ class UserHandlerTest {
 
         // None of the auth users configured for the existing user actually exist in the external user
         // service
+        val existingAuthUsers =
+          listOf(
+            AuthUser()
+              .withUserId(existingUserId)
+              .withAuthUserId(existingAuthUserId)
+              .withAuthProvider(AuthProvider.KEYCLOAK),
+          )
+        val pendingRelinkAuthUsers =
+          existingAuthUsers +
+            AuthUser()
+              .withUserId(existingUserId)
+              .withAuthUserId(newAuthUserId)
+              .withAuthProvider(AuthProvider.KEYCLOAK)
         whenever(userPersistence.listAuthUsersForUser(existingUserId))
-          .thenReturn(listOf<AuthUser>(AuthUser().withAuthUserId(existingAuthUserId).withAuthProvider(AuthProvider.KEYCLOAK)))
+          .thenReturn(
+            existingAuthUsers,
+            existingAuthUsers,
+            existingAuthUsers,
+            pendingRelinkAuthUsers,
+          )
         whenever(externalUserService.getRealmByAuthUserId(existingAuthUserId)).thenReturn(null)
 
         val res = userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
         Assertions.assertFalse(res.newUserCreated)
         Assertions.assertEquals(res.userRead.userId, existingUserId)
 
-        // verify auth user is replaced
+        // Verify the incoming identity is staged before the old identity is removed.
+        Mockito.verify(userPersistence).writeAuthUser(existingUserId, newAuthUserId, AuthProvider.KEYCLOAK)
         Mockito.verify(userPersistence).replaceAuthUserForUserId(existingUserId, newAuthUserId, AuthProvider.KEYCLOAK)
+      }
+
+      @Test
+      fun testRelinkOrphanedUserRejectsAuthenticationIdentityOwnedByAnotherUser() {
+        whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
+        whenever(userPersistence.getUserByAuthId(newAuthUserId))
+          .thenReturn(Optional.empty<AuthenticatedUser>())
+        whenever(userPersistence.getUserByEmail(email)).thenReturn(Optional.of<User>(existingUser!!))
+        whenever(userPersistence.listAuthUsersForUser(existingUserId))
+          .thenReturn(listOf(AuthUser().withAuthUserId(existingAuthUserId).withAuthProvider(AuthProvider.KEYCLOAK)))
+        whenever(externalUserService.getRealmByAuthUserId(existingAuthUserId)).thenReturn(null)
+        whenever(
+          scimFirstLoginService.attachIfPreProvisioned(
+            email,
+            null,
+            newAuthUserId,
+            AuthProvider.KEYCLOAK,
+            null,
+          ),
+        ).thenReturn(
+          ScimFirstLoginAttachmentResult.NoMatch,
+          ScimFirstLoginAttachmentResult.ExistingIdentity(UUID.randomUUID()),
+        )
+
+        Assertions.assertThrows(UserAlreadyExistsProblem::class.java) {
+          userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+        }
+
+        Mockito.verify(userPersistence, Mockito.never()).getUser(existingUserId)
       }
 
       @ParameterizedTest
@@ -658,8 +1006,26 @@ class UserHandlerTest {
         whenever(externalUserService.getRealmByAuthUserId(existingAuthUserId)).thenReturn(realm)
         whenever(ssoConfigService.getSsoConfigByRealmName(realm)).thenReturn(null)
 
+        val existingAuthUsers =
+          listOf(
+            AuthUser()
+              .withUserId(existingUserId)
+              .withAuthUserId(existingAuthUserId)
+              .withAuthProvider(AuthProvider.KEYCLOAK),
+          )
+        val pendingMigrationAuthUsers =
+          existingAuthUsers +
+            AuthUser()
+              .withUserId(existingUserId)
+              .withAuthUserId(newAuthUserId)
+              .withAuthProvider(AuthProvider.KEYCLOAK)
         whenever(userPersistence.listAuthUsersForUser(existingUserId))
-          .thenReturn(listOf<AuthUser>(AuthUser().withAuthUserId(existingAuthUserId).withAuthProvider(AuthProvider.KEYCLOAK)))
+          .thenReturn(
+            existingAuthUsers,
+            existingAuthUsers,
+            existingAuthUsers,
+            pendingMigrationAuthUsers,
+          )
 
         val existingAuthedUser =
           AuthenticatedUserConverter.toAuthenticatedUser(existingUser!!, existingAuthUserId, AuthProvider.KEYCLOAK)
@@ -915,6 +1281,8 @@ class UserHandlerTest {
             Optional.of(initialUserConfig),
             resourceBootstrapHandler,
             TestClient(emptyMap()),
+            scimFirstLoginService,
+            transactionOperations,
           )
         whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
           Optional.of<Organization>(organization),
@@ -1032,6 +1400,8 @@ class UserHandlerTest {
               Optional.empty<InitialUserConfig>(),
               resourceBootstrapHandler,
               featureFlagClient,
+              scimFirstLoginService,
+              transactionOperations,
             )
         }
 
@@ -1082,9 +1452,9 @@ class UserHandlerTest {
           }
           Mockito
             .verify(userPersistence, Mockito.never())
-            .writeAuthenticatedUser(any())
+            .createAuthenticatedUserIfNoScimMapping(any())
           if (authRealm != null) {
-            Mockito.verify(externalUserService).deleteUserByExternalId(newAuthedUser!!.authUserId, authRealm)
+            Mockito.verify(externalUserService, Mockito.never()).deleteUserByExternalId(newAuthedUser!!.authUserId, authRealm)
           }
           return
         }
@@ -1241,7 +1611,7 @@ class UserHandlerTest {
       ) {
         inOrder
           .verify(userPersistence)
-          .writeAuthenticatedUser(
+          .createAuthenticatedUserIfNoScimMapping(
             argThat { user: AuthenticatedUser? ->
               user!!.userId == newUserId &&
                 newEmail == user.email &&

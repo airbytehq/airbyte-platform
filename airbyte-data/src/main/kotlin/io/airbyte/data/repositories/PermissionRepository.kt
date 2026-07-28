@@ -63,23 +63,28 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
 
   @Query(
     """
+    WITH auth_user_owners AS (
+      SELECT DISTINCT user_id
+      FROM auth_user
+      WHERE auth_user_id = :authUserId
+    )
     select direct_permission.*
     from permission direct_permission
-    join auth_user au on direct_permission.user_id = au.user_id
-    where au.auth_user_id = :authUserId
+    join auth_user_owners owner on direct_permission.user_id = owner.user_id
+    WHERE (SELECT COUNT(*) FROM auth_user_owners) = 1
     and direct_permission.group_id is null
     and direct_permission.service_account_id is null
     union all
     select group_permission.*
-    from auth_user au
-    join group_member gm on gm.user_id = au.user_id
+    from auth_user_owners owner
+    join group_member gm on gm.user_id = owner.user_id
     join "group" g on g.id = gm.group_id
     join organization o on o.id = g.organization_id
     -- Keep this lookup correlated so PostgreSQL uses the user/organization index for high-membership users.
     join lateral (
       select 1
       from permission organization_membership
-      where organization_membership.user_id = au.user_id
+      where organization_membership.user_id = owner.user_id
       and organization_membership.organization_id = o.id
       and organization_membership.workspace_id is null
       and organization_membership.group_id is null
@@ -97,7 +102,7 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
     left join workspace w
       on w.id = group_permission.workspace_id
       and w.organization_id = o.id
-    where au.auth_user_id = :authUserId
+    where (SELECT COUNT(*) FROM auth_user_owners) = 1
     and group_permission.user_id is null
     and group_permission.service_account_id is null
     and (

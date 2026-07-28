@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.keycloak
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
+import io.airbyte.data.services.ScimAuthUserOwnershipService
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.mockk.every
@@ -22,12 +23,18 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.admin.client.KeycloakBuilder
+import org.keycloak.admin.client.resource.ClientResource
 import org.keycloak.admin.client.resource.ClientsResource
 import org.keycloak.admin.client.resource.RealmResource
+import org.keycloak.admin.client.resource.UserResource
 import org.keycloak.admin.client.resource.UsersResource
 import org.keycloak.representations.idm.ClientRepresentation
+import org.keycloak.representations.idm.UserRepresentation
 import java.net.URI
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 internal class ApplicationServiceKeycloakImplTests {
   private var keycloakConfiguration: AirbyteKeycloakConfig? = null
@@ -37,6 +44,7 @@ internal class ApplicationServiceKeycloakImplTests {
   private val clientsResource: ClientsResource = mockk<ClientsResource>()
   private val usersResource: UsersResource = mockk<UsersResource>()
   private val clientScopeConfigurator: ClientScopeConfigurator = mockk<ClientScopeConfigurator>()
+  private val authUserOwnershipService: ScimAuthUserOwnershipService = mockk()
 
   private var apiKeyServiceKeycloakImpl: ApplicationServiceKeycloakImpl? = null
 
@@ -52,6 +60,11 @@ internal class ApplicationServiceKeycloakImplTests {
     every {
       clientsResource.create(any(ClientRepresentation::class))
     } returns Response.created(URI.create("https://company.example")).build()
+    every {
+      authUserOwnershipService.withUniqueOwner<Any?>(any(), any(), any())
+    } answers {
+      thirdArg<() -> Any?>().invoke()
+    }
 
     apiKeyServiceKeycloakImpl =
       spyk(
@@ -60,6 +73,7 @@ internal class ApplicationServiceKeycloakImplTests {
           keycloakConfiguration!!,
           clientScopeConfigurator,
           AirbyteAuthConfig(),
+          authUserOwnershipService,
         ),
         recordPrivateCalls = true,
       )
@@ -67,10 +81,13 @@ internal class ApplicationServiceKeycloakImplTests {
 
   @Test
   fun testNoMoreThanTwoApiKeys() {
-    val user = AuthenticatedUser().withUserId(UUID.fromString("6287ecb9-f9fb-4062-a12b-20479b6d2dde"))
+    val user =
+      AuthenticatedUser()
+        .withUserId(UUID.fromString("6287ecb9-f9fb-4062-a12b-20479b6d2dde"))
+        .withAuthUserId("max-credentials-auth-user")
 
     every {
-      apiKeyServiceKeycloakImpl!!.listApplicationsByUser(user)
+      apiKeyServiceKeycloakImpl!!["listApplicationsByAuthUserId"](user.authUserId)
     } returns
       listOf(
         buildApplication(user, TEST_1, 0),
@@ -84,10 +101,13 @@ internal class ApplicationServiceKeycloakImplTests {
 
   @Test
   fun testApiKeyNameAlreadyExists() {
-    val user = AuthenticatedUser().withUserId(UUID.fromString("4bb2a760-a0b6-4936-aea0-a13fada349f4"))
+    val user =
+      AuthenticatedUser()
+        .withUserId(UUID.fromString("4bb2a760-a0b6-4936-aea0-a13fada349f4"))
+        .withAuthUserId("duplicate-name-auth-user")
 
     every {
-      apiKeyServiceKeycloakImpl!!.listApplicationsByUser(user)
+      apiKeyServiceKeycloakImpl!!["listApplicationsByAuthUserId"](user.authUserId)
     } returns listOf(buildApplication(user, TEST_1, 0))
 
     every {
@@ -105,14 +125,17 @@ internal class ApplicationServiceKeycloakImplTests {
 
   @Test
   fun testBadKeycloakCreateResponse() {
-    val user = AuthenticatedUser().withUserId(UUID.fromString("b3600891-e7c7-4278-8a94-8b838985de2a"))
+    val user =
+      AuthenticatedUser()
+        .withUserId(UUID.fromString("b3600891-e7c7-4278-8a94-8b838985de2a"))
+        .withAuthUserId("bad-create-auth-user")
     every {
       clientsResource.create(any(ClientRepresentation::class))
     } returns Response.status(500).build()
 
     every {
-      apiKeyServiceKeycloakImpl!!.listApplicationsByUser(user)
-    } returns mutableListOf()
+      apiKeyServiceKeycloakImpl!!["listApplicationsByAuthUserId"](user.authUserId)
+    } returns emptyList<Application>()
 
     every {
       clientsResource.findByClientId(
@@ -131,6 +154,80 @@ internal class ApplicationServiceKeycloakImplTests {
           user,
         ).isEmpty(),
     )
+  }
+
+  @Test
+  fun `create serializes complete Keycloak provisioning against authentication ownership changes`() {
+    val user =
+      AuthenticatedUser()
+        .withUserId(USER_ID)
+        .withAuthUserId(AUTH_USER_ID)
+    val clientResource = mockk<ClientResource>()
+    val userResource = mockk<UserResource>()
+    val serviceAccountUser =
+      UserRepresentation().apply {
+        id = SERVICE_ACCOUNT_ID
+      }
+    val identityMonitor = Any()
+    val createReachedKeycloak = CountDownLatch(1)
+    val allowKeycloakCreate = CountDownLatch(1)
+    val ownershipChangeStarted = CountDownLatch(1)
+    val ownershipChangeCompleted = CountDownLatch(1)
+
+    every {
+      authUserOwnershipService.withUniqueOwner<Any>(AUTH_USER_ID, USER_ID, any())
+    } answers {
+      synchronized(identityMonitor) {
+        thirdArg<() -> Any>().invoke()
+      }
+    }
+    every { usersResource.searchByAttributes("user_id:$AUTH_USER_ID") } returns emptyList()
+    every { clientsResource.create(any(ClientRepresentation::class)) } answers {
+      createReachedKeycloak.countDown()
+      check(allowKeycloakCreate.await(10, TimeUnit.SECONDS))
+      Response.created(URI.create("https://company.example")).build()
+    }
+    every { clientsResource.findByClientId(any()) } answers {
+      listOf(
+        ClientRepresentation().apply {
+          id = CLIENT_INTERNAL_ID
+          clientId = firstArg()
+          name = TEST_1
+          secret = "secret"
+          attributes = mapOf("client.secret.creation.time" to "365")
+        },
+      )
+    }
+    every { clientsResource[CLIENT_INTERNAL_ID] } returns clientResource
+    every { clientResource.serviceAccountUser } returns serviceAccountUser
+    every { usersResource[SERVICE_ACCOUNT_ID] } returns userResource
+    every { userResource.update(any()) } returns Unit
+
+    val executor = Executors.newFixedThreadPool(2)
+    try {
+      val create = executor.submit<Application> { apiKeyServiceKeycloakImpl!!.createApplication(user, TEST_1) }
+      Assertions.assertTrue(createReachedKeycloak.await(10, TimeUnit.SECONDS))
+      val ownershipChange =
+        executor.submit {
+          ownershipChangeStarted.countDown()
+          synchronized(identityMonitor) {
+            ownershipChangeCompleted.countDown()
+          }
+        }
+      Assertions.assertTrue(ownershipChangeStarted.await(10, TimeUnit.SECONDS))
+      Assertions.assertFalse(
+        ownershipChangeCompleted.await(250, TimeUnit.MILLISECONDS),
+        "Authentication ownership must not change while Keycloak client provisioning is incomplete.",
+      )
+
+      allowKeycloakCreate.countDown()
+      create.get(10, TimeUnit.SECONDS)
+      ownershipChange.get(10, TimeUnit.SECONDS)
+      Assertions.assertTrue(ownershipChangeCompleted.await(10, TimeUnit.SECONDS))
+    } finally {
+      allowKeycloakCreate.countDown()
+      executor.shutdownNow()
+    }
   }
 
   @Test
@@ -189,6 +286,14 @@ internal class ApplicationServiceKeycloakImplTests {
 
     mockkStatic(KeycloakBuilder::class)
     every { KeycloakBuilder.builder() } returns builder
+    every {
+      apiKeyServiceKeycloakImpl!!["authUserIdForClient"]("bad-client-id")
+    } returns "auth-user-id"
+    every {
+      authUserOwnershipService.withUniqueOwner<String>("auth-user-id", null, any())
+    } answers {
+      thirdArg<() -> String>().invoke()
+    }
 
     try {
       Assertions.assertThrows(
@@ -232,6 +337,10 @@ internal class ApplicationServiceKeycloakImplTests {
     private const val TEST_1 = "test1"
     private const val TEST_2 = "test2"
     private const val REALM_NAME = "testRealm"
+    private const val AUTH_USER_ID = "keycloak-create-auth-user"
+    private const val CLIENT_INTERNAL_ID = "keycloak-client-id"
+    private const val SERVICE_ACCOUNT_ID = "service-account-id"
+    private val USER_ID = UUID.fromString("624b9a6a-bc22-4734-9f2b-40dbf366adf7")
 
     private fun buildClientId(userId: String?): String = "$userId-0"
   }

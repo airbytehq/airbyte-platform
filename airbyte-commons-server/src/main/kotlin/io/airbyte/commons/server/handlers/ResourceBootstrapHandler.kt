@@ -33,6 +33,7 @@ import io.airbyte.featureflag.UnifiedTrial
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import org.jooq.DSLContext
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -55,7 +56,18 @@ open class ResourceBootstrapHandler(
   /**
    * This is for bootstrapping a workspace and all the necessary links (organization) and permissions (workspace & organization).
    */
-  override fun bootStrapWorkspaceForCurrentUser(workspaceCreateWithId: WorkspaceCreateWithId): WorkspaceRead {
+  override fun bootStrapWorkspaceForCurrentUser(workspaceCreateWithId: WorkspaceCreateWithId): WorkspaceRead =
+    bootstrapWorkspace(workspaceCreateWithId, null)
+
+  override fun bootStrapWorkspaceForCurrentUser(
+    ctx: DSLContext,
+    workspaceCreateWithId: WorkspaceCreateWithId,
+  ): WorkspaceRead = bootstrapWorkspace(workspaceCreateWithId, ctx)
+
+  private fun bootstrapWorkspace(
+    workspaceCreateWithId: WorkspaceCreateWithId,
+    ctx: DSLContext?,
+  ): WorkspaceRead {
     val user = currentUserService.getCurrentUser()
     // The organization to use to set up the new workspace
     val organization =
@@ -86,7 +98,11 @@ open class ResourceBootstrapHandler(
       )
 
     validateWorkspace(standardWorkspace, airbyteEdition)
-    workspaceService.writeWorkspaceWithSecrets(standardWorkspace)
+    if (ctx == null) {
+      workspaceService.writeWorkspaceWithSecrets(standardWorkspace)
+    } else {
+      workspaceService.writeWorkspaceWithSecrets(ctx, standardWorkspace)
+    }
 
     kotlin
       .runCatching {

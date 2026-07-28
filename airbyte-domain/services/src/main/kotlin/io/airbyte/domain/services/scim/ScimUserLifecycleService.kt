@@ -160,6 +160,7 @@ open class ScimUserLifecycleService(
     id: UUID,
     input: ScimUserWrite,
   ): ScimUserRead {
+    userRepository.acquireGlobalEmailLock(input.primaryEmail)
     val current = locked(id, configurationId, organizationId)
     val transitions = if (current.userActive != input.active) listOf(input.active) else emptyList()
     return update(current, configurationId, organizationId, input, transitions)
@@ -172,6 +173,7 @@ open class ScimUserLifecycleService(
     input: ScimUserWrite,
     activeTransitions: List<Boolean>,
   ): ScimUserRead {
+    userRepository.acquireGlobalEmailLock(input.primaryEmail)
     val current = locked(id, configurationId, organizationId)
     validateTransitions(current.userActive!!, input.active, activeTransitions)
     return update(current, configurationId, organizationId, input, activeTransitions)
@@ -210,7 +212,6 @@ open class ScimUserLifecycleService(
       current.id!!,
       input,
     )
-    userRepository.acquireGlobalEmailLock(input.primaryEmail)
     val globalUsers = userRepository.findByEmailIgnoreCaseForUpdate(input.primaryEmail)
     if (globalUsers.size > 1 || globalUsers.singleOrNull()?.id?.let { it != current.userId } == true) {
       throw ScimUserConflictException()
