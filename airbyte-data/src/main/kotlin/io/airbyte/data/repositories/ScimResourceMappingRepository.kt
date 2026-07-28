@@ -298,6 +298,22 @@ interface ScimResourceMappingRepository : PageableRepository<ScimResourceMapping
 
   @Query(
     """
+    SELECT * FROM scim_resource_mapping
+    WHERE scim_configuration_id = :configurationId
+      AND organization_id = :organizationId
+      AND resource_type = 'USER'
+      AND user_active = FALSE
+    ORDER BY created_at, id
+    FOR UPDATE
+    """,
+  )
+  fun findInactiveUsersForUpdate(
+    configurationId: UUID,
+    organizationId: UUID,
+  ): List<ScimResourceMapping>
+
+  @Query(
+    """
     SELECT COUNT(*)
     FROM scim_resource_mapping mapping
     WHERE mapping.scim_configuration_id = :configurationId

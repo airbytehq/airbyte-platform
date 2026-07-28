@@ -183,25 +183,29 @@ internal class ScimConfigApiHttpTest {
   }
 
   @Test
-  fun `enable from disabled returns 409 with the known error body`() {
-    val message = "Disabled SCIM configurations cannot be re-enabled by this operation"
-    every { service.enable(any(), DomainScimIdpProvider.OKTA, any()) } throws ScimConfigurationConflictException(message)
+  fun `enable from disabled returns 200 with a one-time replacement token`() {
+    every {
+      service.enable(OrganizationId(organizationId), DomainScimIdpProvider.OKTA, UserId(userId))
+    } returns
+      ScimConfigurationRead(
+        status = ScimConfigurationStatus.ENABLED,
+        idpProvider = DomainScimIdpProvider.OKTA,
+        token = "airbyte_scim_reenabled_token",
+      )
 
-    val error =
-      exchangeError(
+    val response =
+      client.toBlocking().exchange(
         HttpRequest.POST(
           "$SCIM_CONFIG_PATH/enable",
           EnableScimRequestBody(organizationId, ScimIdpProvider.OKTA),
         ),
+        ScimConfigResponse::class.java,
       )
 
-    assertStatus(HttpStatus.CONFLICT, error.status)
-    assertThat(
-      error.response
-        .getBody(KnownExceptionInfo::class.java)
-        .orElseThrow()
-        .message,
-    ).isEqualTo(message)
+    assertStatus(HttpStatus.OK, response.status)
+    assertThat(response.body()!!.status).isEqualTo(ScimConfigStatus.ENABLED)
+    assertThat(response.body()!!.idpProvider).isEqualTo(ScimIdpProvider.OKTA)
+    assertThat(response.body()!!.token).isEqualTo("airbyte_scim_reenabled_token")
   }
 
   @Test

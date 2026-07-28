@@ -70,6 +70,30 @@ interface ScimConfigurationRepository : PageableRepository<ScimConfiguration, UU
   @Query(
     """
     UPDATE scim_configuration
+    SET enabled = TRUE,
+        token_hash = :tokenHash,
+        token_issued_at = :tokenIssuedAt,
+        token_issued_by_user_id = :tokenIssuedByUserId,
+        disabled_at = NULL,
+        disabled_by_user_id = NULL,
+        updated_at = :updatedAt
+    WHERE id = :id
+      AND organization_id = :organizationId
+      AND enabled = FALSE
+    """,
+  )
+  fun reenableByIdAndOrganizationId(
+    id: UUID,
+    organizationId: UUID,
+    tokenHash: String,
+    tokenIssuedAt: OffsetDateTime,
+    tokenIssuedByUserId: UUID,
+    updatedAt: OffsetDateTime,
+  ): Long
+
+  @Query(
+    """
+    UPDATE scim_configuration
     SET enabled = FALSE,
         token_hash = NULL,
         token_issued_at = NULL,

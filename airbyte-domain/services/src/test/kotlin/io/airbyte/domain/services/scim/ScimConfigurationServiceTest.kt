@@ -19,8 +19,10 @@ import io.micronaut.transaction.TransactionCallback
 import io.micronaut.transaction.TransactionDefinition
 import io.micronaut.transaction.TransactionOperations
 import io.micronaut.transaction.TransactionStatus
+import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import io.mockk.verifyOrder
@@ -41,6 +43,7 @@ class ScimConfigurationServiceTest {
   private val scimAccessGate = mockk<ScimAccessGate>()
   private val organizationRepository = mockk<OrganizationRepository>()
   private val scimConfigurationRepository = mockk<ScimConfigurationRepository>()
+  private val scimUserLifecycleService = mockk<ScimUserLifecycleService>()
   private val tokenService = mockk<ScimTokenService>()
   private val organizationId = OrganizationId(UUID.randomUUID())
   private val userId = UserId(UUID.randomUUID())
@@ -49,13 +52,14 @@ class ScimConfigurationServiceTest {
       scimAccessGate,
       organizationRepository,
       scimConfigurationRepository,
+      scimUserLifecycleService,
       tokenService,
       ImmediateConfigTransactionOperations(),
     )
 
   @BeforeEach
   fun setUp() {
-    clearMocks(scimAccessGate, organizationRepository, scimConfigurationRepository, tokenService)
+    clearMocks(scimAccessGate, organizationRepository, scimConfigurationRepository, scimUserLifecycleService, tokenService)
   }
 
   @Test
@@ -224,25 +228,176 @@ class ScimConfigurationServiceTest {
   }
 
   @Test
-  fun `enable rejects a disabled configuration for PLAT-940 reconciliation`() {
-    stubLockedConfiguration(
+  fun `enable re-enables a disabled configuration with a new one-time token`() {
+    val disabledAt = OffsetDateTime.now().minusDays(1)
+    val configuration =
       ScimConfiguration(
+        id = UUID.randomUUID(),
+        organizationId = organizationId.value,
+        idpProvider = ScimIdpProvider.OKTA.storageValue,
+        enabled = false,
+        disabledAt = disabledAt,
+        disabledByUserId = UUID.randomUUID(),
+      )
+    val rawToken = "airbyte_scim_${"e".repeat(64)}"
+    stubLockedConfiguration(configuration)
+    every {
+      scimUserLifecycleService.reconcileInactiveUsers(configuration.id!!, organizationId.value)
+    } just Runs
+    every { tokenService.generateToken() } returns rawToken
+    val tokenHash = "f".repeat(64)
+    every { tokenService.hashToken(rawToken) } returns tokenHash
+    every {
+      scimConfigurationRepository.reenableByIdAndOrganizationId(
+        configuration.id!!,
+        organizationId.value,
+        tokenHash,
+        any(),
+        userId.value,
+        any(),
+      )
+    } returns 1
+
+    val result = service.enable(organizationId, ScimIdpProvider.OKTA, userId)
+
+    assertEquals(ScimConfigurationStatus.ENABLED, result.status)
+    assertEquals(ScimIdpProvider.OKTA, result.idpProvider)
+    assertEquals(rawToken, result.token)
+    assertTrue(configuration.enabled)
+    assertEquals(tokenHash, configuration.tokenHash)
+    assertEquals(userId.value, configuration.tokenIssuedByUserId)
+    assertTrue(configuration.tokenIssuedAt != null)
+    assertNull(configuration.disabledAt)
+    assertNull(configuration.disabledByUserId)
+    verifyOrder {
+      scimAccessGate.isAllowed(organizationId)
+      organizationRepository.findByIdForUpdate(organizationId.value)
+      scimConfigurationRepository.findByOrganizationIdForUpdate(organizationId.value)
+      scimUserLifecycleService.reconcileInactiveUsers(configuration.id!!, organizationId.value)
+      tokenService.generateToken()
+      tokenService.hashToken(rawToken)
+      scimConfigurationRepository.reenableByIdAndOrganizationId(
+        configuration.id!!,
+        organizationId.value,
+        tokenHash,
+        any(),
+        userId.value,
+        any(),
+      )
+    }
+  }
+
+  @Test
+  fun `enable rejects changing the provider on a disabled configuration before cleanup or token issuance`() {
+    val configuration =
+      ScimConfiguration(
+        id = UUID.randomUUID(),
         organizationId = organizationId.value,
         idpProvider = ScimIdpProvider.OKTA.storageValue,
         enabled = false,
         disabledAt = OffsetDateTime.now(),
-      ),
-    )
+      )
+    stubLockedConfiguration(configuration)
 
     val exception =
       assertThrows<ScimConfigurationConflictException> {
+        service.enable(organizationId, ScimIdpProvider.MICROSOFT_ENTRA_ID, userId)
+      }
+
+    assertEquals("SCIM is already enabled with a different identity provider", exception.message)
+    verify(exactly = 0) { scimUserLifecycleService.reconcileInactiveUsers(any(), any()) }
+    verify(exactly = 0) { tokenService.generateToken() }
+    verify(exactly = 0) { scimConfigurationRepository.reenableByIdAndOrganizationId(any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `re-enable propagates cleanup failure before generating token or enabling guards`() {
+    val configuration =
+      ScimConfiguration(
+        id = UUID.randomUUID(),
+        organizationId = organizationId.value,
+        idpProvider = ScimIdpProvider.OKTA.storageValue,
+        enabled = false,
+        disabledAt = OffsetDateTime.now(),
+      )
+    val failure = IllegalStateException("cleanup failed")
+    stubLockedConfiguration(configuration)
+    every {
+      scimUserLifecycleService.reconcileInactiveUsers(configuration.id!!, organizationId.value)
+    } throws failure
+
+    val thrown =
+      assertThrows<IllegalStateException> {
         service.enable(organizationId, ScimIdpProvider.OKTA, userId)
       }
 
-    assertEquals("Disabled SCIM configurations cannot be re-enabled by this operation", exception.message)
+    assertSame(failure, thrown)
+    assertFalse(configuration.enabled)
     verify(exactly = 0) { tokenService.generateToken() }
-    verify(exactly = 0) { scimConfigurationRepository.rotateTokenByIdAndOrganizationId(any(), any(), any(), any(), any(), any()) }
-    verify(exactly = 0) { scimConfigurationRepository.disableByIdAndOrganizationId(any(), any(), any(), any(), any()) }
+    verify(exactly = 0) { tokenService.hashToken(any()) }
+    verify(exactly = 0) { scimConfigurationRepository.reenableByIdAndOrganizationId(any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `re-enable propagates token failure after cleanup without enabling guards`() {
+    val configuration =
+      ScimConfiguration(
+        id = UUID.randomUUID(),
+        organizationId = organizationId.value,
+        idpProvider = ScimIdpProvider.OKTA.storageValue,
+        enabled = false,
+        disabledAt = OffsetDateTime.now(),
+      )
+    val failure = IllegalStateException("token generation failed")
+    stubLockedConfiguration(configuration)
+    every {
+      scimUserLifecycleService.reconcileInactiveUsers(configuration.id!!, organizationId.value)
+    } just Runs
+    every { tokenService.generateToken() } throws failure
+
+    val thrown =
+      assertThrows<IllegalStateException> {
+        service.enable(organizationId, ScimIdpProvider.OKTA, userId)
+      }
+
+    assertSame(failure, thrown)
+    assertFalse(configuration.enabled)
+    verify(exactly = 0) { tokenService.hashToken(any()) }
+    verify(exactly = 0) { scimConfigurationRepository.reenableByIdAndOrganizationId(any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `re-enable requires exactly one disabled organization scoped row to be updated`() {
+    val configuration =
+      ScimConfiguration(
+        id = UUID.randomUUID(),
+        organizationId = organizationId.value,
+        idpProvider = ScimIdpProvider.OKTA.storageValue,
+        enabled = false,
+        disabledAt = OffsetDateTime.now(),
+      )
+    stubLockedConfiguration(configuration)
+    every {
+      scimUserLifecycleService.reconcileInactiveUsers(configuration.id!!, organizationId.value)
+    } just Runs
+    every { tokenService.generateToken() } returns "raw-token"
+    every { tokenService.hashToken("raw-token") } returns "replacement-hash"
+    every {
+      scimConfigurationRepository.reenableByIdAndOrganizationId(
+        configuration.id!!,
+        organizationId.value,
+        "replacement-hash",
+        any(),
+        userId.value,
+        any(),
+      )
+    } returns 0
+
+    assertThrows<IllegalStateException> {
+      service.enable(organizationId, ScimIdpProvider.OKTA, userId)
+    }
+
+    assertFalse(configuration.enabled)
   }
 
   @Test

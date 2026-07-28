@@ -189,6 +189,15 @@ open class ScimUserLifecycleService(
     }
   }
 
+  open fun reconcileInactiveUsers(
+    configurationId: UUID,
+    organizationId: UUID,
+  ) {
+    mappingRepository
+      .findInactiveUsersForUpdate(configurationId, organizationId)
+      .forEach { cleanupAccess(requireNotNull(it.userId), organizationId) }
+  }
+
   private fun update(
     current: ScimResourceMapping,
     configurationId: UUID,

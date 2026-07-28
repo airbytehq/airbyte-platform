@@ -138,6 +138,64 @@ class ScimUserLifecycleServiceTest {
   }
 
   @Test
+  fun `re-enable reconciliation cleans every inactive User in the configured organization`() {
+    val first = mapping(userActive = false)
+    val second = mapping(userActive = false)
+    every { mappingRepository.findInactiveUsersForUpdate(configurationId, organizationId) } returns listOf(first, second)
+    listOf(first, second).forEach { mapping ->
+      every { permissionRepository.deleteByUserIdAndOrganizationId(mapping.userId!!, organizationId) } returns 1
+      every {
+        permissionRepository.deleteWorkspacePermissionsByUserIdAndOrganizationId(mapping.userId!!, organizationId)
+      } returns 2
+      every { groupMemberRepository.deleteByUserIdAndOrganizationId(mapping.userId!!, organizationId) } returns 3
+    }
+
+    service.reconcileInactiveUsers(configurationId, organizationId)
+
+    verifyOrder {
+      mappingRepository.findInactiveUsersForUpdate(configurationId, organizationId)
+      permissionRepository.deleteByUserIdAndOrganizationId(first.userId!!, organizationId)
+      permissionRepository.deleteWorkspacePermissionsByUserIdAndOrganizationId(first.userId!!, organizationId)
+      groupMemberRepository.deleteByUserIdAndOrganizationId(first.userId!!, organizationId)
+      permissionRepository.deleteByUserIdAndOrganizationId(second.userId!!, organizationId)
+      permissionRepository.deleteWorkspacePermissionsByUserIdAndOrganizationId(second.userId!!, organizationId)
+      groupMemberRepository.deleteByUserIdAndOrganizationId(second.userId!!, organizationId)
+    }
+  }
+
+  @Test
+  fun `re-enable reconciliation handles no inactive Users without cleanup writes`() {
+    every { mappingRepository.findInactiveUsersForUpdate(configurationId, organizationId) } returns emptyList()
+
+    service.reconcileInactiveUsers(configurationId, organizationId)
+
+    verify(exactly = 0) { permissionRepository.deleteByUserIdAndOrganizationId(any(), any()) }
+    verify(exactly = 0) { permissionRepository.deleteWorkspacePermissionsByUserIdAndOrganizationId(any(), any()) }
+    verify(exactly = 0) { groupMemberRepository.deleteByUserIdAndOrganizationId(any(), any()) }
+  }
+
+  @Test
+  fun `re-enable reconciliation propagates cleanup failure and stops processing`() {
+    val first = mapping(userActive = false)
+    val second = mapping(userActive = false)
+    val failure = IllegalStateException("permission cleanup failed")
+    every { mappingRepository.findInactiveUsersForUpdate(configurationId, organizationId) } returns listOf(first, second)
+    every { permissionRepository.deleteByUserIdAndOrganizationId(first.userId!!, organizationId) } throws failure
+
+    val thrown =
+      assertThrows<IllegalStateException> {
+        service.reconcileInactiveUsers(configurationId, organizationId)
+      }
+
+    assertThat(thrown).isSameAs(failure)
+    verify(exactly = 0) {
+      permissionRepository.deleteWorkspacePermissionsByUserIdAndOrganizationId(first.userId!!, organizationId)
+    }
+    verify(exactly = 0) { groupMemberRepository.deleteByUserIdAndOrganizationId(first.userId!!, organizationId) }
+    verify(exactly = 0) { permissionRepository.deleteByUserIdAndOrganizationId(second.userId!!, organizationId) }
+  }
+
+  @Test
   fun `POST rejects ambiguous global identity matches`() {
     every { mappingRepository.findAllUsers(configurationId, organizationId) } returns emptyList()
     every { userRepository.findByEmailIgnoreCaseForUpdate("alice@example.com") } returns
