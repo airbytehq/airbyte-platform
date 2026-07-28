@@ -124,23 +124,38 @@ interface GoogleSecretManagerClient {
 
   fun getKmsKeyName(): String? = null
 
-  fun getReplicationPolicy(): Replication? =
-    if (getRegion().isNullOrBlank()) {
-      Replication
-        .newBuilder()
-        .setAutomatic(Replication.Automatic.newBuilder().build())
-        .build()
-    } else {
-      null
+  fun getReplicationPolicy(): Replication? {
+    // regional secrets reject a replication policy, their CMEK key goes on the secret itself
+    if (!getRegion().isNullOrBlank()) {
+      return null
     }
+
+    val automatic = Replication.Automatic.newBuilder()
+
+    // global secrets carry CMEK in the replication policy and require a key in the global location
+    getKmsKeyName()?.takeIf { it.isNotBlank() }?.let { kmsKeyName ->
+      automatic.setCustomerManagedEncryption(
+        CustomerManagedEncryption
+          .newBuilder()
+          .setKmsKeyName(kmsKeyName)
+          .build(),
+      )
+      logger.info { "Using CMEK for global secret: kmsKeyName=$kmsKeyName" }
+    }
+
+    return Replication
+      .newBuilder()
+      .setAutomatic(automatic.build())
+      .build()
+  }
 
   fun getSecret(coordinate: SecretCoordinate): String {
     try {
       val region = getRegion()
       val projectId = getProjectId()
       val secretVersionName =
-        if (!getRegion().isNullOrBlank()) {
-          // For regional secrets, construct the resource name with location
+        if (!region.isNullOrBlank()) {
+          // for regional secrets, construct the resource name with location
           val resourceName = "projects/$projectId/locations/$region/secrets/${coordinate.fullCoordinate}/versions/$LATEST_VERSION"
           SecretVersionName.parse(resourceName)
         } else {
@@ -191,13 +206,16 @@ interface GoogleSecretManagerClient {
     val secretBuilder = Secret.newBuilder()
     getReplicationPolicy()?.let { secretBuilder.setReplication(it) }
 
-    // For regional secrets, set CMEK directly on the secret (not via replication)
-    if (!getRegion().isNullOrBlank() && !getKmsKeyName().isNullOrBlank()) {
-      val cmek = CustomerManagedEncryption.newBuilder()
-        .setKmsKeyName(getKmsKeyName())
-        .build()
-      secretBuilder.setCustomerManagedEncryption(cmek)
-      logger.info { "Using CMEK for regional secret: kmsKeyName=${getKmsKeyName()}" }
+    // for regional secrets, set CMEK on the secret itself since they have no replication policy
+    val kmsKeyName = getKmsKeyName()
+    if (!getRegion().isNullOrBlank() && !kmsKeyName.isNullOrBlank()) {
+      secretBuilder.setCustomerManagedEncryption(
+        CustomerManagedEncryption
+          .newBuilder()
+          .setKmsKeyName(kmsKeyName)
+          .build(),
+      )
+      logger.info { "Using CMEK for regional secret: kmsKeyName=$kmsKeyName" }
     }
 
     // set the expiry if specified
@@ -315,6 +333,5 @@ class SystemGoogleSecretManagerClient(
 
   override fun getRegion(): String? = config.region
 
-  // Read KMS key from env var since the config class is in a separate JAR (commons-micronaut)
-  override fun getKmsKeyName(): String? = System.getenv("SECRET_STORE_GCP_KMS_KEY_NAME")?.ifBlank { null }
+  override fun getKmsKeyName(): String? = config.kmsKeyName
 }
