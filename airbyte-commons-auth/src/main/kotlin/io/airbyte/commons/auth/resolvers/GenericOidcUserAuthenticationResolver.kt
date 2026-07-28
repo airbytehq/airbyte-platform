@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.auth.resolvers
 
-import io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_EMAIL_VERIFIED
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver
 import io.airbyte.commons.auth.support.UserAuthenticationResolver
 import io.airbyte.config.AuthProvider
@@ -48,14 +47,6 @@ class GenericOidcUserAuthenticationResolver(
       .withAuthProvider(AuthProvider.AIRBYTE)
   }
 
-  override fun resolveVerifiedEmail(): String? {
-    val jwtMap = securityService.authentication.orElse(null) ?: return null
-    if (jwtMap.attributes[JWT_USER_EMAIL_VERIFIED] != true) {
-      return null
-    }
-    return jwtMap.attributes[STANDARD_EMAIL_CLAIM] as? String
-  }
-
   override fun resolveRealm(): String? {
     val jwtMap: Optional<Authentication> = securityService.authentication
     if (jwtMap.isEmpty) {
@@ -67,9 +58,5 @@ class GenericOidcUserAuthenticationResolver(
       return null
     }
     return issuer
-  }
-
-  private companion object {
-    const val STANDARD_EMAIL_CLAIM = "email"
   }
 }

@@ -7,7 +7,6 @@ package io.airbyte.commons.server.support
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_AUTH_PROVIDER
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_EMAIL
-import io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_EMAIL_VERIFIED
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_NAME
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver
 import io.airbyte.config.AuthProvider
@@ -55,43 +54,6 @@ internal class JwtUserAuthenticationResolverTest {
     // In this case we do not have ssoRealm in the attributes; expecting not throw and treat it as a
     // request without realm.
     Assertions.assertNull(jwtUserAuthenticationResolver.resolveRealm())
-  }
-
-  @Test
-  fun `resolves a verified email claim only when it is boolean true`() {
-    val authentication: Optional<Authentication> =
-      Optional.of(
-        Authentication.build(
-          AUTH_USER_ID,
-          mapOf(JWT_USER_EMAIL to EMAIL, JWT_USER_EMAIL_VERIFIED to true),
-        ),
-      )
-    Mockito.`when`(securityService.getAuthentication()).thenReturn(authentication)
-
-    Assertions.assertEquals(EMAIL, jwtUserAuthenticationResolver.resolveVerifiedEmail())
-  }
-
-  @Test
-  fun `does not treat a missing email verification claim as verified`() {
-    val authentication: Optional<Authentication> =
-      Optional.of(Authentication.build(AUTH_USER_ID, emptyMap()))
-    Mockito.`when`(securityService.getAuthentication()).thenReturn(authentication)
-
-    Assertions.assertNull(jwtUserAuthenticationResolver.resolveVerifiedEmail())
-  }
-
-  @Test
-  fun `does not treat a string email verification claim as verified`() {
-    val authentication: Optional<Authentication> =
-      Optional.of(
-        Authentication.build(
-          AUTH_USER_ID,
-          mapOf(JWT_USER_EMAIL_VERIFIED to "true"),
-        ),
-      )
-    Mockito.`when`(securityService.getAuthentication()).thenReturn(authentication)
-
-    Assertions.assertNull(jwtUserAuthenticationResolver.resolveVerifiedEmail())
   }
 
   @Test

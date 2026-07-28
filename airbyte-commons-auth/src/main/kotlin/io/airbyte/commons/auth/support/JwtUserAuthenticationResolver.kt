@@ -7,7 +7,6 @@ package io.airbyte.commons.auth.support
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_AUTH_PROVIDER
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_EMAIL
-import io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_EMAIL_VERIFIED
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_USER_NAME
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthenticatedUser
@@ -44,17 +43,6 @@ class JwtUserAuthenticationResolver(
       .withEmail(email)
       .withAuthUserId(expectedAuthUserId)
       .withAuthProvider(authProvider)
-  }
-
-  override fun resolveVerifiedEmail(): String? {
-    if (securityService == null) {
-      return null
-    }
-    val jwtMap = securityService.authentication.getOrNull()?.attributes ?: return null
-    if (jwtMap[JWT_USER_EMAIL_VERIFIED] != true) {
-      return null
-    }
-    return jwtMap[JWT_USER_EMAIL] as? String
   }
 
   override fun resolveRealm(): String? {

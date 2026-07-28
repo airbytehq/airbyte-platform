@@ -13,12 +13,7 @@ import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.runtime.http.scope.RequestScope
 import io.micronaut.security.utils.SecurityService
-import io.micronaut.transaction.TransactionOperations
 import io.opentelemetry.instrumentation.annotations.WithSpan
-import jakarta.inject.Named
-import org.jooq.SQLDialect
-import org.jooq.impl.DSL
-import java.sql.Connection
 import java.util.Optional
 import java.util.UUID
 
@@ -36,7 +31,6 @@ import java.util.UUID
 open class SecurityAwareCurrentUserService(
   private val userPersistence: UserPersistence,
   private val securityService: SecurityService,
-  @param:Named("config") private val transactionOperations: TransactionOperations<Connection>,
 ) : CurrentUserService {
   private var retrievedCurrentUser: AuthenticatedUser? = null
 
@@ -45,16 +39,7 @@ open class SecurityAwareCurrentUserService(
     if (this.retrievedCurrentUser == null) {
       try {
         val authUserId = securityService.username().orElseThrow()
-        val user =
-          if (transactionOperations.hasConnection()) {
-            userPersistence.getUserByAuthId(
-              DSL.using(transactionOperations.connection, SQLDialect.POSTGRES),
-              authUserId,
-            )
-          } else {
-            userPersistence.getUserByAuthId(authUserId)
-          }
-        this.retrievedCurrentUser = user.orElseThrow()
+        this.retrievedCurrentUser = userPersistence.getUserByAuthId(authUserId).orElseThrow()
 
         retrievedCurrentUser?.also {
           ApmTraceUtils.addTagsToRootSpan(mapOf("userId" to it.userId))

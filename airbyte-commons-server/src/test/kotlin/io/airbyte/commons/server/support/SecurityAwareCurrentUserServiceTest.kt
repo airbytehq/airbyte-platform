@@ -14,14 +14,12 @@ import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.security.utils.SecurityService
 import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
-import io.micronaut.transaction.TransactionOperations
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.io.IOException
-import java.sql.Connection
 import java.util.Optional
 import java.util.UUID
 
@@ -36,19 +34,14 @@ internal class SecurityAwareCurrentUserServiceTest {
   @MockBean(UserPersistence::class)
   fun mockUserPersistence(): UserPersistence = Mockito.mock(UserPersistence::class.java)
 
-  @Suppress("UNCHECKED_CAST")
-  private val transactionOperations =
-    Mockito.mock(TransactionOperations::class.java) as TransactionOperations<Connection>
+  @Inject
+  lateinit var currentUserService: SecurityAwareCurrentUserService
 
   @Inject
   lateinit var securityService: SecurityService
 
   @Inject
   lateinit var userPersistence: UserPersistence
-
-  private val currentUserService: SecurityAwareCurrentUserService by lazy {
-    SecurityAwareCurrentUserService(userPersistence, securityService, transactionOperations)
-  }
 
   // todo (cgardens) fix in commons-server PR
   @Disabled

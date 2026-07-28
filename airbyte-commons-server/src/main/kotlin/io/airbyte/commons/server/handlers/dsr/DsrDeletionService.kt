@@ -37,7 +37,6 @@ import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.instance.configs.jooq.generated.enums.DataSubjectDeletionStatus
-import io.airbyte.db.instance.configs.jooq.generated.enums.ScimResourceType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.models.WorkspaceId
@@ -955,20 +954,12 @@ open class DsrDeletionService(
         .mapNotNull { it.builderProjectId }
         .distinct()
     val permissions = permissionRepository.findByUserId(userId)
-    val authUserRows = userPersistence.listAuthUsersForUser(userId)
-    authUserRows
-      .map { it.authUserId }
-      .distinct()
-      .forEach { authUserId ->
-        val owner = userPersistence.getUserByAuthId(authUserId)
-        check(owner.isPresent && owner.get().userId == userId) {
-          "Authentication identity $authUserId is not uniquely owned by DSR user $userId."
-        }
-      }
     val authUsers =
-      authUserRows.map { au ->
-        DsrManifest.ManifestAuthUser(authUserId = au.authUserId, authProvider = au.authProvider?.toString())
-      }
+      userPersistence
+        .listAuthUsersForUser(userId)
+        .map { au ->
+          DsrManifest.ManifestAuthUser(authUserId = au.authUserId, authProvider = au.authProvider?.toString())
+        }
     val jobCounts = dbPrune.countJobsAndAttemptsByScopes(connectionIds.map { it.toString() })
     val keycloakUsers =
       externalUserService
@@ -1505,149 +1496,6 @@ open class DsrDeletionService(
     syncWorkloadIds: List<String>,
   ): ConfigDeletionCounts {
     ctx.execute("SET LOCAL statement_timeout = '600s'")
-    userPersistence.lockAuthUserReplacement(ctx, manifest.userId)
-
-    val scimMappingSnapshot =
-      ctx
-        .select(
-          ConfigTables.SCIM_RESOURCE_MAPPING.ID,
-          ConfigTables.SCIM_RESOURCE_MAPPING.ORGANIZATION_ID,
-          ConfigTables.SCIM_RESOURCE_MAPPING.SCIM_CONFIGURATION_ID,
-          ConfigTables.SCIM_RESOURCE_MAPPING.PRIMARY_EMAIL,
-        ).from(ConfigTables.SCIM_RESOURCE_MAPPING)
-        .where(ConfigTables.SCIM_RESOURCE_MAPPING.RESOURCE_TYPE.eq(ScimResourceType.USER))
-        .and(ConfigTables.SCIM_RESOURCE_MAPPING.USER_ID.eq(manifest.userId))
-        .orderBy(ConfigTables.SCIM_RESOURCE_MAPPING.ID)
-        .fetch()
-    val scimOrganizationIds =
-      (scimMappingSnapshot.map { requireNotNull(it.value2()) } + manifest.organizationIds)
-        .distinct()
-        .sorted()
-    scimOrganizationIds.forEach { organizationId ->
-      check(
-        ctx
-          .select(ConfigTables.ORGANIZATION.ID)
-          .from(ConfigTables.ORGANIZATION)
-          .where(ConfigTables.ORGANIZATION.ID.eq(organizationId))
-          .forUpdate()
-          .fetchOne() != null,
-      ) {
-        "SCIM organization $organizationId changed while deleting DSR user ${manifest.userId}; retry the deletion."
-      }
-    }
-    val lockedScimConfigurations =
-      if (scimOrganizationIds.isEmpty()) {
-        emptyList()
-      } else {
-        ctx
-          .select(ConfigTables.SCIM_CONFIGURATION.ID, ConfigTables.SCIM_CONFIGURATION.ORGANIZATION_ID)
-          .from(ConfigTables.SCIM_CONFIGURATION)
-          .where(ConfigTables.SCIM_CONFIGURATION.ORGANIZATION_ID.`in`(scimOrganizationIds))
-          .orderBy(ConfigTables.SCIM_CONFIGURATION.ID)
-          .forUpdate()
-          .fetch()
-      }
-    check(
-      scimMappingSnapshot.all { mapping ->
-        lockedScimConfigurations.any { configuration ->
-          configuration.value1() == mapping.value3() && configuration.value2() == mapping.value2()
-        }
-      },
-    ) {
-      "A SCIM configuration changed while deleting DSR user ${manifest.userId}; retry the deletion."
-    }
-
-    val observedUserEmail =
-      ctx
-        .select(ConfigTables.USER.EMAIL)
-        .from(ConfigTables.USER)
-        .where(ConfigTables.USER.ID.eq(manifest.userId))
-        .fetchOne(ConfigTables.USER.EMAIL)
-    (scimMappingSnapshot.mapNotNull { it.value4() } + listOfNotNull(observedUserEmail))
-      .distinctBy { it.lowercase(Locale.ROOT) }
-      .sortedBy { it.lowercase(Locale.ROOT) }
-      .forEach { email ->
-        ctx.fetch("SELECT pg_advisory_xact_lock(hashtextextended('email:' || lower(?), 0))", email)
-      }
-    val lockedUserEmail =
-      ctx
-        .select(ConfigTables.USER.EMAIL)
-        .from(ConfigTables.USER)
-        .where(ConfigTables.USER.ID.eq(manifest.userId))
-        .forUpdate()
-        .fetchOne(ConfigTables.USER.EMAIL)
-    check(lockedUserEmail == observedUserEmail && lockedUserEmail != null) {
-      "Airbyte user ${manifest.userId} changed while preparing DSR deletion; retry the deletion."
-    }
-
-    val lockedScimMappings =
-      ctx
-        .select(
-          ConfigTables.SCIM_RESOURCE_MAPPING.ID,
-          ConfigTables.SCIM_RESOURCE_MAPPING.ORGANIZATION_ID,
-          ConfigTables.SCIM_RESOURCE_MAPPING.SCIM_CONFIGURATION_ID,
-          ConfigTables.SCIM_RESOURCE_MAPPING.PRIMARY_EMAIL,
-        ).from(ConfigTables.SCIM_RESOURCE_MAPPING)
-        .where(ConfigTables.SCIM_RESOURCE_MAPPING.RESOURCE_TYPE.eq(ScimResourceType.USER))
-        .and(ConfigTables.SCIM_RESOURCE_MAPPING.USER_ID.eq(manifest.userId))
-        .orderBy(ConfigTables.SCIM_RESOURCE_MAPPING.ID)
-        .forUpdate()
-        .fetch()
-    check(
-      lockedScimMappings.size == scimMappingSnapshot.size &&
-        lockedScimMappings.zip(scimMappingSnapshot).all { (locked, observed) ->
-          locked.value1() == observed.value1() &&
-            locked.value2() == observed.value2() &&
-            locked.value3() == observed.value3() &&
-            locked.value4() == observed.value4()
-        },
-    ) {
-      "SCIM mappings changed while preparing DSR deletion for user ${manifest.userId}; retry the deletion."
-    }
-    ctx
-      .deleteFrom(ConfigTables.SCIM_RESOURCE_MAPPING)
-      .where(ConfigTables.SCIM_RESOURCE_MAPPING.RESOURCE_TYPE.eq(ScimResourceType.USER))
-      .and(ConfigTables.SCIM_RESOURCE_MAPPING.USER_ID.eq(manifest.userId))
-      .execute()
-
-    val observedCurrentAuthUserIds =
-      ctx
-        .select(ConfigTables.AUTH_USER.AUTH_USER_ID)
-        .from(ConfigTables.AUTH_USER)
-        .where(ConfigTables.AUTH_USER.USER_ID.eq(manifest.userId))
-        .orderBy(ConfigTables.AUTH_USER.AUTH_USER_ID)
-        .fetch(ConfigTables.AUTH_USER.AUTH_USER_ID)
-        .distinct()
-    val authUserIdsToLock =
-      (manifest.authUsers.map { it.authUserId } + observedCurrentAuthUserIds)
-        .distinct()
-        .sorted()
-    authUserIdsToLock.forEach { authUserId ->
-      ctx.fetch("SELECT pg_advisory_xact_lock(hashtextextended('auth-user:' || ?, 0))", authUserId)
-      val owners =
-        ctx
-          .select(ConfigTables.AUTH_USER.USER_ID)
-          .from(ConfigTables.AUTH_USER)
-          .where(ConfigTables.AUTH_USER.AUTH_USER_ID.eq(authUserId))
-          .orderBy(ConfigTables.AUTH_USER.USER_ID)
-          .forUpdate()
-          .fetch(ConfigTables.AUTH_USER.USER_ID)
-          .distinct()
-      check(owners == listOf(manifest.userId)) {
-        "Authentication identity $authUserId is not uniquely owned by DSR user ${manifest.userId}."
-      }
-    }
-    val currentAuthUserIds =
-      ctx
-        .select(ConfigTables.AUTH_USER.AUTH_USER_ID)
-        .from(ConfigTables.AUTH_USER)
-        .where(ConfigTables.AUTH_USER.USER_ID.eq(manifest.userId))
-        .orderBy(ConfigTables.AUTH_USER.AUTH_USER_ID)
-        .fetch(ConfigTables.AUTH_USER.AUTH_USER_ID)
-        .distinct()
-    check(currentAuthUserIds == observedCurrentAuthUserIds) {
-      "Authentication identities changed while preparing DSR deletion for user ${manifest.userId}; retry the deletion."
-    }
 
     val workspaceIds = manifest.workspaceIds.distinct()
     val organizationIds = manifest.organizationIds.distinct()
@@ -1799,7 +1647,7 @@ open class DsrDeletionService(
     deleteByUuidField(ctx, "organization_payment_config", "organization_id", organizationIds)
     deleteByUuidField(ctx, "sso_config", "organization_id", organizationIds)
 
-    deleteByStringField(ctx, "application", "auth_user_id", currentAuthUserIds)
+    deleteByStringField(ctx, "application", "auth_user_id", manifest.authUsers.map { it.authUserId })
 
     val authUsersDeleted =
       ctx

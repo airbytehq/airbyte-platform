@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.airbyte.commons.temporal.ConnectionManagerUtils
 import io.airbyte.config.AuthUser
-import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConnectorBuilderProject
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
@@ -41,7 +40,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ConfigScopeType
 import io.airbyte.db.instance.configs.jooq.generated.enums.DataSubjectDeletionStatus
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
-import io.airbyte.db.instance.configs.jooq.generated.enums.ScimResourceType
 import io.airbyte.db.instance.configs.jooq.generated.enums.Status
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType
 import io.airbyte.domain.models.SecretReferenceScopeType
@@ -62,18 +60,13 @@ import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.Optional
 import java.util.UUID
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -384,261 +377,6 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   }
 
   @Test
-  fun `hard delete fails before deleting applications when a captured auth subject has another owner`() {
-    val collidingAuthUserRowId = UUID.randomUUID()
-    database!!.transaction { ctx ->
-      ctx
-        .insertInto(ConfigTables.AUTH_USER)
-        .set(ConfigTables.AUTH_USER.ID, collidingAuthUserRowId)
-        .set(ConfigTables.AUTH_USER.USER_ID, unrelatedUserId)
-        .set(ConfigTables.AUTH_USER.AUTH_USER_ID, "kc-auth-integration")
-        .set(ConfigTables.AUTH_USER.AUTH_PROVIDER, JooqAuthProvider.google_identity_platform)
-        .execute()
-    }
-
-    assertThrows(IllegalStateException::class.java) {
-      database!!.transaction { ctx ->
-        service.hardDeleteConfigRowsForTest(ctx, manifest(), datagrailId, emptyList())
-      }
-    }
-
-    assertPresent("application", applicationId)
-    assertPresent("auth_user", authUserRowId)
-    assertPresent("auth_user", collidingAuthUserRowId)
-    assertPresent("user", userId)
-    assertPresent("user", unrelatedUserId)
-  }
-
-  @Test
-  fun `hard delete removes an identity and application attached after manifest refresh`() {
-    val configurationId = UUID.randomUUID()
-    val mappingId = UUID.randomUUID()
-    val attachedAuthUserRowId = UUID.randomUUID()
-    val attachedApplicationId = UUID.randomUUID()
-    val attachedAuthUserId = "attached-after-dsr-refresh"
-    val staleManifest =
-      emptyManifestForUser(userId).copy(
-        authUsers = listOf(DsrManifest.ManifestAuthUser("kc-auth-integration", "KEYCLOAK")),
-      )
-    database!!.query { ctx ->
-      ctx
-        .insertInto(ConfigTables.SCIM_CONFIGURATION)
-        .set(ConfigTables.SCIM_CONFIGURATION.ID, configurationId)
-        .set(ConfigTables.SCIM_CONFIGURATION.ORGANIZATION_ID, unrelatedOrganizationId)
-        .set(ConfigTables.SCIM_CONFIGURATION.TOKEN_HASH, "b".repeat(64))
-        .set(ConfigTables.SCIM_CONFIGURATION.IDP_PROVIDER, "okta")
-        .set(ConfigTables.SCIM_CONFIGURATION.ENABLED, true)
-        .set(ConfigTables.SCIM_CONFIGURATION.TOKEN_ISSUED_AT, OffsetDateTime.now(ZoneOffset.UTC))
-        .execute()
-      ctx
-        .insertInto(ConfigTables.SCIM_RESOURCE_MAPPING)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.ID, mappingId)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.SCIM_CONFIGURATION_ID, configurationId)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.ORGANIZATION_ID, unrelatedOrganizationId)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.RESOURCE_TYPE, ScimResourceType.USER)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.USER_ID, userId)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.USER_NAME, email)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.PRIMARY_EMAIL, email)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.USER_ACTIVE, true)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.ATTRIBUTES, JSONB.valueOf("{}"))
-        .execute()
-    }
-
-    val attachmentHasOwnershipLocks = CountDownLatch(1)
-    val allowAttachmentToCommit = CountDownLatch(1)
-    val deletionTransactionStarted = CountDownLatch(1)
-    val executor = Executors.newFixedThreadPool(2)
-    try {
-      val attachment =
-        executor.submit {
-          database!!.transaction { ctx ->
-            ctx
-              .select(ConfigTables.ORGANIZATION.ID)
-              .from(ConfigTables.ORGANIZATION)
-              .where(ConfigTables.ORGANIZATION.ID.eq(unrelatedOrganizationId))
-              .forUpdate()
-              .fetchOne()
-            ctx
-              .select(ConfigTables.SCIM_CONFIGURATION.ID)
-              .from(ConfigTables.SCIM_CONFIGURATION)
-              .where(ConfigTables.SCIM_CONFIGURATION.ID.eq(configurationId))
-              .forUpdate()
-              .fetchOne()
-            ctx.fetch("SELECT pg_advisory_xact_lock(hashtextextended('email:' || lower(?), 0))", email)
-            ctx
-              .select(ConfigTables.SCIM_RESOURCE_MAPPING.ID)
-              .from(ConfigTables.SCIM_RESOURCE_MAPPING)
-              .where(ConfigTables.SCIM_RESOURCE_MAPPING.ID.eq(mappingId))
-              .forUpdate()
-              .fetchOne()
-            ctx.fetch("SELECT pg_advisory_xact_lock(hashtextextended('auth-user:' || ?, 0))", attachedAuthUserId)
-            attachmentHasOwnershipLocks.countDown()
-            check(allowAttachmentToCommit.await(10, TimeUnit.SECONDS))
-            ctx
-              .insertInto(ConfigTables.AUTH_USER)
-              .set(ConfigTables.AUTH_USER.ID, attachedAuthUserRowId)
-              .set(ConfigTables.AUTH_USER.USER_ID, userId)
-              .set(ConfigTables.AUTH_USER.AUTH_USER_ID, attachedAuthUserId)
-              .set(ConfigTables.AUTH_USER.AUTH_PROVIDER, JooqAuthProvider.keycloak)
-              .execute()
-            ctx
-              .insertInto(ConfigTables.APPLICATION)
-              .set(ConfigTables.APPLICATION.ID, attachedApplicationId)
-              .set(ConfigTables.APPLICATION.AUTH_USER_ID, attachedAuthUserId)
-              .set(ConfigTables.APPLICATION.NAME, "attached after DSR refresh")
-              .set(ConfigTables.APPLICATION.CLIENT_ID, "attached-after-refresh-client")
-              .set(ConfigTables.APPLICATION.CLIENT_SECRET, "attached-after-refresh-secret")
-              .execute()
-          }
-        }
-      assertTrue(attachmentHasOwnershipLocks.await(10, TimeUnit.SECONDS))
-
-      val deletion =
-        executor.submit {
-          database!!.transaction { ctx ->
-            deletionTransactionStarted.countDown()
-            service.hardDeleteConfigRowsForTest(ctx, staleManifest, datagrailId, emptyList())
-          }
-        }
-      assertTrue(deletionTransactionStarted.await(10, TimeUnit.SECONDS))
-      allowAttachmentToCommit.countDown()
-      attachment.get(10, TimeUnit.SECONDS)
-      deletion.get(10, TimeUnit.SECONDS)
-    } finally {
-      allowAttachmentToCommit.countDown()
-      executor.shutdownNow()
-    }
-
-    assertDeleted("auth_user", attachedAuthUserRowId)
-    assertDeleted("application", attachedApplicationId)
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun `hard delete and identity replacement use the User lock before either lexical subject order`(incomingSortsBeforeOld: Boolean) {
-    val oldAuthUserId = "kc-auth-integration"
-    val incomingAuthUserId =
-      if (incomingSortsBeforeOld) {
-        "aaa-dsr-replacement-incoming"
-      } else {
-        "zzz-dsr-replacement-incoming"
-      }
-    val incomingAuthUserRowId = UUID.randomUUID()
-    database!!.transaction { ctx ->
-      ctx
-        .insertInto(ConfigTables.AUTH_USER)
-        .set(ConfigTables.AUTH_USER.ID, incomingAuthUserRowId)
-        .set(ConfigTables.AUTH_USER.USER_ID, userId)
-        .set(ConfigTables.AUTH_USER.AUTH_USER_ID, incomingAuthUserId)
-        .set(ConfigTables.AUTH_USER.AUTH_PROVIDER, JooqAuthProvider.keycloak)
-        .execute()
-    }
-    val concurrentManifest =
-      manifest().copy(
-        authUsers =
-          listOf(
-            DsrManifest.ManifestAuthUser(oldAuthUserId, ConfigAuthProvider.KEYCLOAK.toString()),
-            DsrManifest.ManifestAuthUser(incomingAuthUserId, ConfigAuthProvider.KEYCLOAK.toString()),
-          ),
-      )
-    val realUserPersistence = UserPersistence(database!!)
-    every { userPersistence.lockAuthUserReplacement(any(), userId) } answers {
-      realUserPersistence.lockAuthUserReplacement(firstArg(), userId)
-    }
-    val migrationHasOldSubjectLock = CountDownLatch(1)
-    val allowMigrationToLockIncoming = CountDownLatch(1)
-    val initialWaiters = advisoryLockWaiterCount()
-    val executor = Executors.newFixedThreadPool(2)
-
-    try {
-      val migration =
-        executor.submit {
-          database!!.transaction { ctx ->
-            realUserPersistence.lockAuthUserReplacement(ctx, userId)
-            realUserPersistence.requireAuthUsersOwnedBy(ctx, userId, listOf(oldAuthUserId))
-            migrationHasOldSubjectLock.countDown()
-            check(allowMigrationToLockIncoming.await(10, TimeUnit.SECONDS))
-            realUserPersistence.requireAuthUserAvailableTo(ctx, userId, incomingAuthUserId)
-          }
-        }
-      check(migrationHasOldSubjectLock.await(10, TimeUnit.SECONDS))
-
-      val deletion =
-        executor.submit {
-          database!!.transaction { ctx ->
-            service.hardDeleteConfigRowsForTest(ctx, concurrentManifest, datagrailId, emptyList())
-          }
-        }
-      assertTrue(waitForAdvisoryLockWaiters(initialWaiters + 1))
-      allowMigrationToLockIncoming.countDown()
-
-      migration.get(30, TimeUnit.SECONDS)
-      deletion.get(30, TimeUnit.SECONDS)
-    } finally {
-      allowMigrationToLockIncoming.countDown()
-      executor.shutdownNow()
-    }
-
-    assertDeleted("auth_user", authUserRowId)
-    assertDeleted("auth_user", incomingAuthUserRowId)
-  }
-
-  @Test
-  fun `hard delete removes SCIM mapping PII for a member of an organization they do not own`() {
-    val configurationId = UUID.randomUUID()
-    val mappingId = UUID.randomUUID()
-    val memberEmail = "dsr-scim-member@example.com"
-    database!!.query { ctx ->
-      ctx
-        .insertInto(ConfigTables.SCIM_CONFIGURATION)
-        .set(ConfigTables.SCIM_CONFIGURATION.ID, configurationId)
-        .set(ConfigTables.SCIM_CONFIGURATION.ORGANIZATION_ID, unrelatedOrganizationId)
-        .set(ConfigTables.SCIM_CONFIGURATION.TOKEN_HASH, "a".repeat(64))
-        .set(ConfigTables.SCIM_CONFIGURATION.IDP_PROVIDER, "okta")
-        .set(ConfigTables.SCIM_CONFIGURATION.ENABLED, true)
-        .set(ConfigTables.SCIM_CONFIGURATION.TOKEN_ISSUED_AT, OffsetDateTime.now(ZoneOffset.UTC))
-        .execute()
-      ctx
-        .insertInto(ConfigTables.SCIM_RESOURCE_MAPPING)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.ID, mappingId)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.SCIM_CONFIGURATION_ID, configurationId)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.ORGANIZATION_ID, unrelatedOrganizationId)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.RESOURCE_TYPE, ScimResourceType.USER)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.USER_ID, userId)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.EXTERNAL_ID, "retained-dsr-external-id")
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.USER_NAME, memberEmail)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.PRIMARY_EMAIL, memberEmail)
-        .set(ConfigTables.SCIM_RESOURCE_MAPPING.USER_ACTIVE, true)
-        .set(
-          ConfigTables.SCIM_RESOURCE_MAPPING.ATTRIBUTES,
-          JSONB.valueOf("""{"displayName":"Retained DSR Name","emails":[{"value":"$memberEmail","primary":true}]}"""),
-        ).execute()
-    }
-    val memberManifest =
-      emptyManifestForUser(userId).copy(
-        authUsers = listOf(DsrManifest.ManifestAuthUser("kc-auth-integration", "KEYCLOAK")),
-      )
-
-    database!!.transaction { ctx ->
-      service.hardDeleteConfigRowsForTest(ctx, memberManifest, datagrailId, emptyList())
-    }
-
-    assertDeleted("scim_resource_mapping", mappingId)
-    assertPresent("scim_configuration", configurationId)
-    assertPresent("organization", unrelatedOrganizationId)
-    val mappedUsersForSubsequentLogin =
-      database!!.query { ctx ->
-        ctx
-          .select(ConfigTables.SCIM_RESOURCE_MAPPING.USER_ID)
-          .from(ConfigTables.SCIM_RESOURCE_MAPPING)
-          .where(ConfigTables.SCIM_RESOURCE_MAPPING.RESOURCE_TYPE.eq(ScimResourceType.USER))
-          .and(ConfigTables.SCIM_RESOURCE_MAPPING.PRIMARY_EMAIL.equalIgnoreCase(memberEmail))
-          .fetch(ConfigTables.SCIM_RESOURCE_MAPPING.USER_ID)
-      }
-    assertTrue(mappedUsersForSubsequentLogin.isEmpty(), "A subsequent first-login lookup must have no SCIM mapping match")
-  }
-
-  @Test
   fun `workload prefix range only deletes underscore-prefixed workload ids at the C collation boundary`() {
     val matchingWorkloadId = "${connectionId}_boundary_0_sync"
     val lowerNeighborWorkloadId = "$connectionId^boundary_0_sync"
@@ -775,7 +513,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
 
     assertEquals("FAILED", executeRequest.status)
     assertFalse(executeRequest.tombstonedUser)
-    assertTrue(executeRequest.errors.single().contains("changed while preparing DSR deletion"))
+    assertTrue(executeRequest.errors.single().contains("Expected to tombstone exactly one Airbyte user row"))
     assertEquals(DataSubjectDeletionStatus.failed, finalizations.single().finalStatus)
     assertEquals(0, objectMapper.readTree(finalizations.single().executionCounts).get("deleted_keycloak_user_count").asInt())
     verify(exactly = 0) { externalUserService.deleteUsersByEmailInRealm(any(), any()) }
@@ -1049,8 +787,6 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
           .withAuthUserId("kc-auth-integration")
           .withAuthProvider(ConfigAuthProvider.KEYCLOAK),
       )
-    every { userPersistence.getUserByAuthId("kc-auth-integration") } returns
-      Optional.of(AuthenticatedUser().withUserId(userId).withAuthUserId("kc-auth-integration"))
     every { dbPrune.countJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
       DbPrune.JobScopeCounts(jobCount = 3L, attemptCount = 4L)
     every { externalUserService.findUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns
@@ -1071,33 +807,6 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       .set(ConfigTables.USER.EMAIL, email)
       .set(ConfigTables.USER.STATUS, Status.registered)
       .execute()
-  }
-
-  private fun advisoryLockWaiterCount(): Int =
-    database!!
-      .query { ctx ->
-        ctx
-          .fetchOne(
-            """
-            SELECT COUNT(*)
-            FROM pg_stat_activity
-            WHERE datname = current_database()
-              AND wait_event_type = 'Lock'
-              AND wait_event = 'advisory'
-            """,
-          )!!
-          .get(0, Int::class.java)
-      }
-
-  private fun waitForAdvisoryLockWaiters(expected: Int): Boolean {
-    val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
-    while (System.nanoTime() < deadline) {
-      if (advisoryLockWaiterCount() >= expected) {
-        return true
-      }
-      Thread.sleep(20)
-    }
-    return false
   }
 
   private fun insertOrganization(

@@ -58,8 +58,6 @@ import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.SsoConfigService
-import io.airbyte.domain.services.scim.ScimFirstLoginAttachmentResult
-import io.airbyte.domain.services.scim.ScimFirstLoginService
 import io.airbyte.featureflag.BypassSsoDomainValidationEnforcement
 import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.EmailAttribute
@@ -68,16 +66,10 @@ import io.airbyte.featureflag.RestrictLoginsForSSODomains
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.transaction.TransactionOperations
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.jooq.DSLContext
-import org.jooq.SQLDialect
 import org.jooq.exception.DataAccessException
-import org.jooq.impl.DSL
 import java.io.IOException
-import java.sql.Connection
-import java.util.Locale
 import java.util.Objects
 import java.util.Optional
 import java.util.UUID
@@ -105,54 +97,7 @@ open class UserHandler
     private val initialUserConfig: Optional<InitialUserConfig>,
     private val resourceBootstrapHandler: ResourceBootstrapHandlerInterface,
     private val featureFlagClient: FeatureFlagClient,
-    private val scimFirstLoginService: ScimFirstLoginService,
-    @param:Named("config") private val transactionOperations: TransactionOperations<Connection>,
   ) {
-    private fun currentConfigContext(): DSLContext? =
-      if (transactionOperations.hasConnection()) {
-        DSL.using(transactionOperations.connection, SQLDialect.POSTGRES)
-      } else {
-        null
-      }
-
-    private fun persistedUser(userId: UUID?): Optional<User> =
-      currentConfigContext()?.let { userPersistence.getUser(it, userId) }
-        ?: userPersistence.getUser(userId)
-
-    private fun persistedUserByAuthId(authUserId: String?): Optional<AuthenticatedUser> =
-      currentConfigContext()?.let { userPersistence.getUserByAuthId(it, authUserId) }
-        ?: userPersistence.getUserByAuthId(authUserId)
-
-    private fun persistedUserByEmail(email: String?): Optional<User> =
-      currentConfigContext()?.let { userPersistence.getUserByEmail(it, email) }
-        ?: userPersistence.getUserByEmail(email)
-
-    private fun persistUser(user: User) {
-      currentConfigContext()?.let { userPersistence.writeUser(it, user) }
-        ?: userPersistence.writeUser(user)
-    }
-
-    private fun persistAuthenticatedUser(user: AuthenticatedUser) {
-      currentConfigContext()?.let { userPersistence.writeAuthenticatedUser(it, user) }
-        ?: userPersistence.writeAuthenticatedUser(user)
-    }
-
-    private fun createAuthenticatedUserIfNoScimMapping(user: AuthenticatedUser): Boolean =
-      currentConfigContext()?.let { userPersistence.createAuthenticatedUserIfNoScimMapping(it, user) }
-        ?: userPersistence.createAuthenticatedUserIfNoScimMapping(user)
-
-    private fun replaceAuthUserForUserId(
-      userId: UUID,
-      authUserId: String,
-      authProvider: AuthProvider?,
-    ): Boolean =
-      currentConfigContext()?.let { userPersistence.replaceAuthUserForUserId(it, userId, authUserId, authProvider) }
-        ?: userPersistence.replaceAuthUserForUserId(userId, authUserId, authProvider)
-
-    private fun persistedAuthUsers(userId: UUID?): List<AuthUser> =
-      currentConfigContext()?.let { userPersistence.listAuthUsersForUser(it, userId) }
-        ?: userPersistence.listAuthUsersForUser(userId)
-
     /**
      * Get a user by internal user ID.
      *
@@ -172,7 +117,7 @@ open class UserHandler
      * @throws IOException if unable to retrieve the user.
      */
     fun getUserByAuthId(userAuthIdRequestBody: UserAuthIdRequestBody): UserRead {
-      val user = persistedUserByAuthId(userAuthIdRequestBody.authUserId)
+      val user = userPersistence.getUserByAuthId(userAuthIdRequestBody.authUserId)
       if (user.isPresent) {
         return buildUserRead(toUser(user.get()))
       } else {
@@ -188,7 +133,7 @@ open class UserHandler
      * @throws IOException if unable to retrieve the user.
      */
     fun getUserByEmail(userEmailRequestBody: UserEmailRequestBody): UserRead {
-      val user = persistedUserByEmail(userEmailRequestBody.email)
+      val user = userPersistence.getUserByEmail(userEmailRequestBody.email)
       if (user.isPresent) {
         return buildUserRead(user.get())
       } else {
@@ -197,7 +142,7 @@ open class UserHandler
     }
 
     private fun buildUserRead(userId: UUID): UserRead {
-      val user = persistedUser(userId)
+      val user = userPersistence.getUser(userId)
       if (user.isEmpty) {
         throw ConfigNotFoundException(ConfigNotFoundType.USER, userId)
       }
@@ -264,7 +209,7 @@ open class UserHandler
       }
 
       if (hasUpdate) {
-        persistUser(user)
+        userPersistence.writeUser(user)
         return buildUserRead(userUpdate.userId)
       }
       throw IllegalArgumentException(
@@ -333,10 +278,7 @@ open class UserHandler
       )
     }
 
-    private fun isAllowedDomain(
-      email: String,
-      currentSSOOrg: Optional<Organization>,
-    ): Boolean {
+    private fun isAllowedDomain(email: String): Boolean {
       if (!featureFlagClient.boolVariation(
           RestrictLoginsForSSODomains,
           io.airbyte.featureflag.User(UUID.randomUUID(), EmailAttribute(email)),
@@ -352,6 +294,7 @@ open class UserHandler
         return true
       }
 
+      val currentSSOOrg = ssoOrganizationIfExists
       return currentSSOOrg.isPresent &&
         restrictedForOrganizations
           .stream()
@@ -359,13 +302,9 @@ open class UserHandler
     }
 
     private fun getExistingUserRealms(userId: UUID): List<String?> {
-      val authUsers = persistedAuthUsers(userId)
-      return getExistingUserRealms(authUsers)
-    }
-
-    private fun getExistingUserRealms(authUsers: List<AuthUser>): List<String?> {
       val keycloakAuthUsers =
-        authUsers
+        userPersistence
+          .listAuthUsersForUser(userId)
           .stream()
           .filter { authUser: AuthUser -> authUser.authProvider == AuthProvider.KEYCLOAK }
           .toList()
@@ -393,11 +332,19 @@ open class UserHandler
     }
 
     private fun handleSSORestrictions(
-      email: String,
-      currentSSOOrg: Optional<Organization>,
+      incomingJwtUser: AuthenticatedUser,
+      authUserExists: Boolean,
     ) {
-      val allowDomain = isAllowedDomain(email, currentSSOOrg)
+      val allowDomain = isAllowedDomain(incomingJwtUser.email)
       if (!allowDomain) {
+        if (!authUserExists) {
+          // Keep keycloak clean by deleting the user if it doesn't exist in our auth_user table is not
+          // allowed to sign in
+          val authRealm = userAuthenticationResolver.resolveRealm()
+          if (authRealm != null) {
+            externalUserService.deleteUserByExternalId(incomingJwtUser.authUserId, authRealm)
+          }
+        }
         throw SSORequiredProblem()
       }
     }
@@ -414,10 +361,10 @@ open class UserHandler
      * @throws OperationNotAllowedException when an invalid domain claim is not bypassed
      */
     private fun validateSsoEmailDomainClaim(
-      email: String,
+      incomingJwtUser: AuthenticatedUser,
       ssoOrganization: Organization,
     ) {
-      val emailDomain = email.substringAfter("@").lowercase()
+      val emailDomain = incomingJwtUser.email.substringAfter("@").lowercase()
       val orgId = ssoOrganization.organizationId
 
       val claimedDomains = organizationEmailDomainService.findByOrganizationId(orgId)
@@ -464,274 +411,66 @@ open class UserHandler
       )
     }
 
-    private fun handleNewUserLogin(userToCreate: AuthenticatedUser): LoginAction {
+    private fun handleNewUserLogin(userToCreate: AuthenticatedUser): UserGetOrCreateByAuthIdResponse {
       val createdUser = createUserFromIncomingUser(userToCreate)
-      return LoginAction.Bootstrap(createdUser, userToCreate, true)
+      handleUserPermissionsAndWorkspace(createdUser)
+
+      // refresh the user from the database in case anything changed during permission/workspace
+      // modification
+      val updatedUser =
+        userPersistence
+          .getUser(createdUser.userId)
+          .orElseThrow {
+            ConfigNotFoundException(
+              ConfigNotFoundType.USER,
+              createdUser.userId,
+            )
+          }
+
+      return UserGetOrCreateByAuthIdResponse()
+        .userRead(buildUserRead(updatedUser))
+        .authUserId(userToCreate.authUserId)
+        .authProvider(
+          userToCreate.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
+        ).newUserCreated(true)
     }
 
     private fun handleRelinkAuthUser(
       existingUser: User,
       incomingJwtUser: AuthenticatedUser,
-      verifiedEmail: String?,
-      organizationId: UUID?,
-    ): LoginAction {
+    ): UserGetOrCreateByAuthIdResponse {
       log.info { "Relinking auth user {} to orphaned existing user $incomingJwtUser.authUserId, existingUser.userId..." }
-      return LoginAction.Relink(
-        existingUser,
-        incomingJwtUser,
-        persistedAuthUsers(existingUser.userId),
-        verifiedEmail,
-        organizationId,
-      )
-    }
+      userPersistence.replaceAuthUserForUserId(existingUser.userId, incomingJwtUser.authUserId, incomingJwtUser.authProvider)
 
-    private fun finishRelinkAuthUser(action: LoginAction.Relink): UserGetOrCreateByAuthIdResponse {
-      val response =
-        transactionOperations.executeWrite {
-          val ctx = currentConfigContext()
-          ctx?.let { userPersistence.lockAuthUserReplacement(it, action.existingUser.userId) }
-
-          val attachment =
-            scimFirstLoginService.attachIfPreProvisioned(
-              action.incomingJwtUser.email,
-              action.verifiedEmail,
-              action.incomingJwtUser.authUserId,
-              action.incomingJwtUser.authProvider,
-              action.organizationId,
+      val updatedUser =
+        userPersistence
+          .getUser(existingUser.userId)
+          .orElseThrow {
+            ConfigNotFoundException(
+              ConfigNotFoundType.USER,
+              existingUser.userId,
             )
-          val attachedUserId =
-            when (attachment) {
-              is ScimFirstLoginAttachmentResult.Attached -> attachment.userId
-              is ScimFirstLoginAttachmentResult.AlreadyAttached -> attachment.userId
-              is ScimFirstLoginAttachmentResult.ExistingIdentity -> attachment.userId
-              ScimFirstLoginAttachmentResult.NoMatch -> action.existingUser.userId
-              ScimFirstLoginAttachmentResult.AmbiguousIdentity,
-              ScimFirstLoginAttachmentResult.EmailNotVerified,
-              ScimFirstLoginAttachmentResult.Conflict,
-              -> null
-            }
-          if (attachedUserId != action.existingUser.userId) {
-            throw UserAlreadyExistsProblem(ProblemEmailData().email(action.incomingJwtUser.email))
           }
 
-          val currentPreviousAuthUsers =
-            persistedAuthUsers(action.existingUser.userId)
-              .filter { it.authUserId != action.incomingJwtUser.authUserId }
-          check(
-            currentPreviousAuthUsers.map { it.authUserId to it.authProvider }.toSet() ==
-              action.previousAuthUsers.map { it.authUserId to it.authProvider }.toSet(),
-          ) {
-            "Authentication identities changed while preparing orphan relink."
-          }
-          check(
-            ctx?.let {
-              userPersistence.lockAuthUsersForReplacement(
-                it,
-                action.existingUser.userId,
-                currentPreviousAuthUsers.map { authUser -> authUser.authUserId },
-                action.incomingJwtUser.authUserId,
-              )
-            } ?: true,
-          ) {
-            "Incoming authentication identity ownership changed during orphan relink."
-          }
-          check(
-            ctx?.let {
-              userPersistence.writeAuthUser(
-                it,
-                action.existingUser.userId,
-                action.incomingJwtUser.authUserId,
-                action.incomingJwtUser.authProvider,
-              )
-            } ?: userPersistence.writeAuthUser(
-              action.existingUser.userId,
-              action.incomingJwtUser.authUserId,
-              action.incomingJwtUser.authProvider,
-            ),
-          ) {
-            "Incoming authentication identity ownership changed during orphan relink."
-          }
-          if (applicationService.map(ApplicationService::deletesApplicationsTransactionally).orElse(false)) {
-            revokeApplications(action.existingUser, currentPreviousAuthUsers)
-          }
-
-          val updatedUser =
-            persistedUser(action.existingUser.userId)
-              .orElseThrow {
-                ConfigNotFoundException(
-                  ConfigNotFoundType.USER,
-                  action.existingUser.userId,
-                )
-              }
-          UserGetOrCreateByAuthIdResponse()
-            .userRead(buildUserRead(updatedUser))
-            .authUserId(action.incomingJwtUser.authUserId)
-            .authProvider(
-              action.incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
-            ).newUserCreated(false)
-        }
-
-      return finishExternalAuthUserCleanup(
-        action.existingUser,
-        action.incomingJwtUser,
-        response,
-        deleteExternalAuthUsers = false,
-      )
+      return UserGetOrCreateByAuthIdResponse()
+        .userRead(buildUserRead(updatedUser))
+        .authUserId(incomingJwtUser.authUserId)
+        .authProvider(
+          incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
+        ).newUserCreated(false)
     }
 
     private fun handleFirstTimeSSOLogin(
       existingUser: User,
       incomingJwtUser: AuthenticatedUser,
-      verifiedEmail: String?,
-      organizationId: UUID,
-    ): LoginAction {
+    ): UserGetOrCreateByAuthIdResponse {
       log.info { "Migrating existing user $existingUser.userId to SSO..." }
-      val previousAuthUsers = persistedAuthUsers(existingUser.userId)
-      return LoginAction.Migrate(existingUser, incomingJwtUser, previousAuthUsers, verifiedEmail, organizationId)
-    }
-
-    private fun finishFirstTimeSSOLogin(action: LoginAction.Migrate): UserGetOrCreateByAuthIdResponse {
-      val response =
-        transactionOperations.executeWrite {
-          val ctx = currentConfigContext()
-          ctx?.let { userPersistence.lockAuthUserReplacement(it, action.existingUser.userId) }
-
-          val currentAuthUsers = persistedAuthUsers(action.existingUser.userId)
-          check(
-            currentAuthUsers.map { it.authUserId to it.authProvider }.toSet() ==
-              action.previousAuthUsers.map { it.authUserId to it.authProvider }.toSet(),
-          ) {
-            "Authentication identities changed while preparing SSO migration."
-          }
-
-          if (
-            scimFirstLoginService.attachIfPreProvisioned(
-              action.incomingJwtUser.email,
-              action.verifiedEmail,
-              action.incomingJwtUser.authUserId,
-              action.incomingJwtUser.authProvider,
-              action.organizationId,
-            ) != ScimFirstLoginAttachmentResult.NoMatch
-          ) {
-            throw UserAlreadyExistsProblem(ProblemEmailData().email(action.incomingJwtUser.email))
-          }
-
-          check(
-            ctx?.let {
-              userPersistence.lockAuthUsersForReplacement(
-                it,
-                action.existingUser.userId,
-                action.previousAuthUsers.map { authUser -> authUser.authUserId },
-                action.incomingJwtUser.authUserId,
-              )
-            } ?: true,
-          ) {
-            "Incoming authentication identity ownership changed during SSO migration."
-          }
-          check(
-            ctx?.let {
-              userPersistence.writeAuthUser(
-                it,
-                action.existingUser.userId,
-                action.incomingJwtUser.authUserId,
-                action.incomingJwtUser.authProvider,
-              )
-            } ?: userPersistence.writeAuthUser(
-              action.existingUser.userId,
-              action.incomingJwtUser.authUserId,
-              action.incomingJwtUser.authProvider,
-            ),
-          ) {
-            "Incoming authentication identity ownership changed during SSO migration."
-          }
-
-          val bootstrapResponse =
-            finishBootstrap(
-              LoginAction.Bootstrap(
-                buildUserRead(action.existingUser),
-                action.incomingJwtUser,
-                false,
-              ),
-            )
-          if (applicationService.map(ApplicationService::deletesApplicationsTransactionally).orElse(false)) {
-            revokeApplications(action.existingUser, action.previousAuthUsers)
-          }
-          bootstrapResponse
-        }
-
-      return finishExternalAuthUserCleanup(
-        action.existingUser,
-        action.incomingJwtUser,
-        response,
-        deleteExternalAuthUsers = true,
-      )
-    }
-
-    private fun finishExternalAuthUserCleanup(
-      existingUser: User,
-      incomingJwtUser: AuthenticatedUser,
-      response: UserGetOrCreateByAuthIdResponse,
-      deleteExternalAuthUsers: Boolean,
-    ): UserGetOrCreateByAuthIdResponse =
-      transactionOperations.executeWrite {
-        val ctx = currentConfigContext()
-        ctx?.let { userPersistence.lockAuthUserReplacement(it, existingUser.userId) }
-        val currentAuthUsers = persistedAuthUsers(existingUser.userId)
-        check(currentAuthUsers.any { it.authUserId == incomingJwtUser.authUserId }) {
-          "Incoming authentication identity ownership changed during replacement."
-        }
-        val previousAuthUsers = currentAuthUsers.filter { it.authUserId != incomingJwtUser.authUserId }
-        if (previousAuthUsers.isEmpty()) {
-          return@executeWrite response
-        }
-
-        check(
-          ctx?.let {
-            userPersistence.lockAuthUsersForReplacement(
-              it,
-              existingUser.userId,
-              previousAuthUsers.map { authUser -> authUser.authUserId },
-              incomingJwtUser.authUserId,
-            )
-          } ?: true,
-        ) {
-          "Incoming authentication identity ownership changed during replacement."
-        }
-
-        // Repeat transactional cleanup here to close the gap after phase one, and perform external
-        // cleanup here because it cannot participate in the phase-one database transaction.
-        revokeApplications(existingUser, previousAuthUsers)
-
-        if (deleteExternalAuthUsers) {
-          log.info { "Deleting user with email ${existingUser.email} from other auth realms..." }
-          val newRealm = userAuthenticationResolver.resolveRealm()
-          checkNotNull(newRealm) { "No new realm found for user ${existingUser.userId}" }
-          externalUserService.deleteUserByEmailOnOtherRealms(existingUser.email, newRealm)
-        }
-
-        log.info { "Replacing existing auth users with new one (${incomingJwtUser.authUserId})..." }
-        check(
-          replaceAuthUserForUserId(
-            existingUser.userId,
-            incomingJwtUser.authUserId,
-            incomingJwtUser.authProvider,
-          ),
-        ) {
-          "Incoming authentication identity ownership changed during SSO migration."
-        }
-
-        log.info { "Done migrating user ${existingUser.userId} to SSO" }
-        response
-      }
-
-    private fun revokeApplications(
-      existingUser: User,
-      previousAuthUsers: List<AuthUser>,
-    ) {
+      // (1) Revoke existing applications
       if (applicationService.isPresent) {
         val appService = applicationService.get()
         log.info { "Revoking existing applications for user $existingUser.userId..." }
-        for (authUser in previousAuthUsers) {
+        val authUsers = userPersistence.listAuthUsersForUser(existingUser.userId)
+        for (authUser in authUsers) {
           val authedUser =
             toAuthenticatedUser(existingUser, authUser.authUserId, authUser.authProvider)
           val existingApplications = appService.listApplicationsByUser(authedUser)
@@ -741,16 +480,28 @@ open class UserHandler
           }
         }
       }
-    }
 
-    private fun finishBootstrap(action: LoginAction.Bootstrap): UserGetOrCreateByAuthIdResponse {
-      val userRead = action.userRead
+      // (2) Delete the user from other auth realms
+      log.info { "Deleting user with email $existingUser.email from other auth realms..." }
+      val newRealm = userAuthenticationResolver.resolveRealm()
+      checkNotNull(newRealm) { "No new realm found for user " + existingUser.userId }
+      externalUserService.deleteUserByEmailOnOtherRealms(existingUser.email, newRealm)
+
+      // (3) Replace the existing auth user with the new one
+      log.info { "Replacing existing auth users with new one ($incomingJwtUser.authUserId)..." }
+      userPersistence.replaceAuthUserForUserId(existingUser.userId, incomingJwtUser.authUserId, incomingJwtUser.authProvider)
+
+      log.info { "Done migrating user $existingUser.userId to SSO" }
+
+      // (4) Return the user
+      val userRead = buildUserRead(existingUser)
       handleUserPermissionsAndWorkspace(userRead)
 
       // refresh the user from the database in case anything changed during permission/workspace
       // modification
       val updatedUser =
-        persistedUser(userRead.userId)
+        userPersistence
+          .getUser(userRead.userId)
           .orElseThrow {
             ConfigNotFoundException(
               ConfigNotFoundType.USER,
@@ -760,95 +511,28 @@ open class UserHandler
 
       return UserGetOrCreateByAuthIdResponse()
         .userRead(buildUserRead(updatedUser))
-        .authUserId(action.incomingJwtUser.authUserId)
+        .authUserId(incomingJwtUser.authUserId)
         .authProvider(
-          action.incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
-        ).newUserCreated(action.newUserCreated)
+          incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
+        ).newUserCreated(false)
     }
 
     fun getOrCreateUserByAuthId(userAuthIdRequestBody: UserAuthIdRequestBody): UserGetOrCreateByAuthIdResponse {
-      val action =
-        transactionOperations.executeWrite {
-          getOrCreateUserByAuthIdInTransaction(userAuthIdRequestBody)
-        }
-      return when (action) {
-        is LoginAction.Complete -> action.response
-        is LoginAction.Bootstrap -> finishBootstrap(action)
-        is LoginAction.Migrate -> finishFirstTimeSSOLogin(action)
-        is LoginAction.Relink -> finishRelinkAuthUser(action)
-        is LoginAction.Cleanup ->
-          finishExternalAuthUserCleanup(
-            action.existingUser,
-            action.incomingJwtUser,
-            action.response,
-            action.deleteExternalAuthUsers,
-          )
-      }
-    }
-
-    private fun getOrCreateUserByAuthIdInTransaction(userAuthIdRequestBody: UserAuthIdRequestBody): LoginAction {
       val incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody)
-      var existingAuthUser = persistedUserByAuthId(incomingJwtUser.authUserId)
+      val existingAuthUser = userPersistence.getUserByAuthId(userAuthIdRequestBody.authUserId)
+
+      // (1) Restrict logins for SSO domains
+      handleSSORestrictions(incomingJwtUser, existingAuthUser.isPresent)
 
       // SEC-14: Resolve the SSO organization for this request once, reused below.
       val ssoOrg = ssoOrganizationIfExists
-      val verifiedEmail = userAuthenticationResolver.resolveVerifiedEmail()
-
-      // Validate every email that can drive first-login attachment before it performs any identity write.
-      if (ssoOrg.isPresent) {
-        listOfNotNull(incomingJwtUser.email, verifiedEmail)
-          .distinctBy { it.lowercase(Locale.ROOT) }
-          .forEach { attachmentEmail ->
-            validateSsoEmailDomainClaim(attachmentEmail, ssoOrg.get())
-            handleSSORestrictions(attachmentEmail, ssoOrg)
-          }
-      }
-
-      when (
-        val attachment =
-          scimFirstLoginService.attachIfPreProvisioned(
-            incomingJwtUser.email,
-            verifiedEmail,
-            incomingJwtUser.authUserId,
-            incomingJwtUser.authProvider,
-            ssoOrg.map(Organization::getOrganizationId).orElse(null),
-          )
-      ) {
-        is ScimFirstLoginAttachmentResult.Attached -> {
-          existingAuthUser =
-            persistedUserByAuthId(incomingJwtUser.authUserId)
-          if (existingAuthUser.isEmpty || existingAuthUser.get().userId != attachment.userId) {
-            throw UserAlreadyExistsProblem(ProblemEmailData().email(incomingJwtUser.email))
-          }
-        }
-        is ScimFirstLoginAttachmentResult.AlreadyAttached -> {
-          existingAuthUser =
-            persistedUserByAuthId(incomingJwtUser.authUserId)
-          if (existingAuthUser.isEmpty || existingAuthUser.get().userId != attachment.userId) {
-            throw UserAlreadyExistsProblem(ProblemEmailData().email(incomingJwtUser.email))
-          }
-        }
-        is ScimFirstLoginAttachmentResult.ExistingIdentity -> {
-          existingAuthUser = persistedUserByAuthId(incomingJwtUser.authUserId)
-          if (existingAuthUser.isEmpty || existingAuthUser.get().userId != attachment.userId) {
-            throw UserAlreadyExistsProblem(ProblemEmailData().email(incomingJwtUser.email))
-          }
-        }
-        ScimFirstLoginAttachmentResult.NoMatch -> Unit
-        ScimFirstLoginAttachmentResult.AmbiguousIdentity,
-        ScimFirstLoginAttachmentResult.EmailNotVerified,
-        ScimFirstLoginAttachmentResult.Conflict,
-        -> throw UserAlreadyExistsProblem(ProblemEmailData().email(incomingJwtUser.email))
-      }
-
-      // Restriction failures never delete a raw external subject: the subject may be shared by
-      // another provider or user, and absence cannot be durably inferred without the lock above.
-      if (ssoOrg.isEmpty) {
-        handleSSORestrictions(incomingJwtUser.email, ssoOrg)
-      }
 
       // (2) Authenticate existing auth_user
       if (existingAuthUser.isPresent) {
+        // SEC-14: Validate domain claim on every SSO login, even for already-linked identities.
+        if (ssoOrg.isPresent) {
+          validateSsoEmailDomainClaim(incomingJwtUser, ssoOrg.get())
+        }
         val existingUser = existingAuthUser.get()
 
         // Support upgrading non-agentic users to agentic (one-way operation)
@@ -859,51 +543,33 @@ open class UserHandler
         ) {
           // Upgrade user: set agenticEnabledAt timestamp
           val upgradedUser = existingUser.withAgenticEnabledAt(incomingJwtUser.agenticEnabledAt)
-          persistAuthenticatedUser(upgradedUser)
+          userPersistence.writeAuthenticatedUser(upgradedUser)
           log.info { "Upgraded user ${existingUser.userId} to agentic user" }
 
-          return LoginAction.Complete(
-            UserGetOrCreateByAuthIdResponse()
-              .userRead(buildUserRead(toUser(upgradedUser)))
-              .authUserId(userAuthIdRequestBody.authUserId)
-              .authProvider(
-                incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
-              ).newUserCreated(false),
-          )
-        }
-
-        // Otherwise, return existing user as-is (agenticEnabledAt is immutable once set)
-        val response =
-          UserGetOrCreateByAuthIdResponse()
-            .userRead(buildUserRead(toUser(existingUser)))
+          return UserGetOrCreateByAuthIdResponse()
+            .userRead(buildUserRead(toUser(upgradedUser)))
             .authUserId(userAuthIdRequestBody.authUserId)
             .authProvider(
               incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
             ).newUserCreated(false)
-        val previousAuthUsers =
-          persistedAuthUsers(existingUser.userId)
-            .filter { it.authUserId != incomingJwtUser.authUserId }
-        if (previousAuthUsers.isNotEmpty()) {
-          if (ssoOrg.isPresent) {
-            return LoginAction.Cleanup(toUser(existingUser), incomingJwtUser, response, true)
-          }
-          if (getExistingUserRealms(previousAuthUsers).isEmpty()) {
-            return LoginAction.Cleanup(toUser(existingUser), incomingJwtUser, response, false)
-          }
         }
-        return LoginAction.Complete(response)
+
+        // Otherwise, return existing user as-is (agenticEnabledAt is immutable once set)
+        return UserGetOrCreateByAuthIdResponse()
+          .userRead(buildUserRead(toUser(existingUser)))
+          .authUserId(userAuthIdRequestBody.authUserId)
+          .authProvider(
+            incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
+          ).newUserCreated(false)
       }
 
       // (3) Handle non-existing auth_user
 
-      var existingUserWithEmail = persistedUserByEmail(incomingJwtUser.email)
-      if (existingUserWithEmail.isPresent && scimFirstLoginService.isScimManagedUser(existingUserWithEmail.get().userId)) {
-        throw UserAlreadyExistsProblem(ProblemEmailData().email(incomingJwtUser.email))
-      }
+      var existingUserWithEmail = userPersistence.getUserByEmail(incomingJwtUser.email)
       if (existingUserWithEmail.isPresent && existingUserWithEmail.get().userId === DEFAULT_USER_ID) {
         // (Enterprise) If the email is already taken by the default user, we can safely clear it so the
         // real user can be created
-        persistUser(existingUserWithEmail.get().withEmail(""))
+        userPersistence.writeUser(existingUserWithEmail.get().withEmail(""))
         log.info { "Cleared email for default user on first login for $incomingJwtUser.email" }
 
         existingUserWithEmail = Optional.empty()
@@ -911,6 +577,11 @@ open class UserHandler
 
       // (3a) Email has not been used before
       if (existingUserWithEmail.isEmpty) {
+        // SEC-14: Even for new users, validate the SSO provider is authorized for this domain.
+        // Prevents an attacker from squatting on victim emails before the victim signs up.
+        if (ssoOrg.isPresent) {
+          validateSsoEmailDomainClaim(incomingJwtUser, ssoOrg.get())
+        }
         return handleNewUserLogin(incomingJwtUser)
       }
 
@@ -918,15 +589,16 @@ open class UserHandler
       val existingUser = existingUserWithEmail.get()
       val existingUserRealms = getExistingUserRealms(existingUser.userId)
 
+      // SEC-14: If this is an SSO login, validate that the SSO provider is authorized
+      // to assert this email domain before any account migration or relinking.
+      if (ssoOrg.isPresent) {
+        validateSsoEmailDomainClaim(incomingJwtUser, ssoOrg.get())
+      }
+
       // (3b0) The existing user does not exist in any auth realm, relink it
       // This can happen if, for example, keycloak state is cleared on an enterprise installation
       if (existingUserRealms.isEmpty()) {
-        return handleRelinkAuthUser(
-          existingUser,
-          incomingJwtUser,
-          verifiedEmail,
-          ssoOrg.map(Organization::getOrganizationId).orElse(null),
-        )
+        return handleRelinkAuthUser(existingUser, incomingJwtUser)
       }
 
       val isCurrentSignInSSO = ssoOrg.isPresent
@@ -934,51 +606,15 @@ open class UserHandler
 
       // (3b1) This is the first SSO sign in for the user, migrate it for SSO
       if (isCurrentSignInSSO && !isExistingUserSSOAuthed) {
-        return handleFirstTimeSSOLogin(
-          existingUser,
-          incomingJwtUser,
-          verifiedEmail,
-          ssoOrg.get().organizationId,
-        )
+        return handleFirstTimeSSOLogin(existingUser, incomingJwtUser)
       }
 
       // (3b2) This isn't a first-time SSO sign in and/or the user already exists
+      val realm = userAuthenticationResolver.resolveRealm()
+      if (realm != null) {
+        externalUserService.deleteUserByExternalId(incomingJwtUser.authUserId, realm)
+      }
       throw UserAlreadyExistsProblem(ProblemEmailData().email(existingUser.email))
-    }
-
-    private sealed interface LoginAction {
-      data class Complete(
-        val response: UserGetOrCreateByAuthIdResponse,
-      ) : LoginAction
-
-      data class Bootstrap(
-        val userRead: UserRead,
-        val incomingJwtUser: AuthenticatedUser,
-        val newUserCreated: Boolean,
-      ) : LoginAction
-
-      data class Migrate(
-        val existingUser: User,
-        val incomingJwtUser: AuthenticatedUser,
-        val previousAuthUsers: List<AuthUser>,
-        val verifiedEmail: String?,
-        val organizationId: UUID,
-      ) : LoginAction
-
-      data class Relink(
-        val existingUser: User,
-        val incomingJwtUser: AuthenticatedUser,
-        val previousAuthUsers: List<AuthUser>,
-        val verifiedEmail: String?,
-        val organizationId: UUID?,
-      ) : LoginAction
-
-      data class Cleanup(
-        val existingUser: User,
-        val incomingJwtUser: AuthenticatedUser,
-        val response: UserGetOrCreateByAuthIdResponse,
-        val deleteExternalAuthUsers: Boolean,
-      ) : LoginAction
     }
 
     private fun resolveIncomingJwtUser(userAuthIdRequestBody: UserAuthIdRequestBody): AuthenticatedUser {
@@ -1004,9 +640,7 @@ open class UserHandler
       log.debug { "Creating User: $user" }
 
       try {
-        if (!createAuthenticatedUserIfNoScimMapping(user)) {
-          throw UserAlreadyExistsProblem(ProblemEmailData().email(user.email))
-        }
+        userPersistence.writeAuthenticatedUser(user)
       } catch (e: DataAccessException) {
         if (e.cause is SQLOperationNotAllowedException) {
           throw OperationNotAllowedException((e.cause as SQLOperationNotAllowedException).message)
@@ -1097,10 +731,7 @@ open class UserHandler
           .displaySetupWizard(true)
           .id(uuidGenerator.get())
 
-      val defaultWorkspace =
-        currentConfigContext()?.let { ctx ->
-          resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(ctx, workspaceCreate)
-        } ?: resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(workspaceCreate)
+      val defaultWorkspace = resourceBootstrapHandler.bootStrapWorkspaceForCurrentUser(workspaceCreate)
 
       // set default workspace id in User table
       val userUpdateDefaultWorkspace =
@@ -1123,21 +754,12 @@ open class UserHandler
       orgId: UUID,
       permissionType: Permission.PermissionType,
     ) {
-      try {
-        permissionHandler.createPermission(
-          Permission()
-            .withOrganizationId(orgId)
-            .withUserId(userId)
-            .withPermissionType(permissionType),
-        )
-      } catch (e: io.micronaut.data.exceptions.DataAccessException) {
-        // Bootstrap runs after the login identity transaction commits. A concurrent SCIM POST can
-        // therefore grant baseline access after the permission pre-read but before this insert.
-        // Treat the resulting unique-key race as success only after verifying that access now exists.
-        if (permissionHandler.listPermissionsForUser(userId).none { it.organizationId == orgId }) {
-          throw e
-        }
-      }
+      permissionHandler.createPermission(
+        Permission()
+          .withOrganizationId(orgId)
+          .withUserId(userId)
+          .withPermissionType(permissionType),
+      )
     }
 
     private fun getSsoDefaultRole(organizationId: UUID): Permission.PermissionType {

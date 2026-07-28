@@ -13,11 +13,6 @@ import io.airbyte.config.AuthenticatedUser
  */
 interface ApplicationService {
   /**
-   * Whether application deletions participate in the caller's config-database transaction.
-   */
-  fun deletesApplicationsTransactionally(): Boolean = false
-
-  /**
    * Creates an Application associated with the [user].
    * @param user the [user] associated with this Application.
    * @property name the [name] of the Application that will be presented as a display name.

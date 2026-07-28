@@ -437,44 +437,6 @@ internal class PermissionRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(setOf(invalidOrganizationMembership.id), result.map { it.id }.toSet())
   }
 
-  @Test
-  fun `queryByAuthUser returns no direct or group permissions for an ambiguous identity`() {
-    val authUserId = "ambiguous-permission-auth-id"
-    val firstUserId = createUserWithAuthUser(authUserId)
-    val secondUserId = createUserWithAuthUser("second-user-auth-id")
-    jooqDslContext
-      .insertInto(Tables.AUTH_USER)
-      .set(Tables.AUTH_USER.ID, UUID.randomUUID())
-      .set(Tables.AUTH_USER.USER_ID, secondUserId)
-      .set(Tables.AUTH_USER.AUTH_USER_ID, authUserId)
-      .set(Tables.AUTH_USER.AUTH_PROVIDER, AuthProvider.google_identity_platform)
-      .execute()
-    val org = createOrganization()
-    val group = createGroup(org.id!!)
-    createGroupMember(group.id!!, firstUserId)
-    createOrganizationMembershipPermission(firstUserId, org.id!!)
-    permissionRepository.save(
-      Permission(
-        id = UUID.randomUUID(),
-        organizationId = org.id,
-        groupId = group.id,
-        permissionType = PermissionType.organization_admin,
-      ),
-    )
-    permissionRepository.save(
-      Permission(
-        id = UUID.randomUUID(),
-        organizationId = org.id,
-        userId = secondUserId,
-        permissionType = PermissionType.organization_admin,
-      ),
-    )
-
-    val result = permissionRepository.queryByAuthUser(authUserId)
-
-    assertEquals(emptyList<Permission>(), result)
-  }
-
   private fun createUserWithAuthUser(authUserId: String): UUID {
     val userId = UUID.randomUUID()
     jooqDslContext

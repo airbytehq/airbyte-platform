@@ -7,7 +7,6 @@ package io.airbyte.data.services
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.data.services.shared.StandardSyncQuery
-import org.jooq.DSLContext
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
@@ -47,11 +46,6 @@ interface WorkspaceService {
 
   fun writeStandardWorkspaceNoSecrets(workspace: StandardWorkspace)
 
-  fun writeStandardWorkspaceNoSecrets(
-    ctx: DSLContext,
-    workspace: StandardWorkspace,
-  ) = writeStandardWorkspaceNoSecrets(workspace)
-
   fun setFeedback(workspaceId: UUID)
 
   fun workspaceCanUseDefinition(
@@ -89,9 +83,4 @@ interface WorkspaceService {
   ): StandardWorkspace
 
   fun writeWorkspaceWithSecrets(workspace: StandardWorkspace)
-
-  fun writeWorkspaceWithSecrets(
-    ctx: DSLContext,
-    workspace: StandardWorkspace,
-  ) = writeWorkspaceWithSecrets(workspace)
 }

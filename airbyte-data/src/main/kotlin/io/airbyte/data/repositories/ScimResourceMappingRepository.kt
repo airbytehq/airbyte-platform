@@ -17,26 +17,6 @@ import java.util.UUID
 interface ScimResourceMappingRepository : PageableRepository<ScimResourceMapping, UUID> {
   @Query(
     """
-    SELECT id
-    FROM organization
-    WHERE id = :organizationId
-    FOR UPDATE
-    """,
-  )
-  fun findOrganizationIdByIdForUpdate(organizationId: UUID): UUID?
-
-  @Query(
-    """
-    SELECT id
-    FROM scim_configuration
-    WHERE organization_id = :organizationId
-    FOR UPDATE
-    """,
-  )
-  fun findConfigurationIdByOrganizationIdForUpdate(organizationId: UUID): UUID?
-
-  @Query(
-    """
     SELECT COUNT(*)
     FROM scim_resource_mapping group_mapping
     JOIN "group" managed_group
@@ -332,33 +312,6 @@ interface ScimResourceMappingRepository : PageableRepository<ScimResourceMapping
     organizationId: UUID,
   ): List<ScimResourceMapping>
 
-  /**
-   * Global first-login exception: searches current USER mapping emails across organizations.
-   */
-  @Query(
-    """
-    SELECT user_id
-    FROM scim_resource_mapping
-    WHERE resource_type = 'USER'
-      AND lower(primary_email) = lower(:email)
-    ORDER BY user_id
-    FOR UPDATE
-    """,
-  )
-  fun findUsersByPrimaryEmailForUpdate(email: String): List<ScimFirstLoginUserRow>
-
-  @Query(
-    """
-    SELECT EXISTS (
-      SELECT 1
-      FROM scim_resource_mapping
-      WHERE resource_type = 'USER'
-        AND user_id = :userId
-    )
-    """,
-  )
-  fun existsUserMappingByUserId(userId: UUID): Boolean
-
   @Query(
     """
     SELECT COUNT(*)
@@ -620,11 +573,6 @@ data class ScimGroupManagementState(
 @Introspected
 data class ScimActiveUserRow(
   val id: UUID,
-  val userId: UUID,
-)
-
-@Introspected
-data class ScimFirstLoginUserRow(
   val userId: UUID,
 )
 

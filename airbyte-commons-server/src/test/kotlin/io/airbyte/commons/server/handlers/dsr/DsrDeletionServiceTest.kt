@@ -10,7 +10,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import io.airbyte.commons.temporal.ConnectionManagerUtils
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthUser
-import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConnectorBuilderProject
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
@@ -247,8 +246,6 @@ internal class DsrDeletionServiceTest {
       )
     every { userPersistence.listAuthUsersForUser(userId) } returns
       listOf(AuthUser().withUserId(userId).withAuthUserId("kc-auth-1").withAuthProvider(AuthProvider.KEYCLOAK))
-    every { userPersistence.getUserByAuthId("kc-auth-1") } returns
-      Optional.of(AuthenticatedUser().withUserId(userId).withAuthUserId("kc-auth-1"))
     every { externalUserService.findUsersByEmailInRealm(email, DsrDeletionService.CLOUD_USERS_REALM) } returns
       listOf(ExternalUserService.ExternalUser("kc-auth-1", email, "Davin", true))
     every { connectionManagerUtils.isWorkflowStateRunning(connectionId) } returns true

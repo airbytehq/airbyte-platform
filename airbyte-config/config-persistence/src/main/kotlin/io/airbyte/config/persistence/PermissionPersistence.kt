@@ -86,27 +86,17 @@ class PermissionPersistence(
     workspaceId: UUID,
     authUserId: String,
   ): Permission.PermissionType? {
-    val owners =
-      ctx
-        .selectDistinct(Tables.AUTH_USER.USER_ID)
-        .from(Tables.AUTH_USER)
-        .where(Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))
-        .asTable("auth_user_owners")
-    val resolvedUserId = owners.field(Tables.AUTH_USER.USER_ID)!!
     val record =
       ctx
         .select(Tables.PERMISSION.PERMISSION_TYPE)
         .from(Tables.PERMISSION)
-        .join(owners)
-        .on(Tables.PERMISSION.USER_ID.eq(resolvedUserId))
+        .join(Tables.USER)
+        .on(Tables.PERMISSION.USER_ID.eq(Tables.USER.ID))
+        .join(Tables.AUTH_USER)
+        .on(Tables.USER.ID.eq(Tables.AUTH_USER.USER_ID))
         .where(Tables.PERMISSION.WORKSPACE_ID.eq(workspaceId))
-        .andNotExists(
-          ctx
-            .selectOne()
-            .from(Tables.AUTH_USER)
-            .where(Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))
-            .and(Tables.AUTH_USER.USER_ID.ne(resolvedUserId)),
-        ).fetchOne()
+        .and(Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))
+        .fetchOne()
     if (record == null) {
       return null
     }
@@ -137,27 +127,17 @@ class PermissionPersistence(
     organizationId: UUID,
     authUserId: String,
   ): Permission.PermissionType? {
-    val owners =
-      ctx
-        .selectDistinct(Tables.AUTH_USER.USER_ID)
-        .from(Tables.AUTH_USER)
-        .where(Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))
-        .asTable("auth_user_owners")
-    val resolvedUserId = owners.field(Tables.AUTH_USER.USER_ID)!!
     val record =
       ctx
         .select(Tables.PERMISSION.PERMISSION_TYPE)
         .from(Tables.PERMISSION)
-        .join(owners)
-        .on(Tables.PERMISSION.USER_ID.eq(resolvedUserId))
+        .join(Tables.USER)
+        .on(Tables.PERMISSION.USER_ID.eq(Tables.USER.ID))
+        .join(Tables.AUTH_USER)
+        .on(Tables.USER.ID.eq(Tables.AUTH_USER.USER_ID))
         .where(Tables.PERMISSION.ORGANIZATION_ID.eq(organizationId))
-        .andNotExists(
-          ctx
-            .selectOne()
-            .from(Tables.AUTH_USER)
-            .where(Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))
-            .and(Tables.AUTH_USER.USER_ID.ne(resolvedUserId)),
-        ).fetchOne()
+        .and(Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))
+        .fetchOne()
 
     if (record == null) {
       return null

@@ -15,7 +15,7 @@ import java.util.UUID
 interface ScimAirbyteUserRepository : PageableRepository<ScimAirbyteUser, UUID> {
   @Query(
     """
-    SELECT pg_advisory_xact_lock(hashtextextended('email:' || lower(:email), 0)) IS NULL
+    SELECT pg_advisory_xact_lock(hashtextextended(lower(:email), 0)) IS NULL
     """,
   )
   fun acquireGlobalEmailLock(email: String): Boolean
