@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { Text } from "components/ui/Text";
 
@@ -7,9 +7,9 @@ import { ExternalLink } from "./index";
 export default {
   title: "Ui/ExternalLink",
   component: ExternalLink,
-} as ComponentMeta<typeof ExternalLink>;
+} as Meta<typeof ExternalLink>;
 
-const Template: ComponentStory<typeof ExternalLink> = (args) => <ExternalLink {...args} />;
+const Template: StoryFn<typeof ExternalLink> = (args) => <ExternalLink {...args} />;
 
 export const Primary = Template.bind({});
 Primary.args = {

@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { Button } from "components/ui/Button";
 
@@ -10,9 +10,9 @@ export default {
   argTypes: {
     title: { type: { name: "string", required: false } },
   },
-} as ComponentMeta<typeof Modal>;
+} as Meta<typeof Modal>;
 
-const Template: ComponentStory<typeof Modal> = (args) => {
+const Template: StoryFn<typeof Modal> = (args) => {
   if (args.cardless) {
     return <Modal {...args} />;
   }

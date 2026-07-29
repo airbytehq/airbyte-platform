@@ -1,4 +1,4 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 import { FormattedMessage } from "react-intl";
 
 import { Modal } from "components/ui/Modal";
@@ -8,12 +8,14 @@ import { ModalServiceProvider } from "core/services/Modal";
 
 import { CatalogDiffModal } from "./CatalogDiffModal";
 
-export default {
+const meta: Meta<typeof CatalogDiffModal> = {
   title: "connection/CatalogDiffModal",
   component: CatalogDiffModal,
-} as ComponentMeta<typeof CatalogDiffModal>;
+};
 
-const Template: ComponentStory<typeof CatalogDiffModal> = (args) => {
+export default meta;
+
+const Template: StoryFn<typeof CatalogDiffModal> = (args) => {
   return (
     <ModalServiceProvider>
       <Modal size="md" title={<FormattedMessage id="connection.updateSchema.completed" />}>

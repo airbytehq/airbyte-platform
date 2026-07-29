@@ -1,4 +1,4 @@
-import { Story, StoryObj } from "@storybook/react";
+import { StoryFn, StoryObj } from "@storybook/react";
 import { createColumnHelper } from "@tanstack/react-table";
 
 import { Table, TableProps } from "./Table";
@@ -15,7 +15,7 @@ export default {
 } as StoryObj<typeof Table>;
 
 const Template =
-  <T,>(): Story<TableProps<T>> =>
+  <T,>(): StoryFn<TableProps<T>> =>
   (args) => (
     <div style={{ height: "100vh" }}>
       <Table<T> {...args} />

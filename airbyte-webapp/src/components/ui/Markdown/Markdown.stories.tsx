@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { Markdown } from "./Markdown";
 import { Card } from "../Card";
@@ -7,9 +7,9 @@ export default {
   title: "UI/Markdown",
   component: Markdown,
   argTypes: {},
-} as ComponentMeta<typeof Markdown>;
+} as Meta<typeof Markdown>;
 
-const Template: ComponentStory<typeof Markdown> = (args) => (
+const Template: StoryFn<typeof Markdown> = (args) => (
   <div>
     <Card>
       <Markdown {...args} />

@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { FlexContainer } from "./FlexContainer";
 import { FlexItem } from "./FlexItem";
@@ -6,9 +6,9 @@ import { FlexItem } from "./FlexItem";
 export default {
   title: "Ui/Flex",
   component: FlexContainer,
-} as ComponentMeta<typeof FlexContainer>;
+} as Meta<typeof FlexContainer>;
 
-const Template: ComponentStory<typeof FlexContainer> = (args) => <FlexContainer {...args} />;
+const Template: StoryFn<typeof FlexContainer> = (args) => <FlexContainer {...args} />;
 
 const Item = ({ label, grow }: { label: string; grow?: boolean }) => (
   <FlexItem grow={grow} style={{ backgroundColor: "#dddddd", borderRadius: 5, padding: 20 }}>{`<FlexItem${

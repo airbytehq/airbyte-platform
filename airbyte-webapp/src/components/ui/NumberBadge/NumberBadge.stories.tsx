@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { NumberBadge } from "./NumberBadge";
 
@@ -6,9 +6,9 @@ export default {
   title: "UI/NumberBadge",
   component: NumberBadge,
   argTypes: {},
-} as ComponentMeta<typeof NumberBadge>;
+} as Meta<typeof NumberBadge>;
 
-const Template: ComponentStory<typeof NumberBadge> = (args) => <NumberBadge {...args} />;
+const Template: StoryFn<typeof NumberBadge> = (args) => <NumberBadge {...args} />;
 
 export const Primary = Template.bind({});
 Primary.args = {

@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -12,9 +12,9 @@ import GroupControls from "./GroupControls";
 export default {
   title: "UI/GroupControls",
   component: GroupControls,
-} as ComponentMeta<typeof GroupControls>;
+} as Meta<typeof GroupControls>;
 
-const Template: ComponentStory<typeof GroupControls> = (args) => (
+const Template: StoryFn<typeof GroupControls> = (args) => (
   <Card>
     <GroupControls {...args} />
   </Card>

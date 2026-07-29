@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { Message } from "./Message";
 import { FlexContainer, FlexItem } from "../Flex";
@@ -13,9 +13,9 @@ export default {
     actionBtnText: { type: { name: "string", required: false } },
     onClose: { table: { disable: true } },
   },
-} as ComponentMeta<typeof Message>;
+} as Meta<typeof Message>;
 
-const Template: ComponentStory<typeof Message> = (args) => <Message {...args} />;
+const Template: StoryFn<typeof Message> = (args) => <Message {...args} />;
 
 export const Basic = Template.bind({});
 Basic.args = {

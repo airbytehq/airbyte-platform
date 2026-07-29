@@ -32,7 +32,7 @@ export const withProviders = (getStory: Parameters<Decorator>[0]) => (
             }}
           >
             <DocumentationPanelProvider>
-                <FeatureService features={[]}>{getStory()}</FeatureService>
+              <FeatureService features={[]}>{getStory()}</FeatureService>
             </DocumentationPanelProvider>
           </IntlProvider>
         </MemoryRouter>

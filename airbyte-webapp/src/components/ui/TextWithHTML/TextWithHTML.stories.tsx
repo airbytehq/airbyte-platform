@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { TextWithHTML } from "./TextWithHTML";
 
@@ -6,9 +6,9 @@ export default {
   title: "UI/TextWithHTML",
   component: TextWithHTML,
   argTypes: {},
-} as ComponentMeta<typeof TextWithHTML>;
+} as Meta<typeof TextWithHTML>;
 
-const Template: ComponentStory<typeof TextWithHTML> = (args) => <TextWithHTML {...args} />;
+const Template: StoryFn<typeof TextWithHTML> = (args) => <TextWithHTML {...args} />;
 
 const text = `
   <h2>List Items</h2>

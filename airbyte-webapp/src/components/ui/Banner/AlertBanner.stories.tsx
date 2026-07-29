@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { AlertBanner } from "./AlertBanner";
 
@@ -6,9 +6,9 @@ export default {
   title: "UI/AlertBanner",
   component: AlertBanner,
   argTypes: {},
-} as ComponentMeta<typeof AlertBanner>;
+} as Meta<typeof AlertBanner>;
 
-const Template: ComponentStory<typeof AlertBanner> = (args) => <AlertBanner {...args} />;
+const Template: StoryFn<typeof AlertBanner> = (args) => <AlertBanner {...args} />;
 
 export const Primary = Template.bind({});
 Primary.args = {
