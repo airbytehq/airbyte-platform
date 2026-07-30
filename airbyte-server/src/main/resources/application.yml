@@ -473,7 +473,10 @@ airbyte:
     web-client-id: ${KEYCLOAK_WEB_CLIENT_ID:airbyte-webapp}
     client-realm: ${KEYCLOAK_CLIENT_REALM:airbyte}
     client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:admin-cli}
+    connect-timeout: ${KEYCLOAK_CONNECT_TIMEOUT:PT5S}
+    connection-checkout-timeout: ${KEYCLOAK_CONNECTION_CHECKOUT_TIMEOUT:PT5S}
     realm: ${KEYCLOAK_REALM:master}
+    read-timeout: ${KEYCLOAK_READ_TIMEOUT:PT5S}
     internal-realm: ${KEYCLOAK_INTERNAL_REALM:_airbyte-internal}
     username: ${KEYCLOAK_ADMIN_USER:airbyteAdmin}
     password: ${KEYCLOAK_ADMIN_PASSWORD:keycloak123}

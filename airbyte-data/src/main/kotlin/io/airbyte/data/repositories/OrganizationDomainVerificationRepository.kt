@@ -63,4 +63,28 @@ interface OrganizationDomainVerificationRepository : PageableRepository<Organiza
     status: DomainVerificationStatus,
     includeDeleted: Boolean,
   ): List<OrganizationDomainVerification>
+
+  /**
+   * Finds the live (non-tombstoned) verification records an organization holds for [domain] in a
+   * given [status]. Domains are matched case-insensitively because DNS names are case-insensitive
+   * and the create path does not normalize what the user typed.
+   *
+   * Callers that need to know whether an organization owns a domain must filter on
+   * `status = verified` rather than on `verified_at`: not every verified row has the timestamp
+   * populated, so a timestamp-based check silently excludes real organizations.
+   */
+  @Query(
+    """
+      SELECT * FROM organization_domain_verification
+      WHERE organization_id = :organizationId
+      AND lower(domain) = lower(:domain)
+      AND status = :status
+      AND tombstone = false
+      """,
+  )
+  fun findByOrganizationIdAndDomainIgnoreCaseAndStatus(
+    organizationId: UUID,
+    domain: String,
+    status: DomainVerificationStatus,
+  ): List<OrganizationDomainVerification>
 }

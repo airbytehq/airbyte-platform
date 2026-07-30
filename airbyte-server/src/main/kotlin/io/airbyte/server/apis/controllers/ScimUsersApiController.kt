@@ -9,6 +9,7 @@ import io.airbyte.api.scim.ScimUserRequest
 import io.airbyte.api.scim.generated.apis.ScimUsersApi
 import io.airbyte.api.scim.generated.models.ScimUser
 import io.airbyte.api.scim.generated.models.ScimUserListResponse
+import io.airbyte.domain.models.scim.ScimEmailDomainNotVerifiedException
 import io.airbyte.domain.models.scim.ScimUserConflictException
 import io.airbyte.domain.models.scim.ScimUserFilterAttribute
 import io.airbyte.domain.models.scim.ScimUserFilterClause
@@ -213,5 +214,7 @@ open class ScimUsersApiController(
       throw ScimErrors.notFound("User not found")
     } catch (_: ScimUserConflictException) {
       throw ScimErrors.uniqueness()
+    } catch (_: ScimEmailDomainNotVerifiedException) {
+      throw ScimErrors.invalidValue("The email domain is not verified for this organization")
     }
 }

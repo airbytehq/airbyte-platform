@@ -7,15 +7,20 @@ package io.airbyte.domain.services.scim
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.airbyte.data.repositories.GroupMemberRepository
+import io.airbyte.data.repositories.OrganizationDomainVerificationRepository
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.ScimAirbyteUserRepository
 import io.airbyte.data.repositories.ScimResourceMappingRepository
 import io.airbyte.data.repositories.ScimUserGroupMembershipRow
+import io.airbyte.data.repositories.entities.OrganizationDomainVerification
 import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.data.repositories.entities.ScimAirbyteUser
 import io.airbyte.data.repositories.entities.ScimResourceMapping
+import io.airbyte.db.instance.configs.jooq.generated.enums.DomainVerificationMethod
+import io.airbyte.db.instance.configs.jooq.generated.enums.DomainVerificationStatus
 import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScimResourceType
+import io.airbyte.domain.models.scim.ScimEmailDomainNotVerifiedException
 import io.airbyte.domain.models.scim.ScimUserConflictException
 import io.airbyte.domain.models.scim.ScimUserFilterAttribute
 import io.airbyte.domain.models.scim.ScimUserFilterClause
@@ -41,12 +46,14 @@ class ScimUserLifecycleServiceTest {
   private val userRepository = mockk<ScimAirbyteUserRepository>()
   private val permissionRepository = mockk<PermissionRepository>()
   private val groupMemberRepository = mockk<GroupMemberRepository>()
+  private val domainVerificationRepository = mockk<OrganizationDomainVerificationRepository>()
   private val service =
     ScimUserLifecycleService(
       mappingRepository,
       userRepository,
       permissionRepository,
       groupMemberRepository,
+      domainVerificationRepository,
     )
   private val configurationId = UUID.randomUUID()
   private val organizationId = UUID.randomUUID()
@@ -57,7 +64,26 @@ class ScimUserLifecycleServiceTest {
     every { userRepository.acquireGlobalEmailLock(any()) } returns false
     every { userRepository.findByEmailIgnoreCaseForUpdate(any()) } returns emptyList()
     every { mappingRepository.findUserByUserId(any(), configurationId, organizationId) } returns null
+    every {
+      domainVerificationRepository.findByOrganizationIdAndDomainIgnoreCaseAndStatus(any(), any(), any())
+    } returns emptyList()
+    every {
+      domainVerificationRepository.findByOrganizationIdAndDomainIgnoreCaseAndStatus(
+        organizationId,
+        "example.com",
+        DomainVerificationStatus.verified,
+      )
+    } returns listOf(verifiedDomain("example.com"))
   }
+
+  private fun verifiedDomain(domain: String): OrganizationDomainVerification =
+    OrganizationDomainVerification(
+      id = UUID.randomUUID(),
+      organizationId = organizationId,
+      domain = domain,
+      verificationMethod = DomainVerificationMethod.dns_txt,
+      status = DomainVerificationStatus.verified,
+    )
 
   @Test
   fun `POST rejects any scoped identifier match without writes`() {
@@ -657,6 +683,99 @@ class ScimUserLifecycleServiceTest {
       )
     }
     verify(exactly = 0) { mappingRepository.findGroupsForUser(any(), any(), any()) }
+  }
+
+  @Test
+  fun `POST rejects an email whose domain the organization has not verified, before any write`() {
+    every { mappingRepository.findAllUsers(configurationId, organizationId) } returns emptyList()
+
+    assertThrows<ScimEmailDomainNotVerifiedException> {
+      service.create(configurationId, organizationId, write().copy(primaryEmail = "victim@victim.com"))
+    }
+
+    verify(exactly = 1) {
+      domainVerificationRepository.findByOrganizationIdAndDomainIgnoreCaseAndStatus(
+        organizationId,
+        "victim.com",
+        DomainVerificationStatus.verified,
+      )
+    }
+    verify(exactly = 0) { userRepository.acquireGlobalEmailLock(any()) }
+    verify(exactly = 0) { userRepository.findByEmailIgnoreCaseForUpdate(any()) }
+    verify(exactly = 0) { userRepository.save(any()) }
+    verify(exactly = 0) { mappingRepository.save(any()) }
+    verify(exactly = 0) { permissionRepository.save(any()) }
+  }
+
+  @Test
+  fun `POST looks the domain up case insensitively and keys ownership on VERIFIED status`() {
+    every { mappingRepository.findAllUsers(configurationId, organizationId) } returns emptyList()
+    every { userRepository.findByEmailIgnoreCaseForUpdate(any()) } returns emptyList()
+    every { userRepository.save(any()) } answers { firstArg() }
+    every { mappingRepository.save(any()) } answers { saved(firstArg()) }
+    every { permissionRepository.existsByUserIdAndOrganizationId(any(), organizationId) } returns true
+
+    service.create(configurationId, organizationId, write().copy(primaryEmail = "Alice@EXAMPLE.CoM"))
+
+    verify(exactly = 1) {
+      domainVerificationRepository.findByOrganizationIdAndDomainIgnoreCaseAndStatus(
+        organizationId,
+        "example.com",
+        DomainVerificationStatus.verified,
+      )
+    }
+  }
+
+  @Test
+  fun `POST rejects an address with no parseable domain without querying domain ownership`() {
+    every { mappingRepository.findAllUsers(configurationId, organizationId) } returns emptyList()
+
+    listOf("no-at-sign", "trailing@", "", "spaced@   ").forEach { malformed ->
+      val thrown =
+        assertThrows<ScimEmailDomainNotVerifiedException> {
+          service.create(configurationId, organizationId, write().copy(primaryEmail = malformed))
+        }
+      assertThat(thrown.emailDomain).isNull()
+    }
+
+    verify(exactly = 0) { domainVerificationRepository.findByOrganizationIdAndDomainIgnoreCaseAndStatus(any(), any(), any()) }
+    verify(exactly = 0) { mappingRepository.save(any()) }
+  }
+
+  @Test
+  fun `PUT rejects repointing a mapping onto a domain the organization has not verified`() {
+    val current = mapping(userName = "alice", primaryEmail = "alice@example.com", externalId = "external")
+    every { mappingRepository.findUserForUpdate(current.id!!, configurationId, organizationId) } returns current
+
+    assertThrows<ScimEmailDomainNotVerifiedException> {
+      service.replace(configurationId, organizationId, current.id!!, write().copy(primaryEmail = "attacker@evil.example"))
+    }
+
+    verify(exactly = 1) {
+      domainVerificationRepository.findByOrganizationIdAndDomainIgnoreCaseAndStatus(
+        organizationId,
+        "evil.example",
+        DomainVerificationStatus.verified,
+      )
+    }
+    verify(exactly = 0) { mappingRepository.updateUser(any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `PATCH that leaves the email untouched does not re-check domain ownership`() {
+    val current = mapping(userName = "alice", primaryEmail = "ALICE@example.com", externalId = "external")
+    every { mappingRepository.findUserForUpdate(current.id!!, configurationId, organizationId) } returns current
+    every { mappingRepository.findAllUsers(configurationId, organizationId) } returns listOf(current)
+    every { userRepository.findByEmailIgnoreCaseForUpdate("alice@example.com") } returns emptyList()
+    every { mappingRepository.updateUser(any(), any(), any(), any(), any(), any(), any(), any()) } returns 1L
+    every { mappingRepository.findUser(current.id!!, configurationId, organizationId) } returns current
+    every { permissionRepository.deleteByUserIdAndOrganizationId(any(), organizationId) } returns 1
+    every { permissionRepository.deleteWorkspacePermissionsByUserIdAndOrganizationId(any(), organizationId) } returns 1
+    every { groupMemberRepository.deleteByUserIdAndOrganizationId(any(), organizationId) } returns 1
+
+    service.patch(configurationId, organizationId, current.id!!, write(active = false), listOf(false))
+
+    verify(exactly = 0) { domainVerificationRepository.findByOrganizationIdAndDomainIgnoreCaseAndStatus(any(), any(), any()) }
   }
 
   private fun write(

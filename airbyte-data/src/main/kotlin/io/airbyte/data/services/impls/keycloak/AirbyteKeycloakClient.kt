@@ -103,6 +103,12 @@ class AirbyteKeycloakClient(
         IdentityProviderRepresentation().apply {
           alias = DEFAULT_IDP_ALIAS
           providerId = "oidc"
+          // Trust the enterprise IdP's own email verification assertion, the normal posture for
+          // brokered enterprise SSO. Matches the Google and GitHub identity providers in the
+          // Terraform-managed Cloud users realm (airbyte-cloud-users-realm/main.tf), which set
+          // the equivalent trust_email = true. Without it, Keycloak requires every brokered user
+          // to complete its own email verification flow before they can use the account.
+          isTrustEmail = true
           config =
             mapOf(
               "clientId" to request.clientId,
@@ -395,6 +401,7 @@ class AirbyteKeycloakClient(
         IdentityProviderRepresentation().apply {
           alias = DEFAULT_IDP_ALIAS
           providerId = "oidc"
+          isTrustEmail = true
           config = idpConfig
         }
       createIdpForRealm(ssoConfig.companyIdentifier, idp)

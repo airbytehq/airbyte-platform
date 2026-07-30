@@ -12,5 +12,7 @@ import io.airbyte.config.AuthenticatedUser
 interface UserAuthenticationResolver {
   fun resolveUser(expectedAuthUserId: String): AuthenticatedUser
 
+  fun resolveVerifiedEmail(): String?
+
   fun resolveRealm(): String?
 }

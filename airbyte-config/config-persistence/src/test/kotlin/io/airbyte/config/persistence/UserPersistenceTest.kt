@@ -150,6 +150,33 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     }
 
     @Test
+    fun enableAgenticUserPersistsTheFirstTimestamp() {
+      val userId = UUID.randomUUID()
+      val firstAgenticEnabledAt = OffsetDateTime.of(2026, 2, 5, 12, 0, 0, 0, ZoneOffset.UTC)
+      val laterAgenticEnabledAt = firstAgenticEnabledAt.plusDays(1)
+      val user =
+        AuthenticatedUser()
+          .withUserId(userId)
+          .withName("agentic-upgrade-user")
+          .withAuthUserId(userId.toString())
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+          .withEmail("agentic-upgrade@test.com")
+
+      userPersistence.writeAuthenticatedUser(user)
+
+      userPersistence.enableAgenticUser(userId, firstAgenticEnabledAt)
+      val persistedAgenticEnabledAt = userPersistence.enableAgenticUser(userId, laterAgenticEnabledAt)
+
+      val retrievedUser = userPersistence.getUserByAuthId(user.authUserId)
+      Assertions.assertTrue(retrievedUser.isPresent)
+      Assertions.assertEquals(firstAgenticEnabledAt, persistedAgenticEnabledAt)
+      Assertions.assertEquals(firstAgenticEnabledAt, retrievedUser.get().agenticEnabledAt)
+      Assertions.assertEquals(user.name, retrievedUser.get().name)
+      Assertions.assertEquals(user.email, retrievedUser.get().email)
+      Assertions.assertEquals(user.authUserId, retrievedUser.get().authUserId)
+    }
+
+    @Test
     fun agenticEnabledAtNullTest() {
       val userId = UUID.randomUUID()
 

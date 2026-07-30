@@ -6,6 +6,7 @@ package io.airbyte.server.scim
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.data.repositories.GroupMemberRepository
+import io.airbyte.data.repositories.OrganizationDomainVerificationRepository
 import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.ScimAirbyteUserRepository
@@ -13,6 +14,7 @@ import io.airbyte.data.repositories.ScimConfigurationRepository
 import io.airbyte.data.repositories.ScimResourceMappingRepository
 import io.airbyte.data.repositories.entities.GroupMember
 import io.airbyte.data.repositories.entities.Organization
+import io.airbyte.data.repositories.entities.OrganizationDomainVerification
 import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.data.repositories.entities.ScimResourceMapping
 import io.airbyte.data.services.InactiveUserAccessException
@@ -21,6 +23,8 @@ import io.airbyte.data.services.impls.data.PermissionServiceDataImpl
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.jooq.generated.Tables
+import io.airbyte.db.instance.configs.jooq.generated.enums.DomainVerificationMethod
+import io.airbyte.db.instance.configs.jooq.generated.enums.DomainVerificationStatus
 import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScimResourceType
 import io.airbyte.db.instance.test.TestDatabaseProviders
@@ -174,6 +178,8 @@ class ScimConfigurationConcurrencyTest {
       )
     val organizationIdA = OrganizationId(organizationA.id!!)
     val organizationIdB = OrganizationId(organizationB.id!!)
+    verifyDomain(organizationIdA.value, "example.com")
+    verifyDomain(organizationIdB.value, "example.com")
     val tokenService = ScimTokenService()
     val serviceA = createService(organizationIdA, tokenService)
     val serviceB = createService(organizationIdB, tokenService)
@@ -322,6 +328,7 @@ class ScimConfigurationConcurrencyTest {
         Organization(name = "re-enable-rollback", email = "re-enable-rollback@example.com"),
       )
     val organizationId = OrganizationId(organization.id!!)
+    verifyDomain(organizationId.value, "example.com")
     val tokenService = ScimTokenService()
     val service = createService(organizationId, tokenService)
     val oldToken = service.enable(organizationId, ScimIdpProvider.OKTA, UserId(actorId)).token!!
@@ -365,6 +372,7 @@ class ScimConfigurationConcurrencyTest {
           scimAirbyteUserRepository,
           permissionRepository,
           failingGroupMemberRepository,
+          domainVerificationRepository,
         ),
         cleanupTokenService,
       )
@@ -873,6 +881,25 @@ class ScimConfigurationConcurrencyTest {
     assertThat(groupMembershipCount(userId, groupId)).isEqualTo(1)
   }
 
+  /** SCIM provisioning is gated on verified domain ownership, so provisioning fixtures need one. */
+  private fun verifyDomain(
+    organizationId: UUID,
+    domain: String,
+  ) {
+    domainVerificationRepository.save(
+      OrganizationDomainVerification(
+        organizationId = organizationId,
+        domain = domain,
+        verificationMethod = DomainVerificationMethod.dns_txt,
+        status = DomainVerificationStatus.verified,
+        verificationToken = UUID.randomUUID().toString(),
+        dnsRecordName = "_airbyte-verification.$domain",
+        dnsRecordPrefix = "_airbyte-verification",
+        verifiedAt = OffsetDateTime.now(),
+      ),
+    )
+  }
+
   private fun insertUser(userId: UUID) {
     jooqDslContext
       .insertInto(Tables.USER)
@@ -894,6 +921,7 @@ class ScimConfigurationConcurrencyTest {
     private lateinit var scimConfigurationRepository: ScimConfigurationRepository
     private lateinit var scimResourceMappingRepository: ScimResourceMappingRepository
     private lateinit var scimAirbyteUserRepository: ScimAirbyteUserRepository
+    private lateinit var domainVerificationRepository: OrganizationDomainVerificationRepository
     private lateinit var permissionRepository: PermissionRepository
     private lateinit var groupMemberRepository: GroupMemberRepository
     private lateinit var scimUserLifecycleService: ScimUserLifecycleService
@@ -936,6 +964,7 @@ class ScimConfigurationConcurrencyTest {
       scimConfigurationRepository = context.getBean(ScimConfigurationRepository::class.java)
       scimResourceMappingRepository = context.getBean(ScimResourceMappingRepository::class.java)
       scimAirbyteUserRepository = context.getBean(ScimAirbyteUserRepository::class.java)
+      domainVerificationRepository = context.getBean(OrganizationDomainVerificationRepository::class.java)
       permissionRepository = context.getBean(PermissionRepository::class.java)
       groupMemberRepository = context.getBean(GroupMemberRepository::class.java)
       scimUserLifecycleService = context.getBean(ScimUserLifecycleService::class.java)

@@ -56,3 +56,14 @@ data class ScimUserFilterClause(
 class ScimUserNotFoundException : RuntimeException("SCIM User was not found")
 
 class ScimUserConflictException : RuntimeException("The SCIM User identifier is already in use")
+
+/**
+ * Thrown when a SCIM configuration names an email address whose domain its organization has not
+ * proven ownership of. Provisioning is gated on a `verified` `organization_domain_verification`
+ * record so an organization can only bind SCIM mappings to addresses it actually controls.
+ *
+ * [emailDomain] is null when the supplied address has no parseable domain.
+ */
+class ScimEmailDomainNotVerifiedException(
+  val emailDomain: String?,
+) : RuntimeException("The SCIM User email domain '${emailDomain.orEmpty()}' is not verified for this organization")

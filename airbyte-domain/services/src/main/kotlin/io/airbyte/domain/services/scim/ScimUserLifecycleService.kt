@@ -5,14 +5,17 @@
 package io.airbyte.domain.services.scim
 
 import io.airbyte.data.repositories.GroupMemberRepository
+import io.airbyte.data.repositories.OrganizationDomainVerificationRepository
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.ScimAirbyteUserRepository
 import io.airbyte.data.repositories.ScimResourceMappingRepository
 import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.data.repositories.entities.ScimAirbyteUser
 import io.airbyte.data.repositories.entities.ScimResourceMapping
+import io.airbyte.db.instance.configs.jooq.generated.enums.DomainVerificationStatus
 import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScimResourceType
+import io.airbyte.domain.models.scim.ScimEmailDomainNotVerifiedException
 import io.airbyte.domain.models.scim.ScimUserConflictException
 import io.airbyte.domain.models.scim.ScimUserFilterAttribute
 import io.airbyte.domain.models.scim.ScimUserFilterClause
@@ -21,10 +24,14 @@ import io.airbyte.domain.models.scim.ScimUserListPage
 import io.airbyte.domain.models.scim.ScimUserNotFoundException
 import io.airbyte.domain.models.scim.ScimUserRead
 import io.airbyte.domain.models.scim.ScimUserWrite
+import io.airbyte.metrics.lib.ApmTraceUtils
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.data.exceptions.DataAccessException
 import jakarta.inject.Singleton
 import java.util.Locale
 import java.util.UUID
+
+private val logger = KotlinLogging.logger { }
 
 @Singleton
 open class ScimUserLifecycleService(
@@ -32,12 +39,14 @@ open class ScimUserLifecycleService(
   private val userRepository: ScimAirbyteUserRepository,
   private val permissionRepository: PermissionRepository,
   private val groupMemberRepository: GroupMemberRepository,
+  private val domainVerificationRepository: OrganizationDomainVerificationRepository,
 ) {
   open fun create(
     configurationId: UUID,
     organizationId: UUID,
     input: ScimUserWrite,
   ): ScimUserRead {
+    requireVerifiedEmailDomain(organizationId, input.primaryEmail)
     val existing = mappingRepository.findAllUsers(configurationId, organizationId)
     rejectCreateIdentifierMatches(existing, input)
 
@@ -160,6 +169,7 @@ open class ScimUserLifecycleService(
     id: UUID,
     input: ScimUserWrite,
   ): ScimUserRead {
+    userRepository.acquireGlobalEmailLock(input.primaryEmail)
     val current = locked(id, configurationId, organizationId)
     val transitions = if (current.userActive != input.active) listOf(input.active) else emptyList()
     return update(current, configurationId, organizationId, input, transitions)
@@ -172,6 +182,7 @@ open class ScimUserLifecycleService(
     input: ScimUserWrite,
     activeTransitions: List<Boolean>,
   ): ScimUserRead {
+    userRepository.acquireGlobalEmailLock(input.primaryEmail)
     val current = locked(id, configurationId, organizationId)
     validateTransitions(current.userActive!!, input.active, activeTransitions)
     return update(current, configurationId, organizationId, input, activeTransitions)
@@ -205,12 +216,14 @@ open class ScimUserLifecycleService(
     input: ScimUserWrite,
     transitions: List<Boolean>,
   ): ScimUserRead {
+    if (!current.primaryEmail.equals(input.primaryEmail, ignoreCase = true)) {
+      requireVerifiedEmailDomain(organizationId, input.primaryEmail)
+    }
     rejectUpdateIdentifierMatches(
       mappingRepository.findAllUsers(configurationId, organizationId),
       current.id!!,
       input,
     )
-    userRepository.acquireGlobalEmailLock(input.primaryEmail)
     val globalUsers = userRepository.findByEmailIgnoreCaseForUpdate(input.primaryEmail)
     if (globalUsers.size > 1 || globalUsers.singleOrNull()?.id?.let { it != current.userId } == true) {
       throw ScimUserConflictException()
@@ -245,6 +258,61 @@ open class ScimUserLifecycleService(
       }
     }
     return get(configurationId, organizationId, current.id!!)
+  }
+
+  /**
+   * Fails closed unless [organizationId] holds a verified domain-ownership record for the domain of
+   * [email]. Without this an organization could name any address — including one belonging to a
+   * user in an unrelated organization — and have SCIM bind its mapping to that user's global User
+   * row.
+   *
+   * Ownership is keyed on `status = verified`, not on `verified_at`, because verified rows do not
+   * all carry the timestamp.
+   *
+   * Denials are logged and tagged so rejected provisioning attempts are searchable and alertable.
+   * The organization and the email domain are recorded; the submitted address is not, because it
+   * can belong to a third party and is deliberately kept out of the SCIM error response too.
+   */
+  private fun requireVerifiedEmailDomain(
+    organizationId: UUID,
+    email: String,
+  ) {
+    val domain =
+      email
+        .substringAfterLast('@', "")
+        .trim()
+        .lowercase(Locale.ROOT)
+    if (domain.isEmpty()) {
+      logger.warn {
+        "SCIM domain not verified: organization $organizationId supplied an email address with no parseable domain"
+      }
+      ApmTraceUtils.addTagsToTrace(
+        mapOf(
+          "scim.organization_id" to organizationId.toString(),
+          "scim.domain_validation" to "unparseable_email",
+        ),
+      )
+      throw ScimEmailDomainNotVerifiedException(null)
+    }
+    val verified =
+      domainVerificationRepository.findByOrganizationIdAndDomainIgnoreCaseAndStatus(
+        organizationId,
+        domain,
+        DomainVerificationStatus.verified,
+      )
+    if (verified.isEmpty()) {
+      logger.warn {
+        "SCIM domain not verified: organization $organizationId has no verified domain record for '$domain'"
+      }
+      ApmTraceUtils.addTagsToTrace(
+        mapOf(
+          "scim.email_domain" to domain,
+          "scim.organization_id" to organizationId.toString(),
+          "scim.domain_validation" to "unverified_domain",
+        ),
+      )
+      throw ScimEmailDomainNotVerifiedException(domain)
+    }
   }
 
   private fun locked(

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.airbyte.api.scim.ScimPatchRequest
 import io.airbyte.api.scim.ScimUserRequest
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.scim.ScimEmailDomainNotVerifiedException
 import io.airbyte.domain.models.scim.ScimUserConflictException
 import io.airbyte.domain.models.scim.ScimUserListPage
 import io.airbyte.domain.models.scim.ScimUserNotFoundException
@@ -210,6 +211,26 @@ class ScimUsersApiControllerTest {
 
     assertThat(error.status).isEqualTo(HttpStatus.CONFLICT)
     assertThat(error.scimType).isEqualTo("uniqueness")
+  }
+
+  @Test
+  fun `unverified email domains become SCIM invalidValue errors, not uniqueness conflicts`() {
+    val body = userBody(active = true)
+    every {
+      lifecycleService.create(configurationId, organizationId, any())
+    } throws ScimEmailDomainNotVerifiedException("victim.com")
+
+    val error =
+      assertThrows<ScimException> {
+        withRequest(HttpRequest.POST("https://airbyte.example.com/scim/v2/Users", body)) {
+          controller.createUser(ScimUserRequest(body), null, null)
+        }
+      }
+
+    assertThat(error.status).isEqualTo(HttpStatus.BAD_REQUEST)
+    assertThat(error.scimType).isEqualTo("invalidValue")
+    // The rejected address is never echoed back into the SCIM error body.
+    assertThat(error.message).doesNotContain("victim.com")
   }
 
   @Test
