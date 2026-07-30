@@ -142,6 +142,8 @@ global:
 
   # -- Database configuration
   database:
+    # -- Whether Airbyte uses its own internal Postgres database or an external one.
+    # External databases require Postgres 13 or later. Airbyte tests through Postgres 17.
     type: internal # "external"
 
     # -- Secret name where database credentials are stored
