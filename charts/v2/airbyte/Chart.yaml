@@ -16,6 +16,16 @@ description: Helm chart to deploy airbyte
 # pipeline. Library charts do not define any templates and therefore cannot be deployed.
 type: application
 
+annotations:
+  artifacthub.io/license: Elastic-2.0
+  artifacthub.io/links: |
+    - name: source
+      url: https://github.com/airbytehq/charts
+    - name: documentation
+      url: https://docs.airbyte.com/platform/deploying-airbyte/chart-v2-community.html
+    - name: support
+      url: https://github.com/airbytehq/airbyte/issues
+
 # This is the chart version. This version number should be incremented each time you make changes
 # to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
