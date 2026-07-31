@@ -23,6 +23,7 @@ import io.airbyte.config.helpers.StateMessageHelper.getState
 import io.airbyte.config.helpers.StateMessageHelper.getTypedState
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.Optional
 import java.util.function.Consumer
@@ -31,6 +32,8 @@ import java.util.function.Consumer
 class BackfillHelper(
   private val catalogClientConverters: CatalogClientConverters,
 ) {
+  private val logger = KotlinLogging.logger {}
+
   /**
    * Indicates whether the current sync replication activity should perform a backfill. A backfill
    * happens under the following conditions: - The feature is enabled for the connection. - There is a
@@ -57,6 +60,11 @@ class BackfillHelper(
     val schemaDiffNeedsBackfill =
       hasSchemaDiff &&
         atLeastOneStreamNeedsBackfill(replicationActivityInput.schemaRefreshOutput!!.appliedDiff, connectionInfo)
+    if (backfillEnabledForConnection && replicationActivityInput.schemaRefreshOutput?.appliedDiff == null) {
+      logger.info {
+        "Backfill preference is ENABLED but no applied catalog diff reached replication; backfill is skipped"
+      }
+    }
     return backfillEnabledForConnection && hasSchemaDiff && schemaDiffNeedsBackfill
   }
 
@@ -187,7 +195,7 @@ class BackfillHelper(
       // anyway.
       return false
     }
-    for (fieldTransform in transform.updateStream.fieldTransforms) {
+    for (fieldTransform in transform.updateStream?.fieldTransforms.orEmpty()) {
       // TODO: we'll add other cases here when we develop the config options further.
       if (FieldTransform.TransformType.ADD_FIELD == fieldTransform.transformType) {
         return true

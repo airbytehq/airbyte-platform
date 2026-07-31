@@ -11,16 +11,25 @@ import io.airbyte.api.client.model.generated.ReplicateCommandOutputRequest
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputResponse
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
+import io.airbyte.config.CatalogDiff
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.FieldTransform
 import io.airbyte.config.Metadata
 import io.airbyte.config.ReplicationAttemptSummary
+import io.airbyte.config.StreamAttributePrimaryKeyUpdate
+import io.airbyte.config.StreamAttributeTransform
 import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.StreamTransform
+import io.airbyte.config.UpdateStream
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.workers.models.ReplicationApiInput
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNull
@@ -42,6 +51,85 @@ class ReplicationCommandTest {
   private val workloadId = "workloadId"
   private val workspaceId = UUID.randomUUID()
   private val organizationId = UUID.randomUUID()
+
+  @Test
+  fun `start forwards applied catalog diff`() {
+    val request = slot<io.airbyte.api.client.model.generated.RunReplicateCommandRequest>()
+    val diff =
+      CatalogDiff().withTransforms(
+        listOf(
+          StreamTransform()
+            .withTransformType(StreamTransform.TransformType.UPDATE_STREAM)
+            .withStreamDescriptor(StreamDescriptor().withName("stream"))
+            .withUpdateStream(
+              UpdateStream()
+                .withFieldTransforms(
+                  listOf(
+                    FieldTransform()
+                      .withTransformType(FieldTransform.TransformType.ADD_FIELD)
+                      .withFieldName(listOf("new_field"))
+                      .withBreaking(false)
+                      .withAddField(Jsons.jsonNode(mapOf("type" to "string"))),
+                  ),
+                ).withStreamAttributeTransforms(
+                  listOf(
+                    StreamAttributeTransform()
+                      .withTransformType(StreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY)
+                      .withBreaking(true)
+                      .withUpdatePrimaryKey(
+                        StreamAttributePrimaryKeyUpdate()
+                          .withOldPrimaryKey(listOf(listOf("id")))
+                          .withNewPrimaryKey(listOf(listOf("new_id"))),
+                      ),
+                  ),
+                ),
+            ),
+        ),
+      )
+
+    replicationCommand.start(
+      ReplicationApiInput(connectionId, jobId.toString(), attemptId, diff),
+      signalPayload = null,
+    )
+
+    verify { commandApi.runReplicateCommand(capture(request)) }
+    val apiDiff = request.captured.appliedCatalogDiff!!
+    assertEquals(1, apiDiff.transforms.size)
+    assertEquals(
+      1,
+      apiDiff.transforms[0]
+        .updateStream!!
+        .fieldTransforms.size,
+    )
+    assertEquals(
+      listOf("new_field"),
+      apiDiff.transforms[0]
+        .updateStream!!
+        .fieldTransforms[0]
+        .fieldName,
+    )
+    assertEquals(
+      listOf(listOf("new_id")),
+      apiDiff.transforms[0]
+        .updateStream!!
+        .streamAttributeTransforms[0]
+        .updatePrimaryKey!!
+        .newPrimaryKey,
+    )
+  }
+
+  @Test
+  fun `start omits null applied catalog diff`() {
+    val request = slot<io.airbyte.api.client.model.generated.RunReplicateCommandRequest>()
+
+    replicationCommand.start(
+      ReplicationApiInput(connectionId, jobId.toString(), attemptId, null),
+      signalPayload = null,
+    )
+
+    verify { commandApi.runReplicateCommand(capture(request)) }
+    assertNull(request.captured.appliedCatalogDiff)
+  }
 
   @Test
   fun `getOutput should return replicate output on success`() {

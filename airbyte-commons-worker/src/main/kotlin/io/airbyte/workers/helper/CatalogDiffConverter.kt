@@ -6,7 +6,11 @@ package io.airbyte.workers.helper
 
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.api.client.model.generated.CatalogDiff as ApiCatalogDiff
+import io.airbyte.api.client.model.generated.FieldAdd as ApiFieldAdd
+import io.airbyte.api.client.model.generated.FieldRemove as ApiFieldRemove
+import io.airbyte.api.client.model.generated.FieldSchemaUpdate as ApiFieldSchemaUpdate
 import io.airbyte.api.client.model.generated.FieldTransform as ApiFieldTransform
+import io.airbyte.api.client.model.generated.StreamAttributePrimaryKeyUpdate as ApiStreamAttributePrimaryKeyUpdate
 import io.airbyte.api.client.model.generated.StreamAttributeTransform as ApiStreamAttributeTransform
 import io.airbyte.api.client.model.generated.StreamTransform as ApiStreamTransform
 import io.airbyte.api.client.model.generated.StreamTransformUpdateStream as ApiStreamTransformUpdateStream
@@ -20,6 +24,12 @@ import io.airbyte.config.StreamTransform as DomainStreamTransform
 import io.airbyte.config.UpdateStream as DomainUpdateStream
 
 object CatalogDiffConverter {
+  @JvmStatic
+  fun toApi(domainCatalogDiff: DomainCatalogDiff): ApiCatalogDiff =
+    ApiCatalogDiff(
+      transforms = domainCatalogDiff.transforms.map { streamTransform -> toApi(streamTransform) },
+    )
+
   @JvmStatic
   fun toDomain(domainCatalogDiff: ApiCatalogDiff): DomainCatalogDiff {
     val streamTransforms =
@@ -37,9 +47,9 @@ object CatalogDiffConverter {
         DomainStreamDescriptor()
           .withName(streamTransform.streamDescriptor.name)
           .withNamespace(streamTransform.streamDescriptor.namespace),
-      ).withUpdateStream(
-        toDomain(streamTransform.updateStream),
-      )
+      ).apply {
+        streamTransform.updateStream?.let { updateStream = toDomain(it) }
+      }
 
   private fun toDomain(streamTransformUpdateStream: ApiStreamTransformUpdateStream?): DomainUpdateStream {
     if (streamTransformUpdateStream == null) {
@@ -61,21 +71,14 @@ object CatalogDiffConverter {
         .withTransformType(fieldTransform.transformType.convertTo<DomainFieldTransform.TransformType>())
         .withFieldName(fieldTransform.fieldName)
         .withBreaking(fieldTransform.breaking)
-        .withAddField(fieldTransform.addField?.schema)
-        .withRemoveField(fieldTransform.removeField?.schema)
-        .withUpdateFieldSchema(
-          DomainFieldSchemaUpdate()
-            .withOldSchema(fieldTransform.updateFieldSchema?.oldSchema)
-            .withNewSchema(fieldTransform.updateFieldSchema?.newSchema),
-        )
-
-    // if (fieldTransform.addField != null) {
-    //   result.addField = fieldTransform.addField?.schema
-    // }
-    //
-    // if (fieldTransform.removeField != null) {
-    //
-    // }
+    fieldTransform.addField?.schema?.let { result.addField = it }
+    fieldTransform.removeField?.schema?.let { result.removeField = it }
+    fieldTransform.updateFieldSchema?.let {
+      result.updateFieldSchema =
+        DomainFieldSchemaUpdate()
+          .withOldSchema(it.oldSchema)
+          .withNewSchema(it.newSchema)
+    }
 
     return result
   }
@@ -84,9 +87,83 @@ object CatalogDiffConverter {
     DomainStreamAttributeTransform()
       .withTransformType(streamAttributeTransform.transformType.convertTo<DomainStreamAttributeTransform.TransformType>())
       .withBreaking(streamAttributeTransform.breaking)
-      .withUpdatePrimaryKey(
-        DomainStreamAttributePrimaryKeyUpdate()
-          .withOldPrimaryKey(streamAttributeTransform.updatePrimaryKey?.oldPrimaryKey)
-          .withNewPrimaryKey(streamAttributeTransform.updatePrimaryKey?.newPrimaryKey),
-      )
+      .apply {
+        streamAttributeTransform.updatePrimaryKey?.let {
+          updatePrimaryKey =
+            DomainStreamAttributePrimaryKeyUpdate()
+              .withOldPrimaryKey(it.oldPrimaryKey)
+              .withNewPrimaryKey(it.newPrimaryKey)
+        }
+      }
+
+  private fun toApi(streamTransform: DomainStreamTransform): ApiStreamTransform =
+    ApiStreamTransform(
+      transformType = streamTransform.transformType.convertTo<ApiStreamTransform.TransformType>(),
+      streamDescriptor =
+        io.airbyte.api.client.model.generated.StreamDescriptor(
+          name = streamTransform.streamDescriptor.name,
+          namespace = streamTransform.streamDescriptor.namespace,
+        ),
+      updateStream =
+        if (streamTransform.transformType == DomainStreamTransform.TransformType.UPDATE_STREAM) {
+          streamTransform.updateStream?.let { toApi(it) }
+        } else {
+          null
+        },
+    )
+
+  private fun toApi(updateStream: DomainUpdateStream): ApiStreamTransformUpdateStream =
+    ApiStreamTransformUpdateStream(
+      fieldTransforms = updateStream.fieldTransforms.map { fieldTransform -> toApi(fieldTransform) },
+      streamAttributeTransforms =
+        updateStream.streamAttributeTransforms.map { streamAttributeTransform -> toApi(streamAttributeTransform) },
+    )
+
+  private fun toApi(fieldTransform: DomainFieldTransform): ApiFieldTransform =
+    ApiFieldTransform(
+      transformType = fieldTransform.transformType.convertTo<ApiFieldTransform.TransformType>(),
+      fieldName = fieldTransform.fieldName,
+      breaking = fieldTransform.breaking,
+      addField =
+        if (fieldTransform.transformType == DomainFieldTransform.TransformType.ADD_FIELD) {
+          fieldTransform.addField?.let { ApiFieldAdd(schema = it) }
+        } else {
+          null
+        },
+      removeField =
+        if (fieldTransform.transformType == DomainFieldTransform.TransformType.REMOVE_FIELD) {
+          fieldTransform.removeField?.let { ApiFieldRemove(schema = it) }
+        } else {
+          null
+        },
+      updateFieldSchema =
+        if (fieldTransform.transformType == DomainFieldTransform.TransformType.UPDATE_FIELD_SCHEMA) {
+          fieldTransform.updateFieldSchema?.let {
+            if (it.oldSchema == null || it.newSchema == null) {
+              null
+            } else {
+              ApiFieldSchemaUpdate(oldSchema = it.oldSchema, newSchema = it.newSchema)
+            }
+          }
+        } else {
+          null
+        },
+    )
+
+  private fun toApi(streamAttributeTransform: DomainStreamAttributeTransform): ApiStreamAttributeTransform =
+    ApiStreamAttributeTransform(
+      transformType = streamAttributeTransform.transformType.convertTo<ApiStreamAttributeTransform.TransformType>(),
+      breaking = streamAttributeTransform.breaking,
+      updatePrimaryKey =
+        if (streamAttributeTransform.transformType == DomainStreamAttributeTransform.TransformType.UPDATE_PRIMARY_KEY) {
+          streamAttributeTransform.updatePrimaryKey?.let {
+            ApiStreamAttributePrimaryKeyUpdate(
+              oldPrimaryKey = it.oldPrimaryKey,
+              newPrimaryKey = it.newPrimaryKey,
+            )
+          }
+        } else {
+          null
+        },
+    )
 }
