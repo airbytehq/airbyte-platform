@@ -115,6 +115,7 @@ internal class DataWorkerCapacityServiceTest {
     every { dataWorkerUsageReservationRepository.findById(job.id) } returns Optional.empty()
     every { dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId) } returns 8.0
     every { dataWorkerUsageService.prepareUsageForJob(job, organizationId, any()) } returns preparedUsage
+    every { dataWorkerUsageService.persistReservedUsageForJob(job.id, preparedUsage, false) } returns true
 
     val result = service.checkCapacityAndReserve(OrganizationId(organizationId), job, 0.5, false)
 
@@ -136,6 +137,7 @@ internal class DataWorkerCapacityServiceTest {
     every { dataWorkerUsageReservationRepository.findById(job.id) } returns Optional.empty()
     every { dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId) } returns 40.0
     every { dataWorkerUsageService.prepareUsageForJob(job, organizationId, any()) } returns preparedUsage
+    every { dataWorkerUsageService.persistReservedUsageForJob(job.id, preparedUsage, true) } returns true
 
     val result = service.checkCapacityAndReserve(OrganizationId(organizationId), job, 0.5, true)
 

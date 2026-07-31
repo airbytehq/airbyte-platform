@@ -45,6 +45,10 @@ data class CapacityCheckResult(
    * Whether the job should use on-demand capacity if it proceeds.
    */
   val usedOnDemandCapacity: Boolean,
+  /**
+   * Whether the value was actually persisted in the reservation table.
+   */
+  val wasPersisted: Boolean,
 )
 
 /**
@@ -134,10 +138,13 @@ open class DataWorkerCapacityService(
               "available=$hasAvailableCapacity, usedOnDemand=$usedOnDemandCapacity"
           }
 
+          var persisted = false
           if (hasAvailableCapacity) {
             val preparedUsage = requirePreparedUsage(job, organizationId)
-            reservedUsage = preparedUsage
-            dataWorkerUsageService.persistReservedUsageForJob(job.id, preparedUsage, usedOnDemandCapacity)
+            persisted = dataWorkerUsageService.persistReservedUsageForJob(job.id, preparedUsage, usedOnDemandCapacity)
+            if (persisted) {
+              reservedUsage = preparedUsage
+            }
           }
 
           CapacityCheckResult(
@@ -146,6 +153,7 @@ open class DataWorkerCapacityService(
             committedDataWorkers = committedDataWorkers,
             requiredDataWorkers = requiredDataWorkers,
             usedOnDemandCapacity = usedOnDemandCapacity,
+            wasPersisted = persisted,
           )
         }
       } catch (e: Exception) {
@@ -155,7 +163,7 @@ open class DataWorkerCapacityService(
         throw e
       }
 
-    if (result.hasAvailableCapacity) {
+    if (result.hasAvailableCapacity && result.wasPersisted) {
       reservedUsage?.let {
         dataWorkerUsageService.recordUsageMetric(job.id, true, DataWorkerUsageService.INCREMENT_OPERATION, it)
       }
@@ -194,6 +202,7 @@ open class DataWorkerCapacityService(
       committedDataWorkers = committedDataWorkers,
       requiredDataWorkers = requiredDataWorkers,
       usedOnDemandCapacity = reservation.usedOnDemandCapacity,
+      wasPersisted = true,
     )
   }
 

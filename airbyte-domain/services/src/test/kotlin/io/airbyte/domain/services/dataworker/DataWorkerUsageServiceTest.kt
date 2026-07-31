@@ -33,6 +33,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.sql.Connection
@@ -61,7 +62,19 @@ class DataWorkerUsageServiceTest {
     dataWorkerUsageDataService = mockk()
     dataWorkerUsageReservationRepository = mockk(relaxed = true)
     every { dataWorkerUsageReservationRepository.existsById(any()) } returns false
-    every { dataWorkerUsageReservationRepository.save(any()) } answers { firstArg() }
+    every {
+      dataWorkerUsageReservationRepository.insertReservationIfJobActive(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    } returns 1
     workspaceService = mockk()
     featureFlagClient = mockk(relaxed = true)
     entitlementService = mockk(relaxed = true)
@@ -385,20 +398,34 @@ class DataWorkerUsageServiceTest {
 
     every { dataWorkerUsageReservationRepository.existsById(jobId) } returns false
     every { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) } returns null
-    every { dataWorkerUsageReservationRepository.save(any()) } answers { firstArg() }
+    every {
+      dataWorkerUsageReservationRepository.insertReservationIfJobActive(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    } returns 1
     every { dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any()) } returns Unit
 
     service.reserveUsageForJob(jobId, dataWorkerUsage, usedOnDemandCapacity = true)
 
     verify(exactly = 1) {
-      dataWorkerUsageReservationRepository.save(
-        match {
-          it.jobId == jobId &&
-            it.organizationId == organizationId &&
-            it.workspaceId == workspaceId &&
-            it.dataplaneGroupId == dataplaneGroupId &&
-            it.usedOnDemandCapacity
-        },
+      dataWorkerUsageReservationRepository.insertReservationIfJobActive(
+        jobId = eq(jobId),
+        organizationId = eq(organizationId),
+        workspaceId = eq(workspaceId),
+        dataplaneGroupId = eq(dataplaneGroupId),
+        sourceCpuRequest = any(),
+        destinationCpuRequest = any(),
+        orchestratorCpuRequest = any(),
+        usedOnDemandCapacity = eq(true),
+        createdAt = any(),
       )
     }
     verify(exactly = 1) { dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any()) }
@@ -429,7 +456,60 @@ class DataWorkerUsageServiceTest {
 
     service.reserveUsageForJob(jobId, dataWorkerUsage, usedOnDemandCapacity = true)
 
-    verify(exactly = 0) { dataWorkerUsageReservationRepository.save(any()) }
+    verify(exactly = 0) {
+      dataWorkerUsageReservationRepository.insertReservationIfJobActive(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    }
+    verify(exactly = 0) { dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any()) }
+    verify(exactly = 0) { dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any()) }
+  }
+
+  @Test
+  fun `persistReservedUsageForJob should skip reservation and bucket increment when job is terminal`() {
+    val jobId = 999L
+    val dataWorkerUsage =
+      DataWorkerUsage(
+        organizationId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        dataplaneGroupId = UUID.randomUUID(),
+        sourceCpuRequest = 1.0,
+        destinationCpuRequest = 1.0,
+        orchestratorCpuRequest = 2.0,
+        bucketStart = OffsetDateTime.now(),
+        createdAt = OffsetDateTime.now(),
+        maxSourceCpuRequest = 1.0,
+        maxDestinationCpuRequest = 1.0,
+        maxOrchestratorCpuRequest = 2.0,
+      )
+
+    // Job already reached a terminal state, so the atomic conditional insert affects 0 rows.
+    every {
+      dataWorkerUsageReservationRepository.insertReservationIfJobActive(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    } returns 0
+
+    val result = service.persistReservedUsageForJob(jobId, dataWorkerUsage, usedOnDemandCapacity = false)
+
+    assertFalse(result)
+    verify(exactly = 0) { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) }
     verify(exactly = 0) { dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any()) }
     verify(exactly = 0) { dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any()) }
   }
