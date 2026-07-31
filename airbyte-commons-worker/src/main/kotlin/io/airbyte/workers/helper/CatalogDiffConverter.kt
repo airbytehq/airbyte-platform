@@ -12,6 +12,7 @@ import io.airbyte.api.client.model.generated.FieldSchemaUpdate as ApiFieldSchema
 import io.airbyte.api.client.model.generated.FieldTransform as ApiFieldTransform
 import io.airbyte.api.client.model.generated.StreamAttributePrimaryKeyUpdate as ApiStreamAttributePrimaryKeyUpdate
 import io.airbyte.api.client.model.generated.StreamAttributeTransform as ApiStreamAttributeTransform
+import io.airbyte.api.client.model.generated.StreamDescriptor as ApiStreamDescriptor
 import io.airbyte.api.client.model.generated.StreamTransform as ApiStreamTransform
 import io.airbyte.api.client.model.generated.StreamTransformUpdateStream as ApiStreamTransformUpdateStream
 import io.airbyte.config.CatalogDiff as DomainCatalogDiff
@@ -47,9 +48,9 @@ object CatalogDiffConverter {
         DomainStreamDescriptor()
           .withName(streamTransform.streamDescriptor.name)
           .withNamespace(streamTransform.streamDescriptor.namespace),
-      ).apply {
-        streamTransform.updateStream?.let { updateStream = toDomain(it) }
-      }
+      ).withUpdateStream(
+        toDomain(streamTransform.updateStream),
+      )
 
   private fun toDomain(streamTransformUpdateStream: ApiStreamTransformUpdateStream?): DomainUpdateStream {
     if (streamTransformUpdateStream == null) {
@@ -71,14 +72,21 @@ object CatalogDiffConverter {
         .withTransformType(fieldTransform.transformType.convertTo<DomainFieldTransform.TransformType>())
         .withFieldName(fieldTransform.fieldName)
         .withBreaking(fieldTransform.breaking)
-    fieldTransform.addField?.schema?.let { result.addField = it }
-    fieldTransform.removeField?.schema?.let { result.removeField = it }
-    fieldTransform.updateFieldSchema?.let {
-      result.updateFieldSchema =
-        DomainFieldSchemaUpdate()
-          .withOldSchema(it.oldSchema)
-          .withNewSchema(it.newSchema)
-    }
+        .withAddField(fieldTransform.addField?.schema)
+        .withRemoveField(fieldTransform.removeField?.schema)
+        .withUpdateFieldSchema(
+          DomainFieldSchemaUpdate()
+            .withOldSchema(fieldTransform.updateFieldSchema?.oldSchema)
+            .withNewSchema(fieldTransform.updateFieldSchema?.newSchema),
+        )
+
+    // if (fieldTransform.addField != null) {
+    //   result.addField = fieldTransform.addField?.schema
+    // }
+    //
+    // if (fieldTransform.removeField != null) {
+    //
+    // }
 
     return result
   }
@@ -87,20 +95,17 @@ object CatalogDiffConverter {
     DomainStreamAttributeTransform()
       .withTransformType(streamAttributeTransform.transformType.convertTo<DomainStreamAttributeTransform.TransformType>())
       .withBreaking(streamAttributeTransform.breaking)
-      .apply {
-        streamAttributeTransform.updatePrimaryKey?.let {
-          updatePrimaryKey =
-            DomainStreamAttributePrimaryKeyUpdate()
-              .withOldPrimaryKey(it.oldPrimaryKey)
-              .withNewPrimaryKey(it.newPrimaryKey)
-        }
-      }
+      .withUpdatePrimaryKey(
+        DomainStreamAttributePrimaryKeyUpdate()
+          .withOldPrimaryKey(streamAttributeTransform.updatePrimaryKey?.oldPrimaryKey)
+          .withNewPrimaryKey(streamAttributeTransform.updatePrimaryKey?.newPrimaryKey),
+      )
 
   private fun toApi(streamTransform: DomainStreamTransform): ApiStreamTransform =
     ApiStreamTransform(
       transformType = streamTransform.transformType.convertTo<ApiStreamTransform.TransformType>(),
       streamDescriptor =
-        io.airbyte.api.client.model.generated.StreamDescriptor(
+        ApiStreamDescriptor(
           name = streamTransform.streamDescriptor.name,
           namespace = streamTransform.streamDescriptor.namespace,
         ),

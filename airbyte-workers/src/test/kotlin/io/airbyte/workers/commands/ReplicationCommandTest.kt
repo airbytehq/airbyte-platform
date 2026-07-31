@@ -9,6 +9,7 @@ import io.airbyte.api.client.model.generated.FailureOrigin
 import io.airbyte.api.client.model.generated.FailureType
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputRequest
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputResponse
+import io.airbyte.api.client.model.generated.RunReplicateCommandRequest
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.CatalogDiff
@@ -54,7 +55,7 @@ class ReplicationCommandTest {
 
   @Test
   fun `start forwards applied catalog diff`() {
-    val request = slot<io.airbyte.api.client.model.generated.RunReplicateCommandRequest>()
+    val request = slot<RunReplicateCommandRequest>()
     val diff =
       CatalogDiff().withTransforms(
         listOf(
@@ -120,7 +121,7 @@ class ReplicationCommandTest {
 
   @Test
   fun `start omits null applied catalog diff`() {
-    val request = slot<io.airbyte.api.client.model.generated.RunReplicateCommandRequest>()
+    val request = slot<RunReplicateCommandRequest>()
 
     replicationCommand.start(
       ReplicationApiInput(connectionId, jobId.toString(), attemptId, null),

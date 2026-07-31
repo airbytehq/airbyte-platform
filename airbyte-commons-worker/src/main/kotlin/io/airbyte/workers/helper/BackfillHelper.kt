@@ -195,7 +195,7 @@ class BackfillHelper(
       // anyway.
       return false
     }
-    for (fieldTransform in transform.updateStream?.fieldTransforms.orEmpty()) {
+    for (fieldTransform in transform.updateStream.fieldTransforms) {
       // TODO: we'll add other cases here when we develop the config options further.
       if (FieldTransform.TransformType.ADD_FIELD == fieldTransform.transformType) {
         return true
