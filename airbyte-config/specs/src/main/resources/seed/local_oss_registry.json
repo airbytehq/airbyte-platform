@@ -73726,7 +73726,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "5.6.13",
+      "dockerImageTag": "6.0.0",
       "dockerRepository": "airbyte/source-linkedin-ads",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/linkedin-ads",
       "externalDocumentationUrls": [
@@ -73748,10 +73748,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Airbyte Support",
-          "commit_author_email": "cloud-support@airbyte.io",
-          "commit_sha": "b143d124757e9306cbbac45b08023ff73f1ccdfc",
-          "commit_timestamp": "2026-07-28T17:36:05+01:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "0dbde3ebfe8574151551ca8b86ea6cf9d5a80a9a",
+          "commit_timestamp": "2026-07-30T11:24:33-07:00"
         },
         "metrics": {
           "all": {
@@ -73767,12 +73767,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-linkedin-ads/5.6.13.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-linkedin-ads/6.0.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-linkedin-ads/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-28T16:45:21.739555+00:00",
-          "registry_entry_generated_at": "2026-07-28T16:45:21.739555+00:00"
+          "metadata_last_modified": "2026-07-30T18:29:19.872045+00:00",
+          "registry_entry_generated_at": "2026-07-30T18:29:19.872045+00:00"
         }
       },
       "githubIssueLabel": "source-linkedin-ads",
@@ -73872,6 +73872,20 @@
             "message": "We would like to inform you that the Primary Key (PK) for ad_campaign_analytics and Custom Ad Analytics Reports streams has been changed from [string_of_pivot_values, end_date] to [string_of_pivot_values, end_date, sponsoredCampaign] and Primary Key (PK) for account_users stream has been changed from [account] to [account, user]. This update is intended to improve data integrity and ensure optimal performance. Upgrade LinkedIn Ads to apply these changes immediately. Otherwise, LinkedIn Ads will be upgraded automatically on 2024-12-10.",
             "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/linkedin-ads-migrations#5.0.0",
             "upgradeDeadline": "2024-12-10"
+          },
+          "6.0.0": {
+            "deadlineAction": "disable",
+            "message": "The ad_impression_device_analytics primary key now includes sponsoredCampaign. This prevents records from different campaigns with the same device type and date from sharing a primary key, fixing incomplete data in deduplication mode. Refresh the source schema after upgrading. If this stream uses deduplication, refresh it to rebuild the affected destination data. See the [LinkedIn Ads migration guide](https://docs.airbyte.com/integrations/sources/linkedin-ads-migrations#upgrading-to-600) for instructions.",
+            "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/linkedin-ads-migrations#6.0.0",
+            "scopedImpact": [
+              {
+                "impactedScopes": [
+                  "ad_impression_device_analytics"
+                ],
+                "scopeType": "stream"
+              }
+            ],
+            "upgradeDeadline": "2026-08-28"
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/linkedin-ads-migrations",
@@ -74045,7 +74059,8 @@
                       "MEMBER_REGION_V2",
                       "MEMBER_COMPANY",
                       "PLACEMENT_NAME",
-                      "IMPRESSION_DEVICE_TYPE"
+                      "IMPRESSION_DEVICE_TYPE",
+                      "EVENT_STAGE"
                     ],
                     "title": "Pivot Category",
                     "type": "string"
@@ -74071,6 +74086,67 @@
                 "type": "object"
               },
               "title": "Custom Ad Analytics Reports",
+              "type": "array"
+            },
+            "ad_statistics_reports": {
+              "default": [],
+              "items": {
+                "description": "Config for custom ad Statistics Finder report",
+                "properties": {
+                  "name": {
+                    "description": "The name for the custom report.",
+                    "title": "Report Name",
+                    "type": "string"
+                  },
+                  "pivots": {
+                    "description": "Choose up to three categories to pivot your Statistics Finder report around.",
+                    "items": {
+                      "enum": [
+                        "COMPANY",
+                        "ACCOUNT",
+                        "SHARE",
+                        "CAMPAIGN",
+                        "CREATIVE",
+                        "CAMPAIGN_GROUP",
+                        "CONVERSION",
+                        "CONVERSATION_NODE",
+                        "CONVERSATION_NODE_OPTION_INDEX",
+                        "SERVING_LOCATION",
+                        "OBJECTIVE_TYPE",
+                        "CARD_INDEX",
+                        "PLACEMENT_NAME",
+                        "IMPRESSION_DEVICE_TYPE",
+                        "EVENT_STAGE"
+                      ],
+                      "type": "string"
+                    },
+                    "maxItems": 3,
+                    "minItems": 1,
+                    "title": "Pivot Categories",
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "time_granularity": {
+                    "description": "Choose how to group the data in your report by time. The options are:<br>- 'ALL': A single result summarizing the entire time range.<br>- 'DAILY': Group results by each day.<br>- 'MONTHLY': Group results by each month.<br>- 'YEARLY': Group results by each year.<br>Selecting a time grouping helps you analyze trends and patterns over different time periods.",
+                    "enum": [
+                      "ALL",
+                      "DAILY",
+                      "MONTHLY",
+                      "YEARLY"
+                    ],
+                    "title": "Time Granularity",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "pivots",
+                  "time_granularity"
+                ],
+                "title": "Ad Statistics Report Configuration",
+                "type": "object"
+              },
+              "title": "Custom Ad Statistics Reports",
               "type": "array"
             },
             "credentials": {
@@ -129233,7 +129309,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.2.11",
+      "dockerImageTag": "1.2.12",
       "dockerRepository": "airbyte/source-youtube-analytics",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/youtube-analytics",
       "externalDocumentationUrls": [
@@ -129260,10 +129336,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "a88fe033a4e02125f48619b3b32c2c9764b33677",
-          "commit_timestamp": "2026-07-14T09:19:26+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "6d2631289950a201264b89bb802ff80171bc42ea",
+          "commit_timestamp": "2026-07-30T14:20:41-07:00"
         },
         "metrics": {
           "all": {
@@ -129279,12 +129355,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-youtube-analytics/1.2.11.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-youtube-analytics/1.2.12.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-youtube-analytics/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-14T09:23:24.251854+00:00",
-          "registry_entry_generated_at": "2026-07-14T09:23:24.251854+00:00"
+          "metadata_last_modified": "2026-07-30T21:24:55.857381+00:00",
+          "registry_entry_generated_at": "2026-07-30T21:24:55.857381+00:00"
         }
       },
       "githubIssueLabel": "source-youtube-analytics",
