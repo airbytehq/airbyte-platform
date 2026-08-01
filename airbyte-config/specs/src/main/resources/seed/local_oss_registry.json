@@ -23124,15 +23124,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-aha/0.4.24.spdx.json",
@@ -73726,7 +73726,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "6.0.0",
+      "dockerImageTag": "6.0.2",
       "dockerRepository": "airbyte/source-linkedin-ads",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/linkedin-ads",
       "externalDocumentationUrls": [
@@ -73750,8 +73750,8 @@
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "0dbde3ebfe8574151551ca8b86ea6cf9d5a80a9a",
-          "commit_timestamp": "2026-07-30T11:24:33-07:00"
+          "commit_sha": "45ca8549675e499cbfa9cbb16c28f718cb43b677",
+          "commit_timestamp": "2026-07-31T14:26:49-04:00"
         },
         "metrics": {
           "all": {
@@ -73767,12 +73767,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-linkedin-ads/6.0.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-linkedin-ads/6.0.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-linkedin-ads/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-30T18:29:19.872045+00:00",
-          "registry_entry_generated_at": "2026-07-30T18:29:19.872045+00:00"
+          "metadata_last_modified": "2026-07-31T18:30:56.202902+00:00",
+          "registry_entry_generated_at": "2026-07-31T18:30:56.202902+00:00"
         }
       },
       "githubIssueLabel": "source-linkedin-ads",
@@ -101031,16 +101031,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-recreation/0.2.25.spdx.json",
@@ -116170,15 +116170,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-square/1.7.24.spdx.json",
