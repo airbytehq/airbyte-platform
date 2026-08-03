@@ -33,6 +33,7 @@ export * from "./organizations";
 export * from "./permissions";
 export * from "./privateLinks";
 export * from "./pypi";
+export * from "./scimConfig";
 export * from "./security";
 export * from "./sources";
 export * from "./sourceDefinitions";
