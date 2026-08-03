@@ -6,7 +6,6 @@ package io.airbyte.config.secrets.hydration
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.secrets.ConfigWithSecretReferences
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import java.util.UUID
 
@@ -50,12 +49,12 @@ interface SecretsHydrator {
   )
   fun hydrateFromRuntimeSecretPersistence(
     partialConfig: JsonNode,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
+    runtimeSecretPersistence: SecretPersistence,
   ): JsonNode
 
   fun hydrateSecretCoordinateFromRuntimeSecretPersistence(
     secretCoordinate: JsonNode,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
+    runtimeSecretPersistence: SecretPersistence,
   ): JsonNode
 
   /**

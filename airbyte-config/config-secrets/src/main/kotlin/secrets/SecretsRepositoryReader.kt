@@ -7,7 +7,6 @@ package io.airbyte.config.secrets
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import io.airbyte.config.secrets.hydration.SecretsHydrator
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
@@ -77,7 +76,7 @@ open class SecretsRepositoryReader(
   )
   fun hydrateConfigFromRuntimeSecretPersistence(
     configuration: JsonNode?,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
+    runtimeSecretPersistence: SecretPersistence,
   ): JsonNode? =
     if (configuration != null) {
       secretsHydrator.hydrateFromRuntimeSecretPersistence(configuration, runtimeSecretPersistence)

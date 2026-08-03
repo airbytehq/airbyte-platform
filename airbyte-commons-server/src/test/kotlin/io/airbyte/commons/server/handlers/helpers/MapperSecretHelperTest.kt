@@ -28,6 +28,7 @@ import io.airbyte.config.mapper.configs.HashingMethods
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.AllowMappersDefaultSecretPersistence
@@ -37,7 +38,6 @@ import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.mappers.transformations.EncryptionMapper
 import io.airbyte.mappers.transformations.HashingMapper
 import io.airbyte.mappers.transformations.Mapper
-import io.airbyte.metrics.MetricClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -62,7 +62,7 @@ internal class MapperSecretHelperTest {
   private val secretsRepositoryReader = mockk<SecretsRepositoryReader>()
   private val secretsProcessor = mockk<JsonSecretsProcessor>()
   private val featureFlagClient = mockk<TestClient>()
-  private val metricClient = mockk<MetricClient>(relaxed = true)
+  private val runtimeSecretPersistenceFactory = mockk<RuntimeSecretPersistenceFactory>(relaxed = true)
   private val objectMapper = MoreMappers.initMapper()
   private val hashingMapper = HashingMapper(objectMapper)
   private val encryptionMapper = EncryptionMapper(objectMapper)
@@ -77,7 +77,7 @@ internal class MapperSecretHelperTest {
       featureFlagClient = featureFlagClient,
       secretsProcessor = secretsProcessor,
       airbyteEdition = Configs.AirbyteEdition.CLOUD,
-      metricClient = metricClient,
+      runtimeSecretPersistenceFactory = runtimeSecretPersistenceFactory,
     )
 
   @BeforeEach
@@ -397,7 +397,7 @@ internal class MapperSecretHelperTest {
         featureFlagClient = featureFlagClient,
         secretsProcessor = secretsProcessor,
         airbyteEdition = Configs.AirbyteEdition.COMMUNITY,
-        metricClient = metricClient,
+        runtimeSecretPersistenceFactory = runtimeSecretPersistenceFactory,
       )
 
     val mapperConfig =

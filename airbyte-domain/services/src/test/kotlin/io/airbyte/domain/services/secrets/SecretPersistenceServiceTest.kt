@@ -11,7 +11,7 @@ import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.persistence.DataPlaneOnlySecretPersistence
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SecretPersistenceConfigService
@@ -24,12 +24,10 @@ import io.airbyte.domain.models.SecretStorageWithConfig
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
-import io.airbyte.metrics.MetricClient
 import io.kotest.matchers.shouldNotBe
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkConstructor
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -45,7 +43,7 @@ class SecretPersistenceServiceTest {
   private val defaultSecretPersistence = mockk<SecretPersistence>()
   private val secretStorageService = mockk<SecretStorageService>()
   private val secretPersistenceConfigService = mockk<SecretPersistenceConfigService>()
-  private val metricClient = mockk<MetricClient>()
+  private val runtimeSecretPersistenceFactory = mockk<RuntimeSecretPersistenceFactory>()
   private val featureFlagClient = mockk<FeatureFlagClient>()
   private val organizationService = mockk<OrganizationService>()
 
@@ -57,7 +55,7 @@ class SecretPersistenceServiceTest {
       defaultSecretPersistence,
       secretStorageService,
       secretPersistenceConfigService,
-      metricClient,
+      runtimeSecretPersistenceFactory,
       featureFlagClient,
       organizationService,
     )
@@ -65,7 +63,8 @@ class SecretPersistenceServiceTest {
   @BeforeEach
   fun setup() {
     clearAllMocks()
-    mockkConstructor(RuntimeSecretPersistence::class)
+    // Return a distinct persistence instance per create() call so tests can assert non-equality.
+    every { runtimeSecretPersistenceFactory.create(any()) } answers { mockk<SecretPersistence>() }
 
     every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), any()) } returns false
   }
@@ -174,11 +173,12 @@ class SecretPersistenceServiceTest {
 
       val persistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, context)
       assertEquals(defaultSecretPersistence, persistenceMap[null])
-      assertTrue(persistenceMap[secretStorageId] is RuntimeSecretPersistence)
-      assertTrue(persistenceMap[secretStorageId2] is RuntimeSecretPersistence)
+      assertNotNull(persistenceMap[secretStorageId])
+      assertNotNull(persistenceMap[secretStorageId2])
       assertTrue(persistenceMap[secretStorageId3] is DataPlaneOnlySecretPersistence)
 
-      // we can't mock the constructor for RuntimeSecretPersistence, so we check these for now
+      // Each non-environment storage gets its own runtime persistence from the factory.
+      verify(exactly = 2) { runtimeSecretPersistenceFactory.create(any()) }
       persistenceMap[secretStorageId] shouldNotBe persistenceMap[secretStorageId2]
       persistenceMap[secretStorageId] shouldNotBe defaultSecretPersistence
       persistenceMap[secretStorageId2] shouldNotBe defaultSecretPersistence

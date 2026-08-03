@@ -10,7 +10,7 @@ import io.airbyte.config.DestinationOAuthParameter
 import io.airbyte.config.ScopeType
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.secrets.SecretsRepositoryReader
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SecretPersistenceConfigService
@@ -380,7 +380,7 @@ class OAuthServiceJooqImpl(
         secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId)
       return secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(
         config,
-        RuntimeSecretPersistence(secretPersistenceConfig, metricClient),
+        RuntimeSecretPersistenceFactory(metricClient).create(secretPersistenceConfig),
       )
     } else {
       return secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(config)

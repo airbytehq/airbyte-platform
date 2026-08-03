@@ -14,7 +14,8 @@ import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
+import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.WorkspaceService
@@ -747,7 +748,7 @@ class WorkspaceServiceJooqImpl
         webhookConfigs =
           secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(
             workspace.webhookOperationConfigs,
-            RuntimeSecretPersistence(secretPersistenceConfig, metricClient),
+            RuntimeSecretPersistenceFactory(metricClient).create(secretPersistenceConfig),
           )
       } else {
         webhookConfigs = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(workspace.webhookOperationConfigs)
@@ -782,12 +783,12 @@ class WorkspaceServiceJooqImpl
 
       if (workspace.webhookOperationConfigs != null) {
         val organizationId = workspace.organizationId
-        var secretPersistence: RuntimeSecretPersistence? = null
+        var secretPersistence: SecretPersistence? = null
 
         if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))) {
           val secretPersistenceConfig =
             secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId)
-          secretPersistence = RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
+          secretPersistence = RuntimeSecretPersistenceFactory(metricClient).create(secretPersistenceConfig)
         }
         val partialConfig =
           if (previousWebhookConfigs.isPresent) {

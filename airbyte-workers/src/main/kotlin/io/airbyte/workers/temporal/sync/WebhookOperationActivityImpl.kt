@@ -16,7 +16,7 @@ import io.airbyte.config.OperatorWebhookInput
 import io.airbyte.config.WebhookConfig
 import io.airbyte.config.WebhookOperationConfigs
 import io.airbyte.config.secrets.SecretsRepositoryReader
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
@@ -48,6 +48,7 @@ class WebhookOperationActivityImpl(
   private val airbyteApiClient: AirbyteApiClient,
   private val featureFlagClient: FeatureFlagClient,
   private val metricClient: MetricClient,
+  private val runtimeSecretPersistenceFactory: RuntimeSecretPersistenceFactory,
 ) : WebhookOperationActivity {
   @WithSpan
   override fun invokeWebhook(input: OperatorWebhookInput): Boolean {
@@ -65,7 +66,7 @@ class WebhookOperationActivityImpl(
             SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId),
           )
         val runtimeSecretPersistence =
-          RuntimeSecretPersistence(secretPersistenceConfig.toModel(), metricClient)
+          runtimeSecretPersistenceFactory.create(secretPersistenceConfig.toModel())
         fullWebhookConfigJson =
           secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.workspaceWebhookConfigs, runtimeSecretPersistence)
       } catch (e: IOException) {

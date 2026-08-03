@@ -54,6 +54,7 @@ import io.airbyte.config.SupportLevel
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.config.specs.RemoteDefinitionsProvider
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
@@ -65,7 +66,6 @@ import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
-import io.airbyte.metrics.MetricClient
 import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.oauth.declarative.DeclarativeOAuthFlow
 import io.airbyte.protocol.models.v0.AdvancedAuth
@@ -105,7 +105,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
   private lateinit var remoteDefinitionsProvider: RemoteDefinitionsProvider
   private lateinit var adaptedConnectorSpecification: ConnectorSpecification
   private lateinit var oauthImplementationFactory: OAuthImplementationFactory
-  private lateinit var metricClient: MetricClient
+  private lateinit var runtimeSecretPersistenceFactory: RuntimeSecretPersistenceFactory
   private lateinit var workspaceId: UUID
   private val specString =
     """
@@ -173,7 +173,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     remoteDefinitionsProvider = Mockito.mock(RemoteDefinitionsProvider::class.java)
     adaptedConnectorSpecification = Mockito.mock(ConnectorSpecification::class.java)
     oauthImplementationFactory = Mockito.mock(OAuthImplementationFactory::class.java)
-    metricClient = Mockito.mock(MetricClient::class.java)
+    runtimeSecretPersistenceFactory = Mockito.mock(RuntimeSecretPersistenceFactory::class.java)
     setupConnectorSpecificationAdapter(anyOrNull(), "")
     workspaceId = UUID.randomUUID()
 
@@ -195,7 +195,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
         actorDefinitionService,
         remoteDefinitionsProvider,
         oauthImplementationFactory,
-        metricClient,
+        runtimeSecretPersistenceFactory,
       )
 
     Mockito.`when`(manifestInjector.getCdkVersion(anyOrNull())).thenReturn(A_CDK_VERSION)

@@ -23,7 +23,8 @@ import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretsHelpers
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
+import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.AllowMappersDefaultSecretPersistence
@@ -32,7 +33,6 @@ import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.mappers.transformations.MapperSpec
-import io.airbyte.metrics.MetricClient
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -49,7 +49,7 @@ class MapperSecretHelper(
   @Named("jsonSecretsProcessorWithCopy") private val secretsProcessor: JsonSecretsProcessor,
   private val featureFlagClient: FeatureFlagClient,
   private val airbyteEdition: AirbyteEdition,
-  private val metricClient: MetricClient,
+  private val runtimeSecretPersistenceFactory: RuntimeSecretPersistenceFactory,
 ) {
   @Inject
   constructor(
@@ -61,7 +61,7 @@ class MapperSecretHelper(
     @Named("jsonSecretsProcessorWithCopy") secretsProcessor: JsonSecretsProcessor,
     featureFlagClient: FeatureFlagClient,
     airbyteEdition: AirbyteEdition,
-    metricClient: MetricClient,
+    runtimeSecretPersistenceFactory: RuntimeSecretPersistenceFactory,
   ) : this(
     mappers.associateBy { it.name },
     workspaceService,
@@ -71,7 +71,7 @@ class MapperSecretHelper(
     secretsProcessor,
     featureFlagClient,
     airbyteEdition,
-    metricClient,
+    runtimeSecretPersistenceFactory,
   )
 
   private fun getMapper(name: String): Mapper<MapperConfig> = mappers[name] ?: throw IllegalArgumentException("Mapper $name not found")
@@ -96,13 +96,13 @@ class MapperSecretHelper(
     }
   }
 
-  private fun getRuntimeSecretPersistence(organizationId: UUID): RuntimeSecretPersistence? {
+  private fun getRuntimeSecretPersistence(organizationId: UUID): SecretPersistence? {
     val isRuntimePersistenceEnabled = featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))
     if (!isRuntimePersistenceEnabled) {
       return null
     }
     val secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId)
-    return RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
+    return runtimeSecretPersistenceFactory.create(secretPersistenceConfig)
   }
 
   private fun assertConfigHasNoMaskedSecrets(
@@ -270,7 +270,7 @@ class MapperSecretHelper(
 
   private fun tryHydrateConfigJson(
     persistedConfigJson: JsonNode?,
-    runtimeSecretPersistence: RuntimeSecretPersistence?,
+    runtimeSecretPersistence: SecretPersistence?,
   ): JsonNode? {
     if (persistedConfigJson == null) {
       return null

@@ -5,10 +5,8 @@
 package io.airbyte.config.secrets.persistence
 
 import io.airbyte.config.SecretPersistenceConfig
-import io.airbyte.config.secrets.SecretCoordinate
-import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.metrics.MetricClient
-import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.inject.Singleton
 import secrets.persistence.AzureKeyVaultClient
 import secrets.persistence.AzureKeyVaultPersistence
 import secrets.persistence.AzureKeyVaultRuntimeConfiguration
@@ -16,19 +14,19 @@ import secrets.persistence.AzureKeyVaultRuntimeConfiguration
 private const val AWS_ASSUME_ROLE_ACCESS_KEY_ID = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"
 private const val AWS_ASSUME_ROLE_SECRET_ACCESS_KEY = "AWS_ASSUME_ROLE_SECRET_ACCESS_KEY"
 
-private val log = KotlinLogging.logger {}
-
 /**
- * Class representing a RuntimeSecretPersistence to be used for BYO secrets customers.
+ * Builds the concrete [SecretPersistence] for a BYO-secrets customer from their runtime
+ * [SecretPersistenceConfig]. The persistence type and its backing cloud client are resolved once
+ * per [create] call, and the returned instance is reused for the lifetime the caller holds it.
  */
-class RuntimeSecretPersistence(
-  private val secretPersistenceConfig: SecretPersistenceConfig,
+@Singleton
+class RuntimeSecretPersistenceFactory(
   private val metricClient: MetricClient,
-) : SecretPersistence {
+) {
   private val awsAssumeRoleAccessKey: String? = System.getenv(AWS_ASSUME_ROLE_ACCESS_KEY_ID)
   private val awsAssumeRoleSecretKey: String? = System.getenv(AWS_ASSUME_ROLE_SECRET_ACCESS_KEY)
 
-  private fun buildSecretPersistence(secretPersistenceConfig: SecretPersistenceConfig): SecretPersistence =
+  fun create(secretPersistenceConfig: SecretPersistenceConfig): SecretPersistence =
     when (secretPersistenceConfig.secretPersistenceType) {
       SecretPersistenceConfig.SecretPersistenceType.AWS -> {
         AwsSecretManagerPersistence(
@@ -73,34 +71,4 @@ class RuntimeSecretPersistence(
         "Unexpected value: " + secretPersistenceConfig.secretPersistenceType,
       )
     }
-
-  override fun read(coordinate: SecretCoordinate): String {
-    val secretPersistence = buildSecretPersistence(secretPersistenceConfig)
-    return secretPersistence.read(coordinate)
-  }
-
-  override fun write(
-    coordinate: AirbyteManagedSecretCoordinate,
-    payload: String,
-  ) {
-    log.debug { "Writing secret to secret persistence: $coordinate" }
-    log.debug { "Config: $secretPersistenceConfig" }
-    val secretPersistence: SecretPersistence = buildSecretPersistence(secretPersistenceConfig)
-    secretPersistence.write(coordinate, payload)
-  }
-
-  override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
-    log.debug { "Deleting secret from secret persistence: $coordinate" }
-    val secretPersistence: SecretPersistence = buildSecretPersistence(secretPersistenceConfig)
-    secretPersistence.delete(coordinate)
-  }
-
-  override fun deleteWithRecoveryWindow(
-    coordinate: AirbyteManagedSecretCoordinate,
-    recoveryWindowInDays: Long,
-  ) {
-    log.debug { "Deleting secret from secret persistence with a $recoveryWindowInDays day recovery window: $coordinate" }
-    val secretPersistence: SecretPersistence = buildSecretPersistence(secretPersistenceConfig)
-    secretPersistence.deleteWithRecoveryWindow(coordinate, recoveryWindowInDays)
-  }
 }
