@@ -21,6 +21,7 @@ fun EntityPermissionType.toConfigModel(): ModelPermissionType =
     EntityPermissionType.organization_member -> ModelPermissionType.ORGANIZATION_MEMBER
     EntityPermissionType.instance_admin -> ModelPermissionType.INSTANCE_ADMIN
     EntityPermissionType.dataplane -> ModelPermissionType.DATAPLANE
+    else -> throw IllegalArgumentException("Unsupported permission type: $this")
   }
 
 fun ModelPermissionType.toEntity(): EntityPermissionType =
