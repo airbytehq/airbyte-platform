@@ -22916,6 +22916,7 @@ components:
       required:
         - status
         - scimBaseUrl
+        - available
       properties:
         status:
           $ref: "#/components/schemas/ScimConfigStatus"
@@ -22924,6 +22925,9 @@ components:
         scimBaseUrl:
           type: string
           description: Absolute Airbyte SCIM endpoint configured in the identity provider.
+        available:
+          type: boolean
+          description: Whether SCIM is available to this organization (entitlements and rollout gating).
         createdAt:
           type: integer
           format: int64

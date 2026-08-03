@@ -23,6 +23,7 @@ import io.airbyte.domain.models.scim.ScimAccessDeniedException
 import io.airbyte.domain.models.scim.ScimConfigurationConflictException
 import io.airbyte.domain.models.scim.ScimConfigurationRead
 import io.airbyte.domain.models.scim.ScimOrganizationNotFoundException
+import io.airbyte.domain.services.scim.ScimAccessGate
 import io.airbyte.domain.services.scim.ScimConfigurationService
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
@@ -39,6 +40,7 @@ private const val SCIM_OPERATION_FAILURE_MESSAGE = "SCIM configuration operation
 @Controller
 open class ScimConfigApiController(
   private val scimConfigurationService: ScimConfigurationService,
+  private val scimAccessGate: ScimAccessGate,
   private val currentUserService: CurrentUserService,
   private val webUrlHelper: WebUrlHelper,
 ) : ScimConfigApi {
@@ -47,9 +49,10 @@ open class ScimConfigApiController(
   @AuditLogging(provider = AuditLoggingProvider.SCIM)
   override fun getScimConfig(organizationIdRequestBody: OrganizationIdRequestBody): ScimConfigResponse =
     executeScim {
+      val organizationId = OrganizationId(organizationIdRequestBody.organizationId)
       scimConfigurationService
-        .getConfiguration(OrganizationId(organizationIdRequestBody.organizationId))
-        .toApi()
+        .getConfiguration(organizationId)
+        .toApi(available = scimAccessGate.isAllowed(organizationId))
     }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
@@ -62,7 +65,9 @@ open class ScimConfigApiController(
           organizationId = OrganizationId(enableScimRequestBody.organizationId),
           idpProvider = enableScimRequestBody.idpProvider.toDomain(),
           userId = currentUserId(),
-        ).toApi()
+          // enable() throws ScimAccessDeniedException unless ScimAccessGate allows the organization,
+          // so reaching this mapping means SCIM is available.
+        ).toApi(available = true)
     }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
@@ -74,7 +79,9 @@ open class ScimConfigApiController(
         .rotateToken(
           organizationId = OrganizationId(organizationIdRequestBody.organizationId),
           userId = currentUserId(),
-        ).toApi()
+          // rotateToken() throws ScimAccessDeniedException unless ScimAccessGate allows the organization,
+          // so reaching this mapping means SCIM is available.
+        ).toApi(available = true)
     }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
@@ -92,7 +99,7 @@ open class ScimConfigApiController(
 
   private fun currentUserId(): UserId = UserId(currentUserService.getCurrentUser().userId)
 
-  private fun ScimConfigurationRead.toApi(): ScimConfigResponse =
+  private fun ScimConfigurationRead.toApi(available: Boolean): ScimConfigResponse =
     ScimConfigResponse(
       status =
         when (status) {
@@ -105,6 +112,7 @@ open class ScimConfigApiController(
       createdAt = createdAt?.toEpochSecond(),
       updatedAt = updatedAt?.toEpochSecond(),
       token = token,
+      available = available,
     )
 
   private fun ApiScimIdpProvider.toDomain(): DomainScimIdpProvider =
