@@ -35,7 +35,7 @@ export const AllSourcesPage: React.FC = () => {
   const [pageSize] = useState(() => Math.ceil(window.innerHeight / 45));
   const navigate = useNavigate();
   useTrackPage(PageTrackingCodes.SOURCE_LIST);
-  const canCreateSource = useGeneratedIntent(Intent.CreateOrEditConnector);
+  const canCreateSource = useGeneratedIntent(Intent.CreateOrEditSource);
   const { limits, sourceLimitReached } = useCurrentWorkspaceLimits();
   const { formatMessage } = useIntl();
   const { openModal } = useModalService();

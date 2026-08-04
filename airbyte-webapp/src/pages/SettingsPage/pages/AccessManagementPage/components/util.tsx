@@ -47,6 +47,8 @@ export const permissionsByResourceType: Record<ResourceType, PermissionType[]> =
   workspace: [
     PermissionType.workspace_admin,
     PermissionType.workspace_editor,
+    PermissionType.workspace_source_editor,
+    PermissionType.workspace_destination_editor,
     PermissionType.workspace_runner,
     PermissionType.workspace_reader,
   ],
@@ -185,6 +187,8 @@ export const getOrganizationAccessLevel = (
 export const isTeamsFeaturePermissionType = (permission: PermissionType): boolean => {
   const warningPermissions: PermissionType[] = [
     PermissionType.workspace_editor,
+    PermissionType.workspace_source_editor,
+    PermissionType.workspace_destination_editor,
     PermissionType.workspace_runner,
     PermissionType.workspace_reader,
     PermissionType.organization_editor,
