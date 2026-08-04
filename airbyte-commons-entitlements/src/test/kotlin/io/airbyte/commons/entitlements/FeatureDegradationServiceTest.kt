@@ -21,8 +21,10 @@ import io.airbyte.config.Permission.PermissionType.ORGANIZATION_ADMIN
 import io.airbyte.config.Permission.PermissionType.ORGANIZATION_EDITOR
 import io.airbyte.config.Permission.PermissionType.ORGANIZATION_MEMBER
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_ADMIN
+import io.airbyte.config.Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_EDITOR
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_READER
+import io.airbyte.config.Permission.PermissionType.WORKSPACE_SOURCE_EDITOR
 import io.airbyte.config.Schedule
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.ScopeType
@@ -381,6 +383,8 @@ class FeatureDegradationServiceTest {
       listOf(
         Permission().withWorkspaceId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
         Permission().withWorkspaceId(workspace.workspaceId).withPermissionType(WORKSPACE_EDITOR),
+        Permission().withWorkspaceId(workspace.workspaceId).withPermissionType(WORKSPACE_SOURCE_EDITOR),
+        Permission().withWorkspaceId(workspace.workspaceId).withPermissionType(WORKSPACE_DESTINATION_EDITOR),
         Permission().withWorkspaceId(workspace.workspaceId).withPermissionType(WORKSPACE_READER),
       )
     every { permissionService.getPermissionsByOrganizationId(orgId.value) } returns
@@ -395,6 +399,8 @@ class FeatureDegradationServiceTest {
     verify {
       permissionService.updatePermissions(
         listOf(
+          Permission().withWorkspaceId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
+          Permission().withWorkspaceId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
           Permission().withWorkspaceId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
           Permission().withWorkspaceId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
           Permission().withWorkspaceId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
@@ -421,6 +427,11 @@ class FeatureDegradationServiceTest {
       listOf(
         UserInvitation().withScopeType(ScopeType.WORKSPACE).withScopeId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
         UserInvitation().withScopeType(ScopeType.WORKSPACE).withScopeId(workspace.workspaceId).withPermissionType(WORKSPACE_EDITOR),
+        UserInvitation().withScopeType(ScopeType.WORKSPACE).withScopeId(workspace.workspaceId).withPermissionType(WORKSPACE_SOURCE_EDITOR),
+        UserInvitation()
+          .withScopeType(ScopeType.WORKSPACE)
+          .withScopeId(workspace.workspaceId)
+          .withPermissionType(WORKSPACE_DESTINATION_EDITOR),
         UserInvitation().withScopeType(ScopeType.WORKSPACE).withScopeId(workspace.workspaceId).withPermissionType(WORKSPACE_READER),
       )
     every { userInvitationService.getPendingInvitations(ScopeType.ORGANIZATION, orgId.value) } returns
@@ -435,6 +446,8 @@ class FeatureDegradationServiceTest {
     verify {
       userInvitationService.updateUserInvitations(
         listOf(
+          UserInvitation().withScopeType(ScopeType.WORKSPACE).withScopeId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
+          UserInvitation().withScopeType(ScopeType.WORKSPACE).withScopeId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
           UserInvitation().withScopeType(ScopeType.WORKSPACE).withScopeId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
           UserInvitation().withScopeType(ScopeType.WORKSPACE).withScopeId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),
           UserInvitation().withScopeType(ScopeType.WORKSPACE).withScopeId(workspace.workspaceId).withPermissionType(WORKSPACE_ADMIN),

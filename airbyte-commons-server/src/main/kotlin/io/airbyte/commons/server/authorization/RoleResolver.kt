@@ -314,6 +314,12 @@ private fun impliedRoles(perm: PermissionType): List<String> = PermissionHelper.
 // Similarly, if the permissions grant no access to a given workspace,
 // then this function returns an NONE (no access).
 //
+// This reduces a user's grants to a single PermissionType per workspace. WORKSPACE_SOURCE_EDITOR and
+// WORKSPACE_DESTINATION_EDITOR share an authority, so a user holding both — reachable only by
+// holding one directly and the other through a group, since permission_unique_user_workspace
+// prevents two direct workspace rows — resolves to an arbitrary one of the two rather than the union
+// of both. Grant WORKSPACE_EDITOR to users who need both.
+//
 // perms == the full list of the permissions a user has
 // workspaceIds == the set of workspace IDs that the request is referring to.
 private fun determineWorkspaceRole(

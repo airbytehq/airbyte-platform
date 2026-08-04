@@ -16,9 +16,11 @@ import io.airbyte.config.Permission.PermissionType.ORGANIZATION_MEMBER
 import io.airbyte.config.Permission.PermissionType.ORGANIZATION_READER
 import io.airbyte.config.Permission.PermissionType.ORGANIZATION_RUNNER
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_ADMIN
+import io.airbyte.config.Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_EDITOR
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_READER
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_RUNNER
+import io.airbyte.config.Permission.PermissionType.WORKSPACE_SOURCE_EDITOR
 import io.airbyte.config.ScopeType
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.StatusReason
@@ -182,7 +184,7 @@ internal class FeatureDegradationService(
     val workspaceLevelPermissions = permissionService.getPermissionsByWorkspaceId(defaultWorkspace.workspaceId)
     workspaceLevelPermissions.forEach {
       when (it.permissionType) {
-        WORKSPACE_EDITOR, WORKSPACE_RUNNER, WORKSPACE_READER -> {
+        WORKSPACE_EDITOR, WORKSPACE_SOURCE_EDITOR, WORKSPACE_DESTINATION_EDITOR, WORKSPACE_RUNNER, WORKSPACE_READER -> {
           logger.debug { "Degrading permission id ${it.permissionId} from type ${it.permissionType} to $targetPermissionType" }
           it.permissionType = targetPermissionType
         }
@@ -216,7 +218,7 @@ internal class FeatureDegradationService(
     val workspaceLevelInvitations = userInvitationService.getPendingInvitations(ScopeType.WORKSPACE, defaultWorkspace.workspaceId)
     workspaceLevelInvitations.forEach {
       when (it.permissionType) {
-        WORKSPACE_EDITOR, WORKSPACE_RUNNER, WORKSPACE_READER -> {
+        WORKSPACE_EDITOR, WORKSPACE_SOURCE_EDITOR, WORKSPACE_DESTINATION_EDITOR, WORKSPACE_RUNNER, WORKSPACE_READER -> {
           logger.debug { "Degrading user invitation id ${it.id} from permission type ${it.permissionType} to $targetPermissionType" }
           it.permissionType = targetPermissionType
         }

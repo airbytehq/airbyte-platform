@@ -8,6 +8,8 @@ import io.airbyte.api.model.generated.PermissionRead
 import io.airbyte.api.model.generated.PermissionType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.util.UUID
 
 class PermissionReadMapperTest {
@@ -32,5 +34,23 @@ class PermissionReadMapperTest {
     assertEquals(permissionRead.userId, permissionResponse.userId)
     assertEquals(permissionRead.workspaceId, permissionResponse.workspaceId)
     assertEquals(permissionRead.organizationId, permissionResponse.organizationId)
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = PermissionType::class, names = ["WORKSPACE_SOURCE_EDITOR", "WORKSPACE_DESTINATION_EDITOR"])
+  fun `should convert the actor-scoped workspace editor permission types`(permissionType: PermissionType) {
+    val permissionRead =
+      PermissionRead().apply {
+        this.permissionId = UUID.randomUUID()
+        this.permissionType = permissionType
+        this.userId = UUID.randomUUID()
+        this.workspaceId = UUID.randomUUID()
+        this.organizationId = null
+      }
+
+    val permissionResponse = PermissionReadMapper.from(permissionRead)
+
+    assertEquals(permissionType.name, permissionResponse.permissionType.name)
+    assertEquals(permissionType.toString(), permissionResponse.permissionType.toString())
   }
 }

@@ -449,6 +449,8 @@ open class PermissionHandler(
         Permission.PermissionType.ORGANIZATION_ADMIN,
         Permission.PermissionType.ORGANIZATION_RUNNER,
         Permission.PermissionType.WORKSPACE_EDITOR,
+        Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+        Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
         Permission.PermissionType.WORKSPACE_OWNER,
         Permission.PermissionType.WORKSPACE_ADMIN,
         Permission.PermissionType.WORKSPACE_RUNNER,

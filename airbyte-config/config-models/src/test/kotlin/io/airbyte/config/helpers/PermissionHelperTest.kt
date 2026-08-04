@@ -19,4 +19,97 @@ internal class PermissionHelperTest {
       Permission.PermissionType.entries.toSet(),
     )
   }
+
+  @Test
+  fun actorScopedWorkspaceEditorsGrantRunnerAndReader() {
+    for (actorScopedEditor in listOf(
+      Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+      Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
+    )) {
+      Assertions.assertEquals(
+        setOf(
+          actorScopedEditor,
+          Permission.PermissionType.WORKSPACE_RUNNER,
+          Permission.PermissionType.WORKSPACE_READER,
+        ),
+        PermissionHelper.getGrantedPermissions(actorScopedEditor),
+      )
+    }
+  }
+
+  @Test
+  fun neitherActorScopedWorkspaceEditorGrantsTheOther() {
+    Assertions.assertFalse(
+      PermissionHelper.definedPermissionGrantsTargetPermission(
+        Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+        Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
+      ),
+    )
+    Assertions.assertFalse(
+      PermissionHelper.definedPermissionGrantsTargetPermission(
+        Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
+        Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+      ),
+    )
+  }
+
+  @Test
+  fun actorScopedWorkspaceEditorsDoNotGrantWorkspaceEditor() {
+    Assertions.assertFalse(
+      PermissionHelper.definedPermissionGrantsTargetPermission(
+        Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+        Permission.PermissionType.WORKSPACE_EDITOR,
+      ),
+    )
+    Assertions.assertFalse(
+      PermissionHelper.definedPermissionGrantsTargetPermission(
+        Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
+        Permission.PermissionType.WORKSPACE_EDITOR,
+      ),
+    )
+  }
+
+  @Test
+  fun editorsAndAdminsGrantBothActorScopedWorkspaceEditors() {
+    val expectedToGrantBoth =
+      setOf(
+        Permission.PermissionType.INSTANCE_ADMIN,
+        Permission.PermissionType.ORGANIZATION_ADMIN,
+        Permission.PermissionType.ORGANIZATION_EDITOR,
+        Permission.PermissionType.WORKSPACE_OWNER,
+        Permission.PermissionType.WORKSPACE_ADMIN,
+        Permission.PermissionType.WORKSPACE_EDITOR,
+      )
+
+    for (actorScopedEditor in listOf(
+      Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+      Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
+    )) {
+      Assertions.assertEquals(
+        expectedToGrantBoth + actorScopedEditor,
+        PermissionHelper.getPermissionTypesThatGrantTargetPermission(actorScopedEditor),
+      )
+    }
+  }
+
+  @Test
+  fun runnersAndReadersDoNotGrantActorScopedWorkspaceEditors() {
+    for (lesserRole in listOf(
+      Permission.PermissionType.ORGANIZATION_RUNNER,
+      Permission.PermissionType.ORGANIZATION_READER,
+      Permission.PermissionType.ORGANIZATION_MEMBER,
+      Permission.PermissionType.WORKSPACE_RUNNER,
+      Permission.PermissionType.WORKSPACE_READER,
+    )) {
+      for (actorScopedEditor in listOf(
+        Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+        Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
+      )) {
+        Assertions.assertFalse(
+          PermissionHelper.definedPermissionGrantsTargetPermission(lesserRole, actorScopedEditor),
+          "$lesserRole must not grant $actorScopedEditor",
+        )
+      }
+    }
+  }
 }

@@ -351,6 +351,8 @@ open class PermissionServiceDataImpl(
       Permission.PermissionType.WORKSPACE_OWNER -> WorkspaceAuthRole.WORKSPACE_ADMIN.getAuthority()
       Permission.PermissionType.WORKSPACE_ADMIN -> WorkspaceAuthRole.WORKSPACE_ADMIN.getAuthority()
       Permission.PermissionType.WORKSPACE_EDITOR -> WorkspaceAuthRole.WORKSPACE_EDITOR.getAuthority()
+      Permission.PermissionType.WORKSPACE_SOURCE_EDITOR -> WorkspaceAuthRole.WORKSPACE_SOURCE_EDITOR.getAuthority()
+      Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR -> WorkspaceAuthRole.WORKSPACE_DESTINATION_EDITOR.getAuthority()
       Permission.PermissionType.WORKSPACE_RUNNER -> WorkspaceAuthRole.WORKSPACE_RUNNER.getAuthority()
       Permission.PermissionType.WORKSPACE_READER -> WorkspaceAuthRole.WORKSPACE_READER.getAuthority()
     }

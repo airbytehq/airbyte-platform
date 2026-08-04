@@ -12,6 +12,8 @@ fun EntityPermissionType.toConfigModel(): ModelPermissionType =
   when (this) {
     EntityPermissionType.workspace_admin -> ModelPermissionType.WORKSPACE_ADMIN
     EntityPermissionType.workspace_editor -> ModelPermissionType.WORKSPACE_EDITOR
+    EntityPermissionType.workspace_source_editor -> ModelPermissionType.WORKSPACE_SOURCE_EDITOR
+    EntityPermissionType.workspace_destination_editor -> ModelPermissionType.WORKSPACE_DESTINATION_EDITOR
     EntityPermissionType.workspace_runner -> ModelPermissionType.WORKSPACE_RUNNER
     EntityPermissionType.workspace_reader -> ModelPermissionType.WORKSPACE_READER
     EntityPermissionType.organization_admin -> ModelPermissionType.ORGANIZATION_ADMIN
@@ -21,7 +23,6 @@ fun EntityPermissionType.toConfigModel(): ModelPermissionType =
     EntityPermissionType.organization_member -> ModelPermissionType.ORGANIZATION_MEMBER
     EntityPermissionType.instance_admin -> ModelPermissionType.INSTANCE_ADMIN
     EntityPermissionType.dataplane -> ModelPermissionType.DATAPLANE
-    else -> throw IllegalArgumentException("Unsupported permission type: $this")
   }
 
 fun ModelPermissionType.toEntity(): EntityPermissionType =
@@ -29,6 +30,8 @@ fun ModelPermissionType.toEntity(): EntityPermissionType =
     ModelPermissionType.WORKSPACE_OWNER -> EntityPermissionType.workspace_admin
     ModelPermissionType.WORKSPACE_ADMIN -> EntityPermissionType.workspace_admin
     ModelPermissionType.WORKSPACE_EDITOR -> EntityPermissionType.workspace_editor
+    ModelPermissionType.WORKSPACE_SOURCE_EDITOR -> EntityPermissionType.workspace_source_editor
+    ModelPermissionType.WORKSPACE_DESTINATION_EDITOR -> EntityPermissionType.workspace_destination_editor
     ModelPermissionType.WORKSPACE_RUNNER -> EntityPermissionType.workspace_runner
     ModelPermissionType.WORKSPACE_READER -> EntityPermissionType.workspace_reader
     ModelPermissionType.ORGANIZATION_ADMIN -> EntityPermissionType.organization_admin

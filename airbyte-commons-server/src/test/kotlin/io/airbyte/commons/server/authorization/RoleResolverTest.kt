@@ -147,7 +147,7 @@ class RoleResolverTest {
     val expect =
       """
       AUTHENTICATED_USER 
-      WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR 
+      WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR 
       ORGANIZATION_MEMBER ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_EDITOR
     """.toRoleSet()
     assertEquals(expect, roles)
@@ -228,7 +228,9 @@ class RoleResolverTest {
           .withWorkspaceId(workspace1),
       )
 
-    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_ADMIN".toRoleSet()
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR WORKSPACE_ADMIN"
+        .toRoleSet()
     assertEquals(expect, req.roles())
     verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
   }
@@ -283,7 +285,7 @@ class RoleResolverTest {
     // The user is not granted workspace access, because they need access to all requested workspaces
     val expect =
       """
-      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR
+      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR
       ORGANIZATION_ADMIN ORGANIZATION_EDITOR WORKSPACE_ADMIN
       ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_MEMBER
     """.toRoleSet()
@@ -438,7 +440,7 @@ class RoleResolverTest {
     // The user should get ORGANIZATION_ADMIN permission to the workspace
     val expect =
       """
-      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR 
+      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR 
       ORGANIZATION_ADMIN ORGANIZATION_EDITOR WORKSPACE_ADMIN 
       ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_MEMBER
     """.toRoleSet()
@@ -470,7 +472,9 @@ class RoleResolverTest {
       )
 
     // The user should get WORKSPACE_ADMIN permission for the requested workspace
-    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_ADMIN".toRoleSet()
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR WORKSPACE_ADMIN"
+        .toRoleSet()
     assertEquals(expect, req.roles())
     verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
   }
@@ -493,7 +497,101 @@ class RoleResolverTest {
           .withGroupId(groupId),
       )
 
-    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR".toRoleSet()
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR"
+        .toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun workspaceSourceEditorResolvesWithoutDestinationEditor() {
+    val workspace1 = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_SOURCE_EDITOR)
+          .withWorkspaceId(workspace1),
+      )
+
+    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_SOURCE_EDITOR".toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun workspaceDestinationEditorResolvesWithoutSourceEditor() {
+    val workspace1 = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR)
+          .withWorkspaceId(workspace1),
+      )
+
+    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_DESTINATION_EDITOR".toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun groupWorkspaceSourceEditorPermissionResolvesWorkspaceRoles() {
+    val workspace1 = UUID.randomUUID()
+    val groupId = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_SOURCE_EDITOR)
+          .withWorkspaceId(workspace1)
+          .withGroupId(groupId),
+      )
+
+    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_SOURCE_EDITOR".toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun workspaceEditorOutranksActorScopedEditorForSameWorkspace() {
+    val workspace1 = UUID.randomUUID()
+    val groupId = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_SOURCE_EDITOR)
+          .withWorkspaceId(workspace1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_EDITOR)
+          .withWorkspaceId(workspace1)
+          .withGroupId(groupId),
+      )
+
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR".toRoleSet()
     assertEquals(expect, req.roles())
     verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
   }
@@ -519,7 +617,9 @@ class RoleResolverTest {
           .withGroupId(groupId),
       )
 
-    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_ADMIN".toRoleSet()
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR WORKSPACE_ADMIN"
+        .toRoleSet()
     assertEquals(expect, req.roles())
     verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
   }
@@ -547,7 +647,7 @@ class RoleResolverTest {
 
     val expect =
       """
-      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR
+      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR
       ORGANIZATION_ADMIN ORGANIZATION_EDITOR WORKSPACE_ADMIN
       ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_MEMBER
     """.toRoleSet()
@@ -580,7 +680,9 @@ class RoleResolverTest {
           .withWorkspaceId(workspace2),
       )
 
-    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR".toRoleSet()
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR"
+        .toRoleSet()
     assertEquals(expect, req.roles())
     verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
   }
@@ -675,7 +777,7 @@ class RoleResolverTest {
 
     val expect =
       """
-      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR
+      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR
       ORGANIZATION_EDITOR ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_MEMBER
     """.toRoleSet()
     assertEquals(expect, req.roles())

@@ -272,6 +272,8 @@ public class Permission implements Serializable {
     WORKSPACE_ADMIN("workspace_admin"),
     WORKSPACE_OWNER("workspace_owner"),
     WORKSPACE_EDITOR("workspace_editor"),
+    WORKSPACE_SOURCE_EDITOR("workspace_source_editor"),
+    WORKSPACE_DESTINATION_EDITOR("workspace_destination_editor"),
     WORKSPACE_RUNNER("workspace_runner"),
     WORKSPACE_READER("workspace_reader"),
     DATAPLANE("dataplane");

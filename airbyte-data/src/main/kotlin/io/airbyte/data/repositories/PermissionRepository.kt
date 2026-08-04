@@ -123,6 +123,8 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
         and group_permission.permission_type in (
           'workspace_admin',
           'workspace_editor',
+          'workspace_source_editor',
+          'workspace_destination_editor',
           'workspace_runner',
           'workspace_reader'
         )

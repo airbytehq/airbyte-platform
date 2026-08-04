@@ -40,6 +40,8 @@ export const useGeneratedIntent = (intentName: Intent, metaOverride?: MetaOverri
         case "workspace_owner":
         case "workspace_admin":
         case "workspace_editor":
+        case "workspace_source_editor":
+        case "workspace_destination_editor":
         case "workspace_runner":
         case "workspace_reader":
           return permission.permissionType === role && permission.workspaceId === workspaceId;
