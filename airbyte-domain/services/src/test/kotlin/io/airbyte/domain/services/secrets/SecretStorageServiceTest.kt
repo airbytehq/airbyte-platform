@@ -4,6 +4,7 @@
 
 package io.airbyte.domain.services.secrets
 
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Organization
@@ -27,6 +28,8 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -94,7 +97,7 @@ class SecretStorageServiceTest {
           scopeType = SecretStorageScopeType.ORGANIZATION,
           scopeId = orgId.value,
           descriptor = "descriptor",
-          storageType = SecretStorageType.AWS_SECRETS_MANAGER,
+          storageType = SecretStorageType.LOCAL_TESTING,
           configuredFromEnvironment = false,
           createdBy = userId,
         )
@@ -153,6 +156,259 @@ class SecretStorageServiceTest {
       shouldThrow<IllegalArgumentException> {
         service.createSecretStorage(secretStorageCreate, null)
       }
+    }
+
+    private fun secretStorageCreate(storageType: SecretStorageType) =
+      SecretStorageCreate(
+        scopeType = SecretStorageScopeType.WORKSPACE,
+        scopeId = workspaceId.value,
+        descriptor = "descriptor",
+        storageType = storageType,
+        configuredFromEnvironment = false,
+        createdBy = userId,
+      )
+
+    private val validAzureConfig =
+      mapOf(
+        "vaultUrl" to "https://example.vault.azure.net",
+        "tenantId" to "tenant",
+        "clientId" to "client",
+        "clientSecret" to "super-secret-value",
+      )
+
+    @Test
+    fun `should create secret storage with valid azure key vault config`() {
+      val create = secretStorageCreate(SecretStorageType.AZURE_KEY_VAULT)
+      val secretStorage = mockk<SecretStorage>()
+      every { secretStorageRepository.create(create) } returns secretStorage
+
+      service.createSecretStorage(create, Jsons.jsonNode(validAzureConfig + ("extraKey" to "allowed"))) shouldBe secretStorage
+    }
+
+    @Test
+    fun `should reject config with nested object values`() {
+      val create = secretStorageCreate(SecretStorageType.AZURE_KEY_VAULT)
+      val wrappedConfig =
+        Jsons.jsonNode(
+          mapOf(
+            "scopeType" to "workspace",
+            "scopeId" to workspaceId.value.toString(),
+            "secretStorageType" to "azure_key_vault",
+            "configuration" to validAzureConfig,
+          ),
+        )
+
+      val problem =
+        shouldThrow<BadRequestProblem> {
+          service.createSecretStorage(create, wrappedConfig)
+        }
+      problem.problem.getData().toString() shouldContain "configuration"
+      problem.problem.getData().toString() shouldNotContain "super-secret-value"
+    }
+
+    @Test
+    fun `should reject config that is not a JSON object`() {
+      val create = secretStorageCreate(SecretStorageType.AZURE_KEY_VAULT)
+
+      shouldThrow<BadRequestProblem> {
+        service.createSecretStorage(create, Jsons.jsonNode("just a string"))
+      }
+    }
+
+    @Test
+    fun `should reject config with non-string scalar values`() {
+      val create = secretStorageCreate(SecretStorageType.AZURE_KEY_VAULT)
+      val config = Jsons.jsonNode(validAzureConfig + ("someFlag" to true))
+
+      val problem =
+        shouldThrow<BadRequestProblem> {
+          service.createSecretStorage(create, config)
+        }
+      problem.problem.getData().toString() shouldContain "someFlag"
+    }
+
+    @Test
+    fun `should reject azure config with missing required keys`() {
+      val create = secretStorageCreate(SecretStorageType.AZURE_KEY_VAULT)
+      val config = Jsons.jsonNode(validAzureConfig - "tenantId" - "clientSecret")
+
+      val problem =
+        shouldThrow<BadRequestProblem> {
+          service.createSecretStorage(create, config)
+        }
+      problem.problem.getData().toString() shouldContain "clientSecret"
+      problem.problem.getData().toString() shouldContain "tenantId"
+    }
+
+    @Test
+    fun `should create secret storage with valid vault config`() {
+      val create = secretStorageCreate(SecretStorageType.VAULT)
+      val secretStorage = mockk<SecretStorage>()
+      every { secretStorageRepository.create(create) } returns secretStorage
+
+      val config = Jsons.jsonNode(mapOf("address" to "http://vault:8200", "token" to "vault-token", "prefix" to "abc"))
+
+      service.createSecretStorage(create, config) shouldBe secretStorage
+    }
+
+    @Test
+    fun `should create vault storage with blank prefix`() {
+      val create = secretStorageCreate(SecretStorageType.VAULT)
+      val secretStorage = mockk<SecretStorage>()
+      every { secretStorageRepository.create(create) } returns secretStorage
+
+      val config = Jsons.jsonNode(mapOf("address" to "http://vault:8200", "token" to "vault-token", "prefix" to ""))
+
+      service.createSecretStorage(create, config) shouldBe secretStorage
+    }
+
+    @Test
+    fun `should reject vault config without prefix key`() {
+      val create = secretStorageCreate(SecretStorageType.VAULT)
+      val config = Jsons.jsonNode(mapOf("address" to "http://vault:8200", "token" to "vault-token"))
+
+      val problem =
+        shouldThrow<BadRequestProblem> {
+          service.createSecretStorage(create, config)
+        }
+      problem.problem.getData().toString() shouldContain "prefix"
+    }
+
+    @Test
+    fun `should reject config with blank required values`() {
+      val create = secretStorageCreate(SecretStorageType.VAULT)
+      val config = Jsons.jsonNode(mapOf("address" to "http://vault:8200", "token" to "", "prefix" to "abc"))
+
+      val problem =
+        shouldThrow<BadRequestProblem> {
+          service.createSecretStorage(create, config)
+        }
+      problem.problem.getData().toString() shouldContain "token"
+    }
+
+    @Test
+    fun `should create aws secret storage with valid access key config and no auth_type`() {
+      val create = secretStorageCreate(SecretStorageType.AWS_SECRETS_MANAGER)
+      val secretStorage = mockk<SecretStorage>()
+      every { secretStorageRepository.create(create) } returns secretStorage
+
+      val config =
+        Jsons.jsonNode(
+          mapOf(
+            "awsRegion" to "us-east-1",
+            "awsAccessKey" to "AKIA123",
+            "awsSecretAccessKey" to "aws-secret-value",
+          ),
+        )
+
+      service.createSecretStorage(create, config) shouldBe secretStorage
+    }
+
+    @Test
+    fun `should reject aws access key config with missing required keys`() {
+      val create = secretStorageCreate(SecretStorageType.AWS_SECRETS_MANAGER)
+      val config =
+        Jsons.jsonNode(
+          mapOf(
+            "auth_type" to "ACCESS_KEY",
+            "awsRegion" to "us-east-1",
+          ),
+        )
+
+      val problem =
+        shouldThrow<BadRequestProblem> {
+          service.createSecretStorage(create, config)
+        }
+      problem.problem.getData().toString() shouldContain "awsAccessKey"
+      problem.problem.getData().toString() shouldContain "awsSecretAccessKey"
+    }
+
+    @Test
+    fun `should create aws secret storage with valid iam role config without optional keys`() {
+      val create = secretStorageCreate(SecretStorageType.AWS_SECRETS_MANAGER)
+      val secretStorage = mockk<SecretStorage>()
+      every { secretStorageRepository.create(create) } returns secretStorage
+
+      val config =
+        Jsons.jsonNode(
+          mapOf(
+            "auth_type" to "iam_role",
+            "awsRegion" to "us-east-1",
+            "roleArn" to "arn:aws:iam::123456789012:role/airbyte",
+            "externalId" to "external-id",
+          ),
+        )
+
+      service.createSecretStorage(create, config) shouldBe secretStorage
+    }
+
+    @Test
+    fun `should reject aws iam role config with missing required keys`() {
+      val create = secretStorageCreate(SecretStorageType.AWS_SECRETS_MANAGER)
+      val config =
+        Jsons.jsonNode(
+          mapOf(
+            "auth_type" to "IAM_ROLE",
+            "awsRegion" to "us-east-1",
+            "kmsKeyArn" to "arn:aws:kms:us-east-1:123456789012:key/abc",
+          ),
+        )
+
+      val problem =
+        shouldThrow<BadRequestProblem> {
+          service.createSecretStorage(create, config)
+        }
+      problem.problem.getData().toString() shouldContain "externalId"
+      problem.problem.getData().toString() shouldContain "roleArn"
+    }
+
+    @Test
+    fun `should reject aws config with unknown auth_type`() {
+      val create = secretStorageCreate(SecretStorageType.AWS_SECRETS_MANAGER)
+      val config =
+        Jsons.jsonNode(
+          mapOf(
+            "auth_type" to "ACESS_KEY",
+            "awsRegion" to "us-east-1",
+          ),
+        )
+
+      val problem =
+        shouldThrow<BadRequestProblem> {
+          service.createSecretStorage(create, config)
+        }
+      problem.problem.getData().toString() shouldContain "ACESS_KEY"
+      problem.problem.getData().toString() shouldContain "ACCESS_KEY"
+      problem.problem.getData().toString() shouldContain "IAM_ROLE"
+    }
+
+    @Test
+    fun `should create secret storage with valid google secret manager config`() {
+      val create = secretStorageCreate(SecretStorageType.GOOGLE_SECRET_MANAGER)
+      val secretStorage = mockk<SecretStorage>()
+      every { secretStorageRepository.create(create) } returns secretStorage
+
+      val config =
+        Jsons.jsonNode(
+          mapOf(
+            "gcpProjectId" to "my-project",
+            "gcpCredentialsJson" to """{"type": "service_account"}""",
+          ),
+        )
+
+      service.createSecretStorage(create, config) shouldBe secretStorage
+    }
+
+    @Test
+    fun `should reject google secret manager config with missing required keys`() {
+      val create = secretStorageCreate(SecretStorageType.GOOGLE_SECRET_MANAGER)
+      val config = Jsons.jsonNode(mapOf("gcpProjectId" to "my-project"))
+
+      val problem =
+        shouldThrow<BadRequestProblem> {
+          service.createSecretStorage(create, config)
+        }
+      problem.problem.getData().toString() shouldContain "gcpCredentialsJson"
     }
   }
 

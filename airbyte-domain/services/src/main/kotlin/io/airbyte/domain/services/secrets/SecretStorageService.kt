@@ -5,10 +5,16 @@
 package io.airbyte.domain.services.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.persistence.AwsSecretsManagerRuntimeConfiguration
+import io.airbyte.config.secrets.persistence.GoogleSecretsManagerRuntimeConfig
+import io.airbyte.config.secrets.persistence.RuntimeConfigError
+import io.airbyte.config.secrets.persistence.VaultSecretsManagerRuntimeConfiguration
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.PatchField.Companion.toPatch
 import io.airbyte.domain.models.SecretReference
@@ -18,6 +24,7 @@ import io.airbyte.domain.models.SecretStorage.Companion.DEFAULT_SECRET_STORAGE_I
 import io.airbyte.domain.models.SecretStorageCreate
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.SecretStorageScopeType
+import io.airbyte.domain.models.SecretStorageType
 import io.airbyte.domain.models.SecretStorageWithConfig
 import io.airbyte.domain.models.UserId
 import io.airbyte.domain.models.WorkspaceId
@@ -28,6 +35,7 @@ import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.Workspace
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+import secrets.persistence.AzureKeyVaultRuntimeConfiguration
 import java.util.UUID
 import io.airbyte.data.services.OrganizationService as OrganizationRepository
 import io.airbyte.data.services.SecretReferenceService as SecretReferenceRepository
@@ -69,8 +77,65 @@ open class SecretStorageService(
     if (!secretStorageCreate.configuredFromEnvironment && storageConfig == null) {
       throw IllegalArgumentException("Storage config must be provided when `configuredFromEnvironment` is false")
     }
+    storageConfig?.let { validateStorageConfig(secretStorageCreate.storageType, it) }
 
     return secretStorageRepository.create(secretStorageCreate)
+  }
+
+  /**
+   * The config is persisted verbatim and only parsed when the storage is first used, where every
+   * storage type hydrates it via [io.airbyte.commons.json.Jsons.deserializeToStringMap] into a flat
+   * string map. Rejecting malformed configs here surfaces the error to the caller at creation time
+   * instead of failing every later secret operation scoped to this storage.
+   */
+  private fun validateStorageConfig(
+    storageType: SecretStorageType,
+    storageConfig: JsonNode,
+  ) {
+    if (!storageConfig.isObject) {
+      throw BadRequestProblem(ProblemMessageData().message("Secret storage config must be a JSON object."))
+    }
+
+    val nonStringKeys =
+      storageConfig
+        .fields()
+        .asSequence()
+        .filter { !it.value.isTextual }
+        .map { it.key }
+        .sorted()
+        .toList()
+    if (nonStringKeys.isNotEmpty()) {
+      throw BadRequestProblem(
+        ProblemMessageData().message(
+          "Secret storage config must be a flat map of string values. Keys with non-string values: $nonStringKeys",
+        ),
+      )
+    }
+
+    val validator =
+      when (storageType) {
+        SecretStorageType.AZURE_KEY_VAULT -> AzureKeyVaultRuntimeConfiguration
+        SecretStorageType.GOOGLE_SECRET_MANAGER -> GoogleSecretsManagerRuntimeConfig
+        SecretStorageType.VAULT -> VaultSecretsManagerRuntimeConfiguration
+        SecretStorageType.AWS_SECRETS_MANAGER -> AwsSecretsManagerRuntimeConfiguration
+        SecretStorageType.LOCAL_TESTING -> null
+      }
+    val configMap = storageConfig.fields().asSequence().associate { it.key to it.value.asText() }
+    when (val error = validator?.validate(configMap)) {
+      is RuntimeConfigError.MissingKeys ->
+        throw BadRequestProblem(
+          ProblemMessageData().message(
+            "Secret storage config for $storageType is missing required keys: ${error.keys}",
+          ),
+        )
+      is RuntimeConfigError.InvalidValue ->
+        throw BadRequestProblem(
+          ProblemMessageData().message(
+            "Secret storage config has invalid ${error.key} '${error.value}'. Valid values: ${error.validValues}",
+          ),
+        )
+      null -> {}
+    }
   }
 
   /**
