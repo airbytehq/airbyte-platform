@@ -31,7 +31,7 @@ class DeclarativeSourceDefinitionsApiController(
 ) : DeclarativeSourceDefinitionsApi {
   @Post(uri = "/create_manifest")
   @Status(HttpStatus.CREATED)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createDeclarativeSourceDefinitionManifest(
     @Body requestBody: DeclarativeSourceDefinitionCreateManifestRequestBody,
@@ -44,7 +44,7 @@ class DeclarativeSourceDefinitionsApiController(
 
   @Post(uri = "/update_active_manifest")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateDeclarativeManifestVersion(
     @Body requestBody: UpdateActiveManifestRequestBody,
@@ -57,7 +57,7 @@ class DeclarativeSourceDefinitionsApiController(
 
   @Post(uri = "/list_manifests")
   @Status(HttpStatus.OK)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listDeclarativeManifests(
     @Body requestBody: ListDeclarativeManifestsRequestBody,

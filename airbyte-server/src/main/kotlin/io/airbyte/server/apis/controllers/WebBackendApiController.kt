@@ -73,7 +73,12 @@ open class WebBackendApiController(
   override fun webBackendCheckUpdates(): WebBackendCheckUpdatesRead? = execute { webBackendCheckUpdatesHandler.checkUpdates() }
 
   @Post("/connections/create")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun webBackendCreateConnection(
@@ -102,7 +107,13 @@ open class WebBackendApiController(
           .newRequest()
           .withCurrentUser()
           .withRef(AuthenticationId.CONNECTION_ID, webBackendConnectionRequestBody.connectionId.toString())
-          .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+          .requireOneOfRoles(
+            setOf(
+              AuthRoleConstants.WORKSPACE_EDITOR,
+              AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+              AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+            ),
+          )
       }
       webBackendConnectionsHandler.webBackendGetConnection(webBackendConnectionRequestBody)
     }
@@ -143,7 +154,12 @@ open class WebBackendApiController(
     }
 
   @Post("/connections/update")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun webBackendUpdateConnection(
@@ -155,7 +171,12 @@ open class WebBackendApiController(
     }
 
   @Post("/connections/mappers/validate")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun webBackendValidateMappers(
     @Body webBackendValidateMappersRequestBody: WebBackendValidateMappersRequestBody,

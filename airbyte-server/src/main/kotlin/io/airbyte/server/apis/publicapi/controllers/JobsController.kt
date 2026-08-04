@@ -97,10 +97,15 @@ open class JobsController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.CONNECTION_ID, jobCreateRequest.connectionId)
-      .requireRole(
+      .requireOneOfRoles(
         when (jobCreateRequest.jobType) {
-          JobTypeEnum.CLEAR -> AuthRoleConstants.WORKSPACE_EDITOR
-          else -> AuthRoleConstants.WORKSPACE_RUNNER
+          JobTypeEnum.CLEAR ->
+            setOf(
+              AuthRoleConstants.WORKSPACE_EDITOR,
+              AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+              AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+            )
+          else -> setOf(AuthRoleConstants.WORKSPACE_RUNNER)
         },
       )
 

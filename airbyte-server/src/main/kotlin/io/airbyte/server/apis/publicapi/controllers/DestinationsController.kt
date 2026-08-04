@@ -48,7 +48,7 @@ open class DestinationsController(
   private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
 ) : PublicDestinationsApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateDestination(destinationCreateRequest: DestinationCreateRequest?): Response {
     val destinationResponse: Any? =
@@ -114,7 +114,7 @@ open class DestinationsController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR))
 
     val destinationResponse: Any? =
       trackingHelper.callWithTracker(
@@ -227,7 +227,7 @@ open class DestinationsController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR))
 
     val destinationResponse: DestinationResponse? =
       destinationPatchRequest?.let { patch ->
@@ -265,7 +265,7 @@ open class DestinationsController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR))
 
     val destinationResponse: Any? =
       destinationPutRequest?.let { request ->

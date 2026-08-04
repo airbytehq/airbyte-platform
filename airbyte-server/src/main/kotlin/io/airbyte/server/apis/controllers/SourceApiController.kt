@@ -46,7 +46,7 @@ open class SourceApiController(
   private val sourceHandler: SourceHandler,
 ) : SourceApi {
   @Post("/apply_schema_changes")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun applySchemaChangeForSource(
     @Body sourceAutoPropagateChange: SourceAutoPropagateChange,
@@ -58,21 +58,21 @@ open class SourceApiController(
   }
 
   @Post("/check_connection")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun checkConnectionToSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ): CheckConnectionRead? = execute { schedulerHandler.checkSourceConnectionFromSourceId(sourceIdRequestBody) }
 
   @Post("/check_connection_for_update")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun checkConnectionToSourceForUpdate(
     @Body sourceUpdate: SourceUpdate,
   ): CheckConnectionRead? = execute { schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(sourceUpdate) }
 
   @Post("/create")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun createSource(
@@ -80,7 +80,7 @@ open class SourceApiController(
   ): SourceRead? = execute { sourceHandler.createSourceWithOptionalSecret(sourceCreate) }
 
   @Post("/delete")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
     HttpStatus.NO_CONTENT,
@@ -96,7 +96,7 @@ open class SourceApiController(
   }
 
   @Post("/discover_schema")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun discoverSchemaForSource(
     @Body sourceDiscoverSchemaRequestBody: SourceDiscoverSchemaRequestBody,
@@ -160,7 +160,12 @@ open class SourceApiController(
   ): SourceReadList? = execute { sourceHandler.searchSources(sourceSearch) }
 
   @Post("/update")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR, AuthRoleConstants.DATAPLANE)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+    AuthRoleConstants.DATAPLANE,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun updateSource(
@@ -168,7 +173,7 @@ open class SourceApiController(
   ): SourceRead? = execute { sourceHandler.updateSource(sourceUpdate) }
 
   @Post("/upgrade_version")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
     HttpStatus.NO_CONTENT,
@@ -184,7 +189,7 @@ open class SourceApiController(
   }
 
   @Post("/partial_update")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun partialUpdateSource(

@@ -33,7 +33,7 @@ open class TagsController(
   private val tagService: TagService,
   private val trackingHelper: TrackingHelper,
 ) : PublicTagsApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR)
   override fun publicCreateTag(tagCreateRequest: TagCreateRequest): Response {
     val tag =
       trackingHelper.callWithTracker({
@@ -54,7 +54,13 @@ open class TagsController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+        ),
+      )
 
     trackingHelper.callWithTracker({
       tagService.deleteTag(tagId, workspaceId)
@@ -120,7 +126,13 @@ open class TagsController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+        ),
+      )
 
     val tag =
       trackingHelper.callWithTracker({

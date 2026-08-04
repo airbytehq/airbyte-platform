@@ -110,7 +110,12 @@ open class ConnectionApiController(
   }
 
   @Post(uri = "/create")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun createConnection(
@@ -118,7 +123,12 @@ open class ConnectionApiController(
   ): ConnectionRead? = execute { connectionsHandler.createConnection(connectionCreate) }
 
   @Post(uri = "/update")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun updateConnection(
@@ -126,7 +136,12 @@ open class ConnectionApiController(
   ): ConnectionRead? = execute { connectionsHandler.updateConnection(connectionUpdate, null, false) }
 
   @Post(uri = "/update_with_reason")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun updateConnectionWithReason(
@@ -333,7 +348,12 @@ open class ConnectionApiController(
 
   @Post(uri = "/delete")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun deleteConnection(
@@ -354,42 +374,72 @@ open class ConnectionApiController(
   ): JobInfoRead? = execute { schedulerHandler.syncConnection(connectionIdRequestBody) }
 
   @Post(uri = "/reset")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun resetConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobInfoRead? = execute { schedulerHandler.resetConnection(connectionIdRequestBody) }
 
   @Post(uri = "/reset/stream")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun resetConnectionStream(
     @Body connectionStreamRequestBody: ConnectionStreamRequestBody,
   ): JobInfoRead? = execute { schedulerHandler.resetConnectionStream(connectionStreamRequestBody) }
 
   @Post(uri = "/clear")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun clearConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobInfoRead? = execute { schedulerHandler.resetConnection(connectionIdRequestBody) }
 
   @Post(uri = "/clear/stream")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun clearConnectionStream(
     @Body connectionStreamRequestBody: ConnectionStreamRequestBody,
   ): JobInfoRead? = execute { schedulerHandler.resetConnectionStream(connectionStreamRequestBody) }
 
   @Post(uri = "/apply_schema_change")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun applySchemaChangeForConnection(
     @Body request: ConnectionAutoPropagateSchemaChange,
   ): ConnectionAutoPropagateResult? = execute { connectionsHandler.applySchemaChange(request) }
 
   @Post("/postprocess_discovered_catalog")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun postprocessDiscoveredCatalogForConnection(
     @Body req: PostprocessDiscoveredCatalogRequestBody,

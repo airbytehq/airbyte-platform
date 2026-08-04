@@ -35,6 +35,7 @@ import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.ActorType
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DeclarativeManifest
@@ -90,7 +91,7 @@ class DefinitionsController(
         ProblemMessageData().message("Non-declarative definitions cannot be created or updated in Airbyte Cloud."),
       )
     }
-    ensureUserCanWrite(workspaceId)
+    ensureUserCanWrite(workspaceId, ActorType.SOURCE)
 
     sourceDefinitionsHandler
       .createCustomSourceDefinition(
@@ -103,7 +104,7 @@ class DefinitionsController(
     workspaceId: UUID,
     request: CreateDeclarativeSourceDefinitionRequest,
   ) = wrap {
-    ensureUserCanWrite(workspaceId)
+    ensureUserCanWrite(workspaceId, ActorType.SOURCE)
 
     val manifest: JsonNode = ObjectMapper().valueToTree(request.manifest)
 
@@ -156,7 +157,7 @@ class DefinitionsController(
         ProblemMessageData().message("Non-declarative definitions cannot be created or updated in Airbyte Cloud."),
       )
     }
-    ensureUserCanWrite(workspaceId)
+    ensureUserCanWrite(workspaceId, ActorType.DESTINATION)
 
     destinationDefinitionsHandler
       .createCustomDestinationDefinition(
@@ -174,7 +175,7 @@ class DefinitionsController(
     if (def.dockerRepository == AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE) {
       throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, definitionId.toString())
     }
-    ensureUserCanWrite(workspaceId, def.custom)
+    ensureUserCanWrite(workspaceId, ActorType.SOURCE, def.custom)
 
     sourceDefinitionsHandler.deleteSourceDefinition(definitionId)
     def.toPublicApiModel().ok()
@@ -184,7 +185,7 @@ class DefinitionsController(
     workspaceId: UUID,
     definitionId: UUID,
   ) = wrap {
-    ensureUserCanWrite(workspaceId)
+    ensureUserCanWrite(workspaceId, ActorType.SOURCE)
 
     val def = sourceDefinitionsHandler.getSourceDefinition(definitionId, false)
     val proj = connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(definitionId)
@@ -209,7 +210,7 @@ class DefinitionsController(
     definitionId: UUID,
   ) = wrap {
     val def = destinationDefinitionsHandler.getDestinationDefinition(definitionId, false)
-    ensureUserCanWrite(workspaceId, def.custom)
+    ensureUserCanWrite(workspaceId, ActorType.DESTINATION, def.custom)
     destinationDefinitionsHandler.deleteDestinationDefinition(definitionId)
     def.toPublicApiModel().ok()
   }
@@ -332,7 +333,7 @@ class DefinitionsController(
     }
 
     val def = sourceDefinitionsHandler.getSourceDefinition(definitionId, false)
-    ensureUserCanWrite(workspaceId, def.custom)
+    ensureUserCanWrite(workspaceId, ActorType.SOURCE, def.custom)
 
     sourceDefinitionsHandler
       .updateSourceDefinition(
@@ -356,7 +357,7 @@ class DefinitionsController(
     }
     val projId = proj.get()
 
-    ensureUserCanWrite(workspaceId)
+    ensureUserCanWrite(workspaceId, ActorType.SOURCE)
 
     val maxVersion =
       connectorBuilderService
@@ -407,7 +408,7 @@ class DefinitionsController(
       )
     }
     val def = destinationDefinitionsHandler.getDestinationDefinition(definitionId, false)
-    ensureUserCanWrite(workspaceId, def.custom)
+    ensureUserCanWrite(workspaceId, ActorType.DESTINATION, def.custom)
 
     destinationDefinitionsHandler
       .updateDestinationDefinition(
@@ -453,6 +454,7 @@ class DefinitionsController(
 
   private fun ensureUserCanWrite(
     workspaceId: UUID,
+    actorType: ActorType,
     isCustom: Boolean = true,
   ) {
     if (!isCustom) {
@@ -461,11 +463,19 @@ class DefinitionsController(
       )
     }
 
+    // WORKSPACE_SOURCE_EDITOR can write source definitions. WORKSPACE_DESTINATION_EDITOR is
+    // deliberately not granted definition writes, matching UploadCustomConnector.
+    val requiredRoles =
+      when (actorType) {
+        ActorType.SOURCE -> setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR)
+        ActorType.DESTINATION -> setOf(AuthRoleConstants.WORKSPACE_EDITOR)
+      }
+
     roleResolver
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(requiredRoles)
   }
 }
 

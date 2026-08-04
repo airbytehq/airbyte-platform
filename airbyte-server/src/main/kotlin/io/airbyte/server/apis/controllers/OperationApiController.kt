@@ -39,14 +39,24 @@ open class OperationApiController(
   ): CheckOperationRead? = execute { operationsHandler.checkOperation(operatorConfiguration) }
 
   @Post("/create")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createOperation(
     @Body operationCreate: OperationCreate,
   ): OperationRead? = execute { operationsHandler.createOperation(operationCreate) }
 
   @Post("/delete")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
     HttpStatus.NO_CONTENT,
@@ -75,7 +85,12 @@ open class OperationApiController(
   ): OperationReadList? = execute { operationsHandler.listOperationsForConnection(connectionIdRequestBody) }
 
   @Post("/update")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateOperation(
     @Body operationUpdate: OperationUpdate,

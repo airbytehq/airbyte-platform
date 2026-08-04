@@ -183,7 +183,12 @@ open class WorkspaceApiController(
     }
 
   @Post("/update")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun updateWorkspace(
@@ -191,7 +196,12 @@ open class WorkspaceApiController(
   ): WorkspaceRead? = execute { workspacesHandler.updateWorkspace(workspaceUpdate) }
 
   @Post("/tag_feedback_status_as_done")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateWorkspaceFeedback(
     @Body workspaceGiveFeedback: WorkspaceGiveFeedback,
@@ -203,7 +213,12 @@ open class WorkspaceApiController(
   }
 
   @Post("/update_name")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun updateWorkspaceName(
@@ -256,7 +271,12 @@ open class WorkspaceApiController(
   ): WorkspaceReadList? = execute { workspacesHandler.listWorkspacesByUser(request) }
 
   @Post("/get_available_dbt_jobs")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getAvailableDbtJobsForWorkspace(workspaceGetDbtJobsRequest: WorkspaceGetDbtJobsRequest?): WorkspaceGetDbtJobsResponse =
     throw ApiNotImplementedInOssProblem()

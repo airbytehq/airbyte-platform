@@ -26,7 +26,12 @@ import io.micronaut.security.rules.SecurityRule
 @Controller("/api/v1/private_link")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class PrivateLinkController : PrivateLinkApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @Post("/create")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createPrivateLink(
@@ -40,7 +45,12 @@ open class PrivateLinkController : PrivateLinkApi {
     @Body privateLinkListRequestBody: PrivateLinkListRequestBody,
   ): PrivateLinkReadList = throw ApiNotImplementedInOssProblem()
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @Post("/delete")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun deletePrivateLink(
