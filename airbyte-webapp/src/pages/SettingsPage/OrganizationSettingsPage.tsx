@@ -26,6 +26,7 @@ export const OrganizationSettingsPage: React.FC = () => {
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
   const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
+  const isScimProvisioningEnabled = useExperiment("settings.scimProvisioning");
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
   const isSubscribed = isOrganizationSubscribed(billing);
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
@@ -76,7 +77,7 @@ export const OrganizationSettingsPage: React.FC = () => {
             {canUpdateSSOConfig && (
               <SettingsLink
                 iconType="lock"
-                name={formatMessage({ id: "settings.sso" })}
+                name={formatMessage({ id: isScimProvisioningEnabled ? "settings.ssoAndScim" : "settings.sso" })}
                 to={SettingsRoutePaths.OrganizationSSO}
               />
             )}

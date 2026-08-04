@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import classNames from "classnames";
-import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -14,7 +12,6 @@ import { FlexContainer } from "components/ui/Flex";
 import { FormControl } from "components/ui/forms/FormControl";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
-import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
@@ -28,6 +25,7 @@ import { useNotificationService } from "core/services/Notification";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 
+import { CollapsibleSettingsCard } from "./CollapsibleSettingsCard";
 import styles from "./SSOSettings.module.scss";
 import { isSsoTestCallback } from "./ssoTestUtils";
 import { useSSOTestCallback } from "./useSSOTestCallback";
@@ -185,272 +183,224 @@ export const SSOSettingsValidation = () => {
   };
 
   return (
-    <div className={styles.card}>
-      <Disclosure defaultOpen={shouldBeOpen}>
-        {({ open }) => (
-          <>
-            <FlexContainer gap="md" alignItems="center">
-              <DisclosureButton as="div">
-                <FlexContainer gap="md" alignItems="center" className={styles.card__header}>
-                  <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.2, ease: "easeInOut" }}>
-                    <Icon type="chevronRight" />
-                  </motion.div>
-                  <Text bold>{formatMessage({ id: "settings.organizationSettings.sso.label" })}</Text>
-                  {isLoading ? (
-                    <Icon type="loading" />
-                  ) : isActive ? (
-                    <Icon type="check" color="primary" />
-                  ) : (
-                    <Text size="sm" color="grey300" italicized>
-                      {formatMessage({ id: "settings.organizationSettings.sso.label.optional" })}
-                    </Text>
-                  )}
-                </FlexContainer>
-              </DisclosureButton>
-              <ExternalLink href={links.ssoDocs} className={styles["card__header-link"]}>
-                <Button
-                  type="button"
-                  variant="link"
-                  icon="docs"
-                  size="sm"
-                  iconPosition="left"
-                  iconSize="sm"
-                  className={styles["card__header-button"]}
-                >
-                  <FormattedMessage id="settings.organizationSettings.sso.docsLink" />
-                </Button>
-              </ExternalLink>
-            </FlexContainer>
+    <CollapsibleSettingsCard
+      label={formatMessage({ id: "settings.organizationSettings.sso.label" })}
+      docsLink={links.ssoDocs}
+      docsLinkLabel={formatMessage({ id: "settings.organizationSettings.sso.docsLink" })}
+      defaultOpen={shouldBeOpen}
+      status={
+        isLoading ? (
+          <Icon type="loading" />
+        ) : isActive ? (
+          <Icon type="check" color="primary" />
+        ) : (
+          <Text size="sm" color="grey300" italicized>
+            {formatMessage({ id: "settings.organizationSettings.sso.label.optional" })}
+          </Text>
+        )
+      }
+    >
+      {isActive && (
+        <Box mb="lg">
+          <Message text={formatMessage({ id: "settings.organizationSettings.sso.configured" })} />
+        </Box>
+      )}
 
-            <AnimatePresence initial={false}>
-              {open && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: "easeInOut" }}
-                >
-                  <DisclosurePanel static>
-                    <Box mt="lg">
-                      {isActive && (
-                        <Box mb="lg">
-                          <Message text={formatMessage({ id: "settings.organizationSettings.sso.configured" })} />
-                        </Box>
-                      )}
-
-                      <FlexContainer direction="column" gap="xl">
-                        {/* Step 1: Test your configuration */}
-                        <Box
-                          className={classNames(styles.step, {
-                            [styles["step--active"]]: !isStep1Complete && !isActive,
-                          })}
-                        >
-                          <FlexContainer direction="column" gap="lg">
-                            <div
-                              className={classNames({
-                                [styles["stepContent--disabled"]]: isStep1Complete,
-                              })}
-                            >
-                              <FlexContainer direction="column" gap="lg">
-                                <Text bold size="lg">
-                                  {formatMessage({ id: "settings.organizationSettings.sso.step1.title" })}
-                                </Text>
-                                <div>
-                                  <FormControl<SSOFormValuesValidation>
-                                    label={formatMessage({ id: "settings.organizationSettings.sso.companyIdentifier" })}
-                                    fieldType="input"
-                                    name="companyIdentifier"
-                                    required
-                                    disabled={isActive}
-                                    reserveSpaceForError={false}
-                                  />
-                                  <Box mt="sm">
-                                    <Message
-                                      type="info"
-                                      text={formatMessage({ id: "settings.organizationSettings.sso.redirectUri.info" })}
-                                    >
-                                      <Box p="md">
-                                        <FlexContainer direction="column" gap="md">
-                                          <FlexContainer direction="column" gap="xs">
-                                            <FlexContainer justifyContent="space-between" alignItems="center">
-                                              <Text size="sm" bold>
-                                                <FormattedMessage id="settings.organizationSettings.sso.redirectUri.signIn" />
-                                              </Text>
-                                              {signInRedirectUri && (
-                                                <CopyButton variant="clear" content={signInRedirectUri} />
-                                              )}
-                                            </FlexContainer>
-                                            {signInRedirectUri ? (
-                                              <Text size="sm" as="span" className={styles.uriText}>
-                                                {signInRedirectUri}
-                                              </Text>
-                                            ) : (
-                                              <Text size="sm" as="span" className={styles.uriText}>
-                                                https://cloud.airbyte.com/auth/realms/
-                                                <Text as="span" italicized color="grey400">
-                                                  <FormattedMessage id="settings.organizationSettings.sso.redirectUri.placeholder" />
-                                                </Text>
-                                                /broker/default/endpoint
-                                              </Text>
-                                            )}
-                                          </FlexContainer>
-                                          <FlexContainer direction="column" gap="xs">
-                                            <FlexContainer justifyContent="space-between" alignItems="center">
-                                              <Text size="sm" bold>
-                                                <FormattedMessage id="settings.organizationSettings.sso.redirectUri.signOut" />
-                                              </Text>
-                                              {signOutRedirectUri && (
-                                                <CopyButton variant="clear" content={signOutRedirectUri} />
-                                              )}
-                                            </FlexContainer>
-                                            {signOutRedirectUri ? (
-                                              <Text size="sm" as="span" className={styles.uriText}>
-                                                {signOutRedirectUri}
-                                              </Text>
-                                            ) : (
-                                              <Text size="sm" as="span" className={styles.uriText}>
-                                                https://cloud.airbyte.com/auth/realms/
-                                                <Text as="span" italicized color="grey400">
-                                                  <FormattedMessage id="settings.organizationSettings.sso.redirectUri.placeholder" />
-                                                </Text>
-                                                /broker/default/endpoint/logout_response
-                                              </Text>
-                                            )}
-                                          </FlexContainer>
-                                        </FlexContainer>
-                                      </Box>
-                                    </Message>
-                                  </Box>
-                                </div>
-                                <FormControl<SSOFormValuesValidation>
-                                  label={formatMessage({ id: "settings.organizationSettings.sso.clientId" })}
-                                  fieldType="input"
-                                  name="clientId"
-                                  required
-                                  disabled={isActive}
-                                />
-                                <FormControl<SSOFormValuesValidation>
-                                  label={formatMessage({ id: "settings.organizationSettings.sso.clientSecret" })}
-                                  fieldType="input"
-                                  type="password"
-                                  name="clientSecret"
-                                  required
-                                  disabled={isStep1Complete || isActive}
-                                  placeholder={
-                                    isStep1Complete || isActive
-                                      ? formatMessage({ id: "settings.organizationSettings.sso.test.placeholder" })
-                                      : undefined
-                                  }
-                                />
-                                <FormControl<SSOFormValuesValidation>
-                                  label={formatMessage({ id: "settings.organizationSettings.sso.discoveryUrl" })}
-                                  fieldType="input"
-                                  name="discoveryUrl"
-                                  required
-                                  disabled={isStep1Complete || isActive}
-                                  placeholder={
-                                    isStep1Complete || isActive
-                                      ? formatMessage({ id: "settings.organizationSettings.sso.test.placeholder" })
-                                      : undefined
-                                  }
-                                />
-                              </FlexContainer>
-                            </div>
-
-                            <FlexContainer gap="md" alignItems="center">
-                              <Button
-                                type={isStep1Complete ? "button" : "submit"}
-                                variant={isStep1Complete ? "secondary" : "primary"}
-                                isLoading={isSubmitting}
-                                onClick={isStep1Complete ? handleRetest : undefined}
-                                disabled={isActive}
-                              >
-                                {getTestButtonText()}
-                              </Button>
-                              {testResult && (
-                                <FlexContainer alignItems="center" gap="sm">
-                                  <Icon
-                                    type={testResult.success ? "statusSuccess" : "statusError"}
-                                    color={testResult.success ? "success" : "error"}
-                                    size="sm"
-                                  />
-                                  <Text>{testResult.message}</Text>
-                                </FlexContainer>
-                              )}
+      <FlexContainer direction="column" gap="xl">
+        {/* Step 1: Test your configuration */}
+        <Box
+          className={classNames(styles.step, {
+            [styles["step--active"]]: !isStep1Complete && !isActive,
+          })}
+        >
+          <FlexContainer direction="column" gap="lg">
+            <div
+              className={classNames({
+                [styles["stepContent--disabled"]]: isStep1Complete,
+              })}
+            >
+              <FlexContainer direction="column" gap="lg">
+                <Text bold size="lg">
+                  {formatMessage({ id: "settings.organizationSettings.sso.step1.title" })}
+                </Text>
+                <div>
+                  <FormControl<SSOFormValuesValidation>
+                    label={formatMessage({ id: "settings.organizationSettings.sso.companyIdentifier" })}
+                    fieldType="input"
+                    name="companyIdentifier"
+                    required
+                    disabled={isActive}
+                    reserveSpaceForError={false}
+                  />
+                  <Box mt="sm">
+                    <Message
+                      type="info"
+                      text={formatMessage({ id: "settings.organizationSettings.sso.redirectUri.info" })}
+                    >
+                      <Box p="md">
+                        <FlexContainer direction="column" gap="md">
+                          <FlexContainer direction="column" gap="xs">
+                            <FlexContainer justifyContent="space-between" alignItems="center">
+                              <Text size="sm" bold>
+                                <FormattedMessage id="settings.organizationSettings.sso.redirectUri.signIn" />
+                              </Text>
+                              {signInRedirectUri && <CopyButton variant="clear" content={signInRedirectUri} />}
                             </FlexContainer>
+                            {signInRedirectUri ? (
+                              <Text size="sm" as="span" className={styles.uriText}>
+                                {signInRedirectUri}
+                              </Text>
+                            ) : (
+                              <Text size="sm" as="span" className={styles.uriText}>
+                                https://cloud.airbyte.com/auth/realms/
+                                <Text as="span" italicized color="grey400">
+                                  <FormattedMessage id="settings.organizationSettings.sso.redirectUri.placeholder" />
+                                </Text>
+                                /broker/default/endpoint
+                              </Text>
+                            )}
                           </FlexContainer>
-                        </Box>
+                          <FlexContainer direction="column" gap="xs">
+                            <FlexContainer justifyContent="space-between" alignItems="center">
+                              <Text size="sm" bold>
+                                <FormattedMessage id="settings.organizationSettings.sso.redirectUri.signOut" />
+                              </Text>
+                              {signOutRedirectUri && <CopyButton variant="clear" content={signOutRedirectUri} />}
+                            </FlexContainer>
+                            {signOutRedirectUri ? (
+                              <Text size="sm" as="span" className={styles.uriText}>
+                                {signOutRedirectUri}
+                              </Text>
+                            ) : (
+                              <Text size="sm" as="span" className={styles.uriText}>
+                                https://cloud.airbyte.com/auth/realms/
+                                <Text as="span" italicized color="grey400">
+                                  <FormattedMessage id="settings.organizationSettings.sso.redirectUri.placeholder" />
+                                </Text>
+                                /broker/default/endpoint/logout_response
+                              </Text>
+                            )}
+                          </FlexContainer>
+                        </FlexContainer>
+                      </Box>
+                    </Message>
+                  </Box>
+                </div>
+                <FormControl<SSOFormValuesValidation>
+                  label={formatMessage({ id: "settings.organizationSettings.sso.clientId" })}
+                  fieldType="input"
+                  name="clientId"
+                  required
+                  disabled={isActive}
+                />
+                <FormControl<SSOFormValuesValidation>
+                  label={formatMessage({ id: "settings.organizationSettings.sso.clientSecret" })}
+                  fieldType="input"
+                  type="password"
+                  name="clientSecret"
+                  required
+                  disabled={isStep1Complete || isActive}
+                  placeholder={
+                    isStep1Complete || isActive
+                      ? formatMessage({ id: "settings.organizationSettings.sso.test.placeholder" })
+                      : undefined
+                  }
+                />
+                <FormControl<SSOFormValuesValidation>
+                  label={formatMessage({ id: "settings.organizationSettings.sso.discoveryUrl" })}
+                  fieldType="input"
+                  name="discoveryUrl"
+                  required
+                  disabled={isStep1Complete || isActive}
+                  placeholder={
+                    isStep1Complete || isActive
+                      ? formatMessage({ id: "settings.organizationSettings.sso.test.placeholder" })
+                      : undefined
+                  }
+                />
+              </FlexContainer>
+            </div>
 
-                        {/* Step 2: Activate your configuration */}
-                        <Box
-                          className={classNames(styles.step, {
-                            [styles["step--inactive"]]: !isStep1Complete && !isActive,
-                            [styles["step--active"]]: isStep1Complete && !isActive,
-                          })}
-                        >
-                          <FlexContainer direction="column" gap="lg">
-                            <Text bold size="lg" color={!isStep1Complete && !isActive ? "grey300" : undefined}>
-                              {formatMessage({ id: "settings.organizationSettings.sso.step2.title" })}
-                            </Text>
+            <FlexContainer gap="md" alignItems="center">
+              <Button
+                type={isStep1Complete ? "button" : "submit"}
+                variant={isStep1Complete ? "secondary" : "primary"}
+                isLoading={isSubmitting}
+                onClick={isStep1Complete ? handleRetest : undefined}
+                disabled={isActive}
+              >
+                {getTestButtonText()}
+              </Button>
+              {testResult && (
+                <FlexContainer alignItems="center" gap="sm">
+                  <Icon
+                    type={testResult.success ? "statusSuccess" : "statusError"}
+                    color={testResult.success ? "success" : "error"}
+                    size="sm"
+                  />
+                  <Text>{testResult.message}</Text>
+                </FlexContainer>
+              )}
+            </FlexContainer>
+          </FlexContainer>
+        </Box>
 
-                            <FlexContainer direction="column" gap="md">
-                              {/* Note: Step 2 uses manual Input instead of FormControl because activation is a
+        {/* Step 2: Activate your configuration */}
+        <Box
+          className={classNames(styles.step, {
+            [styles["step--inactive"]]: !isStep1Complete && !isActive,
+            [styles["step--active"]]: isStep1Complete && !isActive,
+          })}
+        >
+          <FlexContainer direction="column" gap="lg">
+            <Text bold size="lg" color={!isStep1Complete && !isActive ? "grey300" : undefined}>
+              {formatMessage({ id: "settings.organizationSettings.sso.step2.title" })}
+            </Text>
+
+            <FlexContainer direction="column" gap="md">
+              {/* Note: Step 2 uses manual Input instead of FormControl because activation is a
                     separate action from form submission - it calls a different API endpoint after
                     the draft config has already been created and tested */}
-                              {!useVerifiedDomainsForActivate && (
-                                <FlexContainer direction="column" gap="xs">
-                                  <Text color={!isStep1Complete && !isActive ? "grey300" : undefined}>
-                                    {formatMessage({ id: "settings.organizationSettings.sso.emailDomain" })}
-                                  </Text>
-                                  <Input
-                                    value={emailDomainInput}
-                                    onChange={(e) => setEmailDomainInput(e.currentTarget.value)}
-                                    disabled={!isStep1Complete || isActive}
-                                    placeholder={formatMessage({
-                                      id: "settings.organizationSettings.sso.emailDomain.placeholder",
-                                    })}
-                                  />
-                                </FlexContainer>
-                              )}
-
-                              <FlexContainer alignItems="flex-start">
-                                <Button
-                                  type="button"
-                                  variant="primary"
-                                  onClick={handleActivate}
-                                  isLoading={isActivating}
-                                  disabled={
-                                    !isStep1Complete ||
-                                    (!useVerifiedDomainsForActivate && !emailDomainInput) ||
-                                    isActive
-                                  }
-                                >
-                                  {formatMessage({ id: "settings.organizationSettings.sso.activate.button" })}
-                                </Button>
-                                {activationResult && (
-                                  <FlexContainer alignItems="center" gap="sm">
-                                    <Icon
-                                      type={activationResult.success ? "check" : "cross"}
-                                      color={activationResult.success ? "success" : "error"}
-                                    />
-                                    <Text color={activationResult.success ? "green" : "red"}>
-                                      {activationResult.message}
-                                    </Text>
-                                  </FlexContainer>
-                                )}
-                              </FlexContainer>
-                            </FlexContainer>
-                          </FlexContainer>
-                        </Box>
-                      </FlexContainer>
-                    </Box>
-                  </DisclosurePanel>
-                </motion.div>
+              {!useVerifiedDomainsForActivate && (
+                <FlexContainer direction="column" gap="xs">
+                  <Text color={!isStep1Complete && !isActive ? "grey300" : undefined}>
+                    {formatMessage({ id: "settings.organizationSettings.sso.emailDomain" })}
+                  </Text>
+                  <Input
+                    value={emailDomainInput}
+                    onChange={(e) => setEmailDomainInput(e.currentTarget.value)}
+                    disabled={!isStep1Complete || isActive}
+                    placeholder={formatMessage({
+                      id: "settings.organizationSettings.sso.emailDomain.placeholder",
+                    })}
+                  />
+                </FlexContainer>
               )}
-            </AnimatePresence>
-          </>
-        )}
-      </Disclosure>
-    </div>
+
+              <FlexContainer alignItems="flex-start">
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={handleActivate}
+                  isLoading={isActivating}
+                  disabled={!isStep1Complete || (!useVerifiedDomainsForActivate && !emailDomainInput) || isActive}
+                >
+                  {formatMessage({ id: "settings.organizationSettings.sso.activate.button" })}
+                </Button>
+                {activationResult && (
+                  <FlexContainer alignItems="center" gap="sm">
+                    <Icon
+                      type={activationResult.success ? "check" : "cross"}
+                      color={activationResult.success ? "success" : "error"}
+                    />
+                    <Text color={activationResult.success ? "green" : "red"}>{activationResult.message}</Text>
+                  </FlexContainer>
+                )}
+              </FlexContainer>
+            </FlexContainer>
+          </FlexContainer>
+        </Box>
+      </FlexContainer>
+    </CollapsibleSettingsCard>
   );
 };
