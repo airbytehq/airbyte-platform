@@ -13,11 +13,10 @@ metadata:
       {{- include "airbyte.tplvalues.render" (dict "value" .Values.airbyteBootloader.podLabels "context" $) | nindent 4 }}
     {{- end }}
   annotations:
-    helm.sh/hook: pre-install,pre-upgrade
-    helm.sh/hook-weight: "0"
-    {{- if .Values.airbyteBootloader.podAnnotations }}
-      {{- include "airbyte.tplvalues.render" (dict "value" .Values.airbyteBootloader.podAnnotations "context" $) | nindent 4 }}
-    {{- end }}
+    {{- $annotations := mergeOverwrite (dict) (.Values.airbyteBootloader.annotations | default dict) (.Values.airbyteBootloader.podAnnotations | default dict) }}
+    {{- $_ := set $annotations "helm.sh/hook" "pre-install,pre-upgrade" }}
+    {{- $_ := set $annotations "helm.sh/hook-weight" "0" }}
+    {{- include "airbyte.tplvalues.render" (dict "value" $annotations "context" $) | nindent 4 }}
 spec:
   serviceAccountName: {{ default .Values.global.serviceAccountName .Values.airbyteBootloader.serviceAccountName }}
   {{- if .Values.global.imagePullSecrets }}

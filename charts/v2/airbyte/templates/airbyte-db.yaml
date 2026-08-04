@@ -1,4 +1,5 @@
 {{- if .Values.postgresql.enabled }}
+{{- $storage := .Values.postgresql.storage | default dict }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -81,5 +82,5 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 500Mi
+          storage: {{ $storage.volumeClaimValue | default "500Mi" }}
 {{- end }}

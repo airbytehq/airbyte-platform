@@ -17,6 +17,9 @@ spec:
     targetPort: http
     protocol: TCP
     name: http
+    {{- if and (or (eq .Values.server.service.type "NodePort") (eq .Values.server.service.type "LoadBalancer")) .Values.server.service.nodePort }}
+    nodePort: {{ .Values.server.service.nodePort }}
+    {{- end }}
   selector:
     {{- include "airbyte.selectorLabels" . | nindent 4 }}
     {{- if .Values.server.extraSelectorLabels }}

@@ -829,6 +829,8 @@ server:
   service:
     type: ClusterIP
     port: 8001
+    # -- Optional: specify a NodePort when type is NodePort or LoadBalancer
+    nodePort: ""
     annotations: {}
 
   annotations: {}
@@ -2134,6 +2136,11 @@ postgresql:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
+  storage:
+    # -- Size of the PersistentVolumeClaim for the bundled PostgreSQL database
+    # Install-time only; expand existing PVCs directly on existing installs.
+    volumeClaimValue: 500Mi
+
 minio:
   enabled: true
   secretName: ""
@@ -2148,7 +2155,11 @@ minio:
   rootPassword: ""
 
   storage:
+    # Install-time only; expand existing PVCs directly on existing installs.
     volumeClaimValue: 500Mi
+    # -- Optional storage class for the MinIO PersistentVolumeClaim
+    # Unset omits the field; "" disables dynamic provisioning (PVC stays Pending without a static PV); a name selects that class.
+    storageClassName: null
 
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   ##
