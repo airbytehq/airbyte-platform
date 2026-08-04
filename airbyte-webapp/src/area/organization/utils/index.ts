@@ -4,5 +4,6 @@ export * from "./useCurrentOrganizationId";
 export * from "./useIsAdpOrganization";
 export * from "./useIsInstanceAdmin";
 export * from "./useOrganizationPlan";
+export * from "./useScimSettingsAccess";
 export { useLastVisitedOrganizationId } from "./useLastVisitedOrganizationId";
 export { useTrackLastOrganization } from "./useTrackLastOrganization";

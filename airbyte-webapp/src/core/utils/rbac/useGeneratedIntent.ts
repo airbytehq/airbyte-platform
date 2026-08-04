@@ -1,4 +1,5 @@
-import { useCurrentOrganizationId } from "area/organization/utils";
+// Deliberately a deep import: importing from the area/organization/utils barrel creates an import cycle (barrel → useScimSettingsAccess → core/utils/rbac → this file)
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useListPermissions } from "core/api";
 import { PermissionType } from "core/api/types/AirbyteClient";

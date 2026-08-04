@@ -12,12 +12,17 @@ export const scimConfigKeys = {
   detail: (organizationId: string) => [...scimConfigKeys.all, organizationId] as const,
 };
 
-export const useGetScimConfig = () => {
+/**
+ * Callers outside `useScimSettingsAccess` (in `area/organization/utils`) should consume that hook
+ * instead — its `canManageScim` is the only sanctioned value for `enabled` (the config read is
+ * `ORGANIZATION_ADMIN`-secured server-side).
+ */
+export const useGetScimConfig = (options: { enabled: boolean }) => {
   const organizationId = useCurrentOrganizationId();
   const requestOptions = useRequestOptions();
 
   return useQuery(scimConfigKeys.detail(organizationId), () => getScimConfig({ organizationId }, requestOptions), {
-    enabled: !!organizationId,
+    enabled: !!organizationId && options.enabled,
   });
 };
 

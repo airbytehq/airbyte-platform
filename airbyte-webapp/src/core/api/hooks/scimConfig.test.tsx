@@ -70,7 +70,7 @@ describe("scimConfig hooks", () => {
     it("does not call getScimConfig when no organization id is available", () => {
       mockUseCurrentOrganizationId.mockReturnValue(undefined as unknown as string);
 
-      const { result } = renderHook(() => useGetScimConfig(), { wrapper });
+      const { result } = renderHook(() => useGetScimConfig({ enabled: true }), { wrapper });
 
       expect(result.current.data).toBeUndefined();
       expect(mockGetScimConfig).not.toHaveBeenCalled();
@@ -79,7 +79,31 @@ describe("scimConfig hooks", () => {
     it("calls getScimConfig({ organizationId }) and returns the config", async () => {
       mockGetScimConfig.mockResolvedValue(baseScimConfig);
 
-      const { result } = renderHook(() => useGetScimConfig(), { wrapper });
+      const { result } = renderHook(() => useGetScimConfig({ enabled: true }), { wrapper });
+
+      await waitFor(() => expect(result.current.data).toEqual(baseScimConfig));
+      expect(mockGetScimConfig).toHaveBeenCalledWith({ organizationId }, {});
+    });
+
+    it("does not call getScimConfig when enabled is false even with an organization id", () => {
+      const { result } = renderHook(() => useGetScimConfig({ enabled: false }), { wrapper });
+
+      expect(result.current.data).toBeUndefined();
+      expect(mockGetScimConfig).not.toHaveBeenCalled();
+    });
+
+    it("fires the query once enabled flips to true after mount, matching the flag/permissions-resolve-async gate", async () => {
+      mockGetScimConfig.mockResolvedValue(baseScimConfig);
+
+      const { result, rerender } = renderHook(({ enabled }) => useGetScimConfig({ enabled }), {
+        wrapper,
+        initialProps: { enabled: false },
+      });
+
+      expect(result.current.data).toBeUndefined();
+      expect(mockGetScimConfig).not.toHaveBeenCalled();
+
+      rerender({ enabled: true });
 
       await waitFor(() => expect(result.current.data).toEqual(baseScimConfig));
       expect(mockGetScimConfig).toHaveBeenCalledWith({ organizationId }, {});
@@ -132,7 +156,7 @@ describe("scimConfig hooks", () => {
 
       const { result } = renderHook(
         () => ({
-          query: useGetScimConfig(),
+          query: useGetScimConfig({ enabled: true }),
           mutation: useEnableScim(),
         }),
         { wrapper }
@@ -158,7 +182,7 @@ describe("scimConfig hooks", () => {
 
       const { result } = renderHook(
         () => ({
-          query: useGetScimConfig(),
+          query: useGetScimConfig({ enabled: true }),
           mutation: useRotateScimToken(),
         }),
         { wrapper }
