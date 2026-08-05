@@ -153,7 +153,7 @@ Renders the workloads.kuberentesClientMaxRetries environment variable
 Renders the workloads.namespace value
 */}}
 {{- define "airbyte-data-plane.workloads.namespace" }}
-    {{- .Values.workloads.namespace | default .Release.Namespace }}
+    {{- .Values.workloads.namespace | default (include "airbyte-data-plane.namespace" .) }}
 {{- end }}
 
 {{/*

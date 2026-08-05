@@ -4,6 +4,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
+  namespace: {{ include "airbyte.namespace" . }}
   name: {{ .Release.Name }}-keycloak
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}

@@ -2,6 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
+  namespace: {{ include "airbyte.namespace" . }}
   name: {{ .Release.Name }}-workload-api-server-svc
   {{- with .Values.workloadApiServer.service.annotations }}
   annotations:

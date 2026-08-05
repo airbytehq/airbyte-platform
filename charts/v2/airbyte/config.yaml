@@ -42,7 +42,7 @@ common:
     # NOTE: this must NOT include the scheme (http://)
     - env: AIRBYTE_SERVER_HOST
       key: server.host
-      valueExp: (printf "%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port))
+      valueExp: (printf "%s-airbyte-server-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.server.service.port))
 
     - env: API_AUTHORIZATION_ENABLED
       key: auth.enabled
@@ -50,14 +50,14 @@ common:
 
     - env: MANIFEST_SERVER_API_HOST
       key: manifestServer.apiHost
-      valueExp: (printf "http://%s-airbyte-manifest-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.manifestServer.service.port))
+      valueExp: (printf "http://%s-airbyte-manifest-server-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.manifestServer.service.port))
 
     - env: DEPLOYMENT_ENV
       key: deploymentEnv
 
     - env: INTERNAL_API_HOST
       key: api.internalHost
-      valueExp: ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane")
+      valueExp: ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane")
     
     - env: LOCAL
       key: local
@@ -386,7 +386,7 @@ database:
   config:
     - env: DATABASE_HOST
       key: host
-      defaultValueExp: (printf "airbyte-db-svc.%s.svc.cluster.local" .Release.Namespace)
+      defaultValueExp: (printf "airbyte-db-svc.%s.svc.cluster.local" (include "airbyte.namespace" .))
 
     - env: DATABASE_PORT
       key: port
@@ -614,7 +614,7 @@ keycloak.database:
 
     - env: KEYCLOAK_DATABASE_HOST
       key: host
-      defaultValueExp: (printf "airbyte-db-svc.%s.svc.cluster.local" .Release.Namespace)
+      defaultValueExp: (printf "airbyte-db-svc.%s.svc.cluster.local" (include "airbyte.namespace" .))
   
     - env: KEYCLOAK_DATABASE_PORT
       key: port
@@ -665,7 +665,7 @@ keycloak.admin.client:
 
     - env: KEYCLOAK_INTERNAL_HOST
       key: internalHost
-      defaultValueExp: (ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (ne .Values.global.edition "community")))
+      defaultValueExp: (ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (ne .Values.global.edition "community")))
 
     - env: KEYCLOAK_INTERNAL_PROTOCOL
       key: internalProtocol
@@ -680,7 +680,7 @@ keycloak.client:
   config:
     - env: KEYCLOAK_INTERNAL_REALM_ISSUER
       key: realmIssuer
-      defaultValueExp: (ternary (printf "%s/auth/realms/%s" .Values.global.airbyteUrl (include "airbyte.keycloak.admin.client.internalRealm" .)) (printf "%s-airbyte-keycloak-svc.%s:%d/auth/realms/%s" .Release.Name .Release.Namespace (int (include "airbyte.keycloak.service.port" .)) (include "airbyte.keycloak.admin.client.internalRealm" .)) (eq (include "airbyte.common.cluster.type" .) "data-plane"))
+      defaultValueExp: (ternary (printf "%s/auth/realms/%s" .Values.global.airbyteUrl (include "airbyte.keycloak.admin.client.internalRealm" .)) (printf "%s-airbyte-keycloak-svc.%s:%d/auth/realms/%s" .Release.Name (include "airbyte.namespace" .) (int (include "airbyte.keycloak.service.port" .)) (include "airbyte.keycloak.admin.client.internalRealm" .)) (eq (include "airbyte.common.cluster.type" .) "data-plane"))
 
 logging:
   keyBasePath: global.logging
@@ -880,7 +880,7 @@ secretsManager:
 
     - env: VAULT_ADDRESS
       key: vault.address
-      defaultValueExp: (printf "http://airbyte-vault-svc.%s:8200" .Release.Namespace)
+      defaultValueExp: (printf "http://airbyte-vault-svc.%s:8200" (include "airbyte.namespace" .))
       discriminatorOpts: 
         - VAULT
 
@@ -1022,7 +1022,7 @@ stigg:
 
     - env: STIGG_SIDECAR_HOST
       key: host
-      valueExp: (printf "%s-stigg-sidecar-svc.%s" .Release.Name .Release.Namespace)
+      valueExp: (printf "%s-stigg-sidecar-svc.%s" .Release.Name (include "airbyte.namespace" .))
       includeIf: .Values.stiggSidecar.enabled
 
     - env: STIGG_SIDECAR_PORT
@@ -1129,7 +1129,7 @@ storage:
       key: minio.endpoint
       discriminatorOpts: 
         - minio
-      defaultValueExp: (printf "http://airbyte-minio-svc.%s:9000" .Release.Namespace)
+      defaultValueExp: (printf "http://airbyte-minio-svc.%s:9000" (include "airbyte.namespace" .))
 
     - env: S3_PATH_STYLE_ACCESS
       key: minio.s3PathStyleAccess
@@ -1449,13 +1449,13 @@ workloadApiServer:
 
     - env: WORKLOAD_API_HOST
       key: host
-      defaultValueExp: (ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port)) (eq (include "airbyte.cluster.type" .) "data-plane"))
+      defaultValueExp: (ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.workloadApiServer.service.port)) (eq (include "airbyte.cluster.type" .) "data-plane"))
 
 workloadLauncher:
   config:
     - env: CONTROL_PLANE_TOKEN_ENDPOINT
       key: controlPlane.tokenEndpoint
-      valueExp: (printf "%s/api/v1/dataplanes/token" (ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane")))
+      valueExp: (printf "%s/api/v1/dataplanes/token" (ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane")))
 
     - env: WORKLOAD_LAUNCHER_ENABLED
       key: enabled

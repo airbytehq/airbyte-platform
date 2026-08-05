@@ -88,7 +88,7 @@ Renders the stigg.webhookSecret environment variable
 Renders the global.stigg.host value
 */}}
 {{- define "airbyte.stigg.host" }}
-    {{- (printf "%s-stigg-sidecar-svc.%s" .Release.Name .Release.Namespace) }}
+    {{- (printf "%s-stigg-sidecar-svc.%s" .Release.Name (include "airbyte.namespace" .)) }}
 {{- end }}
 
 {{/*

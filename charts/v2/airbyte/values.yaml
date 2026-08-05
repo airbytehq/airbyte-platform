@@ -505,6 +505,8 @@ global:
 nameOverride: ""
 # -- String to fully override airbyte.fullname template with a string
 fullnameOverride: ""
+# -- Namespace to use for namespaced resources and service discovery.
+namespaceOverride: ""
 
 # Pods Service Account, see https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
 serviceAccount:

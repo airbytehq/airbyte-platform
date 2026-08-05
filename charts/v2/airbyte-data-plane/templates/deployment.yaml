@@ -1,6 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: {{ include "airbyte-data-plane.namespace" . }}
   name: {{ include "airbyte-data-plane.fullname" . }}
   labels:
     {{- include "airbyte-data-plane.labels" . | nindent 4 }}

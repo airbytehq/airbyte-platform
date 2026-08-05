@@ -193,7 +193,7 @@ Renders the keycloak.admin.client.internalBasePath environment variable
 Renders the keycloak.internalHost value
 */}}
 {{- define "airbyte.keycloak.admin.client.internalHost" }}
-    {{- .Values.keycloak.internalHost | default (ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (ne .Values.global.edition "community"))) }}
+    {{- .Values.keycloak.internalHost | default (ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (ne .Values.global.edition "community"))) }}
 {{- end }}
 
 {{/*
@@ -350,7 +350,7 @@ KEYCLOAK_ADMIN_PASSWORD: {{ include "airbyte.keycloak.admin.user.auth.adminPassw
 Renders the keycloak.realmIssuer value
 */}}
 {{- define "airbyte.keycloak.client.realmIssuer" }}
-    {{- .Values.keycloak.realmIssuer | default (ternary (printf "%s/auth/realms/%s" .Values.global.airbyteUrl (include "airbyte.keycloak.admin.client.internalRealm" .)) (printf "%s-airbyte-keycloak-svc.%s:%d/auth/realms/%s" .Release.Name .Release.Namespace (int (include "airbyte.keycloak.service.port" .)) (include "airbyte.keycloak.admin.client.internalRealm" .)) (eq (include "airbyte.common.cluster.type" .) "data-plane")) }}
+    {{- .Values.keycloak.realmIssuer | default (ternary (printf "%s/auth/realms/%s" .Values.global.airbyteUrl (include "airbyte.keycloak.admin.client.internalRealm" .)) (printf "%s-airbyte-keycloak-svc.%s:%d/auth/realms/%s" .Release.Name (include "airbyte.namespace" .) (int (include "airbyte.keycloak.service.port" .)) (include "airbyte.keycloak.admin.client.internalRealm" .)) (eq (include "airbyte.common.cluster.type" .) "data-plane")) }}
 {{- end }}
 
 {{/*
@@ -411,7 +411,7 @@ Renders the keycloak.database.name environment variable
 Renders the keycloak.database.host value
 */}}
 {{- define "airbyte.keycloak.database.host" }}
-    {{- .Values.keycloak.database.host | default (printf "airbyte-db-svc.%s.svc.cluster.local" .Release.Namespace) }}
+    {{- .Values.keycloak.database.host | default (printf "airbyte-db-svc.%s.svc.cluster.local" (include "airbyte.namespace" .)) }}
 {{- end }}
 
 {{/*

@@ -9,7 +9,7 @@
 Renders the workloadLauncher.controlPlane.tokenEndpoint value
 */}}
 {{- define "airbyte.workloadLauncher.controlPlane.tokenEndpoint" }}
-    {{- (printf "%s/api/v1/dataplanes/token" (ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane"))) }}
+    {{- (printf "%s/api/v1/dataplanes/token" (ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane"))) }}
 {{- end }}
 
 {{/*

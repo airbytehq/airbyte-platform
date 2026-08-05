@@ -415,7 +415,7 @@ Renders the secretsManager.googleSecretManager.region environment variable
 Renders the global.secretsManager.vault.address value
 */}}
 {{- define "airbyte.secretsManager.vault.address" }}
-    {{- .Values.global.secretsManager.vault.address | default (printf "http://airbyte-vault-svc.%s:8200" .Release.Namespace) }}
+    {{- .Values.global.secretsManager.vault.address | default (printf "http://airbyte-vault-svc.%s:8200" (include "airbyte.namespace" .)) }}
 {{- end }}
 
 {{/*

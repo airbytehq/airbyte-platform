@@ -182,7 +182,7 @@ Renders the common.api.host environment variable
 Renders the global.server.host value
 */}}
 {{- define "airbyte.common.server.host" }}
-    {{- (printf "%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) }}
+    {{- (printf "%s-airbyte-server-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.server.service.port)) }}
 {{- end }}
 
 {{/*
@@ -218,7 +218,7 @@ Renders the common.auth.enabled environment variable
 Renders the global.manifestServer.apiHost value
 */}}
 {{- define "airbyte.common.manifestServer.apiHost" }}
-    {{- (printf "http://%s-airbyte-manifest-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.manifestServer.service.port)) }}
+    {{- (printf "http://%s-airbyte-manifest-server-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.manifestServer.service.port)) }}
 {{- end }}
 
 {{/*
@@ -254,7 +254,7 @@ Renders the common.deploymentEnv environment variable
 Renders the global.api.internalHost value
 */}}
 {{- define "airbyte.common.api.internalHost" }}
-    {{- ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane") }}
+    {{- ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane") }}
 {{- end }}
 
 {{/*

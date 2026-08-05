@@ -1,6 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  namespace: {{ include "airbyte.namespace" . }}
   name: {{ .Release.Name }}-airbyte-env
   annotations:
     helm.sh/hook: pre-install,pre-upgrade
