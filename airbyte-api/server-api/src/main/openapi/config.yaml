@@ -20139,8 +20139,6 @@ components:
 
     NotFoundKnownExceptionInfo:
       type: object
-      required:
-        - message
       properties:
         id:
           type: string
