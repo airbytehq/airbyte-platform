@@ -12392,7 +12392,7 @@
       ],
       "custom": false,
       "destinationDefinitionId": "25c5221d-dce2-4163-ade9-739ef790f503",
-      "dockerImageTag": "3.0.13",
+      "dockerImageTag": "3.0.14",
       "dockerRepository": "airbyte/destination-postgres",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/postgres",
       "externalDocumentationUrls": [
@@ -12424,10 +12424,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Ryan Br...",
-          "commit_author_email": "ryan.broughan@gmail.com",
-          "commit_sha": "959977e23519b3bce1a014e134f2c2ae9e6efcee",
-          "commit_timestamp": "2026-04-17T10:07:41-07:00"
+          "commit_author": "Sunil Kuruba",
+          "commit_author_email": "sunil.kuruba@airbyte.io",
+          "commit_sha": "2ddb22251db6be1155c2723c8a9e6c7c28087d60",
+          "commit_timestamp": "2026-08-05T10:55:05-07:00"
         },
         "metrics": {
           "all": {
@@ -12443,12 +12443,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-postgres/3.0.13.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-postgres/3.0.14.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-postgres/latest/metadata.yaml",
-          "metadata_last_modified": "2026-04-17T17:11:51.483142+00:00",
-          "registry_entry_generated_at": "2026-04-17T17:11:51.483142+00:00"
+          "metadata_last_modified": "2026-08-05T18:00:38.351592+00:00",
+          "registry_entry_generated_at": "2026-08-05T18:00:38.351592+00:00"
         }
       },
       "githubIssueLabel": "destination-postgres",
@@ -18311,6 +18311,423 @@
                 "metadata_file_path": "metadata/airbyte/destination-snowflake/4.0.48/metadata.yaml",
                 "metadata_last_modified": "2026-07-23T22:52:24.308841+00:00",
                 "registry_entry_generated_at": "2026-07-23T22:52:24.308841+00:00"
+              }
+            },
+            "githubIssueLabel": "destination-snowflake",
+            "icon": "snowflake.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-snowflake/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "name": "Snowflake",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "2.0.0": {
+                  "message": "Remove GCS/S3 loading method support.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations#2.0.0",
+                  "upgradeDeadline": "2023-08-31"
+                },
+                "3.0.0": {
+                  "message": "**Do not upgrade until you have run a test upgrade as outlined [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#testing-destinations-v2-for-a-single-connection)**.\nThis version introduces [Destinations V2](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#what-is-destinations-v2), which provides better error handling, incremental delivery of data for large syncs, and improved final table structures. To review the breaking changes, and how to upgrade, see [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#quick-start-to-upgrading). These changes will likely require updates to downstream dbt / SQL models, which we walk through [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#updating-downstream-transformations).\nSelecting `Upgrade` will upgrade **all** connections using this destination at their next sync. You can manually sync existing connections prior to the next scheduled sync to start the upgrade early.\n",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations#3.0.0",
+                  "upgradeDeadline": "2023-11-07"
+                },
+                "4.0.0": {
+                  "message": "The connector now requires ALTER TABLE permissions, so you must grant this permission to the Snowflake user. Otherwise, if you never interact with the raw tables, you can upgrade without taking any action. If you _do_ use the raw tables, make sure to read the migration guide for more details.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations#4.0.0",
+                  "upgradeDeadline": "2026-01-06"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "resourceRequirements": {
+              "jobSpecific": [
+                {
+                  "jobType": "sync",
+                  "resourceRequirements": {
+                    "memory_limit": "2Gi",
+                    "memory_request": "2Gi"
+                  }
+                }
+              ]
+            },
+            "sourceType": "database",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "groups": [
+                  {
+                    "id": "connection",
+                    "title": "Connection"
+                  },
+                  {
+                    "id": "sync_behavior",
+                    "title": "Sync Behavior"
+                  },
+                  {
+                    "id": "advanced",
+                    "title": "Advanced"
+                  }
+                ],
+                "properties": {
+                  "cdc_deletion_mode": {
+                    "always_show": true,
+                    "default": "Hard delete",
+                    "description": "Whether to execute CDC deletions as hard deletes (i.e. propagate source deletions to the destination), or soft deletes (i.e. leave a tombstone record in the destination). Defaults to hard deletes.",
+                    "enum": [
+                      "Hard delete",
+                      "Soft delete"
+                    ],
+                    "group": "sync_behavior",
+                    "order": 5,
+                    "title": "CDC deletion mode",
+                    "type": "string"
+                  },
+                  "credentials": {
+                    "description": "Determines the type of authentication that should be used.",
+                    "group": "connection",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "Configuration details for the Key Pair Authentication.",
+                        "properties": {
+                          "auth_type": {
+                            "default": "Key Pair Authentication",
+                            "enum": [
+                              "Key Pair Authentication"
+                            ],
+                            "type": "string"
+                          },
+                          "private_key": {
+                            "airbyte_secret": true,
+                            "description": "RSA Private key to use for Snowflake connection. See the <a\n href=\"https://docs.airbyte.com/integrations/destinations/snowflake\">docs</a> for more\n information on how to obtain this key.",
+                            "multiline": true,
+                            "order": 0,
+                            "title": "Private Key",
+                            "type": "string"
+                          },
+                          "private_key_password": {
+                            "airbyte_secret": true,
+                            "description": "Passphrase for private key",
+                            "order": 0,
+                            "title": "Passphrase",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "auth_type",
+                          "private_key"
+                        ],
+                        "title": "Key Pair Authentication",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Configuration details for the Username and Password Authentication.",
+                        "properties": {
+                          "auth_type": {
+                            "default": "Username and Password",
+                            "enum": [
+                              "Username and Password"
+                            ],
+                            "type": "string"
+                          },
+                          "password": {
+                            "airbyte_secret": true,
+                            "description": "Enter the password associated with the username.",
+                            "order": 0,
+                            "title": "Password",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "auth_type",
+                          "password"
+                        ],
+                        "title": "Username and Password",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 6,
+                    "title": "Authorization Method",
+                    "type": "object"
+                  },
+                  "database": {
+                    "description": "Enter the name of the <a href=\"https://docs.snowflake.com/en/sql-reference/ddl-database.html#database-schema-share-ddl\">database</a> you want to sync data into",
+                    "examples": [
+                      "AIRBYTE_DATABASE"
+                    ],
+                    "group": "connection",
+                    "order": 3,
+                    "title": "Database",
+                    "type": "string"
+                  },
+                  "disable_type_dedupe": {
+                    "description": "Write the legacy \"raw tables\" format, to enable backwards compatibility with older versions of this connector.",
+                    "group": "advanced",
+                    "order": 7,
+                    "title": "Legacy raw tables",
+                    "type": "boolean"
+                  },
+                  "host": {
+                    "description": "Enter your Snowflake account's <a href=\"https://docs.snowflake.com/en/user-guide/admin-account-identifier.html#using-an-account-locator-as-an-identifier\">locator</a> (in the format <account_locator>.<region>.<cloud>.snowflakecomputing.com)",
+                    "examples": [
+                      "accountname.us-east-2.aws.snowflakecomputing.com",
+                      "accountname.snowflakecomputing.com"
+                    ],
+                    "group": "connection",
+                    "order": 0,
+                    "pattern": "^(http(s)?:\\/\\/)?([^./?#]+\\.)?([^./?#]+\\.)?([^./?#]+\\.)?([^./?#]+\\.(snowflakecomputing\\.com|localstack\\.cloud))$",
+                    "pattern_descriptor": "{account_name}.snowflakecomputing.com or {accountname}.{aws_location}.aws.snowflakecomputing.com",
+                    "title": "Host",
+                    "type": "string"
+                  },
+                  "jdbc_url_params": {
+                    "description": "Enter the additional properties to pass to the JDBC URL string when connecting to the database (formatted as key=value pairs separated by the symbol &). Example: key1=value1&key2=value2&key3=value3",
+                    "group": "advanced",
+                    "order": 10,
+                    "title": "JDBC URL Params",
+                    "type": "string"
+                  },
+                  "raw_data_schema": {
+                    "description": "Airbyte will use this dataset for various internal tables. In legacy raw tables mode, the raw tables will be stored in this dataset. Defaults to \"airbyte_internal\".",
+                    "group": "advanced",
+                    "order": 8,
+                    "title": "Airbyte Internal Table Dataset Name",
+                    "type": "string"
+                  },
+                  "retention_period_days": {
+                    "description": "The number of days of Snowflake Time Travel to enable on the tables. See <a href=\"https://docs.snowflake.com/en/user-guide/data-time-travel#data-retention-period\">Snowflake's documentation</a> for more information. Setting a nonzero value will incur increased storage costs in your Snowflake instance.",
+                    "group": "advanced",
+                    "order": 11,
+                    "title": "Data Retention Period (days)",
+                    "type": "integer"
+                  },
+                  "role": {
+                    "description": "Enter the <a href=\"https://docs.snowflake.com/en/user-guide/security-access-control-overview.html#roles\">role</a> that you want to use to access Snowflake",
+                    "examples": [
+                      "AIRBYTE_ROLE"
+                    ],
+                    "group": "connection",
+                    "order": 1,
+                    "title": "Role",
+                    "type": "string"
+                  },
+                  "schema": {
+                    "description": "Enter the name of the default <a href=\"https://docs.snowflake.com/en/sql-reference/ddl-database.html#database-schema-share-ddl\">schema</a>",
+                    "examples": [
+                      "AIRBYTE_SCHEMA"
+                    ],
+                    "group": "connection",
+                    "order": 4,
+                    "title": "Default Schema",
+                    "type": "string"
+                  },
+                  "trim_space": {
+                    "default": true,
+                    "description": "Whether Snowflake should trim leading and trailing whitespace from fields during data loading. Disable this option if your data contains meaningful leading or trailing whitespace in string fields that should be preserved.",
+                    "group": "advanced",
+                    "order": 9,
+                    "title": "Trim Whitespace from String Fields",
+                    "type": "boolean"
+                  },
+                  "username": {
+                    "description": "Enter the name of the user you want to use to access the database",
+                    "examples": [
+                      "AIRBYTE_USER"
+                    ],
+                    "group": "connection",
+                    "order": 5,
+                    "title": "Username",
+                    "type": "string"
+                  },
+                  "warehouse": {
+                    "description": "Enter the name of the <a href=\"https://docs.snowflake.com/en/user-guide/warehouses-overview.html#overview-of-warehouses\">warehouse</a> that you want to use as a compute cluster",
+                    "examples": [
+                      "AIRBYTE_WAREHOUSE"
+                    ],
+                    "group": "connection",
+                    "order": 2,
+                    "title": "Warehouse",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "host",
+                  "role",
+                  "warehouse",
+                  "database",
+                  "schema",
+                  "username"
+                ],
+                "title": "Snowflake Specification",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake",
+              "supported_destination_sync_modes": [
+                "overwrite",
+                "append",
+                "append_dedup"
+              ],
+              "supportsDBT": false,
+              "supportsIncremental": true,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsDbt": true,
+            "supportsRefreshes": true,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          },
+          "4.0.49": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 300,
+              "requireVersionIncrementsInPullRequests": false,
+              "sl": 300
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.4@sha256:5f343797cfcf021ca98ba9bdf5970ef66cbf6222d8cc17b0d61d13860a5bcc2b"
+            },
+            "connectorIPCOptions": {
+              "dataChannel": {
+                "supportedSerialization": [
+                  "JSONL",
+                  "PROTOBUF"
+                ],
+                "supportedTransport": [
+                  "SOCKET",
+                  "STDIO"
+                ],
+                "version": "0.0.2"
+              }
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "1s1t_disabletd_internal_staging_config.json",
+                    "name": "SECRET_DESTINATION-SNOWFLAKE_INTERNAL_STAGING_CONFIG_DISABLETD",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "1s1t_disabletd_internal_staging_config_raw_schema_override.json",
+                    "name": "SECRET_DESTINATION-SNOWFLAKE_INTERNAL_STAGING_CONFIG_RAW_SCHEMA_OVERRIDE_DISABLETD",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "1s1t_internal_staging_config.json",
+                    "name": "SECRET_DESTINATION_SNOWFLAKE_1S1T_INTERNAL_STAGING_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "1s1t_internal_staging_config_raw_schema_override.json",
+                    "name": "SECRET_DESTINATION_SNOWFLAKE_1S1T_INTERNAL_STAGING_CREDS_RAW_SCHEMA_OVERRIDE",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_DESTINATION_SNOWFLAKE_INSUFFICIENT_PERMISSIONS_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "1s1t_case_insensitive.json",
+                    "name": "SECRET_DESTINATION_SNOWFLAKE_QUOTED_IDENTIFIERS_IGNORE_CASE_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "destinationDefinitionId": "424892c4-daac-4491-b35d-c6688ba547ba",
+            "dockerImageTag": "4.0.49",
+            "dockerRepository": "airbyte/destination-snowflake",
+            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake",
+            "externalDocumentationUrls": [
+              {
+                "title": "Release notes",
+                "type": "api_release_history",
+                "url": "https://docs.snowflake.com/en/release-notes"
+              },
+              {
+                "title": "Snowflake server release notes and feature updates",
+                "type": "api_release_history",
+                "url": "https://docs.snowflake.com/en/release-notes/new-features"
+              },
+              {
+                "title": "Key pair authentication",
+                "type": "authentication_guide",
+                "url": "https://docs.snowflake.com/en/user-guide/key-pair-auth"
+              },
+              {
+                "title": "Access control",
+                "type": "permissions_scopes",
+                "url": "https://docs.snowflake.com/en/user-guide/security-access-control"
+              },
+              {
+                "title": "SQL reference",
+                "type": "sql_reference",
+                "url": "https://docs.snowflake.com/en/sql-reference"
+              },
+              {
+                "title": "Snowflake Status",
+                "type": "status_page",
+                "url": "https://status.snowflake.com/"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "Sunil Kuruba",
+                "commit_author_email": "sunil.kuruba@airbyte.io",
+                "commit_sha": "494deecffba77ca9023a39f29aedb009e83c0929",
+                "commit_timestamp": "2026-08-05T14:43:35-07:00"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake/4.0.49.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/destination-snowflake/4.0.49/metadata.yaml",
+                "metadata_last_modified": "2026-08-05T21:47:41.220928+00:00",
+                "registry_entry_generated_at": "2026-08-05T21:47:41.220928+00:00"
               }
             },
             "githubIssueLabel": "destination-snowflake",
@@ -24971,6 +25388,614 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner-migrations",
+        "releaseCandidates": {
+          "5.9.2": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 400,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "https://sellingpartnerapi-eu.amazon.com",
+                "https://sellingpartnerapi-fe.amazon.com",
+                "https://sellingpartnerapi-na.amazon.com",
+                "https://sandbox.sellingpartnerapi-eu.amazon.com",
+                "https://sandbox.sellingpartnerapi-fe.amazon.com",
+                "https://sandbox.sellingpartnerapi-na.amazon.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.23.8@sha256:58d3593d8e816d4a346570570d5a42bb78e41de344f8c74c2a5c225acdc4c4d1"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "liveTests",
+                "testConnections": [
+                  {
+                    "id": "17415432-092c-4020-ab55-fbb77cf5196e",
+                    "name": "amazon-seller-partner_config_dev_null"
+                  }
+                ]
+              },
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-AMAZON-SELLER-PARTNER__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "5.9.2",
+            "dockerRepository": "airbyte/source-amazon-seller-partner",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner",
+            "erdUrl": "https://dbdocs.io/airbyteio/source-amazon-seller-partner?view=relationships",
+            "externalDocumentationUrls": [
+              {
+                "title": "SP-API Deprecation Schedule",
+                "type": "api_deprecations",
+                "url": "https://developer-docs.amazon.com/sp-api/docs/sp-api-deprecations"
+              },
+              {
+                "title": "SP-API documentation",
+                "type": "api_reference",
+                "url": "https://developer-docs.amazon.com/sp-api/"
+              },
+              {
+                "title": "SP-API Release Notes",
+                "type": "api_release_history",
+                "url": "https://developer-docs.amazon.com/sp-api/docs/sp-api-release-notes"
+              },
+              {
+                "title": "Authorization",
+                "type": "other",
+                "url": "https://developer-docs.amazon.com/sp-api/docs/authorizing-selling-partner-api-applications"
+              },
+              {
+                "title": "Usage plans and rate limits",
+                "type": "other",
+                "url": "https://developer-docs.amazon.com/sp-api/docs/usage-plans-and-rate-limits-in-the-sp-api"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "Anatolii Yatsuk",
+                "commit_author_email": "tolikyatsuk@gmail.com",
+                "commit_sha": "6ee9012d68c408de9e3f64e789d81c5b679488ac",
+                "commit_timestamp": "2026-08-05T18:04:33+03:00"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-seller-partner/5.9.2.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-amazon-seller-partner/5.9.2/metadata.yaml",
+                "metadata_last_modified": "2026-08-05T15:08:49.532404+00:00",
+                "registry_entry_generated_at": "2026-08-05T15:08:49.532404+00:00"
+              }
+            },
+            "githubIssueLabel": "source-amazon-seller-partner",
+            "icon": "amazonsellerpartner.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-amazon-seller-partner/latest/icon.svg",
+            "language": "manifest-only",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 14400,
+            "name": "Amazon Seller Partner",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "2.0.0": {
+                  "message": "Deprecated FBA reports will be removed permanently from Cloud and Brand Analytics Reports will be removed temporarily. Updates on Brand Analytics Reports can be tracked here: [#32353](https://github.com/airbytehq/airbyte/issues/32353)",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner-migrations#2.0.0",
+                  "upgradeDeadline": "2023-12-11"
+                },
+                "3.0.0": {
+                  "message": "Streams `GET_FLAT_FILE_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL` and `GET_FLAT_FILE_ALL_ORDERS_DATA_BY_LAST_UPDATE_GENERAL` now have updated schemas. Streams `GET_AMAZON_FULFILLED_SHIPMENTS_DATA_GENERAL`, `GET_LEDGER_DETAIL_VIEW_DATA`, `GET_MERCHANTS_LISTINGS_FYP_REPORT`, `GET_STRANDED_INVENTORY_UI_DATA`, and `GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE` now have date-time formatted fields. Users will need to refresh the source schemas and reset these streams after upgrading.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner-migrations#3.0.0",
+                  "upgradeDeadline": "2024-01-12"
+                },
+                "4.0.0": {
+                  "message": "Stream `GET_FBA_STORAGE_FEE_CHARGES_DATA` schema has been updated to match Amazon Seller Partner. Users will need to refresh the source schema and reset this stream after upgrading.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner-migrations#4.0.0",
+                  "upgradeDeadline": "2024-03-11"
+                },
+                "5.0.0": {
+                  "message": "Deprecated FBA Subscribe and Save report types (GET_FBA_SNS_FORECAST_DATA and GET_FBA_SNS_PERFORMANCE_DATA) have been removed per Amazon SP-API deprecation. See: https://developer-docs.amazon.com/sp-api/changelog/deprecation-of-two-fba-subscribe-and-save-report-types",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner-migrations#5.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "GET_FBA_SNS_FORECAST_DATA",
+                        "GET_FBA_SNS_PERFORMANCE_DATA"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2025-12-18"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "slow"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": false,
+                "packageName": "airbyte-source-amazon-seller-partner"
+              }
+            },
+            "sourceDefinitionId": "e55879a8-0ef8-4557-abcf-ab34c53ec460",
+            "sourceType": "api",
+            "spec": {
+              "advanced_auth": {
+                "auth_flow_type": "oauth2.0",
+                "oauth_config_specification": {
+                  "complete_oauth_output_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "refresh_token": {
+                        "path_in_connector_config": [
+                          "refresh_token"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_input_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "app_id": {
+                        "type": "string"
+                      },
+                      "lwa_app_id": {
+                        "type": "string"
+                      },
+                      "lwa_client_secret": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_output_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "app_id": {
+                        "path_in_connector_config": [
+                          "app_id"
+                        ],
+                        "type": "string"
+                      },
+                      "lwa_app_id": {
+                        "path_in_connector_config": [
+                          "lwa_app_id"
+                        ],
+                        "type": "string"
+                      },
+                      "lwa_client_secret": {
+                        "path_in_connector_config": [
+                          "lwa_client_secret"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "oauth_user_input_from_connector_config_specification": {
+                    "properties": {
+                      "account_type": {
+                        "path_in_connector_config": [
+                          "account_type"
+                        ],
+                        "type": "string"
+                      },
+                      "region": {
+                        "path_in_connector_config": [
+                          "region"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  }
+                },
+                "predicate_key": [
+                  "auth_type"
+                ],
+                "predicate_value": "oauth2.0"
+              },
+              "connectionSpecification": {
+                "additionalProperties": true,
+                "properties": {
+                  "account_type": {
+                    "default": "Seller",
+                    "description": "Type of the Account you're going to authorize the Airbyte application by",
+                    "enum": [
+                      "Seller",
+                      "Vendor"
+                    ],
+                    "order": 3,
+                    "title": "AWS Seller Partner Account Type",
+                    "type": "string"
+                  },
+                  "app_id": {
+                    "airbyte_secret": true,
+                    "description": "Your Amazon Application ID.",
+                    "order": 4,
+                    "title": "Application ID",
+                    "type": "string"
+                  },
+                  "auth_type": {
+                    "const": "oauth2.0",
+                    "order": 0,
+                    "title": "Auth Type",
+                    "type": "string"
+                  },
+                  "aws_environment": {
+                    "default": "PRODUCTION",
+                    "description": "Select the AWS Environment.",
+                    "enum": [
+                      "PRODUCTION",
+                      "SANDBOX"
+                    ],
+                    "order": 1,
+                    "title": "AWS Environment",
+                    "type": "string"
+                  },
+                  "creation_requester_429_max_retries": {
+                    "default": 5,
+                    "description": "Maximum number of retry attempts when the report creation API returns HTTP 429 (Too Many Requests). Each retry uses exponential backoff based on the x-amzn-RateLimit-Limit header. Reduce this value to avoid exhausting rate limits on retrying requests.",
+                    "minimum": 0,
+                    "order": 20,
+                    "title": "Report Creation 429 Max Retries",
+                    "type": "integer"
+                  },
+                  "failed_retry_wait_time_in_seconds": {
+                    "default": 1800,
+                    "description": "Time in seconds to wait before retrying a report that returned FATAL status. Amazon enforces per-report-type cooldowns after generating a report. Near-real-time FBA reports have an approximately 30-minute cooldown, daily FBA reports approximately 4 hours. The default of 1800 seconds covers the most common cooldown. Increase this value if you see repeated FATAL errors on daily FBA reports.",
+                    "maximum": 14400,
+                    "minimum": 1,
+                    "order": 19,
+                    "title": "Failed Report Retry Wait Time (Seconds)",
+                    "type": "integer"
+                  },
+                  "financial_events_max_results_per_page": {
+                    "default": 100,
+                    "description": "The maximum number of results to return per page for the ListFinancialEvents stream. If the response exceeds the maximum number of transactions or 10 MB, the API returns an InvalidInput error. Lower this value if you encounter InvalidInput errors during sync. Valid range is 1-100.",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "order": 17,
+                    "title": "Financial Events Max Results Per Page",
+                    "type": "integer"
+                  },
+                  "financial_events_step": {
+                    "default": "180D",
+                    "description": "The time window size for fetching financial events data in chunks for the ListFinancialEvents and ListFinancialEventGroups streams. Options include hourly (1H, 6H, 12H) and daily (1D, 7D, 14D, 30D, 60D, 90D, 180D) granularity.\n\n- **Hourly step sizes (e.g., 1H, 6H)** are recommended for very high data volumes where daily windows cause pagination token expiration (TTL errors). They fetch smaller chunks per request, reducing the risk of timeouts.\n- **Daily step sizes (e.g., 1D, 7D)** are better for moderate data volumes. They balance sync speed with API efficiency.\n- **Larger step sizes (e.g., 30D, 180D)** are better for smaller data volumes. They fetch more data per request, speeding up syncing and reducing the number of API calls.\n\nSelect a step size that matches your data volume to optimize syncing speed and API performance.",
+                    "enum": [
+                      "1H",
+                      "2H",
+                      "4H",
+                      "6H",
+                      "8H",
+                      "12H",
+                      "1D",
+                      "7D",
+                      "14D",
+                      "30D",
+                      "60D",
+                      "90D",
+                      "180D"
+                    ],
+                    "order": 13,
+                    "title": "Financial Events Step Size",
+                    "type": "string"
+                  },
+                  "include_pii": {
+                    "default": false,
+                    "description": "When enabled, the connector requests a Restricted Data Token (RDT) to access PII fields such as BuyerInfo and ShippingAddress in the Orders and OrderItems streams. Your Amazon SP-API developer profile must have an approved Restricted Role (Direct-to-Consumer Shipping or Tax Invoicing). If the RDT request is denied (HTTP 403), the connector falls back to the standard token automatically and PII fields remain empty.",
+                    "order": 16,
+                    "title": "Include PII (Personally Identifiable Information)",
+                    "type": "boolean"
+                  },
+                  "lwa_app_id": {
+                    "airbyte_secret": true,
+                    "description": "Your Login with Amazon Client ID.",
+                    "order": 5,
+                    "title": "LWA Client Id",
+                    "type": "string"
+                  },
+                  "lwa_client_secret": {
+                    "airbyte_secret": true,
+                    "description": "Your Login with Amazon Client Secret.",
+                    "order": 6,
+                    "title": "LWA Client Secret",
+                    "type": "string"
+                  },
+                  "max_async_job_count": {
+                    "default": 2,
+                    "description": "The maximum number of concurrent asynchronous job requests that can be active at a time.",
+                    "minimum": 1,
+                    "order": 15,
+                    "title": "Maximum Concurrent Async Job Count",
+                    "type": "integer"
+                  },
+                  "max_done_report_age_hours": {
+                    "default": 0,
+                    "description": "When the connector finds an existing completed (DONE) report matching the same date range and marketplace, it can reuse that report instead of creating a new one. This setting controls how old (in hours) a completed report can be and still be reused. Set to 0 to always create new reports. Maximum is 72 hours.",
+                    "maximum": 72,
+                    "minimum": 0,
+                    "order": 14,
+                    "title": "Max Age of Completed Reports to Reuse (Hours)",
+                    "type": "integer"
+                  },
+                  "num_workers": {
+                    "default": 2,
+                    "description": "The number of workers to use for the connector when syncing concurrently.",
+                    "maximum": 10,
+                    "minimum": 2,
+                    "order": 14,
+                    "title": "Number of Workers",
+                    "type": "integer"
+                  },
+                  "period_in_days": {
+                    "default": 90,
+                    "description": "For syncs spanning a large date range, this option is used to request data in a smaller fixed window to improve sync reliability. This time window can be configured granularly by day.",
+                    "minimum": 1,
+                    "order": 10,
+                    "title": "Period In Days",
+                    "type": "integer"
+                  },
+                  "refresh_token": {
+                    "airbyte_secret": true,
+                    "description": "The Refresh Token obtained via OAuth flow authorization.",
+                    "order": 7,
+                    "title": "Refresh Token",
+                    "type": "string"
+                  },
+                  "region": {
+                    "default": "US",
+                    "description": "Select the AWS Region.",
+                    "enum": [
+                      "AE",
+                      "AU",
+                      "BE",
+                      "BR",
+                      "CA",
+                      "DE",
+                      "EG",
+                      "ES",
+                      "FR",
+                      "GB",
+                      "IE",
+                      "IN",
+                      "IT",
+                      "JP",
+                      "MX",
+                      "NL",
+                      "PL",
+                      "SA",
+                      "SE",
+                      "SG",
+                      "TR",
+                      "UK",
+                      "US"
+                    ],
+                    "order": 2,
+                    "title": "AWS Region",
+                    "type": "string"
+                  },
+                  "replication_end_date": {
+                    "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Any data after this date will not be replicated.",
+                    "examples": [
+                      "2017-01-25T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 9,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$|^$",
+                    "title": "End Date",
+                    "type": "string"
+                  },
+                  "replication_start_date": {
+                    "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Any data before this date will not be replicated. If start date is not provided or older than 2 years ago from today, the date 2 years ago from today will be used.",
+                    "examples": [
+                      "2017-01-25T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 8,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "title": "Start Date",
+                    "type": "string"
+                  },
+                  "report_options_list": {
+                    "description": "Additional information passed to reports. This varies by report type.",
+                    "items": {
+                      "properties": {
+                        "options_list": {
+                          "description": "List of options",
+                          "items": {
+                            "properties": {
+                              "option_name": {
+                                "order": 0,
+                                "title": "Name",
+                                "type": "string"
+                              },
+                              "option_value": {
+                                "order": 1,
+                                "title": "Value",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "option_name",
+                              "option_value"
+                            ],
+                            "type": "object"
+                          },
+                          "order": 2,
+                          "title": "List of options",
+                          "type": "array"
+                        },
+                        "report_name": {
+                          "enum": [
+                            "GET_AFN_INVENTORY_DATA",
+                            "GET_AFN_INVENTORY_DATA_BY_COUNTRY",
+                            "GET_AMAZON_FULFILLED_SHIPMENTS_DATA_GENERAL",
+                            "GET_BRAND_ANALYTICS_ALTERNATE_PURCHASE_REPORT",
+                            "GET_BRAND_ANALYTICS_ITEM_COMPARISON_REPORT",
+                            "GET_BRAND_ANALYTICS_MARKET_BASKET_REPORT",
+                            "GET_BRAND_ANALYTICS_REPEAT_PURCHASE_REPORT",
+                            "GET_BRAND_ANALYTICS_SEARCH_TERMS_REPORT",
+                            "GET_FBA_ESTIMATED_FBA_FEES_TXT_DATA",
+                            "GET_FBA_FULFILLMENT_CUSTOMER_RETURNS_DATA",
+                            "GET_FBA_FULFILLMENT_CUSTOMER_SHIPMENT_PROMOTION_DATA",
+                            "GET_FBA_FULFILLMENT_CUSTOMER_SHIPMENT_REPLACEMENT_DATA",
+                            "GET_FBA_FULFILLMENT_REMOVAL_ORDER_DETAIL_DATA",
+                            "GET_FBA_FULFILLMENT_REMOVAL_SHIPMENT_DETAIL_DATA",
+                            "GET_FBA_INVENTORY_PLANNING_DATA",
+                            "GET_FBA_MYI_UNSUPPRESSED_INVENTORY_DATA",
+                            "GET_FBA_REIMBURSEMENTS_DATA",
+                            "GET_FBA_STORAGE_FEE_CHARGES_DATA",
+                            "GET_FLAT_FILE_ACTIONABLE_ORDER_DATA_SHIPPING",
+                            "GET_FLAT_FILE_ALL_ORDERS_DATA_BY_LAST_UPDATE_GENERAL",
+                            "GET_FLAT_FILE_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL",
+                            "GET_FLAT_FILE_ARCHIVED_ORDERS_DATA_BY_ORDER_DATE",
+                            "GET_FLAT_FILE_OPEN_LISTINGS_DATA",
+                            "GET_FLAT_FILE_RETURNS_DATA_BY_RETURN_DATE",
+                            "GET_LEDGER_DETAIL_VIEW_DATA",
+                            "GET_LEDGER_SUMMARY_VIEW_DATA",
+                            "GET_MERCHANT_CANCELLED_LISTINGS_DATA",
+                            "GET_MERCHANT_LISTINGS_ALL_DATA",
+                            "GET_MERCHANT_LISTINGS_DATA",
+                            "GET_MERCHANT_LISTINGS_DATA_BACK_COMPAT",
+                            "GET_MERCHANT_LISTINGS_INACTIVE_DATA",
+                            "GET_MERCHANTS_LISTINGS_FYP_REPORT",
+                            "GET_ORDER_REPORT_DATA_SHIPPING",
+                            "GET_RESTOCK_INVENTORY_RECOMMENDATIONS_REPORT",
+                            "GET_SALES_AND_TRAFFIC_REPORT",
+                            "GET_SELLER_FEEDBACK_DATA",
+                            "GET_STRANDED_INVENTORY_UI_DATA",
+                            "GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE",
+                            "GET_VENDOR_FORECASTING_REPORT",
+                            "GET_VENDOR_INVENTORY_REPORT",
+                            "GET_VENDOR_NET_PURE_PRODUCT_MARGIN_REPORT",
+                            "GET_VENDOR_REAL_TIME_INVENTORY_REPORT",
+                            "GET_VENDOR_SALES_REPORT",
+                            "GET_VENDOR_TRAFFIC_REPORT",
+                            "GET_XML_ALL_ORDERS_DATA_BY_ORDER_DATE_GENERAL",
+                            "GET_XML_BROWSE_TREE_DATA"
+                          ],
+                          "order": 0,
+                          "title": "Report Name",
+                          "type": "string"
+                        },
+                        "stream_name": {
+                          "order": 1,
+                          "title": "Stream Name",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "report_name",
+                        "stream_name",
+                        "options_list"
+                      ],
+                      "title": "Report Options",
+                      "type": "object"
+                    },
+                    "order": 12,
+                    "title": "Report Options",
+                    "type": "array"
+                  },
+                  "report_stream_lookback_window_in_hours": {
+                    "default": 0,
+                    "description": "Number of hours to re-fetch for incremental report streams on each sync. Increase this value if Amazon continues updating report data after the previous sync has completed. Duplicates from the lookback window are handled by destination deduplication. Set to 0 to disable. This does not apply to GET_SALES_AND_TRAFFIC_REPORT_BY_MONTH or GET_VENDOR_SALES_REPORT, which use monthly or date-only report boundaries.",
+                    "minimum": 0,
+                    "order": 18,
+                    "title": "Report Stream Lookback Window (Hours)",
+                    "type": "integer"
+                  },
+                  "sales_and_traffic_report_asin_granularity": {
+                    "default": "PARENT",
+                    "description": "The level of ASIN granularity for the Sales and Traffic report streams. PARENT returns data aggregated at the parent ASIN level. CHILD returns data at the child ASIN level with populated childAsin values. SKU returns data at the individual SKU level with populated childAsin and sku values.",
+                    "enum": [
+                      "PARENT",
+                      "CHILD",
+                      "SKU"
+                    ],
+                    "order": 11,
+                    "title": "Sales and Traffic Report ASIN Granularity",
+                    "type": "string"
+                  },
+                  "stop_sync_on_rate_limit": {
+                    "default": false,
+                    "description": "Only applies to report streams. When enabled, the source stops retrying immediately once the rate limit retry budget is exhausted and fails with an actionable configuration error. This is useful when persistent rate limiting indicates the connector configuration needs adjustment (such as reducing the number of report streams or increasing the sync interval). When disabled (default), the source applies its backoff and retry strategy; if all retry attempts are exhausted, a transient error is thrown and the sync may be rescheduled automatically.",
+                    "order": 21,
+                    "title": "Stop Sync When Report Streams Are Rate Limited",
+                    "type": "boolean"
+                  },
+                  "wait_to_avoid_fatal_errors": {
+                    "airbyte_hidden": true,
+                    "default": false,
+                    "description": "Deprecated - this option is no longer functional and will be removed in a future version. Rate limiting is now handled automatically by the connector.",
+                    "order": 13,
+                    "title": "[Deprecated] Wait between requests to avoid fatal statuses in reports",
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "aws_environment",
+                  "region",
+                  "account_type",
+                  "lwa_app_id",
+                  "lwa_client_secret",
+                  "refresh_token"
+                ],
+                "title": "Amazon Seller Partner Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner",
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "suggestedStreams": {
+              "streams": [
+                "Orders",
+                "OrderItems",
+                "ListFinancialEvents",
+                "ListFinancialEventGroups"
+              ]
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "language:manifest-only",
+              "cdk:low-code"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "enableProgressiveRollout": false,
@@ -51896,15 +52921,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "medium"
           }
         },
@@ -71958,7 +72983,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "2.19.3",
+      "dockerImageTag": "2.20.0",
       "dockerRepository": "airbyte/source-klaviyo",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/klaviyo",
       "externalDocumentationUrls": [
@@ -71979,10 +73004,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Airbyte Support",
-          "commit_author_email": "cloud-support@airbyte.io",
-          "commit_sha": "b143d124757e9306cbbac45b08023ff73f1ccdfc",
-          "commit_timestamp": "2026-07-28T17:36:05+01:00"
+          "commit_author": "Michal Krawczyk",
+          "commit_author_email": "michal@corraldata.com",
+          "commit_sha": "9bb7d9ff9c7345608c35e48703b0146811a4735b",
+          "commit_timestamp": "2026-08-05T17:33:38+02:00"
         },
         "metrics": {
           "all": {
@@ -71998,12 +73023,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-klaviyo/2.19.3.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-klaviyo/2.20.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-klaviyo/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-28T16:44:51.312216+00:00",
-          "registry_entry_generated_at": "2026-07-28T16:44:51.312216+00:00"
+          "metadata_last_modified": "2026-08-05T15:37:56.422459+00:00",
+          "registry_entry_generated_at": "2026-08-05T15:37:56.422459+00:00"
         }
       },
       "githubIssueLabel": "source-klaviyo",
@@ -72094,7 +73119,7 @@
               "type": "integer"
             },
             "start_date": {
-              "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Any data before this date will not be replicated. This field is optional - if not provided, Airbyte will replicate the data for the last year.",
+              "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Any data before this date will not be replicated. This field is optional - if not provided, Airbyte will replicate the data for the last year. The metrics stream is not affected by this field and always syncs all metric definitions.",
               "examples": [
                 "2017-01-25T00:00:00Z"
               ],
@@ -106856,6 +107881,421 @@
       "public": true,
       "releaseStage": "generally_available",
       "releases": {
+        "releaseCandidates": {
+          "2.8.1": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 400,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "*.salesforce.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/python-connector-base:4.0.2@sha256:9fdb1888c4264cf6fee473649ecb593f56f58e5d0096a87ee0b231777e2e3e73"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "liveTests",
+                "testConnections": [
+                  {
+                    "id": "114d8a58-804d-49cd-be0f-14d8f20012b6",
+                    "name": "salesforce_config_bulk_dev_null"
+                  },
+                  {
+                    "id": "36b229e8-cea8-4d92-8b3d-cdfe488b00a5",
+                    "name": "salesforce_config_dev_null"
+                  },
+                  {
+                    "id": "4cfaad00-8911-450e-a8f0-d31c6acd2fe2",
+                    "name": "salesforce_config_sandbox_dev_null"
+                  }
+                ]
+              },
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config_bulk.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_BULK_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_REST_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config_sandbox.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_SANDBOX_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config_bulk.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_BULK_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_REST_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config_sandbox.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_SANDBOX_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "2.8.1",
+            "dockerRepository": "airbyte/source-salesforce",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/salesforce",
+            "externalDocumentationUrls": [
+              {
+                "title": "REST API Release Notes",
+                "type": "api_release_history",
+                "url": "https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/rest_rns.htm"
+              },
+              {
+                "title": "Winter 2026 release notes - API",
+                "type": "api_release_history",
+                "url": "https://help.salesforce.com/s/articleView?id=release-notes.salesforce_release_notes.htm&release=258&type=5"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "James Truty",
+                "commit_author_email": "jtruty@gmail.com",
+                "commit_sha": "c1384ab9e0b586a69d0a33e06ed6faaf9b32270c",
+                "commit_timestamp": "2026-08-05T08:32:12-05:00"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-salesforce/2.8.1.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-salesforce/2.8.1/metadata.yaml",
+                "metadata_last_modified": "2026-08-05T13:39:16.147596+00:00",
+                "registry_entry_generated_at": "2026-08-05T13:39:16.147596+00:00"
+              }
+            },
+            "githubIssueLabel": "source-salesforce",
+            "icon": "salesforce.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-salesforce/latest/icon.svg",
+            "language": "python",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 86400,
+            "name": "Salesforce",
+            "packageInfo": {
+              "cdk_version": "python:7.23.5"
+            },
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "slow"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": true,
+                "packageName": "airbyte-source-salesforce"
+              }
+            },
+            "sourceDefinitionId": "b117307c-14b6-41aa-9422-947e34922962",
+            "sourceType": "api",
+            "spec": {
+              "advanced_auth": {
+                "auth_flow_type": "oauth2.0",
+                "oauth_config_specification": {
+                  "complete_oauth_output_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "refresh_token": {
+                        "path_in_connector_config": [
+                          "refresh_token"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_input_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "client_id": {
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_output_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "client_id": {
+                        "path_in_connector_config": [
+                          "client_id"
+                        ],
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "path_in_connector_config": [
+                          "client_secret"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "oauth_connector_input_specification": {
+                    "access_token_headers": {
+                      "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    "access_token_params": {
+                      "client_id": "{{ client_id_value }}",
+                      "client_secret": "{{ client_secret_value }}",
+                      "code": "{{ auth_code_value }}",
+                      "grant_type": "authorization_code",
+                      "redirect_uri": "{{ redirect_uri_value }}"
+                    },
+                    "access_token_url": "https://{% if is_sandbox %}test{% else %}login{% endif %}.salesforce.com/services/oauth2/token",
+                    "consent_url": "https://{% if is_sandbox %}test{% else %}login{% endif %}.salesforce.com/services/oauth2/authorize?{{client_id_param}}&{{redirect_uri_param}}&response_type=code&{{scopes_param}}&{{state_param}}",
+                    "extract_output": [
+                      "refresh_token"
+                    ],
+                    "scopes": [
+                      {
+                        "scope": "api"
+                      },
+                      {
+                        "scope": "web"
+                      },
+                      {
+                        "scope": "refresh_token"
+                      },
+                      {
+                        "scope": "lightning"
+                      }
+                    ]
+                  },
+                  "oauth_user_input_from_connector_config_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "is_sandbox": {
+                        "path_in_connector_config": [
+                          "is_sandbox"
+                        ],
+                        "type": "boolean"
+                      }
+                    },
+                    "type": "object"
+                  }
+                },
+                "predicate_key": [
+                  "auth_type"
+                ],
+                "predicate_value": "Client"
+              },
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "auth_type": {
+                    "const": "Client",
+                    "type": "string"
+                  },
+                  "client_id": {
+                    "description": "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\">Client ID</a>",
+                    "order": 2,
+                    "title": "Client ID",
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "airbyte_secret": true,
+                    "description": "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\">Client secret</a>",
+                    "order": 3,
+                    "title": "Client Secret",
+                    "type": "string"
+                  },
+                  "force_use_bulk_api": {
+                    "default": false,
+                    "description": "Toggle to use Bulk API (this might cause empty fields for some streams)",
+                    "order": 6,
+                    "title": "Force to use BULK API",
+                    "type": "boolean"
+                  },
+                  "is_sandbox": {
+                    "default": false,
+                    "description": "Toggle if you're using a <a href=\"https://help.salesforce.com/s/articleView?id=sf.deploy_sandboxes_parent.htm&type=5\">Salesforce Sandbox</a>",
+                    "order": 1,
+                    "title": "Sandbox",
+                    "type": "boolean"
+                  },
+                  "lookback_window": {
+                    "default": "PT10M",
+                    "description": "The duration (ISO8601 duration) to re-read data from the source when running incremental syncs. This compensates for records that may not be immediately available when querying the Salesforce API due to eventual consistency delays. The connector will re-query this amount of time before the last cursor position on each sync. Increase this value if you observe missing records in your destination. See <a href=\"https://docs.airbyte.com/integrations/sources/salesforce#limitations--troubleshooting\">Limitations & Troubleshooting</a> for details.",
+                    "examples": [
+                      "PT10M",
+                      "PT30M",
+                      "PT1H"
+                    ],
+                    "order": 8,
+                    "title": "Lookback Window for Incremental sync",
+                    "type": "string"
+                  },
+                  "preserve_na_values": {
+                    "default": false,
+                    "description": "By default, string values such as \"NA\", \"N/A\", \"NULL\", \"None\" and \"NaN\" returned by the Salesforce Bulk API are treated as missing and synced as null. Enable this option to keep these values as literal strings (for example, \"NA\" meaning \"North America\"). Empty fields are still synced as null. Leaving this disabled preserves the connector's historical behavior.",
+                    "order": 10,
+                    "title": "Preserve \"NA\" and similar string values",
+                    "type": "boolean"
+                  },
+                  "refresh_token": {
+                    "airbyte_secret": true,
+                    "description": "Enter your application's <a href=\"https://developer.salesforce.com/docs/atlas.en-us.mobile_sdk.meta/mobile_sdk/oauth_refresh_token_flow.htm\">Salesforce Refresh Token</a> used for Airbyte to access your Salesforce account.",
+                    "order": 4,
+                    "title": "Refresh Token",
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "description": "Enter the date (or date-time) in the YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format. Airbyte will replicate the data updated on and after this date. If this field is blank, Airbyte will replicate the data for last two years.",
+                    "examples": [
+                      "2021-07-25",
+                      "2021-07-25T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 5,
+                    "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?)$",
+                    "pattern_descriptor": "YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ",
+                    "title": "Start Date",
+                    "type": "string"
+                  },
+                  "stream_slice_step": {
+                    "default": "P30D",
+                    "description": "The size of the time window (ISO8601 duration) to slice requests.",
+                    "examples": [
+                      "PT12H",
+                      "P7D",
+                      "P30D",
+                      "P1M",
+                      "P1Y"
+                    ],
+                    "order": 7,
+                    "title": "Stream Slice Step for Incremental sync",
+                    "type": "string"
+                  },
+                  "streams_criteria": {
+                    "description": "Add filters to select only required stream based on `SObject` name. Use this field to filter which tables are displayed by this connector. This is useful if your Salesforce account has a large number of tables (>1000), in which case you may find it easier to navigate the UI and speed up the connector's performance if you restrict the tables displayed by this connector.",
+                    "items": {
+                      "properties": {
+                        "criteria": {
+                          "default": "contains",
+                          "enum": [
+                            "starts with",
+                            "ends with",
+                            "contains",
+                            "exacts",
+                            "starts not with",
+                            "ends not with",
+                            "not contains",
+                            "not exacts"
+                          ],
+                          "order": 1,
+                          "title": "Search criteria",
+                          "type": "string"
+                        },
+                        "value": {
+                          "order": 2,
+                          "title": "Search value",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "criteria",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    "order": 9,
+                    "title": "Filter Salesforce Objects",
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "client_id",
+                  "client_secret",
+                  "refresh_token"
+                ],
+                "title": "Salesforce Source Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/salesforce",
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "suggestedStreams": {
+              "streams": [
+                "Account",
+                "Contact",
+                "Lead",
+                "Opportunity",
+                "OpportunityStage",
+                "Stage",
+                "Task",
+                "User"
+              ]
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "language:python",
+              "cdk:python"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -113652,15 +115092,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
