@@ -1571,19 +1571,19 @@ workloads.resources:
 
     - env: JOB_MAIN_CONTAINER_CPU_LIMIT
       key: mainContainer.cpu.limit
-      defaultValue: ""
+      valueExp: dig "mainContainer" "cpu" "limit" "" (dig "workloads" "resources" dict .Values.global) | default (dig "jobs" "resources" "limits" "cpu" "" .Values.global)
 
     - env: JOB_MAIN_CONTAINER_CPU_REQUEST
       key: mainContainer.cpu.request
-      defaultValue: ""
+      valueExp: dig "mainContainer" "cpu" "request" "" (dig "workloads" "resources" dict .Values.global) | default (dig "jobs" "resources" "requests" "cpu" "" .Values.global)
 
     - env: JOB_MAIN_CONTAINER_MEMORY_LIMIT
       key: mainContainer.memory.limit
-      defaultValue: ""
+      valueExp: dig "mainContainer" "memory" "limit" "" (dig "workloads" "resources" dict .Values.global) | default (dig "jobs" "resources" "limits" "memory" "" .Values.global)
 
     - env: JOB_MAIN_CONTAINER_MEMORY_REQUEST
       key: mainContainer.memory.request
-      defaultValue: ""
+      valueExp: dig "mainContainer" "memory" "request" "" (dig "workloads" "resources" dict .Values.global) | default (dig "jobs" "resources" "requests" "memory" "" .Values.global)
 
     - env: CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT
       key: check.cpu.limit

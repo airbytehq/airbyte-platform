@@ -365,6 +365,9 @@ global:
   # resources, such as Minikube.
   jobs:
     resources:
+      # Deprecated: set global.workloads.resources.mainContainer.{cpu,memory}.{request,limit} instead.
+      # Fallback applies per key to main-container resources only; replication is not consumed (#72833).
+      # Empty new values do not suppress legacy values; remove legacy values to stop the fallback.
       ## Example:
       ## requests:
       ##    memory: 256Mi

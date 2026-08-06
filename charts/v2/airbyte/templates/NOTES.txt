@@ -1,3 +1,7 @@
+{{- if or (dig "jobs" "resources" "limits" "cpu" "" .Values.global) (dig "jobs" "resources" "limits" "memory" "" .Values.global) (dig "jobs" "resources" "requests" "cpu" "" .Values.global) (dig "jobs" "resources" "requests" "memory" "" .Values.global) }}
+WARNING: global.jobs.resources is deprecated; use global.workloads.resources.mainContainer instead.
+{{- end }}
+
 {{- if .Values.webapp.ingress.enabled }}
 Airbyte is available at:
 {{- range $host := .Values.webapp.ingress.hosts }}
