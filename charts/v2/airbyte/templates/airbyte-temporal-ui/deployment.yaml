@@ -96,10 +96,10 @@ spec:
           containerPort: 8080
           protocol: TCP
         {{- if .Values.temporalUi.resources }}
-        resources: {{- toYaml .Values.temporalUi.resources | nindent 8 }}
+        resources: {{- toYaml .Values.temporalUi.resources | nindent 10 }}
         {{- end }}
         {{- if .Values.temporalUi.containerSecurityContext }}
-        securityContext: {{- toYaml .Values.temporalUi.containerSecurityContext | nindent 8 }}
+        securityContext: {{- toYaml .Values.temporalUi.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
         {{- if .Values.temporalUi.extraVolumeMount }}
@@ -114,9 +114,9 @@ spec:
         {{- if .Values.global.extraContainers }}
         {{ toYaml .Values.global.extraContainers | nindent 8 }}
         {{- end }}
-        securityContext: {{- toYaml .Values.temporalUi.podSecurityContext | nindent 8 }}
-        volumes:
-        {{- if .Values.temporalUi.extraVolumes }}
-    {{ toYaml .Values.temporalUi.extraVolumes | nindent 8 }}
-        {{- end }}
+      securityContext: {{- toYaml .Values.temporalUi.podSecurityContext | nindent 8 }}
+      {{- if .Values.temporalUi.extraVolumes }}
+      volumes:
+      {{- toYaml .Values.temporalUi.extraVolumes | nindent 6 }}
+      {{- end }}
 {{- end }}

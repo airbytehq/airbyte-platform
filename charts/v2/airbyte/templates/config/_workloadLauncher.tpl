@@ -139,7 +139,7 @@ Renders the workloadLauncher.dataPlane.clientIdSecretName environment variable
 Renders the workloadLauncher.dataPlane.clientIdSecretKey value
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.clientIdSecretKey" }}
-    {{- .Values.workloadLauncher.dataPlane.clientIdSecretKey | default (include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" .) }}
+    {{- .Values.workloadLauncher.dataPlane.clientIdSecretKey }}
 {{- end }}
 
 {{/*
@@ -200,7 +200,7 @@ Renders the workloadLauncher.dataPlane.clientSecretSecretName environment variab
 Renders the workloadLauncher.dataPlane.clientSecretSecretKey value
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.clientSecretSecretKey" }}
-    {{- .Values.workloadLauncher.dataPlane.clientSecretSecretKey | default (include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" .) }}
+    {{- .Values.workloadLauncher.dataPlane.clientSecretSecretKey }}
 {{- end }}
 
 {{/*
@@ -231,9 +231,7 @@ Renders the set of all workloadLauncher.dataPlane config map variables
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.configVars" }}
 DATAPLANE_CLIENT_ID_SECRET_NAME: {{ include "airbyte.workloadLauncher.dataPlane.clientIdSecretName" . | quote }}
-DATAPLANE_CLIENT_ID_SECRET_KEY: {{ include "airbyte.workloadLauncher.dataPlane.clientIdSecretKey" . | quote }}
 DATAPLANE_CLIENT_SECRET_SECRET_NAME: {{ include "airbyte.workloadLauncher.dataPlane.clientSecretSecretName" . | quote }}
-DATAPLANE_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte.workloadLauncher.dataPlane.clientSecretSecretKey" . | quote }}
 {{- end }}
 
 {{/*

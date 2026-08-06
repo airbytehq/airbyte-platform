@@ -140,11 +140,11 @@ auth.bootstrap:
     # dataplane secret keys
     - env: DATAPLANE_CLIENT_ID_SECRET_KEY
       key: dataPlane.clientIdSecretKey
-      defaultValue: dataplane-client-id
+      valueExp: (default (default "dataplane-client-id" .Values.global.auth.dataPlane.clientIdSecretKey) .Values.workloadLauncher.dataPlane.clientIdSecretKey)
 
     - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
       key: dataPlane.clientSecretSecretKey
-      defaultValue: dataplane-client-secret
+      valueExp: (default (default "dataplane-client-secret" .Values.global.auth.dataPlane.clientSecretSecretKey) .Values.workloadLauncher.dataPlane.clientSecretSecretKey)
 
 auth.identityProvider:
   keyBasePath: global.auth.identityProvider
@@ -1479,7 +1479,7 @@ workloadLauncher.dataPlane:
 
     - env: DATAPLANE_CLIENT_ID_SECRET_KEY
       key: clientIdSecretKey
-      defaultValueExp: (include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" .)
+      refKey: DATAPLANE_CLIENT_ID_SECRET_KEY
 
     - env: DATAPLANE_CLIENT_SECRET
       key: clientSecret
@@ -1493,7 +1493,7 @@ workloadLauncher.dataPlane:
 
     - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
       key: clientSecretSecretKey
-      defaultValueExp: (include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" .)
+      refKey: DATAPLANE_CLIENT_SECRET_SECRET_KEY
 
 workloadLauncher.images:
   keyBasePath: workloadLauncher

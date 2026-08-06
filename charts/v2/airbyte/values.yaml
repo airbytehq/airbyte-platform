@@ -117,7 +117,9 @@ global:
       jwtSignatureSecretKey: ""
 
     dataPlane:
+      # -- Secret key for the data-plane client ID; overridden by workloadLauncher.dataPlane.clientIdSecretKey when set
       clientIdSecretKey: ""
+      # -- Secret key for the data-plane client secret; overridden by workloadLauncher.dataPlane.clientSecretSecretKey when set
       clientSecretSecretKey: ""
 
   api: {}
