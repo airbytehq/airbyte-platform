@@ -22,7 +22,7 @@ spec:
       {{ toYaml (mergeOverwrite .Values.stiggSidecar.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
       {{- end }}
   strategy:
-    type: RollingUpdate
+    type: {{ .Values.stiggSidecar.deploymentStrategyType }}
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 100%
@@ -72,6 +72,9 @@ spec:
       {{- end }}
       {{- if .Values.stiggSidecar.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.stiggSidecar.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- with .Values.stiggSidecar.priorityClassName }}
+      priorityClassName: {{ . }}
       {{- end }}
       {{- if .Values.stiggSidecar.extraInitContainers }}
       initContainers:
