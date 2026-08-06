@@ -5,7 +5,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   width: 100%;
-  border: variables.$border-thin solid colors.$grey-100;
+  border: variables.$border-thin solid colors.$grey-200;
   border-radius: variables.$border-radius-md;
   overflow: hidden;
 
@@ -17,7 +17,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: variables.$spacing-sm variables.$spacing-md;
+    padding: variables.$spacing-md;
     font-size: variables.$font-size-sm;
     font-weight: 500;
     color: colors.$grey-400;
@@ -26,7 +26,7 @@
     user-select: none;
 
     &:not(:last-child) {
-      border-right: variables.$border-thin solid colors.$grey-100;
+      border-right: variables.$border-thin solid colors.$grey-200;
     }
 
     &[data-checked] {

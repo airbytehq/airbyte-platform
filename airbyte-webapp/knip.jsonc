@@ -31,10 +31,7 @@
 
     // Ignore unused connection change review components as they will be integrated in a later PR
     "src/pages/connections/ConnectionReplicationPage/ChangeWarningCard.tsx",
-    "src/pages/connections/ConnectionReplicationPage/ChangesReviewModal.tsx",
-
-    // Ignore unused SCIM IdP provider selector as it will be mounted in the SCIM setup form in a later PR (PLAT-1016)
-    "src/pages/SettingsPage/components/ScimIdpProviderSelector.tsx"
+    "src/pages/connections/ConnectionReplicationPage/ChangesReviewModal.tsx"
   ],
   "ignoreDependencies": [
     // Knip doesn't detect the import to this from a SASS file

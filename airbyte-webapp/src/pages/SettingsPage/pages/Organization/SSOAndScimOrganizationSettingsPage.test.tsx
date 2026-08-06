@@ -28,6 +28,10 @@ jest.mock("pages/SettingsPage/components/DomainVerification", () => ({
   DomainVerificationSection: () => <div data-testid="domain-verification-section" />,
 }));
 
+jest.mock("pages/SettingsPage/components/ScimSettingsCard", () => ({
+  ScimSettingsCard: () => <div data-testid="scim-settings-card" />,
+}));
+
 jest.mock("pages/SettingsPage/UpdateSSOSettingsForm", () => ({
   UpdateSSOSettingsForm: () => <div data-testid="update-sso-settings-form" />,
 }));
@@ -76,22 +80,23 @@ describe("SSOAndScimOrganizationSettingsPage", () => {
     expect(screen.getByTestId("domain-verification-section")).toBeInTheDocument();
   });
 
-  it("does not render a SCIM section when settings.scimProvisioning is off", async () => {
+  it("does not render the SCIM settings card when settings.scimProvisioning is off", async () => {
     await renderPage();
 
-    expect(screen.queryByText("SCIM")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("scim-settings-card")).not.toBeInTheDocument();
     expect(mockUseGetScimConfig).not.toHaveBeenCalled();
     expect(mockUseScimSettingsAccess).not.toHaveBeenCalled();
   });
 
-  it("renders a closed SCIM section when settings.scimProvisioning is on, with no SCIM API call", async () => {
+  it("renders the SCIM settings card when settings.scimProvisioning is on, with no SCIM API call from the page shell", async () => {
     mockUseExperiment.mockImplementation((key) => key === "settings.scimProvisioning");
 
     await renderPage();
 
-    expect(screen.getByRole("button", { name: "SCIM" })).toHaveAttribute("aria-expanded", "false");
-    // No docsLink is passed for the SCIM section (PLAT-1014 backfills it), so no docs link renders.
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    // Card-shell assertions (collapsed disclosure, label, docs link) live in ScimSettingsCard.test.tsx,
+    // which owns the CollapsibleSettingsCard. The page shell must stay hook-free: these negative
+    // assertions prove neither SCIM hook is reached directly from the page.
+    expect(screen.getByTestId("scim-settings-card")).toBeInTheDocument();
     expect(mockUseGetScimConfig).not.toHaveBeenCalled();
     expect(mockUseScimSettingsAccess).not.toHaveBeenCalled();
   });
