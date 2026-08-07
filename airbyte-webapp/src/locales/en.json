@@ -1519,6 +1519,7 @@
   "settings.organizationSettings.scim.idpProvider.okta": "Okta",
   "settings.organizationSettings.scim.idpProvider.microsoftEntraId": "Microsoft Entra ID",
   "settings.organizationSettings.scim.idpProvider.footnote": "You can't change this later. To switch providers you'll need to contact support.",
+  "settings.organizationSettings.scim.disabled.changeProviderNote": "To change identity providers, contact support. You can continue using your previous identity provider.",
   "settings.organizationSettings.scim.enable.button": "Enable SCIM",
   "settings.organizationSettings.scim.enable.error": "Something went wrong enabling SCIM. Please try again.",
   "settings.organizationSettings.scim.enable.modal.title": "Copy your SCIM details",

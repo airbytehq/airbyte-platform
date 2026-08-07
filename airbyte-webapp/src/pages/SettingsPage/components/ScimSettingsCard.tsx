@@ -65,20 +65,20 @@ export const ScimSettingsCard: React.FC = () => {
   const disableScim = useDisableScim();
   const [selectedProvider, setSelectedProvider] = useState<ScimIdpProvider | undefined>(undefined);
 
-  const handleEnable = async () => {
-    if (!selectedProvider) {
+  const handleEnable = async (provider: ScimIdpProvider | undefined) => {
+    if (!provider) {
       return;
     }
 
     try {
-      const response = await enableScim.mutateAsync(selectedProvider);
+      const response = await enableScim.mutateAsync(provider);
 
       if (response.token) {
         const token = response.token;
         const { scimBaseUrl } = response;
-        // Drive the modal's Okta-only note off the enable response's provider, not the local
-        // selection state, so it always reflects what was actually persisted.
-        const idpProvider = response.idpProvider ?? selectedProvider;
+        // Drive the modal's Okta-only note off the enable response's provider, not the
+        // provider this call was sent with, so it always reflects what was actually persisted.
+        const resolvedProvider = response.idpProvider ?? provider;
 
         await openModal<void>({
           title: formatMessage({ id: "settings.organizationSettings.scim.enable.modal.title" }),
@@ -90,7 +90,7 @@ export const ScimSettingsCard: React.FC = () => {
             <ScimCredentialsModal
               scimBaseUrl={scimBaseUrl}
               token={token}
-              idpProvider={idpProvider}
+              idpProvider={resolvedProvider}
               onComplete={onComplete}
             />
           ),
@@ -142,6 +142,7 @@ export const ScimSettingsCard: React.FC = () => {
 
   const { status, idpProvider, scimBaseUrl, createdAt } = scimConfig;
   const canEnable = canManageScim && status === ScimConfigStatus.not_configured;
+  const canReenable = canManageScim && status === ScimConfigStatus.disabled;
   const statusChipIcon = STATUS_CHIP_ICONS[status];
 
   return (
@@ -188,7 +189,38 @@ export const ScimSettingsCard: React.FC = () => {
                 type="button"
                 disabled={!selectedProvider}
                 isLoading={enableScim.isLoading}
-                onClick={handleEnable}
+                onClick={() => handleEnable(selectedProvider)}
+              >
+                <FormattedMessage id="settings.organizationSettings.scim.enable.button" />
+              </Button>
+            </FlexContainer>
+          </FlexContainer>
+        )}
+
+        {canReenable && (
+          <FlexContainer direction="column" gap="lg">
+            <Text size="sm" color="grey">
+              <FormattedMessage id="settings.organizationSettings.scim.description" />
+            </Text>
+
+            <FlexContainer direction="column" gap="md">
+              <Text size="sm" bold>
+                <FormattedMessage id="settings.organizationSettings.scim.idpProvider.label" />
+              </Text>
+              <ScimIdpProviderSelector value={idpProvider} onChange={() => {}} disabled />
+            </FlexContainer>
+
+            <Message
+              type="warning"
+              text={formatMessage({ id: "settings.organizationSettings.scim.disabled.changeProviderNote" })}
+            />
+
+            <FlexContainer justifyContent="flex-end">
+              <Button
+                type="button"
+                disabled={!idpProvider}
+                isLoading={enableScim.isLoading}
+                onClick={() => handleEnable(idpProvider)}
               >
                 <FormattedMessage id="settings.organizationSettings.scim.enable.button" />
               </Button>

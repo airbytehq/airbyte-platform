@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { render } from "test-utils";
@@ -268,6 +268,95 @@ describe("ScimSettingsCard", () => {
     });
   });
 
+  describe("re-enabling", () => {
+    const disabledConfig: ScimConfigResponse = {
+      ...baseConfig,
+      status: ScimConfigStatus.disabled,
+      idpProvider: ScimIdpProvider.okta,
+    };
+
+    const clickEnable = async () => {
+      await renderOpenCard();
+      await userEvent.click(screen.getByRole("button", { name: "Enable SCIM" }));
+    };
+
+    it("calls mutateAsync with the stored provider (not local selection state), opens a non-dismissable modal seeded with the resolved token, and resets afterwards", async () => {
+      setAccess({ scimConfig: disabledConfig });
+      const enableResponse: ScimConfigResponse = {
+        ...baseConfig,
+        status: ScimConfigStatus.enabled,
+        idpProvider: ScimIdpProvider.okta,
+        token: TOKEN,
+      };
+      mockMutateAsync.mockResolvedValue(enableResponse);
+      mockOpenModal.mockResolvedValue({ type: "completed", reason: undefined });
+
+      await clickEnable();
+
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledWith(ScimIdpProvider.okta));
+      await waitFor(() => expect(mockOpenModal).toHaveBeenCalledTimes(1));
+
+      const modalOptions = mockOpenModal.mock.calls[0][0];
+      expect(modalOptions.preventCancel).toBe(true);
+      // Without `allowNavigation`, a location change closes the modal without resolving
+      // `openModal`, destroying the one-time token.
+      expect(modalOptions.allowNavigation).toBe(true);
+
+      // Render the exact `content` component ScimSettingsCard handed to openModal, in isolation
+      // from the card tree above, so the `screen` queries below resolve against exactly one tree.
+      cleanup();
+      const ModalContent = modalOptions.content;
+      await render(<ModalContent onComplete={jest.fn()} />);
+
+      expect(screen.getByTitle(SCIM_BASE_URL)).toBeInTheDocument();
+      expect(screen.getByTestId("bearer-token-value")).toHaveTextContent(TOKEN.slice(0, 19));
+
+      await waitFor(() => expect(mockReset).toHaveBeenCalledTimes(1));
+    });
+
+    it("does not open a modal or reset when the re-enable response has no token (idempotent no-op)", async () => {
+      setAccess({ scimConfig: disabledConfig });
+      mockMutateAsync.mockResolvedValue({
+        ...baseConfig,
+        status: ScimConfigStatus.enabled,
+        idpProvider: ScimIdpProvider.okta,
+      });
+
+      await clickEnable();
+
+      await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledWith(ScimIdpProvider.okta));
+      await act(async () => {});
+      expect(mockOpenModal).not.toHaveBeenCalled();
+      expect(mockReset).not.toHaveBeenCalled();
+      expect(mockRegisterNotification).not.toHaveBeenCalled();
+    });
+
+    it("shows an error toast and does not open a modal when the re-enable mutation rejects", async () => {
+      setAccess({ scimConfig: disabledConfig });
+      mockMutateAsync.mockRejectedValue(new Error("boom"));
+
+      await clickEnable();
+
+      await waitFor(() =>
+        expect(mockRegisterNotification).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "scim-enable-error", type: "error" })
+        )
+      );
+      expect(mockOpenModal).not.toHaveBeenCalled();
+      expect(mockReset).not.toHaveBeenCalled();
+    });
+
+    it("disables the Enable button when the stored config omits idpProvider", async () => {
+      setAccess({ scimConfig: { ...disabledConfig, idpProvider: undefined } });
+
+      await renderOpenCard();
+
+      expect(screen.getByRole("button", { name: "Enable SCIM" })).toBeDisabled();
+      await userEvent.click(screen.getByRole("button", { name: "Enable SCIM" }));
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
   describe("already configured", () => {
     it("renders a green chip and header check icon, with no selector or Enable button, when enabled", async () => {
       setAccess({
@@ -350,7 +439,7 @@ describe("ScimSettingsCard", () => {
       expect(screen.getByText("Unknown")).toBeInTheDocument();
     });
 
-    it("renders a red chip with no header icon, and no selector or Enable button, when disabled", async () => {
+    it("renders a red chip with no header icon, and a disabled selector pre-filled with the stored provider, when disabled", async () => {
       setAccess({
         scimConfig: { ...baseConfig, status: ScimConfigStatus.disabled, idpProvider: ScimIdpProvider.okta },
       });
@@ -359,8 +448,38 @@ describe("ScimSettingsCard", () => {
 
       expect(screen.getByText("Disabled")).toBeInTheDocument();
       expect(document.querySelector('[data-icon="check"]')).not.toBeInTheDocument();
-      expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Enable SCIM" })).not.toBeInTheDocument();
+
+      const radiogroup = screen.getByRole("radiogroup", { name: "Identity provider" });
+      expect(radiogroup).toBeInTheDocument();
+      const oktaRadio = screen.getByRole("radio", { name: "Okta" });
+      expect(oktaRadio).toHaveAttribute("aria-checked", "true");
+      expect(oktaRadio).toHaveAttribute("aria-disabled", "true");
+
+      await userEvent.click(screen.getByRole("radio", { name: "Microsoft Entra ID" }));
+      expect(screen.getByRole("radio", { name: "Okta" })).toHaveAttribute("aria-checked", "true");
+      expect(screen.getByRole("radio", { name: "Microsoft Entra ID" })).toHaveAttribute("aria-checked", "false");
+
+      expect(
+        screen.getByText(
+          "To change identity providers, contact support. You can continue using your previous identity provider."
+        )
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Enable SCIM" })).toBeEnabled();
+    });
+
+    it("renders the selector unselected but disabled when the stored config omits idpProvider", async () => {
+      setAccess({
+        scimConfig: { ...baseConfig, status: ScimConfigStatus.disabled, idpProvider: undefined },
+      });
+
+      await renderOpenCard();
+
+      const radios = screen.getAllByRole("radio");
+      expect(radios).toHaveLength(2);
+      radios.forEach((radio) => {
+        expect(radio).toHaveAttribute("aria-checked", "false");
+        expect(radio).toHaveAttribute("aria-disabled", "true");
+      });
     });
   });
 
