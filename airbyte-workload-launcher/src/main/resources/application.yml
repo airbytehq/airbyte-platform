@@ -146,6 +146,7 @@ airbyte:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
         region: ${SECRET_STORE_GCP_REGION:}
+        kms-key-name: ${SECRET_STORE_GCP_KMS_KEY_NAME:}
         # injects the name/key for secret reference
         credentials-ref-name: ${SECRET_STORE_GCP_SECRET_NAME:}
         credentials-ref-key: ${SECRET_STORE_GCP_SECRET_KEY:}
