@@ -517,15 +517,21 @@ open class DataWorkerUsageService(
   /**
    * Persists precomputed usage inside an already-open config transaction.
    *
-   * Caller must already have established idempotency for the job id.
+   * The reservation is inserted only if the job is still non-terminal (checked atomically in the
+   * same statement as the insert), and the hourly usage bucket is incremented only when that
+   * reservation was actually created. This prevents a job whose terminal-state release already ran
+   * from stranding a reservation and a permanently carried-forward bucket value.
+   *
+   * @return true if usage was reserved and recorded, false if the job was already terminal or
+   *         already had a reservation (in which case the bucket is left untouched).
    */
   open fun persistReservedUsageForJob(
     jobId: Long,
     dataWorkerUsage: DataWorkerUsage,
     usedOnDemandCapacity: Boolean,
-  ) {
-    dataWorkerUsageReservationRepository.save(
-      DataWorkerUsageReservation(
+  ): Boolean {
+    val inserted =
+      dataWorkerUsageReservationRepository.insertReservationIfJobActive(
         jobId = jobId,
         organizationId = dataWorkerUsage.organizationId,
         workspaceId = dataWorkerUsage.workspaceId,
@@ -535,9 +541,15 @@ open class DataWorkerUsageService(
         orchestratorCpuRequest = dataWorkerUsage.orchestratorCpuRequest,
         usedOnDemandCapacity = usedOnDemandCapacity,
         createdAt = OffsetDateTime.now(ZoneOffset.UTC),
-      ),
-    )
+      )
+
+    if (inserted == 0) {
+      logger.info { "Skipping data worker usage reservation for job $jobId: job is already terminal or already reserved." }
+      return false
+    }
+
     performUsageInsertion(dataWorkerUsage)
+    return true
   }
 
   /**

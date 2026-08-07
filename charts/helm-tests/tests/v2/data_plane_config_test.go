@@ -120,3 +120,78 @@ func TestCustomSecretDataPlaneConfig(t *testing.T) {
 	})
 
 }
+
+func TestLauncherSecretKeyOverridesMatchConfigMap(t *testing.T) {
+	opts := helmtests.BaseHelmOptions()
+	opts.SetValues["workloadLauncher.dataPlane.clientIdSecretKey"] = "MY_CUSTOM_KEY"
+	opts.SetValues["workloadLauncher.dataPlane.clientSecretSecretKey"] = "MY_CUSTOM_SECRET_KEY"
+	chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
+	assert.NoError(t, err)
+
+	releaseApps := appsForRelease("airbyte")
+	bootloader := releaseApps["bootloader"]
+	workloadLauncher := releaseApps["workload-launcher"]
+	chartYaml.VerifyEnvVarsForApp(t, bootloader.Kind, bootloader.FQN(), []helmtests.ExpectedEnvVar{
+		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATAPLANE_CLIENT_ID_SECRET_KEY").Value("MY_CUSTOM_KEY"),
+		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATAPLANE_CLIENT_SECRET_SECRET_KEY").Value("MY_CUSTOM_SECRET_KEY"),
+	})
+	chartYaml.VerifyEnvVarsForApp(t, workloadLauncher.Kind, workloadLauncher.FQN(), []helmtests.ExpectedEnvVar{
+		helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("airbyte-auth-secrets").RefKey("MY_CUSTOM_KEY"),
+		helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("airbyte-auth-secrets").RefKey("MY_CUSTOM_SECRET_KEY"),
+	})
+}
+
+func TestDataPlaneSecretKeyPrecedence(t *testing.T) {
+	tests := []struct {
+		name           string
+		globalId       string
+		globalSecret   string
+		launcherId     string
+		launcherSecret string
+		expectedId     string
+		expectedSecret string
+	}{
+		{
+			name:           "global only",
+			globalId:       "GLOBAL_KEY",
+			globalSecret:   "GLOBAL_SECRET_KEY",
+			expectedId:     "GLOBAL_KEY",
+			expectedSecret: "GLOBAL_SECRET_KEY",
+		},
+		{
+			name:           "launcher overrides global",
+			globalId:       "GLOBAL_KEY",
+			globalSecret:   "GLOBAL_SECRET_KEY",
+			launcherId:     "LAUNCHER_KEY",
+			launcherSecret: "LAUNCHER_SECRET_KEY",
+			expectedId:     "LAUNCHER_KEY",
+			expectedSecret: "LAUNCHER_SECRET_KEY",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := helmtests.BaseHelmOptions()
+			opts.SetValues["global.auth.dataPlane.clientIdSecretKey"] = tt.globalId
+			opts.SetValues["global.auth.dataPlane.clientSecretSecretKey"] = tt.globalSecret
+			if tt.launcherId != "" {
+				opts.SetValues["workloadLauncher.dataPlane.clientIdSecretKey"] = tt.launcherId
+				opts.SetValues["workloadLauncher.dataPlane.clientSecretSecretKey"] = tt.launcherSecret
+			}
+			chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
+			assert.NoError(t, err)
+
+			releaseApps := appsForRelease("airbyte")
+			bootloader := releaseApps["bootloader"]
+			workloadLauncher := releaseApps["workload-launcher"]
+			chartYaml.VerifyEnvVarsForApp(t, bootloader.Kind, bootloader.FQN(), []helmtests.ExpectedEnvVar{
+				helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATAPLANE_CLIENT_ID_SECRET_KEY").Value(tt.expectedId),
+				helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATAPLANE_CLIENT_SECRET_SECRET_KEY").Value(tt.expectedSecret),
+			})
+			chartYaml.VerifyEnvVarsForApp(t, workloadLauncher.Kind, workloadLauncher.FQN(), []helmtests.ExpectedEnvVar{
+				helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("airbyte-auth-secrets").RefKey(tt.expectedId),
+				helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("airbyte-auth-secrets").RefKey(tt.expectedSecret),
+			})
+		})
+	}
+}

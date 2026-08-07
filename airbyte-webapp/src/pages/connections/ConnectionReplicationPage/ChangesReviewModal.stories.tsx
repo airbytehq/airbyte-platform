@@ -1,4 +1,4 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 import { FormattedMessage } from "react-intl";
 
 import { Modal } from "components/ui/Modal";
@@ -10,9 +10,9 @@ import { ChangesReviewModal } from "./ChangesReviewModal";
 export default {
   title: "connection/ChangesReviewModal",
   component: ChangesReviewModal,
-} as ComponentMeta<typeof ChangesReviewModal>;
+} as Meta<typeof ChangesReviewModal>;
 
-const Template: ComponentStory<typeof ChangesReviewModal> = (args) => {
+const Template: StoryFn<typeof ChangesReviewModal> = (args) => {
   return (
     <ModalServiceProvider>
       <Modal size="md" title={<FormattedMessage id="connection.reviewChanges.title" />}>

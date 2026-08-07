@@ -35,6 +35,7 @@ open class ScimConfigurationService(
   private val scimAccessGate: ScimAccessGate,
   private val organizationRepository: OrganizationRepository,
   private val scimConfigurationRepository: ScimConfigurationRepository,
+  private val scimUserLifecycleService: ScimUserLifecycleService,
   private val tokenService: ScimTokenService,
   @param:Named("config") private val configTransactionOperations: TransactionOperations<Connection>,
 ) {
@@ -53,13 +54,13 @@ open class ScimConfigurationService(
       lockOrganization(organizationId)
       val existing = scimConfigurationRepository.findByOrganizationIdForUpdate(organizationId.value)
       if (existing != null) {
-        if (!existing.enabled) {
-          throw ScimConfigurationConflictException("Disabled SCIM configurations cannot be re-enabled by this operation")
-        }
         if (existing.idpProvider != idpProvider.storageValue) {
           throw ScimConfigurationConflictException("SCIM is already enabled with a different identity provider")
         }
-        return@executeWrite existing.toDomainRead()
+        if (existing.enabled) {
+          return@executeWrite existing.toDomainRead()
+        }
+        return@executeWrite reenable(existing, organizationId, userId)
       }
 
       val rawToken = tokenService.generateToken()
@@ -79,6 +80,40 @@ open class ScimConfigurationService(
 
       saved.toDomainRead(token = rawToken)
     }
+  }
+
+  private fun reenable(
+    configuration: ScimConfiguration,
+    organizationId: OrganizationId,
+    userId: UserId,
+  ): ScimConfigurationRead {
+    val configurationId = checkNotNull(configuration.id) { "Persisted SCIM configuration must have an id" }
+    scimUserLifecycleService.reconcileInactiveUsers(configurationId, organizationId.value)
+
+    val rawToken = tokenService.generateToken()
+    val tokenHash = tokenService.hashToken(rawToken)
+    val now = OffsetDateTime.now(ZoneOffset.UTC)
+    val updatedRows =
+      scimConfigurationRepository.reenableByIdAndOrganizationId(
+        id = configurationId,
+        organizationId = organizationId.value,
+        tokenHash = tokenHash,
+        tokenIssuedAt = now,
+        tokenIssuedByUserId = userId.value,
+        updatedAt = now,
+      )
+    check(updatedRows == 1L) {
+      "Expected to re-enable one SCIM configuration for organization ${organizationId.value}, updated $updatedRows"
+    }
+
+    configuration.enabled = true
+    configuration.tokenHash = tokenHash
+    configuration.tokenIssuedAt = now
+    configuration.tokenIssuedByUserId = userId.value
+    configuration.disabledAt = null
+    configuration.disabledByUserId = null
+    configuration.updatedAt = now
+    return configuration.toDomainRead(token = rawToken)
   }
 
   open fun rotateToken(

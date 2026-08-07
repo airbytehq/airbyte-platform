@@ -65,7 +65,7 @@ internal class CatalogApiControllerTest {
         currentCatalogId = catalogId1,
         newCatalogId = catalogId2,
         connectionId = connectionId,
-        role = AuthRoleConstants.WORKSPACE_READER,
+        roles = setOf(AuthRoleConstants.WORKSPACE_READER),
       ) {
         "success"
       }
@@ -96,7 +96,7 @@ internal class CatalogApiControllerTest {
         currentCatalogId = catalogId1,
         newCatalogId = catalogId2,
         connectionId = connectionId,
-        role = AuthRoleConstants.WORKSPACE_READER,
+        roles = setOf(AuthRoleConstants.WORKSPACE_READER),
       ) {
         "success"
       }
@@ -123,7 +123,7 @@ internal class CatalogApiControllerTest {
         currentCatalogId = catalogId1,
         newCatalogId = catalogId2,
         connectionId = null,
-        role = AuthRoleConstants.WORKSPACE_READER,
+        roles = setOf(AuthRoleConstants.WORKSPACE_READER),
       ) {
         "success"
       }
@@ -151,7 +151,7 @@ internal class CatalogApiControllerTest {
         currentCatalogId = catalogId1,
         newCatalogId = catalogId2,
         connectionId = null,
-        role = AuthRoleConstants.WORKSPACE_READER,
+        roles = setOf(AuthRoleConstants.WORKSPACE_READER),
       ) {
         "should not execute"
       }

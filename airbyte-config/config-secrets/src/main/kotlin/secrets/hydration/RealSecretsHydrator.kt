@@ -9,7 +9,6 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
 import io.airbyte.config.secrets.SecretsHelpers
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.config.secrets.toConfigWithRefs
 import io.micronaut.context.annotation.Requires
@@ -29,7 +28,7 @@ class RealSecretsHydrator(
 
   override fun hydrateFromRuntimeSecretPersistence(
     partialConfig: JsonNode,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
+    runtimeSecretPersistence: SecretPersistence,
   ): JsonNode = SecretsHelpers.combineConfig(InlinedConfigWithSecretRefs(partialConfig).toConfigWithRefs(), runtimeSecretPersistence)
 
   override fun hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate: JsonNode): JsonNode =
@@ -47,7 +46,7 @@ class RealSecretsHydrator(
 
   override fun hydrateSecretCoordinateFromRuntimeSecretPersistence(
     secretCoordinate: JsonNode,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
+    runtimeSecretPersistence: SecretPersistence,
   ): JsonNode = hydrateSecretCoordinateAsJson(secretCoordinate, runtimeSecretPersistence)
 
   override fun hydrate(

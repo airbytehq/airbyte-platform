@@ -1,5 +1,5 @@
 import { action } from "@storybook/addon-actions";
-import { ComponentMeta } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import { ChangeEvent, useState } from "react";
 
 import { CheckBox, CheckBoxProps } from "./CheckBox";
@@ -16,7 +16,7 @@ export default {
       control: { type: "radio" },
     },
   },
-} as ComponentMeta<typeof CheckBox>;
+} as Meta<typeof CheckBox>;
 
 const CheckBoxWithState = ({ checked: initial = false, ...props }: CheckBoxProps) => {
   const [checked, setChecked] = useState(initial);

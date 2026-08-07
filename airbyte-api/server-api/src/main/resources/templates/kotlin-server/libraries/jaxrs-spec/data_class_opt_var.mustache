@@ -1,0 +1,6 @@
+{{#description}}
+    /* {{{.}}} */
+{{/description}}
+
+    @JsonProperty("{{#vendorExtensions.x-scim-dollar-ref}}\$ref{{/vendorExtensions.x-scim-dollar-ref}}{{^vendorExtensions.x-scim-dollar-ref}}{{{baseName}}}{{/vendorExtensions.x-scim-dollar-ref}}")
+{{#useBeanValidation}}{{>beanValidation}}{{>beanValidationModel}}{{/useBeanValidation}}    {{>modelMutable}} {{{name}}}: {{#isEnum}}{{classname}}.{{nameInPascalCase}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{/isEnum}}? = {{{defaultValue}}}{{^defaultValue}}null{{/defaultValue}}

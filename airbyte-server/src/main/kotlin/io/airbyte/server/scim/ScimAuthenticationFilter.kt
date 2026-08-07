@@ -4,18 +4,17 @@
 
 package io.airbyte.server.scim
 
+import io.airbyte.api.scim.generated.models.ScimError
 import io.airbyte.domain.models.scim.ScimAccessDeniedException
 import io.airbyte.domain.models.scim.ScimAuthenticationException
 import io.airbyte.domain.services.scim.ScimAuthenticationService
 import io.micronaut.core.async.publisher.Publishers
-import io.micronaut.core.convert.ConversionService
 import io.micronaut.core.order.Ordered
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
-import io.micronaut.http.MediaType
-import io.micronaut.http.MutableHttpRequestWrapper
+import io.micronaut.http.MutableHttpHeaders
 import io.micronaut.http.MutableHttpResponse
 import io.micronaut.http.annotation.RequestFilter
 import io.micronaut.http.annotation.ServerFilter
@@ -30,7 +29,6 @@ import reactor.core.publisher.Flux
 @ExecuteOn(TaskExecutors.BLOCKING)
 class ScimAuthenticationFilter(
   private val authenticationService: ScimAuthenticationService,
-  private val conversionService: ConversionService,
 ) : Ordered {
   override fun getOrder(): Int = ServerFilterPhase.SECURITY.before()
 
@@ -50,12 +48,11 @@ class ScimAuthenticationFilter(
         return Publishers.just(forbidden())
       }
 
-    val authenticatedRequest = MutableHttpRequestWrapper.wrapIfNecessary(conversionService, request)
-    authenticatedRequest.setAttribute(SCIM_AUTHENTICATION_ATTRIBUTE, context)
-    authenticatedRequest.headers.remove(HttpHeaders.AUTHORIZATION)
+    request.setAttribute(SCIM_AUTHENTICATION_ATTRIBUTE, context)
+    (request.headers as MutableHttpHeaders).remove(HttpHeaders.AUTHORIZATION)
 
     return Flux
-      .from(continuation.request(authenticatedRequest).proceed())
+      .from(continuation.proceed())
       .onErrorResume(ScimAuthenticationException::class.java) { Flux.just(unauthorized()) }
       .onErrorResume(ScimAccessDeniedException::class.java) { Flux.just(forbidden()) }
   }
@@ -81,31 +78,30 @@ class ScimAuthenticationFilter(
     return value.substring(tokenStart).takeIf(String::isNotEmpty)
   }
 
-  private fun unauthorized(): MutableHttpResponse<ScimErrorResponse> =
+  private fun unauthorized(): MutableHttpResponse<ScimError> =
     HttpResponse
-      .status<ScimErrorResponse>(HttpStatus.UNAUTHORIZED)
+      .status<ScimError>(HttpStatus.UNAUTHORIZED)
       .contentType(SCIM_MEDIA_TYPE)
       .header(HttpHeaders.WWW_AUTHENTICATE, BEARER_SCHEME)
       .body(
-        ScimErrorResponse(
-          status = HttpStatus.UNAUTHORIZED.code.toString(),
+        scimError(
+          status = HttpStatus.UNAUTHORIZED,
           detail = "Invalid bearer token",
         ),
       )
 
-  private fun forbidden(): MutableHttpResponse<ScimErrorResponse> =
+  private fun forbidden(): MutableHttpResponse<ScimError> =
     HttpResponse
-      .status<ScimErrorResponse>(HttpStatus.FORBIDDEN)
+      .status<ScimError>(HttpStatus.FORBIDDEN)
       .contentType(SCIM_MEDIA_TYPE)
       .body(
-        ScimErrorResponse(
-          status = HttpStatus.FORBIDDEN.code.toString(),
+        scimError(
+          status = HttpStatus.FORBIDDEN,
           detail = "SCIM access is denied",
         ),
       )
 
   private companion object {
     const val BEARER_SCHEME = "Bearer"
-    val SCIM_MEDIA_TYPE = MediaType.of("application/scim+json")
   }
 }

@@ -103,4 +103,24 @@ interface GroupMemberWithUserInfoRepository : GenericRepository<GroupMemberWithU
     groupId: UUID,
     userId: UUID,
   ): GroupMemberWithUserInfo?
+
+  @Query(
+    """
+    SELECT gm.id, gm.group_id, gm.user_id, gm.created_at,
+           u.email as email, u.name as name
+    FROM group_member gm
+    JOIN "group" scoped_group
+      ON scoped_group.id = gm.group_id
+     AND scoped_group.organization_id = :organizationId
+    JOIN "user" u ON gm.user_id = u.id
+    WHERE gm.group_id = :groupId
+      AND gm.user_id = :userId
+    """,
+    nativeQuery = true,
+  )
+  fun findByGroupIdAndUserIdAndOrganizationId(
+    groupId: UUID,
+    userId: UUID,
+    organizationId: UUID,
+  ): GroupMemberWithUserInfo?
 }

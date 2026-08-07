@@ -38,7 +38,7 @@ export const AllDestinationsPage: React.FC = () => {
   const { limits, destinationLimitReached } = useCurrentWorkspaceLimits();
   const { formatMessage } = useIntl();
   const { openModal } = useModalService();
-  const canCreateDestination = useGeneratedIntent(Intent.CreateOrEditConnector);
+  const canCreateDestination = useGeneratedIntent(Intent.CreateOrEditDestination);
 
   const [{ search, status }, setFilterValue] = useFilters<{ search: string; status: ActorStatus | null }>({
     search: "",

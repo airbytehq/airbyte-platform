@@ -16,6 +16,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
+  namespace: {{ include "airbyte.namespace" . }}
   name: {{ $fullName }}
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}

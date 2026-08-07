@@ -10,7 +10,7 @@ import io.airbyte.config.SecretPersistenceConfig
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretsHelpers
 import io.airbyte.config.secrets.persistence.DataPlaneOnlySecretPersistence
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SecretPersistenceConfigService
@@ -22,7 +22,6 @@ import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
-import io.airbyte.metrics.MetricClient
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -48,7 +47,7 @@ class SecretPersistenceService(
   private val defaultSecretPersistence: SecretPersistence,
   private val secretStorageService: SecretStorageService,
   private val secretPersistenceConfigService: SecretPersistenceConfigService,
-  private val metricClient: MetricClient,
+  private val runtimeSecretPersistenceFactory: RuntimeSecretPersistenceFactory,
   private val featureFlagClient: FeatureFlagClient,
   private val organizationService: OrganizationService,
 ) {
@@ -84,12 +83,12 @@ class SecretPersistenceService(
           },
         ).withConfiguration(secretStorageConfig?.let { Jsons.deserializeToStringMap(it) })
 
-    return RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
+    return runtimeSecretPersistenceFactory.create(secretPersistenceConfig)
   }
 
   private fun getLegacyByOrganizationId(organizationId: OrganizationId): SecretPersistence {
     val secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.value)
-    return RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
+    return runtimeSecretPersistenceFactory.create(secretPersistenceConfig)
   }
 
   fun getPersistenceMapFromConfig(

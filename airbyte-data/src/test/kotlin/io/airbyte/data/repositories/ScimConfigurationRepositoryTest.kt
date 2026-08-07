@@ -5,6 +5,7 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Organization
+import io.airbyte.data.repositories.entities.ScimAirbyteUser
 import io.airbyte.data.repositories.entities.ScimConfiguration
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.assertj.core.api.Assertions.assertThat
@@ -18,11 +19,13 @@ import java.util.UUID
 @MicronautTest
 class ScimConfigurationRepositoryTest : AbstractConfigRepositoryTest() {
   private val scimConfigurationRepository = context.getBean(ScimConfigurationRepository::class.java)
+  private val scimAirbyteUserRepository = context.getBean(ScimAirbyteUserRepository::class.java)
 
   @AfterEach
   fun cleanUp() {
     scimConfigurationRepository.deleteAll()
     organizationRepository.deleteAll()
+    scimAirbyteUserRepository.deleteAll()
   }
 
   @Test
@@ -68,6 +71,48 @@ class ScimConfigurationRepositoryTest : AbstractConfigRepositoryTest() {
     assertThat(retrieved?.tokenIssuedAt).isNull()
     assertThat(retrieved?.idpProvider).isEqualTo("microsoft_entra_id")
     assertThat(retrieved?.disabledAt).isEqualTo(disabledAt)
+  }
+
+  @Test
+  fun `re-enable atomically replaces disabled state while preserving provider and creation metadata`() {
+    val organization = createOrganization("re-enable")
+    val actor = scimAirbyteUserRepository.save(ScimAirbyteUser(name = "Re-enable actor", email = "re-enable-actor@example.com"))
+    val disabledAt = OffsetDateTime.now().minusDays(1).truncatedTo(ChronoUnit.MICROS)
+    val saved =
+      scimConfigurationRepository.save(
+        ScimConfiguration(
+          organizationId = organization.id!!,
+          idpProvider = "okta",
+          enabled = false,
+          createdByUserId = actor.id,
+          disabledAt = disabledAt,
+          disabledByUserId = actor.id,
+        ),
+      )
+    val createdAt = scimConfigurationRepository.findByOrganizationId(organization.id!!)!!.createdAt
+    val issuedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS)
+
+    val updated =
+      scimConfigurationRepository.reenableByIdAndOrganizationId(
+        id = saved.id!!,
+        organizationId = organization.id!!,
+        tokenHash = "replacement-hash",
+        tokenIssuedAt = issuedAt,
+        tokenIssuedByUserId = actor.id,
+        updatedAt = issuedAt,
+      )
+
+    assertThat(updated).isEqualTo(1)
+    val reenabled = scimConfigurationRepository.findByOrganizationId(organization.id!!)!!
+    assertThat(reenabled.enabled).isTrue()
+    assertThat(reenabled.tokenHash).isEqualTo("replacement-hash")
+    assertThat(reenabled.tokenIssuedAt).isEqualTo(issuedAt)
+    assertThat(reenabled.tokenIssuedByUserId).isEqualTo(actor.id)
+    assertThat(reenabled.disabledAt).isNull()
+    assertThat(reenabled.disabledByUserId).isNull()
+    assertThat(reenabled.idpProvider).isEqualTo("okta")
+    assertThat(reenabled.createdByUserId).isEqualTo(actor.id)
+    assertThat(reenabled.createdAt).isEqualTo(createdAt)
   }
 
   @Test
@@ -170,9 +215,19 @@ class ScimConfigurationRepositoryTest : AbstractConfigRepositoryTest() {
         disabledByUserId = UUID.randomUUID(),
         updatedAt = attemptedAt,
       )
+    val reenabled =
+      scimConfigurationRepository.reenableByIdAndOrganizationId(
+        id = saved.id!!,
+        organizationId = otherOrganization.id!!,
+        tokenHash = "re-enabled-hash",
+        tokenIssuedAt = attemptedAt,
+        tokenIssuedByUserId = UUID.randomUUID(),
+        updatedAt = attemptedAt,
+      )
 
     assertThat(rotated).isZero()
     assertThat(disabled).isZero()
+    assertThat(reenabled).isZero()
     val unchanged = scimConfigurationRepository.findByOrganizationId(configuredOrganization.id!!)
     assertThat(unchanged?.organizationId).isEqualTo(configuredOrganization.id!!)
     assertThat(unchanged?.tokenHash).isEqualTo("original-hash")

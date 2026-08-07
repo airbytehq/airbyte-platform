@@ -9,6 +9,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.time.Duration
 
 @MicronautTest(environments = [Environment.TEST])
 internal class AirbyteKeycloakConfigDefaultTest {
@@ -21,11 +22,14 @@ internal class AirbyteKeycloakConfigDefaultTest {
     assertEquals(DEFAULT_KEYCLOAK_BASE_PATH, airbyteKeycloakConfig.basePath)
     assertEquals(DEFAULT_KEYCLOAK_CLIENT_ID, airbyteKeycloakConfig.clientId)
     assertEquals(DEFAULT_KEYCLOAK_CLIENT_REALM, airbyteKeycloakConfig.clientRealm)
+    assertEquals(Duration.ofSeconds(5), airbyteKeycloakConfig.connectTimeout)
+    assertEquals(Duration.ofSeconds(5), airbyteKeycloakConfig.connectionCheckoutTimeout)
     assertEquals("", airbyteKeycloakConfig.host)
     assertEquals(DEFAULT_KEYCLOAK_INTERNAL_REALM, airbyteKeycloakConfig.internalRealm)
     assertEquals(DEFAULT_KEYCLOAK_PASSWORD, airbyteKeycloakConfig.password)
     assertEquals(DEFAULT_KEYCLOAK_PROTOCOL, airbyteKeycloakConfig.protocol)
     assertEquals(DEFAULT_KEYCLOAK_REALM, airbyteKeycloakConfig.realm)
+    assertEquals(Duration.ofSeconds(5), airbyteKeycloakConfig.readTimeout)
     assertEquals(false, airbyteKeycloakConfig.resetRealm)
     assertEquals(DEFAULT_KEYCLOAK_USERNAME, airbyteKeycloakConfig.username)
     assertEquals(DEFAULT_KEYCLOAK_WEB_CLIENT_ID, airbyteKeycloakConfig.webClientId)
@@ -43,11 +47,14 @@ internal class AirbyteKeycloakConfigStiggTest {
     assertEquals("test-base-path", airbyteKeycloakConfig.basePath)
     assertEquals("test-client-id", airbyteKeycloakConfig.clientId)
     assertEquals("test-client-realm", airbyteKeycloakConfig.clientRealm)
+    assertEquals(Duration.ofMillis(125), airbyteKeycloakConfig.connectTimeout)
+    assertEquals(Duration.ofMillis(225), airbyteKeycloakConfig.connectionCheckoutTimeout)
     assertEquals("test-host", airbyteKeycloakConfig.host)
     assertEquals("test-internal-realm", airbyteKeycloakConfig.internalRealm)
     assertEquals("test-password", airbyteKeycloakConfig.password)
     assertEquals("test-protocol", airbyteKeycloakConfig.protocol)
     assertEquals("test-realm", airbyteKeycloakConfig.realm)
+    assertEquals(Duration.ofMillis(375), airbyteKeycloakConfig.readTimeout)
     assertEquals(true, airbyteKeycloakConfig.resetRealm)
     assertEquals("test-username", airbyteKeycloakConfig.username)
     assertEquals("test-web-client-id", airbyteKeycloakConfig.webClientId)

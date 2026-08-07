@@ -29,14 +29,14 @@ class DestinationOauthApiController(
   private val oAuthHandler: OAuthHandler,
 ) : DestinationOauthApi {
   @Post("/complete_oauth")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun completeDestinationOAuth(
     @Body completeDestinationOAuthRequest: CompleteDestinationOAuthRequest,
   ): CompleteOAuthResponse? = execute { oAuthHandler.completeDestinationOAuth(completeDestinationOAuthRequest) }
 
   @Post("/get_consent_url")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getDestinationOAuthConsent(
     @Body destinationOauthConsentRequest: DestinationOauthConsentRequest,

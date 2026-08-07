@@ -4,11 +4,14 @@ airbyte:
     base-path: test-base-path
     client-id: test-client-id
     client-realm: test-client-realm
+    connect-timeout: PT0.125S
+    connection-checkout-timeout: PT0.225S
     host: test-host
     internal-realm: test-internal-realm
     password: test-password
     protocol: test-protocol
     realm: test-realm
+    read-timeout: PT0.375S
     reset-realm: true
     username: test-username
     web-client-id: test-web-client-id

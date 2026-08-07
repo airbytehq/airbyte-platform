@@ -93,7 +93,13 @@ data class GoogleSecretsManagerRuntimeConfig(
   val gcpCredentials: String,
   val region: String?,
 ) {
-  companion object {
+  companion object : RuntimeConfigValidator {
+    // Checked when a user saves their secret-storage credentials, so an incomplete config is
+    // answered immediately with which keys to fix.
+    private val REQUIRED_CONFIG_KEYS = setOf("gcpProjectId", "gcpCredentialsJson")
+
+    override fun validate(config: Map<String, String>): RuntimeConfigError? = missingKeysError(config, REQUIRED_CONFIG_KEYS)
+
     fun fromSecretPersistenceConfig(config: SecretPersistenceConfig): GoogleSecretsManagerRuntimeConfig {
       // TODO: We should unmarshal this into a typed object instead of relying on the `configuration` map
       return GoogleSecretsManagerRuntimeConfig(

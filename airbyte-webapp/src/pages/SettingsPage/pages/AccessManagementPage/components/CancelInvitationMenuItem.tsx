@@ -43,7 +43,7 @@ export const CancelInvitationMenuItem: React.FC<CancelInvitationMenuItemProps> =
       title: <FormattedMessage id="userInvitations.cancel.confirm.title" />,
       submitButtonText: "userInvitations.cancel.confirm.title",
       onSubmit: async () => {
-        await cancelInvitation({ inviteCode: user.id });
+        await cancelInvitation({ id: user.id });
         closeConfirmationModal();
       },
       submitButtonDataId: "cancel-invite",

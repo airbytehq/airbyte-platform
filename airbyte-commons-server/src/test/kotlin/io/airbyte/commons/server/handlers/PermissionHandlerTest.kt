@@ -17,6 +17,7 @@ import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.PermissionPersistence
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
 import io.airbyte.data.services.WorkspaceService
@@ -96,6 +97,33 @@ internal class PermissionHandlerTest {
       Assertions.assertThrows(
         JsonValidationException::class.java,
       ) { permissionHandler.createPermission(permissionCreate) }
+    }
+
+    @Test
+    fun `permission with both workspace and organization scope is rejected before delegation`() {
+      val permissionCreate =
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
+          .withUserId(userId)
+          .withWorkspaceId(workspaceId)
+          .withOrganizationId(UUID.randomUUID())
+
+      Assertions.assertThrows(JsonValidationException::class.java) {
+        permissionHandler.createPermission(permissionCreate)
+      }
+
+      verify(permissionService, times(0)).createPermission(anyOrNull())
+    }
+
+    @Test
+    fun `inactive SCIM User grant becomes an HTTP conflict`() {
+      whenever(permissionService.getPermissionsForUser(userId)).thenReturn(emptyList())
+      whenever(permissionService.createPermission(anyOrNull()))
+        .thenThrow(InactiveUserAccessException("inactive"))
+
+      Assertions.assertThrows(ConflictException::class.java) {
+        permissionHandler.createPermission(permission)
+      }
     }
   }
 
@@ -451,7 +479,17 @@ internal class PermissionHandlerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = Permission.PermissionType::class, names = ["WORKSPACE_OWNER", "WORKSPACE_ADMIN", "WORKSPACE_EDITOR", "WORKSPACE_READER"])
+    @EnumSource(
+      value = Permission.PermissionType::class,
+      names = [
+        "WORKSPACE_OWNER",
+        "WORKSPACE_ADMIN",
+        "WORKSPACE_EDITOR",
+        "WORKSPACE_SOURCE_EDITOR",
+        "WORKSPACE_DESTINATION_EDITOR",
+        "WORKSPACE_READER",
+      ],
+    )
     fun workspaceLevelPermissions(userPermissionType: Permission.PermissionType?) {
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
@@ -556,6 +594,53 @@ internal class PermissionHandlerTest {
         Assertions.assertEquals(
           PermissionCheckRead.StatusEnum.FAILED,
           permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_READER)).getStatus(),
+        )
+        Assertions.assertEquals(
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_MEMBER)).getStatus(),
+        )
+      }
+
+      if (userPermissionType == Permission.PermissionType.WORKSPACE_SOURCE_EDITOR ||
+        userPermissionType == Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR
+      ) {
+        val oppositeActorEditor =
+          if (userPermissionType == Permission.PermissionType.WORKSPACE_SOURCE_EDITOR) {
+            Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR
+          } else {
+            Permission.PermissionType.WORKSPACE_SOURCE_EDITOR
+          }
+
+        Assertions.assertEquals(
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(userPermissionType)).getStatus(),
+        )
+        Assertions.assertEquals(
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_RUNNER)).getStatus(),
+        )
+        Assertions.assertEquals(
+          PermissionCheckRead.StatusEnum.SUCCEEDED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_READER)).getStatus(),
+        )
+
+        // The opposite actor type's editor, and the full workspace editor, are both out of reach.
+        Assertions.assertEquals(
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(oppositeActorEditor)).getStatus(),
+        )
+        Assertions.assertEquals(
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_EDITOR)).getStatus(),
+        )
+        Assertions.assertEquals(
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getWorkspacePermissionCheck(Permission.PermissionType.WORKSPACE_ADMIN)).getStatus(),
+        )
+
+        Assertions.assertEquals(
+          PermissionCheckRead.StatusEnum.FAILED,
+          permissionHandler.checkPermissions(getOrganizationPermissionCheck(Permission.PermissionType.ORGANIZATION_ADMIN)).getStatus(),
         )
         Assertions.assertEquals(
           PermissionCheckRead.StatusEnum.FAILED,
@@ -843,6 +928,8 @@ internal class PermissionHandlerTest {
           Permission.PermissionType.WORKSPACE_OWNER,
           Permission.PermissionType.WORKSPACE_ADMIN,
           Permission.PermissionType.WORKSPACE_EDITOR,
+          Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+          Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
           Permission.PermissionType.WORKSPACE_RUNNER,
           Permission.PermissionType.WORKSPACE_READER,
           Permission.PermissionType.ORGANIZATION_ADMIN,
@@ -994,6 +1081,68 @@ internal class PermissionHandlerTest {
       // verify the intended permission was deleted
       verify(permissionService).deletePermissions(listOf<UUID>(workspacePermission.getPermissionId()))
       verify(permissionService, times(1)).deletePermissions(anyOrNull())
+    }
+  }
+
+  @Nested
+  internal inner class CountInstanceEditors {
+    @Test
+    fun actorScopedWorkspaceEditorsCountAsEditors() {
+      val sourceEditorUserId = UUID.randomUUID()
+      val destinationEditorUserId = UUID.randomUUID()
+
+      whenever(permissionService.listPermissions()).thenReturn(
+        listOf<Permission>(
+          Permission()
+            .withUserId(sourceEditorUserId)
+            .withWorkspaceId(UUID.randomUUID())
+            .withPermissionType(Permission.PermissionType.WORKSPACE_SOURCE_EDITOR),
+          Permission()
+            .withUserId(destinationEditorUserId)
+            .withWorkspaceId(UUID.randomUUID())
+            .withPermissionType(Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR),
+        ),
+      )
+
+      Assertions.assertEquals(2, permissionHandler.countInstanceEditors())
+    }
+
+    @Test
+    fun readersDoNotCountAsEditors() {
+      whenever(permissionService.listPermissions()).thenReturn(
+        listOf<Permission>(
+          Permission()
+            .withUserId(UUID.randomUUID())
+            .withWorkspaceId(UUID.randomUUID())
+            .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+          Permission()
+            .withUserId(UUID.randomUUID())
+            .withOrganizationId(UUID.randomUUID())
+            .withPermissionType(Permission.PermissionType.ORGANIZATION_READER),
+        ),
+      )
+
+      Assertions.assertEquals(0, permissionHandler.countInstanceEditors())
+    }
+
+    @Test
+    fun oneUserWithMultipleEditorRolesCountsOnce() {
+      val userId = UUID.randomUUID()
+
+      whenever(permissionService.listPermissions()).thenReturn(
+        listOf<Permission>(
+          Permission()
+            .withUserId(userId)
+            .withWorkspaceId(UUID.randomUUID())
+            .withPermissionType(Permission.PermissionType.WORKSPACE_SOURCE_EDITOR),
+          Permission()
+            .withUserId(userId)
+            .withWorkspaceId(UUID.randomUUID())
+            .withPermissionType(Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR),
+        ),
+      )
+
+      Assertions.assertEquals(1, permissionHandler.countInstanceEditors())
     }
   }
 }

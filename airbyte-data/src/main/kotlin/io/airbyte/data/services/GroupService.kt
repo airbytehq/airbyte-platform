@@ -10,6 +10,7 @@ import io.airbyte.domain.models.GroupId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.UserId
 import java.io.IOException
+import java.util.UUID
 
 /**
  * Service for managing user groups within organizations.
@@ -22,6 +23,16 @@ interface GroupService {
    * @throws IOException if there's an error persisting the group
    */
   fun createGroup(group: Group): Group
+
+  /**
+   * Creates a Group for an enabled SCIM configuration after verifying that the configuration owns
+   * the organization. This is intentionally distinct from the normal API path.
+   */
+  fun createGroupForScim(
+    configurationId: UUID,
+    organizationId: OrganizationId,
+    name: String,
+  ): Group
 
   /**
    * Retrieves a group by its ID.
@@ -37,11 +48,22 @@ interface GroupService {
    */
   fun updateGroup(group: Group): Group
 
+  /** Renames a mapped Group after verifying the enabled SCIM configuration that owns it. */
+  fun updateGroupForScim(
+    configurationId: UUID,
+    organizationId: OrganizationId,
+    groupId: GroupId,
+    name: String,
+  ): Group
+
   /**
    * Deletes a group and all its memberships.
    * @throws IOException if there's an error deleting the group
    */
-  fun deleteGroup(groupId: GroupId)
+  fun deleteGroup(
+    groupId: GroupId,
+    organizationId: OrganizationId,
+  )
 
   /**
    * Lists all groups within an organization.
@@ -55,11 +77,15 @@ interface GroupService {
   /**
    * Adds a user to a group.
    * @throws AlreadyGroupMemberException if the user is already a member of the group
+   * @throws InactiveUserAccessException if the user has an inactive SCIM mapping while SCIM is enabled
+   * @throws UserNotOrganizationMemberException if the user does not belong to the group's organization
    * @throws IOException if there's an error persisting the membership
    */
   fun addGroupMember(
     groupId: GroupId,
     userId: UserId,
+    organizationId: OrganizationId,
+    source: GroupMembershipSource = GroupMembershipSource.Manual,
   ): GroupMember
 
   /**
@@ -69,6 +95,15 @@ interface GroupService {
   fun removeGroupMember(
     groupId: GroupId,
     userId: UserId,
+    organizationId: OrganizationId,
+  )
+
+  /** Replaces direct membership after verifying the enabled SCIM configuration and Group mapping. */
+  fun replaceGroupMembersForScim(
+    configurationId: UUID,
+    organizationId: OrganizationId,
+    groupId: GroupId,
+    userIds: List<UserId>,
   )
 
   /**
@@ -126,6 +161,24 @@ class GroupNameNotUniqueException(
 class AlreadyGroupMemberException(
   message: String,
 ) : Exception(message)
+
+class UserNotOrganizationMemberException(
+  message: String,
+) : Exception(message)
+
+/** Exception thrown when a normal API attempts an IdP-owned mutation. */
+class GroupManagedByScimException(
+  message: String,
+) : Exception(message)
+
+sealed interface GroupMembershipSource {
+  data object Manual : GroupMembershipSource
+
+  data class Scim(
+    val configurationId: UUID,
+    val userMappingId: UUID,
+  ) : GroupMembershipSource
+}
 
 /**
  * Pagination params is used to paginate returns from this service

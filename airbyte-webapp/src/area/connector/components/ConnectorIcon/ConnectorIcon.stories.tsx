@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 import classNames from "classnames";
 
 import { ConnectorIcon } from "./ConnectorIcon";
@@ -7,9 +7,9 @@ import styles from "./ConnectorIcon.story.module.scss";
 export default {
   title: "Common/ConnectorIcon",
   component: ConnectorIcon,
-} as ComponentMeta<typeof ConnectorIcon>;
+} as Meta<typeof ConnectorIcon>;
 
-const Template: ComponentStory<typeof ConnectorIcon> = (args) => <ConnectorIcon {...args} />;
+const Template: StoryFn<typeof ConnectorIcon> = (args) => <ConnectorIcon {...args} />;
 
 export const Primary = Template.bind({});
 Primary.args = {

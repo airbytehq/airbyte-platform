@@ -5,6 +5,7 @@ import (
 
 	helmtests "github.com/airbytehq/airbyte-platform-internal/oss/charts/helm-tests"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestDefaultDatabaseConfiguration(t *testing.T) {
@@ -24,6 +25,30 @@ func TestDefaultDatabaseConfiguration(t *testing.T) {
 		app := releaseApps[name]
 		chartYaml.VerifyEnvVarsForApp(t, app.Kind, app.FQN(), expectedEnvVars)
 	}
+}
+
+func TestPostgresqlStorageConfiguration(t *testing.T) {
+	opts := helmtests.BaseHelmOptions()
+	opts.SetValues["postgresql.storage.volumeClaimValue"] = "2Gi"
+	chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
+	assert.NoError(t, err)
+
+	db := helmtests.GetStatefulSet(chartYaml.String(), "airbyte-db")
+	assert.NotNil(t, db)
+	storage := db.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]
+	assert.Equal(t, "2Gi", storage.String())
+}
+
+func TestPostgresqlNullStorage(t *testing.T) {
+	opts := helmtests.BaseHelmOptions()
+	opts.SetValues["postgresql.storage"] = "null"
+	chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
+	assert.NoError(t, err)
+
+	db := helmtests.GetStatefulSet(chartYaml.String(), "airbyte-db")
+	assert.NotNil(t, db)
+	storage := db.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]
+	assert.Equal(t, "500Mi", storage.String())
 }
 
 func TestDatabaseConfiguration(t *testing.T) {

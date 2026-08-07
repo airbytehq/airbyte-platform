@@ -141,3 +141,7 @@ class InvalidServiceAccountPermissionRequestException(
 class InvalidGroupPermissionRequestException(
   message: String,
 ) : Exception(message)
+
+class InactiveUserAccessException(
+  message: String,
+) : IllegalStateException(message)

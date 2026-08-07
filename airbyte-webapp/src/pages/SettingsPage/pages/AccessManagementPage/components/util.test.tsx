@@ -13,6 +13,9 @@ import {
   getWorkspaceAccessLevel,
   getOrganizationAccessLevel,
   isTeamsFeaturePermissionType,
+  permissionsByResourceType,
+  permissionStringDictionary,
+  permissionDescriptionDictionary,
 } from "./util";
 
 describe("unifyWorkspaceUserData", () => {
@@ -59,7 +62,7 @@ describe("unifyWorkspaceUserData", () => {
         },
       },
       {
-        id: "code1",
+        id: "invitation1",
         invitationPermissionType: "workspace_reader",
         invitationStatus: "pending",
         userEmail: "userInvite1@example.com",
@@ -123,7 +126,7 @@ describe("unifyOrganizationUserData", () => {
         userName: "Org And Workspace User",
       },
       {
-        id: "code1",
+        id: "invitation1",
         invitationPermissionType: "organization_reader",
         invitationStatus: "pending",
         userEmail: "userInvite1@example.com",
@@ -220,5 +223,77 @@ describe("isTeamsFeaturePermissionType", () => {
 
   it("should return false for instance_admin", () => {
     expect(isTeamsFeaturePermissionType(PermissionType.instance_admin)).toBe(false);
+  });
+
+  it("should return true for the actor-scoped workspace editors", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.workspace_source_editor)).toBe(true);
+    expect(isTeamsFeaturePermissionType(PermissionType.workspace_destination_editor)).toBe(true);
+  });
+});
+
+describe("actor-scoped workspace editor roles", () => {
+  it.each([PermissionType.workspace_source_editor, PermissionType.workspace_destination_editor])(
+    "%s is assignable at the workspace scope",
+    (permissionType) => {
+      expect(permissionsByResourceType.workspace).toContain(permissionType);
+      expect(permissionsByResourceType.organization).not.toContain(permissionType);
+      expect(permissionsByResourceType.instance).not.toContain(permissionType);
+    }
+  );
+
+  it.each([PermissionType.workspace_source_editor, PermissionType.workspace_destination_editor])(
+    "%s has a label and a description",
+    (permissionType) => {
+      expect(permissionStringDictionary[permissionType].resource).toBe("resource.workspace");
+      expect(permissionStringDictionary[permissionType].role).toBeTruthy();
+      expect(permissionDescriptionDictionary[permissionType].id).toBeTruthy();
+      expect(permissionDescriptionDictionary[permissionType].values.resourceType).toBe("workspace");
+    }
+  );
+
+  it("resolves to its own access level rather than falling back to a lesser role", () => {
+    expect(
+      getWorkspaceAccessLevel({
+        workspacePermission: {
+          permissionType: PermissionType.workspace_source_editor,
+          permissionId: "1",
+          userId: "user1",
+        },
+      })
+    ).toBe("SOURCE_EDITOR");
+
+    expect(
+      getWorkspaceAccessLevel({
+        workspacePermission: {
+          permissionType: PermissionType.workspace_destination_editor,
+          permissionId: "1",
+          userId: "user1",
+        },
+      })
+    ).toBe("DESTINATION_EDITOR");
+  });
+
+  it("is outranked by a workspace admin and outranks a runner", () => {
+    expect(
+      getWorkspaceAccessLevel({
+        workspacePermission: {
+          permissionType: PermissionType.workspace_source_editor,
+          permissionId: "1",
+          userId: "user1",
+        },
+        organizationPermission: { permissionType: PermissionType.organization_admin, permissionId: "2", userId: "u2" },
+      })
+    ).toBe("ADMIN");
+
+    expect(
+      getWorkspaceAccessLevel({
+        workspacePermission: {
+          permissionType: PermissionType.workspace_source_editor,
+          permissionId: "1",
+          userId: "user1",
+        },
+        organizationPermission: { permissionType: PermissionType.organization_runner, permissionId: "2", userId: "u2" },
+      })
+    ).toBe("SOURCE_EDITOR");
   });
 });

@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence
 
+import io.airbyte.config.AuthProvider
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.Permission
 import io.airbyte.config.secrets.SecretsRepositoryReader
@@ -103,6 +104,35 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
       permissionPersistence!!
         .findPermissionTypeForUserAndOrganization(MockData.ORGANIZATION_ID_2, MockData.CREATOR_USER_ID_5.toString())
     Assertions.assertEquals(Permission.PermissionType.ORGANIZATION_READER, permissionType)
+  }
+
+  @Test
+  fun crossProviderIdentityRepeatPreservesWorkspaceAndOrganizationPermissionResolution() {
+    val userPersistence = UserPersistence(database)
+    val authUserId = MockData.CREATOR_USER_ID_5.toString()
+
+    Assertions.assertTrue(
+      userPersistence.writeAuthUser(
+        MockData.CREATOR_USER_ID_5,
+        authUserId,
+        AuthProvider.GOOGLE_IDENTITY_PLATFORM,
+      ),
+    )
+
+    Assertions.assertEquals(
+      1,
+      userPersistence
+        .listAuthUsersForUser(MockData.CREATOR_USER_ID_5)
+        .count { it.authUserId == authUserId },
+    )
+    Assertions.assertEquals(
+      Permission.PermissionType.WORKSPACE_ADMIN,
+      permissionPersistence!!.findPermissionTypeForUserAndWorkspace(MockData.WORKSPACE_ID_2, authUserId),
+    )
+    Assertions.assertEquals(
+      Permission.PermissionType.ORGANIZATION_READER,
+      permissionPersistence!!.findPermissionTypeForUserAndOrganization(MockData.ORGANIZATION_ID_2, authUserId),
+    )
   }
 
   @Test

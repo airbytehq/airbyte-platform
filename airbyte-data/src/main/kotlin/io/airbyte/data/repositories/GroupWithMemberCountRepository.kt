@@ -38,6 +38,23 @@ interface GroupWithMemberCountRepository : GenericRepository<GroupWithMemberCoun
   )
   fun findById(id: UUID): Optional<GroupWithMemberCount>
 
+  @Query(
+    """
+    SELECT g.id, g.name, g.description, g.organization_id, g.created_at, g.updated_at,
+           COALESCE(COUNT(gm.user_id), 0) as member_count
+    FROM "group" g
+    LEFT JOIN group_member gm ON g.id = gm.group_id
+    WHERE g.id = :id
+      AND g.organization_id = :organizationId
+    GROUP BY g.id, g.name, g.description, g.organization_id, g.created_at, g.updated_at
+    """,
+    nativeQuery = true,
+  )
+  fun findByIdAndOrganizationId(
+    id: UUID,
+    organizationId: UUID,
+  ): Optional<GroupWithMemberCount>
+
   /**
    * Find a group by name within a specific organization with member count.
    *

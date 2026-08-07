@@ -1,8 +1,10 @@
 {{- if .Values.minio.enabled }}
 {{- if (eq (lower (default "" .Values.global.storage.type)) "minio")}}
+{{- $storage := .Values.minio.storage | default dict }}
 apiVersion: apps/v1 #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
 kind: StatefulSet
 metadata:
+  namespace: {{ include "airbyte.namespace" . }}
   # This name uniquely identifies the Deployment
   name: airbyte-minio
   annotations:
@@ -22,7 +24,10 @@ spec:
           accessModes: [ "ReadWriteOnce" ]
           resources:
             requests:
-              storage: {{ .Values.minio.storage.volumeClaimValue  }}
+              storage: {{ $storage.volumeClaimValue | default "500Mi" }}
+          {{- if ne $storage.storageClassName nil }}
+          storageClassName: {{ $storage.storageClassName | quote }}
+          {{- end }}
   template:
     metadata:
       labels:
@@ -89,6 +94,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  namespace: {{ include "airbyte.namespace" . }}
   name: airbyte-minio-svc
   labels:
     {{ include "airbyte.minioLabels" . | nindent 4 }}
@@ -108,6 +114,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
+  namespace: {{ include "airbyte.namespace" . }}
   name: airbyte-minio-create-bucket
   annotations:
     "helm.sh/hook": post-install, post-upgrade

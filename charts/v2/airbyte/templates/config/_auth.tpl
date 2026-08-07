@@ -316,7 +316,7 @@ Renders the auth.bootstrap.security.jwtSignatureSecretKey environment variable
 Renders the global.auth.dataPlane.clientIdSecretKey value
 */}}
 {{- define "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" }}
-    {{- .Values.global.auth.dataPlane.clientIdSecretKey | default "dataplane-client-id" }}
+    {{- (default (default "dataplane-client-id" .Values.global.auth.dataPlane.clientIdSecretKey) .Values.workloadLauncher.dataPlane.clientIdSecretKey) }}
 {{- end }}
 
 {{/*
@@ -334,7 +334,7 @@ Renders the auth.bootstrap.dataPlane.clientIdSecretKey environment variable
 Renders the global.auth.dataPlane.clientSecretSecretKey value
 */}}
 {{- define "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" }}
-    {{- .Values.global.auth.dataPlane.clientSecretSecretKey | default "dataplane-client-secret" }}
+    {{- (default (default "dataplane-client-secret" .Values.global.auth.dataPlane.clientSecretSecretKey) .Values.workloadLauncher.dataPlane.clientSecretSecretKey) }}
 {{- end }}
 
 {{/*

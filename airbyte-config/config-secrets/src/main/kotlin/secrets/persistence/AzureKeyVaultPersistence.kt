@@ -12,7 +12,10 @@ import com.azure.security.keyvault.secrets.models.SecretProperties
 import io.airbyte.config.SecretPersistenceConfig
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.persistence.RuntimeConfigError
+import io.airbyte.config.secrets.persistence.RuntimeConfigValidator
 import io.airbyte.config.secrets.persistence.SecretPersistence
+import io.airbyte.config.secrets.persistence.missingKeysError
 import io.airbyte.micronaut.runtime.AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.AzureKeyVaultSecretsManagerConfig
 import io.airbyte.micronaut.runtime.SECRET_MANAGER_AZURE_KEY_VAULT
 import io.airbyte.micronaut.runtime.SECRET_PERSISTENCE
@@ -47,7 +50,13 @@ class AzureKeyVaultRuntimeConfiguration(
   val clientSecret: String,
   val tags: String?,
 ) {
-  companion object {
+  companion object : RuntimeConfigValidator {
+    // Checked when a user saves their secret-storage credentials, so an incomplete config is
+    // answered immediately with which keys to fix.
+    private val REQUIRED_CONFIG_KEYS = setOf("vaultUrl", "tenantId", "clientId", "clientSecret")
+
+    override fun validate(config: Map<String, String>): RuntimeConfigError? = missingKeysError(config, REQUIRED_CONFIG_KEYS)
+
     fun fromSecretPersistenceConfig(config: SecretPersistenceConfig): AzureKeyVaultRuntimeConfiguration =
       AzureKeyVaultRuntimeConfiguration(
         vaultUrl = config.configuration["vaultUrl"]!!,

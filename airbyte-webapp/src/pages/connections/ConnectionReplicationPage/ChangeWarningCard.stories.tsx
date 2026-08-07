@@ -1,4 +1,4 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 
 import { ChangeWarningCard } from "./ChangeWarningCard";
 import { ChangeWarning } from "./connectionUpdateHelpers";
@@ -6,9 +6,9 @@ import { ChangeWarning } from "./connectionUpdateHelpers";
 export default {
   title: "connection/ChangeWarningCard",
   component: ChangeWarningCard,
-} as ComponentMeta<typeof ChangeWarningCard>;
+} as Meta<typeof ChangeWarningCard>;
 
-const Template: ComponentStory<typeof ChangeWarningCard> = (args) => (
+const Template: StoryFn<typeof ChangeWarningCard> = (args) => (
   <ChangeWarningCard
     warning={args.warning}
     affectedStreams={args.affectedStreams}

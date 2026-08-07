@@ -1,0 +1,28 @@
+@use "scss/variables";
+@use "scss/colors";
+
+// The label inherits Badge's 9px font while the xs icon is a fixed 12px; sizing the chip's
+// inner wrapper (not a Text, whose default color class would repaint the badge's variant color)
+// brings the label up to match without touching the inherited color.
+.statusChipContent {
+  font-size: variables.$font-size-sm;
+}
+
+.summaryTable {
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-md;
+  background-color: colors.$foreground;
+}
+
+.summaryRow {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  align-items: center;
+  padding: variables.$spacing-sm variables.$spacing-md;
+  min-height: 40px;
+  overflow-wrap: anywhere;
+
+  &:not(:last-child) {
+    border-bottom: variables.$border-thin solid colors.$grey-100;
+  }
+}

@@ -51,19 +51,23 @@ class CatalogApiController(
       )
     }
 
-    // Require WORKSPACE_EDITOR role when persisting changes, WORKSPACE_READER otherwise
-    val requiredRole =
+    // Require an editor role when persisting changes, WORKSPACE_READER otherwise
+    val requiredRoles =
       if (diffCatalogsRequest.persistChanges == true) {
-        AuthRoleConstants.WORKSPACE_EDITOR
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+        )
       } else {
-        AuthRoleConstants.WORKSPACE_READER
+        setOf(AuthRoleConstants.WORKSPACE_READER)
       }
 
     return withRoleValidation(
       currentCatalogId = diffCatalogsRequest.currentCatalogId,
       newCatalogId = diffCatalogsRequest.newCatalogId,
       connectionId = diffCatalogsRequest.connectionId,
-      role = requiredRole,
+      roles = requiredRoles,
     ) {
       diffCatalogsRequest.connectionId?.let { TracingHelper.addConnection(it) }
       catalogDiffService.diffCatalogs(diffCatalogsRequest)
@@ -75,7 +79,7 @@ class CatalogApiController(
     currentCatalogId: UUID,
     newCatalogId: UUID,
     connectionId: UUID?,
-    role: String,
+    roles: Set<String>,
     call: () -> T,
   ): T {
     val workspaceId: UUID
@@ -105,12 +109,12 @@ class CatalogApiController(
       workspaceId = currentCatalogWorkspaceId
     }
 
-    // Validate user has required role for the workspace
+    // Validate user has one of the required roles for the workspace
     roleResolver
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireOneOfRoles(setOf(role))
+      .requireOneOfRoles(roles)
 
     return call()
   }

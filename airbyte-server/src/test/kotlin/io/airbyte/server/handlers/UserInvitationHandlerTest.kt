@@ -8,6 +8,8 @@ import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.api.model.generated.InviteCodeRequestBody
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.api.model.generated.UserInvitationAdminRead
+import io.airbyte.api.model.generated.UserInvitationCancelRequestBody
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
 import io.airbyte.api.model.generated.UserInvitationCreateResponse
 import io.airbyte.api.model.generated.UserInvitationListRequestBody
@@ -25,6 +27,7 @@ import io.airbyte.config.User
 import io.airbyte.config.UserInvitation
 import io.airbyte.config.UserPermission
 import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
 import io.airbyte.data.services.OrganizationService
@@ -255,7 +258,6 @@ internal class UserInvitationHandlerTest {
 
         // make sure the final result is correct
         Assertions.assertFalse(result.directlyAdded)
-        Assertions.assertEquals(capturedUserInvitation.inviteCode, result.inviteCode)
 
         // verify we sent an invitation tracking event
         verify(exactly = 1) {
@@ -341,8 +343,6 @@ internal class UserInvitationHandlerTest {
 
         // make sure the final result is correct
         Assertions.assertTrue(result.directlyAdded)
-        Assertions.assertNull(result.inviteCode)
-
         // we don't send a "user invited" event when a user is directly added to a workspace.
         verify(exactly = 0) {
           trackingClient.track(any<UUID>(), any<ScopeType>(), any<String>())
@@ -425,15 +425,61 @@ internal class UserInvitationHandlerTest {
         ConflictException::class.java,
       ) { handler.accept(inviteCodeRequestBody, currentUser) }
     }
+
+    @Test
+    fun testInactiveScimUser() {
+      val invitation =
+        UserInvitation()
+          .withInviteCode(inviteCode)
+          .withInvitedEmail(CURRENT_USER_EMAIL)
+
+      every { service.getUserInvitationByInviteCode(inviteCode) } returns invitation
+      every { service.acceptUserInvitation(inviteCode, currentUser.userId) } throws
+        InactiveUserAccessException("inactive")
+
+      Assertions.assertThrows(
+        ConflictException::class.java,
+      ) { handler.accept(inviteCodeRequestBody, currentUser) }
+    }
   }
 
   @Nested
   internal inner class CancelInvitation {
     @Test
     fun testCancelInvitationCallsService() {
-      val inviteCode = "invite-code"
-      val req = InviteCodeRequestBody().inviteCode(inviteCode)
+      val invitationId = UUID.randomUUID()
+      val req = UserInvitationCancelRequestBody().id(invitationId)
 
+      val cancelledInvitation =
+        UserInvitation()
+          .withId(invitationId)
+          .withInvitedEmail("invited@airbyte.io")
+          .withStatus(InvitationStatus.CANCELLED)
+
+      every { service.cancelUserInvitation(invitationId) } returns cancelledInvitation
+      every { mapper.toAdminApi(cancelledInvitation) } returns mockk<UserInvitationAdminRead>()
+
+      handler.cancel(req)
+
+      verify(exactly = 1) { service.cancelUserInvitation(invitationId) }
+    }
+
+    @Test
+    fun testCancelInvitationThrowsConflictExceptionOnUnexpectedStatus() {
+      val invitationId = UUID.randomUUID()
+      val req = UserInvitationCancelRequestBody().id(invitationId)
+
+      every { service.cancelUserInvitation(invitationId) } answers { throw InvitationStatusUnexpectedException("unexpected status") }
+
+      Assertions.assertThrows(
+        ConflictException::class.java,
+      ) { handler.cancel(req) }
+    }
+
+    @Test
+    fun testCancelInvitationByInviteCodeCallsService() {
+      val inviteCode = "invite-code"
+      val req = UserInvitationCancelRequestBody().inviteCode(inviteCode)
       val cancelledInvitation =
         UserInvitation()
           .withInviteCode(inviteCode)
@@ -441,7 +487,7 @@ internal class UserInvitationHandlerTest {
           .withStatus(InvitationStatus.CANCELLED)
 
       every { service.cancelUserInvitation(inviteCode) } returns cancelledInvitation
-      every { mapper.toApi(cancelledInvitation) } returns mockk<UserInvitationRead>()
+      every { mapper.toAdminApi(cancelledInvitation) } returns mockk<UserInvitationAdminRead>()
 
       handler.cancel(req)
 
@@ -449,15 +495,10 @@ internal class UserInvitationHandlerTest {
     }
 
     @Test
-    fun testCancelInvitationThrowsConflictExceptionOnUnexpectedStatus() {
-      val inviteCode = "invite-code"
-      val req = InviteCodeRequestBody().inviteCode(inviteCode)
-
-      every { service.cancelUserInvitation(inviteCode) } answers { throw InvitationStatusUnexpectedException("unexpected status") }
-
+    fun testCancelInvitationWithoutIdentifierThrowsBadRequestException() {
       Assertions.assertThrows(
-        ConflictException::class.java,
-      ) { handler.cancel(req) }
+        io.airbyte.commons.server.errors.BadRequestException::class.java,
+      ) { handler.cancel(UserInvitationCancelRequestBody()) }
     }
   }
 
@@ -482,7 +523,7 @@ internal class UserInvitationHandlerTest {
 
     every { mapper.toDomain(io.airbyte.api.model.generated.ScopeType.WORKSPACE) } returns ScopeType.WORKSPACE
     every { mapper.toDomain(io.airbyte.api.model.generated.ScopeType.ORGANIZATION) } returns ScopeType.ORGANIZATION
-    every { mapper.toApi(any<UserInvitation>()) } returns mockk<UserInvitationRead>()
+    every { mapper.toAdminApi(any<UserInvitation>()) } returns mockk<UserInvitationAdminRead>()
 
     val workspaceResult =
       handler.getPendingInvitations(
@@ -503,7 +544,7 @@ internal class UserInvitationHandlerTest {
     verify(exactly = 1) { service.getPendingInvitations(ScopeType.WORKSPACE, workspaceId) }
     verify(exactly = 1) { service.getPendingInvitations(ScopeType.ORGANIZATION, organizationId) }
 
-    verify(exactly = workspaceInvitations.size + organizationInvitations.size) { mapper.toApi(any<UserInvitation>()) }
+    verify(exactly = workspaceInvitations.size + organizationInvitations.size) { mapper.toAdminApi(any<UserInvitation>()) }
   }
 
   companion object {

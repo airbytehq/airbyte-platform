@@ -1,0 +1,1255 @@
+{
+  "supported": [
+    {
+      "name": "Pathless User add merges supported mutable attributes",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "externalId": "external",
+        "userName": "alice@example.com",
+        "active": true,
+        "name": { "givenName": "Alice" },
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Add",
+            "value": {
+              "displayName": "Alice Example",
+              "active": false,
+              "name": { "familyName": "Example" }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "externalId": "external",
+        "userName": "alice@example.com",
+        "active": false,
+        "name": { "givenName": "Alice", "familyName": "Example" },
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ],
+        "displayName": "Alice Example"
+      }
+    },
+    {
+      "name": "Direct User email add promotes the submitted primary",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Add",
+            "path": "emails",
+            "value": {
+              "value": "new@example.com",
+              "type": "home",
+              "primary": true
+            }
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": false },
+          { "value": "new@example.com", "type": "home", "primary": true }
+        ]
+      }
+    },
+    {
+      "name": "Pathless User email add promotes the submitted primary",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Add",
+            "value": {
+              "emails": [
+                { "value": "new@example.com", "type": "home", "primary": true }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": false },
+          { "value": "new@example.com", "type": "home", "primary": true }
+        ]
+      }
+    },
+    {
+      "name": "Pathless User replace leaves omitted attributes unchanged",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "externalId": "external",
+        "userName": "alice@example.com",
+        "name": { "givenName": "Alice" },
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "value": {
+              "title": "Engineer",
+              "name": { "familyName": "Example" }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "externalId": "external",
+        "userName": "alice@example.com",
+        "name": { "givenName": "Alice", "familyName": "Example" },
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ],
+        "title": "Engineer"
+      }
+    },
+    {
+      "name": "Direct User paths cover strings active name emails and work email value",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "active": true,
+        "name": { "givenName": "Alice" },
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "userName",
+            "value": "alicia@example.com"
+          },
+          { "op": "Replace", "path": "active", "value": false },
+          { "op": "Add", "path": "displayName", "value": "Alicia" },
+          { "op": "Replace", "path": "name.givenName", "value": "Alicia" },
+          { "op": "Replace", "path": "title", "value": "Lead" },
+          {
+            "op": "Replace",
+            "path": "emails",
+            "value": [
+              {
+                "value": "intermediate@example.com",
+                "type": "work",
+                "primary": true
+              }
+            ]
+          },
+          {
+            "op": "Replace",
+            "path": "emails[type eq \"work\"].value",
+            "value": "alicia@example.com"
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alicia@example.com",
+        "active": false,
+        "name": { "givenName": "Alicia" },
+        "emails": [
+          { "value": "alicia@example.com", "type": "work", "primary": true }
+        ],
+        "displayName": "Alicia",
+        "title": "Lead"
+      }
+    },
+    {
+      "name": "Direct User name replace preserves omitted subattributes",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "name": { "givenName": "Alice", "familyName": "Before" },
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "name",
+            "value": { "familyName": "After" }
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "name": { "givenName": "Alice", "familyName": "After" },
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      }
+    },
+    {
+      "name": "User externalId explicit null clearing",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "externalId": "external",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{ "op": "Replace", "path": "externalId", "value": null }]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      }
+    },
+    {
+      "name": "User externalId remove clearing",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "externalId": "external",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{ "op": "Remove", "path": "externalId" }]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      }
+    },
+    {
+      "name": "Mixed-case core-qualified User direct and value paths",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "UrN:ieTf:PaRaMs:ScIm:ScHeMaS:CoRe:2.0:uSeR:DiSpLaYnAmE",
+            "value": "Alice Example"
+          },
+          {
+            "op": "Replace",
+            "path": "uRn:IeTf:pArAmS:sCiM:sChEmAs:cOrE:2.0:UsEr:EmAiLs[TyPe eQ \"WoRk\"].VaLuE",
+            "value": "new@example.com"
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "new@example.com", "type": "work", "primary": true }
+        ],
+        "displayName": "Alice Example"
+      }
+    },
+    {
+      "name": "Pathless User password-only replace is an ignored no-op",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          { "op": "Replace", "value": { "password": "discarded" } }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      }
+    },
+    {
+      "name": "Pathless User id meta and groups-only replace is an ignored no-op",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ],
+        "meta": { "resourceType": "User" }
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "value": {
+              "id": "ignored-id",
+              "meta": { "resourceType": "Ignored" },
+              "groups": [{ "value": "ignored-group" }]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ],
+        "meta": { "resourceType": "User" }
+      }
+    },
+    {
+      "name": "Pathless User schemas-only replace validates and is an ignored no-op",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "value": {
+              "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      }
+    },
+    {
+      "name": "Allowed pathless Group fields",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": []
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "value": {
+              "displayName": "Platform",
+              "externalId": "group-external"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Platform",
+        "members": [],
+        "externalId": "group-external"
+      }
+    },
+    {
+      "name": "Direct Group displayName and externalId paths",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": []
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          { "op": "Replace", "path": "displayName", "value": "Platform" },
+          { "op": "Add", "path": "externalId", "value": "group-external" }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Platform",
+        "members": [],
+        "externalId": "group-external"
+      }
+    },
+    {
+      "name": "Mixed-case core-qualified Group direct and value paths",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }, { "value": "two" }]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "UrN:ieTf:PaRaMs:ScIm:ScHeMaS:CoRe:2.0:gRoUp:DiSpLaYnAmE",
+            "value": "Platform"
+          },
+          {
+            "op": "Remove",
+            "path": "uRn:IeTf:pArAmS:sCiM:sChEmAs:cOrE:2.0:GrOuP:MeMbErS[VaLuE eQ \"one\"]"
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Platform",
+        "members": [{ "value": "two" }]
+      }
+    },
+    {
+      "name": "Okta Group member add tolerates display",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Add",
+            "path": "members",
+            "value": { "value": "two", "display": "Two Example" }
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }, { "value": "two" }]
+      }
+    },
+    {
+      "name": "Entra Group member add tolerates null ref",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Add",
+            "path": "members",
+            "value": { "value": "two", "$ref": null }
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }, { "value": "two" }]
+      }
+    },
+    {
+      "name": "Direct Group members replace",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          { "op": "Replace", "path": "members", "value": [{ "value": "two" }] }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "two" }]
+      }
+    },
+    {
+      "name": "Okta Group valuePath member removal",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }, { "value": "two" }]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{ "op": "Remove", "path": "members[value eq \"one\"]" }]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "two" }]
+      }
+    },
+    {
+      "name": "Entra Group member array removal",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }, { "value": "two" }]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Remove",
+            "path": "members",
+            "value": [{ "value": "two", "$ref": null }]
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }]
+      }
+    },
+    {
+      "name": "Group externalId explicit null clearing",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "externalId": "group-external",
+        "displayName": "Engineering",
+        "members": []
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{ "op": "Replace", "value": { "externalId": null } }]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": []
+      }
+    }
+  ],
+  "unsupported": [
+    {
+      "name": "Pathless User remove is noTarget",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{ "op": "Remove" }]
+      },
+      "expectedScimType": "noTarget"
+    },
+    {
+      "name": "Pathless Group remove is noTarget",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": []
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{ "op": "Remove" }]
+      },
+      "expectedScimType": "noTarget"
+    },
+    {
+      "name": "Unsupported PatchOp envelope field is invalidValue",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          { "op": "Replace", "path": "displayName", "value": "Alice" }
+        ],
+        "unsupportedRoot": true
+      },
+      "expectedScimType": "invalidValue"
+    },
+    {
+      "name": "Unsupported PATCH operation field is invalidValue",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "displayName",
+            "value": "Alice",
+            "unsupportedOperation": true
+          }
+        ]
+      },
+      "expectedScimType": "invalidValue"
+    },
+    {
+      "name": "Empty pathless User replace is invalidValue",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{ "op": "Replace", "value": {} }]
+      },
+      "expectedScimType": "invalidValue"
+    },
+    {
+      "name": "Unadvertised User schema in a pathless operation is invalidPath",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "value": {
+              "schemas": [
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+              ],
+              "displayName": "Alice"
+            }
+          }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "Unknown field in a pathless User no-op object remains invalidPath",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "value": { "password": "ignored", "unknown": "unsupported" }
+          }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "User replace missing value fails closed",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "externalId": "external",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{ "op": "Replace", "path": "externalId" }]
+      },
+      "expectedScimType": "invalidValue"
+    },
+    {
+      "name": "User active explicit null is invalid",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "active": true,
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{ "op": "Replace", "path": "active", "value": null }]
+      },
+      "expectedScimType": "invalidValue"
+    },
+    {
+      "name": "User name subattribute explicit null is invalid",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "name": { "givenName": "Alice" },
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          { "op": "Replace", "path": "name.givenName", "value": null }
+        ]
+      },
+      "expectedScimType": "invalidValue"
+    },
+    {
+      "name": "Pathless Group members are unsupported",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": []
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          { "op": "Add", "value": { "members": [{ "value": "one" }] } }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "Unrelated Group member subattribute fails atomically",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          { "op": "Replace", "path": "displayName", "value": "Platform" },
+          {
+            "op": "Add",
+            "path": "members",
+            "value": {
+              "value": "two",
+              "display": "Two Example",
+              "$ref": null,
+              "type": "User"
+            }
+          }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "Unsupported Group member filter is invalidFilter",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "members[value ne \"one\"].value",
+            "value": "two"
+          }
+        ]
+      },
+      "expectedScimType": "invalidFilter"
+    },
+    {
+      "name": "Malformed Group member filter is invalidFilter",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          { "op": "Replace", "path": "members[value eq].value", "value": "two" }
+        ]
+      },
+      "expectedScimType": "invalidFilter"
+    },
+    {
+      "name": "Supported Group member filter value remains immutable",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [{ "value": "one" }]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "members[value eq \"one\"].value",
+            "value": "two"
+          }
+        ]
+      },
+      "expectedScimType": "mutability"
+    },
+    {
+      "name": "Unsupported direct User path is invalidPath",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "enterprise.department",
+            "value": "Platform"
+          }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "Malformed descendant of ignored User id is invalidPath",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          { "op": "Replace", "path": "id.value", "value": "ignored" }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "Leading whitespace in a direct User path is invalidPath",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          { "op": "Replace", "path": " displayName", "value": "Alice" }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "Whitespace before a User value-path separator is invalidFilter",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "emails[type eq \"work\"] .value",
+            "value": "new@example.com"
+          }
+        ]
+      },
+      "expectedScimType": "invalidFilter"
+    },
+    {
+      "name": "Wrong-resource core URN remains invalid for User PATCH",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "urn:ietf:params:scim:schemas:core:2.0:Group:displayName",
+            "value": "Alice"
+          }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "Unadvertised extension URN remains invalid for User PATCH",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department",
+            "value": "Platform"
+          }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "Unadvertised extension User value path is invalidPath",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:emails[type eq \"work\"].value",
+            "value": "new@example.com"
+          }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "Unsupported User value-path root is invalidPath",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "addresses[type eq \"work\"].value",
+            "value": "new@example.com"
+          }
+        ]
+      },
+      "expectedScimType": "invalidPath"
+    },
+    {
+      "name": "Unsupported User email filter is invalidFilter",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "emails[type ne \"work\"].value",
+            "value": "new@example.com"
+          }
+        ]
+      },
+      "expectedScimType": "invalidFilter"
+    },
+    {
+      "name": "Pathless User duplicate case-variant attributes are invalidValue",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "value": { "displayName": "First", "DISPLAYNAME": "Second" }
+          }
+        ]
+      },
+      "expectedScimType": "invalidValue"
+    },
+    {
+      "name": "User name duplicate case-variant subattributes are invalidValue",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "name",
+            "value": { "givenName": "First", "GIVENNAME": "Second" }
+          }
+        ]
+      },
+      "expectedScimType": "invalidValue"
+    },
+    {
+      "name": "User email duplicate case-variant subattributes are invalidValue",
+      "resourceType": "User",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "emails": [
+          { "value": "alice@example.com", "type": "work", "primary": true }
+        ]
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "emails",
+            "value": [
+              {
+                "value": "first@example.com",
+                "VALUE": "second@example.com",
+                "type": "work"
+              }
+            ]
+          }
+        ]
+      },
+      "expectedScimType": "invalidValue"
+    },
+    {
+      "name": "Pathless Group duplicate case-variant attributes are invalidValue",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering"
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "value": { "displayName": "First", "DISPLAYNAME": "Second" }
+          }
+        ]
+      },
+      "expectedScimType": "invalidValue"
+    },
+    {
+      "name": "Group member duplicate case-variant subattributes are invalidValue",
+      "resourceType": "Group",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering"
+      },
+      "request": {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+          {
+            "op": "Replace",
+            "path": "members",
+            "value": [{ "value": "one", "VALUE": "two" }]
+          }
+        ]
+      },
+      "expectedScimType": "invalidValue"
+    }
+  ]
+}

@@ -45,7 +45,13 @@ open class WorkspacesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+        ),
+      )
 
     return workspaceService.controllerSetWorkspaceOverrideOAuthParams(
       UUID.fromString(workspaceId),
@@ -63,7 +69,13 @@ open class WorkspacesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+        ),
+      )
 
     return workspaceService.controllerDeleteWorkspaceOverrideOAuthParams(
       UUID.fromString(workspaceId),
@@ -93,7 +105,13 @@ open class WorkspacesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+        ),
+      )
 
     return workspaceService.controllerDeleteWorkspace(UUID.fromString(workspaceId))
   }
@@ -145,7 +163,13 @@ open class WorkspacesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+        ),
+      )
     return workspaceService.controllerUpdateWorkspace(UUID.fromString(workspaceId), workspaceUpdateRequest)
   }
 }

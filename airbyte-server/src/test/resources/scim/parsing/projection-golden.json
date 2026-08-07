@@ -1,0 +1,193 @@
+{
+  "supported": [
+    {
+      "name": "Mixed-case core-qualified User projection",
+      "resourceType": "User",
+      "attributes": "UrN:ieTf:PaRaMs:ScIm:ScHeMaS:CoRe:2.0:uSeR:NaMe.GiVeNnAmE",
+      "excludedAttributes": null,
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "name": { "givenName": "Alice", "familyName": "Example" }
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "name": { "givenName": "Alice" }
+      }
+    },
+    {
+      "name": "Exact comma-separated mixed-case User projection",
+      "resourceType": "User",
+      "attributes": "USERNAME,META.LOCATION",
+      "excludedAttributes": null,
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "meta": {
+          "resourceType": "User",
+          "location": "https://example/scim/v2/Users/user-id"
+        }
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "id": "user-id",
+        "userName": "alice@example.com",
+        "meta": {
+          "location": "https://example/scim/v2/Users/user-id"
+        }
+      }
+    },
+    {
+      "name": "Mixed-case core-qualified Group projection",
+      "resourceType": "Group",
+      "attributes": "uRn:IeTf:pArAmS:sCiM:sChEmAs:cOrE:2.0:gRoUp:DiSpLaYnAmE",
+      "excludedAttributes": null,
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": []
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering"
+      }
+    },
+    {
+      "name": "Core-qualified Group nested excludedAttributes projection",
+      "resourceType": "Group",
+      "attributes": null,
+      "excludedAttributes": "urn:ietf:params:scim:schemas:core:2.0:Group:members.display",
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [
+          {
+            "value": "user-id",
+            "$ref": "https://example/scim/v2/Users/user-id",
+            "display": "Alice"
+          }
+        ]
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "group-id",
+        "displayName": "Engineering",
+        "members": [
+          {
+            "value": "user-id",
+            "$ref": "https://example/scim/v2/Users/user-id"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Mixed-case core-qualified ServiceProviderConfig projection",
+      "resourceType": "ServiceProviderConfig",
+      "attributes": "UrN:iEtF:pArAmS:sCiM:sChEmAs:cOrE:2.0:sErViCePrOvIdErCoNfIg:PaTcH.sUpPoRtEd",
+      "excludedAttributes": null,
+      "original": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"
+        ],
+        "patch": { "supported": true },
+        "filter": { "supported": true, "maxResults": 200 }
+      },
+      "expected": {
+        "schemas": [
+          "urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"
+        ],
+        "patch": { "supported": true }
+      }
+    },
+    {
+      "name": "Core-qualified ResourceType projection",
+      "resourceType": "ResourceType",
+      "attributes": "urn:ietf:params:scim:schemas:core:2.0:ResourceType:endpoint",
+      "excludedAttributes": null,
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
+        "id": "User",
+        "name": "User",
+        "endpoint": "/Users"
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
+        "id": "User",
+        "endpoint": "/Users"
+      }
+    },
+    {
+      "name": "Core-qualified Schema projection",
+      "resourceType": "Schema",
+      "attributes": "urn:ietf:params:scim:schemas:core:2.0:Schema:name",
+      "excludedAttributes": null,
+      "original": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
+        "id": "urn:ietf:params:scim:schemas:core:2.0:User",
+        "name": "User",
+        "description": "User schema"
+      },
+      "expected": {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
+        "id": "urn:ietf:params:scim:schemas:core:2.0:User",
+        "name": "User"
+      }
+    }
+  ],
+  "unsupported": [
+    {
+      "name": "Wrong-resource core URN remains invalid for User projection",
+      "resourceType": "User",
+      "attributes": "urn:ietf:params:scim:schemas:core:2.0:Group:userName",
+      "excludedAttributes": null
+    },
+    {
+      "name": "Unadvertised extension URN remains invalid for User projection",
+      "resourceType": "User",
+      "attributes": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:userName",
+      "excludedAttributes": null
+    },
+    {
+      "name": "Wrong-resource core URN remains invalid for ServiceProviderConfig projection",
+      "resourceType": "ServiceProviderConfig",
+      "attributes": "urn:ietf:params:scim:schemas:core:2.0:ResourceType:patch.supported",
+      "excludedAttributes": null
+    },
+    {
+      "name": "Wrong-resource core URN remains invalid for ResourceType projection",
+      "resourceType": "ResourceType",
+      "attributes": "urn:ietf:params:scim:schemas:core:2.0:Schema:endpoint",
+      "excludedAttributes": null
+    },
+    {
+      "name": "Wrong-resource core URN remains invalid for Schema projection",
+      "resourceType": "Schema",
+      "attributes": "urn:ietf:params:scim:schemas:core:2.0:User:name",
+      "excludedAttributes": null
+    },
+    {
+      "name": "Unadvertised extension URN remains invalid for Schema projection",
+      "resourceType": "Schema",
+      "attributes": "urn:example:extension:Schema:name",
+      "excludedAttributes": null
+    },
+    {
+      "name": "Leading projection whitespace is invalid",
+      "resourceType": "User",
+      "attributes": " userName",
+      "excludedAttributes": null
+    },
+    {
+      "name": "Comma-adjacent non-ASCII projection whitespace is invalid",
+      "resourceType": "User",
+      "attributes": "userName,\u00a0meta.location",
+      "excludedAttributes": null
+    }
+  ]
+}

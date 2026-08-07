@@ -25,6 +25,8 @@ object PermissionHelper {
           Permission.PermissionType.ORGANIZATION_MEMBER,
           Permission.PermissionType.WORKSPACE_ADMIN,
           Permission.PermissionType.WORKSPACE_EDITOR,
+          Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+          Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
           Permission.PermissionType.WORKSPACE_RUNNER,
           Permission.PermissionType.WORKSPACE_READER,
         ),
@@ -36,6 +38,8 @@ object PermissionHelper {
           Permission.PermissionType.ORGANIZATION_READER,
           Permission.PermissionType.ORGANIZATION_MEMBER,
           Permission.PermissionType.WORKSPACE_EDITOR,
+          Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+          Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
           Permission.PermissionType.WORKSPACE_RUNNER,
           Permission.PermissionType.WORKSPACE_READER,
         ),
@@ -65,6 +69,8 @@ object PermissionHelper {
         setOf(
           Permission.PermissionType.WORKSPACE_ADMIN,
           Permission.PermissionType.WORKSPACE_EDITOR,
+          Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+          Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
           Permission.PermissionType.WORKSPACE_RUNNER,
           Permission.PermissionType.WORKSPACE_READER,
         ),
@@ -73,6 +79,8 @@ object PermissionHelper {
         setOf(
           Permission.PermissionType.WORKSPACE_ADMIN,
           Permission.PermissionType.WORKSPACE_EDITOR,
+          Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+          Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
           Permission.PermissionType.WORKSPACE_RUNNER,
           Permission.PermissionType.WORKSPACE_READER,
         ),
@@ -80,6 +88,24 @@ object PermissionHelper {
       Permission.PermissionType.WORKSPACE_EDITOR to
         setOf(
           Permission.PermissionType.WORKSPACE_EDITOR,
+          Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+          Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
+          Permission.PermissionType.WORKSPACE_RUNNER,
+          Permission.PermissionType.WORKSPACE_READER,
+        ),
+      // Workspace source editor: everything a workspace editor can do except manage destinations.
+      // Deliberately does not grant WORKSPACE_DESTINATION_EDITOR.
+      Permission.PermissionType.WORKSPACE_SOURCE_EDITOR to
+        setOf(
+          Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+          Permission.PermissionType.WORKSPACE_RUNNER,
+          Permission.PermissionType.WORKSPACE_READER,
+        ),
+      // Workspace destination editor: everything a workspace editor can do except manage sources.
+      // Deliberately does not grant WORKSPACE_SOURCE_EDITOR.
+      Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR to
+        setOf(
+          Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
           Permission.PermissionType.WORKSPACE_RUNNER,
           Permission.PermissionType.WORKSPACE_READER,
         ),

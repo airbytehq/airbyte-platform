@@ -26,8 +26,9 @@ class UserInvitationAuthorizationHelperTest {
 
   private lateinit var authorizationHelper: UserInvitationAuthorizationHelper
   private val userId = UUID.randomUUID()
+  private val invitationId = UUID.randomUUID()
   private val inviteCode = "test-invite-code"
-  private val invitation = UserInvitation().withInviteCode(inviteCode).withScopeId(UUID.randomUUID())
+  private val invitation = UserInvitation().withId(invitationId).withScopeId(UUID.randomUUID())
 
   @BeforeEach
   fun setUp() {
@@ -38,26 +39,36 @@ class UserInvitationAuthorizationHelperTest {
   @EnumSource(ScopeType::class)
   fun `successful permission check does not throw`(scopeType: ScopeType) {
     invitation.scopeType = scopeType
-    every { userInvitationService.getUserInvitationByInviteCode(inviteCode) } returns invitation
+    every { userInvitationService.getUserInvitationById(invitationId) } returns invitation
     every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead().status(PermissionCheckRead.StatusEnum.SUCCEEDED)
 
-    assertDoesNotThrow { authorizationHelper.authorizeInvitationAdmin(inviteCode, userId) }
+    assertDoesNotThrow { authorizationHelper.authorizeInvitationAdmin(invitationId, userId) }
   }
 
   @ParameterizedTest
   @EnumSource(ScopeType::class)
   fun `failed permission check throws`(scopeType: ScopeType) {
     invitation.scopeType = scopeType
-    every { userInvitationService.getUserInvitationByInviteCode(inviteCode) } returns invitation
+    every { userInvitationService.getUserInvitationById(invitationId) } returns invitation
     every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead().status(PermissionCheckRead.StatusEnum.FAILED)
 
-    assertThrows<OperationNotAllowedException> { authorizationHelper.authorizeInvitationAdmin(inviteCode, userId) }
+    assertThrows<OperationNotAllowedException> { authorizationHelper.authorizeInvitationAdmin(invitationId, userId) }
   }
 
   @Test
   fun `authorizeInvitationAdmin should handle exceptions from UserInvitationService`() {
-    every { userInvitationService.getUserInvitationByInviteCode(inviteCode) } throws RuntimeException("Service exception")
+    every { userInvitationService.getUserInvitationById(invitationId) } throws RuntimeException("Service exception")
 
-    assertThrows<OperationNotAllowedException> { authorizationHelper.authorizeInvitationAdmin(inviteCode, userId) }
+    assertThrows<OperationNotAllowedException> { authorizationHelper.authorizeInvitationAdmin(invitationId, userId) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(ScopeType::class)
+  fun `invite code authorization uses invite code lookup`(scopeType: ScopeType) {
+    invitation.scopeType = scopeType
+    every { userInvitationService.getUserInvitationByInviteCode(inviteCode) } returns invitation
+    every { permissionHandler.checkPermissions(any()) } returns PermissionCheckRead().status(PermissionCheckRead.StatusEnum.SUCCEEDED)
+
+    assertDoesNotThrow { authorizationHelper.authorizeInvitationAdmin(inviteCode, userId) }
   }
 }

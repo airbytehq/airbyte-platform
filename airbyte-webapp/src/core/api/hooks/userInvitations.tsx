@@ -14,8 +14,8 @@ import {
 } from "../generated/AirbyteClient";
 import { SCOPE_ORGANIZATION, SCOPE_USER, SCOPE_WORKSPACE } from "../scopes";
 import {
-  InviteCodeRequestBody,
   UserInvitationCreateRequestBody,
+  UserInvitationCancelRequestBody,
   UserInvitationListRequestBody,
   UserInvitationRead,
 } from "../types/AirbyteClient";
@@ -133,8 +133,8 @@ export const useCancelUserInvitation = () => {
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
 
-  return useMutation(async (inviteCodeRequestBody: InviteCodeRequestBody) =>
-    cancelUserInvitation(inviteCodeRequestBody, requestOptions)
+  return useMutation(async (invitationRequestBody: UserInvitationCancelRequestBody) =>
+    cancelUserInvitation(invitationRequestBody, requestOptions)
       .then((response) => {
         registerNotification({
           type: "success",

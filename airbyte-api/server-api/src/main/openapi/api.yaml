@@ -2622,7 +2622,7 @@ paths:
         '404':
           description: Not found
         '409':
-          description: Group name conflict
+          description: Group name conflict or group is managed by SCIM
       operationId: updateGroup
       x-speakeasy-alias: updateGroup
       x-speakeasy-group: Groups
@@ -2640,6 +2640,8 @@ paths:
           description: Not allowed
         '404':
           description: Not found
+        '409':
+          description: Group is managed by SCIM
       operationId: deleteGroup
       x-speakeasy-alias: deleteGroup
       x-speakeasy-group: Groups
@@ -2718,7 +2720,7 @@ paths:
         '404':
           description: Not found
         '409':
-          description: User is already a member of this group
+          description: User is already a member of this group or group is managed by SCIM
       operationId: addGroupMember
       x-speakeasy-alias: addGroupMember
       x-speakeasy-group: Groups
@@ -2752,6 +2754,8 @@ paths:
           description: Not allowed
         '404':
           description: Not found
+        '409':
+          description: Group is managed by SCIM
       operationId: removeGroupMember
       x-speakeasy-alias: removeGroupMember
       x-speakeasy-group: Groups

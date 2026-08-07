@@ -3,6 +3,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: {{ include "airbyte.namespace" . }}
   name: {{ .Release.Name }}-metrics
   labels:
     app.kubernetes.io/name: {{ include "airbyte.name" . }}

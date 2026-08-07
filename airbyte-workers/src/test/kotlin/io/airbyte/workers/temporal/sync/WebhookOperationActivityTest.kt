@@ -14,6 +14,7 @@ import io.airbyte.config.OperatorWebhookInput
 import io.airbyte.config.WebhookConfig
 import io.airbyte.config.WebhookOperationConfigs
 import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
@@ -49,6 +50,7 @@ internal class WebhookOperationActivityTest {
         airbyteApiClient,
         featureFlagClient,
         mockk<MetricClient>(relaxed = true),
+        mockk<RuntimeSecretPersistenceFactory>(relaxed = true),
       )
   }
 

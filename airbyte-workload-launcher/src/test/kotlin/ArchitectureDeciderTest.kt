@@ -117,7 +117,7 @@ class ArchitectureDeciderTest {
               serializations = listOf(Serialization.JSONL, Serialization.PROTOBUF),
               transports = listOf(Transport.SOCKET, Transport.STDIO),
             ),
-          cpuLimit = 1, // → min(cpu) * 2 = 2 sockets
+          cpuLimit = "1", // → min(cpu) * 2 = 2 sockets
         ),
       )
 
@@ -141,6 +141,163 @@ class ArchitectureDeciderTest {
     Assertions.assertEquals(
       2,
       env.destinationEnvironmentVariables
+        .valueOf(DATA_CHANNEL_SOCKET_PATHS)
+        .split(',')
+        .size,
+    )
+  }
+
+  @Test
+  fun `millicore CPU limit is converted to cores for socket count`() {
+    every { featureFlags.intVariation(SocketCount, any()) } returns 0
+
+    val env =
+      decider.computeEnvironmentVariables(
+        input(
+          srcIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          dstIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          cpuLimit = "4000m",
+        ),
+      )
+
+    Assertions.assertEquals(
+      8,
+      env.sourceEnvironmentVariables
+        .valueOf(DATA_CHANNEL_SOCKET_PATHS)
+        .split(',')
+        .size,
+    )
+  }
+
+  @Test
+  fun `plain integer CPU limit determines socket count`() {
+    every { featureFlags.intVariation(SocketCount, any()) } returns 0
+
+    val env =
+      decider.computeEnvironmentVariables(
+        input(
+          srcIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          dstIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          cpuLimit = "4",
+        ),
+      )
+
+    Assertions.assertEquals(
+      8,
+      env.sourceEnvironmentVariables
+        .valueOf(DATA_CHANNEL_SOCKET_PATHS)
+        .split(',')
+        .size,
+    )
+  }
+
+  @Test
+  fun `fractional millicore CPU limit uses the minimum socket count`() {
+    every { featureFlags.intVariation(SocketCount, any()) } returns 0
+
+    val env =
+      decider.computeEnvironmentVariables(
+        input(
+          srcIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          dstIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          cpuLimit = "500m",
+        ),
+      )
+
+    Assertions.assertEquals(
+      2,
+      env.sourceEnvironmentVariables
+        .valueOf(DATA_CHANNEL_SOCKET_PATHS)
+        .split(',')
+        .size,
+    )
+  }
+
+  @Test
+  fun `fractional CPU limit floors to one core`() {
+    every { featureFlags.intVariation(SocketCount, any()) } returns 0
+
+    val env =
+      decider.computeEnvironmentVariables(
+        input(
+          srcIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          dstIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          cpuLimit = "1500m",
+        ),
+      )
+
+    Assertions.assertEquals(
+      2,
+      env.sourceEnvironmentVariables
+        .valueOf(DATA_CHANNEL_SOCKET_PATHS)
+        .split(',')
+        .size,
+    )
+  }
+
+  @Test
+  fun `invalid CPU limit uses the default socket count`() {
+    every { featureFlags.intVariation(SocketCount, any()) } returns 0
+
+    val env =
+      decider.computeEnvironmentVariables(
+        input(
+          srcIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          dstIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          cpuLimit = "garbage",
+        ),
+      )
+
+    Assertions.assertEquals(
+      2,
+      env.sourceEnvironmentVariables
+        .valueOf(DATA_CHANNEL_SOCKET_PATHS)
+        .split(',')
+        .size,
+    )
+  }
+
+  @Test
+  fun `large CPU quantities are clamped to the maximum core count`() {
+    every { featureFlags.intVariation(SocketCount, any()) } returns 0
+
+    for (cpuLimit in listOf("2G", "6000000000")) {
+      val env =
+        decider.computeEnvironmentVariables(
+          input(
+            srcIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+            dstIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+            cpuLimit = cpuLimit,
+            destinationCpuLimit = "1",
+          ),
+        )
+
+      Assertions.assertEquals(
+        2,
+        env.sourceEnvironmentVariables
+          .valueOf(DATA_CHANNEL_SOCKET_PATHS)
+          .split(',')
+          .size,
+      )
+    }
+  }
+
+  @Test
+  fun `null sync resource requirements use the default socket count`() {
+    every { featureFlags.intVariation(SocketCount, any()) } returns 0
+
+    val env =
+      decider.computeEnvironmentVariables(
+        input(
+          srcIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          dstIpc = ipcNode(serializations = listOf(Serialization.PROTOBUF), transports = listOf(Transport.SOCKET)),
+          nullSyncResourceRequirements = true,
+        ),
+      )
+
+    Assertions.assertEquals(
+      2,
+      env.sourceEnvironmentVariables
         .valueOf(DATA_CHANNEL_SOCKET_PATHS)
         .split(',')
         .size,
@@ -220,7 +377,9 @@ class ArchitectureDeciderTest {
     dstIpc: JsonNode? = null,
     useFileTransfer: Boolean = false,
     isReset: Boolean = false,
-    cpuLimit: Int = 1,
+    cpuLimit: String = "1",
+    destinationCpuLimit: String = cpuLimit,
+    nullSyncResourceRequirements: Boolean = false,
   ): ReplicationInput {
     val connectionRead =
       mockk<ConnectionRead> {
@@ -239,14 +398,18 @@ class ArchitectureDeciderTest {
 
     every { airbyteApiClient.connectionApi.getConnection(any()) } returns connectionRead
 
-    val domainRes: io.airbyte.config.ResourceRequirements =
+    val sourceDomainRes: io.airbyte.config.ResourceRequirements =
       io.airbyte.config
         .ResourceRequirements()
-        .withCpuLimit(cpuLimit.toString())
+        .withCpuLimit(cpuLimit)
+    val destinationDomainRes: io.airbyte.config.ResourceRequirements =
+      io.airbyte.config
+        .ResourceRequirements()
+        .withCpuLimit(destinationCpuLimit)
     val syncRes =
       mockk<io.airbyte.config.SyncResourceRequirements> {
-        every { source } returns domainRes
-        every { destination } returns domainRes
+        every { source } returns sourceDomainRes
+        every { destination } returns destinationDomainRes
       }
 
     val input = mockk<ReplicationInput>()
@@ -255,7 +418,7 @@ class ArchitectureDeciderTest {
     every { input.destinationIPCOptions } returns dstIpc
     every { input.useFileTransfer } returns useFileTransfer
     every { input.isReset } returns isReset
-    every { input.syncResourceRequirements } returns syncRes
+    every { input.syncResourceRequirements } returns if (nullSyncResourceRequirements) null else syncRes
     every { input.connectionContext } returns ConnectionContext()
     every { input.destinationLauncherConfig } returns null
     return input

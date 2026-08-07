@@ -2,21 +2,8 @@
 
 ### Enabling in Helm
 
-You will need to enable the server in Helm.
-
-To do that run:
-
-Edit `oss/charts/airbyte-workload-launcher/values.yaml` setting at the top level `enabled: true`
-
-Edit `oss/charts/airbyte/values.yaml` setting `enabled: true` under `workload-launcher:`
-
-Edit `oss/charts/airbyte/Chart.yaml.test` adding the following block:
-```yaml
-  - condition: airbyte-workload-launcher.enabled
-    name: workload-launcher
-    repository: "file://../airbyte-workload-launcher"
-    version: "*"
-```
+The workload launcher is enabled by default in the v2 chart. To toggle it, set
+`workloadLauncher.enabled` in `oss/charts/v2/airbyte/values.yaml`.
 
 ### S3 Bucket Creation errors
 If you are having issues with your bucket not being created locally add the following to the `S3DocumentStoreClient` constructor at line 70.

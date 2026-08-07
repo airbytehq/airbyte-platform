@@ -32,6 +32,13 @@ describe("partitionPermissionType", () => {
   it("maps workspace_owner to workspace_admin", () => {
     expect(partitionPermissionType("workspace_owner")).toEqual(["WORKSPACE", "ADMIN"]);
   });
+
+  // These have three underscore-separated parts, so splitting on "_" would yield the role "SOURCE",
+  // which is absent from RbacRoleHierarchy and would make every role comparison succeed.
+  it("parses the actor-scoped workspace editors without truncating the role", () => {
+    expect(partitionPermissionType("workspace_source_editor")).toEqual(["WORKSPACE", "SOURCE_EDITOR"]);
+    expect(partitionPermissionType("workspace_destination_editor")).toEqual(["WORKSPACE", "DESTINATION_EDITOR"]);
+  });
 });
 
 describe("useRbacPermissionsQuery", () => {
@@ -90,6 +97,50 @@ describe("useRbacPermissionsQuery", () => {
           { permissionType: "workspace_reader", workspaceId: "test-workspace" },
           { permissionType: "workspace_admin", workspaceId: "test-workspace" },
         ],
+        true,
+      ],
+
+      /* ACTOR-SCOPED WORKSPACE EDITORS */
+      [
+        "workspace_source_editor permission grants READER access to the workspace",
+        { resourceType: "WORKSPACE", resourceId: "test-workspace", role: "READER" },
+        [{ permissionType: "workspace_source_editor", workspaceId: "test-workspace" }],
+        true,
+      ],
+      [
+        "workspace_source_editor permission grants RUNNER access to the workspace",
+        { resourceType: "WORKSPACE", resourceId: "test-workspace", role: "RUNNER" },
+        [{ permissionType: "workspace_source_editor", workspaceId: "test-workspace" }],
+        true,
+      ],
+      [
+        "workspace_source_editor permission does not satisfy an EDITOR query",
+        { resourceType: "WORKSPACE", resourceId: "test-workspace", role: "EDITOR" },
+        [{ permissionType: "workspace_source_editor", workspaceId: "test-workspace" }],
+        false,
+      ],
+      [
+        "workspace_source_editor permission does not satisfy an ADMIN query",
+        { resourceType: "WORKSPACE", resourceId: "test-workspace", role: "ADMIN" },
+        [{ permissionType: "workspace_source_editor", workspaceId: "test-workspace" }],
+        false,
+      ],
+      [
+        "workspace_destination_editor permission does not satisfy an EDITOR query",
+        { resourceType: "WORKSPACE", resourceId: "test-workspace", role: "EDITOR" },
+        [{ permissionType: "workspace_destination_editor", workspaceId: "test-workspace" }],
+        false,
+      ],
+      [
+        "workspace_destination_editor permission does not satisfy an ADMIN query",
+        { resourceType: "WORKSPACE", resourceId: "test-workspace", role: "ADMIN" },
+        [{ permissionType: "workspace_destination_editor", workspaceId: "test-workspace" }],
+        false,
+      ],
+      [
+        "workspace_editor permission satisfies an EDITOR query, unchanged by the new ranks",
+        { resourceType: "WORKSPACE", resourceId: "test-workspace", role: "EDITOR" },
+        [{ permissionType: "workspace_editor", workspaceId: "test-workspace" }],
         true,
       ],
 

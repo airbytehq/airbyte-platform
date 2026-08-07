@@ -288,6 +288,7 @@ class JobsHandlerTest {
         committedDataWorkers = 5,
         requiredDataWorkers = 0.8125,
         usedOnDemandCapacity = true,
+        wasPersisted = true,
       ),
     )
 

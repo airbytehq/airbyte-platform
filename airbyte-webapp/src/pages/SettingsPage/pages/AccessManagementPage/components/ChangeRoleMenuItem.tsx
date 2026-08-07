@@ -52,6 +52,8 @@ export const disallowedRoles = (
       "organization_member",
       "workspace_admin",
       "workspace_editor",
+      "workspace_source_editor",
+      "workspace_destination_editor",
       "workspace_runner",
       "workspace_reader",
     ];
@@ -80,13 +82,26 @@ export const disallowedRoles = (
 
   if (organizationRole === "organization_editor") {
     if (!workspaceRole) {
-      return ["workspace_editor", "workspace_runner", "workspace_reader"];
+      return [
+        "workspace_editor",
+        "workspace_source_editor",
+        "workspace_destination_editor",
+        "workspace_runner",
+        "workspace_reader",
+      ];
     }
     return ["workspace_runner", "workspace_reader"];
   }
 
   if (organizationRole === "organization_admin") {
-    return ["workspace_admin", "workspace_editor", "workspace_runner", "workspace_reader"];
+    return [
+      "workspace_admin",
+      "workspace_editor",
+      "workspace_source_editor",
+      "workspace_destination_editor",
+      "workspace_runner",
+      "workspace_reader",
+    ];
   }
 
   return [];

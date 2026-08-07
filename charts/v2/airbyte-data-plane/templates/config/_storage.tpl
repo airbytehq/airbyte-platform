@@ -332,7 +332,7 @@ Renders the storage.minio.secretAccessKey environment variable
 Renders the storage.minio.endpoint value
 */}}
 {{- define "airbyte-data-plane.storage.minio.endpoint" }}
-    {{- .Values.storage.minio.endpoint | default (printf "http://airbyte-minio-svc.%s:9000" .Release.Namespace) }}
+    {{- .Values.storage.minio.endpoint | default (printf "http://airbyte-minio-svc.%s:9000" (include "airbyte-data-plane.namespace" .)) }}
 {{- end }}
 
 {{/*

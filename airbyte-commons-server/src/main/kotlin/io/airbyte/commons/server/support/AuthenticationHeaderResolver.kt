@@ -192,6 +192,18 @@ class AuthenticationHeaderResolver(
     }
   }
 
+  fun resolveWorkspaceOrganizations(workspaceIds: Set<UUID>): Map<UUID, UUID> {
+    val workspaceOrganizations = mutableMapOf<UUID, UUID>()
+    for (workspaceId in workspaceIds) {
+      try {
+        workspaceOrganizations[workspaceId] = workspaceHelper.getOrganizationForWorkspace(workspaceId)
+      } catch (e: RuntimeException) {
+        log.debug(e) { "Unable to resolve organization ID for workspace ID: $workspaceId" }
+      }
+    }
+    return workspaceOrganizations
+  }
+
   @Nullable
   fun resolveAuthUserIds(properties: Map<String?, String?>): Set<String>? {
     log.debug { "properties: $properties" }

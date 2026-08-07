@@ -1,4 +1,4 @@
-import { ComponentMeta, ComponentStory } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 
 import { RadioButton } from "./RadioButton";
 
@@ -9,9 +9,9 @@ export default {
     disabled: { control: "boolean" },
     checked: { control: "boolean" },
   },
-} as ComponentMeta<typeof RadioButton>;
+} as Meta<typeof RadioButton>;
 
-const Template: ComponentStory<typeof RadioButton> = (args) => <RadioButton {...args} />;
+const Template: StoryFn<typeof RadioButton> = (args) => <RadioButton {...args} />;
 
 export const Default = Template.bind({});
 Default.args = {};

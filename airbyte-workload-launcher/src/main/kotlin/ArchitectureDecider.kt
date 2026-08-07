@@ -39,9 +39,11 @@ import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+import java.math.BigDecimal
 import java.util.UUID
 import kotlin.math.min
 
+private const val MAX_CORES = 1024
 private val logger = KotlinLogging.logger {}
 
 @Singleton
@@ -267,18 +269,26 @@ class ArchitectureDecider(
   private fun extractCpuLimit(
     input: ReplicationInput,
     isSource: Boolean,
-  ): Int {
-    val res: ResourceRequirements =
-      if (isSource) {
-        ResourceConversionUtils.domainToApi(input.syncResourceRequirements.source)
-      } else {
-        ResourceConversionUtils.domainToApi(input.syncResourceRequirements.destination)
-      }
+  ): Int =
+    try {
+      val resourceRequirements = if (isSource) input.syncResourceRequirements?.source else input.syncResourceRequirements?.destination
+      val res: ResourceRequirements = resourceRequirements?.let { ResourceConversionUtils.domainToApi(it) } ?: return 1
 
-    return res.limits
-      ?.get(CPU_RESOURCE_KEY)
-      ?.amount
-      ?.toIntOrNull()
-      ?.takeIf { it > 0 } ?: 1
-  }
+      res.limits
+        ?.get(CPU_RESOURCE_KEY)
+        ?.numericalAmount
+        ?.min(BigDecimal(MAX_CORES))
+        // Fractional core quantities intentionally floor at the conversion boundary.
+        ?.toInt()
+        ?.takeIf { it > 0 } ?: 1
+    } catch (e: NumberFormatException) {
+      logger.warn(e) { "Failed to determine CPU limit (isSource=$isSource); defaulting to 1 core." }
+      1
+    } catch (e: IllegalArgumentException) {
+      logger.warn(e) { "Failed to determine CPU limit (isSource=$isSource); defaulting to 1 core." }
+      1
+    } catch (e: ArithmeticException) {
+      logger.warn(e) { "Failed to determine CPU limit (isSource=$isSource); defaulting to 1 core." }
+      1
+    }
 }

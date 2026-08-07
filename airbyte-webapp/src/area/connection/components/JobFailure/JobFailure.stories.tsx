@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { JobFailure } from "./JobFailure";
 
@@ -12,9 +12,9 @@ export default {
     actionBtnText: { type: { name: "string", required: false } },
     onClose: { table: { disable: true } },
   },
-} as ComponentMeta<typeof JobFailure>;
+} as Meta<typeof JobFailure>;
 
-const Template: ComponentStory<typeof JobFailure> = (args) => <JobFailure {...args} />;
+const Template: StoryFn<typeof JobFailure> = (args) => <JobFailure {...args} />;
 
 const jobBasics = {
   id: "123",

@@ -222,6 +222,8 @@ object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", de
 
 object EnableDestinationCatalogValidation : Temporary<Boolean>(key = "platform.enable-destination-catalog-validation", default = false)
 
+object EnableStrictJsonDeserialization : Temporary<Boolean>(key = "platform.enable-strict-json-deserialization", default = false)
+
 object LicenseAllowDestinationObjectStorageConfig : Permanent<Boolean>(key = "license.allow-destination-object-storage-config", default = false)
 
 object UseSonarServer : Temporary<Boolean>(key = "embedded.useSonarServer", default = false)

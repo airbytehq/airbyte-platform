@@ -10,6 +10,7 @@ import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.ScopeType
+import io.airbyte.config.UserInvitation
 import io.airbyte.data.services.UserInvitationService
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -29,19 +30,37 @@ class UserInvitationAuthorizationHelper(
    * @throws OperationNotAllowedException if authorization fails.
    */
   fun authorizeInvitationAdmin(
+    id: UUID,
+    userId: UUID,
+  ) {
+    try {
+      val invitation = userInvitationService.getUserInvitationById(id)
+      authorizeInvitationAdmin(invitation, userId)
+    } catch (e: Exception) {
+      throw OperationNotAllowedException("Could not authorize $userId for invitation $id", e)
+    }
+  }
+
+  fun authorizeInvitationAdmin(
     inviteCode: String,
     userId: UUID,
   ) {
     try {
       val invitation = userInvitationService.getUserInvitationByInviteCode(inviteCode)
-      when (invitation.scopeType) {
-        ScopeType.WORKSPACE -> authorizeWorkspaceInvitationAdmin(invitation.scopeId, userId)
-        ScopeType.ORGANIZATION -> authorizeOrganizationInvitationAdmin(invitation.scopeId, userId)
-        null -> throw OperationNotAllowedException("Invitation $inviteCode has no scope type")
-      }
+      authorizeInvitationAdmin(invitation, userId)
     } catch (e: Exception) {
-      // always explicitly throw a 403 if anything goes wrong during authorization
       throw OperationNotAllowedException("Could not authorize $userId for invitation $inviteCode", e)
+    }
+  }
+
+  private fun authorizeInvitationAdmin(
+    invitation: UserInvitation,
+    userId: UUID,
+  ) {
+    when (invitation.scopeType) {
+      ScopeType.WORKSPACE -> authorizeWorkspaceInvitationAdmin(invitation.scopeId, userId)
+      ScopeType.ORGANIZATION -> authorizeOrganizationInvitationAdmin(invitation.scopeId, userId)
+      null -> throw OperationNotAllowedException("Invitation has no scope type")
     }
   }
 

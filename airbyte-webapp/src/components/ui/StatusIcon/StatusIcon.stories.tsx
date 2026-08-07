@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { StatusIcon } from "./StatusIcon";
 
@@ -8,9 +8,9 @@ export default {
   argTypes: {
     value: { type: { name: "number", required: false } },
   },
-} as ComponentMeta<typeof StatusIcon>;
+} as Meta<typeof StatusIcon>;
 
-const Template: ComponentStory<typeof StatusIcon> = (args) => <StatusIcon {...args} />;
+const Template: StoryFn<typeof StatusIcon> = (args) => <StatusIcon {...args} />;
 
 export const Primary = Template.bind({});
 Primary.args = {

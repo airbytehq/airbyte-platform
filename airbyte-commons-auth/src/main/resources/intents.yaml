@@ -9,6 +9,8 @@ intents:
       - ORGANIZATION_ADMIN
       - WORKSPACE_READER
       - WORKSPACE_RUNNER
+      - WORKSPACE_SOURCE_EDITOR
+      - WORKSPACE_DESTINATION_EDITOR
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ADMIN
@@ -18,6 +20,8 @@ intents:
     roles:
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
+      - WORKSPACE_SOURCE_EDITOR
+      - WORKSPACE_DESTINATION_EDITOR
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ADMIN
@@ -27,6 +31,30 @@ intents:
     roles:
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
+      # Coarse "can edit some connector" check, kept for call sites shared between sources and
+      # destinations. Use CreateOrEditSource / CreateOrEditDestination where the actor type is known.
+      - WORKSPACE_SOURCE_EDITOR
+      - WORKSPACE_DESTINATION_EDITOR
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ADMIN
+  CreateOrEditSource:
+    name: Create or edit source
+    description: Create a source connector, or change the settings of an existing source
+    roles:
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_SOURCE_EDITOR
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ADMIN
+  CreateOrEditDestination:
+    name: Create or edit destination
+    description: Create a destination connector, or change the settings of an existing destination
+    roles:
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_DESTINATION_EDITOR
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ADMIN
@@ -36,6 +64,10 @@ intents:
     roles:
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
+      # WORKSPACE_SOURCE_EDITOR only. This single intent covers custom source *and* destination
+      # definition uploads, so it also lets a source editor upload a custom destination definition —
+      # it still cannot create a destination instance. Splitting the intent is a follow-up.
+      - WORKSPACE_SOURCE_EDITOR
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ADMIN
@@ -107,6 +139,8 @@ intents:
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
       - WORKSPACE_RUNNER
+      - WORKSPACE_SOURCE_EDITOR
+      - WORKSPACE_DESTINATION_EDITOR
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ADMIN
@@ -122,6 +156,9 @@ intents:
     description: Allow user to run OAuth flow
     roles:
       - EMBEDDED_END_USER
+      # WORKSPACE_SOURCE_EDITOR only: this intent is applied class-level on SourceOauthApiController.
+      # Destination OAuth is guarded by @Secured on DestinationOauthApiController instead.
+      - WORKSPACE_SOURCE_EDITOR
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ORGANIZATION_EDITOR
@@ -165,6 +202,8 @@ intents:
       - ORGANIZATION_READER
       - WORKSPACE_ADMIN
       - WORKSPACE_EDITOR
+      - WORKSPACE_SOURCE_EDITOR
+      - WORKSPACE_DESTINATION_EDITOR
       - WORKSPACE_RUNNER
       - WORKSPACE_READER
   CreateOrEditConnectorBuilder:
@@ -173,6 +212,8 @@ intents:
     roles:
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
+      # WORKSPACE_SOURCE_EDITOR only — connector builder projects produce sources.
+      - WORKSPACE_SOURCE_EDITOR
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ADMIN

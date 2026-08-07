@@ -6,7 +6,6 @@ package io.airbyte.config.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
@@ -81,7 +80,7 @@ open class SecretsRepositoryWriter(
     secretBaseId: UUID,
     fullConfig: JsonNode,
     connSpec: JsonNode,
-    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+    runtimeSecretPersistence: SecretPersistence? = null,
     secretBasePrefix: String,
   ): JsonNode {
     val fullConfigWithProcessedSecrets =
@@ -103,7 +102,7 @@ open class SecretsRepositoryWriter(
     secretBaseId: UUID,
     fullConfig: JsonNode,
     connSpec: JsonNode,
-    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+    runtimeSecretPersistence: SecretPersistence? = null,
   ): JsonNode =
     createFromConfigLegacy(
       secretBaseId = secretBaseId,
@@ -156,7 +155,7 @@ open class SecretsRepositoryWriter(
   @Deprecated("Use deleteFromConfig() that takes in ConfigWithSecretReferences instead")
   fun deleteFromConfig(
     config: JsonNode,
-    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+    runtimeSecretPersistence: SecretPersistence? = null,
   ) {
     val configWithSecretRefs = buildConfigWithSecretRefsJava(config)
     deleteFromConfig(configWithSecretRefs, runtimeSecretPersistence ?: secretPersistence)
@@ -270,7 +269,7 @@ open class SecretsRepositoryWriter(
     oldPartialConfig: JsonNode,
     fullConfig: JsonNode,
     spec: JsonNode,
-    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+    runtimeSecretPersistence: SecretPersistence? = null,
     secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
   ): JsonNode {
     val oldPartialConfigWithSecretReferences = buildConfigWithSecretRefsJava(oldPartialConfig)
@@ -297,7 +296,7 @@ open class SecretsRepositoryWriter(
     oldPartialConfig: JsonNode,
     fullConfig: JsonNode,
     spec: JsonNode,
-    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+    runtimeSecretPersistence: SecretPersistence? = null,
   ): JsonNode =
     updateFromConfigLegacy(
       secretBaseId = secretBaseId,

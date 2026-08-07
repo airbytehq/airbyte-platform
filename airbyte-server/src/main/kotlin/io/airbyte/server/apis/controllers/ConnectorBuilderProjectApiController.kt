@@ -60,7 +60,7 @@ class ConnectorBuilderProjectApiController(
 ) : ConnectorBuilderProjectApi {
   @Post(uri = "/create")
   @Status(HttpStatus.CREATED)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createConnectorBuilderProject(
     @Body project: ConnectorBuilderProjectWithWorkspaceId,
@@ -73,7 +73,7 @@ class ConnectorBuilderProjectApiController(
 
   @Post(uri = "/fork")
   @Status(HttpStatus.CREATED)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createForkedConnectorBuilderProject(
     @Body connectorBuilderProjectForkRequestBody: ConnectorBuilderProjectForkRequestBody,
@@ -86,7 +86,7 @@ class ConnectorBuilderProjectApiController(
 
   @Post(uri = "/delete")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun deleteConnectorBuilderProject(
     @Body connectorBuilderProjectIdWithWorkspaceId: ConnectorBuilderProjectIdWithWorkspaceId,
@@ -125,7 +125,7 @@ class ConnectorBuilderProjectApiController(
 
   @Post(uri = "/publish")
   @Status(HttpStatus.OK)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   override fun publishConnectorBuilderProject(
     @Body connectorBuilderPublishRequestBody: ConnectorBuilderPublishRequestBody,
   ): SourceDefinitionIdBody? =
@@ -243,7 +243,7 @@ class ConnectorBuilderProjectApiController(
 
   @Post(uri = "/update")
   @Status(HttpStatus.NO_CONTENT)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateConnectorBuilderProject(
     @Body existingConnectorBuilderProjectWithWorkspaceId: ExistingConnectorBuilderProjectWithWorkspaceId,
@@ -256,7 +256,7 @@ class ConnectorBuilderProjectApiController(
 
   @Post(uri = "/update_testing_values")
   @Status(HttpStatus.OK)
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateConnectorBuilderProjectTestingValues(
     @Body connectorBuilderProjectTestingValuesUpdate: ConnectorBuilderProjectTestingValuesUpdate,

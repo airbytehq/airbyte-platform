@@ -13,7 +13,7 @@ import { DestinationsPage, SourcesPage } from "pages/SettingsPage/pages/Connecto
 import { LicenseSettingsPage } from "pages/SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
-import { SSOOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/SSOOrganizationSettingsPage";
+import { SSOAndScimOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/SSOAndScimOrganizationSettingsPage";
 
 import { RoutePaths, SettingsRoutePaths } from "../routePaths";
 
@@ -44,7 +44,9 @@ export const OrganizationRoutes: React.FC = () => {
           {canViewOrgSettings && (
             <Route path={SettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
           )}
-          {supportsSSO && <Route path={SettingsRoutePaths.OrganizationSSO} element={<SSOOrganizationSettingsPage />} />}
+          {supportsSSO && (
+            <Route path={SettingsRoutePaths.OrganizationSSO} element={<SSOAndScimOrganizationSettingsPage />} />
+          )}
           {licenseUi && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}
           {canManageOrganizationBilling && (
             <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />

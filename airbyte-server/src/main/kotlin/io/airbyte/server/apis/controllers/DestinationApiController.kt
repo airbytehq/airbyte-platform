@@ -49,7 +49,7 @@ open class DestinationApiController(
   private val destinationDiscoverService: DestinationDiscoverService,
 ) : DestinationApi {
   @Post(uri = "/check_connection")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun checkConnectionToDestination(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
@@ -61,7 +61,7 @@ open class DestinationApiController(
     }
 
   @Post(uri = "/check_connection_for_update")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun checkConnectionToDestinationForUpdate(
     @Body destinationUpdate: DestinationUpdate,
@@ -73,7 +73,7 @@ open class DestinationApiController(
     }
 
   @Post(uri = "/create")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun createDestination(
@@ -81,7 +81,7 @@ open class DestinationApiController(
   ): DestinationRead? = execute { destinationHandler.createDestination(destinationCreate) }
 
   @Post(uri = "/delete")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
     HttpStatus.NO_CONTENT,
@@ -170,7 +170,7 @@ open class DestinationApiController(
   ): DestinationReadList? = execute { destinationHandler.searchDestinations(destinationSearch) }
 
   @Post(uri = "/update")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun updateDestination(
@@ -178,7 +178,7 @@ open class DestinationApiController(
   ): DestinationRead? = execute { destinationHandler.updateDestination(destinationUpdate) }
 
   @Post("/upgrade_version")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Status(
     HttpStatus.NO_CONTENT,
@@ -194,7 +194,7 @@ open class DestinationApiController(
   }
 
   @Post(uri = "/partial_update")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun partialUpdateDestination(

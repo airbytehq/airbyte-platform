@@ -58,7 +58,7 @@ import io.airbyte.config.SupportLevel
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.config.specs.RemoteDefinitionsProvider
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
@@ -71,7 +71,6 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
-import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTOR_BUILDER_PROJECT_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToRootSpan
@@ -114,7 +113,7 @@ open class ConnectorBuilderProjectsHandler
     private val actorDefinitionService: ActorDefinitionService,
     private val remoteDefinitionsProvider: RemoteDefinitionsProvider,
     @param:Named("oauthImplementationFactory") private val oAuthImplementationFactory: OAuthImplementationFactory,
-    private val metricClient: MetricClient,
+    private val runtimeSecretPersistenceFactory: RuntimeSecretPersistenceFactory,
   ) {
     private fun getProjectDetailsWithoutBaseAdvInfo(project: ConnectorBuilderProject): ConnectorBuilderProjectDetailsRead {
       val detailsRead =
@@ -595,10 +594,7 @@ open class ConnectorBuilderProjectsHandler
       val secretPersistence =
         secretPersistenceConfig
           .map { c: SecretPersistenceConfig? ->
-            RuntimeSecretPersistence(
-              c!!,
-              metricClient,
-            )
+            runtimeSecretPersistenceFactory.create(c!!)
           }.orElse(null)
       if (existingTestingValues.isPresent) {
         return secretsRepositoryWriter.updateFromConfigLegacy(
@@ -639,7 +635,7 @@ open class ConnectorBuilderProjectsHandler
           Optional.ofNullable(
             secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(
               testingValues.get(),
-              RuntimeSecretPersistence(secretPersistenceConfigOptional.get(), metricClient),
+              runtimeSecretPersistenceFactory.create(secretPersistenceConfigOptional.get()),
             ),
           )
         } else {

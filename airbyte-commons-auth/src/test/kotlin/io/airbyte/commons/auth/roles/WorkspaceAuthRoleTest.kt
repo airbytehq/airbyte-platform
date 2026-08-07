@@ -12,11 +12,13 @@ class WorkspaceAuthRoleTest {
   @Test
   fun `buildWorkspaceAuthRolesSet returns all lower roles for WORKSPACE_ADMIN`() {
     val result = WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN)
-    assertEquals(4, result.size)
+    assertEquals(6, result.size)
     assertEquals(
       linkedSetOf(
         WorkspaceAuthRole.WORKSPACE_ADMIN.getLabel(),
         WorkspaceAuthRole.WORKSPACE_EDITOR.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_SOURCE_EDITOR.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_DESTINATION_EDITOR.getLabel(),
         WorkspaceAuthRole.WORKSPACE_RUNNER.getLabel(),
         WorkspaceAuthRole.WORKSPACE_READER.getLabel(),
       ),
@@ -27,15 +29,55 @@ class WorkspaceAuthRoleTest {
   @Test
   fun `buildWorkspaceAuthRolesSet returns expected roles for WORKSPACE_EDITOR`() {
     val result = WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_EDITOR)
-    assertEquals(3, result.size)
+    assertEquals(5, result.size)
     assertEquals(
       linkedSetOf(
         WorkspaceAuthRole.WORKSPACE_EDITOR.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_SOURCE_EDITOR.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_DESTINATION_EDITOR.getLabel(),
         WorkspaceAuthRole.WORKSPACE_RUNNER.getLabel(),
         WorkspaceAuthRole.WORKSPACE_READER.getLabel(),
       ),
       result,
     )
+  }
+
+  @Test
+  fun `buildWorkspaceAuthRolesSet excludes the opposite actor editor for WORKSPACE_SOURCE_EDITOR`() {
+    val result = WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_SOURCE_EDITOR)
+    assertEquals(3, result.size)
+    assertEquals(
+      linkedSetOf(
+        WorkspaceAuthRole.WORKSPACE_SOURCE_EDITOR.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_RUNNER.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_READER.getLabel(),
+      ),
+      result,
+    )
+  }
+
+  @Test
+  fun `buildWorkspaceAuthRolesSet excludes the opposite actor editor for WORKSPACE_DESTINATION_EDITOR`() {
+    val result = WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_DESTINATION_EDITOR)
+    assertEquals(3, result.size)
+    assertEquals(
+      linkedSetOf(
+        WorkspaceAuthRole.WORKSPACE_DESTINATION_EDITOR.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_RUNNER.getLabel(),
+        WorkspaceAuthRole.WORKSPACE_READER.getLabel(),
+      ),
+      result,
+    )
+  }
+
+  @Test
+  fun `the actor scoped editors share an authority so neither implies the other`() {
+    assertEquals(
+      WorkspaceAuthRole.WORKSPACE_SOURCE_EDITOR.getAuthority(),
+      WorkspaceAuthRole.WORKSPACE_DESTINATION_EDITOR.getAuthority(),
+    )
+    assertTrue(WorkspaceAuthRole.WORKSPACE_SOURCE_EDITOR.getAuthority() > WorkspaceAuthRole.WORKSPACE_RUNNER.getAuthority())
+    assertTrue(WorkspaceAuthRole.WORKSPACE_SOURCE_EDITOR.getAuthority() < WorkspaceAuthRole.WORKSPACE_EDITOR.getAuthority())
   }
 
   @Test

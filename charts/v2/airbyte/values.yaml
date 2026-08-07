@@ -117,7 +117,9 @@ global:
       jwtSignatureSecretKey: ""
 
     dataPlane:
+      # -- Secret key for the data-plane client ID; overridden by workloadLauncher.dataPlane.clientIdSecretKey when set
       clientIdSecretKey: ""
+      # -- Secret key for the data-plane client secret; overridden by workloadLauncher.dataPlane.clientSecretSecretKey when set
       clientSecretSecretKey: ""
 
   api: {}
@@ -142,6 +144,8 @@ global:
 
   # -- Database configuration
   database:
+    # -- Whether Airbyte uses its own internal Postgres database or an external one.
+    # External databases require Postgres 13 or later. Airbyte tests through Postgres 17.
     type: internal # "external"
 
     # -- Secret name where database credentials are stored
@@ -363,6 +367,9 @@ global:
   # resources, such as Minikube.
   jobs:
     resources:
+      # Deprecated: set global.workloads.resources.mainContainer.{cpu,memory}.{request,limit} instead.
+      # Fallback applies per key to main-container resources only; replication is not consumed (#72833).
+      # Empty new values do not suppress legacy values; remove legacy values to stop the fallback.
       ## Example:
       ## requests:
       ##    memory: 256Mi
@@ -503,6 +510,8 @@ global:
 nameOverride: ""
 # -- String to fully override airbyte.fullname template with a string
 fullnameOverride: ""
+# -- Namespace to use for namespaced resources and service discovery.
+namespaceOverride: ""
 
 # Pods Service Account, see https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
 serviceAccount:
@@ -827,6 +836,8 @@ server:
   service:
     type: ClusterIP
     port: 8001
+    # -- Optional: specify a NodePort when type is NodePort or LoadBalancer
+    nodePort: ""
     annotations: {}
 
   annotations: {}
@@ -2132,6 +2143,11 @@ postgresql:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
+  storage:
+    # -- Size of the PersistentVolumeClaim for the bundled PostgreSQL database
+    # Install-time only; expand existing PVCs directly on existing installs.
+    volumeClaimValue: 500Mi
+
 minio:
   enabled: true
   secretName: ""
@@ -2146,7 +2162,11 @@ minio:
   rootPassword: ""
 
   storage:
+    # Install-time only; expand existing PVCs directly on existing installs.
     volumeClaimValue: 500Mi
+    # -- Optional storage class for the MinIO PersistentVolumeClaim
+    # Unset omits the field; "" disables dynamic provisioning (PVC stays Pending without a static PV); a name selects that class.
+    storageClassName: null
 
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   ##

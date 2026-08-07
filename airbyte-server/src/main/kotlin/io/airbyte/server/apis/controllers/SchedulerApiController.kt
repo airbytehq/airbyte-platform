@@ -26,7 +26,7 @@ open class SchedulerApiController(
   private val schedulerHandler: SchedulerHandler,
 ) : SchedulerApi {
   @Post("/destinations/check_connection")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun executeDestinationCheckConnection(
     @Body destinationCoreConfig: DestinationCoreConfig,
@@ -38,14 +38,14 @@ open class SchedulerApiController(
     }
 
   @Post("/sources/check_connection")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun executeSourceCheckConnection(
     @Body sourceCoreConfig: SourceCoreConfig,
   ): CheckConnectionRead? = execute { schedulerHandler.checkSourceConnectionFromSourceCreate(sourceCoreConfig) }
 
   @Post("/sources/discover_schema")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun executeSourceDiscoverSchema(
     @Body sourceCoreConfig: SourceCoreConfig,

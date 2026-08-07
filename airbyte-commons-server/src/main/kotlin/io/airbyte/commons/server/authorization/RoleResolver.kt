@@ -177,8 +177,14 @@ open class RoleResolver(
             resolvePermissions(
               subject.id,
               permissionHandler.getPermissionsByServiceAccountId(UUID.fromString(subject.id)),
+              usePerTargetPermissionReduction = false,
             )
-          TokenType.USER -> resolvePermissions(subject.id, permissionHandler.getPermissionsByAuthUserId(subject.id))
+          TokenType.USER ->
+            resolvePermissions(
+              subject.id,
+              permissionHandler.getPermissionsByAuthUserId(subject.id),
+              usePerTargetPermissionReduction = true,
+            )
           TokenType.INTERNAL_CLIENT -> AuthRole.getInstanceAdminRoles()
         }
       } catch (e: Exception) {
@@ -190,15 +196,26 @@ open class RoleResolver(
     private fun resolvePermissions(
       subjectId: String,
       perms: List<Permission>,
+      usePerTargetPermissionReduction: Boolean,
     ): Set<String> {
       logger.debug { "Resolving permissions for $subject and $perms" }
 
       val workspaceIds = authenticationHeaderResolver.resolveWorkspace(props)?.toSet() ?: emptySet()
       val resolvedOrgIds = authenticationHeaderResolver.resolveOrganization(props)?.toSet() ?: emptySet()
+      val workspaceOrganizationIds =
+        if (usePerTargetPermissionReduction) authenticationHeaderResolver.resolveWorkspaceOrganizations(workspaceIds) else emptyMap()
       val authUserIds = authenticationHeaderResolver.resolveAuthUserIds(props.toMap()) ?: emptySet()
       val allOrgIds = orgs + resolvedOrgIds
 
-      return resolveRoles(perms, subjectId, workspaceIds, allOrgIds, authUserIds)
+      return resolveRoles(
+        perms,
+        subjectId,
+        workspaceIds,
+        workspaceOrganizationIds,
+        allOrgIds,
+        authUserIds,
+        usePerTargetPermissionReduction,
+      )
     }
 
     /**
@@ -234,6 +251,7 @@ open class RoleResolver(
    * @param perms - the list of permissions the current user has.
    * @param currentAuthUserId - the authUserId of the current user.
    * @param workspaceIds - list of workspace IDs the user is requesting access to.
+   * @param workspaceOrganizationIds - organization ID for each requested workspace.
    * @param organizationIds - list of organization IDs the user is requesting access to.
    * @param authUserIds - list of authUserIds the user is requesting access to.
    */
@@ -241,8 +259,10 @@ open class RoleResolver(
     perms: List<Permission>,
     subjectId: String,
     workspaceIds: Set<UUID>,
+    workspaceOrganizationIds: Map<UUID, UUID>,
     organizationIds: Set<UUID>,
     authUserIds: Set<String>,
+    usePerTargetPermissionReduction: Boolean = true,
   ): Set<String> {
     logger.debug {
       "Resolving roles for $subjectId with perms=$perms workspaceIds=$workspaceIds organizationIds=$organizationIds authUserIds=$authUserIds"
@@ -269,10 +289,10 @@ open class RoleResolver(
       }
     }
 
-    determineWorkspaceRole(perms, workspaceIds)?.let {
+    determineWorkspaceRole(perms, workspaceIds, workspaceOrganizationIds, usePerTargetPermissionReduction)?.let {
       roles.addAll(impliedRoles(it))
     }
-    determineOrganizationRole(perms, organizationIds)?.let {
+    determineOrganizationRole(perms, organizationIds, usePerTargetPermissionReduction)?.let {
       roles.addAll(impliedRoles(it))
     }
 
@@ -294,31 +314,84 @@ private fun impliedRoles(perm: PermissionType): List<String> = PermissionHelper.
 // Similarly, if the permissions grant no access to a given workspace,
 // then this function returns an NONE (no access).
 //
+// This reduces a user's grants to a single PermissionType per workspace. WORKSPACE_SOURCE_EDITOR and
+// WORKSPACE_DESTINATION_EDITOR share an authority, so a user holding both — reachable only by
+// holding one directly and the other through a group, since permission_unique_user_workspace
+// prevents two direct workspace rows — resolves to an arbitrary one of the two rather than the union
+// of both. Grant WORKSPACE_EDITOR to users who need both.
+//
 // perms == the full list of the permissions a user has
 // workspaceIds == the set of workspace IDs that the request is referring to.
 private fun determineWorkspaceRole(
   perms: List<Permission>,
   workspaceIds: Set<UUID>,
+  workspaceOrganizationIds: Map<UUID, UUID>,
+  usePerTargetPermissionReduction: Boolean,
 ): PermissionType? {
   if (workspaceIds.isEmpty()) return null
   if (perms.isEmpty()) return null
 
-  // Filters out organization level permissions
-  val workspacePerms = perms.filter { it.workspaceId != null }
-  val permWorkspaceIds = workspacePerms.map { it.workspaceId }.toSet()
+  if (!usePerTargetPermissionReduction) {
+    val workspacePerms = perms.filter { it.workspaceId != null }
+    val permWorkspaceIds = workspacePerms.map { it.workspaceId }.toSet()
+    if (!permWorkspaceIds.containsAll(workspaceIds)) {
+      return null
+    }
+    return workspacePerms
+      .filter { it.workspaceId in workspaceIds }
+      .minByOrNull {
+        it.permissionType
+          .convertTo<WorkspaceAuthRole>()
+          ?.getAuthority()
+          ?: Integer.MAX_VALUE
+      }?.permissionType
+  }
+
+  val effectiveWorkspaceGrants =
+    perms.flatMap { permission ->
+      PermissionHelper.getGrantedPermissions(permission.permissionType).mapNotNull { grantedPermission ->
+        workspaceAuthority(grantedPermission)?.let { authority -> Triple(permission, grantedPermission, authority) }
+      }
+    }
+
+  val highestWorkspacePermsByWorkspaceId =
+    effectiveWorkspaceGrants
+      .filter { (permission) ->
+        permission.workspaceId in workspaceIds &&
+          (
+            permission.permissionType == PermissionType.WORKSPACE_OWNER ||
+              WorkspaceAuthRole.entries.any { it.name == permission.permissionType.name }
+          )
+      }.groupBy { (permission) -> permission.workspaceId!! }
+      .mapValues { (_, workspaceGrants) -> workspaceGrants.maxBy { it.third }.second }
+  val requestedOrganizationIds = workspaceOrganizationIds.filterKeys { it in workspaceIds }.values.toSet()
+  val highestWorkspacePermsByOrganizationId =
+    effectiveWorkspaceGrants
+      .filter { (permission) ->
+        permission.organizationId in requestedOrganizationIds &&
+          OrganizationAuthRole.entries.any { it.name == permission.permissionType.name }
+      }.groupBy { (permission) -> permission.organizationId!! }
+      .mapValues { (_, organizationGrants) -> organizationGrants.maxBy { it.third }.second }
+  val highestEffectivePermsByWorkspaceId =
+    workspaceIds
+      .mapNotNull { workspaceId ->
+        val workspacePermission = highestWorkspacePermsByWorkspaceId[workspaceId]
+        val organizationPermission = workspaceOrganizationIds[workspaceId]?.let { highestWorkspacePermsByOrganizationId[it] }
+        listOfNotNull(workspacePermission, organizationPermission)
+          .maxByOrNull { workspaceAuthority(it)!! }
+          ?.let { workspaceId to it }
+      }.toMap()
+
   // There must be a permission for every workspace. If not, then return null.
-  if (!permWorkspaceIds.containsAll(workspaceIds)) {
+  if (!highestEffectivePermsByWorkspaceId.keys.containsAll(workspaceIds)) {
     return null
   }
-  return workspacePerms
-    // Make sure we're only getting the min permission from permissions tied to the requested workspace Ids
-    .filter { it.workspaceId in workspaceIds }
+
+  return workspaceIds
+    .map { highestEffectivePermsByWorkspaceId.getValue(it) }
     .minByOrNull {
-      it.permissionType
-        .convertTo<WorkspaceAuthRole>()
-        ?.getAuthority()
-        ?: Integer.MAX_VALUE
-    }?.permissionType
+      workspaceAuthority(it) ?: Integer.MAX_VALUE
+    }
 }
 
 // Determine the minimal role that the permissions grant to the given organizations.
@@ -330,24 +403,52 @@ private fun determineWorkspaceRole(
 private fun determineOrganizationRole(
   perms: List<Permission>,
   organizationIds: Set<UUID>,
+  usePerTargetPermissionReduction: Boolean,
 ): PermissionType? {
   if (organizationIds.isEmpty()) return null
   if (perms.isEmpty()) return null
 
+  if (!usePerTargetPermissionReduction) {
+    val orgPerms = perms.filter { it.organizationId != null }
+    val permOrgIds = orgPerms.map { it.organizationId }.toSet()
+    if (!permOrgIds.containsAll(organizationIds)) {
+      return null
+    }
+    return orgPerms
+      .filter { it.organizationId in organizationIds }
+      .minByOrNull {
+        it.permissionType
+          .convertTo<OrganizationAuthRole>()
+          ?.getAuthority()
+          ?: Integer.MAX_VALUE
+      }?.permissionType
+  }
+
   // Filters out workspace level permissions
-  val orgPerms = perms.filter { it.organizationId != null }
-  val permOrgIds = orgPerms.map { it.organizationId }.toSet()
+  val highestOrgPermsByOrganizationId =
+    perms
+      .filter { it.organizationId in organizationIds }
+      .groupBy { it.organizationId!! }
+      .mapValues { (_, orgPerms) -> highestOrganizationPermission(orgPerms) }
+  val permOrgIds = highestOrgPermsByOrganizationId.keys
   // There must be a permission for every org. If not, then return null.
   if (!permOrgIds.containsAll(organizationIds)) {
     return null
   }
-  return orgPerms
-    // Make sure we're only getting the min permission from permissions tied to the requested organization Ids
-    .filter { it.organizationId in organizationIds }
+
+  return organizationIds
+    .map { highestOrgPermsByOrganizationId.getValue(it) }
     .minByOrNull {
-      it.permissionType
-        .convertTo<OrganizationAuthRole>()
-        ?.getAuthority()
-        ?: Integer.MAX_VALUE
+      organizationAuthority(it.permissionType) ?: Integer.MAX_VALUE
     }?.permissionType
 }
+
+private fun highestOrganizationPermission(perms: List<Permission>): Permission =
+  perms.maxBy {
+    organizationAuthority(it.permissionType) ?: Integer.MIN_VALUE
+  }
+
+private fun workspaceAuthority(permissionType: PermissionType): Int? =
+  WorkspaceAuthRole.entries.firstOrNull { it.name == permissionType.name }?.getAuthority()
+
+private fun organizationAuthority(permissionType: PermissionType): Int? = permissionType.convertTo<OrganizationAuthRole>()?.getAuthority()

@@ -20,6 +20,7 @@ import {
 } from "./packages/vite-plugins";
 
 export default defineConfig(() => {
+  const isStorybookBuild = process.env.STORYBOOK_BUILD === "true";
   const config: UserConfig = {
     plugins: [
       environmentVariables(),
@@ -57,24 +58,28 @@ export default defineConfig(() => {
           },
         },
       }),
-      checker({
-        // Enable checks while building the app (not just in dev mode)
-        enableBuild: true,
-        overlay: {
-          initialIsOpen: false,
-          position: "br",
-          // Align error popover button with the react-query dev tool button
-          badgeStyle: "transform: translate(-75px,-11px); display: var(--show-dev-tools)",
-        },
-        eslint: { lintCommand: `eslint --max-warnings=0 --ext .js,.ts,.tsx --ignore-path .gitignore .` },
-        stylelint: {
-          lintCommand: 'stylelint "src/**/*.{css,scss}"',
-          // We need to overwrite this during development, since otherwise `files` are wrongly
-          // still containing the quotes around them, which they shouldn't
-          dev: { overrideConfig: { files: "src/**/*.{css,scss}" } },
-        },
-        typescript: true,
-      }),
+      ...(isStorybookBuild
+        ? []
+        : [
+            checker({
+              // Enable checks while building the app (not just in dev mode)
+              enableBuild: true,
+              overlay: {
+                initialIsOpen: false,
+                position: "br",
+                // Align error popover button with the react-query dev tool button
+                badgeStyle: "transform: translate(-75px,-11px); display: var(--show-dev-tools)",
+              },
+              eslint: { lintCommand: `eslint --max-warnings=0 --ext .js,.ts,.tsx --ignore-path .gitignore .` },
+              stylelint: {
+                lintCommand: 'stylelint "src/**/*.{css,scss}"',
+                // We need to overwrite this during development, since otherwise `files` are wrongly
+                // still containing the quotes around them, which they shouldn't
+                dev: { overrideConfig: { files: "src/**/*.{css,scss}" } },
+              },
+              typescript: true,
+            }),
+          ]),
       docMiddleware(),
       experimentOverwrites(),
       preloadTags(),

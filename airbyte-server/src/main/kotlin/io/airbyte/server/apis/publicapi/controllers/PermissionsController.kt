@@ -57,6 +57,17 @@ open class PermissionsController(
     val userId: UUID = currentUserService.getCurrentUser().userId
     val workspaceId: UUID? = permissionCreateRequest.workspaceId
     val organizationId: UUID? = permissionCreateRequest.organizationId
+    if (workspaceId != null && organizationId != null) {
+      val badRequestProblem =
+        BadRequestProblem(ProblemMessageData().message("A permission cannot target both a workspace and an organization."))
+      trackingHelper.trackFailuresIfAny(
+        PERMISSIONS_PATH,
+        POST,
+        userId,
+        badRequestProblem,
+      )
+      throw badRequestProblem
+    }
     // auth check before processing the request
     if (workspaceId != null) { // adding a workspace level permission
       // current user should have workspace_admin or a higher role

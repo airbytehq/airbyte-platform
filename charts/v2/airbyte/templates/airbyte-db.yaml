@@ -1,7 +1,9 @@
 {{- if .Values.postgresql.enabled }}
+{{- $storage := .Values.postgresql.storage | default dict }}
 apiVersion: v1
 kind: Service
 metadata:
+  namespace: {{ include "airbyte.namespace" . }}
   name: airbyte-db-svc
   annotations:
     helm.sh/hook: pre-install
@@ -19,6 +21,7 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
+  namespace: {{ include "airbyte.namespace" . }}
   name: airbyte-db
   annotations:
     helm.sh/hook: pre-install
@@ -81,5 +84,5 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 500Mi
+          storage: {{ $storage.volumeClaimValue | default "500Mi" }}
 {{- end }}

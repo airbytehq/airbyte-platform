@@ -19,10 +19,13 @@ import io.airbyte.domain.models.scim.ScimConfigurationConflictException
 import io.airbyte.domain.models.scim.ScimConfigurationRead
 import io.airbyte.domain.models.scim.ScimConfigurationStatus
 import io.airbyte.domain.models.scim.ScimOrganizationNotFoundException
+import io.airbyte.domain.services.scim.ScimAccessGate
 import io.airbyte.domain.services.scim.ScimConfigurationService
 import io.airbyte.server.assertStatus
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
+import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
@@ -50,18 +53,28 @@ import java.util.UUID
 import io.airbyte.domain.models.scim.ScimIdpProvider as DomainScimIdpProvider
 
 private const val SCIM_CONFIG_PATH = "/api/v1/scim_config"
+private const val SCIM_CONFIG_SPEC = "ScimConfigApiHttpTest"
 
 @MicronautTest(rebuildContext = true)
+@Property(name = "spec.name", value = SCIM_CONFIG_SPEC)
 internal class ScimConfigApiHttpTest {
+  @Requires(property = "spec.name", value = SCIM_CONFIG_SPEC)
   @Factory
   class TestFactory {
     @Singleton
     @Replaces(ScimConfigurationService::class)
     fun scimConfigurationService(): ScimConfigurationService = mockk()
+
+    @Singleton
+    @Replaces(ScimAccessGate::class)
+    fun scimAccessGate(): ScimAccessGate = mockk()
   }
 
   @Inject
   lateinit var service: ScimConfigurationService
+
+  @Inject
+  lateinit var scimAccessGate: ScimAccessGate
 
   @Inject
   lateinit var currentUserService: CurrentUserService
@@ -78,7 +91,8 @@ internal class ScimConfigApiHttpTest {
 
   @BeforeEach
   fun setUp() {
-    clearMocks(service)
+    clearMocks(service, scimAccessGate)
+    every { scimAccessGate.isAllowed(any()) } returns false
     every { currentUserService.getCurrentUser() } returns
       mockk {
         every { this@mockk.userId } returns this@ScimConfigApiHttpTest.userId
@@ -86,9 +100,10 @@ internal class ScimConfigApiHttpTest {
   }
 
   @Test
-  fun `get returns a serialized 200 response`() {
+  fun `get returns a serialized 200 response with available false when the gate denies the organization`() {
     every { service.getConfiguration(OrganizationId(organizationId)) } returns
       ScimConfigurationRead(status = ScimConfigurationStatus.NOT_CONFIGURED)
+    every { scimAccessGate.isAllowed(OrganizationId(organizationId)) } returns false
 
     val response =
       client.toBlocking().exchange(
@@ -101,6 +116,23 @@ internal class ScimConfigApiHttpTest {
     assertThat(response.body()!!.status).isEqualTo(ScimConfigStatus.NOT_CONFIGURED)
     assertThat(response.body()!!.scimBaseUrl).endsWith("/scim/v2")
     assertThat(response.body()!!.token).isNull()
+    assertThat(response.body()!!.available).isFalse()
+  }
+
+  @Test
+  fun `get returns available true when the gate allows the organization`() {
+    every { service.getConfiguration(OrganizationId(organizationId)) } returns
+      ScimConfigurationRead(status = ScimConfigurationStatus.ENABLED, idpProvider = DomainScimIdpProvider.OKTA)
+    every { scimAccessGate.isAllowed(OrganizationId(organizationId)) } returns true
+
+    val response =
+      client.toBlocking().exchange(
+        HttpRequest.POST("$SCIM_CONFIG_PATH/get", OrganizationIdRequestBody(organizationId)),
+        ScimConfigResponse::class.java,
+      )
+
+    assertStatus(HttpStatus.OK, response.status)
+    assertThat(response.body()!!.available).isTrue()
   }
 
   @Test
@@ -183,25 +215,29 @@ internal class ScimConfigApiHttpTest {
   }
 
   @Test
-  fun `enable from disabled returns 409 with the known error body`() {
-    val message = "Disabled SCIM configurations cannot be re-enabled by this operation"
-    every { service.enable(any(), DomainScimIdpProvider.OKTA, any()) } throws ScimConfigurationConflictException(message)
+  fun `enable from disabled returns 200 with a one-time replacement token`() {
+    every {
+      service.enable(OrganizationId(organizationId), DomainScimIdpProvider.OKTA, UserId(userId))
+    } returns
+      ScimConfigurationRead(
+        status = ScimConfigurationStatus.ENABLED,
+        idpProvider = DomainScimIdpProvider.OKTA,
+        token = "airbyte_scim_reenabled_token",
+      )
 
-    val error =
-      exchangeError(
+    val response =
+      client.toBlocking().exchange(
         HttpRequest.POST(
           "$SCIM_CONFIG_PATH/enable",
           EnableScimRequestBody(organizationId, ScimIdpProvider.OKTA),
         ),
+        ScimConfigResponse::class.java,
       )
 
-    assertStatus(HttpStatus.CONFLICT, error.status)
-    assertThat(
-      error.response
-        .getBody(KnownExceptionInfo::class.java)
-        .orElseThrow()
-        .message,
-    ).isEqualTo(message)
+    assertStatus(HttpStatus.OK, response.status)
+    assertThat(response.body()!!.status).isEqualTo(ScimConfigStatus.ENABLED)
+    assertThat(response.body()!!.idpProvider).isEqualTo(ScimIdpProvider.OKTA)
+    assertThat(response.body()!!.token).isEqualTo("airbyte_scim_reenabled_token")
   }
 
   @Test

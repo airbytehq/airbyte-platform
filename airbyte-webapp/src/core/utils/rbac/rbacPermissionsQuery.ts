@@ -1,8 +1,21 @@
 import { useGetWorkspace } from "core/api";
-import { PermissionRead } from "core/api/types/AirbyteClient";
+import { PermissionRead, PermissionType } from "core/api/types/AirbyteClient";
 
 export const RbacResourceHierarchy = ["INSTANCE", "ORGANIZATION", "WORKSPACE"] as const;
-export const RbacRoleHierarchy = ["ADMIN", "EDITOR", "RUNNER", "READER", "MEMBER"] as const;
+// SOURCE_EDITOR and DESTINATION_EDITOR sit between EDITOR and RUNNER: each can do everything a
+// runner can, but neither is a full editor. Their order relative to each other is arbitrary and
+// unobservable, because no RbacQuery is ever built with either role — `intentToRbacQuery` only
+// targets ADMIN/EDITOR/RUNNER/READER/MEMBER, and the generated-intent path (useGeneratedIntent)
+// matches permission types exactly instead of walking this hierarchy.
+export const RbacRoleHierarchy = [
+  "ADMIN",
+  "EDITOR",
+  "SOURCE_EDITOR",
+  "DESTINATION_EDITOR",
+  "RUNNER",
+  "READER",
+  "MEMBER",
+] as const;
 export type RbacResource = (typeof RbacResourceHierarchy)[number];
 export type RbacRole = (typeof RbacRoleHierarchy)[number];
 
@@ -17,21 +30,39 @@ export type RbacQueryWithoutResourceId = Omit<RbacQuery, "resourceId">;
 export type RbacPermission = Omit<PermissionRead, "permissionId" | "userId">;
 
 /**
- * Accepts a permission type and splits it into its resource and role parts
+ * The resource and role each permission type maps onto. Spelled out rather than derived by
+ * splitting the permission type on "_": `workspace_source_editor` has three parts, so splitting
+ * yields the role "SOURCE", which is not in RbacRoleHierarchy. `indexOf` would then return -1 and
+ * satisfy every role comparison in useRbacPermissionsQuery, making the role read as more privileged
+ * than admin. The Record is keyed on PermissionType so adding a new one is a compile error here.
+ */
+const rbacPartsByPermissionType: Record<PermissionType, [RbacResource, RbacRole]> = {
+  instance_admin: ["INSTANCE", "ADMIN"],
+  organization_admin: ["ORGANIZATION", "ADMIN"],
+  organization_editor: ["ORGANIZATION", "EDITOR"],
+  organization_runner: ["ORGANIZATION", "RUNNER"],
+  organization_reader: ["ORGANIZATION", "READER"],
+  organization_member: ["ORGANIZATION", "MEMBER"],
+  // for legacy support, workspace_owner maps to workspace_admin
+  workspace_owner: ["WORKSPACE", "ADMIN"],
+  workspace_admin: ["WORKSPACE", "ADMIN"],
+  workspace_editor: ["WORKSPACE", "EDITOR"],
+  workspace_source_editor: ["WORKSPACE", "SOURCE_EDITOR"],
+  workspace_destination_editor: ["WORKSPACE", "DESTINATION_EDITOR"],
+  workspace_runner: ["WORKSPACE", "RUNNER"],
+  workspace_reader: ["WORKSPACE", "READER"],
+};
+
+/**
+ * Accepts a permission type and returns its resource and role parts
  */
 export const partitionPermissionType = (permissionType: RbacPermission["permissionType"]): [RbacResource, RbacRole] => {
-  // for legacy support, map workspace_owner to workspace_adin
-  if (permissionType === "workspace_owner") {
-    permissionType = "workspace_admin";
+  // instance_reader is a frontend-only role that is not part of PermissionType — see useGeneratedIntent.
+  if ((permissionType as string) === "instance_reader") {
+    return ["INSTANCE", "READER"];
   }
 
-  // type guarantees all of the enumerations of PermissionType are handled
-  type PermissionTypeParts = typeof permissionType extends `${infer Resource}_${infer Role}` ? [Resource, Role] : never;
-
-  const [permissionResource, permissionRole] = permissionType.split("_") as PermissionTypeParts;
-  const rbacResource: RbacResource = permissionResource.toUpperCase() as Uppercase<typeof permissionResource>;
-  const rbacRole: RbacRole = permissionRole.toUpperCase() as Uppercase<typeof permissionRole>;
-  return [rbacResource, rbacRole];
+  return rbacPartsByPermissionType[permissionType];
 };
 
 /**

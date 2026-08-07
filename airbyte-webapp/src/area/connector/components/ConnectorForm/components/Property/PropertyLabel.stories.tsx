@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { Card } from "components/ui/Card";
 import { Input } from "components/ui/Input";
@@ -8,9 +8,9 @@ import { PropertyLabel } from "./PropertyLabel";
 export default {
   title: "Connector/PropertyLabel",
   component: PropertyLabel,
-} as ComponentMeta<typeof PropertyLabel>;
+} as Meta<typeof PropertyLabel>;
 
-const Template: ComponentStory<typeof PropertyLabel> = (args) => (
+const Template: StoryFn<typeof PropertyLabel> = (args) => (
   <Card>
     <PropertyLabel {...args} />
   </Card>

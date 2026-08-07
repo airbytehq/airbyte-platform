@@ -39,6 +39,7 @@ export interface Experiments {
   "settings.breakingChangeNotifications": boolean;
   "settings.domainVerification": boolean;
   "settings.downloadDiagnostics": boolean;
+  "settings.scimProvisioning": boolean;
   "settings.showAdvancedSettings": boolean;
   "settings.ssoConfigValidation": boolean;
 }
@@ -91,6 +92,7 @@ export const defaultExperimentValues: Experiments = {
   "settings.breakingChangeNotifications": false,
   "settings.domainVerification": false,
   "settings.downloadDiagnostics": false,
+  "settings.scimProvisioning": false,
   "settings.showAdvancedSettings": false,
   "settings.ssoConfigValidation": false,
 };

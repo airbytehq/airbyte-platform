@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import omit from "lodash/omit";
 
 import { ApiCallOptions } from "../apiCall";
 import { getInstanceConfiguration, setupInstanceConfiguration, licenseInfo } from "../generated/AirbyteClient";
@@ -23,7 +24,8 @@ export function useSetupInstanceConfiguration() {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   return useMutation(
-    (body: InstanceConfigurationSetupRequestBody) => setupInstanceConfiguration(body, requestOptions),
+    (body: InstanceConfigurationSetupRequestBody) =>
+      setupInstanceConfiguration(omit(body, "securityCheck"), requestOptions),
     {
       onSuccess: (data) => {
         queryClient.setQueryData([QUERY_KEY_INSTANCE], data);

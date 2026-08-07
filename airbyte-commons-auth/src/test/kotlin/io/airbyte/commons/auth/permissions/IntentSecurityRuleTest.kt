@@ -5,6 +5,7 @@
 package io.airbyte.commons.auth.permissions
 
 import io.airbyte.commons.auth.generated.Intent
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.micronaut.core.annotation.AnnotationValue
 import io.micronaut.http.HttpAttributes
 import io.micronaut.http.HttpRequest
@@ -16,6 +17,8 @@ import io.micronaut.web.router.RouteMatch
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import reactor.test.StepVerifier
@@ -107,6 +110,61 @@ internal class IntentSecurityRuleTest {
     val result = intentSecurityRule.check(request, authentication)
     StepVerifier
       .create(result)
+      .expectNext(SecurityRuleResult.REJECTED)
+      .verifyComplete()
+  }
+
+  @Test
+  fun `the actor-scoped editor intents carry only their own actor type's role`() {
+    assertTrue(Intent.CreateOrEditSource.roles.contains(AuthRoleConstants.WORKSPACE_SOURCE_EDITOR))
+    assertFalse(Intent.CreateOrEditSource.roles.contains(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR))
+
+    assertTrue(Intent.CreateOrEditDestination.roles.contains(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR))
+    assertFalse(Intent.CreateOrEditDestination.roles.contains(AuthRoleConstants.WORKSPACE_SOURCE_EDITOR))
+
+    // A full workspace editor still satisfies both.
+    assertTrue(Intent.CreateOrEditSource.roles.contains(AuthRoleConstants.WORKSPACE_EDITOR))
+    assertTrue(Intent.CreateOrEditDestination.roles.contains(AuthRoleConstants.WORKSPACE_EDITOR))
+  }
+
+  @Test
+  fun `check allows a source editor on CreateOrEditSource and rejects it on CreateOrEditDestination`() {
+    every { authentication.roles } returns listOf(AuthRoleConstants.WORKSPACE_SOURCE_EDITOR)
+
+    every {
+      routeMatch.getAnnotation(RequiresIntent::class.java)
+    } returns AnnotationValue.builder(RequiresIntent::class.java).value(Intent.CreateOrEditSource.name).build()
+    StepVerifier
+      .create(intentSecurityRule.check(request, authentication))
+      .expectNext(SecurityRuleResult.ALLOWED)
+      .verifyComplete()
+
+    every {
+      routeMatch.getAnnotation(RequiresIntent::class.java)
+    } returns AnnotationValue.builder(RequiresIntent::class.java).value(Intent.CreateOrEditDestination.name).build()
+    StepVerifier
+      .create(intentSecurityRule.check(request, authentication))
+      .expectNext(SecurityRuleResult.REJECTED)
+      .verifyComplete()
+  }
+
+  @Test
+  fun `check allows a destination editor on CreateOrEditDestination and rejects it on CreateOrEditSource`() {
+    every { authentication.roles } returns listOf(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR)
+
+    every {
+      routeMatch.getAnnotation(RequiresIntent::class.java)
+    } returns AnnotationValue.builder(RequiresIntent::class.java).value(Intent.CreateOrEditDestination.name).build()
+    StepVerifier
+      .create(intentSecurityRule.check(request, authentication))
+      .expectNext(SecurityRuleResult.ALLOWED)
+      .verifyComplete()
+
+    every {
+      routeMatch.getAnnotation(RequiresIntent::class.java)
+    } returns AnnotationValue.builder(RequiresIntent::class.java).value(Intent.CreateOrEditSource.name).build()
+    StepVerifier
+      .create(intentSecurityRule.check(request, authentication))
       .expectNext(SecurityRuleResult.REJECTED)
       .verifyComplete()
   }

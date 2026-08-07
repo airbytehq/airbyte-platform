@@ -962,7 +962,6 @@ components:
     NotFoundKnownExceptionInfo:
       type: object
       required:
-        - message
         - exceptionClassName
       properties:
         message:

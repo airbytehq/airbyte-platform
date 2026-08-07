@@ -11,6 +11,7 @@ import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.config.persistence.ConfigNotFoundException
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -41,6 +42,7 @@ internal fun <T> execute(call: Callable<T>): T? {
         e,
       )
       is OperationNotAllowedException -> throw e
+      is InactiveUserAccessException -> throw ConflictException(e.message, e)
       is IOException -> throw RuntimeException(e)
       is DataAccessException -> throw ConflictException("Failed to access database. Check the server logs for more information", e)
       else -> {

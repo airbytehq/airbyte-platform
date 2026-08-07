@@ -14,6 +14,8 @@ import io.airbyte.data.repositories.entities.Permission
 import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationPermissionOverlapException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
+import io.airbyte.data.services.PermissionRedundantException
+import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.UserInvitationService
 import io.airbyte.data.services.impls.data.mappers.EntityInvitationStatus
 import io.airbyte.data.services.impls.data.mappers.EntityScopeType
@@ -29,12 +31,20 @@ import java.util.UUID
 open class UserInvitationServiceDataImpl(
   private val userInvitationRepository: UserInvitationRepository,
   private val permissionRepository: PermissionRepository,
+  private val permissionService: PermissionService,
 ) : UserInvitationService {
   override fun getUserInvitationByInviteCode(inviteCode: String): UserInvitation =
     userInvitationRepository
       .findByInviteCode(inviteCode)
       .orElseThrow {
         ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, inviteCode)
+      }.toConfigModel()
+
+  override fun getUserInvitationById(id: UUID): UserInvitation =
+    userInvitationRepository
+      .findById(id)
+      .orElseThrow {
+        ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, id)
       }.toConfigModel()
 
   override fun getPendingInvitations(
@@ -92,16 +102,21 @@ open class UserInvitationServiceDataImpl(
     throwIfNotPending(invitation)
 
     // create a new permission record according to the invitation
-    Permission(
-      id = UUID.randomUUID(),
-      userId = acceptingUserId,
-      permissionType = invitation.permissionType,
-    ).apply {
-      when (invitation.scopeType) {
-        EntityScopeType.organization -> organizationId = invitation.scopeId
-        EntityScopeType.workspace -> workspaceId = invitation.scopeId
-      }
-    }.let { permissionRepository.save(it) }
+    try {
+      Permission(
+        id = UUID.randomUUID(),
+        userId = acceptingUserId,
+        permissionType = invitation.permissionType,
+      ).apply {
+        when (invitation.scopeType) {
+          EntityScopeType.organization -> organizationId = invitation.scopeId
+          EntityScopeType.workspace -> workspaceId = invitation.scopeId
+        }
+      }.toConfigModel()
+        .let { permissionService.createPermission(it) }
+    } catch (_: PermissionRedundantException) {
+      // The invitation's requested access is already satisfied.
+    }
 
     // mark the invitation as accepted
     invitation.status = EntityInvitationStatus.accepted
@@ -118,12 +133,25 @@ open class UserInvitationServiceDataImpl(
     TODO("Not yet implemented")
   }
 
+  override fun cancelUserInvitation(id: UUID): UserInvitation {
+    val invitation =
+      userInvitationRepository.findById(id).orElseThrow {
+        ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, id)
+      }
+
+    return cancelInvitation(invitation)
+  }
+
   override fun cancelUserInvitation(inviteCode: String): UserInvitation {
     val invitation =
       userInvitationRepository.findByInviteCode(inviteCode).orElseThrow {
         ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, inviteCode)
       }
 
+    return cancelInvitation(invitation)
+  }
+
+  private fun cancelInvitation(invitation: EntityUserInvitation): UserInvitation {
     throwIfNotPending(invitation)
 
     invitation.status = EntityInvitationStatus.cancelled

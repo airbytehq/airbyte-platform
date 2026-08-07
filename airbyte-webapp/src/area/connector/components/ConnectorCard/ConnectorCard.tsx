@@ -110,7 +110,9 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   skipCheckConnection = false,
   ...props
 }) => {
-  const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
+  const canEditConnector = useGeneratedIntent(
+    props.formType === "source" ? Intent.CreateOrEditSource : Intent.CreateOrEditDestination
+  );
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
   const { formatMessage } = useIntl();
   const { workspaceId } = useCurrentWorkspace();

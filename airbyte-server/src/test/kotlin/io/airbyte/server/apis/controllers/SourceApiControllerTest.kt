@@ -18,6 +18,7 @@ import io.airbyte.api.model.generated.SourceReadWithMetadata
 import io.airbyte.api.model.generated.SourceSearch
 import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.persistence.ConfigNotFoundException
@@ -29,10 +30,14 @@ import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
+import io.micronaut.security.annotation.Secured
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -173,5 +178,47 @@ internal class SourceApiControllerTest {
     val path = "/api/v1/sources/upgrade_version"
     assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
     assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceIdRequestBody())))
+  }
+
+  @Test
+  fun `source write endpoints allow the source editor and reject the destination editor`() {
+    val writeEndpoints =
+      setOf(
+        "applySchemaChangeForSource",
+        "checkConnectionToSource",
+        "checkConnectionToSourceForUpdate",
+        "createSource",
+        "deleteSource",
+        "discoverSchemaForSource",
+        "updateSource",
+        "upgradeSourceVersion",
+        "partialUpdateSource",
+      )
+
+    val rolesByEndpoint =
+      SourceApiController::class.java.declaredMethods
+        .filter { it.name in writeEndpoints && it.getAnnotation(Secured::class.java) != null }
+        .associate { it.name to it.getAnnotation(Secured::class.java).value.toList() }
+
+    assertEquals(writeEndpoints, rolesByEndpoint.keys)
+
+    rolesByEndpoint.forEach { (name, roles) ->
+      assertTrue(roles.contains(AuthRoleConstants.WORKSPACE_SOURCE_EDITOR), "$name should allow the source editor")
+      assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR), "$name should not allow the destination editor")
+      assertTrue(roles.contains(AuthRoleConstants.WORKSPACE_EDITOR), "$name should still allow the workspace editor")
+    }
+  }
+
+  @Test
+  fun `source read endpoints do not gain either actor-scoped editor role`() {
+    val readEndpoints = setOf("getSource", "getSourceWithMetadata", "listSourcesForWorkspace", "getMostRecentSourceActorCatalog")
+
+    SourceApiController::class.java.declaredMethods
+      .filter { it.name in readEndpoints && it.getAnnotation(Secured::class.java) != null }
+      .forEach {
+        val roles = it.getAnnotation(Secured::class.java).value.toList()
+        assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_SOURCE_EDITOR), "${it.name} should stay reader-scoped")
+        assertFalse(roles.contains(AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR), "${it.name} should stay reader-scoped")
+      }
   }
 }

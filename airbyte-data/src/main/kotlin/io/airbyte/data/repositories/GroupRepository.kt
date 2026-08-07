@@ -5,6 +5,7 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Group
+import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
@@ -18,6 +19,87 @@ import java.util.UUID
  */
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface GroupRepository : PageableRepository<Group, UUID> {
+  fun existsByIdAndOrganizationId(
+    id: UUID,
+    organizationId: UUID,
+  ): Boolean
+
+  @Query(
+    """
+    SELECT EXISTS (
+      SELECT 1
+      FROM "group"
+      WHERE organization_id = :organizationId
+        AND LOWER(name) = LOWER(:name)
+    )
+    """,
+  )
+  fun existsByNameIgnoreCaseAndOrganizationId(
+    name: String,
+    organizationId: UUID,
+  ): Boolean
+
+  @Query(
+    """
+    SELECT EXISTS (
+      SELECT 1
+      FROM "group"
+      WHERE organization_id = :organizationId
+        AND LOWER(name) = LOWER(:name)
+        AND id <> :excludedId
+    )
+    """,
+  )
+  fun existsByNameIgnoreCaseAndOrganizationIdAndIdNot(
+    name: String,
+    organizationId: UUID,
+    excludedId: UUID,
+  ): Boolean
+
+  @Query(
+    """
+    UPDATE "group"
+    SET name = :name,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = :id
+      AND organization_id = :organizationId
+    """,
+  )
+  fun updateName(
+    id: UUID,
+    organizationId: UUID,
+    name: String,
+  ): Long
+
+  @Query(
+    """
+    UPDATE "group"
+    SET name = :name,
+        description = :description,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = :id
+      AND organization_id = :organizationId
+    """,
+  )
+  fun updateByIdAndOrganizationId(
+    id: UUID,
+    organizationId: UUID,
+    name: String,
+    description: String?,
+  ): Long
+
+  @Query(
+    """
+    DELETE FROM "group"
+    WHERE id = :id
+      AND organization_id = :organizationId
+    """,
+  )
+  fun deleteByIdAndOrganizationId(
+    id: UUID,
+    organizationId: UUID,
+  ): Long
+
   /**
    * Find a group by name within a specific organization.
    *

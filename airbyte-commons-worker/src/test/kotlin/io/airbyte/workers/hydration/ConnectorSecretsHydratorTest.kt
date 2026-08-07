@@ -18,15 +18,12 @@ import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.SecretsRepositoryReader
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.config.secrets.persistence.RuntimeSecretPersistenceFactory
 import io.airbyte.config.secrets.persistence.SecretPersistence
-import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.helper.toConfigModel
-import io.mockk.EqMatcher
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
@@ -36,17 +33,17 @@ import java.util.UUID
 
 class ConnectorSecretsHydratorTest {
   private val environmentSecretPersistence = mockk<SecretPersistence>()
+  private val runtimeSecretPersistenceFactory = mockk<RuntimeSecretPersistenceFactory>()
 
   @BeforeEach
   fun setup() {
     clearAllMocks()
-    mockkConstructor(RuntimeSecretPersistence::class)
+    every { runtimeSecretPersistenceFactory.create(any()) } returns mockk<SecretPersistence>()
   }
 
   @Test
   fun `uses runtime hydration if ff enabled for organization id`() {
     val airbyteApiClient: AirbyteApiClient = mockk()
-    val metricClient: MetricClient = mockk()
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val secretsApiClient: SecretsPersistenceConfigApi = mockk()
     val useRuntimeSecretPersistence = true
@@ -59,7 +56,7 @@ class ConnectorSecretsHydratorTest {
         airbyteApiClient,
         useRuntimeSecretPersistence,
         environmentSecretPersistence,
-        metricClient,
+        runtimeSecretPersistenceFactory,
       )
 
     val unhydratedConfig =
@@ -98,7 +95,7 @@ class ConnectorSecretsHydratorTest {
       )
 
     verify { secretsApiClient.getSecretsPersistenceConfig(SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, orgId)) }
-    verify { constructedWith<RuntimeSecretPersistence>(EqMatcher(secretConfig), EqMatcher(metricClient)) }
+    verify { runtimeSecretPersistenceFactory.create(any()) }
     verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any<Map<UUID?, SecretPersistence>>()) }
 
     Assertions.assertEquals(hydratedConfig, result)
@@ -107,7 +104,6 @@ class ConnectorSecretsHydratorTest {
   @Test
   fun `uses default hydration if ff not enabled for organization id`() {
     val airbyteApiClient: AirbyteApiClient = mockk()
-    val metricClient: MetricClient = mockk()
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val secretsApiClient: SecretsPersistenceConfigApi = mockk()
     val useRuntimeSecretPersistence = false
@@ -120,7 +116,7 @@ class ConnectorSecretsHydratorTest {
         airbyteApiClient,
         useRuntimeSecretPersistence,
         environmentSecretPersistence,
-        metricClient,
+        runtimeSecretPersistenceFactory,
       )
 
     val unhydratedConfig =
@@ -158,7 +154,6 @@ class ConnectorSecretsHydratorTest {
   @Test
   fun `uses persistence from secret storage`() {
     val airbyteApiClient: AirbyteApiClient = mockk()
-    val metricClient: MetricClient = mockk()
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val useRuntimeSecretPersistence = true
 
@@ -168,7 +163,7 @@ class ConnectorSecretsHydratorTest {
         airbyteApiClient,
         useRuntimeSecretPersistence,
         environmentSecretPersistence,
-        metricClient,
+        runtimeSecretPersistenceFactory,
       )
 
     val secretStorageId = UUID.randomUUID()
@@ -212,7 +207,7 @@ class ConnectorSecretsHydratorTest {
       )
 
     verify { airbyteApiClient.secretStorageApi.getSecretStorage(SecretStorageIdRequestBody(secretStorageId)) }
-    verify { constructedWith<RuntimeSecretPersistence>(EqMatcher(secretStorageConfig), EqMatcher(metricClient)) }
+    verify { runtimeSecretPersistenceFactory.create(secretStorageConfig) }
     verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any<Map<UUID?, SecretPersistence>>()) }
 
     Assertions.assertEquals(hydratedConfig, result)
@@ -221,7 +216,6 @@ class ConnectorSecretsHydratorTest {
   @Test
   fun `uses environment-configured persistence from secret storage`() {
     val airbyteApiClient: AirbyteApiClient = mockk()
-    val metricClient: MetricClient = mockk()
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val useRuntimeSecretPersistence = true
 
@@ -231,7 +225,7 @@ class ConnectorSecretsHydratorTest {
         airbyteApiClient,
         useRuntimeSecretPersistence,
         environmentSecretPersistence,
-        metricClient,
+        runtimeSecretPersistenceFactory,
       )
 
     val secretStorageId = UUID.randomUUID()

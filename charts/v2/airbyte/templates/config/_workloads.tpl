@@ -319,7 +319,7 @@ Renders the workloads.resources.useConnectorResourceDefaults environment variabl
 Renders the global.workloads.resources.mainContainer.cpu.limit value
 */}}
 {{- define "airbyte.workloads.resources.mainContainer.cpu.limit" }}
-    {{- .Values.global.workloads.resources.mainContainer.cpu.limit | default "" }}
+    {{- dig "mainContainer" "cpu" "limit" "" (dig "workloads" "resources" dict .Values.global) | default (dig "jobs" "resources" "limits" "cpu" "" .Values.global) }}
 {{- end }}
 
 {{/*
@@ -337,7 +337,7 @@ Renders the workloads.resources.mainContainer.cpu.limit environment variable
 Renders the global.workloads.resources.mainContainer.cpu.request value
 */}}
 {{- define "airbyte.workloads.resources.mainContainer.cpu.request" }}
-    {{- .Values.global.workloads.resources.mainContainer.cpu.request | default "" }}
+    {{- dig "mainContainer" "cpu" "request" "" (dig "workloads" "resources" dict .Values.global) | default (dig "jobs" "resources" "requests" "cpu" "" .Values.global) }}
 {{- end }}
 
 {{/*
@@ -355,7 +355,7 @@ Renders the workloads.resources.mainContainer.cpu.request environment variable
 Renders the global.workloads.resources.mainContainer.memory.limit value
 */}}
 {{- define "airbyte.workloads.resources.mainContainer.memory.limit" }}
-    {{- .Values.global.workloads.resources.mainContainer.memory.limit | default "" }}
+    {{- dig "mainContainer" "memory" "limit" "" (dig "workloads" "resources" dict .Values.global) | default (dig "jobs" "resources" "limits" "memory" "" .Values.global) }}
 {{- end }}
 
 {{/*
@@ -373,7 +373,7 @@ Renders the workloads.resources.mainContainer.memory.limit environment variable
 Renders the global.workloads.resources.mainContainer.memory.request value
 */}}
 {{- define "airbyte.workloads.resources.mainContainer.memory.request" }}
-    {{- .Values.global.workloads.resources.mainContainer.memory.request | default "" }}
+    {{- dig "mainContainer" "memory" "request" "" (dig "workloads" "resources" dict .Values.global) | default (dig "jobs" "resources" "requests" "memory" "" .Values.global) }}
 {{- end }}
 
 {{/*

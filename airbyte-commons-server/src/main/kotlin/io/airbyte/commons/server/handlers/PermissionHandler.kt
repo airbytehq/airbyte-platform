@@ -22,6 +22,7 @@ import io.airbyte.config.UserPermission
 import io.airbyte.config.helpers.PermissionHelper.definedPermissionGrantsTargetPermission
 import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
 import io.airbyte.data.services.WorkspaceService
@@ -65,6 +66,10 @@ open class PermissionHandler(
       throw JsonValidationException("Cannot create DATAPLANE_ADMIN permission record.")
     }
 
+    if (permissionCreate.workspaceId != null && permissionCreate.organizationId != null) {
+      throw JsonValidationException("Permission cannot target both a workspace and an organization.")
+    }
+
     // Look for an existing permission.
     val existingPermissions = permissionService.getPermissionsForUser(permissionCreate.userId)
     for (p in existingPermissions) {
@@ -77,7 +82,11 @@ open class PermissionHandler(
       permissionCreate.permissionId = uuidGenerator?.get()
     }
 
-    return permissionService.createPermission(permissionCreate)
+    return try {
+      permissionService.createPermission(permissionCreate)
+    } catch (e: InactiveUserAccessException) {
+      throw ConflictException(e.message, e)
+    }
   }
 
   fun grantInstanceAdmin(userId: UUID?) {
@@ -440,6 +449,8 @@ open class PermissionHandler(
         Permission.PermissionType.ORGANIZATION_ADMIN,
         Permission.PermissionType.ORGANIZATION_RUNNER,
         Permission.PermissionType.WORKSPACE_EDITOR,
+        Permission.PermissionType.WORKSPACE_SOURCE_EDITOR,
+        Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR,
         Permission.PermissionType.WORKSPACE_OWNER,
         Permission.PermissionType.WORKSPACE_ADMIN,
         Permission.PermissionType.WORKSPACE_RUNNER,

@@ -25,7 +25,14 @@ export const useValidateMappers = () => {
     const queryKey = mappersKeys.validation(connectionId, streamDescriptor);
 
     return queryClient.fetchQuery<WebBackendValidateMappersResponse>(queryKey, () =>
-      webBackendValidateMappers({ connectionId, streamDescriptor, mappers }, requestOptions)
+      webBackendValidateMappers(
+        {
+          connectionId,
+          streamDescriptor,
+          mappers: mappers.map(({ id, type, mapperConfiguration }) => ({ id, type, mapperConfiguration })),
+        },
+        requestOptions
+      )
     );
   };
 
@@ -44,6 +51,13 @@ export const useInitialValidation = (streamDescriptor: StreamDescriptor, mappers
   const queryKey = mappersKeys.validation(connectionId, streamDescriptor);
 
   return useSuspenseQuery<WebBackendValidateMappersResponse>(queryKey, () =>
-    webBackendValidateMappers({ connectionId, streamDescriptor, mappers }, requestOptions)
+    webBackendValidateMappers(
+      {
+        connectionId,
+        streamDescriptor,
+        mappers: mappers.map(({ id, type, mapperConfiguration }) => ({ id, type, mapperConfiguration })),
+      },
+      requestOptions
+    )
   );
 };

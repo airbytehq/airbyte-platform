@@ -28,8 +28,10 @@ import org.jooq.Record3
 import org.jooq.impl.DSL
 import java.io.IOException
 import java.time.OffsetDateTime
+import java.util.Locale
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider as DbAuthProvider
 
 /**
  * User Persistence.
@@ -49,21 +51,14 @@ open class UserPersistence(
    * @throws IOException in case of a db error
    */
   fun writeUser(user: User) {
-    database.transaction<Any?> { ctx: DSLContext ->
-      val isExistingConfig =
-        ctx.fetchExists(
-          DSL
-            .select()
-            .from(Tables.USER)
-            .where(Tables.USER.ID.eq(user.userId)),
-        )
-      if (isExistingConfig) {
-        updateUser(ctx, user)
-      } else {
-        createUser(ctx, user)
-      }
-      null
-    }
+    writeUser(user, null, false)
+  }
+
+  fun writeUser(
+    ctx: DSLContext,
+    user: User,
+  ) {
+    check(writeUser(ctx, user, null, false))
   }
 
   private fun updateUser(
@@ -126,57 +121,260 @@ open class UserPersistence(
    * @param user user to create or update.
    */
   fun writeAuthenticatedUser(user: AuthenticatedUser) {
-    database.transaction<Any?> { ctx: DSLContext ->
-      val isExistingConfig =
-        ctx.fetchExists(
-          DSL
-            .select()
-            .from(Tables.USER)
-            .where(Tables.USER.ID.eq(user.userId)),
-        )
-      if (isExistingConfig) {
-        updateUser(ctx, toUser(user))
-      } else {
-        createUser(ctx, toUser(user))
-        writeAuthUser(ctx, user.userId, user.authUserId, user.authProvider)
-      }
-      null
+    check(writeUser(toUser(user), user, false)) {
+      "Authentication identity is already attached to another user."
     }
   }
+
+  fun writeAuthenticatedUser(
+    ctx: DSLContext,
+    user: AuthenticatedUser,
+  ) {
+    check(writeUser(ctx, toUser(user), user, false)) {
+      "Authentication identity is already attached to another user."
+    }
+  }
+
+  fun enableAgenticUser(
+    userId: UUID,
+    agenticEnabledAt: OffsetDateTime,
+  ): OffsetDateTime = database.transaction { ctx -> enableAgenticUser(ctx, userId, agenticEnabledAt) }
+
+  fun enableAgenticUser(
+    ctx: DSLContext,
+    userId: UUID,
+    agenticEnabledAt: OffsetDateTime,
+  ): OffsetDateTime {
+    val updatedAgenticEnabledAt =
+      ctx
+        .update(Tables.USER)
+        .set(Tables.USER.AGENTIC_ENABLED_AT, agenticEnabledAt)
+        .where(Tables.USER.ID.eq(userId))
+        .and(Tables.USER.AGENTIC_ENABLED_AT.isNull)
+        .returning(Tables.USER.AGENTIC_ENABLED_AT)
+        .fetchOne()
+        ?.get(Tables.USER.AGENTIC_ENABLED_AT)
+    if (updatedAgenticEnabledAt != null) {
+      return updatedAgenticEnabledAt
+    }
+
+    val storedUser =
+      ctx
+        .select(Tables.USER.AGENTIC_ENABLED_AT)
+        .from(Tables.USER)
+        .where(Tables.USER.ID.eq(userId))
+        .fetchOne()
+    checkNotNull(storedUser) { "User $userId no longer exists." }
+    return checkNotNull(storedUser.value1()) { "User $userId was not enabled for agentic use." }
+  }
+
+  /**
+   * Creates an authenticated user unless a SCIM mapping claimed the email while login was in
+   * progress.
+   *
+   * The email advisory lock makes the mapping check and user creation atomic with SCIM email
+   * transitions, which acquire the same lock.
+   */
+  fun createAuthenticatedUserIfNoScimMapping(user: AuthenticatedUser): Boolean = writeUser(toUser(user), user, true)
+
+  fun createAuthenticatedUserIfNoScimMapping(
+    ctx: DSLContext,
+    user: AuthenticatedUser,
+  ): Boolean = writeUser(ctx, toUser(user), user, true)
+
+  private fun writeUser(
+    user: User,
+    authenticatedUser: AuthenticatedUser?,
+    rejectScimManagedEmail: Boolean,
+  ): Boolean =
+    database.transaction { ctx ->
+      writeUser(ctx, user, authenticatedUser, rejectScimManagedEmail)
+    }
+
+  private fun writeUser(
+    ctx: DSLContext,
+    user: User,
+    authenticatedUser: AuthenticatedUser?,
+    rejectScimManagedEmail: Boolean,
+  ): Boolean {
+    while (true) {
+      try {
+        val observedUser =
+          ctx
+            .select(Tables.USER.EMAIL)
+            .from(Tables.USER)
+            .where(Tables.USER.ID.eq(user.userId))
+            .fetchOne()
+        val emailsToLock =
+          listOfNotNull(observedUser?.value1(), user.email)
+            .distinct()
+            .sortedWith(compareBy<String> { it.lowercase(Locale.ROOT) }.thenBy { it })
+        // Dual-lock for this one release's rolling-deploy bridge: old pods (pre-rename) only ever
+        // take the legacy (unprefixed) key, so a new pod must also take it to serialize against
+        // them. All legacy keys are acquired (sorted) before any current key (sorted) so that two
+        // new pods locking overlapping email sets in different orders can never deadlock against
+        // each other. TODO: drop the legacy pass next release.
+        emailsToLock.forEach { email ->
+          ctx.fetch("SELECT pg_advisory_xact_lock(hashtextextended(lower(?), 0))", email)
+        }
+        emailsToLock.forEach { email ->
+          ctx.fetch("SELECT pg_advisory_xact_lock(hashtextextended('email:' || lower(?), 0))", email)
+        }
+        val lockedUser =
+          ctx
+            .select(Tables.USER.EMAIL)
+            .from(Tables.USER)
+            .where(Tables.USER.ID.eq(user.userId))
+            .forUpdate()
+            .fetchOne()
+        if (
+          (observedUser == null) != (lockedUser == null) ||
+          observedUser?.value1() != lockedUser?.value1()
+        ) {
+          throw RetryUserWriteException()
+        }
+        if (lockedUser == null &&
+          rejectScimManagedEmail &&
+          ctx.fetchExists(
+            ctx
+              .selectOne()
+              .from(Tables.SCIM_RESOURCE_MAPPING)
+              .where(Tables.SCIM_RESOURCE_MAPPING.RESOURCE_TYPE.eq(io.airbyte.db.instance.configs.jooq.generated.enums.ScimResourceType.USER))
+              .and(Tables.SCIM_RESOURCE_MAPPING.PRIMARY_EMAIL.equalIgnoreCase(user.email)),
+          )
+        ) {
+          return false
+        }
+        if (lockedUser == null) {
+          val dbAuthProvider = authenticatedUser?.authProvider?.value()?.toEnum<DbAuthProvider>()
+          val existingAuthUsers =
+            authenticatedUser?.let { lockAuthUsers(ctx, it.authUserId) }.orEmpty()
+          if (existingAuthUsers.any { it.userId != user.userId }) {
+            return false
+          }
+          createUser(ctx, user)
+          if (authenticatedUser != null && existingAuthUsers.isEmpty()) {
+            insertAuthUser(ctx, authenticatedUser.userId, authenticatedUser.authUserId, dbAuthProvider)
+          }
+        } else {
+          updateUser(ctx, user)
+        }
+        return true
+      } catch (_: RetryUserWriteException) {
+        // Retry with the current stored email so every identity key remains locked until commit.
+      }
+    }
+  }
+
+  private class RetryUserWriteException : RuntimeException(null, null, false, false)
 
   fun writeAuthUser(
     userId: UUID,
     authUserId: String,
     authProvider: AuthProvider?,
-  ) {
-    database.query<Any?> { ctx: DSLContext ->
-      writeAuthUser(ctx, userId, authUserId, authProvider)
-      null
-    }
-  }
+  ): Boolean = database.transaction { ctx -> attachAuthUser(ctx, userId, authUserId, authProvider) }
 
-  private fun writeAuthUser(
+  fun writeAuthUser(
     ctx: DSLContext,
     userId: UUID,
     authUserId: String,
     authProvider: AuthProvider?,
+  ): Boolean = attachAuthUser(ctx, userId, authUserId, authProvider)
+
+  private fun attachAuthUser(
+    ctx: DSLContext,
+    userId: UUID,
+    authUserId: String,
+    authProvider: AuthProvider?,
+  ): Boolean {
+    val dbAuthProvider = authProvider?.value()?.toEnum<DbAuthProvider>()
+    val existingAuthUsers = lockAuthUsers(ctx, authUserId)
+    if (existingAuthUsers.any { it.userId != userId }) {
+      return false
+    }
+    if (existingAuthUsers.isNotEmpty()) {
+      return true
+    }
+
+    insertAuthUser(ctx, userId, authUserId, dbAuthProvider)
+    return true
+  }
+
+  /**
+   * Locks authentication subjects in a stable order and verifies that each has exactly one owner,
+   * which is the expected Airbyte user.
+   */
+  fun requireAuthUsersOwnedBy(
+    ctx: DSLContext,
+    userId: UUID,
+    authUserIds: Collection<String>,
   ) {
-    val now = OffsetDateTime.now()
-    ctx
-      .insertInto(Tables.AUTH_USER)
-      .set(Tables.AUTH_USER.ID, UUID.randomUUID())
-      .set(Tables.AUTH_USER.USER_ID, userId)
-      .set(Tables.AUTH_USER.AUTH_USER_ID, authUserId)
-      .set(
-        Tables.AUTH_USER.AUTH_PROVIDER,
-        if (authProvider == null) {
-          null
+    authUserIds
+      .distinct()
+      .sorted()
+      .forEach { authUserId ->
+        val owners = lockAuthUsers(ctx, authUserId).map { it.userId }.distinct()
+        check(owners == listOf(userId)) {
+          "Authentication identity $authUserId is not uniquely owned by user $userId."
+        }
+      }
+  }
+
+  /**
+   * Locks an authentication subject and verifies that it is either unowned or owned only by the
+   * expected Airbyte user.
+   */
+  fun requireAuthUserAvailableTo(
+    ctx: DSLContext,
+    userId: UUID,
+    authUserId: String,
+  ) {
+    val owners = lockAuthUsers(ctx, authUserId).map { it.userId }.distinct()
+    check(owners.isEmpty() || owners == listOf(userId)) {
+      "Authentication identity $authUserId is owned by another user."
+    }
+  }
+
+  /**
+   * Locks every authentication subject participating in a replacement in one stable order.
+   *
+   * Existing subjects must remain uniquely owned by the expected Airbyte user. The incoming
+   * subject may be unowned or already owned by that same user.
+   *
+   * @return whether the incoming subject is available to the expected Airbyte user
+   */
+  fun lockAuthUsersForReplacement(
+    ctx: DSLContext,
+    userId: UUID,
+    existingAuthUserIds: Collection<String>,
+    incomingAuthUserId: String,
+  ): Boolean {
+    val existingSubjects = existingAuthUserIds.toSet()
+    var incomingSubjectAvailable = true
+    (existingSubjects + incomingAuthUserId)
+      .sorted()
+      .forEach { authUserId ->
+        val owners = lockAuthUsers(ctx, authUserId).map { it.userId }.distinct()
+        if (authUserId in existingSubjects) {
+          check(owners == listOf(userId)) {
+            "Authentication identity $authUserId is not uniquely owned by user $userId."
+          }
         } else {
-          authProvider.value().toEnum<io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider>()!!
-        },
-      ).set(Tables.AUTH_USER.CREATED_AT, now)
-      .set(Tables.AUTH_USER.UPDATED_AT, now)
-      .execute()
+          incomingSubjectAvailable = owners.isEmpty() || owners == listOf(userId)
+        }
+      }
+    return incomingSubjectAvailable
+  }
+
+  /**
+   * Serializes the staged database and external phases of an authentication identity replacement
+   * for one Airbyte user.
+   */
+  fun lockAuthUserReplacement(
+    ctx: DSLContext,
+    userId: UUID,
+  ) {
+    ctx.fetch("SELECT pg_advisory_xact_lock(hashtextextended('auth-user-replacement:' || ?, 0))", userId.toString())
   }
 
   /**
@@ -185,22 +383,98 @@ open class UserPersistence(
    * @param userId internal user id
    * @param newAuthUserId new auth user id
    * @param newAuthProvider new auth provider
+   * @return whether the identity was replaced or was already attached to this user
    * @throws IOException in case of a db error
    */
   fun replaceAuthUserForUserId(
     userId: UUID,
     newAuthUserId: String,
     newAuthProvider: AuthProvider?,
-  ) {
-    database.transaction<Any?> { ctx: DSLContext ->
-      ctx
-        .deleteFrom(Tables.AUTH_USER)
-        .where(Tables.AUTH_USER.USER_ID.eq(userId))
-        .execute()
-      writeAuthUser(ctx, userId, newAuthUserId, newAuthProvider)
-      null
+  ): Boolean =
+    database.transaction { ctx: DSLContext ->
+      replaceAuthUserForUserId(ctx, userId, newAuthUserId, newAuthProvider)
     }
+
+  fun replaceAuthUserForUserId(
+    ctx: DSLContext,
+    userId: UUID,
+    newAuthUserId: String,
+    newAuthProvider: AuthProvider?,
+  ): Boolean {
+    lockAuthUserReplacement(ctx, userId)
+    if (
+      !lockAuthUsersForReplacement(
+        ctx,
+        userId,
+        listAuthUsersForUser(ctx, userId).map { it.authUserId },
+        newAuthUserId,
+      )
+    ) {
+      return false
+    }
+    val dbAuthProvider = newAuthProvider?.value()?.toEnum<DbAuthProvider>()
+    val existingAuthUsers = lockAuthUsers(ctx, newAuthUserId)
+    if (existingAuthUsers.any { it.userId != userId }) {
+      return false
+    }
+    val retainedAuthUser =
+      existingAuthUsers.firstOrNull {
+        it.userId == userId && it.authProvider == dbAuthProvider
+      }
+    ctx
+      .deleteFrom(Tables.AUTH_USER)
+      .where(Tables.AUTH_USER.USER_ID.eq(userId))
+      .and(retainedAuthUser?.let { Tables.AUTH_USER.ID.ne(it.id) } ?: DSL.noCondition())
+      .execute()
+    if (retainedAuthUser == null) {
+      insertAuthUser(ctx, userId, newAuthUserId, dbAuthProvider)
+    }
+    return true
   }
+
+  private fun lockAuthUsers(
+    ctx: DSLContext,
+    authUserId: String,
+  ): List<AuthUserOwnership> {
+    ctx.fetch("SELECT pg_advisory_xact_lock(hashtextextended('auth-user:' || ?, 0))", authUserId)
+    return ctx
+      .select(Tables.AUTH_USER.ID, Tables.AUTH_USER.USER_ID, Tables.AUTH_USER.AUTH_PROVIDER)
+      .from(Tables.AUTH_USER)
+      .where(Tables.AUTH_USER.AUTH_USER_ID.eq(authUserId))
+      .orderBy(Tables.AUTH_USER.USER_ID, Tables.AUTH_USER.AUTH_PROVIDER)
+      .forUpdate()
+      .fetch {
+        AuthUserOwnership(
+          id = it.value1(),
+          userId = it.value2(),
+          authProvider = it.value3(),
+        )
+      }
+  }
+
+  private fun insertAuthUser(
+    ctx: DSLContext,
+    userId: UUID,
+    authUserId: String,
+    authProvider: DbAuthProvider?,
+  ) {
+    val now = OffsetDateTime.now()
+    ctx
+      .insertInto(Tables.AUTH_USER)
+      .set(Tables.AUTH_USER.ID, UUID.randomUUID())
+      .set(Tables.AUTH_USER.USER_ID, userId)
+      .set(Tables.AUTH_USER.AUTH_USER_ID, authUserId)
+      .set(Tables.AUTH_USER.AUTH_PROVIDER, authProvider)
+      .set(Tables.AUTH_USER.CREATED_AT, now)
+      .set(Tables.AUTH_USER.UPDATED_AT, now)
+      .execute()
+  }
+
+  private data class AuthUserOwnership(
+    val id: UUID,
+    val userId: UUID,
+    val authProvider: DbAuthProvider,
+  )
 
   /**
    * Delete User.
@@ -248,15 +522,18 @@ open class UserPersistence(
    * @return user if found
    * @throws IOException in case of a db error
    */
-  fun getUser(userId: UUID?): Optional<User> {
+  fun getUser(userId: UUID?): Optional<User> = database.query { ctx -> getUser(ctx, userId) }
+
+  fun getUser(
+    ctx: DSLContext,
+    userId: UUID?,
+  ): Optional<User> {
     val result =
-      database.query { ctx: DSLContext ->
-        ctx
-          .select(DSL.asterisk())
-          .from(Tables.USER)
-          .where(Tables.USER.ID.eq(userId))
-          .fetch()
-      }
+      ctx
+        .select(DSL.asterisk())
+        .from(Tables.USER)
+        .where(Tables.USER.ID.eq(userId))
+        .fetch()
 
     if (result.isEmpty()) {
       return Optional.empty()
@@ -328,28 +605,48 @@ open class UserPersistence(
    * @return the user information if it exists in the database, Optional.empty() otherwise
    * @throws IOException in case of a db error
    */
-  fun getUserByAuthId(userAuthId: String?): Optional<AuthenticatedUser> {
+  fun getUserByAuthId(userAuthId: String?): Optional<AuthenticatedUser> = database.query { ctx -> getUserByAuthId(ctx, userAuthId) }
+
+  fun getUserByAuthId(
+    ctx: DSLContext,
+    userAuthId: String?,
+  ): Optional<AuthenticatedUser> {
+    val owners =
+      ctx
+        .selectDistinct(Tables.AUTH_USER.USER_ID)
+        .from(Tables.AUTH_USER)
+        .where(Tables.AUTH_USER.AUTH_USER_ID.eq(userAuthId))
+        .asTable("auth_user_owners")
+    val resolvedUserId = owners.field(Tables.AUTH_USER.USER_ID)!!
     val result =
-      database.query { ctx: DSLContext ->
-        ctx
-          .select(
-            Tables.AUTH_USER.AUTH_USER_ID,
-            Tables.AUTH_USER.AUTH_PROVIDER,
-            Tables.USER.ID,
-            Tables.USER.NAME,
-            Tables.USER.DEFAULT_WORKSPACE_ID,
-            Tables.USER.STATUS,
-            Tables.USER.COMPANY_NAME,
-            Tables.USER.EMAIL,
-            Tables.USER.NEWS,
-            Tables.USER.UI_METADATA,
-            Tables.USER.AGENTIC_ENABLED_AT,
-          ).from(Tables.AUTH_USER)
-          .innerJoin(Tables.USER)
-          .on(Tables.AUTH_USER.USER_ID.eq(Tables.USER.ID))
-          .where(Tables.AUTH_USER.AUTH_USER_ID.eq(userAuthId))
-          .fetch()
-      }
+      ctx
+        .select(
+          Tables.AUTH_USER.AUTH_USER_ID,
+          Tables.AUTH_USER.AUTH_PROVIDER,
+          Tables.USER.ID,
+          Tables.USER.NAME,
+          Tables.USER.DEFAULT_WORKSPACE_ID,
+          Tables.USER.STATUS,
+          Tables.USER.COMPANY_NAME,
+          Tables.USER.EMAIL,
+          Tables.USER.NEWS,
+          Tables.USER.UI_METADATA,
+          Tables.USER.AGENTIC_ENABLED_AT,
+        ).from(owners)
+        .innerJoin(Tables.USER)
+        .on(resolvedUserId.eq(Tables.USER.ID))
+        .innerJoin(Tables.AUTH_USER)
+        .on(Tables.AUTH_USER.USER_ID.eq(resolvedUserId))
+        .and(Tables.AUTH_USER.AUTH_USER_ID.eq(userAuthId))
+        .whereNotExists(
+          ctx
+            .selectOne()
+            .from(Tables.AUTH_USER)
+            .where(Tables.AUTH_USER.AUTH_USER_ID.eq(userAuthId))
+            .and(Tables.AUTH_USER.USER_ID.ne(resolvedUserId)),
+        ).orderBy(Tables.AUTH_USER.AUTH_PROVIDER)
+        .limit(1)
+        .fetch()
 
     if (result.isEmpty()) {
       return Optional.empty()
@@ -387,15 +684,18 @@ open class UserPersistence(
     return Optional.of(createAuthenticatedUserFromRecord(result[0]))
   }
 
-  fun getUserByEmail(email: String?): Optional<User> {
+  fun getUserByEmail(email: String?): Optional<User> = database.query { ctx -> getUserByEmail(ctx, email) }
+
+  fun getUserByEmail(
+    ctx: DSLContext,
+    email: String?,
+  ): Optional<User> {
     val result =
-      database.query { ctx: DSLContext ->
-        ctx
-          .select(DSL.asterisk())
-          .from(Tables.USER)
-          .where(Tables.USER.EMAIL.eq(email))
-          .fetch()
-      }
+      ctx
+        .select(DSL.asterisk())
+        .from(Tables.USER)
+        .where(Tables.USER.EMAIL.eq(email))
+        .fetch()
 
     if (result.isEmpty()) {
       return Optional.empty()
@@ -440,41 +740,51 @@ open class UserPersistence(
    */
   fun listAuthUserIdsForUser(userId: UUID?): List<String> =
     database.query { ctx: DSLContext ->
+      val otherOwner = Tables.AUTH_USER.`as`("other_owner")
       ctx
-        .select(Tables.AUTH_USER.AUTH_USER_ID)
+        .selectDistinct(Tables.AUTH_USER.AUTH_USER_ID)
         .from(Tables.AUTH_USER)
         .where(Tables.AUTH_USER.USER_ID.eq(userId))
-        .fetch(Tables.AUTH_USER.AUTH_USER_ID)
+        .andNotExists(
+          ctx
+            .selectOne()
+            .from(otherOwner)
+            .where(otherOwner.AUTH_USER_ID.eq(Tables.AUTH_USER.AUTH_USER_ID))
+            .and(otherOwner.USER_ID.ne(Tables.AUTH_USER.USER_ID)),
+        ).fetch(Tables.AUTH_USER.AUTH_USER_ID)
     }
 
-  fun listAuthUsersForUser(userId: UUID?): List<AuthUser> =
-    database.query { ctx: DSLContext ->
-      ctx
-        .select(
-          Tables.AUTH_USER.USER_ID,
-          Tables.AUTH_USER.AUTH_USER_ID,
-          Tables.AUTH_USER.AUTH_PROVIDER,
-        ).from(Tables.AUTH_USER)
-        .where(Tables.AUTH_USER.USER_ID.eq(userId))
-        .fetch()
-        .stream()
-        .map { record: Record3<UUID, String, io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider> ->
-          AuthUser()
-            .withUserId(record.get(Tables.AUTH_USER.USER_ID))
-            .withAuthUserId(record.get(Tables.AUTH_USER.AUTH_USER_ID))
-            .withAuthProvider(
-              if (record.get(Tables.AUTH_USER.AUTH_PROVIDER) == null) {
-                null
-              } else {
-                record
-                  .get(
-                    Tables.AUTH_USER.AUTH_PROVIDER,
-                    String::class.java,
-                  ).toEnum<AuthProvider>()!!
-              },
-            )
-        }.toList()
-    }
+  fun listAuthUsersForUser(userId: UUID?): List<AuthUser> = database.query { ctx -> listAuthUsersForUser(ctx, userId) }
+
+  fun listAuthUsersForUser(
+    ctx: DSLContext,
+    userId: UUID?,
+  ): List<AuthUser> =
+    ctx
+      .select(
+        Tables.AUTH_USER.USER_ID,
+        Tables.AUTH_USER.AUTH_USER_ID,
+        Tables.AUTH_USER.AUTH_PROVIDER,
+      ).from(Tables.AUTH_USER)
+      .where(Tables.AUTH_USER.USER_ID.eq(userId))
+      .fetch()
+      .stream()
+      .map { record: Record3<UUID, String, io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider> ->
+        AuthUser()
+          .withUserId(record.get(Tables.AUTH_USER.USER_ID))
+          .withAuthUserId(record.get(Tables.AUTH_USER.AUTH_USER_ID))
+          .withAuthProvider(
+            if (record.get(Tables.AUTH_USER.AUTH_PROVIDER) == null) {
+              null
+            } else {
+              record
+                .get(
+                  Tables.AUTH_USER.AUTH_PROVIDER,
+                  String::class.java,
+                ).toEnum<AuthProvider>()!!
+            },
+          )
+      }.toList()
 
   // This method is used for testing purposes only. For some reason, the actual
   // listWorkspaceUserAccessInfo method cannot be properly tested because in CI

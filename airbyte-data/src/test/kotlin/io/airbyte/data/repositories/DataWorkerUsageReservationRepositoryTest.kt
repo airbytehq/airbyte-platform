@@ -100,6 +100,66 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
     result.shouldBe(expected plusOrMinus 0.0001)
   }
 
+  @Test
+  fun `insertReservationIfJobActive inserts a reservation when the job is active`() {
+    val organizationId = UUID.randomUUID()
+    val jobId = 1L
+    jobsRepository.save(createJob(jobId, JobStatus.running))
+
+    val inserted = insertReservationIfActive(jobId, organizationId)
+
+    inserted shouldBe 1
+    dataWorkerUsageReservationRepository.existsById(jobId) shouldBe true
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = JobStatus::class, names = ["failed", "succeeded", "cancelled"])
+  fun `insertReservationIfJobActive does not insert when the job is terminal`(status: JobStatus) {
+    val organizationId = UUID.randomUUID()
+    val jobId = 1L
+    jobsRepository.save(createJob(jobId, status))
+
+    val inserted = insertReservationIfActive(jobId, organizationId)
+
+    inserted shouldBe 0
+    dataWorkerUsageReservationRepository.existsById(jobId) shouldBe false
+  }
+
+  @Test
+  fun `insertReservationIfJobActive does not insert when the job does not exist`() {
+    val inserted = insertReservationIfActive(jobId = 42L, organizationId = UUID.randomUUID())
+
+    inserted shouldBe 0
+    dataWorkerUsageReservationRepository.existsById(42L) shouldBe false
+  }
+
+  @Test
+  fun `insertReservationIfJobActive is idempotent on a duplicate reservation`() {
+    val organizationId = UUID.randomUUID()
+    val jobId = 1L
+    jobsRepository.save(createJob(jobId, JobStatus.running))
+
+    insertReservationIfActive(jobId, organizationId) shouldBe 1
+    insertReservationIfActive(jobId, organizationId) shouldBe 0
+    dataWorkerUsageReservationRepository.existsById(jobId) shouldBe true
+  }
+
+  private fun insertReservationIfActive(
+    jobId: Long,
+    organizationId: UUID,
+  ): Int =
+    dataWorkerUsageReservationRepository.insertReservationIfJobActive(
+      jobId = jobId,
+      organizationId = organizationId,
+      workspaceId = UUID.randomUUID(),
+      dataplaneGroupId = UUID.randomUUID(),
+      sourceCpuRequest = 1.0,
+      destinationCpuRequest = 1.0,
+      orchestratorCpuRequest = 2.0,
+      usedOnDemandCapacity = false,
+      createdAt = OffsetDateTime.now(),
+    )
+
   private fun createJob(
     id: Long,
     status: JobStatus,

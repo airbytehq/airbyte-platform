@@ -17,6 +17,7 @@ import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import jakarta.ws.rs.core.Response
 import okhttp3.Call
@@ -148,6 +149,47 @@ class AirbyteKeycloakClientTest {
       airbyteAgentsValidRedirectUris,
       airbyteAgentsWebOrigins,
     )
+  }
+
+  @Test
+  fun `createOidcSsoConfig sets trustEmail on the created identity provider`() {
+    val config =
+      SsoConfig(
+        organizationId = UUID.randomUUID(),
+        emailDomain = "testdomain",
+        companyIdentifier = "airbyte",
+        clientId = "client-id",
+        clientSecret = "client-secret",
+        discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+        status = SsoConfigStatus.ACTIVE,
+      )
+
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(any()) } returns realmMock
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    every { clientsMock.create(any()) } returns mockResponse
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { realmMock.identityProviders() } returns idpMock
+    val capturedIdp = slot<IdentityProviderRepresentation>()
+    every { idpMock.create(capture(capturedIdp)) } returns mockResponse
+    every { idpMock.importFrom(any()) } returns
+      mapOf(
+        "authorizationUrl" to "https://auth.airbyte.com/authorize",
+        "tokenUrl" to "https://auth.airbyte.com/token",
+      )
+
+    airbyteKeycloakClient.createOidcSsoConfig(config)
+
+    assertTrue(capturedIdp.captured.isTrustEmail)
   }
 
   @Test
@@ -436,6 +478,46 @@ class AirbyteKeycloakClientTest {
     verify(exactly = 1) { idpMock.findAll() }
     verify(exactly = 1) { idpMock.get(any()) }
     verify(exactly = 1) { idpProviderMock.update(any()) }
+  }
+
+  @Test
+  fun `replaceOidcIdpConfig sets trustEmail when no identity provider exists yet`() {
+    val config =
+      SsoConfig(
+        organizationId = UUID.randomUUID(),
+        emailDomain = "testdomain",
+        companyIdentifier = "airbyte",
+        clientId = "client-id",
+        clientSecret = "client-secret",
+        discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+        status = SsoConfigStatus.ACTIVE,
+      )
+
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(any()) } returns realmMock
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { realmMock.identityProviders() } returns idpMock
+    // No existing default IDP: replaceOidcIdpConfig falls into its "create new" branch, which is
+    // the one that constructs a fresh IdentityProviderRepresentation.
+    every { idpMock.findAll() } returns emptyList()
+    every { idpMock.importFrom(any()) } returns
+      mapOf(
+        "authorizationUrl" to "https://auth.airbyte.com/authorize",
+        "tokenUrl" to "https://auth.airbyte.com/token",
+      )
+    val capturedIdp = slot<IdentityProviderRepresentation>()
+    every { idpMock.create(capture(capturedIdp)) } returns mockResponse
+
+    airbyteKeycloakClient.replaceOidcIdpConfig(config)
+
+    assertTrue(capturedIdp.captured.isTrustEmail)
   }
 
   @Test

@@ -310,7 +310,7 @@ secretsManager:
 
     - env: VAULT_ADDRESS
       key: vault.address
-      defaultValueExp: (printf "http://airbyte-vault-svc.%s:8200" .Release.Namespace)
+      defaultValueExp: (printf "http://airbyte-vault-svc.%s:8200" (include "airbyte-data-plane.namespace" .))
       discriminatorOpts: 
         - VAULT
 
@@ -418,7 +418,7 @@ storage:
       key: minio.endpoint
       discriminatorOpts: 
         - minio
-      defaultValueExp: (printf "http://airbyte-minio-svc.%s:9000" .Release.Namespace)
+      defaultValueExp: (printf "http://airbyte-minio-svc.%s:9000" (include "airbyte-data-plane.namespace" .))
 
     - env: S3_PATH_STYLE
       key: minio.s3PathStyleAccess
@@ -612,7 +612,7 @@ workloads:
 
     - env: WORKLOADS_NAMESPACE
       key: namespace
-      defaultValueExp: .Release.Namespace
+      defaultValueExp: (include "airbyte-data-plane.namespace" .)
 
     - env: PUB_SUB_ENABLED
       key: pubSub.enabled
@@ -731,4 +731,3 @@ workloads.queues:
     - env: DATA_SYNC_TASK_QUEUES
       key: sync
       valueExp: join " " .Values.workloads.queues.sync
-

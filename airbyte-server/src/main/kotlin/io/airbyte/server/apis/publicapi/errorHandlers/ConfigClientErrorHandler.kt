@@ -17,6 +17,7 @@ import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
+import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
@@ -93,6 +94,11 @@ object ConfigClientErrorHandler {
       is ValueConflictKnownException -> {
         val message = throwable.message ?: DEFAULT_CONFLICT_MESSAGE
         throw TryAgainLaterConflictProblem(ProblemMessageData().message(message))
+      }
+
+      is ConflictException -> {
+        val message = throwable.message ?: DEFAULT_CONFLICT_MESSAGE
+        throw StateConflictProblem(ProblemMessageData().message(message))
       }
 
       is IllegalStateException -> {

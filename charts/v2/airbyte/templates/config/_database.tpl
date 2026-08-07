@@ -20,7 +20,7 @@ Renders the database secret name
 Renders the global.database.host value
 */}}
 {{- define "airbyte.database.host" }}
-    {{- .Values.global.database.host | default (printf "airbyte-db-svc.%s.svc.cluster.local" .Release.Namespace) }}
+    {{- .Values.global.database.host | default (printf "airbyte-db-svc.%s.svc.cluster.local" (include "airbyte.namespace" .)) }}
 {{- end }}
 
 {{/*

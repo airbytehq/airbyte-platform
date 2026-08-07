@@ -1,4 +1,4 @@
-import { ComponentStory, ComponentMeta } from "@storybook/react";
+import { StoryFn, Meta } from "@storybook/react";
 
 import { CodeEditor } from "./CodeEditor";
 
@@ -6,9 +6,9 @@ export default {
   title: "UI/CodeEditor",
   component: CodeEditor,
   argTypes: {},
-} as ComponentMeta<typeof CodeEditor>;
+} as Meta<typeof CodeEditor>;
 
-const Template: ComponentStory<typeof CodeEditor> = (args) => <CodeEditor {...args} />;
+const Template: StoryFn<typeof CodeEditor> = (args) => <CodeEditor {...args} />;
 
 const code = `{
   "name": "Airbyte",

@@ -6665,7 +6665,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/UserInvitationRead"
+                  $ref: "#/components/schemas/UserInvitationAdminRead"
 
   /v1/user_invitations/accept:
     post:
@@ -6715,14 +6715,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InviteCodeRequestBody"
+              $ref: "#/components/schemas/UserInvitationCancelRequestBody"
       responses:
         "201":
           description: Successfully cancelled user invitation.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserInvitationRead"
+                $ref: "#/components/schemas/UserInvitationAdminRead"
 
   # Tags
   /v1/tags/list:
@@ -10516,7 +10516,7 @@ paths:
         "404":
           description: Not found
         "409":
-          description: Group name conflict
+          description: Group name conflict or group is managed by SCIM
       operationId: publicUpdateGroup
       x-sdk-alias: updateGroup
       x-sdk-group: Groups
@@ -10534,6 +10534,8 @@ paths:
           description: Not allowed
         "404":
           description: Not found
+        "409":
+          description: Group is managed by SCIM
       operationId: publicDeleteGroup
       x-sdk-alias: deleteGroup
       x-sdk-group: Groups
@@ -10613,7 +10615,7 @@ paths:
         "404":
           description: Not found
         "409":
-          description: User is already a member of this group
+          description: User is already a member of this group or group is managed by SCIM
       operationId: publicAddGroupMember
       x-sdk-alias: addGroupMember
       x-sdk-group: Groups
@@ -10648,6 +10650,8 @@ paths:
           description: Not allowed
         "404":
           description: Not found
+        "409":
+          description: Group is managed by SCIM
       operationId: publicRemoveGroupMember
       x-sdk-alias: removeGroupMember
       x-sdk-group: Groups
@@ -16876,6 +16880,8 @@ components:
         - workspace_admin # Permission to create, read, delete, and edit a specific workspace, and also can grant other users permissions to this workspace
         - workspace_runner # Permission to read everything and run/cancel jobs
         - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
+        - workspace_source_editor # Equivalent to `workspace_editor`, except it cannot create or edit destinations
+        - workspace_destination_editor # Equivalent to `workspace_editor`, except it cannot create or edit sources
         - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
       x-sdk-component: true
     SSOConfigDefaultRole:
@@ -16896,6 +16902,8 @@ components:
         - organization_member # Permission to read organization basic information, not having permissions to any workspaces within an organization
         - workspace_admin # Permission to create, read, delete, and edit a specific workspace, and also can grant other users permissions to this workspace
         - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
+        - workspace_source_editor # Equivalent to `workspace_editor`, except it cannot create or edit destinations
+        - workspace_destination_editor # Equivalent to `workspace_editor`, except it cannot create or edit sources
         - workspace_runner # Permission to read everything and run/cancel jobs
         - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
       x-sdk-component: true
@@ -20131,8 +20139,6 @@ components:
 
     NotFoundKnownExceptionInfo:
       type: object
-      required:
-        - message
       properties:
         id:
           type: string
@@ -20496,12 +20502,46 @@ components:
     UserInvitationCreateResponse:
       type: object
       properties:
-        inviteCode:
-          type: string
-          description: The created invite code, if the request resulted in a new invitation being created.
         directlyAdded:
           type: boolean
           description: True if the request resulted in the user being directly added, without a created invitation.
+    UserInvitationAdminRead:
+      type: object
+      required:
+        - id
+        - inviterUserId
+        - invitedEmail
+        - scopeId
+        - scopeType
+        - permissionType
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        inviterUserId:
+          type: string
+          format: uuid
+        invitedEmail:
+          type: string
+          format: email
+        scopeId:
+          type: string
+          format: uuid
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        status:
+          $ref: "#/components/schemas/UserInvitationStatus"
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
     UserInvitationListRequestBody:
       type: object
       required:
@@ -20565,6 +20605,15 @@ components:
       required:
         - inviteCode
       properties:
+        inviteCode:
+          type: string
+    UserInvitationCancelRequestBody:
+      type: object
+      minProperties: 1
+      properties:
+        id:
+          type: string
+          format: uuid
         inviteCode:
           type: string
 
@@ -22869,6 +22918,7 @@ components:
       required:
         - status
         - scimBaseUrl
+        - available
       properties:
         status:
           $ref: "#/components/schemas/ScimConfigStatus"
@@ -22877,6 +22927,9 @@ components:
         scimBaseUrl:
           type: string
           description: Absolute Airbyte SCIM endpoint configured in the identity provider.
+        available:
+          type: boolean
+          description: Whether SCIM is available to this organization (entitlements and rollout gating).
         createdAt:
           type: integer
           format: int64

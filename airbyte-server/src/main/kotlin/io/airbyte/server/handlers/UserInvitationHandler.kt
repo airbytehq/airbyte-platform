@@ -9,10 +9,13 @@ import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.api.model.generated.InviteCodeRequestBody
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.ScopeType
+import io.airbyte.api.model.generated.UserInvitationAdminRead
+import io.airbyte.api.model.generated.UserInvitationCancelRequestBody
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
 import io.airbyte.api.model.generated.UserInvitationCreateResponse
 import io.airbyte.api.model.generated.UserInvitationListRequestBody
 import io.airbyte.api.model.generated.UserInvitationRead
+import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.handlers.PermissionHandler
@@ -24,6 +27,7 @@ import io.airbyte.config.User
 import io.airbyte.config.UserInvitation
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.InactiveUserAccessException
 import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationPermissionOverlapException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
@@ -65,11 +69,11 @@ class UserInvitationHandler(
     return mapper.toApi(invitation)
   }
 
-  fun getPendingInvitations(invitationListRequestBody: UserInvitationListRequestBody): List<UserInvitationRead> {
+  fun getPendingInvitations(invitationListRequestBody: UserInvitationListRequestBody): List<UserInvitationAdminRead> {
     val scopeType = mapper.toDomain(invitationListRequestBody.scopeType)
     val invitations = service.getPendingInvitations(scopeType, invitationListRequestBody.scopeId)
 
-    return invitations.map { domain -> mapper.toApi(domain) }
+    return invitations.map { domain -> mapper.toAdminApi(domain) }
   }
 
   /**
@@ -88,8 +92,8 @@ class UserInvitationHandler(
       return UserInvitationCreateResponse().directlyAdded(true)
     } else {
       try {
-        val invitation = createUserInvitationForNewOrgEmail(req, currentUser)
-        response = UserInvitationCreateResponse().directlyAdded(false).inviteCode(invitation.inviteCode)
+        createUserInvitationForNewOrgEmail(req, currentUser)
+        response = UserInvitationCreateResponse().directlyAdded(false)
         trackUserInvited(req, currentUser)
         return response
       } catch (e: InvitationDuplicateException) {
@@ -354,13 +358,18 @@ class UserInvitationHandler(
       return mapper.toApi(accepted)
     } catch (e: InvitationStatusUnexpectedException) {
       throw ConflictException(e.message)
+    } catch (e: InactiveUserAccessException) {
+      throw ConflictException(e.message)
     }
   }
 
-  fun cancel(req: InviteCodeRequestBody): UserInvitationRead {
+  fun cancel(req: UserInvitationCancelRequestBody): UserInvitationAdminRead {
     try {
-      val canceled = service.cancelUserInvitation(req.inviteCode)
-      return mapper.toApi(canceled)
+      val canceled =
+        req.id?.let { service.cancelUserInvitation(it) }
+          ?: req.inviteCode?.let { service.cancelUserInvitation(it) }
+          ?: throw BadRequestException("Either id or inviteCode must be provided.")
+      return mapper.toAdminApi(canceled)
     } catch (e: InvitationStatusUnexpectedException) {
       throw ConflictException(e.message)
     }

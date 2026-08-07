@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.authorization
 
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
@@ -26,6 +27,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.util.UUID
 
 class RoleResolverTest {
@@ -140,11 +143,11 @@ class RoleResolverTest {
           .withPermissionType(Permission.PermissionType.ORGANIZATION_EDITOR),
       )
 
-    val roles = roleResolver.resolveRoles(perms, "user1", emptySet(), setOf(org), emptySet())
+    val roles = roleResolver.resolveRoles(perms, "user1", emptySet(), emptyMap(), setOf(org), emptySet())
     val expect =
       """
       AUTHENTICATED_USER 
-      WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR 
+      WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR 
       ORGANIZATION_MEMBER ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_EDITOR
     """.toRoleSet()
     assertEquals(expect, roles)
@@ -225,7 +228,9 @@ class RoleResolverTest {
           .withWorkspaceId(workspace1),
       )
 
-    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_ADMIN".toRoleSet()
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR WORKSPACE_ADMIN"
+        .toRoleSet()
     assertEquals(expect, req.roles())
     verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
   }
@@ -280,8 +285,8 @@ class RoleResolverTest {
     // The user is not granted workspace access, because they need access to all requested workspaces
     val expect =
       """
-      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR 
-      ORGANIZATION_ADMIN ORGANIZATION_EDITOR WORKSPACE_ADMIN 
+      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR
+      ORGANIZATION_ADMIN ORGANIZATION_EDITOR WORKSPACE_ADMIN
       ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_MEMBER
     """.toRoleSet()
     assertEquals(expect, req.roles())
@@ -435,7 +440,7 @@ class RoleResolverTest {
     // The user should get ORGANIZATION_ADMIN permission to the workspace
     val expect =
       """
-      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR 
+      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR 
       ORGANIZATION_ADMIN ORGANIZATION_EDITOR WORKSPACE_ADMIN 
       ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_MEMBER
     """.toRoleSet()
@@ -467,9 +472,376 @@ class RoleResolverTest {
       )
 
     // The user should get WORKSPACE_ADMIN permission for the requested workspace
-    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_ADMIN".toRoleSet()
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR WORKSPACE_ADMIN"
+        .toRoleSet()
     assertEquals(expect, req.roles())
     verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun groupWorkspacePermissionResolvesWorkspaceRoles() {
+    val workspace1 = UUID.randomUUID()
+    val groupId = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_EDITOR)
+          .withWorkspaceId(workspace1)
+          .withGroupId(groupId),
+      )
+
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR"
+        .toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun workspaceSourceEditorResolvesWithoutDestinationEditor() {
+    val workspace1 = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_SOURCE_EDITOR)
+          .withWorkspaceId(workspace1),
+      )
+
+    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_SOURCE_EDITOR".toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun workspaceDestinationEditorResolvesWithoutSourceEditor() {
+    val workspace1 = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_DESTINATION_EDITOR)
+          .withWorkspaceId(workspace1),
+      )
+
+    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_DESTINATION_EDITOR".toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun groupWorkspaceSourceEditorPermissionResolvesWorkspaceRoles() {
+    val workspace1 = UUID.randomUUID()
+    val groupId = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_SOURCE_EDITOR)
+          .withWorkspaceId(workspace1)
+          .withGroupId(groupId),
+      )
+
+    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_SOURCE_EDITOR".toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun workspaceEditorOutranksActorScopedEditorForSameWorkspace() {
+    val workspace1 = UUID.randomUUID()
+    val groupId = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_SOURCE_EDITOR)
+          .withWorkspaceId(workspace1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_EDITOR)
+          .withWorkspaceId(workspace1)
+          .withGroupId(groupId),
+      )
+
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR".toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun directAndGroupWorkspacePermissionsUseHighestGrantForSameWorkspace() {
+    val workspace1 = UUID.randomUUID()
+    val groupId = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
+          .withWorkspaceId(workspace1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
+          .withWorkspaceId(workspace1)
+          .withGroupId(groupId),
+      )
+
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR WORKSPACE_ADMIN"
+        .toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun directAndGroupOrganizationPermissionsUseHighestGrantForSameOrganization() {
+    val organizationId = UUID.randomUUID()
+    val groupId = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withOrg(organizationId)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+          .withOrganizationId(organizationId),
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+          .withOrganizationId(organizationId)
+          .withGroupId(groupId),
+      )
+
+    val expect =
+      """
+      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR
+      ORGANIZATION_ADMIN ORGANIZATION_EDITOR WORKSPACE_ADMIN
+      ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_MEMBER
+    """.toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun overlappingWorkspacePermissionsUseHighestGrantPerWorkspaceThenLowestAcrossWorkspaces() {
+    val workspace1 = UUID.randomUUID()
+    val workspace2 = UUID.randomUUID()
+    val groupId = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withWorkspaces(listOf(workspace1, workspace2))
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
+          .withWorkspaceId(workspace1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
+          .withWorkspaceId(workspace1)
+          .withGroupId(groupId),
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_EDITOR)
+          .withWorkspaceId(workspace2),
+      )
+
+    val expect =
+      "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR"
+        .toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun organizationAndWorkspaceGrantsAreCombinedPerWorkspaceBeforeMultiWorkspaceReduction() {
+    val workspace1 = UUID.randomUUID()
+    val workspace2 = UUID.randomUUID()
+    val organization1 = UUID.randomUUID()
+    val organization2 = UUID.randomUUID()
+    val group1 = UUID.randomUUID()
+    val group2 = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withWorkspaces(listOf(workspace1, workspace2))
+
+    every { workspaceHelper.getOrganizationForWorkspace(workspace1) } returns organization1
+    every { workspaceHelper.getOrganizationForWorkspace(workspace2) } returns organization2
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+          .withOrganizationId(organization1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+          .withOrganizationId(organization1)
+          .withGroupId(group1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+          .withOrganizationId(organization2),
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
+          .withWorkspaceId(workspace2)
+          .withGroupId(group2),
+      )
+
+    val expect = "AUTHENTICATED_USER ORGANIZATION_MEMBER WORKSPACE_READER".toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun organizationGrantDoesNotCoverWorkspaceInAnotherOrganization() {
+    val workspace = UUID.randomUUID()
+    val workspaceOrganization = UUID.randomUUID()
+    val otherOrganization = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace)
+
+    every { workspaceHelper.getOrganizationForWorkspace(workspace) } returns workspaceOrganization
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+          .withOrganizationId(otherOrganization),
+      )
+
+    assertEquals(baseRoles, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun overlappingOrganizationPermissionsUseHighestGrantPerOrganizationThenLowestAcrossOrganizations() {
+    val organization1 = UUID.randomUUID()
+    val organization2 = UUID.randomUUID()
+    val groupId = UUID.randomUUID()
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withOrg(organization1)
+        .withOrg(organization2)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+          .withOrganizationId(organization1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+          .withOrganizationId(organization1)
+          .withGroupId(groupId),
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_EDITOR)
+          .withOrganizationId(organization2),
+      )
+
+    val expect =
+      """
+      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_SOURCE_EDITOR WORKSPACE_DESTINATION_EDITOR
+      ORGANIZATION_EDITOR ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_MEMBER
+    """.toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun hardCodedNonUserTokenRolesAreUnchanged() {
+    val roles = roleResolver.newRequest().withSubject("workload-api-token", TokenType.WORKLOAD_API).roles()
+
+    assertEquals(setOf(AuthRoleConstants.DATAPLANE), roles)
+    verify(exactly = 0) { permissionHandler.getPermissionsByAuthUserId("workload-api-token") }
+  }
+
+  @Test
+  fun serviceAccountPermissionResolutionIsUnchanged() {
+    val serviceAccountId = UUID.randomUUID()
+    every { permissionHandler.getPermissionsByServiceAccountId(serviceAccountId) } returns
+      listOf(Permission().withPermissionType(Permission.PermissionType.INSTANCE_ADMIN))
+
+    val roles = roleResolver.newRequest().withSubject(serviceAccountId.toString(), TokenType.SERVICE_ACCOUNT).roles()
+
+    assertEquals(AuthRole.getInstanceAdminRoles(), roles)
+    verify(exactly = 1) { permissionHandler.getPermissionsByServiceAccountId(serviceAccountId) }
+    verify(exactly = 0) { permissionHandler.getPermissionsByAuthUserId(serviceAccountId.toString()) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = TokenType::class, names = ["SERVICE_ACCOUNT", "DATAPLANE_V1"])
+  fun nonUserPermissionResolutionPreservesLegacyCrossWorkspaceReduction(tokenType: TokenType) {
+    val serviceAccountId = UUID.randomUUID()
+    val workspace1 = UUID.randomUUID()
+    val workspace2 = UUID.randomUUID()
+    val organization1 = UUID.randomUUID()
+    val organization2 = UUID.randomUUID()
+    every { workspaceHelper.getOrganizationForWorkspace(workspace1) } returns organization1
+    every { workspaceHelper.getOrganizationForWorkspace(workspace2) } returns organization2
+    every { permissionHandler.getPermissionsByServiceAccountId(serviceAccountId) } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
+          .withWorkspaceId(workspace1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+          .withOrganizationId(organization1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
+          .withWorkspaceId(workspace2),
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_READER)
+          .withOrganizationId(organization2),
+      )
+
+    val roles =
+      roleResolver
+        .newRequest()
+        .withSubject(serviceAccountId.toString(), tokenType)
+        .withWorkspaces(listOf(workspace1, workspace2))
+        .roles()
+
+    val expect = "AUTHENTICATED_USER ORGANIZATION_READER ORGANIZATION_MEMBER WORKSPACE_READER".toRoleSet()
+    assertEquals(expect, roles)
+    verify(exactly = 1) { permissionHandler.getPermissionsByServiceAccountId(serviceAccountId) }
+    verify(exactly = 0) { permissionHandler.getPermissionsByAuthUserId(serviceAccountId.toString()) }
   }
 }
 

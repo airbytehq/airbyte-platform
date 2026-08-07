@@ -2,7 +2,7 @@ import {
   OrganizationUserRead,
   PermissionType,
   ScopeType,
-  UserInvitationRead,
+  UserInvitationAdminRead,
   WorkspaceUserAccessInfoRead,
 } from "core/api/types/AirbyteClient";
 import { RbacRole, RbacRoleHierarchy, partitionPermissionType } from "core/utils/rbac/rbacPermissionsQuery";
@@ -18,6 +18,8 @@ export const permissionStringDictionary: Record<PermissionType, Record<string, s
   workspace_admin: { resource: "resource.workspace", role: "role.admin" },
   workspace_owner: { resource: "resource.workspace", role: "role.admin" },
   workspace_editor: { resource: "resource.workspace", role: "role.editor" },
+  workspace_source_editor: { resource: "resource.workspace", role: "role.sourceEditor" },
+  workspace_destination_editor: { resource: "resource.workspace", role: "role.destinationEditor" },
   workspace_runner: { resource: "resource.workspace", role: "role.runner" },
   workspace_reader: { resource: "resource.workspace", role: "role.reader" },
 };
@@ -36,6 +38,8 @@ export const permissionDescriptionDictionary: Record<PermissionType, PermissionD
   workspace_admin: { id: "role.admin.description", values: { resourceType: "workspace" } },
   workspace_owner: { id: "role.admin.description", values: { resourceType: "workspace" } },
   workspace_editor: { id: "role.editor.description", values: { resourceType: "workspace" } },
+  workspace_source_editor: { id: "role.sourceEditor.description", values: { resourceType: "workspace" } },
+  workspace_destination_editor: { id: "role.destinationEditor.description", values: { resourceType: "workspace" } },
   workspace_runner: { id: "role.runner.description", values: { resourceType: "workspace" } },
   workspace_reader: { id: "role.reader.description", values: { resourceType: "workspace" } },
 };
@@ -43,6 +47,8 @@ export const permissionsByResourceType: Record<ResourceType, PermissionType[]> =
   workspace: [
     PermissionType.workspace_admin,
     PermissionType.workspace_editor,
+    PermissionType.workspace_source_editor,
+    PermissionType.workspace_destination_editor,
     PermissionType.workspace_runner,
     PermissionType.workspace_reader,
   ],
@@ -58,7 +64,7 @@ export const permissionsByResourceType: Record<ResourceType, PermissionType[]> =
 
 /**
  * a unified typing to allow listing invited and current users together in WorkspaceUsersTable
- * using this custom union rather than a union of WorkspaceUserAccessInfoRead | UserInvitationRead
+ * using this custom union rather than a union of WorkspaceUserAccessInfoRead | UserInvitationAdminRead
  * allows us to handle intentionally missing properties more gracefully.
  */
 export type UnifiedUserModel =
@@ -77,13 +83,13 @@ export type UnifiedUserModel =
       userName?: string;
       organizationPermission?: never; // Explicitly marking these as never when invitation fields are present
       workspacePermission?: never;
-      invitationStatus: UserInvitationRead["status"];
-      invitationPermissionType: UserInvitationRead["permissionType"];
+      invitationStatus: UserInvitationAdminRead["status"];
+      invitationPermissionType: UserInvitationAdminRead["permissionType"];
     };
 
 export const unifyWorkspaceUserData = (
   workspaceAccessUsers: WorkspaceUserAccessInfoRead[],
-  workspaceInvitations: UserInvitationRead[]
+  workspaceInvitations: UserInvitationAdminRead[]
 ): UnifiedUserModel[] => {
   const normalizedUsers = workspaceAccessUsers.map((user) => {
     return {
@@ -97,7 +103,7 @@ export const unifyWorkspaceUserData = (
 
   const normalizedInvitations = workspaceInvitations.map((invitation) => {
     return {
-      id: invitation.inviteCode,
+      id: invitation.id,
       userEmail: invitation.invitedEmail,
       invitationStatus: invitation.status,
       invitationPermissionType: invitation.permissionType,
@@ -109,7 +115,7 @@ export const unifyWorkspaceUserData = (
 
 export const unifyOrganizationUserData = (
   organizationUsers: OrganizationUserRead[],
-  organizationInvitations: UserInvitationRead[]
+  organizationInvitations: UserInvitationAdminRead[]
 ): UnifiedUserModel[] => {
   const normalizedUsers = organizationUsers.map((user) => {
     return {
@@ -127,7 +133,7 @@ export const unifyOrganizationUserData = (
 
   const normalizedInvitations = organizationInvitations.map((invitation) => {
     return {
-      id: invitation.inviteCode,
+      id: invitation.id,
       userEmail: invitation.invitedEmail,
       invitationStatus: invitation.status,
       invitationPermissionType: invitation.permissionType,
@@ -181,6 +187,8 @@ export const getOrganizationAccessLevel = (
 export const isTeamsFeaturePermissionType = (permission: PermissionType): boolean => {
   const warningPermissions: PermissionType[] = [
     PermissionType.workspace_editor,
+    PermissionType.workspace_source_editor,
+    PermissionType.workspace_destination_editor,
     PermissionType.workspace_runner,
     PermissionType.workspace_reader,
     PermissionType.organization_editor,

@@ -22,6 +22,11 @@ airbyte:
         node-selectors: ${SPEC_JOB_KUBE_NODE_SELECTORS:spec node selectors}
         memory-limit: spec memory limit
         memory-request: ${SOMETHING_NOT_THERE:}
+      orchestrator:
+        cpu-limit: ${REPLICATION_ORCHESTRATOR_CPU_LIMIT:JOB_MAIN_CONTAINER_CPU_LIMIT:orch default cpu limit}
+        cpu-request: ${REPLICATION_ORCHESTRATOR_CPU_REQUEST:JOB_MAIN_CONTAINER_CPU_REQUEST:orch default cpu request}
+        memory-limit: ${REPLICATION_ORCHESTRATOR_MEMORY_LIMIT:JOB_MAIN_CONTAINER_MEMORY_LIMIT:orch default memory limit}
+        memory-request: ${REPLICATION_ORCHESTRATOR_MEMORY_REQUEST:JOB_MAIN_CONTAINER_MEMORY_REQUEST:orch default memory request}
       source:
         cpu-request: 0.5
         cpu-limit: "" # This unsets the value from the inherited test file to test defaults

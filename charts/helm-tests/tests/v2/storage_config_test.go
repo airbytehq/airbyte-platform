@@ -31,6 +31,55 @@ func TestDefaultStorageConfig(t *testing.T) {
 	}
 }
 
+func TestMinioStorageClassConfiguration(t *testing.T) {
+	t.Run("unset storage class is omitted", func(t *testing.T) {
+		opts := helmtests.BaseHelmOptions()
+		chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
+		assert.NoError(t, err)
+
+		minio := helmtests.GetStatefulSet(chartYaml.String(), "airbyte-minio")
+		assert.NotNil(t, minio)
+		assert.Nil(t, minio.Spec.VolumeClaimTemplates[0].Spec.StorageClassName)
+	})
+
+	t.Run("configured storage class is rendered", func(t *testing.T) {
+		opts := helmtests.BaseHelmOptions()
+		opts.SetValues["minio.storage.storageClassName"] = "fast"
+		chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
+		assert.NoError(t, err)
+
+		minio := helmtests.GetStatefulSet(chartYaml.String(), "airbyte-minio")
+		assert.NotNil(t, minio)
+		assert.NotNil(t, minio.Spec.VolumeClaimTemplates[0].Spec.StorageClassName)
+		assert.Equal(t, "fast", *minio.Spec.VolumeClaimTemplates[0].Spec.StorageClassName)
+	})
+
+	t.Run("empty storage class is rendered explicitly", func(t *testing.T) {
+		opts := helmtests.BaseHelmOptions()
+		opts.SetValues["minio.storage.storageClassName"] = ""
+		chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
+		assert.NoError(t, err)
+
+		minio := helmtests.GetStatefulSet(chartYaml.String(), "airbyte-minio")
+		assert.NotNil(t, minio)
+		assert.NotNil(t, minio.Spec.VolumeClaimTemplates[0].Spec.StorageClassName)
+		assert.Equal(t, "", *minio.Spec.VolumeClaimTemplates[0].Spec.StorageClassName)
+	})
+}
+
+func TestMinioNullStorage(t *testing.T) {
+	opts := helmtests.BaseHelmOptions()
+	opts.SetValues["minio.storage"] = "null"
+	chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
+	assert.NoError(t, err)
+
+	minio := helmtests.GetStatefulSet(chartYaml.String(), "airbyte-minio")
+	assert.NotNil(t, minio)
+	storage := minio.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests["storage"]
+	assert.Equal(t, "500Mi", storage.String())
+	assert.Nil(t, minio.Spec.VolumeClaimTemplates[0].Spec.StorageClassName)
+}
+
 func TestGcsStorageConfig(t *testing.T) {
 	opts := helmtests.BaseHelmOptions()
 	opts.SetValues["global.storage.type"] = "gcs"

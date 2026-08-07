@@ -192,7 +192,24 @@ sealed class AwsSecretsManagerRuntimeConfiguration {
     val tagKey: String?,
   ) : AwsSecretsManagerRuntimeConfiguration()
 
-  companion object {
+  companion object : RuntimeConfigValidator {
+    // Checked when a user saves their secret-storage credentials, so a wrong auth_type or a
+    // missing key for the chosen auth mode is answered immediately with what to fix.
+    // Resolution mirrors fromSecretPersistenceConfig: uppercase, default ACCESS_KEY.
+    override fun validate(config: Map<String, String>): RuntimeConfigError? {
+      val rawAuthType = config["auth_type"]?.uppercase() ?: AwsAuthType.ACCESS_KEY.name
+      val authType =
+        AwsAuthType.entries.find { it.name == rawAuthType }
+          ?: return RuntimeConfigError.InvalidValue("auth_type", rawAuthType, AwsAuthType.entries.map { it.name })
+
+      val requiredKeys =
+        when (authType) {
+          AwsAuthType.ACCESS_KEY -> setOf("awsRegion", "awsAccessKey", "awsSecretAccessKey")
+          AwsAuthType.IAM_ROLE -> setOf("awsRegion", "roleArn", "externalId")
+        }
+      return missingKeysError(config, requiredKeys)
+    }
+
     fun fromSecretPersistenceConfig(config: SecretPersistenceConfig): AwsSecretsManagerRuntimeConfiguration {
       val authType = config.configuration["auth_type"]?.uppercase() ?: AwsAuthType.ACCESS_KEY.value
       when (AwsAuthType.valueOf(authType)) {

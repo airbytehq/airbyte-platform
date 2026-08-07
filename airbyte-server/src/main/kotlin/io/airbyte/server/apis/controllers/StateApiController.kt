@@ -32,7 +32,12 @@ open class StateApiController(
   ): ConnectionState? = execute { stateHandler.createOrUpdateState(connectionStateCreateOrUpdate) }
 
   @Post("/create_or_update_safe")
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_EDITOR,
+    AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+    AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+    AuthRoleConstants.ORGANIZATION_EDITOR,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createOrUpdateStateSafe(
     @Body connectionStateCreateOrUpdate: ConnectionStateCreateOrUpdate,

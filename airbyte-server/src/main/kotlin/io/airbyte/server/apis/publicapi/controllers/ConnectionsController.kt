@@ -58,7 +58,7 @@ open class ConnectionsController(
   private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
 ) : PublicConnectionsApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateConnection(connectionCreateRequest: ConnectionCreateRequest): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
@@ -175,7 +175,13 @@ open class ConnectionsController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.CONNECTION_ID, connectionId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+        ),
+      )
 
     val connectionResponse: Any =
       trackingHelper.callWithTracker(
@@ -284,7 +290,13 @@ open class ConnectionsController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.CONNECTION_ID, connectionId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR,
+        ),
+      )
 
     // validate cron timing configurations
     val validConnectionPatchRequest =

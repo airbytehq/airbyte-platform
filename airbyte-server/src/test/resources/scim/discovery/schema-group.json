@@ -1,0 +1,70 @@
+{
+  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
+  "id": "urn:ietf:params:scim:schemas:core:2.0:Group",
+  "name": "Group",
+  "description": "Group",
+  "meta": {
+    "resourceType": "Schema",
+    "location": "/scim/v2/Schemas/urn:ietf:params:scim:schemas:core:2.0:Group"
+  },
+  "attributes": [
+    {
+      "name": "displayName",
+      "type": "string",
+      "multiValued": false,
+      "description": "Human-readable name for the Group.",
+      "required": true,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "server"
+    },
+    {
+      "name": "members",
+      "type": "complex",
+      "multiValued": true,
+      "description": "Direct User members of the Group.",
+      "required": false,
+      "caseExact": false,
+      "mutability": "readWrite",
+      "returned": "default",
+      "uniqueness": "none",
+      "subAttributes": [
+        {
+          "name": "value",
+          "type": "string",
+          "multiValued": false,
+          "description": "User mapping identifier.",
+          "required": true,
+          "caseExact": false,
+          "mutability": "immutable",
+          "returned": "always",
+          "uniqueness": "none"
+        },
+        {
+          "name": "$ref",
+          "type": "reference",
+          "multiValued": false,
+          "description": "Canonical User resource URL.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readOnly",
+          "returned": "default",
+          "uniqueness": "none",
+          "referenceTypes": ["User"]
+        },
+        {
+          "name": "display",
+          "type": "string",
+          "multiValued": false,
+          "description": "User display name or userName fallback.",
+          "required": false,
+          "caseExact": false,
+          "mutability": "readOnly",
+          "returned": "default",
+          "uniqueness": "none"
+        }
+      ]
+    }
+  ]
+}

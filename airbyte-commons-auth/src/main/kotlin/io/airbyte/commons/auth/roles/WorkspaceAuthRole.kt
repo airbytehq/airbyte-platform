@@ -10,6 +10,12 @@ enum class WorkspaceAuthRole(
 ) : AuthRoleInterface {
   WORKSPACE_ADMIN(500, AuthRoleConstants.WORKSPACE_ADMIN),
   WORKSPACE_EDITOR(400, AuthRoleConstants.WORKSPACE_EDITOR),
+
+  // WORKSPACE_SOURCE_EDITOR and WORKSPACE_DESTINATION_EDITOR are each "workspace editor minus the
+  // opposite actor type". They deliberately share an authority so that neither implies the other,
+  // while WORKSPACE_EDITOR and above imply both.
+  WORKSPACE_SOURCE_EDITOR(350, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR),
+  WORKSPACE_DESTINATION_EDITOR(350, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR),
   WORKSPACE_RUNNER(300, AuthRoleConstants.WORKSPACE_RUNNER),
   WORKSPACE_READER(200, AuthRoleConstants.WORKSPACE_READER),
   NONE(0, AuthRoleConstants.NONE),

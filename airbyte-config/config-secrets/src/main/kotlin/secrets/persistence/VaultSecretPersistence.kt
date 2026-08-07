@@ -49,7 +49,21 @@ class VaultSecretsManagerRuntimeConfiguration(
   val token: String,
   val prefix: String,
 ) {
-  companion object {
+  companion object : RuntimeConfigValidator {
+    // Checked when a user saves their secret-storage credentials, so an incomplete config is
+    // answered immediately with which keys to fix.
+    private val REQUIRED_CONFIG_KEYS = setOf("address", "token")
+
+    override fun validate(config: Map<String, String>): RuntimeConfigError? {
+      missingKeysError(config, REQUIRED_CONFIG_KEYS)?.let { return it }
+      // An empty prefix is a working config (secrets stored at the vault root), so unlike the
+      // other required keys it only needs to be present, not non-blank.
+      if ("prefix" !in config) {
+        return RuntimeConfigError.MissingKeys(listOf("prefix"))
+      }
+      return null
+    }
+
     fun fromSecretPersistenceConfig(config: SecretPersistenceConfig): VaultSecretsManagerRuntimeConfiguration =
       VaultSecretsManagerRuntimeConfiguration(
         address = config.configuration["address"]!!,

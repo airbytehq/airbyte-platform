@@ -49,7 +49,7 @@ open class SourcesController(
   private val currentUserService: CurrentUserService,
   private val roleResolver: RoleResolver,
 ) : PublicSourcesApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateSource(sourceCreateRequest: SourceCreateRequest?): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
@@ -114,7 +114,13 @@ open class SourcesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER))
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.EMBEDDED_END_USER,
+        ),
+      )
 
     val sourceResponse: Any? =
       trackingHelper.callWithTracker(
@@ -176,7 +182,7 @@ open class SourcesController(
       .build()
   }
 
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun initiateOAuth(initiateOauthRequest: InitiateOauthRequest): Response = sourceService.controllerInitiateOAuth(initiateOauthRequest)
 
@@ -234,7 +240,13 @@ open class SourcesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER))
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.EMBEDDED_END_USER,
+        ),
+      )
 
     val sourceResponse: Any? =
       sourcePatchRequest?.let { request ->
@@ -276,7 +288,13 @@ open class SourcesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER))
+      .requireOneOfRoles(
+        setOf(
+          AuthRoleConstants.WORKSPACE_EDITOR,
+          AuthRoleConstants.WORKSPACE_SOURCE_EDITOR,
+          AuthRoleConstants.EMBEDDED_END_USER,
+        ),
+      )
 
     val sourceResponse: Any? =
       sourcePutRequest?.let { request ->

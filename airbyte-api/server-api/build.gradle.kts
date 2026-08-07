@@ -63,6 +63,7 @@ dependencies {
 }
 
 val specFile = "$projectDir/src/main/openapi/config.yaml"
+val scimSpecFile = "$projectDir/src/main/openapi/scim.yaml"
 
 val genApiServer =
   tasks.register<GenerateTask>("generateApiServer") {
@@ -183,6 +184,48 @@ val genApiServer2 =
       )
   }
 
+val genScimApiServer =
+  tasks.register<GenerateTask>("genScimApiServer") {
+    val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/scim-server"
+
+    inputs.file(scimSpecFile).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(serverOutputDir)
+
+    generatorName = "kotlin-server"
+    inputSpec = scimSpecFile
+    outputDir = serverOutputDir
+    templateDir.set("$projectDir/src/main/resources/templates/kotlin-server")
+
+    doFirst {
+      delete(serverOutputDir)
+    }
+
+    packageName = "io.airbyte.api.scim.generated"
+
+    schemaMappings =
+      mapOf(
+        "ScimUserRequest" to "io.airbyte.api.scim.ScimUserRequest",
+        "ScimGroupRequest" to "io.airbyte.api.scim.ScimGroupRequest",
+        "ScimPatchRequest" to "io.airbyte.api.scim.ScimPatchRequest",
+      )
+
+    generateApiDocumentation = false
+
+    configOptions =
+      mapOf(
+        "dateLibrary" to "java8",
+        "enumPropertyNaming" to "UPPERCASE",
+        "generatePom" to "false",
+        "interfaceOnly" to "true",
+        "library" to "jaxrs-spec",
+        "returnResponse" to "true",
+        "additionalModelTypeAnnotations" to
+          "\n@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)",
+        "useTags" to "true",
+        "useJakartaEe" to "true",
+      )
+  }
+
 val genApiClient =
   tasks.register<GenerateTask>("genApiClient") {
     val clientOutputDir = "${getLayout().buildDirectory.get()}/generated/api/client"
@@ -291,6 +334,7 @@ sourceSets {
     kotlin {
       srcDirs(
         "${project.layout.buildDirectory.get()}/generated/api/server2/src/main/kotlin",
+        "${project.layout.buildDirectory.get()}/generated/api/scim-server/src/main/kotlin",
         "${project.layout.buildDirectory.get()}/generated/api/client/src/main/kotlin",
         "$projectDir/src/main/kotlin",
       )
@@ -310,13 +354,13 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.named("compileKotlin") {
-  dependsOn(genApiClient, genApiServer2)
+  dependsOn(genApiClient, genApiServer2, genScimApiServer)
 }
 
 // uses afterEvaluate because at configuration time, the kspKotlin task does not exist.
 afterEvaluate {
   tasks.named("kspKotlin").configure {
-    mustRunAfter(genApiDocs, genApiClient, genApiServer, genApiServer2)
+    mustRunAfter(genApiDocs, genApiClient, genApiServer, genApiServer2, genScimApiServer)
   }
 }
 

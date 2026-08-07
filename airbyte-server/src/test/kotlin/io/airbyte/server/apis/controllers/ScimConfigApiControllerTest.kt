@@ -23,6 +23,7 @@ import io.airbyte.domain.models.scim.ScimConfigurationConflictException
 import io.airbyte.domain.models.scim.ScimConfigurationRead
 import io.airbyte.domain.models.scim.ScimConfigurationStatus
 import io.airbyte.domain.models.scim.ScimOrganizationNotFoundException
+import io.airbyte.domain.services.scim.ScimAccessGate
 import io.airbyte.domain.services.scim.ScimConfigurationService
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Status
@@ -44,18 +45,20 @@ import java.util.UUID
 
 class ScimConfigApiControllerTest {
   private val service = mockk<ScimConfigurationService>()
+  private val scimAccessGate = mockk<ScimAccessGate>()
   private val currentUserService = mockk<CurrentUserService>()
   private val webUrlHelper =
     mockk<WebUrlHelper> {
       every { baseUrl } returns "https://airbyte.example.com"
     }
-  private val controller = ScimConfigApiController(service, currentUserService, webUrlHelper)
+  private val controller = ScimConfigApiController(service, scimAccessGate, currentUserService, webUrlHelper)
   private val organizationId = UUID.randomUUID()
   private val userId = UUID.randomUUID()
 
   @BeforeEach
   fun setUp() {
-    clearMocks(service, currentUserService)
+    clearMocks(service, scimAccessGate, currentUserService)
+    every { scimAccessGate.isAllowed(any()) } returns false
     every { currentUserService.getCurrentUser() } returns
       mockk {
         every { this@mockk.userId } returns this@ScimConfigApiControllerTest.userId
@@ -66,6 +69,7 @@ class ScimConfigApiControllerTest {
   fun `get maps not configured status and absolute SCIM base URL`() {
     every { service.getConfiguration(OrganizationId(organizationId)) } returns
       ScimConfigurationRead(status = ScimConfigurationStatus.NOT_CONFIGURED)
+    every { scimAccessGate.isAllowed(OrganizationId(organizationId)) } returns false
 
     val result = controller.getScimConfig(OrganizationIdRequestBody(organizationId))
 
@@ -75,7 +79,20 @@ class ScimConfigApiControllerTest {
     assertNull(result.createdAt)
     assertNull(result.updatedAt)
     assertNull(result.token)
+    assertEquals(false, result.available)
     verify(exactly = 0) { currentUserService.getCurrentUser() }
+  }
+
+  @Test
+  fun `get reports available true when the access gate allows the organization`() {
+    every { service.getConfiguration(OrganizationId(organizationId)) } returns
+      ScimConfigurationRead(status = ScimConfigurationStatus.NOT_CONFIGURED)
+    every { scimAccessGate.isAllowed(OrganizationId(organizationId)) } returns true
+
+    val result = controller.getScimConfig(OrganizationIdRequestBody(organizationId))
+
+    assertEquals(ScimConfigStatus.NOT_CONFIGURED, result.status)
+    assertEquals(true, result.available)
   }
 
   @Test
@@ -107,6 +124,9 @@ class ScimConfigApiControllerTest {
     assertEquals(createdAt.toEpochSecond(), result.createdAt)
     assertEquals(updatedAt.toEpochSecond(), result.updatedAt)
     assertEquals("airbyte_scim_one_time_token", result.token)
+    // A successful enable implies the organization passed the gate inside the service.
+    assertEquals(true, result.available)
+    verify(exactly = 0) { scimAccessGate.isAllowed(any()) }
   }
 
   @Test
@@ -121,7 +141,10 @@ class ScimConfigApiControllerTest {
     val result = controller.rotateScimToken(OrganizationIdRequestBody(organizationId))
 
     assertEquals("airbyte_scim_rotated_token", result.token)
+    // A successful rotation implies the organization passed the gate inside the service.
+    assertEquals(true, result.available)
     verify(exactly = 1) { service.rotateToken(OrganizationId(organizationId), UserId(userId)) }
+    verify(exactly = 0) { scimAccessGate.isAllowed(any()) }
   }
 
   @Test
