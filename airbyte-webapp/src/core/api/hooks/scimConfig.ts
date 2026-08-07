@@ -59,8 +59,8 @@ export const useDisableScim = () => {
 
   return useMutation({
     mutationFn: () => disableScim({ organizationId }, requestOptions),
-    onSuccess: () => {
-      queryClient.invalidateQueries(scimConfigKeys.detail(organizationId));
-    },
+    // Returned (not fire-and-forget) so mutateAsync resolves only after the refetch: the
+    // confirmation modal then closes exactly when the card flips to disabled, with no stale window.
+    onSuccess: () => queryClient.invalidateQueries(scimConfigKeys.detail(organizationId)),
   });
 };
