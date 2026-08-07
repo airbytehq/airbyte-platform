@@ -38,14 +38,18 @@ const baseScimConfig: ScimConfigResponse = {
 };
 
 /**
- * A getScimConfig response that never settles, used for the refetch the mutations trigger via
- * invalidateQueries.
+ * A getScimConfig response that never settles, used for the refetch that useEnableScim's
+ * fire-and-forget onSuccess triggers via invalidateQueries without awaiting it.
  *
- * The token-containment cases assert that the cache holds no `token` after a mutation resolves. If
- * the refetch were allowed to settle with a token-free config, it would overwrite the cache and the
- * assertion would pass even for a hook that wrote the token there in onSuccess — the test could not
- * fail on the one thing it exists to catch. Leaving the refetch pending means the cache still holds
- * whatever the mutation path left behind at assertion time.
+ * The enable-scim token-containment case below asserts that the cache holds no `token` after the
+ * mutation resolves. Because onSuccess doesn't await the refetch, mutateAsync resolves regardless of
+ * whether it ever settles. If the refetch were allowed to settle with a token-free config, it would
+ * overwrite the cache and the assertion would pass even for a hook that wrote the token there in
+ * onSuccess — the test could not fail on the one thing it exists to catch. Leaving the refetch
+ * pending means the cache still holds whatever the mutation path left behind at assertion time.
+ *
+ * useRotateScimToken awaits the refetch in onSuccess, so its token-containment case below uses a
+ * controllable promise instead — mutateAsync can't resolve until that refetch settles.
  */
 const pendingScimConfig = () => new Promise<ScimConfigResponse>(() => {});
 
@@ -134,6 +138,67 @@ describe("scimConfig hooks", () => {
       expect(mockRotateScimToken).toHaveBeenCalledWith({ organizationId }, {});
       expect(invalidateQueriesSpy).toHaveBeenCalledWith(scimConfigKeys.detail(organizationId));
     });
+
+    it("does not resolve mutateAsync until the invalidated config refetch settles", async () => {
+      mockGetScimConfig.mockResolvedValueOnce(baseScimConfig);
+      mockRotateScimToken.mockResolvedValue(baseScimConfig);
+
+      // A controllable stand-in for the invalidation-triggered refetch, so the test can assert
+      // mutateAsync is still pending before letting it settle.
+      let resolveRefetch: ((value: ScimConfigResponse) => void) | undefined;
+      mockGetScimConfig.mockReturnValueOnce(
+        new Promise<ScimConfigResponse>((resolve) => {
+          resolveRefetch = resolve;
+        })
+      );
+
+      const { result } = renderHook(
+        () => ({
+          query: useGetScimConfig({ enabled: true }),
+          mutation: useRotateScimToken(),
+        }),
+        { wrapper }
+      );
+
+      await waitFor(() => expect(result.current.query.data).toEqual(baseScimConfig));
+
+      let settled = false;
+      const mutatePromise = result.current.mutation.mutateAsync().then(() => {
+        settled = true;
+      });
+
+      // The refetch has been issued but hasn't settled yet: mutateAsync must still be pending,
+      // otherwise the one-time credential modal could open before the cache reflects the rotation.
+      await waitFor(() => expect(mockGetScimConfig).toHaveBeenCalledTimes(2));
+      expect(settled).toBe(false);
+
+      resolveRefetch?.(baseScimConfig);
+      await mutatePromise;
+
+      expect(settled).toBe(true);
+    });
+
+    it("still resolves mutateAsync when the invalidation-triggered refetch fails", async () => {
+      mockGetScimConfig.mockResolvedValueOnce(baseScimConfig).mockRejectedValueOnce(new Error("refetch failed"));
+      mockRotateScimToken.mockResolvedValue({ ...baseScimConfig, token: "rotate-secret-token" });
+
+      const { result } = renderHook(
+        () => ({
+          query: useGetScimConfig({ enabled: true }),
+          mutation: useRotateScimToken(),
+        }),
+        { wrapper }
+      );
+
+      await waitFor(() => expect(result.current.query.data).toEqual(baseScimConfig));
+
+      // A refetch failure after a successful rotation must not reject mutateAsync: the old token is
+      // already invalidated server-side, and a rejection here would route the card into its error
+      // toast instead of the one-time credential modal, destroying the token.
+      const data = await result.current.mutation.mutateAsync();
+
+      expect(data.token).toBe("rotate-secret-token");
+    });
   });
 
   describe("useDisableScim", () => {
@@ -177,8 +242,18 @@ describe("scimConfig hooks", () => {
     });
 
     it("keeps the rotate-token response out of the query cache while returning it from the mutation", async () => {
-      mockGetScimConfig.mockResolvedValueOnce(baseScimConfig).mockReturnValueOnce(pendingScimConfig());
+      mockGetScimConfig.mockResolvedValueOnce(baseScimConfig);
       mockRotateScimToken.mockResolvedValue({ ...baseScimConfig, token: "rotate-secret-token" });
+
+      // useRotateScimToken awaits the refetch in onSuccess, so mutateAsync won't resolve until it
+      // settles — a controllable promise (rather than a never-settling one) lets the test check the
+      // cache mid-flight, before letting the refetch resolve.
+      let resolveRefetch: ((value: ScimConfigResponse) => void) | undefined;
+      mockGetScimConfig.mockReturnValueOnce(
+        new Promise<ScimConfigResponse>((resolve) => {
+          resolveRefetch = resolve;
+        })
+      );
 
       const { result } = renderHook(
         () => ({
@@ -190,13 +265,18 @@ describe("scimConfig hooks", () => {
 
       await waitFor(() => expect(result.current.query.data).toEqual(baseScimConfig));
 
-      await result.current.mutation.mutateAsync();
+      const mutatePromise = result.current.mutation.mutateAsync();
 
-      // Wait for the invalidation-triggered refetch to be issued, but not to settle — it never
-      // does, by construction. See pendingScimConfig.
+      // Wait for the invalidation-triggered refetch to be issued, but not to settle yet.
       await waitFor(() => expect(mockGetScimConfig).toHaveBeenCalledTimes(2));
+      expect(
+        queryClient.getQueryData<ScimConfigResponse>(scimConfigKeys.detail(organizationId))?.token
+      ).toBeUndefined();
 
-      expect(result.current.mutation.data?.token).toBe("rotate-secret-token");
+      resolveRefetch?.(baseScimConfig);
+      const data = await mutatePromise;
+
+      expect(data.token).toBe("rotate-secret-token");
       expect(
         queryClient.getQueryData<ScimConfigResponse>(scimConfigKeys.detail(organizationId))?.token
       ).toBeUndefined();

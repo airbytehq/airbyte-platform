@@ -10,7 +10,7 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useScimSettingsAccess } from "area/organization/utils";
-import { useDisableScim, useEnableScim } from "core/api";
+import { useDisableScim, useEnableScim, useRotateScimToken } from "core/api";
 import { ScimConfigStatus, ScimIdpProvider } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { useModalService } from "core/services/Modal";
@@ -45,6 +45,7 @@ const STATUS_CHIP_ICONS: Partial<Record<ScimConfigStatus, IconType>> = {
 
 const SCIM_ENABLE_ERROR_NOTIFICATION_ID = "scim-enable-error";
 const SCIM_DISABLE_ERROR_NOTIFICATION_ID = "scim-disable-error";
+const SCIM_ROTATE_ERROR_NOTIFICATION_ID = "scim-rotate-error";
 
 /**
  * Owns the SCIM `CollapsibleSettingsCard` (chrome + data access). The page shell that mounts
@@ -63,6 +64,7 @@ export const ScimSettingsCard: React.FC = () => {
   const { registerNotification } = useNotificationService();
   const enableScim = useEnableScim();
   const disableScim = useDisableScim();
+  const rotateScimToken = useRotateScimToken();
   const [selectedProvider, setSelectedProvider] = useState<ScimIdpProvider | undefined>(undefined);
 
   const handleEnable = async (provider: ScimIdpProvider | undefined) => {
@@ -129,6 +131,61 @@ export const ScimSettingsCard: React.FC = () => {
           registerNotification({
             id: SCIM_DISABLE_ERROR_NOTIFICATION_ID,
             text: formatMessage({ id: "settings.organizationSettings.scim.disable.error" }),
+            type: "error",
+          });
+        }
+      },
+    });
+  };
+
+  const handleRotate = () => {
+    openConfirmationModal({
+      title: "settings.organizationSettings.scim.rotate.confirm.title",
+      text: "settings.organizationSettings.scim.rotate.confirm.text",
+      submitButtonText: "settings.organizationSettings.scim.rotate.confirm.button",
+      submitButtonVariant: "danger",
+      onSubmit: async () => {
+        try {
+          const response = await rotateScimToken.mutateAsync();
+          closeConfirmationModal();
+
+          if (response.token) {
+            const token = response.token;
+            const { scimBaseUrl: rotatedScimBaseUrl } = response;
+            // Drive the modal's Okta-only note off the rotate response's provider, falling back to
+            // the card's stored provider, so it always reflects what was actually persisted.
+            const resolvedProvider = response.idpProvider ?? idpProvider;
+
+            if (resolvedProvider) {
+              await openModal<void>({
+                title: formatMessage({ id: "settings.organizationSettings.scim.enable.modal.title" }),
+                preventCancel: true,
+                // Without this, any location change (a browser Back press) closes the modal without
+                // ever resolving `openModal`, destroying the one-time token with no way to recover it.
+                allowNavigation: true,
+                content: ({ onComplete }) => (
+                  <ScimCredentialsModal
+                    scimBaseUrl={rotatedScimBaseUrl}
+                    token={token}
+                    idpProvider={resolvedProvider}
+                    onComplete={onComplete}
+                  />
+                ),
+              });
+
+              // The one-time token lives in `mutation.data` until this fires. It's never read again
+              // after the modal closes, so drop this component's view of it. Note this clears the
+              // observer's result only - the underlying cache entry outlives the call - so it's tidiness,
+              // not a guarantee the token is gone from memory.
+              rotateScimToken.reset();
+            }
+          }
+        } catch {
+          // SCIM backend failures are plain exceptions, not HttpProblems - there's no API-provided
+          // message to format, so the toast copy is entirely client-authored.
+          registerNotification({
+            id: SCIM_ROTATE_ERROR_NOTIFICATION_ID,
+            text: formatMessage({ id: "settings.organizationSettings.scim.rotate.error" }),
             type: "error",
           });
         }
@@ -281,6 +338,9 @@ export const ScimSettingsCard: React.FC = () => {
             <Message type="info" text={formatMessage({ id: "settings.organizationSettings.scim.summary.info" })} />
 
             <FlexContainer>
+              <Button type="button" variant="secondary" disabled={!idpProvider} onClick={handleRotate}>
+                <FormattedMessage id="settings.organizationSettings.scim.rotate.button" />
+              </Button>
               <Button type="button" variant="danger" onClick={handleDisable}>
                 <FormattedMessage id="settings.organizationSettings.scim.disable.button" />
               </Button>

@@ -46,9 +46,10 @@ export const useRotateScimToken = () => {
 
   return useMutation({
     mutationFn: () => rotateScimToken({ organizationId }, requestOptions),
-    onSuccess: () => {
-      queryClient.invalidateQueries(scimConfigKeys.detail(organizationId));
-    },
+    // Returned (not fire-and-forget) so mutateAsync resolves only after the refetch: the
+    // confirmation modal stays in its loading state until the refetch settles, then the
+    // one-time credential modal opens against a consistent cache.
+    onSuccess: () => queryClient.invalidateQueries(scimConfigKeys.detail(organizationId)),
   });
 };
 

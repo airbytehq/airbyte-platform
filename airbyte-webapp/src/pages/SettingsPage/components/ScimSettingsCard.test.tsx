@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { render } from "test-utils";
 
 import { useScimSettingsAccess } from "area/organization/utils";
-import { useDisableScim, useEnableScim } from "core/api";
+import { useDisableScim, useEnableScim, useRotateScimToken } from "core/api";
 import { ScimConfigResponse, ScimConfigStatus, ScimIdpProvider } from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { useModalService } from "core/services/Modal";
@@ -22,6 +22,7 @@ jest.mock("area/organization/utils", () => ({
 jest.mock("core/api", () => ({
   useEnableScim: jest.fn(),
   useDisableScim: jest.fn(),
+  useRotateScimToken: jest.fn(),
 }));
 
 // Modal/Notification/ConfirmationModal are not circular, so spread the real module - `render`
@@ -45,6 +46,7 @@ jest.mock("core/services/ConfirmationModal", () => ({
 const mockUseScimSettingsAccess = useScimSettingsAccess as jest.Mock;
 const mockUseEnableScim = useEnableScim as jest.Mock;
 const mockUseDisableScim = useDisableScim as jest.Mock;
+const mockUseRotateScimToken = useRotateScimToken as jest.Mock;
 const mockUseModalService = useModalService as jest.Mock;
 const mockUseNotificationService = useNotificationService as jest.Mock;
 const mockUseConfirmationModalService = useConfirmationModalService as jest.Mock;
@@ -91,6 +93,8 @@ describe("ScimSettingsCard", () => {
   let mockOpenModal: jest.Mock;
   let mockRegisterNotification: jest.Mock;
   let mockDisableMutateAsync: jest.Mock;
+  let mockRotateMutateAsync: jest.Mock;
+  let mockRotateReset: jest.Mock;
   let mockOpenConfirmationModal: jest.Mock;
   let mockCloseConfirmationModal: jest.Mock;
 
@@ -109,6 +113,14 @@ describe("ScimSettingsCard", () => {
 
     mockDisableMutateAsync = jest.fn();
     mockUseDisableScim.mockReturnValue({ mutateAsync: mockDisableMutateAsync, isLoading: false });
+
+    mockRotateMutateAsync = jest.fn();
+    mockRotateReset = jest.fn();
+    mockUseRotateScimToken.mockReturnValue({
+      mutateAsync: mockRotateMutateAsync,
+      isLoading: false,
+      reset: mockRotateReset,
+    });
 
     mockOpenModal = jest.fn();
     mockUseModalService.mockReturnValue({ openModal: mockOpenModal, getCurrentModalTitle: jest.fn() });
@@ -579,6 +591,187 @@ describe("ScimSettingsCard", () => {
 
       expect(await screen.findByText("Disable SCIM?")).toBeInTheDocument();
       expect(screen.getByText(/no longer be able to create, update, or deactivate users/)).toBeInTheDocument();
+    });
+  });
+
+  describe("rotating", () => {
+    const enabledConfig: ScimConfigResponse = {
+      ...baseConfig,
+      status: ScimConfigStatus.enabled,
+      idpProvider: ScimIdpProvider.okta,
+      createdAt: 1700000000,
+    };
+
+    it("renders the Generate new token button when enabled", async () => {
+      setAccess({ scimConfig: enabledConfig });
+
+      await renderOpenCard();
+
+      expect(screen.getByRole("button", { name: "Generate new token" })).toBeInTheDocument();
+    });
+
+    it("does not render the Generate new token button when not configured", async () => {
+      await renderOpenCard();
+
+      expect(screen.queryByRole("button", { name: "Generate new token" })).not.toBeInTheDocument();
+    });
+
+    it("does not render the Generate new token button when disabled", async () => {
+      setAccess({
+        scimConfig: { ...baseConfig, status: ScimConfigStatus.disabled, idpProvider: ScimIdpProvider.okta },
+      });
+
+      await renderOpenCard();
+
+      expect(screen.queryByRole("button", { name: "Generate new token" })).not.toBeInTheDocument();
+    });
+
+    it("disables the Generate new token button when the config carries no provider", async () => {
+      setAccess({ scimConfig: { ...baseConfig, status: ScimConfigStatus.enabled, createdAt: 1700000000 } });
+
+      await renderOpenCard();
+
+      expect(screen.getByRole("button", { name: "Generate new token" })).toBeDisabled();
+    });
+
+    it("opens a danger confirmation modal with the rotate copy when clicked", async () => {
+      setAccess({ scimConfig: enabledConfig });
+
+      await renderOpenCard();
+      await userEvent.click(screen.getByRole("button", { name: "Generate new token" }));
+
+      expect(mockOpenConfirmationModal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "settings.organizationSettings.scim.rotate.confirm.title",
+          text: "settings.organizationSettings.scim.rotate.confirm.text",
+          submitButtonText: "settings.organizationSettings.scim.rotate.confirm.button",
+          submitButtonVariant: "danger",
+        })
+      );
+    });
+
+    it("calls mutateAsync, closes the confirmation modal, opens a non-dismissable credential modal seeded from the response, and resets afterwards", async () => {
+      const rotateResponse: ScimConfigResponse = {
+        ...baseConfig,
+        status: ScimConfigStatus.enabled,
+        idpProvider: ScimIdpProvider.okta,
+        token: TOKEN,
+      };
+      setAccess({ scimConfig: enabledConfig });
+      mockRotateMutateAsync.mockResolvedValue(rotateResponse);
+      mockOpenModal.mockResolvedValue({ type: "completed", reason: undefined });
+
+      await renderOpenCard();
+      await userEvent.click(screen.getByRole("button", { name: "Generate new token" }));
+
+      const onSubmit = mockOpenConfirmationModal.mock.calls[0][0].onSubmit;
+      await act(async () => {
+        await onSubmit();
+      });
+
+      expect(mockRotateMutateAsync).toHaveBeenCalledWith();
+      expect(mockCloseConfirmationModal).toHaveBeenCalledTimes(1);
+
+      expect(mockOpenModal).toHaveBeenCalledTimes(1);
+      const modalOptions = mockOpenModal.mock.calls[0][0];
+      expect(modalOptions.preventCancel).toBe(true);
+      // Without `allowNavigation`, a location change closes the modal without resolving
+      // `openModal`, destroying the one-time token.
+      expect(modalOptions.allowNavigation).toBe(true);
+      expect(modalOptions.title).toBe("Copy your SCIM details");
+
+      // Render the exact `content` component ScimSettingsCard handed to openModal, in isolation
+      // from the card tree above, so the `screen` queries below resolve against exactly one tree.
+      cleanup();
+      const ModalContent = modalOptions.content;
+      await render(<ModalContent onComplete={jest.fn()} onCancel={jest.fn()} />);
+
+      expect(screen.getByTitle(SCIM_BASE_URL)).toBeInTheDocument();
+      expect(screen.getByTestId("bearer-token-value")).toHaveTextContent(TOKEN.slice(0, 19));
+
+      expect(mockRotateReset).toHaveBeenCalledTimes(1);
+      expect(mockRegisterNotification).not.toHaveBeenCalled();
+    });
+
+    it("seeds the credential modal from the card's stored provider when the rotate response omits it", async () => {
+      setAccess({ scimConfig: enabledConfig });
+      mockRotateMutateAsync.mockResolvedValue({ ...baseConfig, status: ScimConfigStatus.enabled, token: TOKEN });
+      mockOpenModal.mockResolvedValue({ type: "completed", reason: undefined });
+
+      await renderOpenCard();
+      await userEvent.click(screen.getByRole("button", { name: "Generate new token" }));
+
+      const onSubmit = mockOpenConfirmationModal.mock.calls[0][0].onSubmit;
+      await act(async () => {
+        await onSubmit();
+      });
+
+      expect(mockOpenModal).toHaveBeenCalledTimes(1);
+
+      // The response carries no provider, so the Okta-only note can only appear if the card's
+      // stored provider was passed through as the fallback.
+      cleanup();
+      const ModalContent = mockOpenModal.mock.calls[0][0].content;
+      await render(<ModalContent onComplete={jest.fn()} onCancel={jest.fn()} />);
+
+      expect(screen.getByText("In Okta, turn off password sync. Airbyte ignores passwords.")).toBeInTheDocument();
+    });
+
+    it("does not open a credential modal or reset when the rotate response has no token", async () => {
+      setAccess({ scimConfig: enabledConfig });
+      mockRotateMutateAsync.mockResolvedValue({
+        ...baseConfig,
+        status: ScimConfigStatus.enabled,
+        idpProvider: ScimIdpProvider.okta,
+      });
+
+      await renderOpenCard();
+      await userEvent.click(screen.getByRole("button", { name: "Generate new token" }));
+
+      const onSubmit = mockOpenConfirmationModal.mock.calls[0][0].onSubmit;
+      await act(async () => {
+        await onSubmit();
+      });
+
+      expect(mockRotateMutateAsync).toHaveBeenCalledWith();
+      expect(mockCloseConfirmationModal).toHaveBeenCalledTimes(1);
+      expect(mockOpenModal).not.toHaveBeenCalled();
+      expect(mockRotateReset).not.toHaveBeenCalled();
+      expect(mockRegisterNotification).not.toHaveBeenCalled();
+    });
+
+    it("shows an error toast and leaves the confirmation open when the mutation rejects", async () => {
+      setAccess({ scimConfig: enabledConfig });
+      mockRotateMutateAsync.mockRejectedValue(new Error("boom"));
+
+      await renderOpenCard();
+      await userEvent.click(screen.getByRole("button", { name: "Generate new token" }));
+
+      const onSubmit = mockOpenConfirmationModal.mock.calls[0][0].onSubmit;
+      await act(async () => {
+        await onSubmit();
+      });
+
+      expect(mockRegisterNotification).toHaveBeenCalledWith({
+        id: "scim-rotate-error",
+        type: "error",
+        text: "Something went wrong generating a new SCIM token. Please try again.",
+      });
+      expect(mockCloseConfirmationModal).not.toHaveBeenCalled();
+      expect(mockOpenModal).not.toHaveBeenCalled();
+    });
+
+    it("renders the confirmation copy from en.json, not raw message ids", async () => {
+      mockUseConfirmationModalService.mockImplementation(
+        jest.requireActual("core/services/ConfirmationModal").useConfirmationModalService
+      );
+      setAccess({ scimConfig: enabledConfig });
+
+      await renderOpenCard();
+      await userEvent.click(screen.getByRole("button", { name: "Generate new token" }));
+
+      expect(await screen.findByText("Generate a new SCIM token?")).toBeInTheDocument();
+      expect(screen.getByText(/Your current token stops working immediately/)).toBeInTheDocument();
     });
   });
 });
