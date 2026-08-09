@@ -1624,6 +1624,90 @@ internal class ConnectionManagerWorkflowTest {
       assertWorkflowWasContinuedAsNew()
     }
 
+    /**
+     * Regression test for https://github.com/airbytehq/airbyte/issues/83340.
+     *
+     * When a mandatory activity fails and the workflow enters its backoff sleep
+     * (WORKFLOW_FAILURE_RESTART_DELAY), a deleteConnection signal may arrive during that sleep.
+     * Because Temporal delivers signals between workflow tasks, workflowState.isDeleted will be true
+     * once the sleep timer fires. Before this fix the workflow unconditionally called continueAsNew
+     * after the sleep, restarting the sync for an already-deleted connection.
+     *
+     * The fix checks workflowState.isDeleted after the sleep; when true it skips continueAsNew
+     * and returns, letting the existing prepareForNextRunAndContinueAsNew guard terminate the
+     * workflow cleanly.
+     */
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    @DisplayName("Workflow does not restart via continueAsNew when deleteConnection arrives during activity failure backoff")
+    fun doesNotRestartAfterDeleteDuringActivityFailureBackoff() {
+      returnTrueForLastJobOrAttemptFailure()
+      every { mConfigFetchActivity.getTimeToWait(any()) } returns ScheduleRetrieverOutput(Duration.ZERO)
+
+      // Configure createNewJob to throw a non-retryable failure. This triggers the mandatory-activity
+      // catch path in runMandatoryActivityWithOutput, which sleeps for WORKFLOW_FAILURE_RESTART_DELAY
+      // before attempting continueAsNew.
+      every { mJobCreationAndStatusUpdateActivity.createNewJob(any()) } answers {
+        throw ApplicationFailure.newNonRetryableFailure(
+          "simulated activity failure for issue-83340 regression test",
+          "SimulatedActivityFailure",
+        )
+      }
+
+      val testId = UUID.randomUUID()
+      reset()
+      val testStateListener = TestStateListener()
+      val workflowState = WorkflowState(testId, testStateListener)
+
+      val input =
+        ConnectionUpdaterInput(
+          connectionId = UUID.randomUUID(),
+          jobId = null,
+          attemptId = null,
+          fromFailure = false,
+          attemptNumber = 1,
+          workflowState = workflowState,
+          resetConnection = false,
+          fromJobResetFailure = false,
+          skipScheduling = false,
+        )
+
+      startWorkflowAndWaitUntilReady(workflow, input)
+
+      // Advance Temporal simulated time partway through the backoff sleep (halfway), then deliver
+      // the deleteConnection signal. The signal is processed between workflow tasks, so
+      // workflowState.isDeleted becomes true before the sleep timer fires.
+      testEnv.sleep(WORKFLOW_FAILURE_RESTART_DELAY.dividedBy(2))
+      workflow.deleteConnection()
+
+      // Advance past the full backoff sleep. The workflow wakes up, sees isDeleted=true, and must
+      // NOT call continueAsNew.
+      testEnv.sleep(WORKFLOW_FAILURE_RESTART_DELAY)
+
+      // Assert the workflow closed without producing a CONTINUED_AS_NEW execution.
+      val request =
+        ListClosedWorkflowExecutionsRequest
+          .newBuilder()
+          .setNamespace(testEnv.namespace)
+          .setExecutionFilter(WorkflowExecutionFilter.newBuilder().setWorkflowId(WORKFLOW_ID))
+          .build()
+      val listResponse =
+        testEnv
+          .workflowService
+          .blockingStub()
+          .listClosedWorkflowExecutions(request)
+
+      // The workflow execution must have closed, but NOT with CONTINUED_AS_NEW status.
+      // If there are no closed executions, the workflow is still running — also a failure.
+      Assertions.assertThat(listResponse.executionsCount).isGreaterThanOrEqualTo(1)
+      Assertions
+        .assertThat(listResponse.executionsList[0].status)
+        .isNotEqualTo(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW)
+
+      // No new job creation attempt should happen after the deletion — the workflow is done.
+      verify(exactly = 1) { mJobCreationAndStatusUpdateActivity.createNewJob(any()) }
+    }
+
     @BeforeEach
     fun setup() {
       setupSpecificChildWorkflow(
@@ -1632,6 +1716,7 @@ internal class ConnectionManagerWorkflowTest {
       )
     }
   }
+
 
   @Nested
   @DisplayName("New 'resilient' retries and progress checking")
