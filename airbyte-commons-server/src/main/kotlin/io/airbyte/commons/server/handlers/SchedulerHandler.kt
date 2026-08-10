@@ -601,19 +601,31 @@ open class SchedulerHandler
       return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId))
     }
 
+    /**
+     * Whether the scheduler should record Data Worker usage itself, which it does only for
+     * organizations that are not under capacity enforcement.
+     *
+     * When enforcement cannot be resolved, skip passive tracking rather than defaulting to it. The
+     * enforced case is the one that matters: the connection manager workflow resolves
+     * [EnforceDataWorkerCapacity] independently and reserves through the capacity check, so
+     * skipping here costs nothing. Defaulting to passive instead writes a reservation that no
+     * capacity check ever gated, which `DataWorkerCapacityService.checkCapacityAndReserve` then
+     * treats as an already-granted admission — letting the organization exceed committed capacity.
+     * The cost of being wrong the other way is one unenforced job's usage going unrecorded.
+     */
     private fun shouldTrackUsagePassively(connectionId: UUID): Boolean =
       try {
         val workspace = workspaceService.getStandardWorkspaceFromConnection(connectionId, false)
         val organizationId = workspace.organizationId
         if (organizationId == null) {
-          log.warn { "Workspace ${workspace.workspaceId} has no organization id; defaulting to passive data worker usage tracking." }
-          true
+          log.warn { "Workspace ${workspace.workspaceId} has no organization id; skipping passive data worker usage tracking." }
+          false
         } else {
           !featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId))
         }
       } catch (e: Exception) {
-        log.warn(e) { "Failed to resolve capacity enforcement for connection $connectionId; defaulting to passive data worker usage tracking." }
-        true
+        log.warn(e) { "Failed to resolve capacity enforcement for connection $connectionId; skipping passive data worker usage tracking." }
+        false
       }
 
     private fun submitManualSyncToWorker(

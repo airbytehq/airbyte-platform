@@ -337,6 +337,88 @@ internal class SchedulerHandlerTest {
     Assertions.assertThat(output.getJob().getId()).isEqualTo(JOB_ID)
   }
 
+  private fun stubSyncJobCreation() {
+    whenever<Long?>(jobFactory.createSync(CONNECTION_ID, true))
+      .thenReturn(JOB_ID)
+    whenever<StandardSync?>(connectionService.getStandardSync(CONNECTION_ID))
+      .thenReturn(mock())
+    whenever<Job?>(jobPersistence.getJob(JOB_ID))
+      .thenReturn(job)
+    whenever<JobInfoRead?>(jobConverter.getJobInfoRead(job))
+      .thenReturn(JobInfoRead().job(JobRead().id(JOB_ID)))
+  }
+
+  private fun stubWorkspaceForConnection(organizationId: UUID?) {
+    whenever(workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, false))
+      .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withOrganizationId(organizationId))
+  }
+
+  @Test
+  @DisplayName("Passive usage tracking records usage when capacity enforcement is disabled")
+  fun createJobTracksUsagePassivelyWhenEnforcementDisabled() {
+    val organizationId = UUID.randomUUID()
+    stubSyncJobCreation()
+    stubWorkspaceForConnection(organizationId)
+    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
+      .thenReturn(false)
+
+    schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+
+    verify(dataWorkerUsageService).insertUsageForCreatedJob(job)
+  }
+
+  @Test
+  @DisplayName("Passive usage tracking is skipped when capacity enforcement is enabled")
+  fun createJobSkipsPassiveUsageTrackingWhenEnforcementEnabled() {
+    val organizationId = UUID.randomUUID()
+    stubSyncJobCreation()
+    stubWorkspaceForConnection(organizationId)
+    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
+      .thenReturn(true)
+
+    schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+
+    verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
+  }
+
+  @Test
+  @DisplayName("Passive usage tracking is skipped when the enforcement flag lookup fails")
+  fun createJobSkipsPassiveUsageTrackingWhenFlagLookupFails() {
+    val organizationId = UUID.randomUUID()
+    stubSyncJobCreation()
+    stubWorkspaceForConnection(organizationId)
+    whenever(featureFlagClient.boolVariation(EnforceDataWorkerCapacity, Organization(organizationId)))
+      .thenThrow(RuntimeException("flag lookup failed"))
+
+    schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+
+    verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
+  }
+
+  @Test
+  @DisplayName("Passive usage tracking is skipped when the workspace lookup fails")
+  fun createJobSkipsPassiveUsageTrackingWhenWorkspaceLookupFails() {
+    stubSyncJobCreation()
+    whenever(workspaceService.getStandardWorkspaceFromConnection(CONNECTION_ID, false))
+      .thenThrow(RuntimeException("workspace lookup failed"))
+
+    schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+
+    verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
+  }
+
+  @Test
+  @DisplayName("Passive usage tracking is skipped when the workspace has no organization")
+  fun createJobSkipsPassiveUsageTrackingWhenWorkspaceHasNoOrganization() {
+    stubSyncJobCreation()
+    stubWorkspaceForConnection(organizationId = null)
+
+    schedulerHandler.createJob(JobCreate().connectionId(CONNECTION_ID).isScheduled(true))
+
+    verify(dataWorkerUsageService, never()).insertUsageForCreatedJob(any())
+    verifyNoInteractions(featureFlagClient)
+  }
+
   @Test
   @DisplayName("Test refresh job creation")
   fun createRefreshJob() {
