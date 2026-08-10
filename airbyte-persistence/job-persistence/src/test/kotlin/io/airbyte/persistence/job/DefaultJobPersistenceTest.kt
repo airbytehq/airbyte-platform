@@ -1958,9 +1958,10 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.queueJob(jobId)
 
       every { timeSupplier.get() } returns Instant.ofEpochMilli(4242)
-      jobPersistence.cancelQueuedJob(jobId)
+      val cancelled = jobPersistence.cancelQueuedJob(jobId)
 
       val updated = jobPersistence.getJob(jobId)
+      assertTrue(cancelled)
       assertEquals(JobStatus.CANCELLED, updated.status)
     }
 
@@ -1969,10 +1970,24 @@ internal class DefaultJobPersistenceTest {
     fun testCancelQueuedJobNoOpForPendingJob() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
 
-      jobPersistence.cancelQueuedJob(jobId)
+      val cancelled = jobPersistence.cancelQueuedJob(jobId)
 
       val updated = jobPersistence.getJob(jobId)
+      assertFalse(cancelled)
       assertEquals(JobStatus.PENDING, updated.status)
+    }
+
+    @Test
+    @DisplayName("Should leave a running job unchanged")
+    fun testCancelQueuedJobNoOpForRunningJob() {
+      val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+      jobPersistence.createAttempt(jobId, LOG_PATH)
+
+      val cancelled = jobPersistence.cancelQueuedJob(jobId)
+
+      val updated = jobPersistence.getJob(jobId)
+      assertFalse(cancelled)
+      assertEquals(JobStatus.RUNNING, updated.status)
     }
   }
 

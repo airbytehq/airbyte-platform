@@ -130,9 +130,10 @@ interface JobPersistence {
    * Data Worker capacity should be discarded before it starts. If not in QUEUED status, no op.
    *
    * @param jobId job to cancel
+   * @return true if the status transitioned from QUEUED to CANCELLED, otherwise false
    * @throws IOException exception due to interaction with persistence
    */
-  fun cancelQueuedJob(jobId: Long)
+  fun cancelQueuedJob(jobId: Long): Boolean
 
   /**
    * Update the persisted sync job config to record whether the job used on-demand capacity.

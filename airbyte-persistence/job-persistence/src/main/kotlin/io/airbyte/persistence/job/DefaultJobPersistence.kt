@@ -193,12 +193,10 @@ class DefaultJobPersistence
         }
       }
 
-    override fun cancelQueuedJob(jobId: Long) {
-      jobDatabase.query<Any?> { ctx: DSLContext ->
-        updateJobStatusIfCurrentStatus(ctx, jobId, JobStatus.QUEUED, JobStatus.CANCELLED)
-        null
+    override fun cancelQueuedJob(jobId: Long): Boolean =
+      jobDatabase.query<Boolean> { ctx: DSLContext ->
+        updateJobStatusIfCurrentStatus(ctx, jobId, JobStatus.QUEUED, JobStatus.CANCELLED) > 0
       }
-    }
 
     override fun updateSyncJobOnDemandCapacity(
       jobId: Long,
@@ -253,17 +251,15 @@ class DefaultJobPersistence
       jobId: Long,
       expectedCurrentStatus: JobStatus,
       newStatus: JobStatus,
-    ): LocalDateTime {
-      val now = currentTime
+    ): Int {
       getJob(ctx, jobId)
-      ctx.execute(
+      return ctx.execute(
         "UPDATE jobs SET status = CAST(? as JOB_STATUS), updated_at = ? WHERE id = ? AND status = CAST(? as JOB_STATUS)",
         toSqlName(newStatus),
         currentTime,
         jobId,
         toSqlName(expectedCurrentStatus),
       )
-      return now
     }
 
     override fun createAttempt(

@@ -550,9 +550,24 @@ class JobCreationAndStatusUpdateHelper(
 
   /**
    * Cancel a job that is still queued while waiting for capacity.
+   *
+   * A queued job may already hold a Data Worker usage reservation: capacity is reserved while the
+   * job is still QUEUED and the job only leaves QUEUED once its attempt is created. Cancelling in
+   * that window makes the job terminal, so [failNonTerminalJobs] will never sweep it and the
+   * reservation must be released here. The release is gated on the cancellation actually taking
+   * effect — releasing a job that is still active would drop it from the capacity sum while it
+   * continues to run.
    */
   fun cancelQueuedJob(jobId: Long) {
-    jobPersistence.cancelQueuedJob(jobId)
+    if (!jobPersistence.cancelQueuedJob(jobId)) {
+      return
+    }
+
+    try {
+      dataWorkerUsageService.releaseReservedUsageForJob(jobId)
+    } catch (e: Exception) {
+      log.error(e) { "Failed to release reserved usage for cancelled queued job $jobId" }
+    }
   }
 
   companion object {

@@ -216,10 +216,36 @@ internal class JobCreationAndStatusUpdateHelperTest {
   }
 
   @Test
-  fun testCancelQueuedJob() {
+  fun testCancelQueuedJobReleasesReservedUsage() {
+    Mockito.`when`(mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID)).thenReturn(true)
+
     helper.cancelQueuedJob(Fixtures.JOB_ID)
 
     Mockito.verify(mJobPersistence).cancelQueuedJob(Fixtures.JOB_ID)
+    Mockito.verify(dataWorkerUsageService).releaseReservedUsageForJob(Fixtures.JOB_ID)
+  }
+
+  @Test
+  fun testCancelQueuedJobSkipsReleaseWhenJobWasNotQueued() {
+    Mockito.`when`(mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID)).thenReturn(false)
+
+    helper.cancelQueuedJob(Fixtures.JOB_ID)
+
+    Mockito.verify(mJobPersistence).cancelQueuedJob(Fixtures.JOB_ID)
+    Mockito.verify(dataWorkerUsageService, Mockito.never()).releaseReservedUsageForJob(Fixtures.JOB_ID)
+  }
+
+  @Test
+  fun testCancelQueuedJobSwallowsReleaseFailure() {
+    Mockito.`when`(mJobPersistence.cancelQueuedJob(Fixtures.JOB_ID)).thenReturn(true)
+    Mockito
+      .doThrow(RuntimeException("boom"))
+      .`when`(dataWorkerUsageService)
+      .releaseReservedUsageForJob(Fixtures.JOB_ID)
+
+    helper.cancelQueuedJob(Fixtures.JOB_ID)
+
+    Mockito.verify(dataWorkerUsageService).releaseReservedUsageForJob(Fixtures.JOB_ID)
   }
 
   @Test
