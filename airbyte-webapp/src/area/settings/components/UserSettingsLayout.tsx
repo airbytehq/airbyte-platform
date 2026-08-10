@@ -13,7 +13,7 @@ import {
 } from "area/settings/components/SettingsNavigation";
 import { useAuthService } from "core/services/auth";
 import { useExperiment } from "core/services/Experiment";
-import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
+import { isConsentManagerActive, showConsentPreferences } from "core/utils/dataPrivacy";
 import { SettingsRoutePaths } from "pages/routePaths";
 
 import { SettingsLayoutContent } from "./SettingsLayout";
@@ -42,10 +42,10 @@ export const UserSettingsLayout: React.FC<React.PropsWithChildren> = () => {
                 to={SettingsRoutePaths.Applications}
               />
             )}
-            {isOsanoActive() && (
+            {isConsentManagerActive() && (
               <SettingsButton
                 iconType="parameters"
-                onClick={() => showOsanoDrawer()}
+                onClick={() => showConsentPreferences()}
                 name={formatMessage({ id: "settings.cookiePreferences" })}
               />
             )}

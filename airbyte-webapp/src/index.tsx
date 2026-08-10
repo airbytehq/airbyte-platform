@@ -6,7 +6,7 @@ import { ErrorDetails } from "core/errors/components/ErrorDetails";
 import { I18nProvider } from "core/services/i18n";
 import { CLOUD_EDITION } from "core/utils/app";
 import { loadDatadog } from "core/utils/datadog";
-import { loadOsano } from "core/utils/dataPrivacy";
+import { loadConsentManager } from "core/utils/dataPrivacy";
 import { AirbyteThemeProvider } from "core/utils/useAirbyteTheme";
 
 import "react-reflex/styles.css";
@@ -20,9 +20,9 @@ loadConfig()
   .then((config) => {
     loadDatadog(config);
 
-    // In Cloud load the Osano script (GDPR consent tool before anything else)
+    // In Cloud load the DataGrail script (GDPR consent tool before anything else)
     if (config.edition === CLOUD_EDITION) {
-      loadOsano();
+      loadConsentManager();
     }
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

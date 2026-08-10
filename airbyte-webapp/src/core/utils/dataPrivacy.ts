@@ -1,14 +1,17 @@
 declare global {
   interface Window {
-    Osano?: {
-      cm: {
-        mode: "production" | "debug";
-        showDrawer: (type: string) => void;
-        addEventListener: (event: string, callback: (event: unknown) => void) => void;
-      };
+    DG_BANNER_API?: {
+      showLayer?: (bannerApiId: string) => void;
+      showConsentBanner?: () => void;
     };
   }
 }
+
+/**
+ * Layer of the DataGrail banner layout that exposes the per-category toggles.
+ * @see https://docs.datagrail.io/docs/consent/banner/layouts-overview/
+ */
+const DATAGRAIL_PREFERENCE_LAYER_ID = "categories-layer";
 
 const GDPR_TIMEZONES = [
   "Africa/Ceuta",
@@ -51,40 +54,37 @@ export const isGdprCountry = (): boolean => {
   return GDPR_TIMEZONES.includes(timeZone);
 };
 
-export const loadOsano = (): void => {
-  if (!process.env.REACT_APP_OSANO) {
+/**
+ * Loads DataGrail, which injects the consent banner itself.
+ *
+ * The embedded widget renders inside a customer's own page, where their consent manager
+ * applies, so it gets no banner of ours.
+ */
+export const loadConsentManager = (): void => {
+  const customerId = process.env.REACT_APP_DATAGRAIL_CUSTOMER_ID;
+  const containerId = process.env.REACT_APP_DATAGRAIL_CONTAINER_ID;
+
+  if (!customerId || !containerId || window.location.href.includes("embedded-widget")) {
     return;
   }
 
-  // Create style element to hide osano widget
-  const style = document.createElement("style");
-  style.appendChild(
-    document.createTextNode(`
-    .osano-cm-widget { display: none; }
-    .osano-cm-dialog__close { display: none; }
-    .osano-cm-button--type_denyAll { display: none; }
-    .osano-cm-button--type_manage { background-color: inherit;  border: 1px #1a194d solid; color: #1a194d; font-weight: 200; }`)
-  );
-  document.head.appendChild(style);
-
-  // Create and append the script tag to load osano
   const script = document.createElement("script");
-  script.src = `https://cmp.osano.com/${process.env.REACT_APP_OSANO}/osano.js`;
-  script.addEventListener("load", () => {
-    window.Osano?.cm.addEventListener("osano-cm-script-blocked", (item) => {
-      console.debug(`🛡️ [Osano] Script blocked: ${item}`);
-    });
-    window.Osano?.cm.addEventListener("osano-cm-cookie-blocked", (item) => {
-      console.debug(`️🛡️ [Osano] Cookie blocked: ${item}`);
-    });
-  });
+  script.src = `https://api.consentjs.datagrail.io/${customerId}/${containerId}/consent-loader.js`;
+  script.async = true;
   document.head.appendChild(script);
 };
 
-export const isOsanoActive = (): boolean => {
-  return window.Osano?.cm.mode === "production";
+export const isConsentManagerActive = (): boolean => {
+  return Boolean(window.DG_BANNER_API);
 };
 
-export const showOsanoDrawer = (): void => {
-  window.Osano?.cm.showDrawer("osano-cm-dom-info-dialog-open");
+export const showConsentPreferences = (): void => {
+  const api = window.DG_BANNER_API;
+
+  if (typeof api?.showLayer === "function") {
+    api.showLayer(DATAGRAIL_PREFERENCE_LAYER_ID);
+    return;
+  }
+
+  api?.showConsentBanner?.();
 };

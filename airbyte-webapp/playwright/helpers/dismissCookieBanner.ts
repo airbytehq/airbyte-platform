@@ -1,13 +1,14 @@
 import { Page } from "@playwright/test";
 
 /**
- * Dismisses the Osano cookie consent banner if present.
- * The banner can intercept pointer events and block clicks on underlying elements.
+ * Dismisses the DataGrail cookie consent banner if present. The banner renders inside a shadow
+ * root, which Playwright locators pierce automatically.
  */
 export const dismissCookieBanner = async (page: Page) => {
-  const acceptButton = page.locator(".osano-cm-accept-all, .osano-cm-button--type_accept");
+  const closeButton = page.locator("aside.dg-consent-banner [data-testid='dg-header-close']");
+
   try {
-    await acceptButton.click({ timeout: 3000 });
+    await closeButton.click({ timeout: 3000 });
   } catch {
     // Banner not present or already dismissed
   }

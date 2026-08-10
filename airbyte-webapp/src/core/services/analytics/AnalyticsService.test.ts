@@ -69,4 +69,65 @@ describe("AnalyticsService", () => {
       expect.objectContaining({ actionDescription: "Created new connection", context: 42 })
     );
   });
+
+  describe("HockeyStack identify", () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      window.HockeyStack = undefined;
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      window.HockeyStack = undefined;
+    });
+
+    it("identifies immediately when HockeyStack is already loaded", () => {
+      const identify = jest.fn();
+      window.HockeyStack = { identify };
+      const service = new AnalyticsService();
+      service.identify("user-1", { email: "user@example.com" });
+      expect(identify).toHaveBeenCalledWith("user@example.com", {
+        email: "user@example.com",
+        airbyte_user_id: "user-1",
+      });
+    });
+
+    it("replays the latest identify once HockeyStack loads later", () => {
+      const service = new AnalyticsService();
+      service.identify("user-1", { email: "first@example.com" });
+      service.identify("user-2", { email: "second@example.com" });
+
+      const identify = jest.fn();
+      window.HockeyStack = { identify };
+      jest.advanceTimersByTime(2000);
+
+      expect(identify).toHaveBeenCalledTimes(1);
+      expect(identify).toHaveBeenCalledWith("second@example.com", {
+        email: "second@example.com",
+        airbyte_user_id: "user-2",
+      });
+
+      jest.advanceTimersByTime(10000);
+      expect(identify).toHaveBeenCalledTimes(1);
+    });
+
+    it("replays identify when HockeyStack loads long after the identify call", () => {
+      const service = new AnalyticsService();
+      service.identify("user-1", { email: "user@example.com" });
+
+      // Simulate the visitor granting consent 10 minutes after load.
+      jest.advanceTimersByTime(10 * 60 * 1000);
+
+      const identify = jest.fn();
+      window.HockeyStack = { identify };
+      jest.advanceTimersByTime(2000);
+
+      expect(identify).toHaveBeenCalledTimes(1);
+      expect(identify).toHaveBeenCalledWith("user@example.com", {
+        email: "user@example.com",
+        airbyte_user_id: "user-1",
+      });
+      expect(jest.getTimerCount()).toBe(0);
+    });
+  });
 });
