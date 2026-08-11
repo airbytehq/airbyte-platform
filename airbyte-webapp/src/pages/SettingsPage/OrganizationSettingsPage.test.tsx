@@ -96,4 +96,35 @@ describe("OrganizationSettingsPage", () => {
     expect(screen.getByText("SSO and SCIM")).toBeInTheDocument();
     expect(screen.queryByText("SSO")).not.toBeInTheDocument();
   });
+
+  it("hides the User Groups nav link when settings.scimProvisioning is off", async () => {
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.UpdateOrganizationPermissions
+    );
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.queryByText("User Groups")).not.toBeInTheDocument();
+  });
+
+  it("hides the User Groups nav link for a non-admin when settings.scimProvisioning is on", async () => {
+    mockUseExperiment.mockImplementation((key) => key === "settings.scimProvisioning");
+    // Default mockUseGeneratedIntent from beforeEach only allows ViewOrganizationSettings,
+    // so UpdateOrganizationPermissions stays false here, simulating a non-admin.
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.queryByText("User Groups")).not.toBeInTheDocument();
+  });
+
+  it("shows the User Groups nav link for an admin when settings.scimProvisioning is on", async () => {
+    mockUseExperiment.mockImplementation((key) => key === "settings.scimProvisioning");
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.UpdateOrganizationPermissions
+    );
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.getByText("User Groups")).toBeInTheDocument();
+  });
 });

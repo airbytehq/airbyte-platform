@@ -12,6 +12,7 @@ import { OrganizationSettingsPage } from "pages/SettingsPage/OrganizationSetting
 import { DestinationsPage, SourcesPage } from "pages/SettingsPage/pages/ConnectorsPage";
 import { LicenseSettingsPage } from "pages/SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
+import { OrganizationGroupsPage } from "pages/SettingsPage/pages/Organization/OrganizationGroupsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
 import { SSOAndScimOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/SSOAndScimOrganizationSettingsPage";
 
@@ -30,6 +31,13 @@ export const OrganizationRoutes: React.FC = () => {
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
   const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
+  const isScimProvisioningEnabled = useExperiment("settings.scimProvisioning");
+  // UpdateOrganizationPermissions is the generated intent whose allow-list
+  // (organization_admin, instance_admin) exactly matches the ORGANIZATION_ADMIN
+  // security on all eight group endpoints. No group-specific intent exists.
+  const canManageOrganizationPermissions = useGeneratedIntent(Intent.UpdateOrganizationPermissions, {
+    organizationId,
+  });
 
   return (
     <Routes>
@@ -43,6 +51,9 @@ export const OrganizationRoutes: React.FC = () => {
           <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
           {canViewOrgSettings && (
             <Route path={SettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
+          )}
+          {isScimProvisioningEnabled && canManageOrganizationPermissions && (
+            <Route path={SettingsRoutePaths.OrganizationGroups} element={<OrganizationGroupsPage />} />
           )}
           {supportsSSO && (
             <Route path={SettingsRoutePaths.OrganizationSSO} element={<SSOAndScimOrganizationSettingsPage />} />

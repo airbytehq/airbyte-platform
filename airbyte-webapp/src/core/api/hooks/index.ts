@@ -23,6 +23,7 @@ export * from "./enterpriseDestinations";
 export * from "./enterpriseSources";
 export * from "./entitlements";
 export * from "./filters";
+export * from "./groups";
 export * from "./health";
 export * from "./instanceConfiguration";
 export * from "./jobs";

@@ -27,6 +27,12 @@ export const OrganizationSettingsPage: React.FC = () => {
   const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
   const isScimProvisioningEnabled = useExperiment("settings.scimProvisioning");
+  // UpdateOrganizationPermissions is the generated intent whose allow-list
+  // (organization_admin, instance_admin) exactly matches the ORGANIZATION_ADMIN
+  // security on all eight group endpoints. No group-specific intent exists.
+  const canManageOrganizationPermissions = useGeneratedIntent(Intent.UpdateOrganizationPermissions, {
+    organizationId,
+  });
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
   const isSubscribed = isOrganizationSubscribed(billing);
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
@@ -48,9 +54,16 @@ export const OrganizationSettingsPage: React.FC = () => {
             />
             {displayOrganizationUsers && (
               <SettingsLink
-                iconType="community"
+                iconType="user"
                 name={formatMessage({ id: "settings.members" })}
                 to={SettingsRoutePaths.OrganizationMembers}
+              />
+            )}
+            {isScimProvisioningEnabled && canManageOrganizationPermissions && (
+              <SettingsLink
+                iconType="community"
+                name={formatMessage({ id: "settings.groups" })}
+                to={SettingsRoutePaths.OrganizationGroups}
               />
             )}
             {isBillingNavVisible && (
