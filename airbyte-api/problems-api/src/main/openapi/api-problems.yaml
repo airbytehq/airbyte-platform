@@ -1132,6 +1132,27 @@ components:
               default: A group with this name already exists in this organization.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    GroupManagedByScimProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:group-managed-by-scim
+            title:
+              type: string
+              default: Group managed by SCIM
+            detail:
+              type: string
+              default: This group is managed by SCIM and cannot be modified.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
     GroupMemberAlreadyExistsProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

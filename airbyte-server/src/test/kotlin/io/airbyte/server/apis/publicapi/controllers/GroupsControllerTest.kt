@@ -20,6 +20,7 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.models.GroupCreateRequest
 import io.airbyte.publicApi.server.generated.models.GroupUpdateRequest
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
+import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.mockk.every
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
@@ -36,6 +37,7 @@ class GroupsControllerTest {
   private val roleResolver = mockk<RoleResolver>(relaxed = true)
   private val currentUserService = mockk<CurrentUserService>()
   private val entitlementService = mockk<EntitlementService>(relaxed = true)
+  private val groupsEntitlementHelper = GroupsEntitlementHelper(entitlementService, Configs.AirbyteEdition.ENTERPRISE)
   private lateinit var controller: GroupsController
 
   @BeforeEach
@@ -50,8 +52,7 @@ class GroupsControllerTest {
         trackingHelper,
         roleResolver,
         currentUserService,
-        entitlementService,
-        Configs.AirbyteEdition.ENTERPRISE,
+        groupsEntitlementHelper,
       )
   }
 

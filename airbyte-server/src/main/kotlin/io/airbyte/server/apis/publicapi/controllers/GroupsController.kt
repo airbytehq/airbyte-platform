@@ -11,13 +11,10 @@ import io.airbyte.api.problems.throwable.generated.GroupAlreadyExistsProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
-import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.GroupsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.config.Configs
 import io.airbyte.data.services.GroupManagedByScimException
 import io.airbyte.data.services.GroupNameNotUniqueException
 import io.airbyte.data.services.GroupService
@@ -40,6 +37,7 @@ import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.mappers.applyToGroupDomainModel
 import io.airbyte.server.apis.publicapi.mappers.toGroupDomainModel
 import io.airbyte.server.apis.publicapi.mappers.toGroupResponse
+import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -55,8 +53,7 @@ open class GroupsController(
   private val trackingHelper: TrackingHelper,
   private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
-  private val entitlementService: EntitlementService,
-  private val airbyteEdition: Configs.AirbyteEdition,
+  private val groupsEntitlementHelper: GroupsEntitlementHelper,
 ) : PublicGroupsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListGroups(
@@ -79,7 +76,7 @@ open class GroupsController(
       .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
-    ensureGroupsEntitlement(OrganizationId(organizationId))
+    groupsEntitlementHelper.ensureEntitled(OrganizationId(organizationId))
 
     // Fetch limit + 1 to detect if more results exist, then take only limit for response
     val allGroups =
@@ -137,7 +134,7 @@ open class GroupsController(
       .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
-    ensureGroupsEntitlement(OrganizationId(groupCreateRequest.organizationId))
+    groupsEntitlementHelper.ensureEntitled(OrganizationId(groupCreateRequest.organizationId))
 
     val groupResponse: GroupResponse =
       trackingHelper.callWithTracker(
@@ -187,7 +184,7 @@ open class GroupsController(
       .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
-    ensureGroupsEntitlement(OrganizationId(group.organizationId.value))
+    groupsEntitlementHelper.ensureEntitled(OrganizationId(group.organizationId.value))
 
     val groupResponse: GroupResponse =
       trackingHelper.callWithTracker(
@@ -289,10 +286,5 @@ open class GroupsController(
     return Response
       .status(HttpStatus.NO_CONTENT.code)
       .build()
-  }
-
-  private fun ensureGroupsEntitlement(orgId: OrganizationId) {
-    if (airbyteEdition == Configs.AirbyteEdition.ENTERPRISE) return
-    entitlementService.ensureEntitled(orgId, GroupsEntitlement)
   }
 }

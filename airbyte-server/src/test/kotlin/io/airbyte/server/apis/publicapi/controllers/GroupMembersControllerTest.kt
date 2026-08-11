@@ -24,6 +24,7 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.UserId
 import io.airbyte.publicApi.server.generated.models.GroupMemberAddRequest
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
+import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -44,6 +45,7 @@ class GroupMembersControllerTest {
   private val roleResolver = mockk<RoleResolver>()
   private val currentUserService = mockk<CurrentUserService>()
   private val entitlementService = mockk<EntitlementService>()
+  private val groupsEntitlementHelper = GroupsEntitlementHelper(entitlementService, Configs.AirbyteEdition.ENTERPRISE)
   private val request = mockk<RoleResolver.Request>()
   private val groupId = UUID.randomUUID()
   private val userId = UUID.randomUUID()
@@ -56,8 +58,7 @@ class GroupMembersControllerTest {
       trackingHelper,
       roleResolver,
       currentUserService,
-      entitlementService,
-      Configs.AirbyteEdition.ENTERPRISE,
+      groupsEntitlementHelper,
     )
 
   @BeforeEach

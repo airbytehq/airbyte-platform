@@ -5933,6 +5933,213 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+
+  # GROUPS
+  /v1/groups/list:
+    post:
+      summary: List groups in an organization
+      tags:
+        - group
+      operationId: listGroups
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved groups.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupReadList"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/groups/get:
+    post:
+      summary: Get a group
+      tags:
+        - group
+      operationId: getGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupRead"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/groups/create:
+    post:
+      summary: Create a group
+      tags:
+        - group
+      operationId: createGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupCreate"
+      responses:
+        "200":
+          description: Successfully created group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupRead"
+        "400":
+          description: The group name or description failed validation.
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "409":
+          description: A group with the same name already exists in the organization.
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/groups/update:
+    post:
+      summary: Update a group
+      description: >-
+        Replaces the mutable fields of the group. Send the whole object: an omitted
+        description is treated as an explicit null and clears the stored description.
+      tags:
+        - group
+      operationId: updateGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupUpdate"
+      responses:
+        "200":
+          description: Successfully updated group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupRead"
+        "400":
+          description: The group name or description failed validation.
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: The name is already taken, or SCIM manages the group.
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/groups/delete:
+    post:
+      summary: Delete a group
+      tags:
+        - group
+      operationId: deleteGroup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupIdRequestBody"
+      responses:
+        "204":
+          description: Successfully deleted group.
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: SCIM manages the group.
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/groups/list_members:
+    post:
+      summary: List group members
+      tags:
+        - group
+      operationId: listGroupMembers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved group members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupMemberReadList"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/groups/add_member:
+    post:
+      summary: Add a member to a group
+      tags:
+        - group
+      operationId: addGroupMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupMemberRequestBody"
+      responses:
+        "200":
+          description: Successfully added group member.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupMemberRead"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: The user is already a member, is inactive, or SCIM manages the group.
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/groups/remove_member:
+    post:
+      summary: Remove a member from a group
+      tags:
+        - group
+      operationId: removeGroupMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupMemberRequestBody"
+      responses:
+        "204":
+          description: Successfully removed group member.
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: SCIM manages the group.
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/domain_verifications/list_pending:
     post:
       tags:
@@ -21574,6 +21781,123 @@ components:
           items:
             $ref: "#/components/schemas/PermissionResponseRead"
       x-sdk-component: true
+
+    GroupRead:
+      type: object
+      required:
+        - groupId
+        - name
+        - organizationId
+        - memberCount
+      properties:
+        groupId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        organizationId:
+          type: string
+          format: uuid
+        memberCount:
+          type: integer
+          format: int64
+    GroupReadList:
+      type: object
+      required:
+        - groups
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupRead"
+    GroupCreate:
+      type: object
+      required:
+        - organizationId
+        - name
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+        description:
+          type: string
+          maxLength: 1024
+    GroupUpdate:
+      type: object
+      required:
+        - groupId
+        - name
+      properties:
+        groupId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+        description:
+          type: string
+          nullable: true
+          maxLength: 1024
+    GroupIdRequestBody:
+      type: object
+      required:
+        - groupId
+      properties:
+        groupId:
+          type: string
+          format: uuid
+    GroupMemberRead:
+      type: object
+      required:
+        - memberId
+        - groupId
+        - userId
+        - userEmail
+        - userName
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        userEmail:
+          type: string
+          format: email
+        userName:
+          type: string
+    GroupMemberReadList:
+      type: object
+      required:
+        - members
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupMemberRead"
+    GroupMemberRequestBody:
+      type: object
+      required:
+        - groupId
+        - userId
+      properties:
+        groupId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
 
     # Public APIs - Groups
     GroupResponse:

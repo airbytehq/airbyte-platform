@@ -9,13 +9,10 @@ import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
-import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.GroupsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.config.Configs
 import io.airbyte.config.Permission
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.GroupService
@@ -23,7 +20,6 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.domain.models.GroupId
-import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.PublicGroupPermissionsApi
 import io.airbyte.publicApi.server.generated.models.GroupPermissionCreateRequest
 import io.airbyte.publicApi.server.generated.models.GroupPermissionsResponse
@@ -37,6 +33,7 @@ import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.mappers.toGroupPermissionResponse
 import io.airbyte.server.apis.publicapi.mappers.toGroupPermissions
 import io.airbyte.server.apis.publicapi.mappers.toPermission
+import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -55,8 +52,7 @@ open class GroupPermissionsController(
   private val trackingHelper: TrackingHelper,
   private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
-  private val entitlementService: EntitlementService,
-  private val airbyteEdition: Configs.AirbyteEdition,
+  private val groupsEntitlementHelper: GroupsEntitlementHelper,
 ) : PublicGroupPermissionsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListGroupPermissions(groupId: UUID): Response {
@@ -75,7 +71,7 @@ open class GroupPermissionsController(
       .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
-    ensureGroupsEntitlement(group.organizationId)
+    groupsEntitlementHelper.ensureEntitled(group.organizationId)
 
     val permissions: List<Permission> =
       trackingHelper.callWithTracker(
@@ -120,7 +116,7 @@ open class GroupPermissionsController(
       .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
-    ensureGroupsEntitlement(group.organizationId)
+    groupsEntitlementHelper.ensureEntitled(group.organizationId)
 
     // Validate that the user has access to the workspace/organization they're trying to grant permissions for
     if (workspaceId != null) {
@@ -275,7 +271,7 @@ open class GroupPermissionsController(
       .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     // Check that the entitlement is working
-    ensureGroupsEntitlement(group.organizationId)
+    groupsEntitlementHelper.ensureEntitled(group.organizationId)
 
     val permission: Permission =
       try {
@@ -305,10 +301,5 @@ open class GroupPermissionsController(
       currentUserService.getCurrentUser().userId,
     )
     return Response.status(HttpStatus.NO_CONTENT.code).build()
-  }
-
-  private fun ensureGroupsEntitlement(orgId: OrganizationId) {
-    if (airbyteEdition == Configs.AirbyteEdition.ENTERPRISE) return
-    entitlementService.ensureEntitled(orgId, GroupsEntitlement)
   }
 }
