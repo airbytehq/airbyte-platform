@@ -184,6 +184,17 @@ describe("getOrganizationAccessLevel", () => {
   });
 });
 
+describe("org-page role parity", () => {
+  it("returns matching workspace and organization access levels for every unifyOrganizationUserData row shape", () => {
+    const result = unifyOrganizationUserData(mockOrganizationUsers, mockOrganizationUserInvitations);
+
+    expect(result.length).toBeGreaterThan(0);
+    result.forEach((user) => {
+      expect(getWorkspaceAccessLevel(user)).toBe(getOrganizationAccessLevel(user));
+    });
+  });
+});
+
 describe("isTeamsFeaturePermissionType", () => {
   it("should return true for workspace_reader", () => {
     expect(isTeamsFeaturePermissionType(PermissionType.workspace_reader)).toBe(true);

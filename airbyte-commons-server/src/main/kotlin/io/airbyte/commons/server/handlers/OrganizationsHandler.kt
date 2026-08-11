@@ -31,6 +31,9 @@ import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.scim.ScimConfigurationStatus
+import io.airbyte.domain.services.scim.ScimAccessGate
+import io.airbyte.domain.services.scim.ScimConfigurationService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UnifiedTrial
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -54,6 +57,8 @@ open class OrganizationsHandler(
   private val permissionService: PermissionService,
   private val entitlementService: EntitlementService,
   private val featureFlagClient: FeatureFlagClient,
+  private val scimConfigurationService: ScimConfigurationService,
+  private val scimAccessGate: ScimAccessGate,
 ) {
   companion object {
     private fun buildOrganizationRead(
@@ -335,11 +340,15 @@ open class OrganizationsHandler(
       .organizationSummaries(orgSummaries)
   }
 
-  private fun buildOrganizationInfoRead(organization: Organization): OrganizationInfoRead =
+  private fun buildOrganizationInfoRead(
+    organization: Organization,
+    scimEnabled: Boolean,
+  ): OrganizationInfoRead =
     OrganizationInfoRead()
       .organizationId(organization.organizationId)
       .organizationName(organization.name)
       .sso(organization.ssoRealm != null && organization.ssoRealm.isNotEmpty())
+      .scim(scimEnabled)
 
   @WithSpan
   fun getOrganizationInfo(organizationId: UUID): OrganizationInfoRead {
@@ -347,6 +356,21 @@ open class OrganizationsHandler(
     if (organization.isEmpty) {
       throw io.airbyte.data.ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId.toString())
     }
-    return buildOrganizationInfoRead(organization.get())
+    return buildOrganizationInfoRead(organization.get(), isScimEnabled(OrganizationId(organizationId)))
   }
+
+  /**
+   * True only when SCIM is both configured as enabled and currently allowed for the organization.
+   * The access gate is checked second so organizations without an enabled configuration never pay
+   * for an entitlement lookup. Never throws: this flag is advisory, and both org-info endpoints are
+   * on the webapp's boot path.
+   */
+  private fun isScimEnabled(organizationId: OrganizationId): Boolean =
+    try {
+      scimConfigurationService.getConfiguration(organizationId).status == ScimConfigurationStatus.ENABLED &&
+        scimAccessGate.isAllowedForOrganizationInfo(organizationId)
+    } catch (e: Exception) {
+      logger.warn(e) { "Could not resolve SCIM state for organization ${organizationId.value}; reporting it as disabled" }
+      false
+    }
 }

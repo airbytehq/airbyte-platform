@@ -16521,6 +16521,7 @@ components:
         - organizationId
         - organizationName
         - sso
+        - scim
       properties:
         organizationId:
           type: string
@@ -16529,6 +16530,9 @@ components:
           type: string
         sso:
           type: boolean
+        scim:
+          type: boolean
+          description: True when SCIM provisioning is currently enabled for the organization.
         billing:
           type: object
           required:

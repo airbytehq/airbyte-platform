@@ -12,3 +12,12 @@ export const Default: StoryObj<typeof Badge> = {
     children: "Some fancy badge",
   },
 };
+
+export const Teal: StoryObj<typeof Badge> = {
+  args: {
+    variant: "teal",
+    radius: "2xs",
+    uppercase: false,
+    children: "SCIM Enabled",
+  },
+};

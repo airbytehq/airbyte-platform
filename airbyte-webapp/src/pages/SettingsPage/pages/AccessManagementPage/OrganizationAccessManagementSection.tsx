@@ -9,6 +9,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
+import { Message } from "components/ui/Message";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
@@ -31,6 +32,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
   const organizationId = organizationInfo?.organizationId ?? "";
   const organizationName = organizationInfo?.organizationName ?? "";
   const sso = organizationInfo?.sso;
+  const scim = organizationInfo?.scim;
   const canUpdateOrganizationPermissions = useGeneratedIntent(Intent.UpdateOrganizationPermissions);
   const allowExternalInvitations = useFeature(FeatureItem.ExternalInvitations);
   const allowUpdateSsoConfig = useFeature(FeatureItem.AllowUpdateSSOConfig);
@@ -51,7 +53,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
   const [userFilter, setUserFilter] = React.useState(filterParam ?? "");
   const debouncedUserFilter = useDeferredValue(userFilter);
   const { formatMessage } = useIntl();
-  const showInviteUsers = !sso && allowExternalInvitations;
+  const showInviteUsers = !sso && !scim && allowExternalInvitations;
   const isCloud = useIsCloudApp();
 
   const onOpenInviteUsersModal = () =>
@@ -84,19 +86,27 @@ export const OrganizationAccessManagementSection: React.FC = () => {
           <FormattedMessage id="settings.accessManagement.members" />
         </Heading>
       </FlexContainer>
+      {scim && <Message type="warning" text={formatMessage({ id: "settings.accessManagement.scimManagedBanner" })} />}
       <FlexContainer justifyContent="space-between" alignItems="center">
         <FlexItem className={styles.searchInputWrapper}>
           <SearchInput value={userFilter} onChange={setUserFilter} />
         </FlexItem>
         <FlexContainer alignItems="baseline">
           {sso && (
-            <Badge variant="blue">
+            <Badge variant="blue" radius="2xs" uppercase={false}>
               <FlexContainer gap="xs" alignItems="center">
                 <Icon type="check" size="xs" />
                 <Text size="sm">
                   <FormattedMessage id="settings.accessManagement.ssoEnabled" />
                 </Text>
               </FlexContainer>
+            </Badge>
+          )}
+          {scim && (
+            <Badge variant="teal" radius="2xs" uppercase={false}>
+              <Text size="xs">
+                <FormattedMessage id="settings.accessManagement.scimEnabled" />
+              </Text>
             </Badge>
           )}
           {!sso && isCloud && !allowUpdateSsoConfig && (

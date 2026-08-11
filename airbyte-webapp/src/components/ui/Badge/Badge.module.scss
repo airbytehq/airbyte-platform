@@ -15,6 +15,10 @@
     text-transform: uppercase;
   }
 
+  &--radius2xs {
+    border-radius: variables.$border-radius-2xs;
+  }
+
   &--blue {
     color: colors.$blue-600;
     background-color: colors.$blue-50;
@@ -43,5 +47,10 @@
   &--red {
     color: colors.$red-800;
     background-color: colors.$red-50;
+  }
+
+  &--teal {
+    color: colors.$dark-blue-900;
+    background-color: colors.$green-100;
   }
 }

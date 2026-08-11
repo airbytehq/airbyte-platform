@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 
+import { organizationKeys } from "./organizations";
 import { scimConfigKeys, useDisableScim, useEnableScim, useGetScimConfig, useRotateScimToken } from "./scimConfig";
 import { disableScim, enableScim, getScimConfig, rotateScimToken } from "../generated/AirbyteClient";
 import { ScimConfigResponse, ScimConfigStatus, ScimIdpProvider } from "../types/AirbyteClient";
@@ -115,7 +116,7 @@ describe("scimConfig hooks", () => {
   });
 
   describe("useEnableScim", () => {
-    it("calls enableScim({ organizationId, idpProvider }) and invalidates the detail key", async () => {
+    it("calls enableScim({ organizationId, idpProvider }) and invalidates the detail and org info keys", async () => {
       mockEnableScim.mockResolvedValue(baseScimConfig);
       const invalidateQueriesSpy = jest.spyOn(queryClient, "invalidateQueries");
 
@@ -124,11 +125,13 @@ describe("scimConfig hooks", () => {
 
       expect(mockEnableScim).toHaveBeenCalledWith({ organizationId, idpProvider: ScimIdpProvider.okta }, {});
       expect(invalidateQueriesSpy).toHaveBeenCalledWith(scimConfigKeys.detail(organizationId));
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith(organizationKeys.info(organizationId));
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith(organizationKeys.orgInfo(organizationId));
     });
   });
 
   describe("useRotateScimToken", () => {
-    it("calls rotateScimToken({ organizationId }) and invalidates the detail key", async () => {
+    it("calls rotateScimToken({ organizationId }) and invalidates the detail and org info keys", async () => {
       mockRotateScimToken.mockResolvedValue(baseScimConfig);
       const invalidateQueriesSpy = jest.spyOn(queryClient, "invalidateQueries");
 
@@ -137,6 +140,8 @@ describe("scimConfig hooks", () => {
 
       expect(mockRotateScimToken).toHaveBeenCalledWith({ organizationId }, {});
       expect(invalidateQueriesSpy).toHaveBeenCalledWith(scimConfigKeys.detail(organizationId));
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith(organizationKeys.info(organizationId));
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith(organizationKeys.orgInfo(organizationId));
     });
 
     it("does not resolve mutateAsync until the invalidated config refetch settles", async () => {
@@ -202,7 +207,7 @@ describe("scimConfig hooks", () => {
   });
 
   describe("useDisableScim", () => {
-    it("calls disableScim({ organizationId }) and invalidates the detail key", async () => {
+    it("calls disableScim({ organizationId }) and invalidates the detail and org info keys", async () => {
       mockDisableScim.mockResolvedValue(undefined);
       const invalidateQueriesSpy = jest.spyOn(queryClient, "invalidateQueries");
 
@@ -211,6 +216,8 @@ describe("scimConfig hooks", () => {
 
       expect(mockDisableScim).toHaveBeenCalledWith({ organizationId }, {});
       expect(invalidateQueriesSpy).toHaveBeenCalledWith(scimConfigKeys.detail(organizationId));
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith(organizationKeys.info(organizationId));
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith(organizationKeys.orgInfo(organizationId));
     });
   });
 

@@ -61,6 +61,9 @@ import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.scim.ScimConfigurationStatus
+import io.airbyte.domain.services.scim.ScimAccessGate
+import io.airbyte.domain.services.scim.ScimConfigurationService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.HydrateLimits
 import io.airbyte.featureflag.Workspace
@@ -98,6 +101,8 @@ class WorkspacesHandler
     private val ffClient: FeatureFlagClient,
     private val airbyteEdition: AirbyteEdition,
     private val roleResolver: RoleResolver,
+    private val scimConfigurationService: ScimConfigurationService,
+    private val scimAccessGate: ScimAccessGate,
   ) {
     fun createWorkspace(workspaceCreate: WorkspaceCreate): WorkspaceRead {
       val workspaceCreateWithId =
@@ -298,7 +303,7 @@ class WorkspacesHandler
       if (organization.isEmpty) {
         throw ConfigNotFoundException(io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE, workspaceId.toString())
       }
-      return buildOrganizationInfoRead(organization.get())
+      return buildOrganizationInfoRead(organization.get(), isScimEnabled(OrganizationId(organization.get().organizationId)))
     }
 
     @Suppress("unused")
@@ -498,11 +503,30 @@ class WorkspacesHandler
       return domainToApiModel(workspace)
     }
 
-    private fun buildOrganizationInfoRead(organization: Organization): OrganizationInfoRead =
+    private fun buildOrganizationInfoRead(
+      organization: Organization,
+      scimEnabled: Boolean,
+    ): OrganizationInfoRead =
       OrganizationInfoRead()
         .organizationId(organization.organizationId)
         .organizationName(organization.name)
         .sso(organization.ssoRealm != null && organization.ssoRealm.isNotEmpty())
+        .scim(scimEnabled)
+
+    /**
+     * True only when SCIM is both configured as enabled and currently allowed for the organization.
+     * The access gate is checked second so organizations without an enabled configuration never pay
+     * for an entitlement lookup. Never throws: this flag is advisory, and both org-info endpoints
+     * are on the webapp's boot path.
+     */
+    private fun isScimEnabled(organizationId: OrganizationId): Boolean =
+      try {
+        scimConfigurationService.getConfiguration(organizationId).status == ScimConfigurationStatus.ENABLED &&
+          scimAccessGate.isAllowedForOrganizationInfo(organizationId)
+      } catch (e: Exception) {
+        log.warn(e) { "Could not resolve SCIM state for organization ${organizationId.value}; reporting it as disabled" }
+        false
+      }
 
     private fun generateUniqueSlug(workspaceName: String): String {
       val proposedSlug = slugify(workspaceName)

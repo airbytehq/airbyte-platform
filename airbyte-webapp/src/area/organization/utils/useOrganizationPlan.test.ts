@@ -17,6 +17,7 @@ const mockOrgInfo = (organizationPlanId: string | undefined) => ({
   organizationName: "Test Organization",
   organizationPlanId,
   sso: false,
+  scim: false,
 });
 
 describe("useOrganizationPlan", () => {

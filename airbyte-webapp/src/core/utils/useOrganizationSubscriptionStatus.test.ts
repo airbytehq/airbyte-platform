@@ -41,6 +41,7 @@ const createMockOrgInfo = (
   organizationId: mockOrganizationId,
   organizationName: "Test Organization",
   sso: false,
+  scim: false,
   billing: {
     paymentStatus,
     subscriptionStatus,
@@ -66,6 +67,7 @@ describe("useOrganizationSubscriptionStatus", () => {
       organizationName: "Test Organization",
       organizationPlanId: "plan-airbyte-standard",
       sso: false,
+      scim: false,
     });
     mockUseOrganizationTrialStatus.mockReturnValue(undefined);
     mockUseGeneratedIntent.mockReturnValue(true);
@@ -166,6 +168,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-unified-trial",
         sso: false,
+        scim: false,
       });
 
       renderHook(() => useOrganizationSubscriptionStatus());
@@ -183,6 +186,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-unified-trial",
         sso: false,
+        scim: false,
       });
 
       renderHook(() => useOrganizationSubscriptionStatus());
@@ -200,6 +204,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-unified-trial",
         sso: false,
+        scim: false,
       });
 
       renderHook(() => useOrganizationSubscriptionStatus());
@@ -239,6 +244,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-unified-trial",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -252,6 +258,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-standard",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -265,6 +272,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: undefined,
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -278,6 +286,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-standard",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -291,6 +300,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-unified-trial",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -304,6 +314,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: undefined,
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -317,6 +328,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-standard-trial",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -330,6 +342,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-standard",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -343,6 +356,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: undefined,
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -357,6 +371,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-sme",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -370,6 +385,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-standard",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -383,6 +399,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: undefined,
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -397,6 +414,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-flex",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -410,6 +428,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-pro",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -423,6 +442,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: undefined,
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -437,6 +457,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-pro",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -450,6 +471,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: "plan-airbyte-sme",
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -463,6 +485,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationName: "Test Organization",
         organizationPlanId: undefined,
         sso: false,
+        scim: false,
       });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
@@ -483,6 +506,7 @@ describe("useOrganizationSubscriptionStatus", () => {
         organizationId: mockOrganizationId,
         organizationName: "Test Organization",
         sso: false,
+        scim: false,
         billing: mockBilling,
       });
 

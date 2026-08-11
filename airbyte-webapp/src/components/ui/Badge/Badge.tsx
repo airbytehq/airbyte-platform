@@ -4,8 +4,9 @@ import styles from "./Badge.module.scss";
 
 interface BadgeProps {
   className?: string;
-  variant: "blue" | "grey" | "green" | "darkBlue" | "lightBlue" | "yellow" | "red";
+  variant: "blue" | "grey" | "green" | "darkBlue" | "lightBlue" | "yellow" | "red" | "teal";
   uppercase?: boolean;
+  radius?: "pill" | "2xs";
   "data-testid"?: string;
 }
 
@@ -14,6 +15,7 @@ export const Badge: React.FC<React.PropsWithChildren<BadgeProps>> = ({
   className,
   variant = "grey",
   uppercase = true,
+  radius = "pill",
   "data-testid": testId,
 }) => {
   return (
@@ -26,7 +28,9 @@ export const Badge: React.FC<React.PropsWithChildren<BadgeProps>> = ({
         [styles["badge--yellow"]]: variant === "yellow",
         [styles["badge--red"]]: variant === "red",
         [styles["badge--yellow"]]: variant === "yellow",
+        [styles["badge--teal"]]: variant === "teal",
         [styles["badge--uppercase"]]: uppercase,
+        [styles["badge--radius2xs"]]: radius === "2xs",
       })}
       data-testid={testId}
     >

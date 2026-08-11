@@ -7,6 +7,7 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useCurrentOrganizationInfo } from "core/api";
 import { useCurrentUser } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
@@ -60,6 +61,7 @@ export const PendingInvitationBadge: React.FC<{ scope: ResourceType }> = ({ scop
 export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, resourceType }) => {
   const indicateGuestUsers = useFeature(FeatureItem.IndicateGuestUsers);
   const organizationId = useCurrentOrganizationId();
+  const organizationInfo = useCurrentOrganizationInfo();
   const workspaceAccessLevel = getWorkspaceAccessLevel(user);
   const organizationAccessLevel = getOrganizationAccessLevel(user);
   const currentUser = useCurrentUser();
@@ -75,7 +77,11 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
   const cannotDemoteUser =
     resourceType === "workspace" && organizationAccessLevel === "ADMIN" && user.invitationStatus === undefined;
 
-  const showViewOnlyBox = cannotDemoteUser || !canEditPermissions || user.id === currentUser.userId;
+  const showViewOnlyBox =
+    cannotDemoteUser ||
+    !canEditPermissions ||
+    user.id === currentUser.userId ||
+    (resourceType === "organization" && Boolean(organizationInfo?.scim));
 
   const tooltipContent =
     cannotDemoteUser && canEditPermissions

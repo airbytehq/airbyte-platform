@@ -59,6 +59,11 @@ import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated
+import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.scim.ScimConfigurationRead
+import io.airbyte.domain.models.scim.ScimConfigurationStatus
+import io.airbyte.domain.services.scim.ScimAccessGate
+import io.airbyte.domain.services.scim.ScimConfigurationService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import jakarta.validation.Valid
@@ -102,6 +107,8 @@ internal class WorkspacesHandlerTest {
   lateinit var ffClient: FeatureFlagClient
   lateinit var roleResolver: RoleResolver
   lateinit var roleRequest: RoleResolver.Request
+  lateinit var scimConfigurationService: ScimConfigurationService
+  lateinit var scimAccessGate: ScimAccessGate
 
   @BeforeEach
   fun setUp() {
@@ -122,12 +129,19 @@ internal class WorkspacesHandlerTest {
     ffClient = Mockito.mock(TestClient::class.java)
     roleResolver = Mockito.mock(RoleResolver::class.java)
     roleRequest = Mockito.mock(RoleResolver.Request::class.java)
+    scimConfigurationService = Mockito.mock(ScimConfigurationService::class.java)
+    scimAccessGate = Mockito.mock(ScimAccessGate::class.java)
 
     // Setup roleResolver mock chain
     Mockito.`when`(roleResolver.newRequest()).thenReturn(roleRequest)
     Mockito.`when`(roleRequest.withCurrentUser()).thenReturn(roleRequest)
     Mockito.`when`(roleRequest.withOrg(any())).thenReturn(roleRequest)
     Mockito.doNothing().`when`(roleRequest).requireRole(any())
+
+    Mockito.`when`(scimConfigurationService.getConfiguration(any())).thenReturn(
+      ScimConfigurationRead(status = ScimConfigurationStatus.NOT_CONFIGURED),
+    )
+    Mockito.`when`(scimAccessGate.isAllowedForOrganizationInfo(any())).thenReturn(true)
 
     workspace = generateWorkspace()
   }
@@ -150,6 +164,8 @@ internal class WorkspacesHandlerTest {
       ffClient,
       airbyteEdition,
       roleResolver,
+      scimConfigurationService,
+      scimAccessGate,
     )
 
   private fun generateWorkspace(): StandardWorkspace =
@@ -877,13 +893,27 @@ internal class WorkspacesHandlerTest {
   }
 
   @ParameterizedTest
-  @CsvSource("true", "false")
-  fun testGetWorkspaceOrganizationInfo(isSso: Boolean) {
+  @CsvSource(
+    "true, ENABLED, true",
+    "false, ENABLED, true",
+    "true, DISABLED, false",
+    "false, DISABLED, false",
+    "true, NOT_CONFIGURED, false",
+    "false, NOT_CONFIGURED, false",
+  )
+  fun testGetWorkspaceOrganizationInfo(
+    isSso: Boolean,
+    scimStatus: ScimConfigurationStatus,
+    expectedScim: Boolean,
+  ) {
     val organization = generateOrganization(if (isSso) "test-realm" else null)
     val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.workspaceId)
 
     Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.getWorkspaceId())).thenReturn(
       Optional.of<Organization>(organization),
+    )
+    Mockito.`when`(scimConfigurationService.getConfiguration(OrganizationId(organization.organizationId))).thenReturn(
+      ScimConfigurationRead(status = scimStatus),
     )
 
     val orgInfo =
@@ -892,6 +922,48 @@ internal class WorkspacesHandlerTest {
     assertEquals(organization.organizationId, orgInfo.organizationId)
     assertEquals(organization.name, orgInfo.organizationName)
     assertEquals(isSso, orgInfo.sso) // sso is true if ssoRealm is set
+    assertEquals(expectedScim, orgInfo.scim)
+    // Pins the org id passed to the SCIM lookup: without this, the false-expecting rows would also
+    // pass against the setUp catch-all stub if the handler looked up the wrong organization.
+    Mockito.verify(scimConfigurationService).getConfiguration(OrganizationId(organization.organizationId))
+  }
+
+  @Test
+  fun testGetWorkspaceOrganizationInfoReportsScimDisabledWhenAccessRevoked() {
+    val organization = generateOrganization("test-realm")
+    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.workspaceId)
+
+    Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.getWorkspaceId())).thenReturn(
+      Optional.of<Organization>(organization),
+    )
+    Mockito.`when`(scimConfigurationService.getConfiguration(OrganizationId(organization.organizationId))).thenReturn(
+      ScimConfigurationRead(status = ScimConfigurationStatus.ENABLED),
+    )
+    Mockito.`when`(scimAccessGate.isAllowedForOrganizationInfo(OrganizationId(organization.organizationId))).thenReturn(false)
+
+    val orgInfo =
+      getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceOrganizationInfo(workspaceIdRequestBody)
+
+    assertEquals(false, orgInfo.scim)
+  }
+
+  @Test
+  fun testGetWorkspaceOrganizationInfoReportsScimDisabledWhenLookupFails() {
+    val organization = generateOrganization(null)
+    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.workspaceId)
+
+    Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.getWorkspaceId())).thenReturn(
+      Optional.of<Organization>(organization),
+    )
+    Mockito.`when`(scimConfigurationService.getConfiguration(OrganizationId(organization.organizationId))).thenThrow(
+      IllegalStateException("Unsupported SCIM IdP provider: jumpcloud"),
+    )
+
+    val orgInfo =
+      getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceOrganizationInfo(workspaceIdRequestBody)
+
+    assertEquals(organization.organizationId, orgInfo.organizationId)
+    assertEquals(false, orgInfo.scim)
   }
 
   @Test
@@ -1325,6 +1397,8 @@ internal class WorkspacesHandlerTest {
         ffClient,
         airbyteEdition,
         roleResolver,
+        scimConfigurationService,
+        scimAccessGate,
       )
 
     val uuid = UUID.randomUUID()

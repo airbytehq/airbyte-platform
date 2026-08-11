@@ -1722,6 +1722,8 @@
   "settings.accessManagement.cannotEditOwnPermissions": "You cannot edit your own permissions.",
   "settings.accessManagement.ssoEnabled": "SSO enabled",
   "settings.accessManagement.enableSso": "Interested in Single Sign-On (SSO)?",
+  "settings.accessManagement.scimEnabled": "SCIM enabled",
+  "settings.accessManagement.scimManagedBanner": "Organization membership is controlled by your identity provider. Edit membership in your identity provider.",
   "plans.standard.title": "Standard",
   "plans.standard.price": "$10 / month",
   "plans.standard.subscribe": "Subscribe",
