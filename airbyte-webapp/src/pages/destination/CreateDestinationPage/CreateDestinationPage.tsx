@@ -41,7 +41,7 @@ export const CreateDestinationPage: React.FC = () => {
   const { mutateAsync: createDestination } = useCreateDestination();
   const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
 
-  const [isAgentView, setIsAgentView] = useState(true);
+  const [isAgentView, setIsAgentView] = useState(false);
 
   const { isLoading: isLoadingSpec } = useGetDestinationDefinitionSpecificationAsync(destinationDefinitionId || null);
 

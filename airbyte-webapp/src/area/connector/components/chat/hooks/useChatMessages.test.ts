@@ -261,6 +261,33 @@ describe("useChatMessages – deferred-tool batching", () => {
   });
 });
 
+describe("useChatMessages – initial request", () => {
+  it("initializes when the initial request skip is removed", async () => {
+    const { rerender } = renderHook(
+      ({ skipInitialRequest }) =>
+        useChatMessages({
+          ...defaultParams,
+          agentParams: { actor_type: "source" },
+          skipInitialRequest,
+        }),
+      {
+        initialProps: { skipInitialRequest: true },
+        wrapper: createWrapper(),
+      }
+    );
+
+    expect(mockStream).not.toHaveBeenCalled();
+
+    rerender({ skipInitialRequest: false });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(mockStream).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("useChatMessages – error-path reset", () => {
   it("resets batching refs on sendMessage error so the next turn is clean", async () => {
     const toolA: DeferredToolEvent = {

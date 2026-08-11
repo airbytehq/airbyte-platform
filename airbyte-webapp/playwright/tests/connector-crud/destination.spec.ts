@@ -2,8 +2,15 @@ import { test, expect } from "@playwright/test";
 
 import { destinationUI, e2eDestinationAPI } from "../../helpers/connectors";
 import { mockHelpers } from "../../helpers/mocks";
-import { appendRandomString, verifyUpdateSuccess, performSecondTextEdit } from "../../helpers/ui";
+import {
+  appendRandomString,
+  navigateToConnectorCreation,
+  performSecondTextEdit,
+  selectConnectorFromMarketplace,
+  verifyUpdateSuccess,
+} from "../../helpers/ui";
 import { setupWorkspaceForTests } from "../../helpers/workspace";
+import { injectFeatureFlagsAndStyle, setFeatureFlags } from "../../support/e2e";
 
 test.describe("Destination CRUD operations", () => {
   let workspaceId: string;
@@ -34,6 +41,22 @@ test.describe("Destination CRUD operations", () => {
     await mockHelpers.mockEmptyConnectorLists(page, "destination");
     await page.goto(`/workspaces/${workspaceId}/destination`, { timeout: 10000 });
     await expect(page).toHaveURL(/.*\/destination\/new-destination/, { timeout: 15000 });
+  });
+
+  test("Shows the Form view first when agent-assisted setup is enabled", async ({ page }) => {
+    setFeatureFlags({ "connector.agentAssistedSetup": true });
+    await injectFeatureFlagsAndStyle(page);
+
+    try {
+      await mockHelpers.mockEnterpriseConnectors(page);
+      await navigateToConnectorCreation(page, "destination", workspaceId);
+      await selectConnectorFromMarketplace(page, "end", "End-to-End Testing");
+
+      await expect(page.locator("input[name='name']")).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText("Connector Setup Assistant")).toBeHidden({ timeout: 15000 });
+    } finally {
+      setFeatureFlags({});
+    }
   });
 
   test("Can create new destination", async ({ page }) => {

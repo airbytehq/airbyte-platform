@@ -10,6 +10,7 @@ import {
   performSecondDropdownEdit,
 } from "../../helpers/ui";
 import { setupWorkspaceForTests } from "../../helpers/workspace";
+import { injectFeatureFlagsAndStyle, setFeatureFlags } from "../../support/e2e";
 
 test.describe("Source CRUD operations", () => {
   let workspaceId: string;
@@ -43,6 +44,22 @@ test.describe("Source CRUD operations", () => {
 
     await expect(page).toHaveURL(/.*\/workspaces\/[^/]+\/source\/new-source/, { timeout: 15000 });
     await expect(page.locator("h2")).toContainText("Set up a new source", { timeout: 20000 });
+  });
+
+  test("Shows the Form view first when agent-assisted setup is enabled", async ({ page }) => {
+    setFeatureFlags({ "connector.agentAssistedSetup": true });
+    await injectFeatureFlagsAndStyle(page);
+
+    try {
+      await mockHelpers.mockEnterpriseConnectors(page);
+      await navigateToConnectorCreation(page, "source", workspaceId);
+      await selectConnectorFromMarketplace(page, "poke", "PokeAPI");
+
+      await expect(page.locator("input[name='name']")).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText("Connector Setup Assistant")).toBeHidden({ timeout: 15000 });
+    } finally {
+      setFeatureFlags({});
+    }
   });
 
   test("Can create new source", async ({ page }) => {

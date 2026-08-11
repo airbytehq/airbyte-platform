@@ -30,7 +30,7 @@ export const CreateSourcePage: React.FC = () => {
   const { sourceDefinitionId } = useParams<{ sourceDefinitionId: string }>();
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
-  const [isAgentView, setIsAgentView] = useState(true);
+  const [isAgentView, setIsAgentView] = useState(false);
 
   const { isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId || null);
   const { sourceDefinitions } = useSourceDefinitionList();

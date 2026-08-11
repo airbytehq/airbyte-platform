@@ -74,10 +74,6 @@ export const useConnectorSetupAgentState = ({
     setOAuthState(state);
   }, []);
 
-  const handleFormValuesReady = useCallback((getFormValues: () => Record<string, unknown>) => {
-    getFormValuesRef.current = getFormValues;
-  }, []);
-
   const addTouchedSecretField = useCallback((path: string) => {
     touchedSecretFieldsRef.current.add(path);
   }, []);
@@ -90,6 +86,7 @@ export const useConnectorSetupAgentState = ({
       actor_type: actorType,
     },
     clientTools: clientTools || {},
+    skipInitialRequest: !isAgentView,
   });
 
   // Helper to create masked snapshot of the form values
@@ -108,6 +105,19 @@ export const useConnectorSetupAgentState = ({
       return JSON.stringify(maskedFormValues);
     },
     [connectionSpecification]
+  );
+
+  const handleFormValuesReady = useCallback(
+    (getFormValues: () => Record<string, unknown>) => {
+      getFormValuesRef.current = getFormValues;
+
+      if (!isAgentView && !lastUnmaskedFormSnapshotRef.current) {
+        const currentFormValues = getFormValues();
+        lastMaskedFormSnapshotRef.current = createMaskedSnapshot(currentFormValues);
+        lastUnmaskedFormSnapshotRef.current = JSON.stringify(currentFormValues);
+      }
+    },
+    [createMaskedSnapshot, isAgentView]
   );
 
   // Change detection and view switching
