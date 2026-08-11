@@ -912,6 +912,21 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       // Add the exception to the span, as it represents a platform failure
       addExceptionToTrace(e)
 
+      // A deleteConnection signal may have arrived while the workflow was sleeping above.
+      // Temporal signals update workflow state synchronously between workflow tasks, so
+      // workflowState.isDeleted will be true here if deleteConnection was received during the sleep.
+      // In that case we must not call continueAsNew — doing so would restart the workflow and
+      // schedule a new sync attempt for a deleted connection (see: https://github.com/airbytehq/airbyte/issues/83340).
+      // Return null here; the existing call chain (reportFailure → prepareForNextRunAndContinueAsNew)
+      // already checks isDeleted and will terminate without restarting.
+      if (workflowState.isDeleted) {
+        log.info(
+          "Connection {} was deleted during activity failure backoff; workflow will not be restarted.",
+          connectionId,
+        )
+        return null
+      }
+
       // If a jobId exists, set the failure reason
       if (workflowInternalState.jobId != null && workflowInternalState.attemptNumber != null) {
         val connectionUpdaterInput = connectionUpdaterInputFromState()
