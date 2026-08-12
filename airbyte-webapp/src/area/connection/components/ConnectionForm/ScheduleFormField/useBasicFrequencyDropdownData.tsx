@@ -53,8 +53,8 @@ export const useBasicFrequencyDropdownData = (
 ): BasicFrequencyOption[] => {
   const { formatMessage } = useIntl();
   const isSyncFrequencyUnderOneHourAllowed = useFeature(FeatureItem.AllowSyncFrequencyUnderOneHour);
-  const { isUnifiedTrialPlan, isStandardTrialPlan, isStandardPlan } = useOrganizationPlan();
-  const showPlusOrProAvailability = isUnifiedTrialPlan || isStandardTrialPlan || isStandardPlan;
+  const { isStandardTrialPlan, isStandardPlan } = useOrganizationPlan();
+  const showPlusOrProAvailability = isStandardTrialPlan || isStandardPlan;
 
   return useMemo(() => {
     // Conditionally add 15 and 30 minute options when feature flag is enabled

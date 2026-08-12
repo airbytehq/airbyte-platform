@@ -8,7 +8,6 @@ import { LicenseBanner } from "components/ui/LicenseBanner/LicenseBanner";
 
 import { SideBar } from "area/layout/SideBar";
 import { StatusBanner } from "cloud/area/billing/components/StatusBanner";
-import { useTrialEndedModal } from "cloud/area/billing/utils/useTrialEndedModal";
 import { AdpOrganizationAccessGuard } from "cloud/components/AdpOrganizationAccessGuard";
 import { AdpOrganizationBanner } from "cloud/components/AdpOrganizationBanner";
 import { usePrefetchOrganizationSummaries } from "core/api/";
@@ -20,7 +19,6 @@ import styles from "./MainLayout.module.scss";
 
 const MainLayout: React.FC<React.PropsWithChildren> = () => {
   usePrefetchOrganizationSummaries()();
-  useTrialEndedModal();
   const isCloudApp = useIsCloudApp();
 
   const checkEnterpriseLicense = useFeature(FeatureItem.EnterpriseLicenseChecking);

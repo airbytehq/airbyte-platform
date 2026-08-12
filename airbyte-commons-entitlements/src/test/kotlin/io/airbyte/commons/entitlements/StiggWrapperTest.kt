@@ -130,26 +130,10 @@ internal class StiggWrapperTest {
     every { stigg.api().query(any<GetPaywallQuery>()) } throws RuntimeException("GraphQL API Error")
 
     val stiggWrapper = StiggWrapper(stigg, metricClient)
-    val result = stiggWrapper.getEntitlementsForPlan(EntitlementPlan.UNIFIED_TRIAL)
+    val result = stiggWrapper.getEntitlementsForPlan(EntitlementPlan.STANDARD_TRIAL)
 
     // Should gracefully return empty list instead of propagating the exception
     assertEquals(emptyList<io.airbyte.commons.entitlements.models.Entitlement>(), result)
-  }
-
-  @Test
-  fun `getEntitlementsForPlan returns empty list for different plan types`() {
-    val stigg = mockk<Stigg>(relaxed = true)
-
-    every { stigg.api().query(any<GetPaywallQuery>()) } throws RuntimeException("API unavailable")
-
-    val stiggWrapper = StiggWrapper(stigg, metricClient)
-
-    // Test for each plan type to ensure consistent error handling
-    val unifiedTrialResult = stiggWrapper.getEntitlementsForPlan(EntitlementPlan.UNIFIED_TRIAL)
-    val standardTrialResult = stiggWrapper.getEntitlementsForPlan(EntitlementPlan.STANDARD_TRIAL)
-
-    assertEquals(emptyList<io.airbyte.commons.entitlements.models.Entitlement>(), unifiedTrialResult)
-    assertEquals(emptyList<io.airbyte.commons.entitlements.models.Entitlement>(), standardTrialResult)
   }
 
   @Test
@@ -182,7 +166,7 @@ internal class StiggWrapperTest {
   fun `getPlans returns multiple plans and logs warning`() {
     val stigg = mockk<Stigg>(relaxed = true)
     val planId1 = EntitlementPlan.PRO.id
-    val planId2 = EntitlementPlan.UNIFIED_TRIAL.id
+    val planId2 = EntitlementPlan.STANDARD_TRIAL.id
 
     val response =
       GetEnumEntitlementResponse
@@ -203,7 +187,7 @@ internal class StiggWrapperTest {
     // Should still return all plans even though it logs an error
     assertEquals(2, result.size)
     assertEquals(EntitlementPlan.PRO, result[0].planEnum)
-    assertEquals(EntitlementPlan.UNIFIED_TRIAL, result[1].planEnum)
+    assertEquals(EntitlementPlan.STANDARD_TRIAL, result[1].planEnum)
   }
 
   @Test

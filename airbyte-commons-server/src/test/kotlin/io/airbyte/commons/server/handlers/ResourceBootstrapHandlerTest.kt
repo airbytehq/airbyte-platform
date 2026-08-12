@@ -16,7 +16,6 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.featureflag.FeatureFlagClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -38,7 +37,6 @@ class ResourceBootstrapHandlerTest {
   private val dataplaneGroupService: DataplaneGroupService = mockk()
   private val roleResolver: RoleResolver = mockk()
   private val entitlementService: EntitlementService = mockk(relaxed = true)
-  private val featureFlagClient: FeatureFlagClient = mockk(relaxed = true)
 
   private val handler =
     ResourceBootstrapHandler(
@@ -52,7 +50,6 @@ class ResourceBootstrapHandlerTest {
       AirbyteEdition.COMMUNITY,
       dataplaneGroupService,
       entitlementService,
-      featureFlagClient,
     )
 
   @Nested
@@ -86,27 +83,12 @@ class ResourceBootstrapHandlerTest {
     }
 
     @Test
-    fun `calls EntitlementService with UNIFIED_TRIAL when feature flag is enabled`() {
+    fun `calls EntitlementService with STANDARD_TRIAL`() {
       val spy = spyk(handler)
 
       every { spy.findExistingOrganization(any()) } returns null
       every { organizationService.writeOrganization(any()) } returns Unit
       every { organizationPaymentConfigService.saveDefaultPaymentConfig(any()) } returns Unit
-      every { featureFlagClient.boolVariation(any(), any()) } returns true
-
-      spy.findOrCreateOrganizationAndPermission(user)
-
-      verify { entitlementService.addOrUpdateOrganization(OrganizationId(orgId), EntitlementPlan.UNIFIED_TRIAL) }
-    }
-
-    @Test
-    fun `calls EntitlementService with STANDARD_TRIAL when feature flag is disabled`() {
-      val spy = spyk(handler)
-
-      every { spy.findExistingOrganization(any()) } returns null
-      every { organizationService.writeOrganization(any()) } returns Unit
-      every { organizationPaymentConfigService.saveDefaultPaymentConfig(any()) } returns Unit
-      every { featureFlagClient.boolVariation(any(), any()) } returns false
 
       spy.findOrCreateOrganizationAndPermission(user)
 

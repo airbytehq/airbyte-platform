@@ -9,7 +9,7 @@ import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentOrganizationId, useOrganizationPlan } from "area/organization/utils";
+import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCreateWorkspace, useListDataplaneGroups } from "core/api";
 import { DataplaneGroupRead } from "core/api/types/AirbyteClient";
 import { useModalService } from "core/services/Modal";
@@ -30,7 +30,6 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
   secondary?: boolean;
   onCreated?: () => void;
 }> = ({ disabled = false, secondary = false, onCreated }) => {
-  const { isUnifiedTrialPlan } = useOrganizationPlan();
   const dataplaneGroups = useListDataplaneGroups();
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
@@ -69,7 +68,7 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
       variant={secondary ? "secondary" : "primary"}
       data-testid="workspaces.createNew"
       size="xs"
-      icon={isUnifiedTrialPlan ? "lock" : "plus"}
+      icon="plus"
     >
       <FormattedMessage id="workspaces.createNew" />
     </Button>

@@ -24,7 +24,6 @@ describe("#useBasicFrequencyDropdownData", () => {
     jest.clearAllMocks();
     mockUseFeature.mockReturnValue(false);
     mockUseOrganizationPlan.mockReturnValue({
-      isUnifiedTrialPlan: false,
       isStandardTrialPlan: false,
       isStandardPlan: false,
     });
@@ -82,8 +81,7 @@ describe("#useBasicFrequencyDropdownData", () => {
   it("marks minute options as available in Plus and Pro for trial plans", () => {
     mockUseFeature.mockReturnValue(true);
     mockUseOrganizationPlan.mockReturnValue({
-      isUnifiedTrialPlan: true,
-      isStandardTrialPlan: false,
+      isStandardTrialPlan: true,
       isStandardPlan: false,
     });
 
@@ -95,7 +93,6 @@ describe("#useBasicFrequencyDropdownData", () => {
 
   it("marks an existing minute option as available in Plus and Pro for standard plans", () => {
     mockUseOrganizationPlan.mockReturnValue({
-      isUnifiedTrialPlan: false,
       isStandardTrialPlan: false,
       isStandardPlan: true,
     });

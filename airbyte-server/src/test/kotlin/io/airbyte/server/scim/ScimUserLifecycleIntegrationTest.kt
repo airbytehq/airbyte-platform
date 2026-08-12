@@ -440,7 +440,6 @@ class ScimUserLifecycleIntegrationTest {
               .withTombstone(false)
         },
         mockk<EntitlementService>(relaxed = true),
-        mockk<FeatureFlagClient>(relaxed = true),
       )
 
     assertThat(organizationRepository.findByEmailIgnoreCase(email)).isEmpty()
@@ -582,7 +581,6 @@ class ScimUserLifecycleIntegrationTest {
               .withTombstone(false)
         },
         mockk<EntitlementService>(relaxed = true),
-        mockk<FeatureFlagClient>(relaxed = true),
       )
     val workspacesHandler = mockk<WorkspacesHandler>()
     every { workspacesHandler.listWorkspacesInOrganization(any()) } returns WorkspaceReadList().workspaces(emptyList())

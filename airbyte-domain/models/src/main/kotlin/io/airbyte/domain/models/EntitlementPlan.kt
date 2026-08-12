@@ -33,7 +33,6 @@ enum class EntitlementPlan(
 
   // fka TEAMS
   PRO("plan-airbyte-pro", displayName = "Pro"),
-  UNIFIED_TRIAL("plan-airbyte-unified-trial", displayName = "Unified Trial"),
 
   // Partners who get Airbyte free, forever
   PARTNER("plan-airbyte-partner", displayName = "Partner"),

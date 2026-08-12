@@ -28,8 +28,6 @@ import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UnifiedTrial
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -51,7 +49,6 @@ open class ResourceBootstrapHandler(
   private val airbyteEdition: AirbyteEdition,
   private val dataplaneGroupService: DataplaneGroupService,
   private val entitlementService: EntitlementService,
-  private val featureFlagClient: FeatureFlagClient,
 ) : ResourceBootstrapHandlerInterface {
   /**
    * This is for bootstrapping a workspace and all the necessary links (organization) and permissions (workspace & organization).
@@ -140,11 +137,10 @@ open class ResourceBootstrapHandler(
       // Add the organization to a Stigg trial plan.
       // Note that Stigg is giving users access to features that they might need before they run a sync, so we need to
       // add them to the EntitlementPlan immediately, as opposed to Orb where we wait for a first successful sync.
-      if (featureFlagClient.boolVariation(UnifiedTrial, io.airbyte.featureflag.Organization(organization.organizationId))) {
-        entitlementService.addOrUpdateOrganization(OrganizationId(organization.organizationId), EntitlementPlan.UNIFIED_TRIAL)
-      } else {
-        entitlementService.addOrUpdateOrganization(OrganizationId(organization.organizationId), EntitlementPlan.STANDARD_TRIAL)
-      }
+      entitlementService.addOrUpdateOrganization(
+        OrganizationId(organization.organizationId),
+        EntitlementPlan.STANDARD_TRIAL,
+      )
     } catch (exception: Exception) {
       logger.error(exception) {
         "Failed to add organization ${organization.organizationId} to entitlement service during user signup. "

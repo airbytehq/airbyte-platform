@@ -69,7 +69,6 @@ jest.mock("./ActivePlanCard", () => ({
 const planFlags = (overrides: Partial<ReturnType<typeof useOrganizationPlan>> = {}) =>
   ({
     isStiggPlanEnabled: false,
-    isUnifiedTrialPlan: false,
     isStandardTrialPlan: false,
     isStandardPlan: false,
     isPlusPlan: false,
@@ -138,7 +137,7 @@ describe("OrganizationPlanPage", () => {
     expect(wrapper.queryByTestId("active-plan-card")).not.toBeInTheDocument();
   });
 
-  it("treats trial users (standard / unified) as unsubscribed and shows three subscribe cards", async () => {
+  it("treats trial users as unsubscribed and shows three subscribe cards", async () => {
     mocked(useOrgInfo).mockReturnValue(billingState({ subscriptionStatus: "unsubscribed" }));
     mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardTrialPlan: true, isStiggPlanEnabled: true }));
 

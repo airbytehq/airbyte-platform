@@ -5,7 +5,6 @@ import { useDebounce } from "react-use";
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 
 import { Box } from "components/ui/Box";
-import { BrandingBadge } from "components/ui/BrandingBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
@@ -14,7 +13,7 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationId, useOrganizationPlan } from "area/organization/utils";
+import { useCurrentOrganizationId } from "area/organization/utils";
 import {
   useListUsersInOrganization,
   useListWorkspacesInOrganization,
@@ -40,7 +39,6 @@ const OrganizationWorkspacesPage: React.FC = () => {
 
   const organizationId = useCurrentOrganizationId();
   const organization = useOrgInfo(organizationId);
-  const { isUnifiedTrialPlan } = useOrganizationPlan();
   const canViewOrganizationDetails = useGeneratedIntent(Intent.ViewOrganizationDetails);
   const memberCount = useListUsersInOrganization(canViewOrganizationDetails ? organizationId : undefined).users.length;
 
@@ -156,7 +154,6 @@ const OrganizationWorkspacesPage: React.FC = () => {
               )}
             </Box>
             <FlexContainer alignItems="center" gap="sm">
-              {isUnifiedTrialPlan && <BrandingBadge product="cloudForTeams" />}
               <OrganizationWorkspacesCreateControl disabled={!isCreateWorkspaceEnabled} onCreated={refetch} />
             </FlexContainer>
           </FlexContainer>

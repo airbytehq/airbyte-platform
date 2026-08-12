@@ -4,7 +4,6 @@ import { ORG_PLAN_IDS } from "./organizationPlans";
 
 export interface UseOrganizationPlanReturn {
   isStiggPlanEnabled: boolean;
-  isUnifiedTrialPlan: boolean;
   isStandardTrialPlan: boolean;
   isStandardPlan: boolean;
   isPlusPlan: boolean;
@@ -24,7 +23,6 @@ export const useOrganizationPlan = (): UseOrganizationPlanReturn => {
 
   return {
     isStiggPlanEnabled: !!planId,
-    isUnifiedTrialPlan: planId === ORG_PLAN_IDS.UNIFIED_TRIAL,
     isStandardTrialPlan: planId === ORG_PLAN_IDS.STANDARD_TRIAL,
     isStandardPlan: planId === ORG_PLAN_IDS.STANDARD,
     isPlusPlan: planId === ORG_PLAN_IDS.PLUS,

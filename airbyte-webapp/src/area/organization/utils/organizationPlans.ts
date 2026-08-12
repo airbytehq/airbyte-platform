@@ -7,7 +7,6 @@ export const AIRBYTE_PLAN_IDS = {
   FLEX: "plan-airbyte-flex",
   PRO: "plan-airbyte-pro",
   STANDARD_TRIAL: "plan-airbyte-standard-trial",
-  UNIFIED_TRIAL: "plan-airbyte-unified-trial",
 } as const;
 
 export const ORG_PLAN_IDS = AIRBYTE_PLAN_IDS;

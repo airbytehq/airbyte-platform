@@ -32,7 +32,6 @@ import io.airbyte.data.services.UserInvitationService
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.EntitlementPlan.PLUS
 import io.airbyte.domain.models.EntitlementPlan.STANDARD
-import io.airbyte.domain.models.EntitlementPlan.UNIFIED_TRIAL
 import io.airbyte.domain.models.OrganizationId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -164,7 +163,7 @@ internal class FeatureDegradationService(
   private fun isSupportedFeatureDegradation(
     fromPlan: EntitlementPlan,
     toPlan: EntitlementPlan,
-  ): Boolean = toPlan == STANDARD && fromPlan in setOf(UNIFIED_TRIAL, PLUS)
+  ): Boolean = toPlan == STANDARD && fromPlan == PLUS
 
   fun downgradeRBAC(
     organizationId: OrganizationId,

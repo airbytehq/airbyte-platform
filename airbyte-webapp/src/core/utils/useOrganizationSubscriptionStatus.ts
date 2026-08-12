@@ -14,7 +14,6 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 export interface UseOrganizationSubscriptionStatusReturn {
   // Organization plan information
   isStiggPlanEnabled: boolean;
-  isUnifiedTrialPlan: boolean;
   isStandardTrialPlan: boolean;
   isStandardPlan: boolean;
   isSmePlan: boolean;
@@ -55,18 +54,11 @@ export const useOrganizationSubscriptionStatus = (options?: {
 
   const { billing } = useOrgInfo(organizationId ?? "", canManageOrganizationBilling) || {};
 
-  const {
-    isStiggPlanEnabled,
-    isUnifiedTrialPlan,
-    isStandardTrialPlan,
-    isStandardPlan,
-    isSmePlan,
-    isFlexPlan,
-    isProPlan,
-  } = useOrganizationPlan();
+  const { isStiggPlanEnabled, isStandardTrialPlan, isStandardPlan, isSmePlan, isFlexPlan, isProPlan } =
+    useOrganizationPlan();
 
-  // Conditional trial status fetching - only when user has permissions and organization's plan is a unified trial plan
-  const shouldFetchTrialStatus = canViewTrialStatus && isUnifiedTrialPlan;
+  // Conditional trial status fetching - only when user has permissions and organization's plan is a standard trial plan
+  const shouldFetchTrialStatus = canViewTrialStatus && isStandardTrialPlan;
 
   const trialStatus = useOrganizationTrialStatus(organizationId ?? "", {
     enabled: shouldFetchTrialStatus,
@@ -105,7 +97,6 @@ export const useOrganizationSubscriptionStatus = (options?: {
   return {
     // Organization plan information
     isStiggPlanEnabled,
-    isUnifiedTrialPlan,
     isStandardTrialPlan,
     isStandardPlan,
     isSmePlan,

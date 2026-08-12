@@ -29,7 +29,6 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     gracePeriodEndsAt,
     isTrialEndingWithin24Hours,
     trialEndsAt,
-    isUnifiedTrialPlan,
     isStandardTrialPlan,
   } = useOrganizationSubscriptionStatus();
   const linkToBilling = useLinkToBillingPage();
@@ -113,14 +112,14 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
 
   // Stigg plan-dependent logic
   if (isStiggPlanEnabled) {
-    if (trialStatus === "pre_trial" && (isUnifiedTrialPlan || isStandardTrialPlan)) {
+    if (trialStatus === "pre_trial" && isStandardTrialPlan) {
       return {
         level: "info",
         content: formatMessage({ id: "billing.banners.entitlements.preTrial" }),
       };
     }
 
-    if (trialStatus === "in_trial" && (isUnifiedTrialPlan || isStandardTrialPlan)) {
+    if (trialStatus === "in_trial" && isStandardTrialPlan) {
       return {
         level: isTrialEndingWithin24Hours ? "error" : "warning",
         content: formatMessage(

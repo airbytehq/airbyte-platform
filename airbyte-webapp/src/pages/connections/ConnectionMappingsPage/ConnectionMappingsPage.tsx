@@ -1,7 +1,6 @@
 import { FormattedMessage, useIntl } from "react-intl";
 import { Navigate } from "react-router-dom";
 
-import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { FormChangeTracker } from "components/ui/forms/FormChangeTracker";
@@ -12,7 +11,6 @@ import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useConnectionEditService } from "area/connection/utils/ConnectionEdit/ConnectionEditService";
 import { useIsDataActivationConnection } from "area/connection/utils/useIsDataActivationConnection";
-import { useOrganizationPlan } from "area/organization/utils";
 import { useNotificationService } from "core/services/Notification";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
@@ -44,7 +42,6 @@ export const ConnectionMappingsRoute = () => {
 };
 
 const ConnectionMappingsPage = () => {
-  const { isUnifiedTrialPlan } = useOrganizationPlan();
   const { streamsWithMappings, clear, submitMappings, hasMappingsChanged, isMappingsFeatureEnabled } =
     useMappingContext();
   const { mode } = useFormMode();
@@ -103,7 +100,6 @@ const ConnectionMappingsPage = () => {
             <Heading as="h3" size="sm">
               <FormattedMessage id="connections.mappings.title" />
             </Heading>
-            {isUnifiedTrialPlan && <BrandingBadge product="cloudForTeams" testId="cloud-for-teams-badge-mappings" />}
           </FlexContainer>
         </FlexItem>
         <ExternalLink href={links.connectionMappings}>

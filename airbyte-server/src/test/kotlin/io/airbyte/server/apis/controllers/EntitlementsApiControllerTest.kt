@@ -136,7 +136,7 @@ class EntitlementsApiControllerTest {
     val result = entitlementsApiController.listAllEntitlementPlans()
 
     assertNotNull(result)
-    assertEquals(12, result!!.plans.size)
+    assertEquals(11, result!!.plans.size)
     assertTrue(result.plans.any { it.planName == "STANDARD" })
   }
 

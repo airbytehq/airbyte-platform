@@ -41,7 +41,6 @@ describe("useOrganizationPlan", () => {
   });
 
   describe.each([
-    ["isUnifiedTrialPlan", "plan-airbyte-unified-trial"],
     ["isStandardTrialPlan", "plan-airbyte-standard-trial"],
     ["isStandardPlan", "plan-airbyte-standard"],
     ["isPlusPlan", "plan-airbyte-plus"],

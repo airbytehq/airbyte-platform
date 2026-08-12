@@ -29,7 +29,6 @@ import io.airbyte.domain.models.scim.ScimConfigurationRead
 import io.airbyte.domain.models.scim.ScimConfigurationStatus
 import io.airbyte.domain.services.scim.ScimAccessGate
 import io.airbyte.domain.services.scim.ScimConfigurationService
-import io.airbyte.featureflag.FeatureFlagClient
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -63,7 +62,6 @@ class OrganizationsHandlerTest {
   private lateinit var workspacesHandler: WorkspacesHandler
   private lateinit var permissionService: PermissionService
   private lateinit var entitlementService: EntitlementService
-  private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var scimConfigurationService: ScimConfigurationService
   private lateinit var scimAccessGate: ScimAccessGate
 
@@ -76,7 +74,6 @@ class OrganizationsHandlerTest {
     workspacesHandler = mockk()
     permissionService = mockk()
     entitlementService = mockk(relaxed = true)
-    featureFlagClient = mockk(relaxed = true)
     scimConfigurationService = mockk()
     every { scimConfigurationService.getConfiguration(any()) } returns ScimConfigurationRead(status = ScimConfigurationStatus.NOT_CONFIGURED)
     scimAccessGate = mockk()
@@ -92,7 +89,6 @@ class OrganizationsHandlerTest {
           workspacesHandler,
           permissionService,
           entitlementService,
-          featureFlagClient,
           scimConfigurationService,
           scimAccessGate,
         ),
@@ -449,7 +445,7 @@ class OrganizationsHandlerTest {
   }
 
   @Test
-  fun `createOrganization calls EntitlementService with UNIFIED_TRIAL when feature flag is enabled`() {
+  fun `createOrganization calls EntitlementService with STANDARD_TRIAL`() {
     val userId = UUID.randomUUID()
     val orgId = UUID.randomUUID()
     val newOrganization =
@@ -461,33 +457,6 @@ class OrganizationsHandlerTest {
 
     every { uuidSupplier.get() } returns orgId
     every { organizationService.writeOrganization(any()) } just runs
-    every { featureFlagClient.boolVariation(any(), any()) } returns true
-
-    val request =
-      OrganizationCreateRequestBody()
-        .organizationName(organizationName)
-        .email(organizationEmail)
-        .userId(userId)
-
-    organizationsHandler.createOrganization(request)
-
-    verify { entitlementService.addOrUpdateOrganization(OrganizationId(orgId), EntitlementPlan.UNIFIED_TRIAL) }
-  }
-
-  @Test
-  fun `createOrganization calls EntitlementService with STANDARD_TRIAL when feature flag is disabled`() {
-    val userId = UUID.randomUUID()
-    val orgId = UUID.randomUUID()
-    val newOrganization =
-      Organization()
-        .withOrganizationId(orgId)
-        .withEmail(organizationEmail)
-        .withName(organizationName)
-        .withUserId(userId)
-
-    every { uuidSupplier.get() } returns orgId
-    every { organizationService.writeOrganization(any()) } just runs
-    every { featureFlagClient.boolVariation(any(), any()) } returns false
 
     val request =
       OrganizationCreateRequestBody()

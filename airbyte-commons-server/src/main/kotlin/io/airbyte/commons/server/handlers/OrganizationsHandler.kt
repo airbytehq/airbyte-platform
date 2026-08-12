@@ -34,8 +34,6 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.scim.ScimConfigurationStatus
 import io.airbyte.domain.services.scim.ScimAccessGate
 import io.airbyte.domain.services.scim.ScimConfigurationService
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UnifiedTrial
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Named
@@ -56,7 +54,6 @@ open class OrganizationsHandler(
   private val workspacesHandler: WorkspacesHandler,
   private val permissionService: PermissionService,
   private val entitlementService: EntitlementService,
-  private val featureFlagClient: FeatureFlagClient,
   private val scimConfigurationService: ScimConfigurationService,
   private val scimAccessGate: ScimAccessGate,
 ) {
@@ -89,11 +86,7 @@ open class OrganizationsHandler(
       // Add the organization to a Stigg trial plan.
       // Note that Stigg is giving users access to features that they might need before they run a sync, so we need to
       // add them to the EntitlementPlan immediately, as opposed to Orb where we wait for a first successful sync.
-      if (featureFlagClient.boolVariation(UnifiedTrial, io.airbyte.featureflag.Organization(orgId))) {
-        entitlementService.addOrUpdateOrganization(OrganizationId(orgId), EntitlementPlan.UNIFIED_TRIAL)
-      } else {
-        entitlementService.addOrUpdateOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL)
-      }
+      entitlementService.addOrUpdateOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL)
     } catch (exception: Exception) {
       logger.error(exception) { "Error while adding organization $orgId to the Entitlement service." }
       // TODO: once we've integrated fully with Stigg, throw instead of just logging

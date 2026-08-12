@@ -17,7 +17,6 @@ import styles from "./ProFeaturesWarnModal.module.scss";
 
 interface ProFeaturesWarnModalProps {
   onContinue?: () => void;
-  variant?: "warning" | "upgrade";
   featureId?: string;
 }
 
@@ -29,33 +28,17 @@ const genericProFeatureMessageIds = [
   "proFeatures.modal.features.connectors",
 ];
 
-export const ProFeaturesWarnModal: React.FC<ProFeaturesWarnModalProps> = ({
-  onContinue,
-  variant = "warning",
-  featureId,
-}) => {
-  const isUpgradeVariant = variant === "upgrade";
+export const ProFeaturesWarnModal: React.FC<ProFeaturesWarnModalProps> = ({ onContinue, featureId }) => {
   const isPlusOrProFeature = featureId === "sub-hourly-sync";
   const titleMessageId = isPlusOrProFeature
-    ? isUpgradeVariant
-      ? "proFeatures.modal.titleUpgradePlusOrPro"
-      : "proFeatures.modal.titlePlusOrPro"
-    : isUpgradeVariant
-    ? "proFeatures.modal.titleUpgrade"
-    : "proFeatures.modal.title";
-  const featuresTitleMessageId = isPlusOrProFeature
-    ? "proFeatures.modal.featuresTitlePlusOrPro"
-    : "proFeatures.modal.featuresTitle";
+    ? "proFeatures.modal.titleUpgradePlusOrPro"
+    : "proFeatures.modal.titleUpgrade";
   const featureMessageIds = isPlusOrProFeature
     ? ["proFeatures.modal.features.subHourSyncsPlusOrPro"]
     : genericProFeatureMessageIds;
   const bodyMessageId = isPlusOrProFeature
-    ? isUpgradeVariant
-      ? "proFeatures.modal.upgradeMessagePlusOrPro"
-      : "proFeatures.modal.warningMessagePlusOrPro"
-    : isUpgradeVariant
-    ? "proFeatures.modal.upgradeMessage"
-    : "proFeatures.modal.warningMessage";
+    ? "proFeatures.modal.upgradeMessagePlusOrPro"
+    : "proFeatures.modal.upgradeMessage";
 
   return (
     <ModalBody className={styles.proFeaturesModal}>
@@ -71,11 +54,6 @@ export const ProFeaturesWarnModal: React.FC<ProFeaturesWarnModalProps> = ({
               <FormattedMessage id={titleMessageId} />
             </Text>
             <Box>
-              {!isUpgradeVariant && (
-                <Text size="lg" align="left">
-                  <FormattedMessage id={featuresTitleMessageId} />
-                </Text>
-              )}
               <ul className={styles.proFeaturesModal__featuresList}>
                 {featureMessageIds.map((messageId) => (
                   <li key={messageId}>
@@ -88,29 +66,14 @@ export const ProFeaturesWarnModal: React.FC<ProFeaturesWarnModalProps> = ({
               <FormattedMessage id={bodyMessageId} />
             </Text>
             <FlexContainer direction="row">
-              {isUpgradeVariant ? (
-                <>
-                  <ExternalLink href={links.contactSales} opensInNewTab>
-                    <Button variant="primary">
-                      <FormattedMessage id="proFeatures.modal.button.talkToSales" />
-                    </Button>
-                  </ExternalLink>
-                  <Button variant="secondary" onClick={onContinue}>
-                    <FormattedMessage id="proFeatures.modal.button.noThanks" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="primary" onClick={onContinue}>
-                    <FormattedMessage id="proFeatures.modal.button.continue" />
-                  </Button>
-                  <ExternalLink href={links.contactSales} opensInNewTab>
-                    <Button variant="secondary" icon="share" iconSize="sm" iconPosition="right">
-                      <FormattedMessage id="proFeatures.modal.button.talkToSalesNow" />
-                    </Button>
-                  </ExternalLink>
-                </>
-              )}
+              <ExternalLink href={links.contactSales} opensInNewTab>
+                <Button variant="primary">
+                  <FormattedMessage id="proFeatures.modal.button.talkToSales" />
+                </Button>
+              </ExternalLink>
+              <Button variant="secondary" onClick={onContinue}>
+                <FormattedMessage id="proFeatures.modal.button.noThanks" />
+              </Button>
             </FlexContainer>
           </FlexContainer>
         </section>

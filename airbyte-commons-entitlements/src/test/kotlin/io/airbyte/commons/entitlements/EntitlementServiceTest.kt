@@ -358,7 +358,7 @@ class EntitlementServiceTest {
     every { entitlementClient.getPlans(orgId) } returns
       listOf(
         EntitlementPlanResponse(EntitlementPlan.PRO, EntitlementPlan.PRO.id, EntitlementPlan.PRO.name),
-        EntitlementPlanResponse(EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.UNIFIED_TRIAL.id, EntitlementPlan.UNIFIED_TRIAL.name),
+        EntitlementPlanResponse(EntitlementPlan.STANDARD_TRIAL, EntitlementPlan.STANDARD_TRIAL.id, EntitlementPlan.STANDARD_TRIAL.name),
       )
 
     val exception =
