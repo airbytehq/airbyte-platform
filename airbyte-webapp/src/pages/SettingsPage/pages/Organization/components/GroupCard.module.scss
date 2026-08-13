@@ -1,0 +1,38 @@
+@use "scss/colors";
+@use "scss/variables";
+
+// Matches Collapsible's own $icon-width, so the inert zero-member label lines up with a real
+// disclosure in the card above or below it.
+$icon-width: 20px;
+
+.card {
+  background: colors.$foreground;
+  border: variables.$border-thin solid colors.$border-color;
+  border-radius: variables.$border-radius-sm;
+  overflow: hidden;
+}
+
+.header {
+  background: colors.$grey-50;
+  border-bottom: variables.$border-thin solid colors.$border-color;
+}
+
+// Collapsible has no disabled prop, so a group with no members renders an inert lookalike of the
+// collapsed disclosure button instead. Tooltip needs a control to attach to.
+.disclosurePlaceholder {
+  display: flex;
+  align-items: center;
+  gap: variables.$spacing-sm;
+  background: none;
+  border: none;
+  padding: 0;
+
+  &:disabled {
+    pointer-events: none;
+  }
+
+  &__icon {
+    width: $icon-width;
+    color: colors.$grey-300;
+  }
+}

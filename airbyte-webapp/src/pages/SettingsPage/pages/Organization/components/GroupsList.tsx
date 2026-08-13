@@ -1,0 +1,115 @@
+import React, { useDeferredValue, useEffect } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
+import { useSearchParams } from "react-router-dom";
+
+import { Box } from "components/ui/Box";
+import { EmptyState } from "components/ui/EmptyState";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
+import { SearchInput } from "components/ui/SearchInput";
+import { Text } from "components/ui/Text";
+
+import { useListGroups } from "core/api";
+
+import { GroupCard } from "./GroupCard";
+import styles from "./GroupsList.module.scss";
+
+const SEARCH_PARAM = "search";
+
+export const GroupsList: React.FC = () => {
+  const { data, isInitialLoading, isError } = useListGroups();
+  const { formatMessage } = useIntl();
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get(SEARCH_PARAM);
+  const [groupFilter, setGroupFilter] = React.useState(filterParam ?? "");
+  const deferredGroupFilter = useDeferredValue(groupFilter);
+
+  // Replace-navigate so typing never stacks history entries. setSearchParams changes identity on
+  // every URL change (it's a useCallback closing over the memoized searchParams), so this effect
+  // re-runs after its own write; the guard below turns that re-run into a no-op instead of an
+  // infinite replace loop, and also skips the redundant replace on mount when the URL already
+  // matches.
+  useEffect(() => {
+    if ((searchParams.get(SEARCH_PARAM) ?? "") === deferredGroupFilter) {
+      return;
+    }
+
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params);
+        if (deferredGroupFilter) {
+          next.set(SEARCH_PARAM, deferredGroupFilter);
+        } else {
+          next.delete(SEARCH_PARAM);
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  }, [deferredGroupFilter, searchParams, setSearchParams]);
+
+  const groups = data?.groups ?? [];
+
+  // The predicate reads the URL parameter rather than the local input state, so a shared or
+  // reloaded URL filters identically. Both matched fields are visible on the card.
+  const filterValue = filterParam?.toLowerCase() ?? "";
+  const filteredGroups = groups.filter(
+    (group) =>
+      group.name.toLowerCase().includes(filterValue) ||
+      (group.description?.toLowerCase().includes(filterValue) ?? false)
+  );
+
+  const isReady = !isInitialLoading && !isError;
+  const hasNoGroups = isReady && groups.length === 0;
+  const hasNoMatches = isReady && !hasNoGroups && filteredGroups.length === 0;
+  const showList = isReady && !hasNoGroups && !hasNoMatches;
+
+  return (
+    <FlexContainer direction="column" gap="md">
+      <FlexContainer justifyContent="space-between" alignItems="center">
+        <FlexItem className={styles.searchInputWrapper}>
+          <SearchInput
+            value={groupFilter}
+            onChange={setGroupFilter}
+            placeholder={formatMessage({ id: "settings.organization.groups.search.placeholder" })}
+          />
+        </FlexItem>
+      </FlexContainer>
+      {isInitialLoading && (
+        <Box py="xl">
+          <LoadingSpinner />
+        </Box>
+      )}
+      {isError && (
+        <Box py="xl">
+          <Text color="red">
+            <FormattedMessage id="settings.organization.groups.list.error" />
+          </Text>
+        </Box>
+      )}
+      {hasNoGroups && (
+        <Box py="xl">
+          <EmptyState
+            text={<FormattedMessage id="settings.organization.groups.empty" />}
+            description={<FormattedMessage id="settings.organization.groups.empty.description" />}
+          />
+        </Box>
+      )}
+      {hasNoMatches && (
+        <Box py="xl" pl="lg">
+          <Text color="grey" italicized>
+            <FormattedMessage id="settings.organization.groups.noSearchResults" />
+          </Text>
+        </Box>
+      )}
+      {showList && (
+        <FlexContainer direction="column" gap="md">
+          {filteredGroups.map((group) => (
+            <GroupCard key={group.groupId} group={group} />
+          ))}
+        </FlexContainer>
+      )}
+    </FlexContainer>
+  );
+};

@@ -18,6 +18,7 @@ interface CollapsibleProps {
   type?: "footer" | "inline" | "section";
   hideWhenEmpty?: boolean;
   "data-testid"?: string;
+  "aria-label"?: string;
   initiallyOpen?: boolean;
   noBodyPadding?: boolean;
   onClick?: (newOpenState: boolean) => void;
@@ -33,6 +34,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
   hideWhenEmpty = false,
   children,
   "data-testid": dataTestId,
+  "aria-label": ariaLabel,
   initiallyOpen = false,
   noBodyPadding = false,
   onClick,
@@ -51,6 +53,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
         >
           <DisclosureButton
             data-testid={dataTestId}
+            aria-label={ariaLabel}
             className={classNames(buttonClassName, styles.button, { [styles.buttonSection]: type === "section" })}
             onClick={() => onClick?.(!open)}
           >
