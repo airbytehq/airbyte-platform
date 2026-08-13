@@ -2,14 +2,16 @@ import React, { useDeferredValue, useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
+import { Badge } from "components/ui/Badge";
 import { Box } from "components/ui/Box";
 import { EmptyState } from "components/ui/EmptyState";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
+import { Message } from "components/ui/Message";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useListGroups } from "core/api";
+import { useCurrentOrganizationInfo, useListGroups } from "core/api";
 
 import { GroupCard } from "./GroupCard";
 import styles from "./GroupsList.module.scss";
@@ -19,6 +21,10 @@ const SEARCH_PARAM = "search";
 export const GroupsList: React.FC = () => {
   const { data, isInitialLoading, isError } = useListGroups();
   const { formatMessage } = useIntl();
+
+  const organizationInfo = useCurrentOrganizationInfo();
+  const sso = organizationInfo?.sso;
+  const scim = organizationInfo?.scim;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get(SEARCH_PARAM);
@@ -65,8 +71,18 @@ export const GroupsList: React.FC = () => {
   const hasNoMatches = isReady && !hasNoGroups && filteredGroups.length === 0;
   const showList = isReady && !hasNoGroups && !hasNoMatches;
 
+  const showScimBanner = scim || (isReady && groups.length > 0);
+
   return (
     <FlexContainer direction="column" gap="md">
+      {showScimBanner && (
+        <Message
+          type="warning"
+          text={formatMessage({
+            id: scim ? "settings.organization.groups.scim.banner" : "settings.organization.groups.scim.enableBanner",
+          })}
+        />
+      )}
       <FlexContainer justifyContent="space-between" alignItems="center">
         <FlexItem className={styles.searchInputWrapper}>
           <SearchInput
@@ -75,6 +91,22 @@ export const GroupsList: React.FC = () => {
             placeholder={formatMessage({ id: "settings.organization.groups.search.placeholder" })}
           />
         </FlexItem>
+        <FlexContainer alignItems="center">
+          {sso && (
+            <Badge variant="blue" radius="2xs" uppercase={false}>
+              <Text size="sm">
+                <FormattedMessage id="settings.organization.groups.scim.ssoEnabled" />
+              </Text>
+            </Badge>
+          )}
+          {scim && (
+            <Badge variant="teal" radius="2xs" uppercase={false}>
+              <Text size="sm">
+                <FormattedMessage id="settings.organization.groups.scim.scimEnabled" />
+              </Text>
+            </Badge>
+          )}
+        </FlexContainer>
       </FlexContainer>
       {isInitialLoading && (
         <Box py="xl">
