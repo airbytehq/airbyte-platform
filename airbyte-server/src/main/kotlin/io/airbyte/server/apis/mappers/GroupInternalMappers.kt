@@ -5,9 +5,12 @@
 package io.airbyte.server.apis.mappers
 
 import io.airbyte.api.server.generated.models.GroupMemberRead
+import io.airbyte.api.server.generated.models.GroupPermissionRead
 import io.airbyte.api.server.generated.models.GroupRead
+import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.config.Group
 import io.airbyte.config.GroupMember
+import io.airbyte.config.Permission
 
 fun Group.toGroupRead(): GroupRead =
   GroupRead(
@@ -25,4 +28,13 @@ fun GroupMember.toGroupMemberRead(): GroupMemberRead =
     userId = userId,
     userEmail = email ?: "",
     userName = name ?: "",
+  )
+
+fun Permission.toGroupPermissionRead(): GroupPermissionRead =
+  GroupPermissionRead(
+    permissionId = permissionId,
+    groupId = groupId!!,
+    permissionType = PermissionType.valueOf(permissionType.name),
+    workspaceId = workspaceId,
+    organizationId = organizationId,
   )

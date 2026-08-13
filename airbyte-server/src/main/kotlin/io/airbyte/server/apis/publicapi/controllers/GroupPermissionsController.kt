@@ -16,9 +16,7 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.GroupService
-import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
-import io.airbyte.data.services.WorkspaceService
 import io.airbyte.domain.models.GroupId
 import io.airbyte.publicApi.server.generated.apis.PublicGroupPermissionsApi
 import io.airbyte.publicApi.server.generated.models.GroupPermissionCreateRequest
@@ -33,6 +31,7 @@ import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.mappers.toGroupPermissionResponse
 import io.airbyte.server.apis.publicapi.mappers.toGroupPermissions
 import io.airbyte.server.apis.publicapi.mappers.toPermission
+import io.airbyte.server.helpers.GroupPermissionValidator
 import io.airbyte.server.helpers.GroupsEntitlementHelper
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
@@ -47,12 +46,11 @@ import java.util.UUID
 open class GroupPermissionsController(
   private val groupService: GroupService,
   private val permissionService: PermissionService,
-  private val workspaceService: WorkspaceService,
-  private val organizationService: OrganizationService,
   private val trackingHelper: TrackingHelper,
   private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
   private val groupsEntitlementHelper: GroupsEntitlementHelper,
+  private val groupPermissionValidator: GroupPermissionValidator,
 ) : PublicGroupPermissionsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListGroupPermissions(groupId: UUID): Response {
@@ -118,103 +116,19 @@ open class GroupPermissionsController(
     // Check that the entitlement is working
     groupsEntitlementHelper.ensureEntitled(group.organizationId)
 
-    // Validate that the user has access to the workspace/organization they're trying to grant permissions for
-    if (workspaceId != null) {
-      // Validate the workspace exists
-      val workspace =
-        try {
-          workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
-        } catch (_: ConfigNotFoundException) {
-          throw ResourceNotFoundProblem(
-            ProblemResourceData()
-              .resourceType("workspace")
-              .resourceId(workspaceId.toString()),
-          )
-        }
+    val permissionTypeEnum = Permission.PermissionType.valueOf(groupPermissionCreateRequest.permissionType.name)
 
-      // Prevent cross-organization scope escalation: verify workspace belongs to same org as group
-      if (workspace.organizationId != group.organizationId.value) {
-        val badRequestProblem =
-          BadRequestProblem(
-            ProblemMessageData().message(
-              "Cannot grant group permissions to workspace in different organization. " +
-                "Group belongs to organization ${group.organizationId.value}, " +
-                "but workspace belongs to organization ${workspace.organizationId}",
-            ),
-          )
-        trackingHelper.trackFailuresIfAny(
-          GROUP_PERMISSIONS_PATH,
-          POST,
-          userId,
-          badRequestProblem,
-        )
-        throw badRequestProblem
-      }
-
-      // User must have workspace_admin or higher role for the target workspace
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withRef(AuthenticationId.WORKSPACE_ID, workspaceId.toString())
-        .requireRole(AuthRoleConstants.WORKSPACE_ADMIN)
-    } else if (organizationId != null) {
-      // Validate the organization exists
-      val organization = organizationService.getOrganization(organizationId)
-      if (organization.isEmpty) {
-        throw ResourceNotFoundProblem(
-          ProblemResourceData()
-            .resourceType("organization")
-            .resourceId(organizationId.toString()),
-        )
-      }
-
-      // Prevent cross-organization scope escalation: verify target org matches group's org
-      if (organizationId != group.organizationId.value) {
-        val badRequestProblem =
-          BadRequestProblem(
-            ProblemMessageData().message(
-              "Cannot grant group permissions to different organization. " +
-                "Group belongs to organization ${group.organizationId.value}, " +
-                "but permission targets organization $organizationId",
-            ),
-          )
-        trackingHelper.trackFailuresIfAny(
-          GROUP_PERMISSIONS_PATH,
-          POST,
-          userId,
-          badRequestProblem,
-        )
-        throw badRequestProblem
-      }
-
-      // User must have organization_admin or higher role for the target organization
-      roleResolver
-        .newRequest()
-        .withCurrentUser()
-        .withRef(AuthenticationId.ORGANIZATION_ID, organizationId.toString())
-        .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
-    } else {
-      val badRequestProblem =
-        BadRequestProblem(
-          ProblemMessageData().message("Workspace ID or Organization ID must be provided in order to create a group permission."),
-        )
-      trackingHelper.trackFailuresIfAny(
-        GROUP_PERMISSIONS_PATH,
-        POST,
-        userId,
-        badRequestProblem,
-      )
-      throw badRequestProblem
+    // Validate type/scope coherence and that the user has access to the workspace/organization
+    // they're trying to grant permissions for
+    try {
+      groupPermissionValidator.validateScope(group, permissionTypeEnum, workspaceId, organizationId)
+    } catch (e: BadRequestProblem) {
+      trackingHelper.trackFailuresIfAny(GROUP_PERMISSIONS_PATH, POST, userId, e)
+      throw e
     }
 
     // Check for duplicate group permissions
-    val permissionTypeEnum = Permission.PermissionType.valueOf(groupPermissionCreateRequest.permissionType.name)
-    val isDuplicate =
-      when {
-        workspaceId != null -> permissionService.groupPermissionExistsForWorkspace(groupId, permissionTypeEnum, workspaceId)
-        organizationId != null -> permissionService.groupPermissionExistsForOrganization(groupId, permissionTypeEnum, organizationId)
-        else -> false
-      }
+    val isDuplicate = groupPermissionValidator.isDuplicate(groupId, permissionTypeEnum, workspaceId, organizationId)
 
     if (isDuplicate) {
       val resourceType = if (workspaceId != null) "workspace" else "organization"

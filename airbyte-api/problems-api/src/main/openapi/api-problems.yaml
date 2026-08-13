@@ -1132,6 +1132,27 @@ components:
               default: A group with this name already exists in this organization.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    GroupPermissionAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:group-permission-already-exists
+            title:
+              type: string
+              default: Group permission already exists
+            detail:
+              type: string
+              default: An equivalent permission already exists for this group.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
     GroupManagedByScimProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

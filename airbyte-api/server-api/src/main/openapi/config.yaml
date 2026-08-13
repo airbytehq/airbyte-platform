@@ -6140,6 +6140,82 @@ paths:
           description: SCIM manages the group.
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  # GROUP PERMISSIONS
+  /v1/group_permissions/list:
+    post:
+      summary: List group permissions
+      tags:
+        - group_permission
+      operationId: listGroupPermissions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved group permissions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupPermissionReadList"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/group_permissions/create:
+    post:
+      summary: Create a group permission
+      tags:
+        - group_permission
+      operationId: createGroupPermission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupPermissionCreate"
+      responses:
+        "200":
+          description: Successfully created group permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupPermissionRead"
+        "400":
+          description: The scope is invalid, cross-organization, or missing.
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "409":
+          description: An equivalent group permission already exists.
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/group_permissions/delete:
+    post:
+      summary: Delete a group permission
+      tags:
+        - group_permission
+      operationId: deleteGroupPermission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupPermissionIdRequestBody"
+      responses:
+        "204":
+          description: Successfully deleted group permission.
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/domain_verifications/list_pending:
     post:
       tags:
@@ -22116,7 +22192,10 @@ components:
 
     GroupPermissionCreateRequest:
       title: Root Type for GroupPermissionCreateRequest
-      description: Request body for creating a group permission
+      description: >-
+        Request body for creating a group permission. Exactly one of workspaceId or organizationId
+        must be set, and the permissionType must match the chosen scope: workspace-scoped permission
+        types require workspaceId, and organization-scoped permission types require organizationId.
       required:
         - permissionType
       type: object
@@ -22136,6 +22215,75 @@ components:
       x-sdk-component: true
       x-sdk-entity: GroupPermission
       x-sdk-param-suppress-computed-diff: true
+
+    GroupPermissionRead:
+      type: object
+      required:
+        - permissionId
+        - groupId
+        - permissionType
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+    GroupPermissionReadList:
+      type: object
+      required:
+        - permissions
+      properties:
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupPermissionRead"
+    GroupPermissionCreate:
+      description: >-
+        Exactly one of workspaceId or organizationId must be set, and the permissionType must match
+        the chosen scope: workspace-scoped permission types require workspaceId, and
+        organization-scoped permission types require organizationId.
+      type: object
+      required:
+        - groupId
+        - permissionType
+      properties:
+        groupId:
+          type: string
+          format: uuid
+        permissionType:
+          # PublicPermissionType, not PermissionType: groups must never be granted instance_admin.
+          $ref: "#/components/schemas/PublicPermissionType"
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+    GroupPermissionIdRequestBody:
+      type: object
+      required:
+        - groupId
+        - permissionId
+      properties:
+        groupId:
+          type: string
+          format: uuid
+        permissionId:
+          type: string
+          format: uuid
 
     # Public APIs - Organizations
     OrganizationResponse:
