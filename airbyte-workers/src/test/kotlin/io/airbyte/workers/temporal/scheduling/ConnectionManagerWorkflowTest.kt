@@ -1566,6 +1566,65 @@ internal class ConnectionManagerWorkflowTest {
   @Nested
   @DisplayName("Test that the workflow is properly restarted after activity failures.")
   internal inner class FailedActivityWorkflow {
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Test that attempt creation conflicts restart without the workflow failure delay")
+    fun testAttemptCreationConflictRestartsWithoutDelay() {
+      returnTrueForLastJobOrAttemptFailure()
+      every { mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()) } answers {
+        throw ApplicationFailure.newNonRetryableFailure(
+          "Conflict",
+          JobCreationAndStatusUpdateActivity.ATTEMPT_CREATION_CONFLICT_FAILURE_TYPE,
+        )
+      }
+
+      val input = testInputBuilder()
+      input.skipScheduling = true
+
+      startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofSeconds(1))
+
+      verify(atLeast = 1) { mJobCreationAndStatusUpdateActivity.attemptFailureWithAttemptNumber(any()) }
+      assertWorkflowWasContinuedAsNew()
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @DisplayName("Test that retryable attempt creation conflicts retain the workflow failure delay")
+    fun testRetryableAttemptCreationConflictRetainsDelay() {
+      returnTrueForLastJobOrAttemptFailure()
+      every { mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()) } answers {
+        throw ApplicationFailure.newFailure(
+          "Conflict",
+          JobCreationAndStatusUpdateActivity.ATTEMPT_CREATION_CONFLICT_FAILURE_TYPE,
+        )
+      }
+
+      val input = testInputBuilder()
+      input.skipScheduling = true
+
+      startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofMinutes(8))
+
+      verify(exactly = 5) { mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()) }
+      val closedWorkflowRequest =
+        ListClosedWorkflowExecutionsRequest
+          .newBuilder()
+          .setNamespace(testEnv.namespace)
+          .setExecutionFilter(WorkflowExecutionFilter.newBuilder().setWorkflowId(WORKFLOW_ID))
+          .build()
+      val closedWorkflowResponse =
+        testEnv
+          .workflowService
+          .blockingStub()
+          .listClosedWorkflowExecutions(closedWorkflowRequest)
+      Assertions.assertThat(closedWorkflowResponse.executionsCount).isZero()
+
+      testEnv.sleep(WORKFLOW_FAILURE_RESTART_DELAY)
+
+      assertWorkflowWasContinuedAsNew()
+    }
+
     @ParameterizedTest
     @MethodSource("io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowTest#getSetupFailingActivity")
     fun testWorkflowRestartedAfterFailedActivity(
@@ -1599,9 +1658,23 @@ internal class ConnectionManagerWorkflowTest {
 
       startWorkflowAndWaitUntilReady(workflow, input)
 
-      // Sleep test env for restart delay, plus a small buffer to ensure that the workflow executed the
-      // logic after the delay
-      testEnv.sleep(WORKFLOW_FAILURE_RESTART_DELAY.plus(Duration.ofSeconds(10)))
+      testEnv.sleep(WORKFLOW_FAILURE_RESTART_DELAY.minus(Duration.ofSeconds(1)))
+
+      val closedWorkflowRequest =
+        ListClosedWorkflowExecutionsRequest
+          .newBuilder()
+          .setNamespace(testEnv.namespace)
+          .setExecutionFilter(WorkflowExecutionFilter.newBuilder().setWorkflowId(WORKFLOW_ID))
+          .build()
+      val closedWorkflowResponse =
+        testEnv
+          .workflowService
+          .blockingStub()
+          .listClosedWorkflowExecutions(closedWorkflowRequest)
+      Assertions.assertThat(closedWorkflowResponse.executionsCount).isZero()
+
+      // Advance past the restart delay and allow the workflow to execute the failure handling logic.
+      testEnv.sleep(Duration.ofSeconds(11))
 
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 

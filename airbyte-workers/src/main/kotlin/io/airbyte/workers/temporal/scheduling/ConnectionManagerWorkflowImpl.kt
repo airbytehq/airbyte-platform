@@ -86,6 +86,7 @@ import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import io.temporal.api.enums.v1.ParentClosePolicy
 import io.temporal.failure.ActivityFailure
+import io.temporal.failure.ApplicationFailure
 import io.temporal.failure.CanceledFailure
 import io.temporal.failure.ChildWorkflowFailure
 import io.temporal.workflow.Async
@@ -887,27 +888,54 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     try {
       return mapper.apply(input)
     } catch (e: Exception) {
-      val sleepDuration = getWorkflowDelay()
-      log.error(
-        "[ACTIVITY-FAILURE] Connection {} failed to run an activity.({}).  Connection manager workflow will be restarted after a delay of {}.",
-        connectionId,
-        input!!.javaClass.getSimpleName(),
-        sleepDuration,
-        e,
-      )
+      val isAttemptCreationConflict =
+        generateSequence<Throwable>(e) { it.cause }
+          .filterIsInstance<ApplicationFailure>()
+          .any {
+            it.isNonRetryable &&
+              it.type == JobCreationAndStatusUpdateActivity.ATTEMPT_CREATION_CONFLICT_FAILURE_TYPE
+          }
+      val shouldSkipWorkflowRestartDelay =
+        isAttemptCreationConflict &&
+          Workflow.getVersion(
+            ATTEMPT_CREATION_CONFLICT_FAST_FAIL_TAG,
+            Workflow.DEFAULT_VERSION,
+            ATTEMPT_CREATION_CONFLICT_FAST_FAIL_CURRENT_VERSION,
+          ) >= ATTEMPT_CREATION_CONFLICT_FAST_FAIL_CURRENT_VERSION
 
-      // TODO (https://github.com/airbytehq/airbyte/issues/13773) add tracking/notification
+      if (shouldSkipWorkflowRestartDelay) {
+        // This cannot hot-loop: an attempt creation conflict means this run already created a job, and
+        // buildStartWorkflowInput clears skipScheduling so the next run waits from that job's createdAt.
+        log.error(
+          "[ACTIVITY-FAILURE] Connection {} failed to run an activity.({}) due to a non-retryable attempt creation conflict. " +
+            "Connection manager workflow will be restarted without delay.",
+          connectionId,
+          input!!.javaClass.getSimpleName(),
+          e,
+        )
+      } else {
+        val sleepDuration = getWorkflowDelay()
+        log.error(
+          "[ACTIVITY-FAILURE] Connection {} failed to run an activity.({}).  Connection manager workflow will be restarted after a delay of {}.",
+          connectionId,
+          input!!.javaClass.getSimpleName(),
+          sleepDuration,
+          e,
+        )
 
-      // Wait a short delay before restarting the workflow. This is important if, for example, the failing
-      // activity was configured to not have retries.
-      // Without this delay, that activity could cause the workflow to loop extremely quickly,
-      // overwhelming temporal.
-      log.info(
-        "Waiting {} before restarting the workflow for connection {}, to prevent spamming temporal with restarts.",
-        sleepDuration,
-        connectionId,
-      )
-      Workflow.sleep(sleepDuration)
+        // TODO (https://github.com/airbytehq/airbyte/issues/13773) add tracking/notification
+
+        // Wait a short delay before restarting the workflow. This is important if, for example, the failing
+        // activity was configured to not have retries.
+        // Without this delay, that activity could cause the workflow to loop extremely quickly,
+        // overwhelming temporal.
+        log.info(
+          "Waiting {} before restarting the workflow for connection {}, to prevent spamming temporal with restarts.",
+          sleepDuration,
+          connectionId,
+        )
+        Workflow.sleep(sleepDuration)
+      }
 
       // Add the exception to the span, as it represents a platform failure
       addExceptionToTrace(e)
@@ -922,7 +950,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         log.warn("Can't properly fail the job, the next run will clean the state in the EnsureCleanJobStateActivity")
       }
 
-      log.info("Finished wait for connection {}, restarting connection manager workflow", connectionId)
+      log.info("Restarting connection manager workflow for connection {}", connectionId)
 
       val newWorkflowInput = buildStartWorkflowInput(connectionId)
 
@@ -1653,6 +1681,8 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
     private const val CAPACITY_CHECK_TAG = "capacity_check"
     private const val CAPACITY_CHECK_CURRENT_VERSION = 1
+    private const val ATTEMPT_CREATION_CONFLICT_FAST_FAIL_TAG = "attempt_creation_conflict_fast_fail"
+    private const val ATTEMPT_CREATION_CONFLICT_FAST_FAIL_CURRENT_VERSION = 1
     private val CAPACITY_CHECK_POLL_INTERVAL: Duration = Duration.ofMinutes(1)
     private val MANUAL_CAPACITY_WAIT_TIMEOUT: Duration = Duration.ofHours(8)
     private const val NEXT_SCHEDULED_CAPACITY_WAIT_CANCELLATION_REASON =

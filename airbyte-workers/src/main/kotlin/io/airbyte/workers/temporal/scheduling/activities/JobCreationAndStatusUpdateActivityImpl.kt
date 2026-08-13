@@ -116,7 +116,7 @@ class JobCreationAndStatusUpdateActivityImpl(
         // still be retried.
         throw ApplicationFailure.newNonRetryableFailure(
           "createNewAttemptNumber for job ${input.jobId} failed with non-retryable status ${e.statusCode}: ${e.message}",
-          e::class.java.name,
+          JobCreationAndStatusUpdateActivity.ATTEMPT_CREATION_CONFLICT_FAILURE_TYPE,
         )
       }
 

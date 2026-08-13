@@ -588,6 +588,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
           jobCreationAndStatusUpdateActivity.createNewAttemptNumber(AttemptCreationInput(JOB_ID))
         }
       Assertions.assertTrue(thrown.isNonRetryable)
+      Assertions.assertEquals(JobCreationAndStatusUpdateActivity.ATTEMPT_CREATION_CONFLICT_FAILURE_TYPE, thrown.type)
     }
   }
 

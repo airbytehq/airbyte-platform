@@ -17,6 +17,10 @@ import java.util.UUID
  */
 @ActivityInterface
 interface JobCreationAndStatusUpdateActivity {
+  companion object {
+    const val ATTEMPT_CREATION_CONFLICT_FAILURE_TYPE = "attempt-creation-conflict"
+  }
+
   /**
    * JobCreationInput.
    */
