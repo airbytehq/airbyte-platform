@@ -2,7 +2,9 @@
   "destinations": [
     {
       "ab_internal": {
+        "isEnterprise": false,
         "ql": 100,
+        "requireVersionIncrementsInPullRequests": true,
         "sl": 100
       },
       "allowedHosts": {
@@ -15,13 +17,10 @@
       },
       "connectorTestSuitesOptions": [
         {
-          "suite": "unitTests",
-          "testConnections": null,
-          "testSecrets": null
+          "suite": "unitTests"
         },
         {
           "suite": "integrationTests",
-          "testConnections": null,
           "testSecrets": [
             {
               "fileName": "config.json",
@@ -35,7 +34,6 @@
         },
         {
           "suite": "acceptanceTests",
-          "testConnections": null,
           "testSecrets": [
             {
               "fileName": "config.json",
@@ -50,15 +48,32 @@
       ],
       "custom": false,
       "destinationDefinitionId": "042ce96f-1158-4662-9543-e2ff015be97a",
-      "dockerImageTag": "0.1.44",
+      "dockerImageTag": "0.1.45",
       "dockerRepository": "airbyte/destination-astra",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/astra",
+      "externalDocumentationUrls": [
+        {
+          "title": "DataStax Astra documentation",
+          "type": "api_reference",
+          "url": "https://docs.datastax.com/en/astra-serverless/docs/"
+        },
+        {
+          "title": "Authentication",
+          "type": "authentication_guide",
+          "url": "https://docs.datastax.com/en/astra-serverless/docs/manage/org/manage-tokens.html"
+        },
+        {
+          "title": "CQL reference",
+          "type": "sql_reference",
+          "url": "https://docs.datastax.com/en/cql-oss/3.x/cql/cql_reference/cqlReferenceTOC.html"
+        }
+      ],
       "generated": {
         "git": {
-          "commit_author": "Airbyte",
-          "commit_author_email": "integration-test@airbyte.io",
-          "commit_sha": "f4c34dd15c70317c288139803342e900bd4e8ea9",
-          "commit_timestamp": "2025-03-30T00:19:27+02:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "4e2b4e99a6a7cbcee101a12b5573a7401c05fdad",
+          "commit_timestamp": "2026-08-13T21:46:45+00:00"
         },
         "metrics": {
           "all": {
@@ -74,22 +89,22 @@
             "usage": null
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-astra/0.1.44.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-astra/0.1.45.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-          "metadata_etag": "CMDOjom4sIwDEAE=",
           "metadata_file_path": "metadata/airbyte/destination-astra/latest/metadata.yaml",
-          "metadata_last_modified": "2025-03-29T23:25:37.367000+00:00",
-          "registry_entry_generated_at": "2025-03-29T23:28:41.371792"
+          "metadata_last_modified": "2026-08-13T21:55:06.144760+00:00",
+          "registry_entry_generated_at": "2026-08-13T21:55:06.144760+00:00"
         }
       },
       "githubIssueLabel": "destination-astra",
       "icon": "astra.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-astra/latest/icon.svg",
       "language": "python",
-      "license": "MIT",
+      "license": "ELv2",
       "name": "Astra DB",
       "packageInfo": {
-        "cdk_version": "python:0.81.6"
+        "cdk_version": "python:7.25.1"
       },
       "public": true,
       "releaseDate": "2024-01-10",
@@ -548,11 +563,12 @@
           "append",
           "append_dedup"
         ],
-        "supportsIncremental": true
+        "supportsDBT": false,
+        "supportsIncremental": true,
+        "supportsNormalization": false
       },
       "supportLevel": "community",
-      "supportsFileTransfer": false,
-      "supportsRefreshes": false,
+      "supportsDataActivation": false,
       "tags": [
         "language:python",
         "cdk:python"
@@ -1703,7 +1719,9 @@
     },
     {
       "ab_internal": {
+        "isEnterprise": false,
         "ql": 100,
+        "requireVersionIncrementsInPullRequests": true,
         "sl": 100
       },
       "connectorBuildOptions": {
@@ -1711,27 +1729,35 @@
       },
       "connectorTestSuitesOptions": [
         {
-          "suite": "unitTests",
-          "testConnections": null,
-          "testSecrets": null
+          "suite": "unitTests"
         },
         {
-          "suite": "integrationTests",
-          "testConnections": null,
-          "testSecrets": null
+          "suite": "integrationTests"
         }
       ],
       "custom": false,
       "destinationDefinitionId": "0b75218b-f702-4a28-85ac-34d3d84c0fc2",
-      "dockerImageTag": "0.0.54",
+      "dockerImageTag": "0.0.55",
       "dockerRepository": "airbyte/destination-chroma",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/chroma",
+      "externalDocumentationUrls": [
+        {
+          "title": "Chroma documentation",
+          "type": "api_reference",
+          "url": "https://docs.trychroma.com/"
+        },
+        {
+          "title": "Authentication",
+          "type": "authentication_guide",
+          "url": "https://docs.trychroma.com/deployment/auth"
+        }
+      ],
       "generated": {
         "git": {
-          "commit_author": "Airbyte",
-          "commit_author_email": "integration-test@airbyte.io",
-          "commit_sha": "b9f96e7a52a178f88a94e75eee1ca77bc35077ab",
-          "commit_timestamp": "2025-05-03T23:09:22+03:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "16b8dfd9118d1371ef15d8dcff39d4db295ffd60",
+          "commit_timestamp": "2026-08-13T21:47:53+00:00"
         },
         "metrics": {
           "all": {
@@ -1743,22 +1769,22 @@
             "usage": "low"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-chroma/0.0.54.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-chroma/0.0.55.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-          "metadata_etag": "CK3S39iPiI0DEAE=",
           "metadata_file_path": "metadata/airbyte/destination-chroma/latest/metadata.yaml",
-          "metadata_last_modified": "2025-05-03T20:19:15.513000+00:00",
-          "registry_entry_generated_at": "2025-05-03T20:21:39.343164"
+          "metadata_last_modified": "2026-08-13T21:56:25.872751+00:00",
+          "registry_entry_generated_at": "2026-08-13T21:56:25.872751+00:00"
         }
       },
       "githubIssueLabel": "destination-chroma",
       "icon": "chroma.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-chroma/latest/icon.svg",
       "language": "python",
-      "license": "MIT",
+      "license": "ELv2",
       "name": "Chroma",
       "packageInfo": {
-        "cdk_version": "python:0.81.6"
+        "cdk_version": "python:7.25.1"
       },
       "public": true,
       "releaseDate": "2023-09-13",
@@ -2337,11 +2363,12 @@
           "append",
           "append_dedup"
         ],
-        "supportsIncremental": true
+        "supportsDBT": false,
+        "supportsIncremental": true,
+        "supportsNormalization": false
       },
       "supportLevel": "community",
-      "supportsFileTransfer": false,
-      "supportsRefreshes": false,
+      "supportsDataActivation": false,
       "tags": [
         "language:python",
         "cdk:python"
@@ -7685,7 +7712,7 @@
       ],
       "custom": false,
       "destinationDefinitionId": "65de8962-48c9-11ee-be56-0242ac120002",
-      "dockerImageTag": "0.0.60",
+      "dockerImageTag": "0.0.61",
       "dockerRepository": "airbyte/destination-milvus",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/milvus",
       "externalDocumentationUrls": [
@@ -7707,10 +7734,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "9815aae30244de21617332353c5b76fb904f1cb6",
-          "commit_timestamp": "2026-07-02T14:20:47-07:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "b0167f9048b1e853b434777914318355b6d1176c",
+          "commit_timestamp": "2026-08-13T21:48:18+00:00"
         },
         "metrics": {
           "all": {
@@ -7726,12 +7753,12 @@
             "usage": "medium"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-milvus/0.0.60.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-milvus/0.0.61.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-milvus/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-02T21:28:21.493754+00:00",
-          "registry_entry_generated_at": "2026-07-02T21:28:21.493754+00:00"
+          "metadata_last_modified": "2026-08-13T21:57:00.200201+00:00",
+          "registry_entry_generated_at": "2026-08-13T21:57:00.200201+00:00"
         }
       },
       "githubIssueLabel": "destination-milvus",
@@ -7741,7 +7768,7 @@
       "license": "ELv2",
       "name": "Milvus",
       "packageInfo": {
-        "cdk_version": "python:0.81.6"
+        "cdk_version": "python:7.25.1"
       },
       "public": true,
       "releaseDate": "2023-08-15",
@@ -8307,7 +8334,9 @@
           "append",
           "append_dedup"
         ],
-        "supportsIncremental": true
+        "supportsDBT": false,
+        "supportsIncremental": true,
+        "supportsNormalization": false
       },
       "supportLevel": "community",
       "supportsDataActivation": false,
@@ -10757,7 +10786,7 @@
       ],
       "custom": false,
       "destinationDefinitionId": "e0e06cd9-57a9-4d39-b032-bedd874ae875",
-      "dockerImageTag": "0.1.11",
+      "dockerImageTag": "0.1.12",
       "dockerRepository": "airbyte/destination-pgvector",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/pgvector",
       "externalDocumentationUrls": [
@@ -10774,10 +10803,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "1aee552fc7317205fbd625186987ce91d11df30e",
-          "commit_timestamp": "2026-07-02T14:14:21-07:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "b355a806613b2f4179e9ce42a6b603e00c1c42ce",
+          "commit_timestamp": "2026-08-13T21:49:16+00:00"
         },
         "metrics": {
           "all": {
@@ -10793,12 +10822,12 @@
             "usage": "medium"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-pgvector/0.1.11.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-pgvector/0.1.12.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-pgvector/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-02T21:22:55.845039+00:00",
-          "registry_entry_generated_at": "2026-07-02T21:22:55.845039+00:00"
+          "metadata_last_modified": "2026-08-13T21:59:22.571959+00:00",
+          "registry_entry_generated_at": "2026-08-13T21:59:22.571959+00:00"
         }
       },
       "githubIssueLabel": "destination-pgvector",
@@ -10808,7 +10837,7 @@
       "license": "ELv2",
       "name": "PGVector",
       "packageInfo": {
-        "cdk_version": "python:1.8.0"
+        "cdk_version": "python:7.25.1"
       },
       "public": true,
       "releaseDate": "2024-09-25",
@@ -11325,7 +11354,9 @@
           "append",
           "append_dedup"
         ],
-        "supportsIncremental": true
+        "supportsDBT": false,
+        "supportsIncremental": true,
+        "supportsNormalization": false
       },
       "supportLevel": "community",
       "supportsDataActivation": false,
@@ -11458,6 +11489,606 @@
       "releaseDate": "2023-08-15",
       "releaseStage": "beta",
       "releases": {
+        "releaseCandidates": {
+          "0.1.51": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 300,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "*.${indexing.pinecone_environment}.pinecone.io",
+                "api.openai.com",
+                "api.cohere.ai",
+                "${embedding.api_base}"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/python-connector-base:4.0.2@sha256:9fdb1888c4264cf6fee473649ecb593f56f58e5d0096a87ee0b231777e2e3e73"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_DESTINATION-PINECONE__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_DESTINATION-PINECONE__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "destinationDefinitionId": "3d2b6f84-7f0d-4e3f-a5e5-7c7d4b50eabd",
+            "dockerImageTag": "0.1.51",
+            "dockerRepository": "airbyte/destination-pinecone",
+            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/pinecone",
+            "externalDocumentationUrls": [
+              {
+                "title": "Pinecone documentation",
+                "type": "api_reference",
+                "url": "https://docs.pinecone.io/"
+              },
+              {
+                "title": "Release notes",
+                "type": "api_release_history",
+                "url": "https://docs.pinecone.io/release-notes"
+              },
+              {
+                "title": "Authentication",
+                "type": "authentication_guide",
+                "url": "https://docs.pinecone.io/guides/get-started/authentication"
+              },
+              {
+                "title": "Rate limits",
+                "type": "rate_limits",
+                "url": "https://docs.pinecone.io/troubleshooting/rate-limits"
+              },
+              {
+                "title": "Pinecone Status",
+                "type": "status_page",
+                "url": "https://status.pinecone.io/"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "af4d48689f5273b323afeeff984e57ab5b2a9cfa",
+                "commit_timestamp": "2026-08-13T14:41:17-07:00"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-pinecone/0.1.51.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/destination-pinecone/0.1.51/metadata.yaml",
+                "metadata_last_modified": "2026-08-13T21:49:09.047270+00:00",
+                "registry_entry_generated_at": "2026-08-13T21:49:09.047270+00:00"
+              }
+            },
+            "githubIssueLabel": "destination-pinecone",
+            "icon": "pinecone.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-pinecone/latest/icon.svg",
+            "language": "python",
+            "license": "ELv2",
+            "name": "Pinecone",
+            "packageInfo": {
+              "cdk_version": "python:7.25.1"
+            },
+            "public": true,
+            "releaseDate": "2023-08-15",
+            "releaseStage": "beta",
+            "releases": {
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": false,
+                "packageName": "airbyte-destination-pinecone"
+              }
+            },
+            "resourceRequirements": {
+              "jobSpecific": [
+                {
+                  "jobType": "sync",
+                  "resourceRequirements": {
+                    "memory_limit": "2Gi",
+                    "memory_request": "2Gi"
+                  }
+                }
+              ]
+            },
+            "sourceType": "vectorstore",
+            "spec": {
+              "connectionSpecification": {
+                "description": "The configuration model for the Vector DB based destinations. This model is used to generate the UI for the destination configuration,\nas well as to provide type safety for the configuration passed to the destination.\n\nThe configuration model is composed of four parts:\n* Processing configuration\n* Embedding configuration\n* Indexing configuration\n* Advanced configuration\n\nProcessing, embedding and advanced configuration are provided by this base class, while the indexing configuration is provided by the destination connector in the sub class.",
+                "groups": [
+                  {
+                    "id": "processing",
+                    "title": "Processing"
+                  },
+                  {
+                    "id": "embedding",
+                    "title": "Embedding"
+                  },
+                  {
+                    "id": "indexing",
+                    "title": "Indexing"
+                  },
+                  {
+                    "id": "advanced",
+                    "title": "Advanced"
+                  }
+                ],
+                "properties": {
+                  "embedding": {
+                    "description": "Embedding configuration",
+                    "group": "embedding",
+                    "oneOf": [
+                      {
+                        "description": "Use the OpenAI API to embed text. This option is using the text-embedding-ada-002 model with 1536 embedding dimensions.",
+                        "properties": {
+                          "mode": {
+                            "const": "openai",
+                            "default": "openai",
+                            "enum": [
+                              "openai"
+                            ],
+                            "title": "Mode",
+                            "type": "string"
+                          },
+                          "openai_key": {
+                            "airbyte_secret": true,
+                            "title": "OpenAI API key",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "openai_key",
+                          "mode"
+                        ],
+                        "title": "OpenAI",
+                        "type": "object"
+                      },
+                      {
+                        "description": "Use the Cohere API to embed text.",
+                        "properties": {
+                          "cohere_key": {
+                            "airbyte_secret": true,
+                            "title": "Cohere API key",
+                            "type": "string"
+                          },
+                          "mode": {
+                            "const": "cohere",
+                            "default": "cohere",
+                            "enum": [
+                              "cohere"
+                            ],
+                            "title": "Mode",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "cohere_key",
+                          "mode"
+                        ],
+                        "title": "Cohere",
+                        "type": "object"
+                      },
+                      {
+                        "description": "Use a fake embedding made out of random vectors with 1536 embedding dimensions. This is useful for testing the data pipeline without incurring any costs.",
+                        "properties": {
+                          "mode": {
+                            "const": "fake",
+                            "default": "fake",
+                            "enum": [
+                              "fake"
+                            ],
+                            "title": "Mode",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode"
+                        ],
+                        "title": "Fake",
+                        "type": "object"
+                      },
+                      {
+                        "description": "Use the Azure-hosted OpenAI API to embed text. This option is using the text-embedding-ada-002 model with 1536 embedding dimensions.",
+                        "properties": {
+                          "api_base": {
+                            "description": "The base URL for your Azure OpenAI resource.  You can find this in the Azure portal under your Azure OpenAI resource",
+                            "examples": [
+                              "https://your-resource-name.openai.azure.com"
+                            ],
+                            "title": "Resource base URL",
+                            "type": "string"
+                          },
+                          "deployment": {
+                            "description": "The deployment for your Azure OpenAI resource.  You can find this in the Azure portal under your Azure OpenAI resource",
+                            "examples": [
+                              "your-resource-name"
+                            ],
+                            "title": "Deployment",
+                            "type": "string"
+                          },
+                          "mode": {
+                            "const": "azure_openai",
+                            "default": "azure_openai",
+                            "enum": [
+                              "azure_openai"
+                            ],
+                            "title": "Mode",
+                            "type": "string"
+                          },
+                          "openai_key": {
+                            "airbyte_secret": true,
+                            "description": "The API key for your Azure OpenAI resource.  You can find this in the Azure portal under your Azure OpenAI resource",
+                            "title": "Azure OpenAI API key",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "openai_key",
+                          "api_base",
+                          "deployment",
+                          "mode"
+                        ],
+                        "title": "Azure OpenAI",
+                        "type": "object"
+                      },
+                      {
+                        "description": "Use a service that's compatible with the OpenAI API to embed text.",
+                        "properties": {
+                          "api_key": {
+                            "airbyte_secret": true,
+                            "default": "",
+                            "title": "API key",
+                            "type": "string"
+                          },
+                          "base_url": {
+                            "description": "The base URL for your OpenAI-compatible service",
+                            "examples": [
+                              "https://your-service-name.com"
+                            ],
+                            "title": "Base URL",
+                            "type": "string"
+                          },
+                          "dimensions": {
+                            "description": "The number of dimensions the embedding model is generating",
+                            "examples": [
+                              1536,
+                              384
+                            ],
+                            "title": "Embedding dimensions",
+                            "type": "integer"
+                          },
+                          "mode": {
+                            "const": "openai_compatible",
+                            "default": "openai_compatible",
+                            "enum": [
+                              "openai_compatible"
+                            ],
+                            "title": "Mode",
+                            "type": "string"
+                          },
+                          "model_name": {
+                            "default": "text-embedding-ada-002",
+                            "description": "The name of the model to use for embedding",
+                            "examples": [
+                              "text-embedding-ada-002"
+                            ],
+                            "title": "Model name",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "base_url",
+                          "dimensions",
+                          "mode"
+                        ],
+                        "title": "OpenAI-compatible",
+                        "type": "object"
+                      }
+                    ],
+                    "title": "Embedding",
+                    "type": "object"
+                  },
+                  "indexing": {
+                    "description": "Pinecone is a popular vector store that can be used to store and retrieve embeddings.",
+                    "group": "indexing",
+                    "properties": {
+                      "index": {
+                        "description": "Pinecone index in your project to load data into",
+                        "title": "Index",
+                        "type": "string"
+                      },
+                      "pinecone_environment": {
+                        "description": "Pinecone Cloud environment to use",
+                        "examples": [
+                          "us-west1-gcp",
+                          "gcp-starter"
+                        ],
+                        "title": "Pinecone Environment",
+                        "type": "string"
+                      },
+                      "pinecone_key": {
+                        "airbyte_secret": true,
+                        "description": "The Pinecone API key to use matching the environment (copy from Pinecone console)",
+                        "title": "Pinecone API key",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "pinecone_key",
+                      "pinecone_environment",
+                      "index"
+                    ],
+                    "title": "Indexing",
+                    "type": "object"
+                  },
+                  "omit_raw_text": {
+                    "default": false,
+                    "description": "Do not store the text that gets embedded along with the vector and the metadata in the destination. If set to true, only the vector and the metadata will be stored - in this case raw text for LLM use cases needs to be retrieved from another source.",
+                    "group": "advanced",
+                    "title": "Do not store raw text",
+                    "type": "boolean"
+                  },
+                  "processing": {
+                    "group": "processing",
+                    "properties": {
+                      "chunk_overlap": {
+                        "default": 0,
+                        "description": "Size of overlap between chunks in tokens to store in vector store to better capture relevant context",
+                        "title": "Chunk overlap",
+                        "type": "integer"
+                      },
+                      "chunk_size": {
+                        "description": "Size of chunks in tokens to store in vector store (make sure it is not too big for the context if your LLM)",
+                        "maximum": 8191,
+                        "minimum": 1,
+                        "title": "Chunk size",
+                        "type": "integer"
+                      },
+                      "field_name_mappings": {
+                        "default": [],
+                        "description": "List of fields to rename. Not applicable for nested fields, but can be used to rename fields already flattened via dot notation.",
+                        "items": {
+                          "properties": {
+                            "from_field": {
+                              "description": "The field name in the source",
+                              "title": "From field name",
+                              "type": "string"
+                            },
+                            "to_field": {
+                              "description": "The field name to use in the destination",
+                              "title": "To field name",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "from_field",
+                            "to_field"
+                          ],
+                          "title": "FieldNameMappingConfigModel",
+                          "type": "object"
+                        },
+                        "title": "Field name mappings",
+                        "type": "array"
+                      },
+                      "metadata_fields": {
+                        "always_show": true,
+                        "default": [],
+                        "description": "List of fields in the record that should be stored as metadata. The field list is applied to all streams in the same way and non-existing fields are ignored. If none are defined, all fields are considered metadata fields. When specifying text fields, you can access nested fields in the record by using dot notation, e.g. `user.name` will access the `name` field in the `user` object. It's also possible to use wildcards to access all fields in an object, e.g. `users.*.name` will access all `names` fields in all entries of the `users` array. When specifying nested paths, all matching values are flattened into an array set to a field named by the path.",
+                        "examples": [
+                          "age",
+                          "user",
+                          "user.name"
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Fields to store as metadata",
+                        "type": "array"
+                      },
+                      "text_fields": {
+                        "always_show": true,
+                        "default": [],
+                        "description": "List of fields in the record that should be used to calculate the embedding. The field list is applied to all streams in the same way and non-existing fields are ignored. If none are defined, all fields are considered text fields. When specifying text fields, you can access nested fields in the record by using dot notation, e.g. `user.name` will access the `name` field in the `user` object. It's also possible to use wildcards to access all fields in an object, e.g. `users.*.name` will access all `names` fields in all entries of the `users` array.",
+                        "examples": [
+                          "text",
+                          "user.name",
+                          "users.*.name"
+                        ],
+                        "items": {
+                          "type": "string"
+                        },
+                        "title": "Text fields to embed",
+                        "type": "array"
+                      },
+                      "text_splitter": {
+                        "description": "Split text fields into chunks based on the specified method.",
+                        "oneOf": [
+                          {
+                            "description": "Split the text by the list of separators until the chunk size is reached, using the earlier mentioned separators where possible. This is useful for splitting text fields by paragraphs, sentences, words, etc.",
+                            "properties": {
+                              "keep_separator": {
+                                "default": false,
+                                "description": "Whether to keep the separator in the resulting chunks",
+                                "title": "Keep separator",
+                                "type": "boolean"
+                              },
+                              "mode": {
+                                "const": "separator",
+                                "default": "separator",
+                                "enum": [
+                                  "separator"
+                                ],
+                                "title": "Mode",
+                                "type": "string"
+                              },
+                              "separators": {
+                                "default": [
+                                  "\"\\n\\n\"",
+                                  "\"\\n\"",
+                                  "\" \"",
+                                  "\"\""
+                                ],
+                                "description": "List of separator strings to split text fields by. The separator itself needs to be wrapped in double quotes, e.g. to split by the dot character, use \".\". To split by a newline, use \"\\n\".",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "title": "Separators",
+                                "type": "array"
+                              }
+                            },
+                            "required": [
+                              "mode"
+                            ],
+                            "title": "By Separator",
+                            "type": "object"
+                          },
+                          {
+                            "description": "Split the text by Markdown headers down to the specified header level. If the chunk size fits multiple sections, they will be combined into a single chunk.",
+                            "properties": {
+                              "mode": {
+                                "const": "markdown",
+                                "default": "markdown",
+                                "enum": [
+                                  "markdown"
+                                ],
+                                "title": "Mode",
+                                "type": "string"
+                              },
+                              "split_level": {
+                                "default": 1,
+                                "description": "Level of markdown headers to split text fields by. Headings down to the specified level will be used as split points",
+                                "maximum": 6,
+                                "minimum": 1,
+                                "title": "Split level",
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "mode"
+                            ],
+                            "title": "By Markdown header",
+                            "type": "object"
+                          },
+                          {
+                            "description": "Split the text by suitable delimiters based on the programming language. This is useful for splitting code into chunks.",
+                            "properties": {
+                              "language": {
+                                "description": "Split code in suitable places based on the programming language",
+                                "enum": [
+                                  "cpp",
+                                  "go",
+                                  "java",
+                                  "js",
+                                  "php",
+                                  "proto",
+                                  "python",
+                                  "rst",
+                                  "ruby",
+                                  "rust",
+                                  "scala",
+                                  "swift",
+                                  "markdown",
+                                  "latex",
+                                  "html",
+                                  "sol"
+                                ],
+                                "title": "Language",
+                                "type": "string"
+                              },
+                              "mode": {
+                                "const": "code",
+                                "default": "code",
+                                "enum": [
+                                  "code"
+                                ],
+                                "title": "Mode",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "language",
+                              "mode"
+                            ],
+                            "title": "By Programming Language",
+                            "type": "object"
+                          }
+                        ],
+                        "title": "Text splitter",
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "chunk_size"
+                    ],
+                    "title": "ProcessingConfigModel",
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "embedding",
+                  "processing",
+                  "indexing"
+                ],
+                "title": "Destination Config",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/pinecone",
+              "supported_destination_sync_modes": [
+                "overwrite",
+                "append",
+                "append_dedup"
+              ],
+              "supportsDBT": false,
+              "supportsIncremental": true,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "tags": [
+              "language:python",
+              "cdk:python"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -12700,22 +13331,37 @@
       },
       "connectorTestSuitesOptions": [
         {
-          "suite": "unitTests",
-          "testConnections": null,
-          "testSecrets": null
+          "suite": "unitTests"
         }
       ],
       "custom": false,
       "destinationDefinitionId": "6eb1198a-6d38-43e5-aaaa-dccd8f71db2b",
-      "dockerImageTag": "0.1.41",
+      "dockerImageTag": "0.1.42",
       "dockerRepository": "airbyte/destination-qdrant",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/qdrant",
+      "externalDocumentationUrls": [
+        {
+          "title": "Qdrant documentation",
+          "type": "api_reference",
+          "url": "https://qdrant.tech/documentation/"
+        },
+        {
+          "title": "Release notes",
+          "type": "api_release_history",
+          "url": "https://github.com/qdrant/qdrant/releases"
+        },
+        {
+          "title": "Authentication",
+          "type": "authentication_guide",
+          "url": "https://qdrant.tech/documentation/guides/security/"
+        }
+      ],
       "generated": {
         "git": {
-          "commit_author": "Airbyte",
-          "commit_author_email": "integration-test@airbyte.io",
-          "commit_sha": "10d4ba065d9ce7ed5a4dd6636d7c569330b095e4",
-          "commit_timestamp": "2025-05-10T19:13:22+03:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "6134e8b1250a7f0df09d5829ece78f9603902e31",
+          "commit_timestamp": "2026-08-13T21:47:20+00:00"
         },
         "metrics": {
           "all": {
@@ -12731,22 +13377,22 @@
             "usage": "medium"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-qdrant/0.1.41.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-qdrant/0.1.42.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-          "metadata_etag": "CM2S+a6pmY0DEAE=",
           "metadata_file_path": "metadata/airbyte/destination-qdrant/latest/metadata.yaml",
-          "metadata_last_modified": "2025-05-10T16:29:22.714000+00:00",
-          "registry_entry_generated_at": "2025-05-10T16:33:15.473110"
+          "metadata_last_modified": "2026-08-13T21:56:01.777111+00:00",
+          "registry_entry_generated_at": "2026-08-13T21:56:01.777111+00:00"
         }
       },
       "githubIssueLabel": "destination-qdrant",
       "icon": "qdrant.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-qdrant/latest/icon.svg",
       "language": "python",
-      "license": "MIT",
+      "license": "ELv2",
       "name": "Qdrant",
       "packageInfo": {
-        "cdk_version": "python:2.4.0"
+        "cdk_version": "python:7.25.1"
       },
       "public": true,
       "releaseDate": "2023-09-22",
@@ -13272,12 +13918,12 @@
           "append",
           "append_dedup"
         ],
-        "supportsIncremental": true
+        "supportsDBT": false,
+        "supportsIncremental": true,
+        "supportsNormalization": false
       },
       "supportLevel": "community",
       "supportsDataActivation": false,
-      "supportsFileTransfer": false,
-      "supportsRefreshes": false,
       "tags": [
         "language:python",
         "cdk:python"
@@ -16652,27 +17298,30 @@
       },
       "connectorTestSuitesOptions": [
         {
-          "suite": "unitTests",
-          "testConnections": null,
-          "testSecrets": null
+          "suite": "unitTests"
         },
         {
-          "suite": "integrationTests",
-          "testConnections": null,
-          "testSecrets": null
+          "suite": "integrationTests"
         }
       ],
       "custom": false,
       "destinationDefinitionId": "e9810f61-4bab-46d2-bb22-edfc902e0644",
-      "dockerImageTag": "0.2.15",
+      "dockerImageTag": "0.2.16",
       "dockerRepository": "airbyte/destination-sftp-json",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/sftp-json",
+      "externalDocumentationUrls": [
+        {
+          "title": "SFTP protocol documentation",
+          "type": "api_reference",
+          "url": "https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer"
+        }
+      ],
       "generated": {
         "git": {
-          "commit_author": "David Gold",
-          "commit_author_email": "32782137+dbgold17@users.noreply.github.com",
-          "commit_sha": "470d8c83eb0bc69725d6ac8f403ab56c0dfe0169",
-          "commit_timestamp": "2025-05-27T16:02:51-07:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "389b32dff7b70dca7fbd7f17e42250b3f72fdf00",
+          "commit_timestamp": "2026-08-13T23:17:01+00:00"
         },
         "metrics": {
           "all": {
@@ -16688,19 +17337,19 @@
             "usage": "medium"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-sftp-json/0.2.15.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-sftp-json/0.2.16.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-          "metadata_etag": "CNnkyLTjxI0DEAE=",
           "metadata_file_path": "metadata/airbyte/destination-sftp-json/latest/metadata.yaml",
-          "metadata_last_modified": "2025-05-27T23:13:32.512000+00:00",
-          "registry_entry_generated_at": "2025-05-27T23:16:39.788201"
+          "metadata_last_modified": "2026-08-13T23:23:36.435669+00:00",
+          "registry_entry_generated_at": "2026-08-13T23:23:36.435669+00:00"
         }
       },
       "githubIssueLabel": "destination-sftp-json",
       "icon": "icon.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-sftp-json/latest/icon.svg",
       "language": "python",
-      "license": "MIT",
+      "license": "ELv2",
       "name": "SFTP-JSON",
       "packageInfo": {
         "cdk_version": "python:6.48.10"
@@ -16775,8 +17424,6 @@
       },
       "supportLevel": "community",
       "supportsDataActivation": false,
-      "supportsFileTransfer": false,
-      "supportsRefreshes": false,
       "tags": [
         "language:python",
         "cdk:python"
@@ -17249,7 +17896,7 @@
       ],
       "custom": false,
       "destinationDefinitionId": "d9e5418d-f0f4-4d19-a8b1-5630543638e2",
-      "dockerImageTag": "0.2.29",
+      "dockerImageTag": "0.2.30",
       "dockerRepository": "airbyte/destination-snowflake-cortex",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-cortex",
       "externalDocumentationUrls": [
@@ -17271,10 +17918,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "3a056a25a99e165a0838c99d69afef5282935d07",
-          "commit_timestamp": "2026-07-02T13:33:44-07:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "fb7e64944dd45186ae7c9aa83790b5b459be788c",
+          "commit_timestamp": "2026-08-13T22:41:41+00:00"
         },
         "metrics": {
           "all": {
@@ -17290,12 +17937,12 @@
             "usage": "low"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake-cortex/0.2.29.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake-cortex/0.2.30.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-snowflake-cortex/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-02T20:41:29.537987+00:00",
-          "registry_entry_generated_at": "2026-07-02T20:41:29.537987+00:00"
+          "metadata_last_modified": "2026-08-13T22:51:32.494644+00:00",
+          "registry_entry_generated_at": "2026-08-13T22:51:32.494644+00:00"
         }
       },
       "githubIssueLabel": "destination-snowflake-cortex",
@@ -17305,7 +17952,7 @@
       "license": "ELv2",
       "name": "Snowflake Cortex",
       "packageInfo": {
-        "cdk_version": "python:1.8.0"
+        "cdk_version": "python:7.25.1"
       },
       "public": true,
       "releaseDate": "2024-05-14",
@@ -17833,7 +18480,9 @@
           "append",
           "append_dedup"
         ],
-        "supportsIncremental": true
+        "supportsDBT": false,
+        "supportsIncremental": true,
+        "supportsNormalization": false
       },
       "supportLevel": "community",
       "supportsDataActivation": false,
@@ -19281,7 +19930,7 @@
       ],
       "custom": false,
       "destinationDefinitionId": "7b7d7a0d-954c-45a0-bcfc-39a634b97736",
-      "dockerImageTag": "0.2.63",
+      "dockerImageTag": "0.2.64",
       "dockerRepository": "airbyte/destination-weaviate",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/weaviate",
       "externalDocumentationUrls": [
@@ -19303,10 +19952,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "8af439b4a477a5ebeed9ae479d43680a13d21b2e",
-          "commit_timestamp": "2026-07-02T13:33:13-07:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "0d4e0215486e0e89450628d67a6bbd07cb80d381",
+          "commit_timestamp": "2026-08-13T21:45:58+00:00"
         },
         "metrics": {
           "all": {
@@ -19322,12 +19971,12 @@
             "usage": "low"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-weaviate/0.2.63.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-weaviate/0.2.64.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-weaviate/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-02T20:40:52.197445+00:00",
-          "registry_entry_generated_at": "2026-07-02T20:40:52.197445+00:00"
+          "metadata_last_modified": "2026-08-13T21:54:34.676477+00:00",
+          "registry_entry_generated_at": "2026-08-13T21:54:34.676477+00:00"
         }
       },
       "githubIssueLabel": "destination-weaviate",
@@ -19337,7 +19986,7 @@
       "license": "ELv2",
       "name": "Weaviate",
       "packageInfo": {
-        "cdk_version": "python:0.81.6"
+        "cdk_version": "python:7.25.1"
       },
       "public": true,
       "releaseStage": "alpha",
@@ -20008,7 +20657,9 @@
           "append",
           "append_dedup"
         ],
-        "supportsIncremental": true
+        "supportsDBT": false,
+        "supportsIncremental": true,
+        "supportsNormalization": false
       },
       "supportLevel": "community",
       "supportsDataActivation": false,
@@ -30231,15 +30882,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-braintree/0.3.38.spdx.json",
@@ -41022,16 +41673,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-discord/0.1.9.spdx.json",
@@ -64145,15 +64796,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -82496,15 +83147,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           }
         },
@@ -126635,6 +127286,269 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/twilio-migrations",
+        "releaseCandidates": {
+          "1.1.0-rc.1": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 200,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 200
+            },
+            "allowedHosts": {
+              "hosts": [
+                "api.twilio.com",
+                "pricing.twilio.com",
+                "monitor.twilio.com",
+                "conversations.twilio.com",
+                "studio.twilio.com",
+                "trunking.twilio.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.24.0@sha256:e34fb609bccdeb77474763c77e3621ea9d5adf9f65f2d9851102cc14a1caa281"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "liveTests",
+                "testConnections": [
+                  {
+                    "id": "57c28219-3a06-48db-9aec-df3cd20be9f6",
+                    "name": "twilio_config_with_lookback_dev_null"
+                  },
+                  {
+                    "id": "91aac9a6-6ece-42e2-9ed5-c6f6a226cc3e",
+                    "name": "twilio_config_dev_null"
+                  }
+                ]
+              },
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config_with_lookback.json",
+                    "name": "SECRET_SOURCE-TWILIO_LOOKBACK_WINDOW__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-TWILIO__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "1.1.0-rc.1",
+            "dockerRepository": "airbyte/source-twilio",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/twilio",
+            "externalDocumentationUrls": [
+              {
+                "title": "Twilio API reference",
+                "type": "api_reference",
+                "url": "https://www.twilio.com/docs/usage/api"
+              },
+              {
+                "title": "Twilio Changelog",
+                "type": "api_release_history",
+                "url": "https://www.twilio.com/en-us/changelog"
+              },
+              {
+                "title": "Twilio authentication",
+                "type": "authentication_guide",
+                "url": "https://www.twilio.com/docs/iam/api-keys"
+              },
+              {
+                "title": "Twilio API OpenAPI specification",
+                "type": "openapi_spec",
+                "url": "https://github.com/twilio/twilio-oai"
+              },
+              {
+                "title": "Twilio rate limits",
+                "type": "rate_limits",
+                "url": "https://www.twilio.com/docs/usage/api#rate-limiting"
+              },
+              {
+                "title": "Twilio Status",
+                "type": "status_page",
+                "url": "https://status.twilio.com/"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "bc60560137c796f214583dee45b7622db733b2e8",
+                "commit_timestamp": "2026-08-13T12:27:00+00:00"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-twilio/1.1.0-rc.1.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-twilio/1.1.0-rc.1/metadata.yaml",
+                "metadata_last_modified": "2026-08-13T23:48:24.264987+00:00",
+                "registry_entry_generated_at": "2026-08-13T23:48:24.264987+00:00"
+              }
+            },
+            "githubIssueLabel": "source-twilio",
+            "icon": "twilio.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-twilio/latest/icon.svg",
+            "language": "manifest-only",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 5400,
+            "name": "Twilio",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "1.0.0": {
+                  "message": "The `services` and `roles` streams have been migrated from Twilio's deprecated Programmable Chat API (`chat.twilio.com/v2`) to the Twilio Conversations API (`conversations.twilio.com/v1`). Twilio is retiring Programmable Chat on June 1, 2026. Existing Service and Role SIDs carry over automatically, but the record schema for these two streams has been simplified to match the Conversations API response and the `service_sid` field on `roles` records is renamed to `chat_service_sid`. Users of the `services` and `roles` streams should refresh the source schema and clear data for those streams after upgrading.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/twilio-migrations#1.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "services",
+                        "roles"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2026-05-30"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/twilio-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": false,
+                "packageName": "airbyte-source-twilio"
+              }
+            },
+            "sourceDefinitionId": "b9dc6155-672e-42ea-b10d-9f1f1fb95ab1",
+            "sourceType": "api",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "properties": {
+                  "account_sid": {
+                    "airbyte_secret": true,
+                    "description": "Twilio account SID",
+                    "order": 1,
+                    "title": "Account ID",
+                    "type": "string"
+                  },
+                  "auth_token": {
+                    "airbyte_secret": true,
+                    "description": "Twilio Auth Token.",
+                    "order": 2,
+                    "title": "Auth Token",
+                    "type": "string"
+                  },
+                  "lookback_window": {
+                    "default": 0,
+                    "description": "How far into the past to look for records. (in minutes)",
+                    "examples": [
+                      60
+                    ],
+                    "maximum": 576000,
+                    "minimum": 0,
+                    "order": 4,
+                    "title": "Lookback window",
+                    "type": "integer"
+                  },
+                  "num_workers": {
+                    "default": 3,
+                    "description": "The number of worker threads to use for the sync.",
+                    "examples": [
+                      1,
+                      2,
+                      3
+                    ],
+                    "maximum": 40,
+                    "minimum": 1,
+                    "order": 5,
+                    "title": "Number of concurrent threads",
+                    "type": "integer"
+                  },
+                  "slice_step_duration": {
+                    "default": "P1M",
+                    "description": "The time window size for each data slice when syncing incremental streams. Smaller windows may help avoid timeouts for accounts with large data volumes.",
+                    "enum": [
+                      "P1D",
+                      "P1W",
+                      "P1M",
+                      "P1Y"
+                    ],
+                    "enum_labels": {
+                      "P1D": "1 Day",
+                      "P1M": "1 Month",
+                      "P1W": "1 Week",
+                      "P1Y": "1 Year"
+                    },
+                    "order": 6,
+                    "title": "Slice Step Duration",
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "description": "UTC date and time in the format 2020-10-01T00:00:00Z. Any data before this date will not be replicated.",
+                    "examples": [
+                      "2020-10-01T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 3,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "title": "Replication Start Date",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "account_sid",
+                  "auth_token",
+                  "start_date"
+                ],
+                "title": "Twilio Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/twilio",
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "suggestedStreams": {
+              "streams": [
+                "calls",
+                "messages"
+              ]
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "language:manifest-only",
+              "cdk:low-code"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
