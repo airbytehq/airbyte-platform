@@ -15,6 +15,7 @@ import { ScimConfigStatus, ScimIdpProvider } from "core/api/types/AirbyteClient"
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { useModalService } from "core/services/Modal";
 import { useNotificationService } from "core/services/Notification";
+import { links } from "core/utils/links";
 
 import { CollapsibleSettingsCard } from "./CollapsibleSettingsCard";
 import { ScimCredentialsModal } from "./ScimCredentialsModal";
@@ -205,6 +206,8 @@ export const ScimSettingsCard: React.FC = () => {
   return (
     <CollapsibleSettingsCard
       label={formatMessage({ id: "settings.organizationSettings.scim.label" })}
+      docsLink={links.scimDocs}
+      docsLinkLabel={formatMessage({ id: "settings.organizationSettings.scim.docsLink" })}
       status={status === ScimConfigStatus.enabled ? <Icon type="check" color="primary" /> : undefined}
     >
       <FlexContainer direction="column" gap="lg">

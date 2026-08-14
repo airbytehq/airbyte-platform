@@ -168,6 +168,25 @@ describe("ScimSettingsCard", () => {
     });
   });
 
+  describe("docs link", () => {
+    it("renders the SCIM docs link in the header without opening the card", async () => {
+      await render(<ScimSettingsCard />);
+
+      expect(screen.getByRole("link")).toHaveAttribute(
+        "href",
+        "https://docs.airbyte.com/platform/access-management/scim"
+      );
+    });
+
+    it("renders no docs link when the card is hidden", async () => {
+      setAccess({ isScimAvailable: false, scimConfig: { ...baseConfig, available: false } });
+
+      await render(<ScimSettingsCard />);
+
+      expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    });
+  });
+
   describe("not configured", () => {
     it("renders the grey chip, selector, and footnote, with no header check icon", async () => {
       await renderOpenCard();

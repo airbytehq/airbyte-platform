@@ -58,6 +58,7 @@ export const links = {
   connectionMappings: `${BASE_DOCS_LINK}/using-airbyte/mappings`,
   dataActivationDocs: `${BASE_DOCS_LINK}/platform/move-data/elt-data-activation`,
   ssoDocs: `${BASE_DOCS_LINK}/platform/access-management/sso`,
+  scimDocs: `${BASE_DOCS_LINK}/platform/access-management/scim`,
   fixIngress1_7: `${BASE_DOCS_LINK}/platform/deploying-airbyte/integrations/ingress-1-7`,
   refreshes: `${BASE_DOCS_LINK}/platform/operator-guides/refreshes`,
   privateLinkDocs: `${BASE_DOCS_LINK}/platform/operating-airbyte/privatelink`,

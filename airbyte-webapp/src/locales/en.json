@@ -1530,6 +1530,7 @@
   "settings.organizationSettings.sso.redirectUri.signOut": "Sign-out redirect URI",
   "settings.organizationSettings.sso.redirectUri.placeholder": "(your-company-identifier)",
   "settings.organizationSettings.scim.label": "SCIM",
+  "settings.organizationSettings.scim.docsLink": "Learn to enable SCIM in Airbyte and your identity provider",
   "settings.organizationSettings.scim.provisioning": "SCIM provisioning",
   "settings.organizationSettings.scim.status.notConfigured": "Not configured",
   "settings.organizationSettings.scim.status.enabled": "Enabled",
