@@ -88,12 +88,26 @@ describe(`${RoleManagementCell.name}`, () => {
     mockUseIntent.mockReturnValue(false);
   });
 
-  it("renders the organization role as static text when SCIM is enabled", async () => {
+  it("leaves the organization role editable when SCIM is enabled", async () => {
     setScim(true);
 
     await render(<RoleManagementCell user={ORG_MEMBER} resourceType="organization" />);
 
-    expect(screen.getByText("Member")).toBeInTheDocument();
+    expect(screen.getByTestId("role-management-menu")).toBeInTheDocument();
+  });
+
+  it("renders a pending organization invitation as static text when SCIM is enabled", async () => {
+    setScim(true);
+
+    const PENDING_INVITATION: UnifiedUserModel = {
+      id: "invitation-id",
+      userEmail: "invited@airbyte.io",
+      invitationStatus: "pending",
+      invitationPermissionType: "organization_member",
+    };
+
+    await render(<RoleManagementCell user={PENDING_INVITATION} resourceType="organization" />);
+
     expect(screen.queryByTestId("role-management-menu")).not.toBeInTheDocument();
   });
 

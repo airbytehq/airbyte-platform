@@ -3,6 +3,7 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
+import { useCurrentOrganizationInfo } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 
 import { CancelInvitationMenuItem } from "./CancelInvitationMenuItem";
@@ -24,10 +25,15 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
     user?.organizationPermission?.permissionType &&
     user?.organizationPermission?.permissionType !== "organization_member";
 
+  const organizationInfo = useCurrentOrganizationInfo();
+  // The identity provider owns organization membership; Airbyte owns permissions.
+  // Role options stay; removing the member does not.
+  const membershipManagedByScim = resourceType === "organization" && Boolean(organizationInfo?.scim);
+
   // user is invited but not yet accepted
   const showCancelInvite = !!user.invitationStatus;
   // user is not invited (so has a relevant permission) and we're in a workspace OR organization
-  const showRemoveUser = !user.invitationStatus;
+  const showRemoveUser = !user.invitationStatus && !membershipManagedByScim;
 
   return (
     <ul className={styles.roleManagementMenu__rolesList}>

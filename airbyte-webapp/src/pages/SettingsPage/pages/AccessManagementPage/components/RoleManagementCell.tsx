@@ -81,7 +81,9 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
     cannotDemoteUser ||
     !canEditPermissions ||
     user.id === currentUser.userId ||
-    (resourceType === "organization" && Boolean(organizationInfo?.scim));
+    // SCIM: an invitation row offers no role options, so its only menu item would be
+    // "Cancel invitation" - a membership operation the identity provider owns.
+    (resourceType === "organization" && Boolean(organizationInfo?.scim) && Boolean(user.invitationStatus));
 
   const tooltipContent =
     cannotDemoteUser && canEditPermissions
