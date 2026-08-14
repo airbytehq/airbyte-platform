@@ -136,6 +136,10 @@ export const YamlManifestEditor: React.FC = () => {
               const newManifest = json as ConnectorManifest;
               if (!lastLoadedManifest.current) {
                 lastLoadedManifest.current = newManifest;
+                // When the YAML editor is first mounted, resolve the manifest and update the ref state
+                // to ensure that $ref mappings are correctly extracted from the YAML content.
+                // Without this, linked/shared values ($refs) are lost when toggling back to UI mode.
+                debouncedResolveAndUpdateManifest(newManifest);
               } else if (!isEqual(lastLoadedManifest.current, newManifest)) {
                 setYamlIsDirty(true);
                 lastLoadedManifest.current = newManifest;
