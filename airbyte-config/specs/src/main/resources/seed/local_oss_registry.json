@@ -75162,7 +75162,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "2.21.1",
+      "dockerImageTag": "3.0.0",
       "dockerRepository": "airbyte/source-klaviyo",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/klaviyo",
       "externalDocumentationUrls": [
@@ -75183,10 +75183,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "4d0cb5ad7185b56f84f99efe3a473c271a275db9",
-          "commit_timestamp": "2026-08-11T06:25:57+00:00"
+          "commit_author": "fedecarossino",
+          "commit_author_email": "1626977+fedecarossino@users.noreply.github.com",
+          "commit_sha": "6680e4abac037c1e358adfcc1e8060083cf55a29",
+          "commit_timestamp": "2026-08-14T16:11:30+02:00"
         },
         "metrics": {
           "all": {
@@ -75202,12 +75202,23 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-klaviyo/2.21.1.spdx.json",
+        "release": {
+          "attributed_to": "fedecarossino",
+          "merge_commit_sha": "6680e4abac037c1e358adfcc1e8060083cf55a29",
+          "merged_at": "2026-08-14T14:11:30Z",
+          "pr_author_id": 1626977,
+          "pr_author_login": "fedecarossino",
+          "pr_author_type": "User",
+          "pr_number": 75495,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/75495",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-klaviyo/3.0.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-klaviyo/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-11T06:30:07.744842+00:00",
-          "registry_entry_generated_at": "2026-08-11T06:30:07.744842+00:00"
+          "metadata_last_modified": "2026-08-14T14:15:52.688403+00:00",
+          "registry_entry_generated_at": "2026-08-14T14:15:52.688403+00:00"
         }
       },
       "githubIssueLabel": "source-klaviyo",
@@ -75231,6 +75242,21 @@
             "message": "In this release, streams 'campaigns', 'email_templates', 'events', 'flows', 'global_exclusions', 'lists', and 'metrics' are now pulling data using latest API which has a different schema. Users will need to refresh the source schemas and reset these streams after upgrading.",
             "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/klaviyo-migrations#2.0.0",
             "upgradeDeadline": "2023-11-30"
+          },
+          "3.0.0": {
+            "deadlineAction": "disable",
+            "message": "The 'flow_series_reports' stream now emits one record per calendar day instead of one record per request window. Every 'statistics' field changes from an array of daily values to a single number for that day, and 'date' is now the real day the row reports on rather than the end of the request window. Both 'flow_series_reports' and 'campaign_values_reports' now request whole calendar day periods ending on the last complete day, which changes the reporting periods previously written by 'campaign_values_reports', and its 'date' is now the midnight that closes the reported period instead of a timestamp inside it. Users must refresh the source schema and clear both streams after upgrading. See the [Klaviyo migration guide](https://docs.airbyte.com/integrations/sources/klaviyo-migrations#upgrading-to-300) for details.",
+            "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/klaviyo-migrations#3.0.0",
+            "scopedImpact": [
+              {
+                "impactedScopes": [
+                  "flow_series_reports",
+                  "campaign_values_reports"
+                ],
+                "scopeType": "stream"
+              }
+            ],
+            "upgradeDeadline": "2026-08-31"
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/klaviyo-migrations",
@@ -75279,13 +75305,13 @@
                 "RESQ6t",
                 "RESQ6t,ABC123,XYZ789"
               ],
-              "order": 6,
+              "order": 7,
               "title": "Event Stream Metric IDs",
               "type": "string"
             },
             "lookback_window": {
               "default": 0,
-              "description": "The number of days to look back when syncing data in incremental mode. This helps capture any late-arriving data. Only applies to the events_detailed stream.",
+              "description": "The number of days to look back when syncing data in incremental mode. This helps capture any late-arriving data. Only applies to the events_detailed stream. For the flow_series_reports stream, use Reporting Lookback Window instead.",
               "examples": [
                 0,
                 7
@@ -75301,7 +75327,7 @@
                 "RESQ6t",
                 "RESQ6t,ABC123,XYZ789"
               ],
-              "order": 5,
+              "order": 6,
               "title": "Report Stream Conversion Metric IDs",
               "type": "string"
             },
@@ -75317,6 +75343,19 @@
               "minimum": 1,
               "order": 3,
               "title": "Number of concurrent threads",
+              "type": "integer"
+            },
+            "reporting_lookback_window": {
+              "default": 0,
+              "description": "Re-syncs the last N days of the flow_series_reports stream on every incremental run. Klaviyo keeps updating conversion attribution after a send - by default for up to 5 days, and up to 90 days if you raise the attribution window in your account settings - so the numbers first reported for a day keep changing for a while. Set this to at least your attribution window to pick those revisions up. Because flow_series_reports rows are keyed by the calendar day they report on, a destination that deduplicates on the primary key replaces the row previously written for a re-synced day, while in append mode each re-synced day adds an extra row per sync. This does not apply to campaign_values_reports: that endpoint returns a single aggregate for the whole requested period instead of a per-day breakdown, so a re-read cannot replace anything and would only add double-counted rows. Defaults to 0 (no re-sync).",
+              "examples": [
+                0,
+                7,
+                30
+              ],
+              "minimum": 0,
+              "order": 5,
+              "title": "Reporting Lookback Window (Days)",
               "type": "integer"
             },
             "start_date": {
@@ -99404,7 +99443,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.3.66",
+      "dockerImageTag": "0.3.67",
       "dockerRepository": "airbyte/source-pokeapi",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/pokeapi",
       "externalDocumentationUrls": [
@@ -99416,10 +99455,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "d841bcbdfc616f43c8fd0f91fcb5cfffed34f02d",
-          "commit_timestamp": "2026-08-11T06:37:31+00:00"
+          "commit_author": "Aaron (\"AJ\") Steers",
+          "commit_author_email": "aj@airbyte.io",
+          "commit_sha": "b38d7ec060c6322adfedeca19ed36c2d5f671257",
+          "commit_timestamp": "2026-08-13T18:35:55-07:00"
         },
         "metrics": {
           "all": {
@@ -99435,12 +99474,23 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pokeapi/0.3.66.spdx.json",
+        "release": {
+          "attributed_to": null,
+          "merge_commit_sha": "b38d7ec060c6322adfedeca19ed36c2d5f671257",
+          "merged_at": "2026-08-14T01:35:55Z",
+          "pr_author_id": null,
+          "pr_author_login": null,
+          "pr_author_type": null,
+          "pr_number": 84389,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84389",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pokeapi/0.3.67.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-pokeapi/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-11T06:42:04.962197+00:00",
-          "registry_entry_generated_at": "2026-08-11T06:42:04.962197+00:00"
+          "metadata_last_modified": "2026-08-14T01:40:15.294994+00:00",
+          "registry_entry_generated_at": "2026-08-14T01:40:15.294994+00:00"
         }
       },
       "githubIssueLabel": "source-pokeapi",
@@ -99462,7 +99512,7 @@
             "strategy": "fast"
           },
           "defaultRolloutMode": "autopilot",
-          "enableProgressiveRollout": true,
+          "enableProgressiveRollout": false,
           "initialPercentage": 0,
           "maxPercentage": 50
         }
