@@ -1,8 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 
-import { listGroupMembers, listGroups } from "../generated/AirbyteClient";
+import {
+  createGroupPermission,
+  deleteGroupPermission,
+  listGroupMembers,
+  listGroupPermissions,
+  listGroups,
+} from "../generated/AirbyteClient";
+import { GroupPermissionCreate, GroupPermissionIdRequestBody } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 
@@ -12,6 +19,8 @@ export const groupKeys = {
   list: (organizationId: string) => [...groupKeys.lists(), organizationId] as const,
   memberLists: () => [...groupKeys.all, "members"] as const,
   memberList: (groupId: string) => [...groupKeys.memberLists(), groupId] as const,
+  permissionLists: () => [...groupKeys.all, "permissions"] as const,
+  permissionList: (groupId: string) => [...groupKeys.permissionLists(), groupId] as const,
 };
 
 /**
@@ -51,4 +60,49 @@ export const useListGroupMembers = (groupId: string, options?: { enabled?: boole
   return useQuery(groupKeys.memberList(groupId), () => listGroupMembers({ groupId }, requestOptions), {
     enabled: options?.enabled ?? true,
   });
+};
+
+/**
+ * Deliberately a plain `useQuery`, for the same reason as `useListGroups` above: the only caller
+ * is the permissions-edit modal, which mounts this read on demand and has no error boundary of its
+ * own to catch a suspended throw. `listGroupPermissions` is organization-admin gated plus
+ * entitlement gated (`GroupsEntitlementHelper`), so a 403 is a reachable state that must render
+ * inline in the modal body rather than escape to the settings shell's boundary.
+ *
+ * Gated on `enabled` because the modal is the only caller and it mounts on demand.
+ */
+export const useListGroupPermissions = (groupId: string, options?: { enabled?: boolean }) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery(groupKeys.permissionList(groupId), () => listGroupPermissions({ groupId }, requestOptions), {
+    enabled: options?.enabled ?? true,
+  });
+};
+
+/**
+ * No update endpoint exists for group permissions, so every value change saves as a delete plus a
+ * create and a single save issues many of these calls at once. The caller owns invalidation: it
+ * invalidates `groupKeys.permissionList` once after every operation has settled, rather than once
+ * per call. Invalidating here would refetch an active query repeatedly mid-save, and each response
+ * would describe a half-applied state.
+ *
+ * The modal reports failures inline per row, so this hook raises no notification of its own.
+ */
+export const useCreateGroupPermission = () => {
+  const requestOptions = useRequestOptions();
+
+  return useMutation((groupPermission: GroupPermissionCreate) =>
+    createGroupPermission(groupPermission, requestOptions)
+  );
+};
+
+/**
+ * The caller owns invalidation. See `useCreateGroupPermission` above.
+ */
+export const useDeleteGroupPermission = () => {
+  const requestOptions = useRequestOptions();
+
+  return useMutation((groupPermissionIdRequestBody: GroupPermissionIdRequestBody) =>
+    deleteGroupPermission(groupPermissionIdRequestBody, requestOptions)
+  );
 };

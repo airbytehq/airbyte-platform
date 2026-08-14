@@ -1,0 +1,44 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.section {
+  background: colors.$foreground;
+  border: variables.$border-thin solid colors.$border-color;
+  border-radius: variables.$border-radius-sm;
+  overflow: hidden;
+
+  & + & {
+    margin-top: variables.$spacing-lg;
+  }
+}
+
+.section__header {
+  background: colors.$grey-50;
+  border-bottom: variables.$border-thin solid colors.$border-color;
+  padding: variables.$spacing-md variables.$spacing-lg;
+}
+
+.section__body {
+  padding: variables.$spacing-lg;
+}
+
+.columnHeaders {
+  margin-bottom: variables.$spacing-sm;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: variables.$spacing-md;
+  margin-bottom: variables.$spacing-lg;
+}
+
+.row__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.row__removeButton {
+  // Aligns the remove button with the vertical centre of the dropdown beside it.
+  margin-top: variables.$spacing-sm;
+}

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { render, TestWrapper } from "test-utils";
 
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useCurrentOrganizationInfo, useListGroups } from "core/api";
 import { GroupRead } from "core/api/types/AirbyteClient";
 
@@ -19,8 +20,15 @@ jest.mock("core/api", () => ({
   useCurrentOrganizationInfo: jest.fn(),
 }));
 
+// The cards this list renders each call `useCurrentOrganizationId` for the edit-permissions
+// modal's kebab. Its own behaviour is covered in GroupCard.test.tsx; here it only needs a value.
+jest.mock("area/organization/utils/useCurrentOrganizationId", () => ({
+  useCurrentOrganizationId: jest.fn(),
+}));
+
 const mockUseListGroups = useListGroups as jest.Mock;
 const mockUseCurrentOrganizationInfo = useCurrentOrganizationInfo as jest.Mock;
+const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.Mock;
 
 const organizationId = "org-1";
 
@@ -65,6 +73,7 @@ describe(`${GroupsList.name}`, () => {
     jest.clearAllMocks();
     setGroups([dataTeam, itTeam]);
     setOrganizationInfo({ sso: false, scim: false });
+    mockUseCurrentOrganizationId.mockReturnValue(organizationId);
   });
 
   it("renders one card per group, with the member count inside the group name", async () => {

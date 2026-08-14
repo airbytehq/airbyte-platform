@@ -3,8 +3,10 @@ import userEvent from "@testing-library/user-event";
 
 import { render } from "test-utils";
 
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useListGroupMembers } from "core/api";
 import { GroupMemberReadList, GroupRead } from "core/api/types/AirbyteClient";
+import { useModalService } from "core/services/Modal";
 
 import { GroupCard } from "./GroupCard";
 
@@ -15,7 +17,23 @@ jest.mock("core/api", () => ({
   useListGroupMembers: jest.fn(),
 }));
 
+jest.mock("area/organization/utils/useCurrentOrganizationId", () => ({
+  useCurrentOrganizationId: jest.fn(),
+}));
+
+// Spread `jest.requireActual` here (unlike the "core/api" mock above): `core/services/Modal` pulls
+// in only `components/ui/Modal` and `rxjs`, not the auth/config chain, so keeping
+// `ModalServiceProvider` real (it wraps every render via `test-utils`) while swapping only
+// `useModalService` is safe and lets this test assert on `openModal`'s call arguments directly.
+jest.mock("core/services/Modal", () => ({
+  ...jest.requireActual("core/services/Modal"),
+  useModalService: jest.fn(),
+}));
+
 const mockUseListGroupMembers = useListGroupMembers as jest.Mock;
+const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.Mock;
+const mockUseModalService = useModalService as jest.Mock;
+const mockOpenModal = jest.fn();
 
 const group: GroupRead = {
   groupId: "group-1",
@@ -55,6 +73,8 @@ describe(`${GroupCard.name}`, () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setMemberQuery({ data: memberList });
+    mockUseCurrentOrganizationId.mockReturnValue("org-1");
+    mockUseModalService.mockReturnValue({ openModal: mockOpenModal, getCurrentModalTitle: jest.fn() });
   });
 
   it("renders the member count inside the group name, and the description beneath", async () => {
@@ -128,10 +148,31 @@ describe(`${GroupCard.name}`, () => {
     expect(screen.queryByText("zoe@example.com")).not.toBeInTheDocument();
   });
 
-  it("does not render a row actions menu", async () => {
+  it("renders the actions menu, with an accessible name naming the group", async () => {
     await render(<GroupCard group={group} />);
 
-    expect(screen.queryByTestId("group-actions-menu")).not.toBeInTheDocument();
+    expect(screen.getByTestId("group-actions-menu")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Actions for ${group.name}` })).toBeInTheDocument();
+  });
+
+  it("opens the edit-permissions modal, titled with the group's name, when 'Edit permissions' is clicked", async () => {
+    await render(<GroupCard group={group} />);
+
+    await userEvent.click(screen.getByRole("button", { name: `Actions for ${group.name}` }));
+    await userEvent.click(await screen.findByText("Edit permissions"));
+
+    expect(mockOpenModal).toHaveBeenCalledTimes(1);
+    const options = mockOpenModal.mock.calls[0][0];
+    expect(options.title).toBe(`Edit permissions for ${group.name} group`);
+    expect(typeof options.content).toBe("function");
+  });
+
+  it("does not render a 'Delete group' item — that belongs to PLAT-1101", async () => {
+    await render(<GroupCard group={group} />);
+
+    await userEvent.click(screen.getByRole("button", { name: `Actions for ${group.name}` }));
+
+    expect(screen.queryByText("Delete group")).not.toBeInTheDocument();
   });
 
   describe("when the group has no members", () => {
