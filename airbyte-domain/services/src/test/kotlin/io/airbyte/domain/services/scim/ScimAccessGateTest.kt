@@ -7,7 +7,6 @@ package io.airbyte.domain.services.scim
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
-import io.airbyte.commons.entitlements.models.GroupsEntitlement
 import io.airbyte.commons.entitlements.models.ScimEntitlement
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.domain.models.OrganizationId
@@ -30,9 +29,8 @@ class ScimAccessGateTest {
   private val gate = ScimAccessGate(entitlementService, featureFlagClient)
 
   @Test
-  fun `allows access when both entitlements and the pilot flag are enabled without requiring SSO`() {
+  fun `allows access when the SCIM entitlement and the pilot flag are enabled without requiring SSO`() {
     stubEntitlement(organizationId, ScimEntitlement, true)
-    stubEntitlement(organizationId, GroupsEntitlement, true)
     every {
       featureFlagClient.boolVariation(ScimProvisioningPilot, Organization(organizationId.value))
     } returns true
@@ -48,24 +46,12 @@ class ScimAccessGateTest {
 
     assertFalse(gate.isAllowed(organizationId))
 
-    verify(exactly = 0) { entitlementService.checkEntitlement(organizationId, GroupsEntitlement) }
-    verify(exactly = 0) { featureFlagClient.boolVariation(any(), any()) }
-  }
-
-  @Test
-  fun `denies access and short circuits when the groups entitlement is absent`() {
-    stubEntitlement(organizationId, ScimEntitlement, true)
-    stubEntitlement(organizationId, GroupsEntitlement, false)
-
-    assertFalse(gate.isAllowed(organizationId))
-
     verify(exactly = 0) { featureFlagClient.boolVariation(any(), any()) }
   }
 
   @Test
   fun `denies access when the pilot flag is disabled`() {
     stubEntitlement(organizationId, ScimEntitlement, true)
-    stubEntitlement(organizationId, GroupsEntitlement, true)
     every {
       featureFlagClient.boolVariation(ScimProvisioningPilot, Organization(organizationId.value))
     } returns false
@@ -76,7 +62,6 @@ class ScimAccessGateTest {
   @Test
   fun `re-evaluates gates on every request`() {
     stubEntitlement(organizationId, ScimEntitlement, true)
-    stubEntitlement(organizationId, GroupsEntitlement, true)
     every {
       featureFlagClient.boolVariation(ScimProvisioningPilot, Organization(organizationId.value))
     } returnsMany listOf(true, false)
@@ -93,9 +78,7 @@ class ScimAccessGateTest {
   fun `evaluates the pilot flag for the requested organization`() {
     val otherOrganizationId = OrganizationId(UUID.randomUUID())
     stubEntitlement(organizationId, ScimEntitlement, true)
-    stubEntitlement(organizationId, GroupsEntitlement, true)
     stubEntitlement(otherOrganizationId, ScimEntitlement, true)
-    stubEntitlement(otherOrganizationId, GroupsEntitlement, true)
     every {
       featureFlagClient.boolVariation(ScimProvisioningPilot, Organization(organizationId.value))
     } returns true
@@ -110,7 +93,6 @@ class ScimAccessGateTest {
   @Test
   fun `defaults to denied when the pilot flag is unconfigured`() {
     stubEntitlement(organizationId, ScimEntitlement, true)
-    stubEntitlement(organizationId, GroupsEntitlement, true)
     val gateWithUnconfiguredFlag = ScimAccessGate(entitlementService, TestClient(emptyMap()))
 
     assertFalse(gateWithUnconfiguredFlag.isAllowed(organizationId))
@@ -119,7 +101,6 @@ class ScimAccessGateTest {
   @Test
   fun `caches the organization-info result so the boot path re-checks nothing`() {
     stubEntitlement(organizationId, ScimEntitlement, true)
-    stubEntitlement(organizationId, GroupsEntitlement, true)
     every {
       featureFlagClient.boolVariation(ScimProvisioningPilot, Organization(organizationId.value))
     } returns true
@@ -128,7 +109,6 @@ class ScimAccessGateTest {
     assertTrue(gate.isAllowedForOrganizationInfo(organizationId))
 
     verify(exactly = 1) { entitlementService.checkEntitlement(organizationId, ScimEntitlement) }
-    verify(exactly = 1) { entitlementService.checkEntitlement(organizationId, GroupsEntitlement) }
     verify(exactly = 1) {
       featureFlagClient.boolVariation(ScimProvisioningPilot, Organization(organizationId.value))
     }
@@ -138,9 +118,7 @@ class ScimAccessGateTest {
   fun `caches the organization-info result per organization`() {
     val otherOrganizationId = OrganizationId(UUID.randomUUID())
     stubEntitlement(organizationId, ScimEntitlement, true)
-    stubEntitlement(organizationId, GroupsEntitlement, true)
     stubEntitlement(otherOrganizationId, ScimEntitlement, true)
-    stubEntitlement(otherOrganizationId, GroupsEntitlement, true)
     every {
       featureFlagClient.boolVariation(ScimProvisioningPilot, Organization(organizationId.value))
     } returns true
@@ -161,7 +139,6 @@ class ScimAccessGateTest {
       Thread.sleep(30_000)
       EntitlementResult(featureId = ScimEntitlement.featureId, isEntitled = true)
     }
-    stubEntitlement(organizationId, GroupsEntitlement, true)
     every {
       featureFlagClient.boolVariation(ScimProvisioningPilot, Organization(organizationId.value))
     } returns true
@@ -177,7 +154,6 @@ class ScimAccessGateTest {
   @Test
   fun `leaves isAllowed uncached so authentication sees a revoked gate immediately`() {
     stubEntitlement(organizationId, ScimEntitlement, true)
-    stubEntitlement(organizationId, GroupsEntitlement, true)
     every {
       featureFlagClient.boolVariation(ScimProvisioningPilot, Organization(organizationId.value))
     } returnsMany listOf(true, false)

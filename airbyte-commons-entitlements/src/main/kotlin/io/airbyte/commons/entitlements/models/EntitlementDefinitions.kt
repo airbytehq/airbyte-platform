@@ -112,10 +112,6 @@ object SourceSharepointEnterpriseListsConnector : ConnectorEntitlement(
   override val name: String = "source-sharepoint-lists"
 }
 
-object GroupsEntitlement : FeatureEntitlement(
-  featureId = "feature-groups",
-)
-
 object ScimEntitlement : FeatureEntitlement(
   featureId = "feature-scim",
 )
@@ -153,7 +149,6 @@ object Entitlements {
       SourceWorkdayEnterpriseConnector,
       SourceDb2EnterpriseConnector,
       SourceSharepointEnterpriseListsConnector,
-      GroupsEntitlement,
       ScimEntitlement,
       OnDemandCapacityEnabledEntitlement,
       CommittedDataWorkersEntitlement,

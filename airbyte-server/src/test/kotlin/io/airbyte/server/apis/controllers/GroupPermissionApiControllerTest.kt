@@ -16,7 +16,7 @@ import io.airbyte.api.server.generated.models.PermissionType
 import io.airbyte.api.server.generated.models.PublicPermissionType
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.GroupsEntitlement
+import io.airbyte.commons.entitlements.models.ScimEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.config.Configs
@@ -429,7 +429,7 @@ class GroupPermissionApiControllerTest {
 
   private fun unentitledHelper(): GroupsEntitlementHelper {
     val entitlementService = mockk<EntitlementService>()
-    every { entitlementService.ensureEntitled(organizationId, GroupsEntitlement) } throws LicenseEntitlementProblem()
+    every { entitlementService.ensureEntitled(organizationId, ScimEntitlement) } throws LicenseEntitlementProblem()
     return GroupsEntitlementHelper(entitlementService, Configs.AirbyteEdition.CLOUD)
   }
 

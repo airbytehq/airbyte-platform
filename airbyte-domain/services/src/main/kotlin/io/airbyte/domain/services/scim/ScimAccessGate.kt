@@ -7,7 +7,6 @@ package io.airbyte.domain.services.scim
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.GroupsEntitlement
 import io.airbyte.commons.entitlements.models.ScimEntitlement
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
@@ -43,9 +42,6 @@ class ScimAccessGate(
 
   fun isAllowed(organizationId: OrganizationId): Boolean {
     if (!entitlementService.checkEntitlement(organizationId, ScimEntitlement).isEntitled) {
-      return false
-    }
-    if (!entitlementService.checkEntitlement(organizationId, GroupsEntitlement).isEntitled) {
       return false
     }
     return featureFlagClient.boolVariation(ScimProvisioningPilot, Organization(organizationId.value))

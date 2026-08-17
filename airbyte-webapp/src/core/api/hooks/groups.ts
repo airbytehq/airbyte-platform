@@ -29,7 +29,7 @@ export const groupKeys = {
  * The settings shell puts its Suspense boundary inside `SettingsLayoutContent` but has no error
  * boundary, so a suspense read that throws escapes to `DefaultErrorBoundary` and replaces the
  * entire settings layout, sidebar included. `listGroups` is `@Secured(ORGANIZATION_ADMIN)` and
- * additionally demands the `feature-groups` entitlement (`GroupApiController.listGroups`), so a
+ * additionally demands the `feature-scim` entitlement (`GroupApiController.listGroups`), so a
  * 403 is a reachable state for a real user. It should render inline, on the page.
  *
  * `useSuspenseQuery` also returns `undefined` whenever the query is disabled, while its return type

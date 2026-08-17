@@ -5,11 +5,16 @@
 package io.airbyte.server.helpers
 
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.GroupsEntitlement
+import io.airbyte.commons.entitlements.models.ScimEntitlement
 import io.airbyte.config.Configs
 import io.airbyte.domain.models.OrganizationId
 import jakarta.inject.Singleton
 
+/**
+ * Gates the user-group endpoints. User groups are sold only as part of SCIM provisioning, so a
+ * single [ScimEntitlement] grants both, and ScimAccessGate reads the same entitlement for the
+ * SCIM endpoints themselves.
+ */
 @Singleton
 class GroupsEntitlementHelper(
   private val entitlementService: EntitlementService,
@@ -17,6 +22,6 @@ class GroupsEntitlementHelper(
 ) {
   fun ensureEntitled(organizationId: OrganizationId) {
     if (airbyteEdition == Configs.AirbyteEdition.ENTERPRISE) return
-    entitlementService.ensureEntitled(organizationId, GroupsEntitlement)
+    entitlementService.ensureEntitled(organizationId, ScimEntitlement)
   }
 }

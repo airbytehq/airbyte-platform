@@ -19,7 +19,7 @@ import io.airbyte.api.server.generated.models.GroupUpdate
 import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.GroupsEntitlement
+import io.airbyte.commons.entitlements.models.ScimEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.config.Configs
@@ -439,7 +439,7 @@ class GroupApiControllerTest {
   fun `non-enterprise organizations without the groups entitlement are rejected`() {
     val entitlementService = mockk<EntitlementService>()
     val entitlementHelper = GroupsEntitlementHelper(entitlementService, Configs.AirbyteEdition.CLOUD)
-    every { entitlementService.ensureEntitled(organizationId, GroupsEntitlement) } throws LicenseEntitlementProblem()
+    every { entitlementService.ensureEntitled(organizationId, ScimEntitlement) } throws LicenseEntitlementProblem()
     val controller = createController(entitlementHelper)
 
     assertThrows<LicenseEntitlementProblem> {
