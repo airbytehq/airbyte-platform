@@ -56,6 +56,7 @@ airbyte:
     api-key: ${STIGG_API_KEY:}
     sidecar-host: ${STIGG_SIDECAR_HOST:}
     sidecar-port: ${STIGG_SIDECAR_PORT:8800}
+    entitlements-file: ${STIGG_ENTITLEMENTS_FILE:}
 
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:CONFIGFILE}

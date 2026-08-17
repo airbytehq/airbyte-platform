@@ -598,6 +598,7 @@ data class AirbyteStiggClientConfig(
   val sidecarHost: String = "",
   val sidecarPort: Int = 8800,
   val webhookSecret: String = "",
+  val entitlementsFile: String = "",
 )
 
 @ConfigurationProperties(FEATURE_FLAG_PREFIX)

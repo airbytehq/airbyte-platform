@@ -21,6 +21,7 @@ internal class AirbyteStiggClientConfigDefaultTest {
     assertEquals(false, airbyteStiggClientConfig.enabled)
     assertEquals("", airbyteStiggClientConfig.sidecarHost)
     assertEquals(8800, airbyteStiggClientConfig.sidecarPort)
+    assertEquals("", airbyteStiggClientConfig.entitlementsFile)
   }
 }
 
@@ -35,5 +36,6 @@ internal class AirbyteEntitlementConfigStiggTest {
     assertEquals(true, airbyteStiggClientConfig.enabled)
     assertEquals("test-stigg-sidecar-host", airbyteStiggClientConfig.sidecarHost)
     assertEquals(8080, airbyteStiggClientConfig.sidecarPort)
+    assertEquals("test-entitlements-file", airbyteStiggClientConfig.entitlementsFile)
   }
 }

@@ -4,6 +4,10 @@
 
 package io.airbyte.commons.entitlements
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.config.Configs
@@ -19,8 +23,58 @@ import io.stigg.sidecar.sdk.Stigg
 import io.stigg.sidecar.sdk.StiggConfig
 import io.stigg.sidecar.sdk.offline.CustomerEntitlements
 import jakarta.inject.Singleton
+import java.io.File
+import java.io.IOException
 
 private val logger = KotlinLogging.logger {}
+
+private val yamlMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
+
+private data class StaticEntitlementsFile(
+  val entitlements: Map<String, Boolean> = emptyMap(),
+)
+
+/**
+ * Loads the set of statically granted entitlement feature ids from a YAML file of the form:
+ *
+ * ```yaml
+ * entitlements:
+ *   <feature-id>: true
+ *   <another-feature-id>: false
+ * ```
+ *
+ * A blank path returns an empty set silently (deny everything, the default behavior).
+ * A missing, unreadable, empty, or unparseable file logs a warning and returns an empty set.
+ * Unknown feature ids are skipped with a warning to catch typos and stale ids after renames.
+ */
+private fun loadGrantedFeatureIds(path: String): Set<String> {
+  if (path.isBlank()) {
+    return emptySet()
+  }
+  val file = File(path)
+  if (!file.isFile || file.length() == 0L) {
+    logger.warn { "Static entitlements file '$path' is missing or empty. No entitlements will be granted." }
+    return emptySet()
+  }
+  val parsed =
+    try {
+      yamlMapper.readValue(file, StaticEntitlementsFile::class.java)
+    } catch (e: IOException) {
+      logger.warn(e) { "Failed to parse static entitlements file '$path'. No entitlements will be granted." }
+      return emptySet()
+    }
+  val knownFeatureIds = Entitlements.all.map { it.featureId }.toSet()
+  return parsed.entitlements
+    .filterValues { it }
+    .keys
+    .filter { featureId ->
+      val known = featureId in knownFeatureIds
+      if (!known) {
+        logger.warn { "Static entitlements file '$path' contains unknown entitlement id '$featureId'. Skipping." }
+      }
+      known
+    }.toSet()
+}
 
 object MissingStiggApiKey : Exception("Can't create an entitlements client because the Stigg API key is null or blank")
 
@@ -43,8 +97,8 @@ internal class EntitlementClientFactory(
   fun entitlementClient(): EntitlementClient =
     when (airbyteConfig.edition) {
       Configs.AirbyteEdition.COMMUNITY -> {
-        logger.info { "Creating NoEntitlementClient" }
-        NoEntitlementClient()
+        logger.info { "Creating StaticEntitlementClient" }
+        StaticEntitlementClient()
       }
       Configs.AirbyteEdition.ENTERPRISE -> createStiggEnterpriseClient()
       Configs.AirbyteEdition.CLOUD -> createStiggCloudClient()
@@ -52,8 +106,13 @@ internal class EntitlementClientFactory(
 
   private fun createStiggCloudClient(): EntitlementClient {
     if (!airbyteStiggClientConfig.enabled) {
-      logger.info { "Stigg cloud client is not enabled. Falling back to NoEntitlementClient" }
-      return NoEntitlementClient()
+      val entitlementsFile = airbyteStiggClientConfig.entitlementsFile
+      val grantedFeatureIds = loadGrantedFeatureIds(entitlementsFile)
+      logger.info {
+        "Stigg cloud client is not enabled. Falling back to StaticEntitlementClient with ${grantedFeatureIds.size} " +
+          "statically granted entitlement id(s) (entitlements file: ${entitlementsFile.ifBlank { "unset" }})"
+      }
+      return StaticEntitlementClient(grantedFeatureIds)
     }
     logger.info { "Creating Stigg Cloud client" }
 
@@ -93,14 +152,14 @@ internal class EntitlementClientFactory(
 
     val license = activeLicense?.license
     if (license == null) {
-      logger.info { "License key is not set. Falling back to NoEntitlementsClient" }
-      return NoEntitlementClient()
+      logger.info { "License key is not set. Falling back to StaticEntitlementClient" }
+      return StaticEntitlementClient()
     }
 
     val rawEntitlements = license.stiggEntitlements
     if (rawEntitlements.isNullOrEmpty()) {
-      logger.info { "Stigg entitlements from license are not set. Falling back to NoEntitlementsClient" }
-      return NoEntitlementClient()
+      logger.info { "Stigg entitlements from license are not set. Falling back to StaticEntitlementClient" }
+      return StaticEntitlementClient()
     }
 
     val entitlements = Jsons.deserialize(rawEntitlements, CustomerEntitlements::class.java)

@@ -252,6 +252,7 @@ airbyte:
     sidecar-host: ${STIGG_SIDECAR_HOST:}
     sidecar-port: ${STIGG_SIDECAR_PORT:8800}
     webhook-secret: ${STIGG_WEBHOOK_SECRET:}
+    entitlements-file: ${STIGG_ENTITLEMENTS_FILE:}
 
   flyway:
     configs:

@@ -109,6 +109,22 @@ Before declaring work done, run `make check.oss` (or at minimum
 - Lazy lambda form: `logger.info { "message $expensiveValue" }` so
   formatting is skipped when the level is disabled.
 
+## Local entitlements overrides
+
+To grant or deny entitlements in a local Cloud deployment:
+
+1. Copy `oss/entitlements.yml.example` to `oss/entitlements.yml` (the
+   latter is gitignored — it's your personal local config).
+2. Fill in the ids you want to control. Valid ids are the `featureId`
+   values in
+   `oss/airbyte-commons-entitlements/src/main/kotlin/io/airbyte/commons/entitlements/models/EntitlementDefinitions.kt`.
+   `true` grants, `false` explicitly denies (same as omitting it).
+3. Run `make deploy.cloud` — when the file exists, the deploy script
+   mounts it into the server at `/etc/airbyte/entitlements.yml` and
+   sets `STIGG_ENTITLEMENTS_FILE`. Without the file, nothing changes.
+4. Restart the server after editing the file for changes to take
+   effect.
+
 ## Common pitfalls
 
 - A new bean isn't picked up → check KSP ran on the module

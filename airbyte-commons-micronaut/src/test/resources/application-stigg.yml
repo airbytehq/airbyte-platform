@@ -4,3 +4,4 @@ airbyte:
     enabled: true
     sidecar-host: test-stigg-sidecar-host
     sidecar-port: 8080
+    entitlements-file: test-entitlements-file

@@ -1,0 +1,7 @@
+# Copy to oss/entitlements.yml and fill in the ids you want to control.
+# Valid ids are the featureId values in
+# oss/airbyte-commons-entitlements/src/main/kotlin/io/airbyte/commons/entitlements/models/EntitlementDefinitions.kt
+# This file (oss/entitlements.yml) is gitignored — it is your personal local config.
+entitlements:
+  <feature-id>: true        # granted locally
+  <another-feature-id>: false  # explicitly denied (same as omitting it)

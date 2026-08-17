@@ -159,6 +159,10 @@ object Entitlements {
       CommittedDataWorkersEntitlement,
     )
 
+  /** All known entitlements. */
+  val all: List<Entitlement>
+    get() = ALL
+
   private val BY_FEATURE_ID: Map<String, Entitlement> =
     ALL.associateBy { it.featureId }
 
