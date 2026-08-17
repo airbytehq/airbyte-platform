@@ -4331,15 +4331,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           }
         },
@@ -7742,15 +7742,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-milvus/0.0.61.spdx.json",
@@ -30052,16 +30052,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-bitly/0.0.52.spdx.json",
@@ -30882,15 +30882,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-braintree/0.3.38.spdx.json",
@@ -42964,15 +42964,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -48032,7 +48032,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "2.1.1",
+      "dockerImageTag": "2.1.2",
       "dockerRepository": "airbyte/source-facebook-pages",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/facebook-pages",
       "externalDocumentationUrls": [
@@ -48059,10 +48059,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "devin-ai-integration[bot]",
-          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "e46a5531842b59b2990e283acc35eac70dc7c5e5",
-          "commit_timestamp": "2026-05-22T11:16:34-07:00"
+          "commit_author": "Anatolii Yatsuk",
+          "commit_author_email": "tolikyatsuk@gmail.com",
+          "commit_sha": "85fd6fddff67fa0e4458984da716efb9b7569dac",
+          "commit_timestamp": "2026-08-17T18:08:30+03:00"
         },
         "metrics": {
           "all": {
@@ -48078,12 +48078,24 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-facebook-pages/2.1.1.spdx.json",
+        "release": {
+          "attributed_to": null,
+          "merge_commit_sha": "85fd6fddff67fa0e4458984da716efb9b7569dac",
+          "merged_at": "2026-08-17T15:08:30Z",
+          "pr_author_id": null,
+          "pr_author_login": null,
+          "pr_author_type": "Unknown",
+          "pr_number": 84408,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84408",
+          "released_at": "2026-08-17T15:08:30Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-facebook-pages/2.1.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-facebook-pages/latest/metadata.yaml",
-          "metadata_last_modified": "2026-05-22T18:23:00.554366+00:00",
-          "registry_entry_generated_at": "2026-05-22T18:23:00.554366+00:00"
+          "metadata_last_modified": "2026-08-17T15:15:58.097814+00:00",
+          "registry_entry_generated_at": "2026-08-17T15:15:58.097814+00:00"
         }
       },
       "githubIssueLabel": "source-facebook-pages",
@@ -56119,15 +56131,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           }
         },
@@ -79250,15 +79262,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mailgun/0.3.60.spdx.json",
@@ -86185,7 +86197,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "3.53.2",
+      "dockerImageTag": "3.53.3",
       "dockerRepository": "airbyte/source-mysql",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/mysql",
       "externalDocumentationUrls": [
@@ -86207,10 +86219,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "ebac5070521e9b7e32ccb8b0945b44ff507e3cae",
-          "commit_timestamp": "2026-08-10T12:51:34-07:00"
+          "commit_author": "Rodi Reich Zilberman",
+          "commit_author_email": "rodi@airbyte.io",
+          "commit_sha": "17b92d8cb7d8f06b127659247e707a7b89e8aeac",
+          "commit_timestamp": "2026-08-11T13:07:53-07:00"
         },
         "metrics": {
           "all": {
@@ -86226,12 +86238,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mysql/3.53.2.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mysql/3.53.3.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-mysql/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-10T20:14:43.382421+00:00",
-          "registry_entry_generated_at": "2026-08-10T20:14:43.382421+00:00"
+          "metadata_last_modified": "2026-08-11T20:12:44.289155+00:00",
+          "registry_entry_generated_at": "2026-08-11T20:12:44.289155+00:00"
         }
       },
       "githubIssueLabel": "source-mysql",
@@ -86253,652 +86265,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/mysql-migrations",
-        "releaseCandidates": {
-          "3.53.3": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 400,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 300
-            },
-            "allowedHosts": {
-              "hosts": [
-                "${host}",
-                "${tunnel_method.tunnel_host}"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/java-connector-base:2.0.4@sha256:5f343797cfcf021ca98ba9bdf5970ef66cbf6222d8cc17b0d61d13860a5bcc2b"
-            },
-            "connectorIPCOptions": {
-              "dataChannel": {
-                "supportedSerialization": [
-                  "JSONL",
-                  "PROTOBUF"
-                ],
-                "supportedTransport": [
-                  "SOCKET",
-                  "STDIO"
-                ],
-                "version": "0.0.2"
-              }
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "ssh-key-repl-config.json",
-                    "name": "SECRET_SOURCE-MYSQL_SSH-KEY-REPL__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "ssh-key-config.json",
-                    "name": "SECRET_SOURCE-MYSQL_SSH-KEY__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "ssh-pwd-repl-config.json",
-                    "name": "SECRET_SOURCE-MYSQL_SSH-PWD-REPL__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "ssh-pwd-config.json",
-                    "name": "SECRET_SOURCE-MYSQL_SSH-PWD__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "performance-config.json",
-                    "name": "SECRET_SOURCE_MYSQL_PERFORMANCE_TEST_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "cat-config.json",
-                    "name": "SECRET_SOURCE_MYSQL_ACCEPTANCE_TEST_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "cat-config-cdc.json",
-                    "name": "SECRET_SOURCE_MYSQL_ACCEPTANCE_TEST_CDC_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "3.53.3",
-            "dockerRepository": "airbyte/source-mysql",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/mysql",
-            "externalDocumentationUrls": [
-              {
-                "title": "MySQL documentation",
-                "type": "api_reference",
-                "url": "https://dev.mysql.com/doc/"
-              },
-              {
-                "title": "MySQL Release Notes",
-                "type": "api_release_history",
-                "url": "https://dev.mysql.com/doc/relnotes/mysql/en/"
-              },
-              {
-                "title": "MySQL authentication",
-                "type": "authentication_guide",
-                "url": "https://dev.mysql.com/doc/refman/8.0/en/access-control.html"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "Rodi Reich Zilberman",
-                "commit_author_email": "rodi@airbyte.io",
-                "commit_sha": "17b92d8cb7d8f06b127659247e707a7b89e8aeac",
-                "commit_timestamp": "2026-08-11T13:07:53-07:00"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mysql/3.53.3.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-mysql/3.53.3/metadata.yaml",
-                "metadata_last_modified": "2026-08-11T20:12:44.289155+00:00",
-                "registry_entry_generated_at": "2026-08-11T20:12:44.289155+00:00"
-              }
-            },
-            "githubIssueLabel": "source-mysql",
-            "icon": "mysql.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-mysql/latest/icon.svg",
-            "language": "java",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 7200,
-            "name": "MySQL",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "alpha",
-            "releases": {
-              "breakingChanges": {
-                "3.0.0": {
-                  "message": "Add default cursor for cdc",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/mysql-migrations#3.0.0",
-                  "upgradeDeadline": "2023-08-17"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/mysql-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "slow"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "sourceDefinitionId": "435bb9a5-7887-4809-aa58-28c27df0d7ad",
-            "sourceType": "database",
-            "spec": {
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "check_privileges": {
-                    "default": true,
-                    "description": "When this feature is enabled, during schema discovery the connector will query each table or view individually to check access privileges and inaccessible tables, views, or columns therein will be removed. In large schemas, this might cause schema discovery to take too long, in which case it might be advisable to disable this feature.",
-                    "order": 13,
-                    "title": "Check Table and Column Access Privileges",
-                    "type": "boolean"
-                  },
-                  "checkpoint_target_interval_seconds": {
-                    "default": 300,
-                    "description": "How often (in seconds) a stream should checkpoint, when possible.",
-                    "order": 12,
-                    "title": "Checkpoint Target Time Interval",
-                    "type": "integer"
-                  },
-                  "concurrency": {
-                    "airbyte_hidden": true,
-                    "default": 1,
-                    "description": "Maximum number of concurrent queries to the database.",
-                    "order": 13,
-                    "title": "Concurrency",
-                    "type": "integer"
-                  },
-                  "database": {
-                    "always_show": true,
-                    "description": "The database name.",
-                    "order": 6,
-                    "title": "Database",
-                    "type": "string"
-                  },
-                  "host": {
-                    "description": "Hostname of the database.",
-                    "order": 1,
-                    "title": "Host",
-                    "type": "string"
-                  },
-                  "jdbc_url_params": {
-                    "description": "Additional properties to pass to the JDBC URL string when connecting to the database formatted as 'key=value' pairs separated by the symbol '&'. (example: key1=value1&key2=value2&key3=value3).",
-                    "order": 8,
-                    "title": "JDBC URL Params",
-                    "type": "string"
-                  },
-                  "max_db_connections": {
-                    "description": "Maximum number of concurrent queries to the database. Leave empty to let Airbyte optimize performance.",
-                    "order": 13,
-                    "title": "Max Concurrent Queries to Database",
-                    "type": "integer"
-                  },
-                  "password": {
-                    "airbyte_secret": true,
-                    "always_show": true,
-                    "description": "The password associated with the username.",
-                    "order": 5,
-                    "title": "Password",
-                    "type": "string"
-                  },
-                  "port": {
-                    "default": 3306,
-                    "description": "Port of the database.",
-                    "maximum": 65536,
-                    "minimum": 0,
-                    "order": 2,
-                    "title": "Port",
-                    "type": "integer"
-                  },
-                  "replication_method": {
-                    "description": "Configures how data is extracted from the database.",
-                    "display_type": "radio",
-                    "oneOf": [
-                      {
-                        "additionalProperties": true,
-                        "description": "Incrementally detects new inserts and updates using the <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\">cursor column</a> chosen when configuring a connection (e.g. created_at, updated_at).",
-                        "properties": {
-                          "method": {
-                            "default": "STANDARD",
-                            "enum": [
-                              "STANDARD"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "method"
-                        ],
-                        "title": "Scan Changes with User Defined Cursor",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "description": "<i>Recommended</i> - Incrementally reads new inserts, updates, and deletes using MySQL's <a href=\"https://docs.airbyte.com/integrations/sources/mysql#change-data-capture-cdc\"> change data capture feature</a>. This must be enabled on your database.",
-                        "properties": {
-                          "initial_load_timeout_hours": {
-                            "always_show": true,
-                            "default": 8,
-                            "description": "The amount of time an initial load is allowed to continue for before catching up on CDC logs.",
-                            "max": 24,
-                            "min": 4,
-                            "order": 3,
-                            "title": "Initial Load Timeout in Hours (Advanced)",
-                            "type": "integer"
-                          },
-                          "invalid_cdc_cursor_position_behavior": {
-                            "always_show": true,
-                            "default": "Fail sync",
-                            "description": "Determines whether Airbyte should fail or re-sync data in case of an stale/invalid cursor value in the mined logs. If 'Fail sync' is chosen, a user will have to manually reset the connection before being able to continue syncing data. If 'Re-sync data' is chosen, Airbyte will automatically trigger a refresh but could lead to higher cloud costs and data loss.",
-                            "enum": [
-                              "Fail sync",
-                              "Re-sync data"
-                            ],
-                            "order": 2,
-                            "title": "Invalid CDC Position Behavior (Advanced)",
-                            "type": "string"
-                          },
-                          "method": {
-                            "default": "CDC",
-                            "enum": [
-                              "CDC"
-                            ],
-                            "type": "string"
-                          },
-                          "server_timezone": {
-                            "always_show": true,
-                            "description": "Enter the configured MySQL server timezone. This should only be done if the configured timezone in your MySQL instance does not conform to IANNA standard.",
-                            "order": 1,
-                            "title": "Configured server timezone for the MySQL source (Advanced)",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "method"
-                        ],
-                        "title": "Read Changes using Change Data Capture (CDC)",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 11,
-                    "title": "Update Method",
-                    "type": "object"
-                  },
-                  "ssl_mode": {
-                    "default": "required",
-                    "description": "The encryption method which is used when communicating with the database.",
-                    "oneOf": [
-                      {
-                        "additionalProperties": true,
-                        "description": "To allow unencrypted communication only when the source doesn't support encryption.",
-                        "properties": {
-                          "mode": {
-                            "default": "preferred",
-                            "enum": [
-                              "preferred"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "mode"
-                        ],
-                        "title": "preferred",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "description": "To always require encryption. Note: The connection will fail if the source doesn't support encryption.",
-                        "properties": {
-                          "mode": {
-                            "default": "required",
-                            "enum": [
-                              "required"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "mode"
-                        ],
-                        "title": "required",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "description": "To always require encryption and verify that the source has a valid SSL certificate.",
-                        "properties": {
-                          "ca_certificate": {
-                            "airbyte_secret": true,
-                            "description": "CA certificate",
-                            "multiline": true,
-                            "title": "CA certificate",
-                            "type": "string"
-                          },
-                          "client_certificate": {
-                            "airbyte_secret": true,
-                            "description": "Client certificate (this is not a required field, but if you want to use it, you will need to add the Client key as well)",
-                            "multiline": true,
-                            "title": "Client certificate File",
-                            "type": "string"
-                          },
-                          "client_key": {
-                            "airbyte_secret": true,
-                            "description": "Client key (this is not a required field, but if you want to use it, you will need to add the Client certificate as well)",
-                            "multiline": true,
-                            "title": "Client Key",
-                            "type": "string"
-                          },
-                          "client_key_password": {
-                            "airbyte_secret": true,
-                            "description": "Password for keystorage. This field is optional. If you do not add it - the password will be generated automatically.",
-                            "multiline": true,
-                            "title": "Client key password",
-                            "type": "string"
-                          },
-                          "mode": {
-                            "default": "verify_ca",
-                            "enum": [
-                              "verify_ca"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "mode",
-                          "ca_certificate"
-                        ],
-                        "title": "verify_ca",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "description": "To always require encryption and verify that the source has a valid SSL certificate.",
-                        "properties": {
-                          "ca_certificate": {
-                            "airbyte_secret": true,
-                            "description": "CA certificate",
-                            "multiline": true,
-                            "title": "CA certificate",
-                            "type": "string"
-                          },
-                          "client_certificate": {
-                            "airbyte_secret": true,
-                            "description": "Client certificate (this is not a required field, but if you want to use it, you will need to add the Client key as well)",
-                            "multiline": true,
-                            "title": "Client certificate File",
-                            "type": "string"
-                          },
-                          "client_key": {
-                            "airbyte_secret": true,
-                            "description": "Client key (this is not a required field, but if you want to use it, you will need to add the Client certificate as well)",
-                            "multiline": true,
-                            "title": "Client Key",
-                            "type": "string"
-                          },
-                          "client_key_password": {
-                            "airbyte_secret": true,
-                            "description": "Password for keystorage. This field is optional. If you do not add it - the password will be generated automatically.",
-                            "multiline": true,
-                            "title": "Client key password",
-                            "type": "string"
-                          },
-                          "mode": {
-                            "default": "verify_identity",
-                            "enum": [
-                              "verify_identity"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "mode",
-                          "ca_certificate"
-                        ],
-                        "title": "verify_identity",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 9,
-                    "title": "Encryption",
-                    "type": "object"
-                  },
-                  "table_filters": {
-                    "description": "Optional filters to include only specific tables from the specified database.",
-                    "items": {
-                      "additionalProperties": true,
-                      "description": "Inclusion filter configuration for table selection per database.",
-                      "properties": {
-                        "database_name": {
-                          "always_show": true,
-                          "description": "The name of the database to apply this filter to. Should match the database defined in the \"Database\" field above.",
-                          "order": 1,
-                          "title": "Database Name",
-                          "type": "string"
-                        },
-                        "table_name_patterns": {
-                          "always_show": true,
-                          "description": "List of table name patterns to include. Should be a SQL LIKE pattern.",
-                          "items": {
-                            "type": "string"
-                          },
-                          "minItems": 1,
-                          "order": 2,
-                          "title": "Table Filter Patterns",
-                          "type": "array"
-                        }
-                      },
-                      "required": [
-                        "database_name",
-                        "table_name_patterns"
-                      ],
-                      "title": "Table Filter",
-                      "type": "object"
-                    },
-                    "order": 7,
-                    "title": "Table Filters",
-                    "type": "array"
-                  },
-                  "treat_tinyint1_as_integer": {
-                    "default": false,
-                    "description": "When enabled, TINYINT(1) columns are emitted as integers instead of booleans.",
-                    "order": 14,
-                    "title": "Treat TINYINT(1) Columns as Integers",
-                    "type": "boolean"
-                  },
-                  "tunnel_method": {
-                    "description": "Whether to initiate an SSH tunnel before connecting to the database, and if so, which kind of authentication to use.",
-                    "oneOf": [
-                      {
-                        "additionalProperties": true,
-                        "description": "No ssh tunnel needed to connect to database",
-                        "properties": {
-                          "tunnel_method": {
-                            "default": "NO_TUNNEL",
-                            "enum": [
-                              "NO_TUNNEL"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "tunnel_method"
-                        ],
-                        "title": "No Tunnel",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "description": "Connect through a jump server tunnel host using username and ssh key",
-                        "properties": {
-                          "ssh_key": {
-                            "airbyte_secret": true,
-                            "description": "OS-level user account ssh key credentials in RSA PEM format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )",
-                            "multiline": true,
-                            "order": 4,
-                            "title": "SSH Private Key",
-                            "type": "string"
-                          },
-                          "tunnel_host": {
-                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
-                            "order": 1,
-                            "title": "SSH Tunnel Jump Server Host",
-                            "type": "string"
-                          },
-                          "tunnel_method": {
-                            "default": "SSH_KEY_AUTH",
-                            "enum": [
-                              "SSH_KEY_AUTH"
-                            ],
-                            "type": "string"
-                          },
-                          "tunnel_port": {
-                            "default": 22,
-                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
-                            "maximum": 65536,
-                            "minimum": 0,
-                            "order": 2,
-                            "title": "SSH Connection Port",
-                            "type": "integer"
-                          },
-                          "tunnel_user": {
-                            "description": "OS-level username for logging into the jump server host",
-                            "order": 3,
-                            "title": "SSH Login Username",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "tunnel_method",
-                          "tunnel_host",
-                          "tunnel_port",
-                          "tunnel_user",
-                          "ssh_key"
-                        ],
-                        "title": "SSH Key Authentication",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "description": "Connect through a jump server tunnel host using username and password authentication",
-                        "properties": {
-                          "tunnel_host": {
-                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
-                            "order": 1,
-                            "title": "SSH Tunnel Jump Server Host",
-                            "type": "string"
-                          },
-                          "tunnel_method": {
-                            "default": "SSH_PASSWORD_AUTH",
-                            "enum": [
-                              "SSH_PASSWORD_AUTH"
-                            ],
-                            "type": "string"
-                          },
-                          "tunnel_port": {
-                            "default": 22,
-                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
-                            "maximum": 65536,
-                            "minimum": 0,
-                            "order": 2,
-                            "title": "SSH Connection Port",
-                            "type": "integer"
-                          },
-                          "tunnel_user": {
-                            "description": "OS-level username for logging into the jump server host",
-                            "order": 3,
-                            "title": "SSH Login Username",
-                            "type": "string"
-                          },
-                          "tunnel_user_password": {
-                            "airbyte_secret": true,
-                            "description": "OS-level password for logging into the jump server host",
-                            "order": 4,
-                            "title": "Password",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "tunnel_method",
-                          "tunnel_host",
-                          "tunnel_port",
-                          "tunnel_user",
-                          "tunnel_user_password"
-                        ],
-                        "title": "Password Authentication",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 10,
-                    "title": "SSH Tunnel Method",
-                    "type": "object"
-                  },
-                  "username": {
-                    "description": "The username which is used to access the database.",
-                    "order": 4,
-                    "title": "User",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "host",
-                  "port",
-                  "database",
-                  "username",
-                  "replication_method"
-                ],
-                "title": "MySQL Source Spec",
-                "type": "object"
-              },
-              "documentationUrl": "https://docs.airbyte.com/integrations/sources/mysql",
-              "supported_destination_sync_modes": [],
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "language:java"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -104323,16 +103689,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "medium",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "medium",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "medium",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ramp/0.0.2.spdx.json",
@@ -104859,16 +104225,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "high",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "cloud": {
-            "sync_success_rate": "high",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "oss": {
-            "sync_success_rate": "high",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-recreation/0.2.25.spdx.json",
@@ -115605,16 +114971,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "cloud": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "oss": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-shortcut/0.0.57.spdx.json",
@@ -116612,11 +115978,11 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           }
         },
@@ -118683,7 +118049,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.1.0",
+      "dockerImageTag": "1.1.1",
       "dockerRepository": "airbyte/source-snowflake",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake",
       "externalDocumentationUrls": [
@@ -118710,10 +118076,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "ebac5070521e9b7e32ccb8b0945b44ff507e3cae",
-          "commit_timestamp": "2026-08-10T12:51:34-07:00"
+          "commit_author": "ANDRIANINA HERIZO Jouissant Michel",
+          "commit_author_email": "herizojouissant@gmail.com",
+          "commit_sha": "92d1a7d0e48d514a20e35cb0c84b5ba8c7464951",
+          "commit_timestamp": "2026-08-13T00:37:11+03:00"
         },
         "metrics": {
           "all": {
@@ -118729,12 +118095,12 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-snowflake/1.1.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-snowflake/1.1.1.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-snowflake/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-10T20:21:11.085271+00:00",
-          "registry_entry_generated_at": "2026-08-10T20:21:11.085271+00:00"
+          "metadata_last_modified": "2026-08-12T21:42:05.389559+00:00",
+          "registry_entry_generated_at": "2026-08-12T21:42:05.389559+00:00"
         }
       },
       "githubIssueLabel": "source-snowflake",
@@ -118756,335 +118122,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake-migrations",
-        "releaseCandidates": {
-          "1.1.1": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 200,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 100
-            },
-            "allowedHosts": {
-              "hosts": [
-                "${host}"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/java-connector-base:2.0.4@sha256:5f343797cfcf021ca98ba9bdf5970ef66cbf6222d8cc17b0d61d13860a5bcc2b"
-            },
-            "connectorIPCOptions": {
-              "dataChannel": {
-                "supportedSerialization": [
-                  "JSONL",
-                  "PROTOBUF"
-                ],
-                "supportedTransport": [
-                  "SOCKET",
-                  "STDIO"
-                ],
-                "version": "0.0.2"
-              }
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "acceptanceTests"
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "1.1.1",
-            "dockerRepository": "airbyte/source-snowflake",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake",
-            "externalDocumentationUrls": [
-              {
-                "title": "Snowflake documentation",
-                "type": "api_reference",
-                "url": "https://docs.snowflake.com/"
-              },
-              {
-                "title": "Snowflake server release notes and feature updates",
-                "type": "api_release_history",
-                "url": "https://docs.snowflake.com/en/release-notes/new-features"
-              },
-              {
-                "title": "Snowflake authentication",
-                "type": "authentication_guide",
-                "url": "https://docs.snowflake.com/en/user-guide/admin-user-management"
-              },
-              {
-                "title": "Snowflake Status",
-                "type": "status_page",
-                "url": "https://status.snowflake.com/"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "ANDRIANINA HERIZO Jouissant Michel",
-                "commit_author_email": "herizojouissant@gmail.com",
-                "commit_sha": "92d1a7d0e48d514a20e35cb0c84b5ba8c7464951",
-                "commit_timestamp": "2026-08-13T00:37:11+03:00"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-snowflake/1.1.1.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-snowflake/1.1.1/metadata.yaml",
-                "metadata_last_modified": "2026-08-12T21:42:05.389559+00:00",
-                "registry_entry_generated_at": "2026-08-12T21:42:05.389559+00:00"
-              }
-            },
-            "githubIssueLabel": "source-snowflake",
-            "icon": "icon.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-snowflake/latest/icon.svg",
-            "language": "java",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 7200,
-            "name": "Snowflake",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "alpha",
-            "releases": {
-              "breakingChanges": {
-                "1.0.0": {
-                  "message": "**Important: This version introduces Airbyte certified source connector to replace community supported connector.**\n**What to expect when upgrading:**\n1. The certified connector configuration spec should be compatible with community version. 2. Full refresh sync mode should remain the same. 3. For incremental sync mode, a full refresh will be triggered for next sync because the connection state will not be compatible. New state will be populated after full refresh is completed.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake-migrations#1.0.0",
-                  "upgradeDeadline": "2025-09-30"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "slow"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "sourceDefinitionId": "e2d65910-8c8b-40a1-ae7d-ee2416b2bfa2",
-            "sourceType": "database",
-            "spec": {
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "check_privileges": {
-                    "default": true,
-                    "description": "When this feature is enabled, during schema discovery the connector will query each table or view individually to check access privileges and inaccessible tables, views, or columns therein will be removed. In large schemas, this might cause schema discovery to take too long, in which case it might be advisable to disable this feature.",
-                    "order": 10,
-                    "title": "Check Table and Column Access Privileges",
-                    "type": "boolean"
-                  },
-                  "checkpoint_target_interval_seconds": {
-                    "default": 300,
-                    "description": "How often (in seconds) a stream should checkpoint, when possible.",
-                    "order": 8,
-                    "title": "Checkpoint Target Time Interval",
-                    "type": "integer"
-                  },
-                  "concurrency": {
-                    "default": 1,
-                    "description": "Maximum number of concurrent queries to the database.",
-                    "order": 9,
-                    "title": "Concurrency",
-                    "type": "integer"
-                  },
-                  "credentials": {
-                    "oneOf": [
-                      {
-                        "additionalProperties": true,
-                        "order": 1,
-                        "properties": {
-                          "auth_type": {
-                            "default": "Key Pair Authentication",
-                            "enum": [
-                              "Key Pair Authentication"
-                            ],
-                            "type": "string"
-                          },
-                          "private_key": {
-                            "airbyte_secret": true,
-                            "description": "RSA Private key to use for Snowflake connection. See the <a href=\"https://docs.airbyte.com/integrations/sources/snowflake#key-pair-authentication\">docs</a> for more information on how to obtain this key.",
-                            "multiline": true,
-                            "order": 2,
-                            "title": "Private Key",
-                            "type": "string"
-                          },
-                          "private_key_password": {
-                            "airbyte_secret": true,
-                            "description": "Passphrase for private key",
-                            "order": 3,
-                            "title": "Passphrase",
-                            "type": "string"
-                          },
-                          "username": {
-                            "description": "The username you created to allow Airbyte to access the database.",
-                            "order": 1,
-                            "title": "Username",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "username",
-                          "private_key"
-                        ],
-                        "title": "Key Pair Authentication",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "order": 2,
-                        "properties": {
-                          "auth_type": {
-                            "default": "username/password",
-                            "enum": [
-                              "username/password"
-                            ],
-                            "type": "string"
-                          },
-                          "password": {
-                            "airbyte_secret": true,
-                            "description": "The password associated with the username.",
-                            "order": 2,
-                            "title": "Password",
-                            "type": "string"
-                          },
-                          "username": {
-                            "description": "The username you created to allow Airbyte to access the database.",
-                            "order": 1,
-                            "title": "Username",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "username",
-                          "password"
-                        ],
-                        "title": "Username and Password",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "order": 3,
-                        "properties": {
-                          "auth_type": {
-                            "default": "Programmatic Access Token",
-                            "enum": [
-                              "Programmatic Access Token"
-                            ],
-                            "type": "string"
-                          },
-                          "programmatic_access_token": {
-                            "airbyte_secret": true,
-                            "description": "The programmatic access token used to authenticate to Snowflake.",
-                            "order": 1,
-                            "title": "Programmatic Access Token",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "programmatic_access_token"
-                        ],
-                        "title": "Programmatic Access Token",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 0,
-                    "title": "Authorization Method",
-                    "type": "object"
-                  },
-                  "cursor": {
-                    "description": "Configures how data is extracted from the database.",
-                    "display_type": "radio",
-                    "oneOf": [
-                      {
-                        "additionalProperties": true,
-                        "description": "Incrementally detects new inserts and updates using the <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\">cursor column</a> chosen when configuring a connection (e.g. created_at, updated_at).",
-                        "properties": {
-                          "cursor_method": {
-                            "default": "user_defined",
-                            "enum": [
-                              "user_defined"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "cursor_method"
-                        ],
-                        "title": "Scan Changes with User Defined Cursor",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 7,
-                    "title": "Update Method",
-                    "type": "object"
-                  },
-                  "database": {
-                    "description": "The database you created for Airbyte to access data.",
-                    "order": 4,
-                    "title": "Database",
-                    "type": "string"
-                  },
-                  "host": {
-                    "description": "The host domain of the snowflake instance (must include the account, region, cloud environment, and end with snowflakecomputing.com).",
-                    "order": 1,
-                    "title": "Server URL",
-                    "type": "string"
-                  },
-                  "jdbc_url_params": {
-                    "description": "Additional properties to pass to the JDBC URL string when connecting to the database formatted as 'key=value' pairs separated by the symbol '&'. (example: key1=value1&key2=value2&key3=value3).",
-                    "order": 6,
-                    "title": "JDBC URL Params",
-                    "type": "string"
-                  },
-                  "role": {
-                    "description": "The role you created for Airbyte to access Snowflake.",
-                    "order": 2,
-                    "title": "Role",
-                    "type": "string"
-                  },
-                  "schema": {
-                    "description": "The source Snowflake schema tables. Leave empty to access tables from multiple schemas.",
-                    "order": 5,
-                    "title": "Schema",
-                    "type": "string"
-                  },
-                  "warehouse": {
-                    "description": "The warehouse you created for Airbyte to access data.",
-                    "order": 3,
-                    "title": "Warehouse",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "host",
-                  "role",
-                  "warehouse",
-                  "database"
-                ],
-                "title": "Snowflake Source Spec",
-                "type": "object"
-              },
-              "documentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake",
-              "supported_destination_sync_modes": [],
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "language:java"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -121512,6 +120549,373 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations",
+        "releaseCandidates": {
+          "6.0.14": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 400,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "api.stripe.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.24.0@sha256:e34fb609bccdeb77474763c77e3621ea9d5adf9f65f2d9851102cc14a1caa281"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "liveTests",
+                "testConnections": [
+                  {
+                    "id": "0f3c8a84-53e2-4a33-89a9-26bf36a2367c",
+                    "name": "stripe_config_dev_null"
+                  },
+                  {
+                    "id": "4f738e2c-a1d2-48b4-9b93-f56e2258068d",
+                    "name": "stripe_performance-config_dev_null"
+                  },
+                  {
+                    "id": "97d55640-b443-49c5-a9d9-aed28396841d",
+                    "name": "stripe_connected_account_config_dev_null"
+                  }
+                ]
+              },
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "connected_account_config.json",
+                    "name": "SECRET_SOURCE-STRIPE_CONNECTED_ACCOUNT__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-STRIPE__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "performance-config.json",
+                    "name": "SECRET_SOURCE-STRIPE__PERFORMANCE",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "6.0.14",
+            "dockerRepository": "airbyte/source-stripe",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/stripe",
+            "erdUrl": "https://dbdocs.io/airbyteio/source-stripe?view=relationships",
+            "externalDocumentationUrls": [
+              {
+                "title": "Stripe API reference",
+                "type": "api_reference",
+                "url": "https://stripe.com/docs/api"
+              },
+              {
+                "title": "API changelog",
+                "type": "api_release_history",
+                "url": "https://docs.stripe.com/changelog"
+              },
+              {
+                "title": "API upgrades",
+                "type": "api_release_history",
+                "url": "https://docs.stripe.com/upgrades"
+              },
+              {
+                "title": "Stripe API changelog",
+                "type": "api_release_history",
+                "url": "https://stripe.com/docs/upgrades"
+              },
+              {
+                "title": "Stripe authentication",
+                "type": "authentication_guide",
+                "url": "https://stripe.com/docs/api/authentication"
+              },
+              {
+                "title": "Stripe API OpenAPI specification",
+                "type": "openapi_spec",
+                "url": "https://github.com/stripe/openapi"
+              },
+              {
+                "title": "Stripe rate limits",
+                "type": "rate_limits",
+                "url": "https://stripe.com/docs/rate-limits"
+              },
+              {
+                "title": "Stripe Status",
+                "type": "status_page",
+                "url": "https://status.stripe.com/"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "18d597f71d10d171a7dc9853b6852bdcd82923eb",
+                "commit_timestamp": "2026-08-17T14:12:11-04:00"
+              },
+              "release": {
+                "attributed_to": null,
+                "merge_commit_sha": "18d597f71d10d171a7dc9853b6852bdcd82923eb",
+                "merged_at": "2026-08-17T18:12:11Z",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration[bot]",
+                "pr_author_type": "Bot",
+                "pr_number": 84355,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84355",
+                "released_at": "2026-08-17T18:12:11Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-stripe/6.0.14.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-stripe/6.0.14/metadata.yaml",
+                "metadata_last_modified": "2026-08-17T18:16:34.426360+00:00",
+                "registry_entry_generated_at": "2026-08-17T18:16:34.426360+00:00"
+              }
+            },
+            "githubIssueLabel": "source-stripe",
+            "icon": "stripe.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-stripe/latest/icon.svg",
+            "language": "manifest-only",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 86400,
+            "name": "Stripe",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "4.0.0": {
+                  "message": "Version 4.0.0 changes the cursors in most of the Stripe streams that support incremental sync mode. This is done to not only sync the data that was created since previous sync, but also the data that was modified. A schema refresh of all effected streams is required to use the new cursor format.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations#4.0.0",
+                  "upgradeDeadline": "2023-09-14"
+                },
+                "5.0.0": {
+                  "message": "Version 5.0.0 introduces fixes for the `CheckoutSessions`, `CheckoutSessionsLineItems` and `Refunds` streams. The cursor field is changed for the `CheckoutSessionsLineItems` and `Refunds` streams. This will prevent data loss during incremental syncs. Also, the `Invoices`, `Subscriptions` and `SubscriptionSchedule` stream schemas have been updated.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations#5.0.0",
+                  "upgradeDeadline": "2023-12-11"
+                },
+                "5.4.0": {
+                  "message": "Version 5.4.0 introduces fixes for the `Refunds` streams. The `Refunds`, which previously was `incremental` on the `creation date`, now tracks updates as well. In order to do that, the cursor field needs to be updated and a `resetting` is required to get the updates.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations#5.4.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "refunds"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2024-07-14"
+                },
+                "6.0.0": {
+                  "message": "Version 6.0.0 fixes a bug where the `invoice_line_items` and `subscription_items` incremental streams emitted only one record per event instead of expanding nested line items. Previously synced data for these streams may be incomplete. Users can run a full refresh to recapture the correct values. If choosing Full Refresh, decide between Refresh and Retain (keeps existing destination data) or Refresh and Clear (replaces destination data but may lose events older than 30 days due to the Stripe Events API retention limit). See the [migration guide](https://docs.airbyte.com/integrations/sources/stripe-migrations#upgrading-to-600) for details.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations#6.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "invoice_line_items",
+                        "subscription_items"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2026-05-12"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": false,
+                "packageName": "airbyte-source-stripe"
+              }
+            },
+            "sourceDefinitionId": "e094cb9a-26de-4645-8761-65c0c425d1de",
+            "sourceType": "api",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "properties": {
+                  "account_id": {
+                    "description": "Your Stripe account ID (starts with 'acct_', find yours <a href=\"https://dashboard.stripe.com/settings/account\">here</a>).",
+                    "order": 0,
+                    "title": "Account ID",
+                    "type": "string"
+                  },
+                  "api_retention_streams": {
+                    "default": [],
+                    "description": "Select streams where cursor age is validated against the Stripe API 30-day event retention period. When a selected stream's cursor is older than 30 days, the connector performs a full refresh to avoid missing data. Streams not selected here will always use incremental sync regardless of cursor age.",
+                    "items": {
+                      "enum": [
+                        "accounts",
+                        "application_fees",
+                        "application_fees_refunds",
+                        "authorizations",
+                        "bank_accounts",
+                        "cardholders",
+                        "charges",
+                        "checkout_sessions",
+                        "coupons",
+                        "credit_notes",
+                        "customers",
+                        "disputes",
+                        "early_fraud_warnings",
+                        "external_account_bank_accounts",
+                        "external_account_cards",
+                        "invoice_items",
+                        "invoice_line_items",
+                        "invoices",
+                        "payment_intents",
+                        "payment_methods",
+                        "payouts",
+                        "persons",
+                        "plans",
+                        "prices",
+                        "products",
+                        "promotion_codes",
+                        "refunds",
+                        "reviews",
+                        "setup_intents",
+                        "subscription_items",
+                        "subscription_schedule",
+                        "subscriptions",
+                        "top_ups",
+                        "transactions",
+                        "transfers"
+                      ],
+                      "type": "string"
+                    },
+                    "order": 7,
+                    "title": "Streams with API Data Retention Validation",
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "call_rate_limit": {
+                    "description": "The number of API calls per second that you allow connector to make. This value can not be bigger than real API call rate limit (https://stripe.com/docs/rate-limits). If not specified the default maximum is 25 calls per second for test/sandbox tokens and 100 for production tokens.",
+                    "examples": [
+                      25,
+                      100
+                    ],
+                    "title": "Max number of API calls per second",
+                    "type": "integer"
+                  },
+                  "client_secret": {
+                    "airbyte_secret": true,
+                    "description": "Stripe API key (usually starts with 'sk_live_'; find yours <a href=\"https://dashboard.stripe.com/apikeys\">here</a>).",
+                    "order": 1,
+                    "title": "Secret Key",
+                    "type": "string"
+                  },
+                  "lookback_window_days": {
+                    "default": 0,
+                    "description": "When set, the connector will always re-export data from the past N days, where N is the value set here. This is useful if your data is frequently updated after creation. The Lookback Window only applies to streams that do not support event-based incremental syncs: Events, SetupAttempts, ShippingRates, BalanceTransactions, Files, FileLinks, Refunds. More info <a href=\"https://docs.airbyte.com/integrations/sources/stripe#requirements\">here</a>",
+                    "minimum": 0,
+                    "order": 3,
+                    "title": "Lookback Window in days",
+                    "type": "integer"
+                  },
+                  "num_workers": {
+                    "default": 10,
+                    "description": "The number of worker thread to use for the sync. The performance upper boundary depends on call_rate_limit setting and type of account.",
+                    "examples": [
+                      2,
+                      3,
+                      4
+                    ],
+                    "maximum": 100,
+                    "minimum": 2,
+                    "order": 5,
+                    "title": "Number of concurrent threads",
+                    "type": "integer"
+                  },
+                  "slice_range": {
+                    "default": 365,
+                    "description": "The time increment used by the connector when requesting data from the Stripe API. The bigger the value is, the less requests will be made and faster the sync will be. On the other hand, the more seldom the state is persisted.",
+                    "examples": [
+                      1,
+                      3,
+                      10,
+                      30,
+                      180,
+                      360
+                    ],
+                    "minimum": 1,
+                    "order": 4,
+                    "title": "Data request time increment in days",
+                    "type": "integer"
+                  },
+                  "start_date": {
+                    "default": "2017-01-25T00:00:00Z",
+                    "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Only data generated after this date will be replicated.",
+                    "examples": [
+                      "2017-01-25T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 2,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "title": "Replication start date",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "client_secret",
+                  "account_id"
+                ],
+                "title": "Stripe Source Spec",
+                "type": "object"
+              },
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "suggestedStreams": {
+              "streams": [
+                "customers",
+                "invoices",
+                "charges",
+                "subscriptions",
+                "refunds"
+              ]
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "cdk:low-code",
+              "language:manifest-only"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -127787,15 +127191,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-twilio-taskrouter/0.2.21.spdx.json",
@@ -130567,15 +129971,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
