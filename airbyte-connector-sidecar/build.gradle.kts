@@ -88,6 +88,7 @@ dependencies {
 airbyte {
   application {
     mainClass.set("io.airbyte.connectorSidecar.ApplicationKt")
+    defaultJvmArgs = listOf("-XX:MaxRAMPercentage=75.0")
 
     localEnvVars.putAll(
       mapOf(
