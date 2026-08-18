@@ -124,6 +124,7 @@ class RuntimeEnvVarFactory(
   ): List<EnvVar> =
     getDdConfiguration() +
       resolveAwsAssumedRoleEnvVars(launcherConfig) +
+      getConnectorApmEnvVars(launcherConfig.dockerImage, Workspace(launcherConfig.workspaceId)) +
       getSecretPersistenceEnvVars(organizationId) +
       getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
@@ -137,6 +138,7 @@ class RuntimeEnvVarFactory(
   ): List<EnvVar> =
     getDdConfiguration() +
       resolveAwsAssumedRoleEnvVars(launcherConfig) +
+      getConnectorApmEnvVars(launcherConfig.dockerImage, Workspace(launcherConfig.workspaceId)) +
       getSecretPersistenceEnvVars(organizationId) +
       getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +

@@ -67,6 +67,7 @@ class ConnectorWatcher(
     withLoggingContext(logContextFactory.create(sidecarInput.logPath)) {
       LineGobbler.startSection(sidecarInput.operationType.toString())
       var heartbeatStarted = false
+      var throwableHandled = false
       try {
         heartbeatMonitor.startHeartbeatThread(sidecarInput)
         heartbeatStarted = true
@@ -80,27 +81,32 @@ class ConnectorWatcher(
         val connectorOutput = processConnectorOutput(sidecarInput)
         try {
           saveConnectorOutput(sidecarInput.workloadId, connectorOutput)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+          throwableHandled = true
           logger.error(e) { "Failed to write connector output to doc store" }
           failWorkload(
             sidecarInput.workloadId,
             FailureReason()
               .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
               .withExternalMessage("Unable to persist the job output, check the document store credentials.")
-              .withInternalMessage(e.message)
-              .withStacktrace(e.stackTraceToString()),
+              .let { applyThrowableDetails(it, e) },
           )
           exitInternalError()
         }
         markWorkloadSuccess(sidecarInput.workloadId)
-      } catch (e: Exception) {
+      } catch (e: Throwable) {
+        throwableHandled = true
         handleException(sidecarInput, e)
       } finally {
         if (heartbeatStarted) {
           heartbeatMonitor.stopHeartbeatThread()
         }
         LineGobbler.endSection(sidecarInput.operationType.toString())
-        exitProperly()
+        if (throwableHandled) {
+          exitInternalError()
+        } else {
+          exitProperly()
+        }
       }
     }
   }
@@ -210,30 +216,55 @@ class ConnectorWatcher(
 
   fun handleException(
     input: SidecarInput,
-    e: Exception,
+    e: Throwable,
   ) {
+    logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
+    var failureReason: FailureReason? = null
+    var outputWriteFailed = false
     try {
-      logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
       val connectorOutput =
         when (input.operationType) {
           SidecarInput.OperationType.CHECK -> getFailedOutput(input.checkConnectionInput, e)
           SidecarInput.OperationType.DISCOVER -> getFailedOutput(input.discoverCatalogInput, e)
           SidecarInput.OperationType.SPEC -> getFailedOutput(input.integrationLauncherConfig.dockerImage, e)
         }
+      failureReason = connectorOutput.failureReason
       outputWriter.write(input.workloadId, connectorOutput)
-      failWorkload(input.workloadId, connectorOutput.failureReason)
-    } catch (e: Exception) {
-      failWorkload(
-        input.workloadId,
-        FailureReason()
-          .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
-          .withExternalMessage("Unable to persist the job output to the doc store.")
-          .withInternalMessage(e.message)
-          .withStacktrace(e.stackTraceToString()),
-      )
+    } catch (writeError: Throwable) {
+      outputWriteFailed = true
+      logger.error(writeError) { "Unable to persist the failed operation output to the doc store" }
+    }
+    try {
+      val workloadFailureReason =
+        if (!outputWriteFailed) {
+          failureReason
+        } else {
+          failureReason?.withExternalMessage(
+            "${failureReason.externalMessage} Failure details could not be saved to the document store.",
+          ) ?: FailureReason()
+            .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+            .withExternalMessage("Unable to persist the job output to the doc store.")
+        }
+      failWorkload(input.workloadId, workloadFailureReason)
+    } catch (failureError: Throwable) {
+      logger.error(failureError) { "Unable to mark workload as failed" }
     } finally {
       exitInternalError()
     }
+  }
+
+  private fun applyThrowableDetails(
+    failureReason: FailureReason,
+    throwable: Throwable,
+  ): FailureReason {
+    if (throwable is Exception) {
+      failureReason
+        .withInternalMessage(throwable.message)
+        .withStacktrace(throwable.stackTraceToString())
+    } else {
+      failureReason.withInternalMessage(throwable.toString())
+    }
+    return failureReason
   }
 
   @InternalForTesting
@@ -289,10 +320,13 @@ class ConnectorWatcher(
   @InternalForTesting
   fun getFailedOutput(
     input: StandardCheckConnectionInput?,
-    e: Exception,
+    e: Throwable,
   ): ConnectorJobOutput {
+    val isFatalError = e !is Exception
     val failureOrigin =
-      if (input?.actorType == ActorType.SOURCE) {
+      if (isFatalError) {
+        FailureReason.FailureOrigin.AIRBYTE_PLATFORM
+      } else if (input?.actorType == ActorType.SOURCE) {
         FailureReason.FailureOrigin.SOURCE
       } else {
         FailureReason.FailureOrigin.DESTINATION
@@ -301,9 +335,13 @@ class ConnectorWatcher(
     val failureReason =
       FailureReason()
         .withFailureOrigin(failureOrigin)
-        .withExternalMessage("The check connection failed due to an internal error.")
-        .withInternalMessage(e.message)
-        .withStacktrace(e.stackTraceToString())
+        .withExternalMessage(
+          if (isFatalError) {
+            "The check connection operation failed due to an internal platform error."
+          } else {
+            "The check connection failed due to an internal error."
+          },
+        ).let { applyThrowableDetails(it, e) }
 
     val checkConnectionOutput =
       StandardCheckConnectionOutput()
@@ -319,14 +357,24 @@ class ConnectorWatcher(
   @InternalForTesting
   fun getFailedOutput(
     input: StandardDiscoverCatalogInput?,
-    e: Exception,
+    e: Throwable,
   ): ConnectorJobOutput {
+    val isFatalError = e !is Exception
     val failureReason =
       FailureReason()
-        .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
-        .withExternalMessage("The discover catalog failed due to an internal error for source: ${input?.sourceId}")
-        .withInternalMessage(e.message)
-        .withStacktrace(e.stackTraceToString())
+        .withFailureOrigin(
+          if (isFatalError) {
+            FailureReason.FailureOrigin.AIRBYTE_PLATFORM
+          } else {
+            FailureReason.FailureOrigin.SOURCE
+          },
+        ).withExternalMessage(
+          if (isFatalError) {
+            "The discover catalog operation failed due to an internal platform error."
+          } else {
+            "The discover catalog failed due to an internal error for source: ${input?.sourceId}"
+          },
+        ).let { applyThrowableDetails(it, e) }
 
     return ConnectorJobOutput()
       .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
@@ -337,14 +385,24 @@ class ConnectorWatcher(
   @InternalForTesting
   fun getFailedOutput(
     dockerImage: String,
-    e: Exception,
+    e: Throwable,
   ): ConnectorJobOutput {
+    val isFatalError = e !is Exception
     val failureReason =
       FailureReason()
-        .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
-        .withExternalMessage("The spec failed due to an internal error for connector: $dockerImage")
-        .withInternalMessage(e.message)
-        .withStacktrace(e.stackTraceToString())
+        .withFailureOrigin(
+          if (isFatalError) {
+            FailureReason.FailureOrigin.AIRBYTE_PLATFORM
+          } else {
+            FailureReason.FailureOrigin.SOURCE
+          },
+        ).withExternalMessage(
+          if (isFatalError) {
+            "The spec operation failed due to an internal platform error."
+          } else {
+            "The spec failed due to an internal error for connector: $dockerImage"
+          },
+        ).let { applyThrowableDetails(it, e) }
 
     return ConnectorJobOutput()
       .withOutputType(ConnectorJobOutput.OutputType.SPEC)

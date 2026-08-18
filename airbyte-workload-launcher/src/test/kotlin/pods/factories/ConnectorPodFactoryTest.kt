@@ -14,6 +14,7 @@ import io.airbyte.micronaut.runtime.AirbyteContainerConfig
 import io.airbyte.micronaut.runtime.AirbyteStorageConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.micronaut.runtime.StorageType
+import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
 import io.airbyte.workload.launcher.pods.KubeContainerInfo
 import io.airbyte.workload.launcher.pods.KubePodInfo
@@ -63,6 +64,31 @@ class ConnectorPodFactoryTest {
     assertEquals("test-label-val-1", pod.metadata.labels["test-label-1"])
     assertEquals("test-anno-val-1", pod.metadata.annotations["test-anno-1"])
     assertEquals("node-sel-val-1", pod.spec.nodeSelector["node-sel-1"])
+  }
+
+  @Test
+  fun `does not pass connector JAVA_OPTS to sidecar`() {
+    val runtimeEnvVars =
+      listOf(
+        EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, "-XX:+ExitOnOutOfMemoryError", null),
+        EnvVar("OTHER_ENV", "value", null),
+      )
+    val pod =
+      Fixtures.createPodWithDefaults(
+        Fixtures.defaultConnectorPodFactory,
+        runtimeEnvVars = runtimeEnvVars,
+      )
+
+    val sidecarEnvNames =
+      pod.spec.containers[0]
+        .env
+        .map { it.name }
+    val mainEnvNames =
+      pod.spec.containers[1]
+        .env
+        .map { it.name }
+    assertEquals(listOf("OTHER_ENV"), sidecarEnvNames)
+    assertEquals(runtimeEnvVars.map { it.name }, mainEnvNames)
   }
 
   @Test

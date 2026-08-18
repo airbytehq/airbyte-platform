@@ -10,6 +10,7 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
 import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
 import io.airbyte.workload.launcher.constants.ContainerConstants
+import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
 import io.airbyte.workload.launcher.pods.KubeContainerInfo
 import io.airbyte.workload.launcher.pods.KubePodInfo
@@ -139,7 +140,7 @@ data class ConnectorPodFactory(
       .withImagePullPolicy(sidecarContainerInfo.pullPolicy)
       .withCommand("sh", "-c", mainCommand)
       .withWorkingDir(airbyteConnectorConfig.configDir)
-      .withEnv(sideCarEnvVars + runtimeEnvVars)
+      .withEnv(sideCarEnvVars + runtimeEnvVars.filterNot { it.name == EnvVarConstants.JAVA_OPTS_ENV_VAR })
       .withVolumeMounts(volumeMounts)
       .withResources(ResourceConversionUtils.domainToApi(sidecarReqs))
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())

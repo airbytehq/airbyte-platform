@@ -31,6 +31,7 @@ import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.mockk.CapturingSlot
 import io.mockk.MockKException
 import io.mockk.Runs
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -39,6 +40,8 @@ import io.mockk.spyk
 import io.mockk.verify
 import io.mockk.verifyOrder
 import io.mockk.verifySequence
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertThrows
@@ -237,6 +240,79 @@ internal class ConnectorWatchTest {
       )
       connectorWatcher.exitInternalError()
     }
+  }
+
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `run for failed with fatal error`(operationType: OperationType) {
+    val error = OutOfMemoryError("Unable to serialize catalog")
+    val expectedExternalMessage =
+      when (operationType) {
+        OperationType.CHECK -> "The check connection operation failed due to an internal platform error."
+        OperationType.DISCOVER -> "The discover catalog operation failed due to an internal platform error."
+        OperationType.SPEC -> "The spec operation failed due to an internal platform error."
+      }
+    val outputSlot = CapturingSlot<ConnectorJobOutput>()
+    val failureRequestSlot = CapturingSlot<WorkloadFailureRequest>()
+
+    clearMocks(outputWriter, answers = true)
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig().withDockerImage(""), operationType, ""))
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } throws error
+    every { outputWriter.write(any(), any()) } returns Unit
+    every { workloadApiClient.workloadFailure(capture(failureRequestSlot)) } returns Unit
+    every { sidecarInput.operationType } returns operationType
+
+    connectorWatcher.run()
+
+    verify { outputWriter.write(workloadId, capture(outputSlot)) }
+    assertEquals(
+      FailureReason.FailureOrigin.AIRBYTE_PLATFORM.value(),
+      outputSlot.captured.failureReason.failureOrigin
+        .value(),
+    )
+    assertEquals(expectedExternalMessage, outputSlot.captured.failureReason.externalMessage)
+    assertNull(outputSlot.captured.failureReason.stacktrace)
+    assertEquals(workloadId, failureRequestSlot.captured.workloadId)
+    assertEquals(FailureReason.FailureOrigin.AIRBYTE_PLATFORM.value(), failureRequestSlot.captured.source)
+    assertEquals(expectedExternalMessage, failureRequestSlot.captured.reason)
+    verify {
+      connectorWatcher.exitInternalError()
+    }
+    verify(exactly = 0) { connectorWatcher.exitProperly() }
+  }
+
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `run for failed when failed output cannot be persisted`(operationType: OperationType) {
+    val error = OutOfMemoryError("Unable to serialize catalog")
+    val expectedExternalMessage =
+      when (operationType) {
+        OperationType.CHECK -> "The check connection operation failed due to an internal platform error."
+        OperationType.DISCOVER -> "The discover catalog operation failed due to an internal platform error."
+        OperationType.SPEC -> "The spec operation failed due to an internal platform error."
+      }
+    val failureRequestSlot = CapturingSlot<WorkloadFailureRequest>()
+
+    clearMocks(outputWriter, answers = true)
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig().withDockerImage(""), operationType, ""))
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } throws error
+    every { outputWriter.write(any(), any()) } throws RuntimeException("Unable to Write")
+    every { workloadApiClient.workloadFailure(capture(failureRequestSlot)) } returns Unit
+    every { sidecarInput.operationType } returns operationType
+
+    connectorWatcher.run()
+
+    verify { outputWriter.write(workloadId, any()) }
+    assertEquals(workloadId, failureRequestSlot.captured.workloadId)
+    assertEquals(FailureReason.FailureOrigin.AIRBYTE_PLATFORM.value(), failureRequestSlot.captured.source)
+    assertEquals(
+      "$expectedExternalMessage Failure details could not be saved to the document store.",
+      failureRequestSlot.captured.reason,
+    )
+    verify { connectorWatcher.exitInternalError() }
+    verify(exactly = 0) { connectorWatcher.exitProperly() }
   }
 
   @ParameterizedTest

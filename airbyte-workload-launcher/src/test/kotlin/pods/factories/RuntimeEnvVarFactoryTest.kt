@@ -379,14 +379,18 @@ internal class RuntimeEnvVarFactoryTest {
   @ValueSource(booleans = [true, false])
   fun `builds expected env vars for check connector container`(flagValue: Boolean) {
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns connectorAwsAssumedRoleSecretEnvList
+    val apmEnvVars = listOf(EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, "connector-opts", null))
+    every { factory.getConnectorApmEnvVars(any(), any()) } returns apmEnvVars
     every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns flagValue
     val config =
       IntegrationLauncherConfig()
         .withWorkspaceId(workspaceId)
+        .withDockerImage("image-name")
     val result = factory.checkConnectorEnvVars(config, organizationId, WORKLOAD_ID)
 
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
+        apmEnvVars +
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, flagValue.toString(), null) +
         EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
@@ -399,14 +403,18 @@ internal class RuntimeEnvVarFactoryTest {
   @ValueSource(booleans = [true, false])
   fun `builds expected env vars for discover connector container`(flagValue: Boolean) {
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns connectorAwsAssumedRoleSecretEnvList
+    val apmEnvVars = listOf(EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, "connector-opts", null))
+    every { factory.getConnectorApmEnvVars(any(), any()) } returns apmEnvVars
     every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns flagValue
     val config =
       IntegrationLauncherConfig()
         .withWorkspaceId(workspaceId)
+        .withDockerImage("image-name")
     val result = factory.discoverConnectorEnvVars(config, organizationId, WORKLOAD_ID)
 
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
+        apmEnvVars +
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, flagValue.toString(), null) +
         EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
