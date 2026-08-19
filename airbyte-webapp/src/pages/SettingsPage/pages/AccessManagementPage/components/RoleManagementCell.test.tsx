@@ -4,6 +4,7 @@ import { render } from "test-utils";
 
 import { useCurrentOrganizationInfo } from "core/api";
 import { useCurrentUser } from "core/services/auth";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useGeneratedIntent, useIntent } from "core/utils/rbac";
 
 import { RoleManagementCell } from "./RoleManagementCell";
@@ -21,6 +22,11 @@ jest.mock("area/organization/utils/useCurrentOrganizationId", () => ({
 
 jest.mock("core/services/auth", () => ({
   useCurrentUser: jest.fn(),
+}));
+
+jest.mock("core/services/features", () => ({
+  ...jest.requireActual("core/services/features"),
+  useFeature: jest.fn(),
 }));
 
 // Intent is re-declared rather than spread from the real module: core/utils/rbac reaches core/api,
@@ -42,6 +48,7 @@ jest.mock("./RoleManagementMenu", () => ({
 
 const mockUseCurrentOrganizationInfo = useCurrentOrganizationInfo as jest.Mock;
 const mockUseCurrentUser = useCurrentUser as jest.Mock;
+const mockUseFeature = useFeature as jest.Mock;
 const mockUseGeneratedIntent = useGeneratedIntent as jest.Mock;
 const mockUseIntent = useIntent as jest.Mock;
 
@@ -84,6 +91,7 @@ describe(`${RoleManagementCell.name}`, () => {
     // Current user is someone else, so the "cannot edit your own permissions" branch stays out of
     // the way and SCIM is the only thing that can force the view-only box.
     mockUseCurrentUser.mockReturnValue({ userId: "current-user-id" });
+    mockUseFeature.mockReturnValue(true);
     mockUseGeneratedIntent.mockReturnValue(true);
     mockUseIntent.mockReturnValue(false);
   });
@@ -115,6 +123,47 @@ describe(`${RoleManagementCell.name}`, () => {
     setScim(true);
 
     await render(<RoleManagementCell user={WORKSPACE_MEMBER} resourceType="workspace" />);
+
+    expect(screen.getByTestId("role-management-menu")).toBeInTheDocument();
+  });
+
+  it("renders the workspace role as static text when SCIM is enabled without RBAC roles", async () => {
+    setScim(true);
+    mockUseFeature.mockImplementation((feature) => feature !== FeatureItem.AllowAllRBACRoles);
+
+    await render(<RoleManagementCell user={WORKSPACE_MEMBER} resourceType="workspace" />);
+
+    expect(screen.queryByTestId("role-management-menu")).not.toBeInTheDocument();
+    expect(screen.getByText("Editor")).toBeInTheDocument();
+  });
+
+  it("renders a pending workspace invitation as static text when SCIM is enabled", async () => {
+    setScim(true);
+
+    const PENDING_INVITATION: UnifiedUserModel = {
+      id: "invitation-id",
+      userEmail: "invited@airbyte.io",
+      invitationStatus: "pending",
+      invitationPermissionType: "workspace_reader",
+    };
+
+    await render(<RoleManagementCell user={PENDING_INVITATION} resourceType="workspace" />);
+
+    expect(screen.queryByTestId("role-management-menu")).not.toBeInTheDocument();
+    expect(screen.getByText("Reader")).toBeInTheDocument();
+  });
+
+  it("leaves a pending workspace invitation editable when SCIM is disabled", async () => {
+    setScim(false);
+
+    const PENDING_INVITATION: UnifiedUserModel = {
+      id: "invitation-id",
+      userEmail: "invited@airbyte.io",
+      invitationStatus: "pending",
+      invitationPermissionType: "workspace_reader",
+    };
+
+    await render(<RoleManagementCell user={PENDING_INVITATION} resourceType="workspace" />);
 
     expect(screen.getByTestId("role-management-menu")).toBeInTheDocument();
   });

@@ -60,6 +60,7 @@ export const PendingInvitationBadge: React.FC<{ scope: ResourceType }> = ({ scop
 };
 export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, resourceType }) => {
   const indicateGuestUsers = useFeature(FeatureItem.IndicateGuestUsers);
+  const areAllRbacRolesEnabled = useFeature(FeatureItem.AllowAllRBACRoles);
   const organizationId = useCurrentOrganizationId();
   const organizationInfo = useCurrentOrganizationInfo();
   const workspaceAccessLevel = getWorkspaceAccessLevel(user);
@@ -81,9 +82,10 @@ export const RoleManagementCell: React.FC<RoleManagementCellProps> = ({ user, re
     cannotDemoteUser ||
     !canEditPermissions ||
     user.id === currentUser.userId ||
-    // SCIM: an invitation row offers no role options, so its only menu item would be
-    // "Cancel invitation" - a membership operation the identity provider owns.
-    (resourceType === "organization" && Boolean(organizationInfo?.scim) && Boolean(user.invitationStatus));
+    // With SCIM, membership actions are hidden. Render static text when that would leave the menu
+    // without any actionable items: invitations have no role options, and plans without RBAC roles
+    // offer no role changes.
+    (Boolean(organizationInfo?.scim) && (Boolean(user.invitationStatus) || !areAllRbacRolesEnabled));
 
   const tooltipContent =
     cannotDemoteUser && canEditPermissions

@@ -6,7 +6,7 @@ import { useCurrentOrganizationInfo } from "core/api";
 import { useFeature } from "core/services/features";
 
 import { RoleManagementMenuBody } from "./RoleManagementMenuBody";
-import { ResourceType, UnifiedUserModel } from "./util";
+import { ResourceType, UnifiedUserModel, permissionsByResourceType } from "./util";
 
 // core/api's import graph is circular, so a jest.requireActual spread fails at module evaluation
 // (same rationale as RoleManagementCell.test.tsx) - list the exports this component uses explicitly.
@@ -25,7 +25,9 @@ jest.mock("core/services/features", () => ({
 
 // Stubbed so each menu item mounts a sentinel rather than its own query stack.
 jest.mock("./ChangeRoleMenuItem", () => ({
-  ChangeRoleMenuItem: () => <div data-testid="change-role-menu-item" />,
+  ChangeRoleMenuItem: ({ permissionType }: { permissionType: string }) => (
+    <div data-testid="change-role-menu-item" data-permission-type={permissionType} />
+  ),
 }));
 jest.mock("./RemoveRoleMenuItem", () => ({
   RemoveRoleMenuItem: () => <div data-testid="remove-role-menu-item" />,
@@ -58,8 +60,20 @@ const MEMBER: UnifiedUserModel = {
   },
 };
 
-const renderMenuBody = (resourceType: ResourceType) =>
-  render(<RoleManagementMenuBody user={MEMBER} resourceType={resourceType} close={jest.fn()} />);
+const WORKSPACE_MEMBER: UnifiedUserModel = {
+  id: "other-user-id",
+  userEmail: "member@airbyte.io",
+  userName: "Member",
+  workspacePermission: {
+    permissionId: "permission-id",
+    permissionType: "workspace_editor",
+    userId: "other-user-id",
+    workspaceId: "workspace-id",
+  },
+};
+
+const renderMenuBody = (resourceType: ResourceType, user: UnifiedUserModel = MEMBER) =>
+  render(<RoleManagementMenuBody user={user} resourceType={resourceType} close={jest.fn()} />);
 
 describe(`${RoleManagementMenuBody.name}`, () => {
   beforeEach(() => {
@@ -85,11 +99,23 @@ describe(`${RoleManagementMenuBody.name}`, () => {
     expect(screen.getByTestId("remove-role-menu-item")).toBeInTheDocument();
   });
 
-  it("keeps removal for a workspace row when SCIM is enabled", async () => {
+  it("keeps role options and hides removal for a workspace row when SCIM is enabled", async () => {
     setScim(true);
 
-    await renderMenuBody("workspace");
+    await renderMenuBody("workspace", WORKSPACE_MEMBER);
 
+    expect(screen.getAllByTestId("change-role-menu-item").map((item) => item.dataset.permissionType)).toEqual(
+      permissionsByResourceType.workspace
+    );
+    expect(screen.queryByTestId("remove-role-menu-item")).not.toBeInTheDocument();
+  });
+
+  it("keeps role options and removal for a workspace row when SCIM is disabled", async () => {
+    setScim(false);
+
+    await renderMenuBody("workspace", WORKSPACE_MEMBER);
+
+    expect(screen.getAllByTestId("change-role-menu-item").length).toBeGreaterThan(0);
     expect(screen.getByTestId("remove-role-menu-item")).toBeInTheDocument();
   });
 });

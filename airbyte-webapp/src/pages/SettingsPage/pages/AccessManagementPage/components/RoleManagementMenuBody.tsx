@@ -26,9 +26,9 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
     user?.organizationPermission?.permissionType !== "organization_member";
 
   const organizationInfo = useCurrentOrganizationInfo();
-  // The identity provider owns organization membership; Airbyte owns permissions.
+  // The identity provider owns membership; Airbyte owns permissions.
   // Role options stay; removing the member does not.
-  const membershipManagedByScim = resourceType === "organization" && Boolean(organizationInfo?.scim);
+  const membershipManagedByScim = Boolean(organizationInfo?.scim);
 
   // user is invited but not yet accepted
   const showCancelInvite = !!user.invitationStatus;

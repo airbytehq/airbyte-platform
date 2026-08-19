@@ -2,14 +2,21 @@ import React, { useDeferredValue, useEffect } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
+import { Badge } from "components/ui/Badge";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Message } from "components/ui/Message";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace, useListUserInvitations, useListWorkspaceAccessUsers } from "core/api";
+import {
+  useCurrentOrganizationInfo,
+  useCurrentWorkspace,
+  useListUserInvitations,
+  useListWorkspaceAccessUsers,
+} from "core/api";
 import { useModalService } from "core/services/Modal";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
@@ -22,6 +29,8 @@ const SEARCH_PARAM = "search";
 
 const WorkspaceAccessManagementSection: React.FC = () => {
   const workspace = useCurrentWorkspace();
+  const organizationInfo = useCurrentOrganizationInfo();
+  const scim = organizationInfo?.scim;
   const canUpdateWorkspacePermissions = useGeneratedIntent(Intent.UpdateWorkspacePermissions);
   const { openModal } = useModalService();
 
@@ -69,13 +78,24 @@ const WorkspaceAccessManagementSection: React.FC = () => {
           <FormattedMessage id="settings.accessManagement.members" />
         </Heading>
       </FlexContainer>
+      {scim && (
+        <Message type="warning" text={formatMessage({ id: "settings.accessManagement.workspaceScimManagedBanner" })} />
+      )}
       <FlexContainer justifyContent="space-between" alignItems="center">
         <FlexItem className={styles.searchInputWrapper}>
           <SearchInput value={userFilter} onChange={setUserFilter} />
         </FlexItem>
-        <Button onClick={onOpenInviteUsersModal} disabled={!canUpdateWorkspacePermissions} icon="plus">
-          <FormattedMessage id="userInvitations.newMember" />
-        </Button>
+        {scim ? (
+          <Badge variant="teal" radius="2xs" uppercase={false}>
+            <Text size="xs">
+              <FormattedMessage id="settings.accessManagement.scimEnabled" />
+            </Text>
+          </Badge>
+        ) : (
+          <Button onClick={onOpenInviteUsersModal} disabled={!canUpdateWorkspacePermissions} icon="plus">
+            <FormattedMessage id="userInvitations.newMember" />
+          </Button>
+        )}
       </FlexContainer>
       {filteredWorkspaceUsers && filteredWorkspaceUsers.length > 0 ? (
         <WorkspaceUsersTable users={filteredWorkspaceUsers} />
