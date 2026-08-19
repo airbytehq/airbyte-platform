@@ -37,6 +37,7 @@ import io.mockk.slot
 import io.mockk.verify
 import io.mockk.verifyAll
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -1079,7 +1080,7 @@ internal class ActorDefinitionVersionUpdaterTest {
   }
 
   @Test
-  fun `test findSafeVersionBeforeBreakingChange excludes preview versions`() {
+  fun `test findSafeVersionBeforeBreakingChange excludes prerelease versions`() {
     val currentVersion =
       ActorDefinitionVersion()
         .withVersionId(UUID.randomUUID())
@@ -1092,12 +1093,17 @@ internal class ActorDefinitionVersionUpdaterTest {
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withDockerImageTag("4.2.1")
 
-    // This preview version has a higher semver than 4.2.1 but should be excluded
     val previewVersion =
       ActorDefinitionVersion()
         .withVersionId(UUID.randomUUID())
         .withActorDefinitionId(ACTOR_DEFINITION_ID)
         .withDockerImageTag("4.3.0-preview.7e48e9b")
+
+    val releaseCandidateVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("4.4.0-rc.1")
 
     val breakingChange = MockData.actorDefinitionBreakingChange("5.0.0")!!.withActorDefinitionId(ACTOR_DEFINITION_ID)
 
@@ -1111,14 +1117,25 @@ internal class ActorDefinitionVersionUpdaterTest {
     every { actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID) } returns listOf(breakingChange)
     every { actorDefinitionService.getActorDefinitionVersion(currentVersion.versionId) } returns currentVersion
     every { actorDefinitionService.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID) } returns
-      listOf(currentVersion, stableVersion, previewVersion)
+      listOf(currentVersion, stableVersion, previewVersion, releaseCandidateVersion)
 
     val result = actorDefinitionVersionUpdater.findSafeVersionBeforeBreakingChange(ACTOR_DEFINITION_ID, currentVersion.versionId)
 
     assertNotNull(result)
-    // Should select the stable version 4.2.1, not the preview version 4.3.0-preview.7e48e9b
     assertEquals(stableVersion, result!!.first)
     assertEquals(breakingChange, result.second)
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["4.2.1", "0.1.0", "10.20.30"])
+  fun `test stable version tag check allows plain semver tags`(dockerImageTag: String) {
+    assertTrue(actorDefinitionVersionUpdater.isStableVersionTag(dockerImageTag))
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = ["4.3.0-preview.7e48e9b", "4.4.0-rc.1", "4.4.0-rc1", "4.2.1-alpha.1", "4.2.1-beta.1", "4.2", "dev", "latest"])
+  fun `test stable version tag check excludes tags with any suffix or non-semver format`(dockerImageTag: String) {
+    assertFalse(actorDefinitionVersionUpdater.isStableVersionTag(dockerImageTag))
   }
 
   private fun buildBreakingChangeScopedConfig(
