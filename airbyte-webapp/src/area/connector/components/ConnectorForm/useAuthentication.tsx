@@ -55,6 +55,12 @@ interface AuthenticationHook {
    * tell them what the redirect URL of their OAuth app should be.
    */
   shouldShowRedirectUrlTooltip: boolean;
+  /**
+   * Whether the user is allowed to enter the OAuth credentials manually. This is only the case if
+   * Airbyte has no global OAuth credentials for the connector, since those would always take
+   * precedence over manually entered ones when the connector runs.
+   */
+  canUseManualOAuthMode: boolean;
   manualOAuthMode: boolean;
   toggleManualOAuthMode: () => void;
 }
@@ -69,9 +75,12 @@ export const useAuthentication = (): AuthenticationHook => {
   const {
     castValues,
     selectedConnectorDefinitionSpecification: connectorSpec,
-    manualOAuthMode,
+    manualOAuthMode: manualOAuthModeSelected,
     toggleManualOAuthMode,
   } = useConnectorForm();
+
+  const canUseManualOAuthMode = connectorSpec?.advancedAuthGlobalCredentialsAvailable === false;
+  const manualOAuthMode = canUseManualOAuthMode && manualOAuthModeSelected;
 
   const advancedAuth = connectorSpec?.advancedAuth;
 
@@ -109,8 +118,7 @@ export const useAuthentication = (): AuthenticationHook => {
     [advancedAuth, valuesWithDefaults]
   );
 
-  const shouldShowRedirectUrlTooltip =
-    connectorSpec?.advancedAuthGlobalCredentialsAvailable === false && !manualOAuthMode;
+  const shouldShowRedirectUrlTooltip = canUseManualOAuthMode && !manualOAuthMode;
 
   // Fields that are filled by the OAuth flow and thus won't need to be shown in the UI if OAuth is available
   const implicitAuthFieldPaths = useMemo(
@@ -166,6 +174,7 @@ export const useAuthentication = (): AuthenticationHook => {
     shouldShowAuthButton,
     hasAuthFieldValues,
     shouldShowRedirectUrlTooltip,
+    canUseManualOAuthMode,
     manualOAuthMode,
     toggleManualOAuthMode,
   };

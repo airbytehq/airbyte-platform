@@ -57,7 +57,7 @@ export const AuthButton: React.FC<{
 }> = ({ selectedConnectorDefinitionSpecification }) => {
   const { selectedConnectorDefinition } = useConnectorForm();
 
-  const { hiddenAuthFieldErrors, manualOAuthMode, toggleManualOAuthMode } = useAuthentication();
+  const { hiddenAuthFieldErrors, canUseManualOAuthMode, manualOAuthMode, toggleManualOAuthMode } = useAuthentication();
   const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("required");
 
   const { loading, done, run } = useFormOauthAdapter(selectedConnectorDefinitionSpecification);
@@ -89,9 +89,11 @@ export const AuthButton: React.FC<{
           )}
         </Component>
 
-        <Button variant="clear" onClick={toggleManualOAuthMode}>
-          <FormattedMessage id="connectorForm.manualAuth.toggle" />
-        </Button>
+        {canUseManualOAuthMode && (
+          <Button variant="clear" onClick={toggleManualOAuthMode}>
+            <FormattedMessage id="connectorForm.manualAuth.toggle" />
+          </Button>
+        )}
       </FlexContainer>
 
       {authRequiredError && (

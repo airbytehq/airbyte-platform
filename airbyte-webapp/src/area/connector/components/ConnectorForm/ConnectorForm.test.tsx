@@ -1016,6 +1016,20 @@ describe("Connector form", () => {
       expect(getInputByName(container, "connectionConfiguration.credentials.access_token")).not.toBeInTheDocument();
     });
 
+    it("should not offer manual setup when Airbyte has global oauth credentials", async () => {
+      await renderNewOAuthForm({ specificationOverride: { advancedAuthGlobalCredentialsAvailable: true } });
+      expect(screen.queryByRole("button", { name: "Set up manually" })).not.toBeInTheDocument();
+    });
+
+    it("should offer manual setup when Airbyte has no global oauth credentials", async () => {
+      const container = await renderNewOAuthForm({
+        specificationOverride: { advancedAuthGlobalCredentialsAvailable: false },
+      });
+      const manualSetupButton = screen.getByRole("button", { name: "Set up manually" });
+      await waitFor(() => userEvent.click(manualSetupButton));
+      expect(getInputByName(container, "connectionConfiguration.credentials.access_token")).toBeInTheDocument();
+    });
+
     it("should insert values correctly and submit them", async () => {
       (useCompleteOAuth as jest.MockedFunction<typeof useCompleteOAuth>).mockReturnValue({
         completeDestinationOAuth: jest.fn(),

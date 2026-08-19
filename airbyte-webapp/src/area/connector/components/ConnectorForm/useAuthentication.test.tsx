@@ -19,13 +19,17 @@ const mockConnectorForm = useConnectorForm as unknown as jest.Mock<Partial<Retur
 const mockFormContext = useFormContext as unknown as jest.Mock<Partial<ReturnType<typeof useFormContext>>>;
 
 interface MockParams {
-  connector: Pick<SourceDefinitionSpecificationRead, "advancedAuth" | "connectionSpecification">;
+  connector: Pick<
+    SourceDefinitionSpecificationRead,
+    "advancedAuth" | "advancedAuthGlobalCredentialsAvailable" | "connectionSpecification"
+  >;
   values: unknown;
   submitCount?: number;
   fieldMeta?: Record<string, { error?: FieldError }>;
+  manualOAuthMode?: boolean;
 }
 
-const mockContext = ({ connector, values, submitCount, fieldMeta = {} }: MockParams) => {
+const mockContext = ({ connector, values, submitCount, fieldMeta = {}, manualOAuthMode }: MockParams) => {
   mockFormContext.mockReturnValue({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     watch: ((field: string) => (field ? get(values, field) : values)) as any,
@@ -38,6 +42,7 @@ const mockContext = ({ connector, values, submitCount, fieldMeta = {} }: MockPar
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     selectedConnectorDefinitionSpecification: { ...connector, sourceDefinitionId: "12345", jobInfo: {} as any },
     castValues: (values) => values,
+    manualOAuthMode,
   });
 };
 
@@ -197,6 +202,60 @@ describe("useAuthentication", () => {
         });
         const { result } = renderHook(() => useAuthentication());
         expect(result.current.hiddenAuthFieldErrors).toEqual({});
+      });
+    });
+
+    describe("manual OAuth mode", () => {
+      const accessTokenField = makeConnectionConfigurationPath(["credentials", "access_token"]);
+      const clientIdField = makeConnectionConfigurationPath(["credentials", "client_id"]);
+      const values = { connectionConfiguration: { credentials: { auth_type: "oauth2.0" } } };
+
+      it("should not be available if Airbyte has global OAuth credentials", () => {
+        mockContext({
+          connector: { advancedAuth: predicateInsideConditional, advancedAuthGlobalCredentialsAvailable: true },
+          values,
+        });
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.canUseManualOAuthMode).toBe(false);
+      });
+
+      it("should not be available if global OAuth credential availability is unknown", () => {
+        mockContext({ connector: { advancedAuth: predicateInsideConditional }, values });
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.canUseManualOAuthMode).toBe(false);
+      });
+
+      it("should be available if Airbyte has no global OAuth credentials", () => {
+        mockContext({
+          connector: { advancedAuth: predicateInsideConditional, advancedAuthGlobalCredentialsAvailable: false },
+          values,
+        });
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.canUseManualOAuthMode).toBe(true);
+      });
+
+      it("should keep auth fields hidden if it is selected but not available", () => {
+        mockContext({
+          connector: { advancedAuth: predicateInsideConditional, advancedAuthGlobalCredentialsAvailable: true },
+          values,
+          manualOAuthMode: true,
+        });
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.manualOAuthMode).toBe(false);
+        expect(result.current.isHiddenAuthField(accessTokenField)).toBe(true);
+        expect(result.current.isHiddenAuthField(clientIdField)).toBe(true);
+      });
+
+      it("should reveal the OAuth output fields if it is selected and available", () => {
+        mockContext({
+          connector: { advancedAuth: predicateInsideConditional, advancedAuthGlobalCredentialsAvailable: false },
+          values,
+          manualOAuthMode: true,
+        });
+        const { result } = renderHook(() => useAuthentication());
+        expect(result.current.manualOAuthMode).toBe(true);
+        expect(result.current.isHiddenAuthField(accessTokenField)).toBe(false);
+        expect(result.current.isHiddenAuthField(clientIdField)).toBe(false);
       });
     });
   });
