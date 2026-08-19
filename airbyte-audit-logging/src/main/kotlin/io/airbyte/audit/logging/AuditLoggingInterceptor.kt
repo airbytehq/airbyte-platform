@@ -10,7 +10,6 @@ import io.airbyte.audit.logging.provider.AuditProvider
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.storage.AirbyteCloudStorageBulkUploader
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.featureflag.ANONYMOUS
@@ -44,6 +43,7 @@ class AuditLoggingInterceptor(
   private val airbyteAuditLoggingConfig: AirbyteAuditLoggingConfig,
   private val applicationContext: ApplicationContext,
   private val auditLoggingHelper: AuditLoggingHelper,
+  private val auditScopeResolver: AuditScopeResolver,
   private val featureFlagClient: FeatureFlagClient,
   private val storageConfiguration: AirbyteStorageConfig,
   storageClientFactory: StorageClientFactory,
@@ -51,7 +51,7 @@ class AuditLoggingInterceptor(
   private val logger: KLogger = KotlinLogging.logger { storageConfiguration.bucket.auditLogging }
 
   private val appender =
-    AirbyteCloudStorageBulkUploader<AuditLogEntry>(
+    AuditLogBulkUploader(
       storageConfiguration.bucket.auditLogging,
       storageClientFactory.create(DocumentType.AUDIT_LOGS),
     )
@@ -120,6 +120,7 @@ class AuditLoggingInterceptor(
       try {
         context.proceed()
       } catch (exception: Exception) {
+        val failureScope = auditScopeResolver.resolveScope(headers, requestBody, null)
         logAuditInfo(
           actor = user,
           operationName = operationName,
@@ -127,12 +128,15 @@ class AuditLoggingInterceptor(
           response = null,
           success = false,
           error = exception.message,
+          organizationId = failureScope.organizationId,
+          workspaceId = failureScope.workspaceId,
         )
         throw exception
       }
 
     val resultSummary = provider.get().generateSummaryFromResult(result)
 
+    val scope = auditScopeResolver.resolveScope(headers, requestBody, result)
     logAuditInfo(
       actor = user,
       operationName = operationName,
@@ -140,6 +144,8 @@ class AuditLoggingInterceptor(
       response = resultSummary,
       success = true,
       error = null,
+      organizationId = scope.organizationId,
+      workspaceId = scope.workspaceId,
     )
 
     return result ?: Unit
@@ -153,6 +159,8 @@ class AuditLoggingInterceptor(
     response: Any?,
     success: Boolean,
     error: String? = null,
+    organizationId: UUID? = null,
+    workspaceId: UUID? = null,
   ) {
     val auditLogEntry =
       AuditLogEntry(
@@ -164,6 +172,8 @@ class AuditLoggingInterceptor(
         response = response,
         success = success,
         errorMessage = error,
+        organizationId = organizationId,
+        workspaceId = workspaceId,
       )
 
     val serializedAuditLogEntry = Jsons.serialize(auditLogEntry)

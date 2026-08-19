@@ -15,4 +15,6 @@ data class AuditLogEntry(
   val response: Any? = null,
   val success: Boolean,
   val errorMessage: String? = null,
+  val organizationId: UUID? = null,
+  val workspaceId: UUID? = null,
 )

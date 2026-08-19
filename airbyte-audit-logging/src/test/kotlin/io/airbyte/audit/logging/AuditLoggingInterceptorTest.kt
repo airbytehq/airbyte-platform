@@ -44,6 +44,7 @@ class AuditLoggingInterceptorTest {
   private lateinit var context: MethodInvocationContext<Any, Any>
   private lateinit var applicationContext: ApplicationContext
   private lateinit var auditLoggingHelper: AuditLoggingHelper
+  private lateinit var auditScopeResolver: AuditScopeResolver
   private lateinit var airbyteStorageConfig: AirbyteStorageConfig
   private lateinit var storageClientFactory: StorageClientFactory
   private lateinit var featureFlagClient: FeatureFlagClient
@@ -53,6 +54,7 @@ class AuditLoggingInterceptorTest {
     context = mockk()
     applicationContext = mockk()
     auditLoggingHelper = mockk()
+    auditScopeResolver = mockk()
     storageClientFactory = mockk(relaxed = true)
     featureFlagClient = mockk()
     airbyteStorageConfig = mockk(relaxed = true)
@@ -70,6 +72,7 @@ class AuditLoggingInterceptorTest {
         AirbyteAuditLoggingConfig(enabled = false),
         applicationContext,
         auditLoggingHelper,
+        auditScopeResolver,
         featureFlagClient,
         airbyteStorageConfig,
         storageClientFactory,
@@ -100,6 +103,7 @@ class AuditLoggingInterceptorTest {
           AirbyteAuditLoggingConfig(enabled = true),
           applicationContext,
           auditLoggingHelper,
+          auditScopeResolver,
           featureFlagClient,
           airbyteStorageConfig,
           storageClientFactory,
@@ -155,10 +159,14 @@ class AuditLoggingInterceptorTest {
         .organizationId(null)
         .permissionType(PermissionType.WORKSPACE_EDITOR)
 
+    val resolvedOrganizationId = UUID.randomUUID()
+    every { auditScopeResolver.resolveScope(any(), any(), any()) } returns
+      ResolvedAuditScope(organizationId = resolvedOrganizationId, workspaceId = workspaceId)
+
     interceptor.intercept(context)
     // Verifying that request is proceeded
     verify { context.proceed() }
-    // Verify logAuditInfo was called with the correct parameters
+    // Verify logAuditInfo was called with the correct parameters, including the resolved scope
     verify {
       interceptor.logAuditInfo(
         actor = match { it.actorId == "userId" && it.userAgent == "userAgent" },
@@ -167,6 +175,8 @@ class AuditLoggingInterceptorTest {
         response = "{\"result\": \"summary\"}",
         success = true,
         error = null,
+        organizationId = resolvedOrganizationId,
+        workspaceId = workspaceId,
       )
     }
   }
