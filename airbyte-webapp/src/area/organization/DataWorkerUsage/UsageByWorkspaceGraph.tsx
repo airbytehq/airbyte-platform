@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import {
@@ -167,7 +168,7 @@ export const UsageByWorkspaceGraph = ({
           }}
         >
           <XAxis
-            tickFormatter={(value) => formatDate(value, { month: "short", day: "numeric" })}
+            tickFormatter={(value) => formatDate(dayjs(value).toDate(), { month: "short", day: "numeric" })}
             dataKey="formattedDate"
             axisLine={false}
             tickLine={false}
