@@ -4332,15 +4332,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-duckdb/0.6.0.spdx.json",
@@ -12688,6 +12688,587 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/postgres-migrations",
+        "releaseCandidates": {
+          "3.0.17": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 200,
+              "requireVersionIncrementsInPullRequests": false,
+              "sl": 100
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.4@sha256:5f343797cfcf021ca98ba9bdf5970ef66cbf6222d8cc17b0d61d13860a5bcc2b"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "credentials.json",
+                    "name": "SECRET_DESTINATION-POSTGRES_CREDENTIALS__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "destinationDefinitionId": "25c5221d-dce2-4163-ade9-739ef790f503",
+            "dockerImageTag": "3.0.17",
+            "dockerRepository": "airbyte/destination-postgres",
+            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/postgres",
+            "externalDocumentationUrls": [
+              {
+                "title": "PostgreSQL documentation",
+                "type": "api_reference",
+                "url": "https://www.postgresql.org/docs/current/"
+              },
+              {
+                "title": "Release Notes",
+                "type": "api_release_history",
+                "url": "https://www.postgresql.org/docs/release/"
+              },
+              {
+                "title": "Client authentication",
+                "type": "authentication_guide",
+                "url": "https://www.postgresql.org/docs/current/client-authentication.html"
+              },
+              {
+                "title": "Database roles and privileges",
+                "type": "permissions_scopes",
+                "url": "https://www.postgresql.org/docs/current/user-manag.html"
+              },
+              {
+                "title": "SQL commands",
+                "type": "sql_reference",
+                "url": "https://www.postgresql.org/docs/current/sql-commands.html"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "Matt Bayley",
+                "commit_author_email": "matt.bayley@airbyte.io",
+                "commit_sha": "a4ff7ba501a0ee3db488b1685d2f546a8c91d397",
+                "commit_timestamp": "2026-08-20T13:04:20-07:00"
+              },
+              "release": {
+                "attributed_to": "mwbayley",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "a4ff7ba501a0ee3db488b1685d2f546a8c91d397",
+                "merged_at": "2026-08-20T20:04:21Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 31358253,
+                "pr_author_login": "mwbayley",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "mwbayley",
+                "pr_merged_by_type": "User",
+                "pr_number": 84853,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84853",
+                "released_at": "2026-08-20T20:04:21Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-postgres/3.0.17.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/destination-postgres/3.0.17/metadata.yaml",
+                "metadata_last_modified": "2026-08-20T20:09:10.483155+00:00",
+                "registry_entry_generated_at": "2026-08-20T20:09:10.483155+00:00"
+              }
+            },
+            "githubIssueLabel": "destination-postgres",
+            "icon": "postgresql.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-postgres/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "name": "Postgres",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "2.0.0": {
+                  "message": "This version introduces [Destinations V2](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#what-is-destinations-v2), which provides better error handling, incremental delivery of data for large syncs, and improved final table structures. To review the breaking changes, and how to upgrade, see [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#quick-start-to-upgrading). These changes will likely require updates to downstream dbt / SQL models, which we walk through [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#updating-downstream-transformations). Selecting `Upgrade` will upgrade **all** connections using this destination at their next sync. For more controlled upgrade [see instructions](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#upgrading-connections-one-by-one-with-dual-writing).\n",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/postgres-migrations#2.0.0",
+                  "upgradeDeadline": "2024-05-31"
+                },
+                "3.0.0": {
+                  "message": "This version introduces Direct Load, a new architecture that writes data directly to final tables without using intermediate raw tables. This provides improved performance and reduced storage costs. Raw tables are no longer created by default. If you have downstream processes that depend on raw tables, you can enable the \"Raw tables only\" option in the connector configuration. Existing raw tables will not be deleted, but new syncs will write directly to final tables.\n",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/postgres-migrations#3.0.0",
+                  "upgradeDeadline": "2026-03-02"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/postgres-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "slow"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "sourceType": "database",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "groups": [
+                  {
+                    "id": "connection",
+                    "title": "Connection"
+                  },
+                  {
+                    "id": "sync_behavior",
+                    "title": "Sync Behavior"
+                  },
+                  {
+                    "id": "advanced",
+                    "title": "Advanced"
+                  }
+                ],
+                "properties": {
+                  "cdc_deletion_mode": {
+                    "always_show": true,
+                    "default": "Hard delete",
+                    "description": "Whether to execute CDC deletions as hard deletes (i.e. propagate source deletions to the destination), or soft deletes (i.e. leave a tombstone record in the destination). Defaults to hard deletes.",
+                    "enum": [
+                      "Hard delete",
+                      "Soft delete"
+                    ],
+                    "group": "sync_behavior",
+                    "order": 8,
+                    "title": "CDC deletion mode",
+                    "type": "string"
+                  },
+                  "database": {
+                    "description": "Name of the database.",
+                    "group": "connection",
+                    "order": 2,
+                    "title": "Database Name",
+                    "type": "string"
+                  },
+                  "disable_type_dedupe": {
+                    "description": "Disable Writing Final Tables. WARNING! The data format in _airbyte_data is likely stable but there are no guarantees that other metadata columns will remain the same in future versions",
+                    "group": "connection",
+                    "order": 11,
+                    "title": "Disable Final Tables. (WARNING! Unstable option; Columns in raw table schema might change between versions)",
+                    "type": "boolean"
+                  },
+                  "drop_cascade": {
+                    "description": "Drop tables with CASCADE. WARNING! This will delete all data in all dependent objects (views, etc.). Use with caution. This option is intended for usecases which can easily rebuild the dependent objects.",
+                    "group": "connection",
+                    "order": 12,
+                    "title": "Drop tables with CASCADE. (WARNING! Risk of unrecoverable data loss)",
+                    "type": "boolean"
+                  },
+                  "host": {
+                    "description": "Hostname of the database.",
+                    "group": "connection",
+                    "order": 0,
+                    "title": "Host",
+                    "type": "string"
+                  },
+                  "jdbc_url_params": {
+                    "description": "Additional properties to pass to the JDBC URL string when connecting to the database formatted as 'key=value' pairs separated by the symbol '&'. (example: key1=value1&key2=value2&key3=value3).",
+                    "group": "connection",
+                    "order": 9,
+                    "title": "JDBC URL Params",
+                    "type": "string"
+                  },
+                  "password": {
+                    "airbyte_secret": true,
+                    "description": "Password associated with the username.",
+                    "group": "connection",
+                    "order": 5,
+                    "title": "Password",
+                    "type": "string"
+                  },
+                  "port": {
+                    "description": "Port of the database.",
+                    "examples": [
+                      "5432"
+                    ],
+                    "group": "connection",
+                    "maximum": 65536,
+                    "minimum": 0,
+                    "order": 1,
+                    "title": "Port",
+                    "type": "integer"
+                  },
+                  "raw_data_schema": {
+                    "description": "Airbyte will use this schema for various internal tables. In legacy raw tables mode, the raw tables will be stored in this schema. Defaults to \"airbyte_internal\".",
+                    "group": "connection",
+                    "order": 10,
+                    "title": "Airbyte Internal Schema Name",
+                    "type": "string"
+                  },
+                  "schema": {
+                    "default": "public",
+                    "description": "The default schema tables are written. If not specified otherwise, the \"public\" schema will be used.",
+                    "examples": [
+                      "public"
+                    ],
+                    "group": "connection",
+                    "order": 3,
+                    "title": "Default Schema",
+                    "type": "string"
+                  },
+                  "ssl": {
+                    "description": "Encrypt data using SSL. When activating SSL, please select one of the connection modes.",
+                    "group": "connection",
+                    "order": 6,
+                    "title": "SSL Connection",
+                    "type": "boolean"
+                  },
+                  "ssl_mode": {
+                    "description": "SSL connection modes.\n  <b>disable</b> - Disables encryption of communication between Airbyte and destination database.\n  <b>allow</b> - Enables encryption only when required by the destination database.\n  <b>prefer</b> - Allows unencrypted connections only if the destination database does not support encryption.\n  <b>require</b> - Always require encryption. If the destination database server does not support encryption, connection will fail.\n  <b>verify-ca</b> - Always require encryption and verifies that the destination database server has a valid SSL certificate.\n  <b>verify-full</b> - This is the most secure mode. Always require encryption and verifies the identity of the destination database server.\n See more information - <a href=\"https://jdbc.postgresql.org/documentation/head/ssl-client.html\"> in the docs</a>.",
+                    "group": "connection",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "Disable SSL.",
+                        "properties": {
+                          "mode": {
+                            "default": "disable",
+                            "enum": [
+                              "disable"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode"
+                        ],
+                        "title": "disable",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Allow SSL mode.",
+                        "properties": {
+                          "mode": {
+                            "default": "allow",
+                            "enum": [
+                              "allow"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode"
+                        ],
+                        "title": "allow",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Prefer SSL mode.",
+                        "properties": {
+                          "mode": {
+                            "default": "prefer",
+                            "enum": [
+                              "prefer"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode"
+                        ],
+                        "title": "prefer",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Require SSL mode.",
+                        "properties": {
+                          "mode": {
+                            "default": "require",
+                            "enum": [
+                              "require"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode"
+                        ],
+                        "title": "require",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Verify-ca SSL mode.",
+                        "properties": {
+                          "ca_certificate": {
+                            "airbyte_secret": true,
+                            "description": "CA certificate",
+                            "multiline": true,
+                            "order": 1,
+                            "title": "CA Certificate",
+                            "type": "string"
+                          },
+                          "client_key_password": {
+                            "airbyte_secret": true,
+                            "description": "Password for keystorage. This field is optional. If you do not add it - the password will be generated automatically.",
+                            "order": 2,
+                            "title": "Client Key Password",
+                            "type": "string"
+                          },
+                          "mode": {
+                            "default": "verify-ca",
+                            "enum": [
+                              "verify-ca"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode",
+                          "ca_certificate"
+                        ],
+                        "title": "verify-ca",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Verify-full SSL mode.",
+                        "properties": {
+                          "ca_certificate": {
+                            "airbyte_secret": true,
+                            "description": "CA certificate",
+                            "multiline": true,
+                            "order": 1,
+                            "title": "CA Certificate",
+                            "type": "string"
+                          },
+                          "client_certificate": {
+                            "airbyte_secret": true,
+                            "description": "Client certificate",
+                            "multiline": true,
+                            "order": 2,
+                            "title": "Client Certificate",
+                            "type": "string"
+                          },
+                          "client_key": {
+                            "airbyte_secret": true,
+                            "description": "Client key",
+                            "multiline": true,
+                            "order": 3,
+                            "title": "Client Key",
+                            "type": "string"
+                          },
+                          "client_key_password": {
+                            "airbyte_secret": true,
+                            "description": "Password for keystorage. This field is optional. If you do not add it - the password will be generated automatically.",
+                            "order": 4,
+                            "title": "Client Key Password",
+                            "type": "string"
+                          },
+                          "mode": {
+                            "default": "verify-full",
+                            "enum": [
+                              "verify-full"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode",
+                          "ca_certificate",
+                          "client_certificate",
+                          "client_key"
+                        ],
+                        "title": "verify-full",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 7,
+                    "title": "SSL Modes",
+                    "type": "object"
+                  },
+                  "tunnel_method": {
+                    "description": "Whether to initiate an SSH tunnel before connecting to the database, and if so, which kind of authentication to use.",
+                    "group": "connection",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "No ssh tunnel needed to connect to database",
+                        "properties": {
+                          "tunnel_method": {
+                            "default": "NO_TUNNEL",
+                            "enum": [
+                              "NO_TUNNEL"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method"
+                        ],
+                        "title": "No Tunnel",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Connect through a jump server tunnel host using username and ssh key",
+                        "properties": {
+                          "ssh_key": {
+                            "airbyte_secret": true,
+                            "description": "OS-level user account ssh key credentials in RSA PEM format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )",
+                            "multiline": true,
+                            "order": 4,
+                            "title": "SSH Private Key",
+                            "type": "string"
+                          },
+                          "tunnel_host": {
+                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
+                            "order": 1,
+                            "title": "SSH Tunnel Jump Server Host",
+                            "type": "string"
+                          },
+                          "tunnel_method": {
+                            "default": "SSH_KEY_AUTH",
+                            "enum": [
+                              "SSH_KEY_AUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "tunnel_port": {
+                            "default": 22,
+                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
+                            "maximum": 65536,
+                            "minimum": 0,
+                            "order": 2,
+                            "title": "SSH Connection Port",
+                            "type": "integer"
+                          },
+                          "tunnel_user": {
+                            "description": "OS-level username for logging into the jump server host",
+                            "order": 3,
+                            "title": "SSH Login Username",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method",
+                          "tunnel_host",
+                          "tunnel_port",
+                          "tunnel_user",
+                          "ssh_key"
+                        ],
+                        "title": "SSH Key Authentication",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Connect through a jump server tunnel host using username and password authentication",
+                        "properties": {
+                          "tunnel_host": {
+                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
+                            "order": 1,
+                            "title": "SSH Tunnel Jump Server Host",
+                            "type": "string"
+                          },
+                          "tunnel_method": {
+                            "default": "SSH_PASSWORD_AUTH",
+                            "enum": [
+                              "SSH_PASSWORD_AUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "tunnel_port": {
+                            "default": 22,
+                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
+                            "maximum": 65536,
+                            "minimum": 0,
+                            "order": 2,
+                            "title": "SSH Connection Port",
+                            "type": "integer"
+                          },
+                          "tunnel_user": {
+                            "description": "OS-level username for logging into the jump server host",
+                            "order": 3,
+                            "title": "SSH Login Username",
+                            "type": "string"
+                          },
+                          "tunnel_user_password": {
+                            "airbyte_secret": true,
+                            "description": "OS-level password for logging into the jump server host",
+                            "order": 4,
+                            "title": "Password",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method",
+                          "tunnel_host",
+                          "tunnel_port",
+                          "tunnel_user",
+                          "tunnel_user_password"
+                        ],
+                        "title": "Password Authentication",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 14,
+                    "title": "SSH Tunnel Method",
+                    "type": "object"
+                  },
+                  "unconstrained_number": {
+                    "description": "Create numeric columns as unconstrained DECIMAL instead of NUMBER(38, 9). This will allow increased precision in numeric values. (this is disabled by default for backwards compatibility, but is recommended to enable)",
+                    "group": "connection",
+                    "order": 13,
+                    "title": "Unconstrained numeric columns",
+                    "type": "boolean"
+                  },
+                  "username": {
+                    "description": "Username to access the database.",
+                    "group": "connection",
+                    "order": 4,
+                    "title": "Username",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "host",
+                  "port",
+                  "database",
+                  "schema",
+                  "username"
+                ],
+                "title": "Postgres Destination Specification",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/postgres",
+              "supported_destination_sync_modes": [
+                "overwrite",
+                "append",
+                "append_dedup"
+              ],
+              "supportsDBT": false,
+              "supportsIncremental": true,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsDbt": true,
+            "supportsRefreshes": true,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -25082,6 +25663,459 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations",
+        "releaseCandidates": {
+          "9.1.0": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 400,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "api.amazon.com",
+                "advertising-api.amazon.com",
+                "advertising-api-eu.amazon.com",
+                "advertising-api-fe.amazon.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.24.0@sha256:e34fb609bccdeb77474763c77e3621ea9d5adf9f65f2d9851102cc14a1caa281"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "liveTests",
+                "testConnections": [
+                  {
+                    "id": "60df103e-5b3a-4a2c-928b-d8b3889cf014",
+                    "name": "amazon-ads_config_report_dev_null"
+                  },
+                  {
+                    "id": "671a9aab-eb0f-48c2-a8bb-98d925aaa069",
+                    "name": "amazon-ads_config_dev_null"
+                  }
+                ]
+              },
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-AMAZON-ADS__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config_report.json",
+                    "name": "SECRET_SOURCE-AMAZON-ADS__TEST_ACCOUNT_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "9.1.0",
+            "dockerRepository": "airbyte/source-amazon-ads",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads",
+            "externalDocumentationUrls": [
+              {
+                "title": "Deprecations",
+                "type": "api_deprecations",
+                "url": "https://advertising.amazon.com/API/docs/en-us/release-notes/deprecations"
+              },
+              {
+                "title": "Advertising API",
+                "type": "api_reference",
+                "url": "https://advertising.amazon.com/API/docs/en-us"
+              },
+              {
+                "title": "All releases",
+                "type": "api_release_history",
+                "url": "https://advertising.amazon.com/API/docs/en-us/release-notes/index"
+              },
+              {
+                "title": "Authorization",
+                "type": "authentication_guide",
+                "url": "https://advertising.amazon.com/API/docs/en-us/guides/account-management/authorization/overview"
+              },
+              {
+                "title": "Rate limits",
+                "type": "rate_limits",
+                "url": "https://advertising.amazon.com/API/docs/en-us/reference/concepts/rate-limiting"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "Patrick Nilan",
+                "commit_author_email": "nilan.patrick@gmail.com",
+                "commit_sha": "918fb0ab6a0c3352ad5cc551655accff34212e0f",
+                "commit_timestamp": "2026-08-20T03:24:36-07:00"
+              },
+              "release": {
+                "attributed_to": "pnilan",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "918fb0ab6a0c3352ad5cc551655accff34212e0f",
+                "merged_at": "2026-08-20T10:24:37Z",
+                "pr_author_association": "COLLABORATOR",
+                "pr_author_id": 6109223,
+                "pr_author_login": "pnilan",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "tolik0",
+                "pr_merged_by_type": "User",
+                "pr_number": 83744,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/83744",
+                "released_at": "2026-08-20T10:24:37Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-ads/9.1.0.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-amazon-ads/9.1.0/metadata.yaml",
+                "metadata_last_modified": "2026-08-20T10:29:16.630653+00:00",
+                "registry_entry_generated_at": "2026-08-20T10:29:16.630653+00:00"
+              }
+            },
+            "githubIssueLabel": "source-amazon-ads",
+            "icon": "amazonads.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-amazon-ads/latest/icon.svg",
+            "language": "manifest-only",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 10860,
+            "name": "Amazon Ads",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "3.0.0": {
+                  "message": "Attribution report stream schemas fix.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations#3.0.0",
+                  "upgradeDeadline": "2023-07-24"
+                },
+                "4.0.0": {
+                  "message": "Streams `SponsoredBrandsAdGroups` and `SponsoredBrandsKeywords` now have updated schemas.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations#4.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "sponsored_brands_ad_groups",
+                        "sponsored_brands_keywords"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2024-01-17"
+                },
+                "5.0.0": {
+                  "message": "`SponsoredBrandCampaigns`, `SponsoredBrandsAdGroups`, `SponsoredProductCampaigns`, and `SponsoredProductAdGroupBidRecommendations` streams have updated schemas and must be reset.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations#5.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "sponsored_brands_campaigns",
+                        "sponsored_brands_ad_groups",
+                        "sponsored_product_campaigns",
+                        "sponsored_product_ad_group_bid_recommendations"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2024-03-27"
+                },
+                "6.0.0": {
+                  "deadlineAction": "auto_upgrade",
+                  "message": "The Report API V2 is being deprecated in favor of V3. Given this change, fields available through the sponsoredDisplayReportStream stream will change, and streams `SponsoredBrandsReportStream` `SponsoredBrandsVideoReportStream` will become unavailable. We recommend using `SponsoredBrandsV3ReportStream` as an alternative stream with the same dataset.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations#6.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "sponsored_display_report_stream",
+                        "sponsored_brands_report_stream",
+                        "sponsored_brands_video_report_stream"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2024-11-01"
+                },
+                "7.0.0": {
+                  "deadlineAction": "auto_upgrade",
+                  "message": "This version introduces new report streams, replacing SponsoredDisplayReportStream and SponsoredProductsReportStream with detailed breakdowns. Primary keys have changed, and metrics are now correctly typed at the root level. We recommend using new detailed streams with the same dataset.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations#7.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "sponsored_display_report_stream",
+                        "sponsored_brands_v3_report_stream",
+                        "sponsored_products_report_stream"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2025-02-24"
+                },
+                "8.0.0": {
+                  "message": "Daily report streams now use the `date` field from the API response as the cursor and primary key instead of the synthetic `reportDate` field. Previously, all rows within a 30-day window were incorrectly assigned the same `reportDate`, causing ~96% data loss during deduplication. Users must refresh all affected daily report streams to backfill the missing data.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations#8.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "sponsored_brands_v3_report_stream_daily",
+                        "sponsored_display_campaigns_report_stream_daily",
+                        "sponsored_display_adgroups_report_stream_daily",
+                        "sponsored_display_productads_report_stream_daily",
+                        "sponsored_display_targets_report_stream_daily",
+                        "sponsored_display_asins_report_stream_daily",
+                        "sponsored_products_campaigns_report_stream_daily",
+                        "sponsored_products_adgroups_report_stream_daily",
+                        "sponsored_products_keywords_report_stream_daily",
+                        "sponsored_products_targets_report_stream_daily",
+                        "sponsored_products_productads_report_stream_daily",
+                        "sponsored_products_asins_keywords_report_stream_daily",
+                        "sponsored_products_asins_targets_report_stream_daily"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2026-05-22"
+                },
+                "9.0.0": {
+                  "message": "The `sponsored_product_ad_group_suggested_keywords` stream has been migrated from the deprecated V2 Suggested Keywords API (`/v2/sp/adGroups/{adGroupId}/suggested/keywords`) to the Keyword Recommendations API (`/sp/targets/keywords/recommendations`). The response schema has changed: fields `suggestedKeywords[].keywordText` and `suggestedKeywords[].matchType` are replaced by `keyword`, `recId`, `bidInfo[]`, `searchTermImpressionShare`, `searchTermImpressionRank`, and other new fields. Users must reset this stream after upgrading.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations#9.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "sponsored_product_ad_group_suggested_keywords"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2026-06-26"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": false,
+                "packageName": "airbyte-source-amazon-ads"
+              }
+            },
+            "sourceDefinitionId": "c6b0a29e-1da9-4512-9002-7bfd0cba2246",
+            "sourceType": "api",
+            "spec": {
+              "advanced_auth": {
+                "auth_flow_type": "oauth2.0",
+                "oauth_config_specification": {
+                  "complete_oauth_output_specification": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "refresh_token": {
+                        "path_in_connector_config": [
+                          "refresh_token"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_input_specification": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "client_id": {
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_output_specification": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "client_id": {
+                        "path_in_connector_config": [
+                          "client_id"
+                        ],
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "path_in_connector_config": [
+                          "client_secret"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "oauth_user_input_from_connector_config_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "region": {
+                        "path_in_connector_config": [
+                          "region"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  }
+                },
+                "predicate_key": [
+                  "auth_type"
+                ],
+                "predicate_value": "oauth2.0"
+              },
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "properties": {
+                  "auth_type": {
+                    "const": "oauth2.0",
+                    "default": "oauth2.0",
+                    "order": 0,
+                    "title": "Auth Type",
+                    "type": "string"
+                  },
+                  "client_id": {
+                    "airbyte_secret": true,
+                    "description": "The client ID of your Amazon Ads developer application. See the <a href=\"https://advertising.amazon.com/API/docs/en-us/get-started/generate-api-tokens#retrieve-your-client-id-and-client-secret\">docs</a> for more information.",
+                    "order": 1,
+                    "title": "Client ID",
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "airbyte_secret": true,
+                    "description": "The client secret of your Amazon Ads developer application. See the <a href=\"https://advertising.amazon.com/API/docs/en-us/get-started/generate-api-tokens#retrieve-your-client-id-and-client-secret\">docs</a> for more information.",
+                    "order": 2,
+                    "title": "Client Secret",
+                    "type": "string"
+                  },
+                  "look_back_window": {
+                    "default": 3,
+                    "description": "The amount of days to go back in time to get the updated data from Amazon Ads",
+                    "examples": [
+                      3,
+                      10
+                    ],
+                    "order": 8,
+                    "title": "Look Back Window",
+                    "type": "integer"
+                  },
+                  "marketplace_ids": {
+                    "description": "Marketplace IDs you want to fetch data for. Note: If Profile IDs are also selected, profiles will be selected if they match the Profile ID OR the Marketplace ID.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "order": 7,
+                    "title": "Marketplace IDs",
+                    "type": "array"
+                  },
+                  "num_workers": {
+                    "default": 14,
+                    "description": "The number of worker threads to use for the sync.",
+                    "examples": [
+                      2,
+                      3
+                    ],
+                    "maximum": 20,
+                    "minimum": 2,
+                    "order": 9,
+                    "title": "Number of concurrent threads",
+                    "type": "integer"
+                  },
+                  "profiles": {
+                    "description": "Profile IDs you want to fetch data for. The Amazon Ads source connector supports only profiles with seller and vendor type, profiles with agency type will be ignored. See <a href=\"https://advertising.amazon.com/API/docs/en-us/concepts/authorization/profiles\">docs</a> for more details. Note: If Marketplace IDs are also selected, profiles will be selected if they match the Profile ID OR the Marketplace ID.",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "order": 6,
+                    "title": "Profile IDs",
+                    "type": "array"
+                  },
+                  "refresh_token": {
+                    "airbyte_secret": true,
+                    "description": "Amazon Ads refresh token. See the <a href=\"https://advertising.amazon.com/API/docs/en-us/get-started/generate-api-tokens\">docs</a> for more information on how to obtain this token.",
+                    "order": 3,
+                    "title": "Refresh Token",
+                    "type": "string"
+                  },
+                  "region": {
+                    "default": "NA",
+                    "description": "Region to pull data from (EU/NA/FE). See <a href=\"https://advertising.amazon.com/API/docs/en-us/info/api-overview#api-endpoints\">docs</a> for more details.",
+                    "enum": [
+                      "NA",
+                      "EU",
+                      "FE"
+                    ],
+                    "order": 4,
+                    "title": "Region",
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "description": "The Start date for collecting reports, should not be more than 60 days in the past. In YYYY-MM-DD format",
+                    "examples": [
+                      "2022-10-10",
+                      "2022-10-22"
+                    ],
+                    "format": "date",
+                    "order": 5,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                    "title": "Start Date",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "client_id",
+                  "client_secret",
+                  "refresh_token"
+                ],
+                "title": "Source Amazon Ads",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads",
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "suggestedStreams": {
+              "streams": [
+                "profiles",
+                "sponsored_brands_video_report_stream",
+                "sponsored_display_report_stream",
+                "sponsored_brands_report_stream",
+                "sponsored_products_report_stream"
+              ]
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "cdk:low-code",
+              "language:manifest-only"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -35037,15 +36071,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           }
         },
         "release": {
@@ -45890,16 +46924,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-defillama/0.0.2.spdx.json",
@@ -47906,15 +48940,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           }
         },
@@ -64486,22 +65520,22 @@
         "baseImage": "docker.io/airbyte/source-declarative-manifest:6.61.6@sha256:a86098c6af1cf9d0b4484f33c973981a4d4f16740924ce9325b01ee4c8ca33df"
       },
       "custom": false,
-      "dockerImageTag": "0.2.25",
+      "dockerImageTag": "0.2.26",
       "dockerRepository": "airbyte/source-goldcast",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/goldcast",
       "externalDocumentationUrls": [
         {
           "title": "Goldcast API documentation",
           "type": "api_reference",
-          "url": "https://www.goldcast.io/api-docs"
+          "url": "https://apidocs.goldcast.io/"
         }
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "408fd31fc6c40524f2d2e19c929f3e630b6ec57c",
-          "commit_timestamp": "2026-06-02T06:23:39+00:00"
+          "commit_author": "Francisco Carneiro",
+          "commit_author_email": "50323946+FVCCarneiro@users.noreply.github.com",
+          "commit_sha": "0ac237053717067a5ecea54fcd0dc85a1851945d",
+          "commit_timestamp": "2026-08-20T11:22:54+01:00"
         },
         "metrics": {
           "all": {
@@ -64517,12 +65551,28 @@
             "usage": "low"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-goldcast/0.2.25.spdx.json",
+        "release": {
+          "attributed_to": "bazarnov",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "0ac237053717067a5ecea54fcd0dc85a1851945d",
+          "merged_at": "2026-08-20T10:22:55Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 50323946,
+          "pr_author_login": "FVCCarneiro",
+          "pr_author_type": "User",
+          "pr_merged_by_login": "bazarnov",
+          "pr_merged_by_type": "User",
+          "pr_number": 83237,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/83237",
+          "released_at": "2026-08-20T10:22:55Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-goldcast/0.2.26.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-goldcast/latest/metadata.yaml",
-          "metadata_last_modified": "2026-06-02T06:27:46.846409+00:00",
-          "registry_entry_generated_at": "2026-06-02T06:27:46.846409+00:00"
+          "metadata_last_modified": "2026-08-20T10:28:09.225537+00:00",
+          "registry_entry_generated_at": "2026-08-20T10:28:09.225537+00:00"
         }
       },
       "githubIssueLabel": "source-goldcast",
@@ -64561,7 +65611,7 @@
           "title": "goldcast.io Source Spec",
           "type": "object"
         },
-        "documentationUrl": "https://customapi.goldcast.io/swagger-ui/#/",
+        "documentationUrl": "https://apidocs.goldcast.io/",
         "supportsDBT": false,
         "supportsNormalization": false
       },
@@ -77063,15 +78113,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-hardcoded-records/0.0.46.spdx.json",
@@ -81196,15 +82246,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "release": {
@@ -99673,7 +100723,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.1.27",
+      "dockerImageTag": "0.1.28",
       "dockerRepository": "airbyte/source-netsuite",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/netsuite",
       "externalDocumentationUrls": [
@@ -99690,10 +100740,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "f589f89217fcd99c0f9bde1874730559aa8f0eeb",
-          "commit_timestamp": "2025-11-18T18:09:21-08:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "f42ab6f2c3bdbc2d025ba077ce7eb679ccd1ea97",
+          "commit_timestamp": "2026-08-20T10:49:41-07:00"
         },
         "metrics": {
           "all": {
@@ -99709,12 +100759,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-netsuite/0.1.27.spdx.json",
+        "release": {
+          "attributed_to": "ZaneHyattAB",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "f42ab6f2c3bdbc2d025ba077ce7eb679ccd1ea97",
+          "merged_at": "2026-08-20T17:49:41Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
+          "pr_author_type": "Bot",
+          "pr_merged_by_login": "ZaneHyattAB",
+          "pr_merged_by_type": "User",
+          "pr_number": 79654,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/79654",
+          "released_at": "2026-08-20T17:49:41Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-netsuite/0.1.28.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-netsuite/latest/metadata.yaml",
-          "metadata_last_modified": "2025-11-19T02:23:39.502000+00:00",
-          "registry_entry_generated_at": "2025-11-19T02:43:06.159304"
+          "metadata_last_modified": "2026-08-20T17:55:13.522270+00:00",
+          "registry_entry_generated_at": "2026-08-20T17:55:13.522270+00:00"
         }
       },
       "githubIssueLabel": "source-netsuite",
@@ -102960,15 +104026,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           }
         },
@@ -118938,22 +120004,38 @@
       },
       "allowedHosts": {
         "hosts": [
-          "api.ramp.com"
+          "api.ramp.com",
+          "demo-api.ramp.com"
         ]
       },
       "connectorBuildOptions": {
         "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
       },
+      "connectorTestSuitesOptions": [
+        {
+          "suite": "acceptanceTests",
+          "testSecrets": [
+            {
+              "fileName": "config.json",
+              "name": "SECRET_SOURCE-RAMP-SANDBOX__CREDS",
+              "secretStore": {
+                "alias": "airbyte-connector-testing-secret-store",
+                "type": "GSM"
+              }
+            }
+          ]
+        }
+      ],
       "custom": false,
-      "dockerImageTag": "0.0.3",
+      "dockerImageTag": "0.0.4",
       "dockerRepository": "airbyte/source-ramp",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/ramp",
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "625af929493f6965d02d94b9b94521495e0c1909",
-          "commit_timestamp": "2026-08-18T07:10:08+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "3a73a35e57d64fc428e31a505d46244729ef0cc7",
+          "commit_timestamp": "2026-08-20T18:42:59+03:00"
         },
         "metrics": {
           "all": {
@@ -118970,23 +120052,27 @@
           }
         },
         "release": {
-          "attributed_to": null,
-          "merge_commit_sha": "625af929493f6965d02d94b9b94521495e0c1909",
-          "merged_at": "2026-08-18T07:10:09Z",
-          "pr_author_id": 230633153,
-          "pr_author_login": "octavia-bot-hoard",
+          "attributed_to": "DanyloGL",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "3a73a35e57d64fc428e31a505d46244729ef0cc7",
+          "merged_at": "2026-08-20T15:43:00Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
-          "pr_number": 84721,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84721",
-          "released_at": "2026-08-18T07:10:09Z",
+          "pr_merged_by_login": "DanyloGL",
+          "pr_merged_by_type": "User",
+          "pr_number": 84843,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84843",
+          "released_at": "2026-08-20T15:43:00Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ramp/0.0.3.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ramp/0.0.4.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-ramp/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-18T07:15:43.708697+00:00",
-          "registry_entry_generated_at": "2026-08-18T07:15:43.708697+00:00"
+          "metadata_last_modified": "2026-08-20T15:47:31.852213+00:00",
+          "registry_entry_generated_at": "2026-08-20T15:47:31.852213+00:00"
         }
       },
       "githubIssueLabel": "source-ramp",
@@ -119013,6 +120099,14 @@
           "$schema": "http://json-schema.org/draft-07/schema#",
           "additionalProperties": true,
           "properties": {
+            "api_url": {
+              "airbyte_hidden": true,
+              "default": "https://api.ramp.com",
+              "description": "Ramp API base URL. All production Ramp accounts use the default. Set to https://demo-api.ramp.com only when testing against a Ramp sandbox app.",
+              "order": 3,
+              "title": "API Base URL",
+              "type": "string"
+            },
             "client_id": {
               "airbyte_secret": true,
               "description": "Your Ramp API client ID, created in Ramp's developer settings.",
@@ -120984,6 +122078,128 @@
       },
       "allowedHosts": {
         "hosts": [
+          "app.getreprise.com",
+          "api.us-east.tinybird.co"
+        ]
+      },
+      "connectorBuildOptions": {
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.26.0@sha256:94a7ac35764d45a5c5a797cc99940308c11c62313b7dfad555a10a6002d8d5d3"
+      },
+      "custom": false,
+      "dockerImageTag": "0.0.1",
+      "dockerRepository": "airbyte/source-reprise",
+      "documentationUrl": "https://docs.airbyte.com/integrations/sources/reprise",
+      "generated": {
+        "git": {
+          "commit_author": "Ella6882",
+          "commit_author_email": "64746286+Ella6882@users.noreply.github.com",
+          "commit_sha": "3b888dceb48c7cbb48a6b6026716726279cc7eca",
+          "commit_timestamp": "2026-08-20T05:29:47-06:00"
+        },
+        "release": {
+          "attributed_to": "bazarnov",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "3b888dceb48c7cbb48a6b6026716726279cc7eca",
+          "merged_at": "2026-08-20T11:29:48Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 64746286,
+          "pr_author_login": "Ella6882",
+          "pr_author_type": "User",
+          "pr_merged_by_login": "bazarnov",
+          "pr_merged_by_type": "User",
+          "pr_number": 84883,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84883",
+          "released_at": "2026-08-20T11:29:48Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-reprise/0.0.1.spdx.json",
+        "source_file_info": {
+          "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+          "metadata_file_path": "metadata/airbyte/source-reprise/latest/metadata.yaml",
+          "metadata_last_modified": "2026-08-20T11:33:48.650124+00:00",
+          "registry_entry_generated_at": "2026-08-20T11:33:48.650124+00:00"
+        }
+      },
+      "githubIssueLabel": "source-reprise",
+      "icon": "icon.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-reprise/latest/icon.svg",
+      "language": "manifest-only",
+      "license": "ELv2",
+      "name": "Reprise",
+      "packageInfo": {},
+      "public": true,
+      "releaseDate": "2026-08-18",
+      "releaseStage": "alpha",
+      "releases": {},
+      "remoteRegistries": {
+        "pypi": {
+          "enabled": false,
+          "packageName": "airbyte-source-reprise"
+        }
+      },
+      "sourceDefinitionId": "77562b16-e56b-4135-bde6-1e87ef6a1449",
+      "sourceType": "api",
+      "spec": {
+        "connectionSpecification": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": true,
+          "properties": {
+            "api_token": {
+              "airbyte_secret": true,
+              "description": "Reprise portal API key (Settings > API Management). Exchanged for a scoped warehouse JWT via POST https://app.getreprise.com/api/warehouse/token before each sync.",
+              "name": "api_token",
+              "order": 0,
+              "title": "API Token",
+              "type": "string"
+            },
+            "include_viewer_pii": {
+              "default": false,
+              "description": "When enabled, replicate_session_activity emits the raw viewer column (visitor email, or IP when no welcome screen is used). Disabled by default; viewer_is_internal is always emitted.",
+              "order": 3,
+              "title": "Include Viewer PII",
+              "type": "boolean"
+            },
+            "internal_email_domains": {
+              "description": "Comma-separated email domains treated as internal for replicate_session_activity viewer_is_internal (e.g. yourcompany.com). Requires viewer_pii from the API; raw viewer is redacted by default unless include_viewer_pii is enabled. If unset, viewer_is_internal is false for all rows.",
+              "order": 2,
+              "title": "Internal email domains",
+              "type": "string"
+            },
+            "start_time": {
+              "description": "Optional UTC lower bound for full refresh / first backfill of activity, summary, replicate, change_feed, and metrics (YYYY-MM-DD HH:MM:SS). Clamped to 18 months ago. Incremental activity/summary/replicate runs only re-fetch the last 3 days (lookback_window); this sets the historical floor.",
+              "order": 1,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$",
+              "title": "Start Time",
+              "type": "string"
+            }
+          },
+          "required": [
+            "api_token"
+          ],
+          "type": "object"
+        },
+        "documentationUrl": "https://reprise.zendesk.com/hc/en-us/articles/18940321925659-Replay-Data-API",
+        "supportsDBT": false,
+        "supportsNormalization": false
+      },
+      "supportLevel": "community",
+      "supportsDataActivation": false,
+      "supportsFileTransfer": false,
+      "tags": [
+        "language:manifest-only",
+        "cdk:low-code"
+      ],
+      "tombstone": false
+    },
+    {
+      "ab_internal": {
+        "isEnterprise": false,
+        "ql": 100,
+        "requireVersionIncrementsInPullRequests": true,
+        "sl": 100
+      },
+      "allowedHosts": {
+        "hosts": [
           "api.retailexpress.com.au"
         ]
       },
@@ -121737,16 +122953,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-rki-covid/0.1.41.spdx.json",
@@ -145697,16 +146913,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-tvmaze-schedule/0.2.25.spdx.json",
@@ -149997,16 +151213,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-wikipedia-pageviews/0.2.22.spdx.json",
