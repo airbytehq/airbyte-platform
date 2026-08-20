@@ -14,6 +14,8 @@ internal data class PodStartupDurations(
   val createToScheduled: Duration?,
   val scheduledToInitialized: Duration?,
   val initializedToReady: Duration?,
+  val scheduledToInitContainerStarted: Duration? = null,
+  val initContainerStartedToFinished: Duration? = null,
 )
 
 internal fun extractPodStartupDurations(pod: Pod): PodStartupDurations {
@@ -27,11 +29,15 @@ internal fun extractPodStartupDurations(pod: Pod): PodStartupDurations {
   val scheduledTime = parseTimestamp(conditions[PodConditionType.SCHEDULED]?.lastTransitionTime)
   val initializedTime = parseTimestamp(conditions[PodConditionType.INITIALIZED]?.lastTransitionTime)
   val readyTime = parseTimestamp(conditions[PodConditionType.READY]?.lastTransitionTime)
+  val initContainerTimes = extractInitContainerTimes(pod)
 
   return PodStartupDurations(
     createToScheduled = durationBetween(creationTime, scheduledTime),
     scheduledToInitialized = durationBetween(scheduledTime, initializedTime),
     initializedToReady = durationBetween(initializedTime, readyTime),
+    scheduledToInitContainerStarted = durationBetween(scheduledTime, initContainerTimes?.earliestStartedAt),
+    initContainerStartedToFinished =
+      durationBetween(initContainerTimes?.earliestStartedAt, initContainerTimes?.latestFinishedAt),
   )
 }
 
@@ -45,6 +51,31 @@ internal fun extractConnectorImage(pod: Pod): String =
     ?: MetricTags.UNKNOWN
 
 private fun parseTimestamp(timestamp: String?): Instant? = timestamp?.let { runCatching { Instant.parse(it) }.getOrNull() }
+
+private fun extractInitContainerTimes(pod: Pod): InitContainerTimes? {
+  val statuses = pod.status?.initContainerStatuses.orEmpty()
+  if (statuses.isEmpty()) {
+    return null
+  }
+
+  val terminatedStates =
+    statuses.map {
+      it.state?.terminated ?: return null
+    }
+  val startedAt =
+    terminatedStates.map {
+      parseTimestamp(it.startedAt) ?: return null
+    }
+  val finishedAt =
+    terminatedStates.map {
+      parseTimestamp(it.finishedAt) ?: return null
+    }
+
+  return InitContainerTimes(
+    earliestStartedAt = startedAt.minOrNull() ?: return null,
+    latestFinishedAt = finishedAt.maxOrNull() ?: return null,
+  )
+}
 
 private fun normalizeConnectorImage(image: String): String? {
   val trimmedImage = image.trim()
@@ -83,6 +114,11 @@ private fun durationBetween(
   } else {
     Duration.between(start, end).takeUnless { it.isNegative }
   }
+
+private data class InitContainerTimes(
+  val earliestStartedAt: Instant,
+  val latestFinishedAt: Instant,
+)
 
 private object PodConditionType {
   const val SCHEDULED = "PodScheduled"

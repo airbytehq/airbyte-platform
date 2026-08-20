@@ -6,6 +6,10 @@ package io.airbyte.workload.launcher.pods
 
 import io.airbyte.workload.launcher.constants.ContainerConstants
 import io.fabric8.kubernetes.api.model.ContainerBuilder
+import io.fabric8.kubernetes.api.model.ContainerStateTerminatedBuilder
+import io.fabric8.kubernetes.api.model.ContainerStateWaitingBuilder
+import io.fabric8.kubernetes.api.model.ContainerStatus
+import io.fabric8.kubernetes.api.model.ContainerStatusBuilder
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodConditionBuilder
@@ -52,6 +56,113 @@ internal class PodStartupDurationsTest {
           initializedToReady = null,
         ),
       )
+  }
+
+  @Test
+  fun `returns null for init container durations when there are no init containers`() {
+    val pod =
+      pod(
+        creationTimestamp = "2026-01-01T00:00:00Z",
+        scheduledTimestamp = "2026-01-01T00:00:02Z",
+      )
+
+    assertThat(extractPodStartupDurations(pod))
+      .isEqualTo(
+        PodStartupDurations(
+          createToScheduled = Duration.ofSeconds(2),
+          scheduledToInitialized = null,
+          initializedToReady = null,
+          scheduledToInitContainerStarted = null,
+          initContainerStartedToFinished = null,
+        ),
+      )
+  }
+
+  @Test
+  fun `returns null for init container durations when an init container is not terminated`() {
+    val pod =
+      pod(
+        creationTimestamp = "2026-01-01T00:00:00Z",
+        scheduledTimestamp = "2026-01-01T00:00:02Z",
+        initContainerStatuses =
+          listOf(
+            ContainerStatusBuilder()
+              .withName("init")
+              .withNewState()
+              .withWaiting(ContainerStateWaitingBuilder().withReason("ContainerCreating").build())
+              .endState()
+              .build(),
+          ),
+      )
+
+    assertThat(extractPodStartupDurations(pod))
+      .extracting(
+        PodStartupDurations::scheduledToInitContainerStarted,
+        PodStartupDurations::initContainerStartedToFinished,
+      ).containsExactly(null, null)
+  }
+
+  @Test
+  fun `extracts init container durations using the earliest start and latest finish`() {
+    val pod =
+      pod(
+        creationTimestamp = "2026-01-01T00:00:00Z",
+        scheduledTimestamp = "2026-01-01T00:00:02Z",
+        initContainerStatuses =
+          listOf(
+            terminatedInitContainer("init-a", "2026-01-01T00:00:04Z", "2026-01-01T00:00:07Z"),
+            terminatedInitContainer("init-b", "2026-01-01T00:00:03Z", "2026-01-01T00:00:09Z"),
+          ),
+      )
+
+    assertThat(extractPodStartupDurations(pod))
+      .extracting(
+        PodStartupDurations::scheduledToInitContainerStarted,
+        PodStartupDurations::initContainerStartedToFinished,
+      ).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(6))
+  }
+
+  @Test
+  fun `returns null for init container durations when timestamps are malformed`() {
+    val pod =
+      pod(
+        creationTimestamp = "2026-01-01T00:00:00Z",
+        scheduledTimestamp = "2026-01-01T00:00:02Z",
+        initContainerStatuses =
+          listOf(
+            terminatedInitContainer("init", "not-a-timestamp", "2026-01-01T00:00:09Z"),
+          ),
+      )
+
+    assertThat(extractPodStartupDurations(pod))
+      .extracting(
+        PodStartupDurations::scheduledToInitContainerStarted,
+        PodStartupDurations::initContainerStartedToFinished,
+      ).containsExactly(null, null)
+  }
+
+  @Test
+  fun `extracts timing for a failed terminated init container`() {
+    val pod =
+      pod(
+        creationTimestamp = "2026-01-01T00:00:00Z",
+        scheduledTimestamp = "2026-01-01T00:00:02Z",
+        initContainerStatuses =
+          listOf(
+            terminatedInitContainer(
+              name = "init",
+              startedAt = "2026-01-01T00:00:03Z",
+              finishedAt = "2026-01-01T00:00:05Z",
+              exitCode = 1,
+            ),
+          ),
+      )
+
+    assertThat(extractPodStartupDurations(pod))
+      .extracting(
+        PodStartupDurations::scheduledToInitContainerStarted,
+        PodStartupDurations::initContainerStartedToFinished,
+      ).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2))
   }
 
   @Test
@@ -175,6 +286,7 @@ internal class PodStartupDurationsTest {
     initializedTimestamp: String? = null,
     readyTimestamp: String? = null,
     readyStatus: String = "True",
+    initContainerStatuses: List<ContainerStatus> = emptyList(),
   ): Pod =
     Pod().apply {
       metadata = ObjectMetaBuilder().withCreationTimestamp(creationTimestamp).build()
@@ -186,8 +298,27 @@ internal class PodStartupDurationsTest {
               initializedTimestamp?.let { condition("Initialized", it) },
               readyTimestamp?.let { condition("Ready", it, readyStatus) },
             ),
-          ).build()
+          ).withInitContainerStatuses(initContainerStatuses)
+          .build()
     }
+
+  private fun terminatedInitContainer(
+    name: String,
+    startedAt: String?,
+    finishedAt: String?,
+    exitCode: Int = 0,
+  ): ContainerStatus =
+    ContainerStatusBuilder()
+      .withName(name)
+      .withNewState()
+      .withTerminated(
+        ContainerStateTerminatedBuilder()
+          .withStartedAt(startedAt)
+          .withFinishedAt(finishedAt)
+          .withExitCode(exitCode)
+          .build(),
+      ).endState()
+      .build()
 
   private fun podWithContainer(
     image: String?,

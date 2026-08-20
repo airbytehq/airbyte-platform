@@ -43,6 +43,8 @@ import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workspaceId
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.fabric8.kubernetes.api.model.ContainerBuilder
+import io.fabric8.kubernetes.api.model.ContainerStateTerminatedBuilder
+import io.fabric8.kubernetes.api.model.ContainerStatusBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
@@ -716,6 +718,8 @@ internal class KubePodClientTest {
         scheduledTimestamp = "2026-01-01T00:00:02Z",
         initializedTimestamp = "2026-01-01T00:00:05Z",
         readyTimestamp = "2026-01-01T00:00:09Z",
+        initContainerStartedTimestamp = "2026-01-01T00:00:03Z",
+        initContainerFinishedTimestamp = "2026-01-01T00:00:05Z",
       )
 
     every {
@@ -766,6 +770,20 @@ internal class KubePodClientTest {
     }
     verify(exactly = 1) {
       metricClient.distribution(
+        OssMetricsRegistry.WORKLOAD_LAUNCH_POD_SCHEDULED_TO_INIT_CONTAINER_STARTED_DURATION,
+        1.0,
+        *attributes,
+      )
+    }
+    verify(exactly = 1) {
+      metricClient.distribution(
+        OssMetricsRegistry.WORKLOAD_LAUNCH_POD_INIT_CONTAINER_STARTED_TO_FINISHED_DURATION,
+        2.0,
+        *attributes,
+      )
+    }
+    verify(exactly = 1) {
+      metricClient.distribution(
         OssMetricsRegistry.WORKLOAD_LAUNCH_POD_INITIALIZED_TO_READY_DURATION,
         4.0,
         *attributes,
@@ -779,6 +797,8 @@ internal class KubePodClientTest {
     scheduledTimestamp: String? = null,
     initializedTimestamp: String? = null,
     readyTimestamp: String? = null,
+    initContainerStartedTimestamp: String? = null,
+    initContainerFinishedTimestamp: String? = null,
   ): Pod =
     PodBuilder()
       .withNewMetadata()
@@ -804,6 +824,24 @@ internal class KubePodClientTest {
                 scheduledTimestamp?.let { podCondition("PodScheduled", it) },
                 initializedTimestamp?.let { podCondition("Initialized", it) },
                 readyTimestamp?.let { podCondition("Ready", it) },
+              ),
+            ).withInitContainerStatuses(
+              listOfNotNull(
+                if (initContainerStartedTimestamp != null && initContainerFinishedTimestamp != null) {
+                  ContainerStatusBuilder()
+                    .withName("init")
+                    .withNewState()
+                    .withTerminated(
+                      ContainerStateTerminatedBuilder()
+                        .withStartedAt(initContainerStartedTimestamp)
+                        .withFinishedAt(initContainerFinishedTimestamp)
+                        .withExitCode(0)
+                        .build(),
+                    ).endState()
+                    .build()
+                } else {
+                  null
+                },
               ),
             ).build()
       }

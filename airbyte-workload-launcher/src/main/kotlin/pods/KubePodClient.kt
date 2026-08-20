@@ -375,6 +375,20 @@ class KubePodClient(
           attributes = attributes,
         )
       }
+      durations.scheduledToInitContainerStarted?.let {
+        metricClient.distribution(
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCH_POD_SCHEDULED_TO_INIT_CONTAINER_STARTED_DURATION,
+          value = it.toNanos().toDouble() / NANOS_PER_SECOND,
+          attributes = attributes,
+        )
+      }
+      durations.initContainerStartedToFinished?.let {
+        metricClient.distribution(
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCH_POD_INIT_CONTAINER_STARTED_TO_FINISHED_DURATION,
+          value = it.toNanos().toDouble() / NANOS_PER_SECOND,
+          attributes = attributes,
+        )
+      }
       durations.initializedToReady?.let {
         metricClient.distribution(
           metric = OssMetricsRegistry.WORKLOAD_LAUNCH_POD_INITIALIZED_TO_READY_DURATION,
