@@ -294,6 +294,15 @@ create table "public"."data_subject_deletion_request" (
   "execution_counts" jsonb,
   constraint "data_subject_deletion_request_pkey" primary key ("id")
 );
+create table "public"."data_worker_allocated_capacity" (
+  "id" uuid not null,
+  "organization_id" uuid not null,
+  "dataplane_group_id" uuid not null,
+  "allocated_capacity" real not null default 0,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "data_worker_allocated_capacity_pkey" primary key ("id")
+);
 create table "public"."data_worker_usage" (
   "organization_id" uuid not null,
   "workspace_id" uuid not null,
@@ -856,6 +865,7 @@ where ((status = ANY (ARRAY['previewed'::data_subject_deletion_status, 'running'
 create index "idx_data_subject_deletion_request_email_hash" on "public"."data_subject_deletion_request"("email_hash" asc);
 create index "idx_data_subject_deletion_request_status" on "public"."data_subject_deletion_request"("status" asc);
 create index "idx_data_subject_deletion_request_user_id" on "public"."data_subject_deletion_request"("user_id" asc);
+create unique index "data_worker_allocated_capacity_org_dataplane_group_idx" on "public"."data_worker_allocated_capacity"("organization_id" asc, "dataplane_group_id" asc);
 create index "data_worker_usage_reservation_organization_id_idx" on "public"."data_worker_usage_reservation"("organization_id" asc);
 create index "idx_dataplane_heartbeat_log_created_at" on "public"."dataplane_heartbeat_log"("created_at" asc);
 create index "idx_dataplane_heartbeat_log_dataplane_created_at" on "public"."dataplane_heartbeat_log"("dataplane_id" asc, "created_at" desc);
