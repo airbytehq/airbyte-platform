@@ -20,7 +20,7 @@ export interface ScimCredentialsModalProps {
 }
 
 // The token is shown exactly once, so it's displayed middle-truncated for readability while
-// `CopyButton` still copies the full provider-ready value.
+// `CopyButton` still copies the full, untruncated value.
 const TOKEN_VISIBLE_HEAD_LENGTH = 19;
 const TOKEN_VISIBLE_TAIL_LENGTH = 4;
 
@@ -46,9 +46,6 @@ export const ScimCredentialsModal: React.FC<ScimCredentialsModalProps> = ({
   // arrive and the modal has no other exit - reveal the full token for manual copying and unlock
   // the exit instead.
   const [tokenCopyFailed, setTokenCopyFailed] = useState(false);
-  // Okta's HTTP Header authentication mode sends the configured value verbatim, while Microsoft
-  // Entra adds the Bearer scheme to the raw value from its Secret Token field.
-  const tokenForProvider = idpProvider === ScimIdpProvider.okta ? `Bearer ${token}` : token;
 
   return (
     <>
@@ -82,12 +79,10 @@ export const ScimCredentialsModal: React.FC<ScimCredentialsModalProps> = ({
               {/* No `title` here, unlike the base URL above: it would put the untruncated token in the
                   DOM regardless of the visual truncation, where session-replay tooling can capture it. */}
               <Text className={styles.fieldValue} data-testid="bearer-token-value">
-                {tokenCopyFailed
-                  ? tokenForProvider
-                  : truncateMiddle(token, TOKEN_VISIBLE_HEAD_LENGTH, TOKEN_VISIBLE_TAIL_LENGTH)}
+                {tokenCopyFailed ? token : truncateMiddle(token, TOKEN_VISIBLE_HEAD_LENGTH, TOKEN_VISIBLE_TAIL_LENGTH)}
               </Text>
               <CopyButton
-                content={tokenForProvider}
+                content={token}
                 variant="secondary"
                 title={formatMessage({ id: "settings.organizationSettings.scim.enable.modal.copyBearerToken" })}
                 onCopy={() => setHasCopiedToken(true)}

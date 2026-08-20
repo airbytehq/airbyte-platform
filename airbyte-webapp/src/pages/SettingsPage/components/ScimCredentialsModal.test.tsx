@@ -10,7 +10,6 @@ import { ScimCredentialsModal, ScimCredentialsModalProps } from "./ScimCredentia
 const SCIM_BASE_URL = "https://cloud.airbyte.com/api/public/v1/scim/v2";
 const TOKEN = "airbyte_scim_4f8a2c9e7b1d4a6f8c3e5b7a9d1f3c5e9db1";
 const TRUNCATED_TOKEN = "airbyte_scim_4f8a2c…9db1";
-const OKTA_TOKEN = `Bearer ${TOKEN}`;
 
 const renderModal = async (props: Partial<ScimCredentialsModalProps> = {}) => {
   const onComplete = jest.fn();
@@ -40,18 +39,8 @@ describe("ScimCredentialsModal", () => {
     });
   });
 
-  it("displays the raw token but copies an Okta token with the Bearer scheme", async () => {
+  it("displays the token middle-truncated but copies the full value", async () => {
     await renderModal();
-
-    expect(screen.getByTestId("bearer-token-value")).toHaveTextContent(TRUNCATED_TOKEN);
-
-    await clickCopyButtonIn("bearer-token-field");
-
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(OKTA_TOKEN);
-  });
-
-  it("displays and copies the raw token for Microsoft Entra ID", async () => {
-    await renderModal({ idpProvider: ScimIdpProvider.microsoft_entra_id });
 
     expect(screen.getByTestId("bearer-token-value")).toHaveTextContent(TRUNCATED_TOKEN);
 
@@ -67,7 +56,6 @@ describe("ScimCredentialsModal", () => {
     // the DOM for session-replay tooling to capture despite the visual truncation.
     expect(screen.getByTitle(SCIM_BASE_URL)).toBeInTheDocument();
     expect(screen.queryByTitle(TOKEN)).not.toBeInTheDocument();
-    expect(screen.queryByTitle(OKTA_TOKEN)).not.toBeInTheDocument();
   });
 
   it("gives the two copy buttons distinct accessible names", async () => {
@@ -106,7 +94,7 @@ describe("ScimCredentialsModal", () => {
 
     await clickCopyButtonIn("bearer-token-field");
 
-    expect(screen.getByTestId("bearer-token-value")).toHaveTextContent(OKTA_TOKEN);
+    expect(screen.getByTestId("bearer-token-value")).toHaveTextContent(TOKEN);
     expect(
       screen.getByText("Copying to the clipboard failed. Select the token and copy it manually.")
     ).toBeInTheDocument();
@@ -124,7 +112,7 @@ describe("ScimCredentialsModal", () => {
 
     await clickCopyButtonIn("bearer-token-field");
 
-    expect(screen.getByTestId("bearer-token-value")).toHaveTextContent(OKTA_TOKEN);
+    expect(screen.getByTestId("bearer-token-value")).toHaveTextContent(TOKEN);
     expect(
       screen.getByText("Copying to the clipboard failed. Select the token and copy it manually.")
     ).toBeInTheDocument();
