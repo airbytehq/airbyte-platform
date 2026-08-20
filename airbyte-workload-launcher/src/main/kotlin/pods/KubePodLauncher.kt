@@ -216,37 +216,39 @@ class KubePodLauncher(
   fun waitForPodReadyOrTerminalByPod(
     pod: Pod,
     waitDuration: Duration,
-  ) {
+  ): Pod {
     val failOnImagePullBackoff = featureFlagClient.boolVariation(CheckImagePullBackoff, Empty)
     var imagePullErrors: List<PodStatusChecker.ImagePullError> = emptyList()
 
-    runKubeCommand(
-      {
-        kubernetesClient
-          .resource(pod)
-          .waitUntilCondition(
-            { p: Pod? ->
-              if (Objects.nonNull(p)) {
-                imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
-                // Fail on image pull errors on every poll if feature flag is enabled
-                if (failOnImagePullBackoff && imagePullErrors.isNotEmpty()) {
-                  // Return true to exit the wait condition - we'll throw outside the predicate
-                  return@waitUntilCondition true
-                }
+    val readyPod =
+      runKubeCommand(
+        {
+          kubernetesClient
+            .resource(pod)
+            .waitUntilCondition(
+              { p: Pod? ->
+                if (Objects.nonNull(p)) {
+                  imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
+                  // Fail on image pull errors on every poll if feature flag is enabled
+                  if (failOnImagePullBackoff && imagePullErrors.isNotEmpty()) {
+                    // Return true to exit the wait condition - we'll throw outside the predicate
+                    return@waitUntilCondition true
+                  }
 
-                Readiness.getInstance().isReady(p) || isTerminal(p)
-              } else {
-                false
-              }
-            },
-            waitDuration.toMinutes(),
-            TimeUnit.MINUTES,
-          )
-      },
-      "wait",
-    )
+                  Readiness.getInstance().isReady(p) || isTerminal(p)
+                } else {
+                  false
+                }
+              },
+              waitDuration.toMinutes(),
+              TimeUnit.MINUTES,
+            )
+        },
+        "wait",
+      )
 
     handleImagePullErrors(imagePullErrors, pod, failOnImagePullBackoff)
+    return readyPod
   }
 
   fun podsRunning(labels: Map<String, String>): Boolean {

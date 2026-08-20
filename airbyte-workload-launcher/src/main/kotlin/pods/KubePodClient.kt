@@ -11,7 +11,11 @@ import io.airbyte.featureflag.EnableAsyncProfiler
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.ProfilingMode
 import io.airbyte.featureflag.ShouldWaitForMainContainersOnReplication
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workers.exception.ImagePullException
 import io.airbyte.workers.exception.KubeClientException
 import io.airbyte.workers.exception.KubeCommandType
@@ -46,6 +50,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class KubePodClient(
   private val kubePodLauncher: KubePodLauncher,
+  private val metricClient: MetricClient,
   private val labeler: PodLabeler,
   private val mapper: PayloadKubeInputMapper,
   private val replicationPodFactory: ReplicationPodFactory,
@@ -277,7 +282,8 @@ class KubePodClient(
 
     waitForPodInitComplete(pod, podLogLabel)
 
-    waitForMainContainersReady(pod)
+    val readyPod = waitForMainContainersReady(pod)
+    recordPodStartupMetrics(readyPod, podLogLabel)
   }
 
   fun deleteMutexPods(mutexKey: String): Boolean {
@@ -334,17 +340,56 @@ class KubePodClient(
   private fun waitForMainContainersReady(
     pod: Pod,
     timeout: Duration = REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE,
-  ) {
+  ): Pod {
     try {
-      kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, timeout)
+      return kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, timeout)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
       throw e
     }
   }
 
+  private fun recordPodStartupMetrics(
+    pod: Pod,
+    workloadType: String,
+  ) {
+    try {
+      val durations = extractPodStartupDurations(pod)
+      val attributes =
+        arrayOf(
+          MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workloadType),
+          MetricAttribute(MetricTags.CONNECTOR_IMAGE, extractConnectorImage(pod)),
+        )
+
+      durations.createToScheduled?.let {
+        metricClient.distribution(
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCH_POD_CREATE_TO_SCHEDULED_DURATION,
+          value = it.toNanos().toDouble() / NANOS_PER_SECOND,
+          attributes = attributes,
+        )
+      }
+      durations.scheduledToInitialized?.let {
+        metricClient.distribution(
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCH_POD_SCHEDULED_TO_INITIALIZED_DURATION,
+          value = it.toNanos().toDouble() / NANOS_PER_SECOND,
+          attributes = attributes,
+        )
+      }
+      durations.initializedToReady?.let {
+        metricClient.distribution(
+          metric = OssMetricsRegistry.WORKLOAD_LAUNCH_POD_INITIALIZED_TO_READY_DURATION,
+          value = it.toNanos().toDouble() / NANOS_PER_SECOND,
+          attributes = attributes,
+        )
+      }
+    } catch (e: Exception) {
+      logger.warn(e) { "Failed to record pod startup metrics." }
+    }
+  }
+
   companion object {
     private val TIMEOUT_SLACK: Duration = Duration.ofSeconds(5)
+    private const val NANOS_PER_SECOND = 1_000_000_000.0
     val POD_INIT_TIMEOUT_VALUE: Duration = Duration.ofMinutes(15)
     val REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE: Duration = FULL_POD_TIMEOUT.plus(TIMEOUT_SLACK)
   }

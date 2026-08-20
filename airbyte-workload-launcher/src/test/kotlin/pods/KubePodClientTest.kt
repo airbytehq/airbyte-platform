@@ -14,6 +14,10 @@ import io.airbyte.featureflag.ProfilingMode
 import io.airbyte.featureflag.ShouldWaitForMainContainersOnReplication
 import io.airbyte.featureflag.SocketTest
 import io.airbyte.featureflag.TestClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -23,6 +27,7 @@ import io.airbyte.workers.exception.KubeCommandType
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workload.launcher.constants.ContainerConstants
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.POD_INIT_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE
@@ -37,12 +42,18 @@ import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.specLauncher
 import io.airbyte.workload.launcher.pods.KubePodClientTest.Fixtures.workspaceId
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
+import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
+import io.fabric8.kubernetes.api.model.PodConditionBuilder
+import io.fabric8.kubernetes.api.model.PodSpecBuilder
+import io.fabric8.kubernetes.api.model.PodStatusBuilder
+import io.mockk.Runs
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.spyk
@@ -58,6 +69,9 @@ import java.util.concurrent.TimeoutException
 internal class KubePodClientTest {
   @MockK
   private lateinit var launcher: KubePodLauncher
+
+  @MockK
+  private lateinit var metricClient: MetricClient
 
   @MockK
   private lateinit var labeler: PodLabeler
@@ -103,6 +117,7 @@ internal class KubePodClientTest {
     client =
       KubePodClient(
         kubePodLauncher = launcher,
+        metricClient = metricClient,
         labeler = labeler,
         mapper = mapper,
         replicationPodFactory = replicationPodFactory,
@@ -175,8 +190,8 @@ internal class KubePodClientTest {
     val slot = slot<Pod>()
     every { launcher.create(capture(slot)) } answers { slot.captured }
     every { launcher.waitForPodInitStartup(any(), any()) } returns Unit
-    every { launcher.waitForPodInitComplete(any(), any()) } returns Unit
-    every { launcher.waitForPodReadyOrTerminalByPod(any(Pod::class), any()) } returns Unit
+    every { launcher.waitForPodInitComplete(any(), any()) } just Runs
+    every { launcher.waitForPodReadyOrTerminalByPod(any(Pod::class), any()) } returns pod
     every { launcher.waitForPodReadyOrTerminal(any(), any()) } returns Unit
   }
 
@@ -683,11 +698,25 @@ internal class KubePodClientTest {
   @Test
   fun `launchConnectorWithSidecar starts a pod and waits on it`() {
     val connector =
-      PodBuilder()
-        .withNewMetadata()
-        .withName("connector-with-sidecar")
-        .endMetadata()
-        .build()
+      podWithLifecycle(
+        name = "connector-with-sidecar",
+        creationTimestamp = "2026-01-01T00:00:00Z",
+      )
+    val initialized =
+      podWithLifecycle(
+        name = "connector-with-sidecar",
+        creationTimestamp = "2026-01-01T00:00:00Z",
+        scheduledTimestamp = "2026-01-01T00:00:02Z",
+        initializedTimestamp = "2026-01-01T00:00:05Z",
+      )
+    val ready =
+      podWithLifecycle(
+        name = "connector-with-sidecar",
+        creationTimestamp = "2026-01-01T00:00:00Z",
+        scheduledTimestamp = "2026-01-01T00:00:02Z",
+        initializedTimestamp = "2026-01-01T00:00:05Z",
+        readyTimestamp = "2026-01-01T00:00:09Z",
+      )
 
     every {
       podFactory.create(
@@ -701,13 +730,92 @@ internal class KubePodClientTest {
         workspaceId,
       )
     } returns connector
+    every { launcher.waitForPodInitComplete(connector, POD_INIT_TIMEOUT_VALUE) } just Runs
+    every { launcher.waitForPodReadyOrTerminalByPod(connector, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) } returns ready
+    every { metricClient.distribution(any(), any(), *anyVararg()) } returns null
 
     client.launchConnectorWithSidecar(connectorKubeInput, podFactory, "OPERATION NAME")
 
-    verify { launcher.waitForPodInitComplete(connector, POD_INIT_TIMEOUT_VALUE) }
+    verify(exactly = 1) { launcher.waitForPodInitComplete(connector, POD_INIT_TIMEOUT_VALUE) }
 
-    verify { launcher.waitForPodReadyOrTerminalByPod(connector, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE) }
+    verify(exactly = 1) {
+      launcher.waitForPodReadyOrTerminalByPod(connector, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE)
+    }
+    verify(exactly = 0) {
+      launcher.waitForPodReadyOrTerminalByPod(initialized, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE)
+    }
+
+    val attributes =
+      arrayOf(
+        MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, "OPERATION NAME"),
+        MetricAttribute(MetricTags.CONNECTOR_IMAGE, "airbyte/source-postgres"),
+      )
+    verify(exactly = 1) {
+      metricClient.distribution(
+        OssMetricsRegistry.WORKLOAD_LAUNCH_POD_CREATE_TO_SCHEDULED_DURATION,
+        2.0,
+        *attributes,
+      )
+    }
+    verify(exactly = 1) {
+      metricClient.distribution(
+        OssMetricsRegistry.WORKLOAD_LAUNCH_POD_SCHEDULED_TO_INITIALIZED_DURATION,
+        3.0,
+        *attributes,
+      )
+    }
+    verify(exactly = 1) {
+      metricClient.distribution(
+        OssMetricsRegistry.WORKLOAD_LAUNCH_POD_INITIALIZED_TO_READY_DURATION,
+        4.0,
+        *attributes,
+      )
+    }
   }
+
+  private fun podWithLifecycle(
+    name: String,
+    creationTimestamp: String,
+    scheduledTimestamp: String? = null,
+    initializedTimestamp: String? = null,
+    readyTimestamp: String? = null,
+  ): Pod =
+    PodBuilder()
+      .withNewMetadata()
+      .withName(name)
+      .withCreationTimestamp(creationTimestamp)
+      .endMetadata()
+      .build()
+      .apply {
+        spec =
+          PodSpecBuilder()
+            .withContainers(
+              listOf(
+                ContainerBuilder()
+                  .withName(ContainerConstants.MAIN_CONTAINER_NAME)
+                  .withImage("airbyte/source-postgres:3.6.1")
+                  .build(),
+              ),
+            ).build()
+        status =
+          PodStatusBuilder()
+            .withConditions(
+              listOfNotNull(
+                scheduledTimestamp?.let { podCondition("PodScheduled", it) },
+                initializedTimestamp?.let { podCondition("Initialized", it) },
+                readyTimestamp?.let { podCondition("Ready", it) },
+              ),
+            ).build()
+      }
+
+  private fun podCondition(
+    type: String,
+    timestamp: String,
+  ) = PodConditionBuilder()
+    .withType(type)
+    .withStatus("True")
+    .withLastTransitionTime(timestamp)
+    .build()
 
   @Test
   fun `launchConnectorWithSidecar propagates pod creation error`() {

@@ -608,6 +608,18 @@ enum class OssMetricsRegistry(
     metricName = "workload_launch_duration",
     metricDescription = "tracks the duration of the launch of a workload",
   ),
+  WORKLOAD_LAUNCH_POD_CREATE_TO_SCHEDULED_DURATION(
+    metricName = "workload_launch_pod_create_to_scheduled_duration",
+    metricDescription = "duration in seconds from pod creation to pod scheduling",
+  ),
+  WORKLOAD_LAUNCH_POD_SCHEDULED_TO_INITIALIZED_DURATION(
+    metricName = "workload_launch_pod_scheduled_to_initialized_duration",
+    metricDescription = "duration in seconds from pod scheduling to pod initialization",
+  ),
+  WORKLOAD_LAUNCH_POD_INITIALIZED_TO_READY_DURATION(
+    metricName = "workload_launch_pod_initialized_to_ready_duration",
+    metricDescription = "duration in seconds from pod initialization to pod readiness",
+  ),
   WORKLOAD_LAUNCH_STATUS(
     metricName = "workload_launch_status",
     metricDescription = "tracks the outcome of a workload launch as reported to the control plane",
