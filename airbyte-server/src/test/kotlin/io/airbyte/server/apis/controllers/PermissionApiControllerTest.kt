@@ -54,6 +54,7 @@ internal class PermissionApiControllerTest {
   fun testCreatePermission() {
     every { permissionHandler.createPermission(any()) } returns
       Permission()
+        .withUserId(UUID.randomUUID())
         .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
 
     val path = "/api/v1/permissions/create"

@@ -501,11 +501,6 @@ airbyte:
     connect-timeout-seconds: ${MANIFEST_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${MANIFEST_SERVER_API_READ_TIMEOUT_SECONDS:300}
 
-  # Enterprise feature
-  audit:
-    logging:
-      enabled: ${AUDIT_LOGGING_ENABLED:false}
-
 datasources:
   config:
     connection-test-query: SELECT 1

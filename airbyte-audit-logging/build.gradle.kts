@@ -26,6 +26,8 @@ dependencies {
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-commons-server"))
   implementation(project(":oss:airbyte-commons-storage"))
+  implementation(project(":oss:airbyte-commons-entitlements"))
+  implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-featureflag"))  // Explicitly needed for FeatureFlagClient
   implementation(libs.bundles.micronaut)
   implementation(libs.micronaut.inject)

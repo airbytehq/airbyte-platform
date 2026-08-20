@@ -791,7 +791,6 @@ server:
 
   datadog:
     serviceName: airbyte-server
-  auditLoggingEnabled: false
 
   serviceAccountName:
 

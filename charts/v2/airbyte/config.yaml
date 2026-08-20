@@ -911,10 +911,6 @@ secretsManager:
 server:
   keyBasePath: server
   config:  
-    - env: AUDIT_LOGGING_ENABLED
-      key: auditLoggingEnabled
-      defaultValue: false
-  
     - env: CONFIG_DB_MAX_POOL_SIZE
       key: configDbMaxPoolSize
 

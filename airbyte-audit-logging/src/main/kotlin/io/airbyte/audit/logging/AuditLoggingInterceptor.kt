@@ -9,14 +9,15 @@ import io.airbyte.audit.logging.model.AuditLogEntry
 import io.airbyte.audit.logging.provider.AuditProvider
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.AuditLoggingEntitlement
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClientFactory
-import io.airbyte.featureflag.ANONYMOUS
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.StoreAuditLogs
-import io.airbyte.featureflag.Workspace
-import io.airbyte.micronaut.runtime.AirbyteAuditLoggingConfig
 import io.airbyte.micronaut.runtime.AirbyteStorageConfig
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -40,10 +41,10 @@ import java.util.UUID
 @Singleton
 @InterceptorBean(AuditLogging::class)
 class AuditLoggingInterceptor(
-  private val airbyteAuditLoggingConfig: AirbyteAuditLoggingConfig,
   private val applicationContext: ApplicationContext,
   private val auditLoggingHelper: AuditLoggingHelper,
   private val auditScopeResolver: AuditScopeResolver,
+  private val entitlementService: EntitlementService,
   private val featureFlagClient: FeatureFlagClient,
   private val storageConfiguration: AirbyteStorageConfig,
   storageClientFactory: StorageClientFactory,
@@ -67,19 +68,6 @@ class AuditLoggingInterceptor(
   }
 
   override fun intercept(context: MethodInvocationContext<Any, Any>): Any {
-    val canStoreAuditLogs = featureFlagClient.boolVariation(StoreAuditLogs, Workspace(ANONYMOUS))
-
-    // We can proceed with storing the audit log if:
-    // 1. the AUDIT_LOGGING_ENABLED env var is set to true, or
-    // 2. the StoreAuditLogs feature flag is enabled.
-    // In cloud, the AUDIT_LOGGING_ENABLED var should never be set, thus we fall back to the flag. In enterprise
-    // deployments, the feature flag is not present (and will default to false), so the env var must be
-    // present in order to proceed.
-    if (!airbyteAuditLoggingConfig.enabled && !canStoreAuditLogs) {
-      logger.debug { "Proceeding with the request without audit logging because it is disabled." }
-      return context.proceed() ?: Unit
-    }
-
     val annotation = context.getAnnotation(AuditLogging::class.java)
     if (annotation == null) {
       logger.error { "Failed to retrieve the audit logging annotation." }
@@ -162,6 +150,22 @@ class AuditLoggingInterceptor(
     organizationId: UUID? = null,
     workspaceId: UUID? = null,
   ) {
+    if (organizationId == null) {
+      logger.debug { "Skipping audit log for $operationName: no organization could be resolved for the request." }
+      return
+    }
+    // Storing audit logs requires both the StoreAuditLogs feature flag (the rollout lever, keyed on
+    // the organization so it can be enabled per org) and the audit-logging entitlement, both
+    // evaluated against the organization the entry is attributed to.
+    if (!featureFlagClient.boolVariation(StoreAuditLogs, Organization(organizationId))) {
+      logger.debug { "Skipping audit log for $operationName: audit logging is disabled for organization $organizationId." }
+      return
+    }
+    if (!entitlementService.checkEntitlement(OrganizationId(organizationId), AuditLoggingEntitlement).isEntitled) {
+      logger.debug { "Skipping audit log for $operationName: organization $organizationId is not entitled to audit logs." }
+      return
+    }
+
     val auditLogEntry =
       AuditLogEntry(
         id = UUID.randomUUID(),

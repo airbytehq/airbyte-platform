@@ -85,7 +85,7 @@ internal class ScimConfigApiSecurityTest {
   fun setUp() {
     clearMocks(service, currentUserService)
     every { currentUserService.getCurrentUser() } returns
-      mockk {
+      mockk(relaxed = true) {
         every { userId } returns TEST_USER_ID
       }
   }

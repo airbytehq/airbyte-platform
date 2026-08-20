@@ -20,7 +20,6 @@ import java.util.UUID
 const val AIRBYTE_PREFIX = "airbyte"
 const val ANALYTICS_PREFIX = "$AIRBYTE_PREFIX.tracking"
 const val API_PREFIX = "$AIRBYTE_PREFIX.api"
-const val AUDIT_LOGGING_PREFIX = "$AIRBYTE_PREFIX.audit.logging"
 const val AUTH_PREFIX = "$AIRBYTE_PREFIX.auth"
 const val CLOUD_PUBSUB_PREFIX = "$AIRBYTE_PREFIX.cloud.pubsub"
 const val CONNECTOR_BUILDER_PREFIX = "$AIRBYTE_PREFIX.connector-builder-server"
@@ -249,11 +248,6 @@ data class AirbyteAnalyticsConfig(
 @ConfigurationProperties(API_PREFIX)
 data class AirbyteApiConfig(
   val host: String = "",
-)
-
-@ConfigurationProperties(AUDIT_LOGGING_PREFIX)
-data class AirbyteAuditLoggingConfig(
-  val enabled: Boolean = false,
 )
 
 @ConfigurationProperties(AUTH_PREFIX)

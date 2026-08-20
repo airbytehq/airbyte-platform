@@ -1,4 +1,0 @@
-airbyte:
-  audit:
-    logging:
-      enabled: true

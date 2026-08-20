@@ -94,7 +94,7 @@ internal class ScimConfigApiHttpTest {
     clearMocks(service, scimAccessGate)
     every { scimAccessGate.isAllowed(any()) } returns false
     every { currentUserService.getCurrentUser() } returns
-      mockk {
+      mockk(relaxed = true) {
         every { this@mockk.userId } returns this@ScimConfigApiHttpTest.userId
       }
   }

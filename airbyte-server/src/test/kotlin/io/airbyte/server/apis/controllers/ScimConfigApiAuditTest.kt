@@ -12,6 +12,9 @@ import io.airbyte.api.server.generated.models.OrganizationIdRequestBody
 import io.airbyte.api.server.generated.models.ScimConfigResponse
 import io.airbyte.api.server.generated.models.ScimIdpProvider
 import io.airbyte.audit.logging.AuditLoggingInterceptor
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.Entitlement
+import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.commons.storage.StorageClient
@@ -21,6 +24,8 @@ import io.airbyte.domain.models.UserId
 import io.airbyte.domain.models.scim.ScimConfigurationRead
 import io.airbyte.domain.models.scim.ScimConfigurationStatus
 import io.airbyte.domain.services.scim.ScimConfigurationService
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.StoreAuditLogs
 import io.airbyte.server.assertStatus
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
@@ -60,7 +65,6 @@ private val AUDIT_STORAGE_CLIENT = mockk<StorageClient>(relaxed = true)
 
 @MicronautTest(environments = ["test"], rebuildContext = true)
 @Property(name = "spec.name", value = SCIM_AUDIT_SPEC)
-@Property(name = "airbyte.audit.logging.enabled", value = "true")
 @Property(name = "micronaut.security.enabled", value = "false")
 internal class ScimConfigApiAuditTest {
   @Requires(property = "spec.name", value = SCIM_AUDIT_SPEC)
@@ -79,6 +83,24 @@ internal class ScimConfigApiAuditTest {
     fun storageClientFactory(): StorageClientFactory =
       mockk {
         every { create(any()) } returns AUDIT_STORAGE_CLIENT
+      }
+
+    // Audit logging is gated on the StoreAuditLogs flag and the audit-logging entitlement;
+    // both must be enabled for the live pipeline to write entries.
+    @Singleton
+    @Primary
+    fun featureFlagClient(): FeatureFlagClient =
+      mockk(relaxed = true) {
+        every { boolVariation(StoreAuditLogs, any()) } returns true
+      }
+
+    @Singleton
+    @Primary
+    fun entitlementService(): EntitlementService =
+      mockk(relaxed = true) {
+        every { checkEntitlement(any(), any()) } answers {
+          EntitlementResult(featureId = secondArg<Entitlement>().featureId, isEntitled = true)
+        }
       }
   }
 

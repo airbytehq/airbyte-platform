@@ -124,6 +124,10 @@ object CommittedDataWorkersEntitlement : FeatureEntitlement(
   featureId = "feature-committed-data-workers",
 )
 
+object AuditLoggingEntitlement : FeatureEntitlement(
+  featureId = "feature-audit-logging",
+)
+
 object Entitlements {
   private val ALL: List<Entitlement> =
     listOf(
@@ -152,6 +156,7 @@ object Entitlements {
       ScimEntitlement,
       OnDemandCapacityEnabledEntitlement,
       CommittedDataWorkersEntitlement,
+      AuditLoggingEntitlement,
     )
 
   /** All known entitlements. */

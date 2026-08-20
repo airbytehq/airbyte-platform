@@ -17,28 +17,6 @@ Renders the server secret name
 {{- end }}
 
 {{/*
-Renders the server.auditLoggingEnabled value
-*/}}
-{{- define "airbyte.server.auditLoggingEnabled" }}
-	{{- if eq .Values.server.auditLoggingEnabled nil }}
-    	{{- false }}
-	{{- else }}
-    	{{- .Values.server.auditLoggingEnabled }}
-	{{- end }}
-{{- end }}
-
-{{/*
-Renders the server.auditLoggingEnabled environment variable
-*/}}
-{{- define "airbyte.server.auditLoggingEnabled.env" }}
-- name: AUDIT_LOGGING_ENABLED
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: AUDIT_LOGGING_ENABLED
-{{- end }}
-
-{{/*
 Renders the server.configDbMaxPoolSize value
 */}}
 {{- define "airbyte.server.configDbMaxPoolSize" }}
@@ -488,7 +466,6 @@ Renders the server.webapp.zendeskKey environment variable
 Renders the set of all server environment variables
 */}}
 {{- define "airbyte.server.envs" }}
-{{- include "airbyte.server.auditLoggingEnabled.env" . }}
 {{- include "airbyte.server.configDbMaxPoolSize.env" . }}
 {{- if (eq (include "airbyte.common.edition" .) "cloud") }}
 {{- include "airbyte.server.connectorDatadogSupportNames.env" . }}
@@ -521,7 +498,6 @@ Renders the set of all server environment variables
 Renders the set of all server config map variables
 */}}
 {{- define "airbyte.server.configVars" }}
-AUDIT_LOGGING_ENABLED: {{ include "airbyte.server.auditLoggingEnabled" . | quote }}
 CONFIG_DB_MAX_POOL_SIZE: {{ include "airbyte.server.configDbMaxPoolSize" . | quote }}
 {{- if (eq (include "airbyte.common.edition" .) "cloud") }}
 CONNECTOR_DATADOG_SUPPORT_NAMES: {{ include "airbyte.server.connectorDatadogSupportNames" . | quote }}
