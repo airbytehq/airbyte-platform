@@ -119,10 +119,10 @@ spec:
           protocol: TCP
         {{- end }}
         {{- if .Values.featureflagServer.resources }}
-        resources: {{- toYaml .Values.featureflagServer.resources | nindent 8 }}
+        resources: {{- toYaml .Values.featureflagServer.resources | nindent 10 }}
         {{- end }}
         {{- if .Values.featureflagServer.containerSecurityContext }}
-        securityContext: {{- toYaml .Values.featureflagServer.containerSecurityContext | nindent 8 }}
+        securityContext: {{- toYaml .Values.featureflagServer.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
         {{- if eq (include "airbyte.storage.type" .) "gcs" }}
@@ -142,7 +142,7 @@ spec:
       {{- if .Values.global.extraContainers }}
       {{ toYaml .Values.global.extraContainers | nindent 6 }}
       {{- end }}
-      securityContext: {{- toYaml .Values.featureflagServer.podSecurityContext | nindent 6 }}
+      securityContext: {{- toYaml .Values.featureflagServer.podSecurityContext | nindent 8 }}
       volumes:
       {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
