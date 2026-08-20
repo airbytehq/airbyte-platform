@@ -4,6 +4,8 @@ import { RegionDataWorkerUsage } from "core/api/types/AirbyteClient";
 
 export interface RegionDataBar {
   formattedDate: string;
+  regionUsage: number;
+  maxWorkspaceUsage: number;
   workspaceUsage: Record<string, number>;
 }
 
@@ -16,6 +18,7 @@ const DATETIME_FORMAT = "YYYY-MM-DD HH:mm";
  *
  * For each day, finds the "peak hour" - the hour with the highest total usage across all workspaces.
  * Then uses each workspace's usage value from that peak hour as the daily value.
+ * The chart bar uses the largest individual workspace value at that hour, while the tooltip retains the regional total.
  * This represents the actual concurrent usage at the moment of peak demand.
  *
  * @param dateRange - A tuple of [startDate, endDate] in YYYY-MM-DD format
@@ -40,6 +43,8 @@ export const calculateGraphData = (
     const formattedDate = cursor.format(DATE_FORMAT);
     days.set(formattedDate, {
       formattedDate,
+      regionUsage: 0,
+      maxWorkspaceUsage: 0,
       workspaceUsage: {},
     });
     cursor = cursor.add(1, "day");
@@ -85,22 +90,32 @@ export const calculateGraphData = (
     // For each day, find the hour with the highest total usage
     hoursByDay.forEach((hours, dayKey) => {
       let maxTotal = -1;
+      let maxWorkspaceUsage = 0;
       let peakHour = "";
 
       hours.forEach((hourKey) => {
         let totalForHour = 0;
+        let maxWorkspaceUsageForHour = 0;
         workspaceHourlyUsage.forEach((hourlyUsage) => {
-          totalForHour += hourlyUsage.get(hourKey) ?? 0;
+          const workspaceUsage = hourlyUsage.get(hourKey) ?? 0;
+          totalForHour += workspaceUsage;
+          maxWorkspaceUsageForHour = Math.max(maxWorkspaceUsageForHour, workspaceUsage);
         });
 
         if (totalForHour > maxTotal) {
           maxTotal = totalForHour;
+          maxWorkspaceUsage = maxWorkspaceUsageForHour;
           peakHour = hourKey;
         }
       });
 
       if (peakHour) {
         peakHourByDay.set(dayKey, peakHour);
+        const day = days.get(dayKey);
+        if (day) {
+          day.regionUsage = maxTotal;
+          day.maxWorkspaceUsage = maxWorkspaceUsage;
+        }
       }
     });
 

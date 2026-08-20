@@ -10,6 +10,8 @@ describe(`${calculateGraphData.name}`, () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].formattedDate).toBe("2025-01-15");
+      expect(result[0].regionUsage).toBe(0);
+      expect(result[0].maxWorkspaceUsage).toBe(0);
       expect(result[0].workspaceUsage).toEqual({});
     });
 
@@ -49,6 +51,8 @@ describe(`${calculateGraphData.name}`, () => {
 
       expect(result).toHaveLength(3);
       result.forEach((day) => {
+        expect(day.regionUsage).toBe(0);
+        expect(day.maxWorkspaceUsage).toBe(0);
         expect(day.workspaceUsage).toEqual({});
       });
     });
@@ -75,6 +79,7 @@ describe(`${calculateGraphData.name}`, () => {
       expect(result[0].workspaceUsage["workspace-1"]).toBe(5);
       expect(result[1].workspaceUsage["workspace-1"]).toBe(10);
       expect(result[2].workspaceUsage["workspace-1"]).toBeUndefined();
+      expect(result.map(({ regionUsage }) => regionUsage)).toEqual([5, 10, 0]);
     });
 
     it("handles multiple workspaces at the same hour", () => {
@@ -100,6 +105,8 @@ describe(`${calculateGraphData.name}`, () => {
 
       expect(result[0].workspaceUsage["workspace-1"]).toBe(5);
       expect(result[0].workspaceUsage["workspace-2"]).toBe(8);
+      expect(result[0].regionUsage).toBe(13);
+      expect(result[0].maxWorkspaceUsage).toBe(8);
     });
 
     it("uses peak hour values when multiple hours exist for the same day", () => {
@@ -124,6 +131,7 @@ describe(`${calculateGraphData.name}`, () => {
 
       // Peak hour is 11:00 with total 10, so workspace-1 gets its value at 11:00
       expect(result[0].workspaceUsage["workspace-1"]).toBe(10);
+      expect(result[0].regionUsage).toBe(10);
     });
 
     it("handles empty workspaces array", () => {
@@ -137,6 +145,7 @@ describe(`${calculateGraphData.name}`, () => {
       const result = calculateGraphData(dateRange, regionData);
 
       expect(result).toHaveLength(1);
+      expect(result[0].regionUsage).toBe(0);
       expect(result[0].workspaceUsage).toEqual({});
     });
 
@@ -157,6 +166,7 @@ describe(`${calculateGraphData.name}`, () => {
       const result = calculateGraphData(dateRange, regionData);
 
       expect(result).toHaveLength(1);
+      expect(result[0].regionUsage).toBe(0);
       expect(result[0].workspaceUsage).toEqual({});
     });
   });
@@ -178,6 +188,7 @@ describe(`${calculateGraphData.name}`, () => {
 
       const result = calculateGraphData(dateRange, regionData);
 
+      expect(result[0].regionUsage).toBe(0);
       expect(result[0].workspaceUsage["workspace-1"]).toBe(0);
     });
 
@@ -243,7 +254,12 @@ describe(`${calculateGraphData.name}`, () => {
       // Workspace 11 at 11:00: 10
       // Workspace 12 at 11:00: 8
       // Other total: 10 + 8 = 18
+      expect(result[0].regionUsage).toBe(18);
+      expect(result[0].maxWorkspaceUsage).toBe(10);
       expect(result[0].workspaceUsage.other).toBe(18);
+      expect(Object.values(result[0].workspaceUsage).reduce((total, usage) => total + usage, 0)).toBe(
+        result[0].regionUsage
+      );
     });
 
     it("uses peak hour value for individual workspace in top 10", () => {
@@ -272,6 +288,7 @@ describe(`${calculateGraphData.name}`, () => {
       );
 
       // Peak hour is 11:00 with total 15, so workspace-1 gets its value at 11:00
+      expect(result[0].regionUsage).toBe(15);
       expect(result[0].workspaceUsage["workspace-1"]).toBe(15);
     });
   });
@@ -305,8 +322,13 @@ describe(`${calculateGraphData.name}`, () => {
       const result = calculateGraphData(dateRange, regionData);
 
       // Peak hour is 11:00 (total 25), so each workspace gets its 11:00 value
+      expect(result[0].regionUsage).toBe(25);
+      expect(result[0].maxWorkspaceUsage).toBe(20);
       expect(result[0].workspaceUsage["workspace-1"]).toBe(5);
       expect(result[0].workspaceUsage["workspace-2"]).toBe(20);
+      expect(Object.values(result[0].workspaceUsage).reduce((total, usage) => total + usage, 0)).toBe(
+        result[0].regionUsage
+      );
     });
 
     it("returns 0 for workspace that has no data at peak hour", () => {
@@ -336,6 +358,7 @@ describe(`${calculateGraphData.name}`, () => {
       const result = calculateGraphData(dateRange, regionData);
 
       // Peak hour is 11:00 (total 15 > 8)
+      expect(result[0].regionUsage).toBe(15);
       expect(result[0].workspaceUsage["workspace-1"]).toBe(15);
       expect(result[0].workspaceUsage["workspace-2"]).toBe(0); // no data at peak hour
     });

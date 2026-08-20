@@ -24,7 +24,6 @@ import { useAirbyteTheme } from "core/utils/useAirbyteTheme";
 import { calculateGraphData } from "./calculateGraphData";
 import { GraphTooltip } from "./GraphTooltip";
 import styles from "./UsageByWorkspaceGraph.module.scss";
-import { getWorkspaceColorByIndex } from "./utils";
 
 interface UsageByWorkspaceGraphProps {
   selectedRegionId: string;
@@ -34,7 +33,7 @@ interface UsageByWorkspaceGraphProps {
 
 interface ColorMap {
   gridLine: string;
-  otherColor: string;
+  barColor: string;
   barHover: string;
   committedLine: string;
 }
@@ -64,7 +63,7 @@ export const UsageByWorkspaceGraph = ({
   );
   const [colorMap, setColorMap] = useState<ColorMap>({
     gridLine: "",
-    otherColor: "",
+    barColor: "",
     barHover: "",
     committedLine: "",
   });
@@ -73,7 +72,7 @@ export const UsageByWorkspaceGraph = ({
   useEffect(() => {
     const colorMap: ColorMap = {
       gridLine: colorValues[styles.gridLine],
-      otherColor: colorValues[styles.otherColor],
+      barColor: colorValues[styles.barColor],
       barHover: colorValues[styles.barHover],
       committedLine: colorValues[styles.committedLine],
     };
@@ -98,34 +97,6 @@ export const UsageByWorkspaceGraph = ({
   const otherWorkspaces = useMemo(() => sortedWorkspaces.slice(10).map((w) => w.workspace), [sortedWorkspaces]);
   const hasOtherCategory = otherWorkspaces.length > 0;
 
-  // Generate workspace color map with sequential colors from theme
-  const workspaceColorMap = useMemo(() => {
-    const map = new Map<string, string>();
-    top10Workspaces.forEach((workspace, index) => {
-      const color = getWorkspaceColorByIndex(index);
-      map.set(workspace.id, color);
-    });
-    return map;
-  }, [top10Workspaces]);
-
-  const stackedWorkspaceSections: Array<{ dataKey: string; fill: string; name: string }> = useMemo(() => {
-    const sections = top10Workspaces.map((workspace) => ({
-      dataKey: `workspaceUsage.${workspace.id}`,
-      name: workspace.name,
-      fill: workspaceColorMap.get(workspace.id) || "#000",
-    }));
-
-    if (hasOtherCategory) {
-      sections.push({
-        dataKey: "workspaceUsage.other",
-        name: "Other",
-        fill: colorMap.otherColor,
-      });
-    }
-
-    return sections;
-  }, [top10Workspaces, hasOtherCategory, workspaceColorMap, colorMap.otherColor]);
-
   const data = useMemo(
     () =>
       calculateGraphData(
@@ -136,11 +107,6 @@ export const UsageByWorkspaceGraph = ({
       ),
     [dateRange, selectedRegionUsage, top10Workspaces, otherWorkspaces]
   );
-
-  const animationDuration = useMemo(() => {
-    const numberOfWorkspaces = Math.max(1, top10Workspaces.length + (hasOtherCategory ? 1 : 0));
-    return 300 / numberOfWorkspaces;
-  }, [top10Workspaces.length, hasOtherCategory]);
 
   if (!selectedRegionUsage || selectedRegionUsage.workspaces.length === 0) {
     return (
@@ -187,7 +153,15 @@ export const UsageByWorkspaceGraph = ({
 
           <Tooltip
             wrapperStyle={{ outline: "none", zIndex: styles.tooltipZindex }}
-            content={GraphTooltip}
+            position={{ y: 20 }}
+            content={
+              <GraphTooltip
+                regionName={selectedRegionUsage.name}
+                top10Workspaces={top10Workspaces}
+                hasOtherCategory={hasOtherCategory}
+                barColor={colorMap.barColor}
+              />
+            }
             cursor={{ fill: colorMap.barHover }}
             {...tooltipConfig}
           />
@@ -207,19 +181,13 @@ export const UsageByWorkspaceGraph = ({
               }}
             />
           )}
-          {stackedWorkspaceSections.map((day, index) => (
-            <Bar
-              stackId="a"
-              key={day.dataKey}
-              name={day.name}
-              dataKey={day.dataKey}
-              fill={day.fill}
-              barSize={16}
-              animationDuration={animationDuration}
-              animationBegin={animationDuration * index}
-              animationEasing="linear"
-            />
-          ))}
+          <Bar
+            dataKey="maxWorkspaceUsage"
+            fill={colorMap.barColor}
+            barSize={16}
+            animationDuration={300}
+            animationEasing="linear"
+          />
         </BarChart>
       </ResponsiveContainer>
     </Box>

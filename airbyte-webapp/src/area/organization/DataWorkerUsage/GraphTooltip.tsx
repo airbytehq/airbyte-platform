@@ -1,86 +1,132 @@
 import dayjs from "dayjs";
-import { FormattedDate, FormattedMessage } from "react-intl";
-import { ContentType } from "recharts/types/component/Tooltip";
+import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 
-import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
-import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { WorkspaceLegendItem } from "./GraphLegend";
+import { RegionDataBar } from "./calculateGraphData";
 import styles from "./GraphTooltip.module.scss";
 
-const formatWorkerUsageNumber = (value: number) => {
-  return Number(value.toFixed(1));
+interface WorkspaceMetadata {
+  id: string;
+  name: string;
+}
+
+interface GraphTooltipProps {
+  active?: boolean;
+  payload?: ReadonlyArray<{ payload?: RegionDataBar }>;
+  regionName: string;
+  top10Workspaces: WorkspaceMetadata[];
+  hasOtherCategory: boolean;
+  barColor: string;
+}
+
+interface WorkspaceUsage {
+  id: string;
+  name: string;
+  value: number;
+}
+
+const formatWorkerUsageNumber = (value: number) => Number(value.toFixed(1));
+
+const hasNonZeroUsage = ({ value }: WorkspaceUsage) => formatWorkerUsageNumber(value) > 0;
+
+const sortByUsageDescendingThenByName = (a: WorkspaceUsage, b: WorkspaceUsage) => {
+  const valueDiff = b.value - a.value;
+  return valueDiff !== 0 ? valueDiff : a.name.localeCompare(b.name);
 };
 
-const hasNonZeroUsage = (entry: { value?: number | string }) => {
-  const formattedValue = entry.value ? formatWorkerUsageNumber(Number(entry.value)) : 0;
-  return formattedValue > 0;
-};
+const WorkspaceUsageRow = ({ name, value }: Pick<WorkspaceUsage, "name" | "value">) => (
+  <li className={styles.workspaceRow}>
+    <Text as="span" color="grey" size="lg" className={styles.workspaceName}>
+      {name}
+    </Text>
+    <Text as="span" size="lg" className={styles.usageValue}>
+      {formatWorkerUsageNumber(value)}
+    </Text>
+  </li>
+);
 
-const sortByUsageDescendingThenByName = (
-  a: { value?: number | string; name?: string },
-  b: { value?: number | string; name?: string }
-) => {
-  // Primary sort: by usage value (descending)
-  const valueDiff = (Number(b.value) || 0) - (Number(a.value) || 0);
-  if (valueDiff !== 0) {
-    return valueDiff;
-  }
-  // Secondary sort: if values are equal, sort by workspace name
-  return (a.name ?? "").localeCompare(b.name ?? "");
-};
+export const GraphTooltip = ({
+  active,
+  payload,
+  regionName,
+  top10Workspaces,
+  hasOtherCategory,
+  barColor,
+}: GraphTooltipProps) => {
+  const { formatMessage } = useIntl();
+  const graphData = payload?.[0]?.payload;
 
-export const GraphTooltip: ContentType<number, string> = ({ active, payload }) => {
-  if (!active) {
+  if (!active || !graphData) {
     return null;
   }
 
-  const totalWorkspaceUsage = formatWorkerUsageNumber(payload?.reduce((acc, { value }) => acc + Number(value), 0) ?? 0);
-
-  // Filter out zero values and sort by usage for this date
-  const workspacesSortedByUsage = [...(payload ?? [])].filter(hasNonZeroUsage).sort(sortByUsageDescendingThenByName);
-
-  // Parse the date string as a local calendar date
-  const dateString = payload?.[0]?.payload?.formattedDate;
-  const localDate = dateString ? dayjs(dateString).toDate() : undefined;
+  const workspacesSortedByUsage = top10Workspaces
+    .map(({ id, name }) => ({ id, name, value: graphData.workspaceUsage[id] ?? 0 }))
+    .filter(hasNonZeroUsage)
+    .sort(sortByUsageDescendingThenByName);
+  const otherWorkspaceUsage = graphData.workspaceUsage.other ?? 0;
+  const showOtherWorkspaceUsage = hasOtherCategory && formatWorkerUsageNumber(otherWorkspaceUsage) > 0;
+  const localDate = dayjs(graphData.formattedDate).toDate();
 
   return (
-    <Card noPadding>
-      <Box p="md">
-        <FlexContainer direction="column">
-          <Text bold>
-            {localDate && (
-              <FormattedDate value={localDate} year="numeric" month="short" day="numeric" weekday="short" />
-            )}
-          </Text>
-          {workspacesSortedByUsage && (
-            <FlexContainer direction="column" gap="xs">
-              {workspacesSortedByUsage?.map((entry) => {
-                if (!entry.value || !entry.name) {
-                  return null;
-                }
-                const fill = entry.payload && "fill" in entry ? (entry.fill as string) : "#000";
-                return (
-                  <WorkspaceLegendItem
-                    color={fill}
-                    key={entry.name}
-                    name={entry.name}
-                    usage={formatWorkerUsageNumber(entry.value)}
-                  />
-                );
-              })}
-            </FlexContainer>
-          )}
-          <FlexContainer alignItems="center" justifyContent="space-between" className={styles.tooltipTotal} gap="md">
-            <Text>
-              <FormattedMessage id="settings.organization.usage.graph.tooltip.total" />
+    <Card noPadding className={styles.tooltip}>
+      <div className={styles.content}>
+        <Text as="div" size="lg" className={styles.date}>
+          <FormattedDate value={localDate} month="short" day="numeric" weekday="short" />
+        </Text>
+
+        <div className={styles.details}>
+          <div className={styles.regionSection}>
+            <Text as="div" color="grey" size="sm" className={styles.sectionLabel}>
+              <FormattedMessage id="settings.organization.usage.graph.tooltip.regionMax" />
             </Text>
-            <Text color="grey">{totalWorkspaceUsage}</Text>
-          </FlexContainer>
-        </FlexContainer>
-      </Box>
+            <div className={styles.regionRow}>
+              <div className={styles.regionIdentity}>
+                <span className={styles.regionSwatch} style={{ backgroundColor: barColor }} aria-hidden="true" />
+                <Text as="span" size="lg" className={styles.workspaceName}>
+                  {regionName}
+                </Text>
+              </div>
+              <Text as="span" size="lg" className={styles.usageValue}>
+                <FormattedMessage
+                  id="settings.organization.usage.graph.yAxisTick"
+                  values={{ value: formatWorkerUsageNumber(graphData.regionUsage) }}
+                />
+              </Text>
+            </div>
+          </div>
+
+          <div className={styles.workspaceSection}>
+            <div className={styles.workspaceHeader}>
+              <Text as="span" color="grey" size="sm" className={styles.sectionLabel}>
+                <FormattedMessage id="settings.organization.usage.graph.tooltip.workspaceUsage" />
+              </Text>
+              <Text as="span" color="grey" size="sm" className={styles.sectionMetadata}>
+                <FormattedMessage id="settings.organization.usage.graph.tooltip.top10" />
+              </Text>
+            </div>
+            <Text color="grey" size="sm" className={styles.workspaceNote}>
+              <FormattedMessage id="settings.organization.usage.graph.tooltip.workspaceUsageDescription" />
+            </Text>
+            <ul
+              className={styles.workspaceList}
+              aria-label={formatMessage({ id: "settings.organization.usage.graph.tooltip.workspaceUsage" })}
+            >
+              {workspacesSortedByUsage.map(({ id, name, value }) => (
+                <WorkspaceUsageRow key={id} name={name} value={value} />
+              ))}
+              {showOtherWorkspaceUsage && (
+                <WorkspaceUsageRow
+                  name={formatMessage({ id: "settings.organization.usage.graph.tooltip.other" })}
+                  value={otherWorkspaceUsage}
+                />
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
     </Card>
   );
 };

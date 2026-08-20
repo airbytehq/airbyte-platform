@@ -1,8 +1,110 @@
 @use "scss/colors";
 @use "scss/variables";
 
-.tooltipTotal {
+.tooltip {
+  width: 350px;
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 10%),
+    0 4px 6px -4px rgb(0 0 0 / 10%);
+}
+
+.content {
+  padding: 8px 12px;
+}
+
+.date,
+.workspaceName,
+.usageValue {
+  line-height: 20px;
+}
+
+.date {
+  font-weight: 400;
+}
+
+.details {
+  margin-top: 6px;
+}
+
+.regionSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectionLabel,
+.sectionMetadata {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.sectionLabel {
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.regionRow,
+.workspaceRow,
+.workspaceHeader {
+  display: flex;
+  justify-content: space-between;
+}
+
+.regionRow,
+.workspaceRow {
+  min-height: 20px;
+  align-items: center;
+  gap: 12px;
+}
+
+.regionIdentity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.regionSwatch {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.workspaceSection {
+  padding-top: 8px;
+  margin-top: 8px;
   border-top: variables.$border-thin solid colors.$grey-100;
-  padding-top: variables.$spacing-sm;
-  margin-top: variables.$spacing-sm;
+}
+
+.workspaceHeader {
+  align-items: baseline;
+  gap: 16px;
+}
+
+.workspaceNote {
+  margin-top: 2px;
+  line-height: 16.5px;
+}
+
+.workspaceList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  margin: 6px 0 0;
+  list-style: none;
+}
+
+.workspaceName {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: break-word;
+}
+
+.usageValue {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
