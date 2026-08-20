@@ -101,6 +101,7 @@ val genApiServer =
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
         "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorIPCOptions" to "com.fasterxml.jackson.databind.JsonNode",
+        "AuditLogDetails" to "com.fasterxml.jackson.databind.JsonNode",
       )
 
     generateApiDocumentation = false
@@ -181,6 +182,7 @@ val genApiServer2 =
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
         "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorIPCOptions" to "com.fasterxml.jackson.databind.JsonNode",
+        "AuditLogDetails" to "com.fasterxml.jackson.databind.JsonNode",
       )
   }
 
@@ -261,6 +263,7 @@ val genApiClient =
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
         "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorIPCOptions" to "com.fasterxml.jackson.databind.JsonNode",
+        "AuditLogDetails" to "com.fasterxml.jackson.databind.JsonNode",
       )
 
     generateApiDocumentation = false
@@ -311,6 +314,7 @@ val genApiDocs =
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
         "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorIPCOptions" to "com.fasterxml.jackson.databind.JsonNode",
+        "AuditLogDetails" to "com.fasterxml.jackson.databind.JsonNode",
       )
 
     generateApiDocumentation = false
