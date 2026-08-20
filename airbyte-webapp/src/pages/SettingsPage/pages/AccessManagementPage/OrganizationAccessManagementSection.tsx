@@ -7,7 +7,6 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { SearchInput } from "components/ui/SearchInput";
@@ -91,20 +90,17 @@ export const OrganizationAccessManagementSection: React.FC = () => {
         <FlexItem className={styles.searchInputWrapper}>
           <SearchInput value={userFilter} onChange={setUserFilter} />
         </FlexItem>
-        <FlexContainer alignItems="baseline">
+        <FlexContainer alignItems="center">
           {sso && (
             <Badge variant="blue" radius="2xs" uppercase={false}>
-              <FlexContainer gap="xs" alignItems="center">
-                <Icon type="check" size="xs" />
-                <Text size="sm">
-                  <FormattedMessage id="settings.accessManagement.ssoEnabled" />
-                </Text>
-              </FlexContainer>
+              <Text size="sm">
+                <FormattedMessage id="settings.accessManagement.ssoEnabled" />
+              </Text>
             </Badge>
           )}
           {scim && (
             <Badge variant="teal" radius="2xs" uppercase={false}>
-              <Text size="xs">
+              <Text size="sm">
                 <FormattedMessage id="settings.accessManagement.scimEnabled" />
               </Text>
             </Badge>
