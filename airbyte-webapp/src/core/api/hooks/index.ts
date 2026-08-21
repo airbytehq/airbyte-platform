@@ -1,5 +1,6 @@
 export * from "./actorDefinitionVersions";
 export * from "./applications";
+export * from "./auditLogs";
 export * from "./auth";
 export * from "./billing";
 export * from "./catalogs";

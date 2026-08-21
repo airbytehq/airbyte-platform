@@ -32,6 +32,7 @@ export enum PageTrackingCodes {
   SETTINGS_ORGANIZATION_SSO = "Settings.OrganizationSSO",
   SETTINGS_ORGANIZATION_BILLING = "Settings.OrganizationBilling",
   SETTINGS_ORGANIZATION_USAGE = "Settings.OrganizationUsage",
+  SETTINGS_ORGANIZATION_AUDIT_LOGS = "Settings.OrganizationAuditLogs",
   SETTINGS_DESTINATION = "Settings.Destination",
   SETTINGS_SOURCE = "Settings.Source",
   SETTINGS_CONFIGURATION = "Settings.Configuration",

@@ -21,6 +21,7 @@ export const OrganizationSettingsPage: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canUpdateSSOConfig = useFeature(FeatureItem.AllowUpdateSSOConfig);
+  const auditLogsEntitled = useFeature(FeatureItem.AllowAuditLogs);
   const canViewOrganizationSettings = useGeneratedIntent(Intent.ViewOrganizationSettings, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
@@ -64,6 +65,13 @@ export const OrganizationSettingsPage: React.FC = () => {
                 iconType="community"
                 name={formatMessage({ id: "settings.groups" })}
                 to={SettingsRoutePaths.OrganizationGroups}
+              />
+            )}
+            {auditLogsEntitled && canManageOrganizationPermissions && (
+              <SettingsLink
+                iconType="docs"
+                name={formatMessage({ id: "settings.auditLogs" })}
+                to={SettingsRoutePaths.OrganizationAuditLogs}
               />
             )}
             {isBillingNavVisible && (

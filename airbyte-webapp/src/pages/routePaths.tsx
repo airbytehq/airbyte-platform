@@ -57,6 +57,7 @@ export enum SettingsRoutePaths {
   OrganizationMembers = "organizationMembers",
   OrganizationGroups = "organizationGroups",
   OrganizationSSO = "organizationSSO",
+  OrganizationAuditLogs = "organizationAuditLogs",
   WorkspaceMembers = "workspaceMembers",
   Applications = "applications",
   License = "license",

@@ -23,6 +23,7 @@ const entitlementsKeys = {
 };
 
 const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
+  "feature-audit-logging": FeatureItem.AllowAuditLogs,
   "feature-rbac-roles": FeatureItem.AllowAllRBACRoles,
   "feature-fe-display-organization-users": FeatureItem.DisplayOrganizationUsers,
   "feature-fe-indicate-guest-users": FeatureItem.IndicateGuestUsers,

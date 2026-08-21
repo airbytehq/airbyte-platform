@@ -185,11 +185,26 @@ class AuditLogReadService {
   ): Boolean {
     if (entry.timestamp < query.startTime.toEpochMilli() || entry.timestamp > query.endTime.toEpochMilli()) return false
     if (query.workspaceId != null && entry.workspaceId != query.workspaceId) return false
-    if (query.actorId != null && entry.actor?.actorId != query.actorId) return false
-    if (query.operation != null && entry.operation != query.operation) return false
+    if (!query.actorId.isNullOrBlank() && !matchesActor(entry, query.actorId)) return false
+    if (!query.operation.isNullOrBlank() && !entry.operation.contains(query.operation, ignoreCase = true)) return false
     if (query.success != null && entry.success != query.success) return false
     if (!query.searchText.isNullOrBlank() && !searchableText(entry).contains(query.searchText.lowercase())) return false
     return true
+  }
+
+  /**
+   * Matches the actor filter against both the actor id and the actor email. Callers see the email
+   * in the audit log UI and will type that, but the id is what the interceptor records, so
+   * matching only one of the two makes the filter look broken. Substring and case-insensitive for
+   * the same reason: an operator filtering by hand should not have to paste an exact UUID.
+   */
+  private fun matchesActor(
+    entry: AuditLogEntry,
+    actor: String,
+  ): Boolean {
+    val candidate = entry.actor ?: return false
+    return candidate.actorId.contains(actor, ignoreCase = true) ||
+      candidate.email?.contains(actor, ignoreCase = true) == true
   }
 
   /**

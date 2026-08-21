@@ -127,4 +127,35 @@ describe("OrganizationSettingsPage", () => {
 
     expect(screen.getByText("User Groups")).toBeInTheDocument();
   });
+
+  it("hides the Audit Logs nav link for an admin without the audit logging entitlement", async () => {
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.UpdateOrganizationPermissions
+    );
+    // The beforeEach default leaves AllowAuditLogs false, standing in for an unentitled org.
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.queryByText("Audit Logs")).not.toBeInTheDocument();
+  });
+
+  it("hides the Audit Logs nav link for a non-admin with the audit logging entitlement", async () => {
+    mockUseFeature.mockImplementation((feature) => feature === FeatureItem.AllowAuditLogs);
+    // The beforeEach default leaves UpdateOrganizationPermissions false, standing in for a non-admin.
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.queryByText("Audit Logs")).not.toBeInTheDocument();
+  });
+
+  it("shows the Audit Logs nav link for an admin with the audit logging entitlement", async () => {
+    mockUseFeature.mockImplementation((feature) => feature === FeatureItem.AllowAuditLogs);
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.UpdateOrganizationPermissions
+    );
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.getByText("Audit Logs")).toBeInTheDocument();
+  });
 });

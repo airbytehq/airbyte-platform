@@ -12,6 +12,7 @@ import { OrganizationSettingsPage } from "pages/SettingsPage/OrganizationSetting
 import { DestinationsPage, SourcesPage } from "pages/SettingsPage/pages/ConnectorsPage";
 import { LicenseSettingsPage } from "pages/SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
+import { OrganizationAuditLogsPage } from "pages/SettingsPage/pages/Organization/OrganizationAuditLogsPage";
 import { OrganizationGroupsPage } from "pages/SettingsPage/pages/Organization/OrganizationGroupsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
 import { SSOAndScimOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/SSOAndScimOrganizationSettingsPage";
@@ -27,6 +28,7 @@ export const OrganizationRoutes: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const supportsSSO = useFeature(FeatureItem.AllowUpdateSSOConfig);
+  const auditLogsEntitled = useFeature(FeatureItem.AllowAuditLogs);
   const canViewOrgSettings = useGeneratedIntent(Intent.ViewOrganizationSettings, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
@@ -57,6 +59,9 @@ export const OrganizationRoutes: React.FC = () => {
           )}
           {supportsSSO && (
             <Route path={SettingsRoutePaths.OrganizationSSO} element={<SSOAndScimOrganizationSettingsPage />} />
+          )}
+          {auditLogsEntitled && canManageOrganizationPermissions && (
+            <Route path={SettingsRoutePaths.OrganizationAuditLogs} element={<OrganizationAuditLogsPage />} />
           )}
           {licenseUi && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}
           {canManageOrganizationBilling && (

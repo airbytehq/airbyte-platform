@@ -16774,8 +16774,10 @@ components:
           description: Convenience filter on the workspace the audited action belongs to. Not an authorization boundary.
         actorId:
           type: string
+          description: Case-insensitive substring match over the actor id and the actor email of an entry.
         operation:
           type: string
+          description: Case-insensitive substring match over the operation of an entry.
         success:
           type: boolean
         searchText:

@@ -114,6 +114,64 @@ class AuditLogReadServiceTest {
   }
 
   @Test
+  fun `actor filter matches a case-insensitive substring of the actor id`() {
+    val day = LocalDate.parse("2026-08-14")
+    val file = fileId(day, "20260814100000")
+    val matching = entry(at("2026-08-14T10:00:00Z"), actorId = "3f9aC21b-user")
+    val other = entry(at("2026-08-14T09:00:00Z"), actorId = "zzz-other")
+
+    stubFiles(mapOf(day to listOf(file)))
+    stubReads(mapOf(file to Jsons.serialize(listOf(matching, other))))
+
+    assertEquals(listOf(matching.id), service.listAuditLogs(query(actorId = "AC21")).entries.map { it.id })
+  }
+
+  @Test
+  fun `actor filter matches the actor email, which is what the table displays`() {
+    val day = LocalDate.parse("2026-08-14")
+    val file = fileId(day, "20260814100000")
+    val matching =
+      entry(at("2026-08-14T10:00:00Z"))
+        .copy(actor = Actor(actorId = UUID.randomUUID().toString(), email = "Ada@airbyte.io"))
+    val other =
+      entry(at("2026-08-14T09:00:00Z"))
+        .copy(actor = Actor(actorId = UUID.randomUUID().toString(), email = "grace@airbyte.io"))
+
+    stubFiles(mapOf(day to listOf(file)))
+    stubReads(mapOf(file to Jsons.serialize(listOf(matching, other))))
+
+    assertEquals(listOf(matching.id), service.listAuditLogs(query(actorId = "ada@")).entries.map { it.id })
+  }
+
+  @Test
+  fun `operation filter matches a case-insensitive substring`() {
+    val day = LocalDate.parse("2026-08-14")
+    val file = fileId(day, "20260814100000")
+    val matching = entry(at("2026-08-14T10:00:00Z"), operation = "enableScim")
+    val other = entry(at("2026-08-14T09:00:00Z"), operation = "updateConnection")
+
+    stubFiles(mapOf(day to listOf(file)))
+    stubReads(mapOf(file to Jsons.serialize(listOf(matching, other))))
+
+    assertEquals(listOf(matching.id), service.listAuditLogs(query(operation = "ablesc")).entries.map { it.id })
+  }
+
+  @Test
+  fun `blank actor and operation filters are ignored`() {
+    val day = LocalDate.parse("2026-08-14")
+    val file = fileId(day, "20260814100000")
+    val first = entry(at("2026-08-14T10:00:00Z"))
+    val second = entry(at("2026-08-14T09:00:00Z"), actorId = "someone-else", operation = "enableScim")
+
+    stubFiles(mapOf(day to listOf(file)))
+    stubReads(mapOf(file to Jsons.serialize(listOf(first, second))))
+
+    val page = service.listAuditLogs(query(actorId = "  ", operation = ""))
+
+    assertEquals(listOf(first.id, second.id), page.entries.map { it.id })
+  }
+
+  @Test
   fun `operation filter matches only the given operation`() {
     val day = LocalDate.parse("2026-08-14")
     val file = fileId(day, "20260814100000")

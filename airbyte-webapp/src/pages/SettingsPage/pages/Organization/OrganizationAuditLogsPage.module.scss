@@ -1,0 +1,13 @@
+.filters {
+  flex-wrap: wrap;
+}
+
+.details {
+  pre {
+    margin: 0;
+    padding: 8px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
