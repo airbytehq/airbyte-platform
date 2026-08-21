@@ -18,6 +18,7 @@ import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.helpers.log
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.workers.helper.CatalogDiffConverter.toApi
 import io.airbyte.workers.helper.TRACE_MESSAGE_METADATA_KEY
 import io.airbyte.workers.models.ReplicationApiInput
 import jakarta.inject.Singleton
@@ -46,6 +47,7 @@ class ReplicationCommand(
         connectionId = input.connectionId,
         jobId = input.jobId,
         attemptNumber = input.attemptId.toInt(),
+        appliedCatalogDiff = input.appliedCatalogDiff?.let { toApi(it) },
         signalInput = signalPayload,
       ),
     )
