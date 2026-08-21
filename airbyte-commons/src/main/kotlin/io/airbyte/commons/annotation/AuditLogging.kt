@@ -43,6 +43,8 @@ class AuditLoggingProvider {
   companion object {
     const val BASIC = "basicAudit"
     const val ONLY_ACTOR = "onlyActorAudit"
+    const val CONNECTOR = "connectorAudit"
+    const val WORKSPACE = "workspaceAudit"
     const val SCIM = "scimAudit"
     const val SSO = "ssoAudit"
     const val CREATE_PERMISSION = "createPermission"

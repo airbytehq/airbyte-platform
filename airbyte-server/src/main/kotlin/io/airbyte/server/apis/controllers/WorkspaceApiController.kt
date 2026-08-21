@@ -58,7 +58,7 @@ open class WorkspaceApiController(
 ) : WorkspaceApi {
   @Post("/create")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)
   override fun createWorkspace(
     @Body workspaceCreate: WorkspaceCreate,
   ): WorkspaceRead? =
@@ -115,7 +115,7 @@ open class WorkspaceApiController(
   @Post("/delete")
   @Secured(AuthRoleConstants.WORKSPACE_ADMIN, AuthRoleConstants.ORGANIZATION_ADMIN)
   @Status(HttpStatus.NO_CONTENT)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)
   override fun deleteWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
   ) {
@@ -190,7 +190,7 @@ open class WorkspaceApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)
   override fun updateWorkspace(
     @Body workspaceUpdate: WorkspaceUpdate,
   ): WorkspaceRead? = execute { workspacesHandler.updateWorkspace(workspaceUpdate) }
@@ -220,7 +220,7 @@ open class WorkspaceApiController(
     AuthRoleConstants.ORGANIZATION_EDITOR,
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)
   override fun updateWorkspaceName(
     @Body workspaceUpdateName: WorkspaceUpdateName,
   ): WorkspaceRead? = execute { workspacesHandler.updateWorkspaceName(workspaceUpdateName) }
@@ -228,7 +228,7 @@ open class WorkspaceApiController(
   @Post("/update_organization")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)
   override fun updateWorkspaceOrganization(
     @Body workspaceUpdateOrganization: WorkspaceUpdateOrganization,
   ): WorkspaceRead? = execute { workspacesHandler.updateWorkspaceOrganization(workspaceUpdateOrganization) }

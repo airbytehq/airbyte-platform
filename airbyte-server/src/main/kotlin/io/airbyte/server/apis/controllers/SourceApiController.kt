@@ -74,7 +74,7 @@ open class SourceApiController(
   @Post("/create")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   override fun createSource(
     @Body sourceCreate: SourceCreate,
   ): SourceRead? = execute { sourceHandler.createSourceWithOptionalSecret(sourceCreate) }
@@ -85,7 +85,7 @@ open class SourceApiController(
   @Status(
     HttpStatus.NO_CONTENT,
   )
-  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   override fun deleteSource(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ) {
@@ -167,7 +167,7 @@ open class SourceApiController(
     AuthRoleConstants.DATAPLANE,
   )
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   override fun updateSource(
     @Body sourceUpdate: SourceUpdate,
   ): SourceRead? = execute { sourceHandler.updateSource(sourceUpdate) }
@@ -178,7 +178,7 @@ open class SourceApiController(
   @Status(
     HttpStatus.NO_CONTENT,
   )
-  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   override fun upgradeSourceVersion(
     @Body sourceIdRequestBody: SourceIdRequestBody,
   ) {
@@ -191,7 +191,7 @@ open class SourceApiController(
   @Post("/partial_update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_SOURCE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   override fun partialUpdateSource(
     @Body partialSourceUpdate: PartialSourceUpdate,
   ): SourceRead? = execute { sourceHandler.updateSourceWithOptionalSecret(partialSourceUpdate) }

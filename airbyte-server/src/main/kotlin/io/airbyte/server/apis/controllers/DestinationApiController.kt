@@ -75,7 +75,7 @@ open class DestinationApiController(
   @Post(uri = "/create")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   override fun createDestination(
     @Body destinationCreate: DestinationCreate,
   ): DestinationRead? = execute { destinationHandler.createDestination(destinationCreate) }
@@ -86,7 +86,7 @@ open class DestinationApiController(
   @Status(
     HttpStatus.NO_CONTENT,
   )
-  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   override fun deleteDestination(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
   ) {
@@ -172,7 +172,7 @@ open class DestinationApiController(
   @Post(uri = "/update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   override fun updateDestination(
     @Body destinationUpdate: DestinationUpdate,
   ): DestinationRead? = execute { destinationHandler.updateDestination(destinationUpdate) }
@@ -183,7 +183,7 @@ open class DestinationApiController(
   @Status(
     HttpStatus.NO_CONTENT,
   )
-  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   override fun upgradeDestinationVersion(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
   ) {
@@ -196,7 +196,7 @@ open class DestinationApiController(
   @Post(uri = "/partial_update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.WORKSPACE_DESTINATION_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
+  @AuditLogging(provider = AuditLoggingProvider.CONNECTOR)
   override fun partialUpdateDestination(
     @Body partialDestinationUpdate: PartialDestinationUpdate,
   ): DestinationRead? = execute { destinationHandler.partialDestinationUpdate(partialDestinationUpdate) }
