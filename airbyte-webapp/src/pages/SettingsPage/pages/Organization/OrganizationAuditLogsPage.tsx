@@ -1,17 +1,19 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import dayjs from "dayjs";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { LoadingPage } from "components";
 import { Badge } from "components/ui/Badge";
 import { Button } from "components/ui/Button";
+import { CopyButton } from "components/ui/CopyButton";
 import { DataLoadingError } from "components/ui/DataLoadingError";
 import DatePicker from "components/ui/DatePicker";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Option } from "components/ui/forms";
 import { Heading } from "components/ui/Heading";
 import { ListBox } from "components/ui/ListBox";
+import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
 
@@ -19,6 +21,7 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import { AuditLogListFilters, useListAuditLogs, useListWorkspacesInOrganization } from "core/api";
 import { AuditLogRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useModalService } from "core/services/Modal";
 
 import styles from "./OrganizationAuditLogsPage.module.scss";
 
@@ -52,6 +55,7 @@ export const OrganizationAuditLogsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION_AUDIT_LOGS);
   const { formatMessage, formatDate, formatTime } = useIntl();
   const organizationId = useCurrentOrganizationId();
+  const { openModal } = useModalService();
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -150,6 +154,34 @@ export const OrganizationAuditLogsPage: React.FC = () => {
         .map((value) => ({ label: value, value })),
     ],
     [optionSourceEntries, formatMessage]
+  );
+
+  // The table surfaces a summary of each entry; the modal is the escape hatch to everything the
+  // API returned for it, including the request and response payloads.
+  const openDetails = useCallback(
+    (entry: AuditLogRead) => {
+      const rawEntry = JSON.stringify(entry, null, 2);
+      openModal({
+        title: formatMessage({ id: "settings.organization.auditLogs.details.title" }, { operation: entry.operation }),
+        size: "lg",
+        testId: "audit-log-details-modal",
+        content: () => (
+          <>
+            <ModalBody>
+              <pre className={styles.rawEntry} data-testid="audit-log-raw-entry">
+                {rawEntry}
+              </pre>
+            </ModalBody>
+            <ModalFooter>
+              <CopyButton content={rawEntry}>
+                <FormattedMessage id="copyButton.title" />
+              </CopyButton>
+            </ModalFooter>
+          </>
+        ),
+      });
+    },
+    [formatMessage, openModal]
   );
 
   const columns = useMemo(
@@ -283,21 +315,7 @@ export const OrganizationAuditLogsPage: React.FC = () => {
         data={data?.auditLogs ?? []}
         rowId="id"
         sorting={false}
-        getRowCanExpand={(row) => Boolean(row.original.request ?? row.original.response)}
-        expandedRow={({ row }) => (
-          <FlexContainer direction="column" gap="md" className={styles.details}>
-            {(["request", "response"] as const).map((field) =>
-              row.original[field] ? (
-                <FlexItem key={field}>
-                  <Text bold>
-                    <FormattedMessage id={`settings.organization.auditLogs.details.${field}`} />
-                  </Text>
-                  <pre data-testid={`audit-log-${field}`}>{JSON.stringify(row.original[field], null, 2)}</pre>
-                </FlexItem>
-              ) : null
-            )}
-          </FlexContainer>
-        )}
+        onClickRow={openDetails}
         customEmptyPlaceholder={<FormattedMessage id="settings.organization.auditLogs.empty" />}
       />
 

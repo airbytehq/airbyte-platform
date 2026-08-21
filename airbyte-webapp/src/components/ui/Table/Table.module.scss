@@ -106,6 +106,10 @@ $border-radius: variables.$border-radius-sm;
     background-color: colors.$grey-50;
   }
 
+  &--clickable {
+    cursor: pointer;
+  }
+
   &.emptyPlaceholder {
     &:hover {
       background-color: colors.$foreground;

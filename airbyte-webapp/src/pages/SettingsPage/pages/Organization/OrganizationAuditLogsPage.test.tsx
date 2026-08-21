@@ -86,6 +86,38 @@ describe("OrganizationAuditLogsPage", () => {
     expect(screen.getByText("Failed")).toBeInTheDocument();
   });
 
+  it("opens a modal with the raw entry when a row is clicked", async () => {
+    const entry = buildEntry({
+      request: { connectionId: "connection-1" },
+      response: { status: "active" },
+    });
+    mockAuditLogsQuery({ auditLogs: [entry] });
+
+    await render(<OrganizationAuditLogsPage />);
+
+    await userEvent.click(screen.getByText("updateConnection"));
+
+    expect(await screen.findByTestId("audit-log-details-modal")).toBeInTheDocument();
+    // The table only shows a summary, so the modal has to carry the fields it leaves out.
+    // textContent rather than toHaveTextContent: the latter collapses whitespace, which would
+    // pass even if the entry were not pretty-printed.
+    expect(screen.getByTestId("audit-log-raw-entry").textContent).toBe(JSON.stringify(entry, null, 2));
+  });
+
+  it("copies the raw entry from the details modal", async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, writable: true, configurable: true });
+    const entry = buildEntry({ request: { connectionId: "connection-1" } });
+    mockAuditLogsQuery({ auditLogs: [entry] });
+
+    await render(<OrganizationAuditLogsPage />);
+
+    await userEvent.click(screen.getByText("updateConnection"));
+    await userEvent.click(await screen.findByTestId("copy-button"));
+
+    expect(writeText).toHaveBeenCalledWith(JSON.stringify(entry, null, 2));
+  });
+
   it("renders timestamps in UTC so they line up with the date filters", async () => {
     mockAuditLogsQuery({ auditLogs: [buildEntry()] });
 

@@ -43,6 +43,11 @@ export interface TableProps<T> {
   sorting?: boolean;
   stickyHeaders?: boolean;
   getRowClassName?: (data: T) => string | undefined;
+  /**
+   * Makes each row clickable. The row is also focusable and activates on Enter/Space so the
+   * behavior is reachable without a mouse.
+   */
+  onClickRow?: (data: T) => void;
   initialSortBy?: Array<{ id: string; desc: boolean }>;
   showTableToggle?: boolean;
   initialExpandedRows?: number;
@@ -78,6 +83,7 @@ export const Table = <T,>({
   columnVisibility,
   columnFilters,
   getRowClassName,
+  onClickRow,
   stickyHeaders = true,
   manualSorting = false,
   onSortingChange,
@@ -153,8 +159,22 @@ export const Table = <T,>({
         return (
           <>
             <tr
-              className={classNames(styles.tr, getRowClassName?.(row.original))}
+              className={classNames(
+                styles.tr,
+                { [styles["tr--clickable"]]: !!onClickRow },
+                getRowClassName?.(row.original)
+              )}
               data-testid={`table-row-${row.id}`}
+              {...(onClickRow && {
+                onClick: () => onClickRow(row.original),
+                onKeyDown: (event: React.KeyboardEvent<HTMLTableRowElement>) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onClickRow(row.original);
+                  }
+                },
+                tabIndex: 0,
+              })}
               {...(virtualized && { ...restRowProps })}
             >
               {row.getVisibleCells().map((cell) => {
@@ -181,7 +201,7 @@ export const Table = <T,>({
           </>
         );
       },
-    [expandedRow, getRowClassName, virtualized]
+    [expandedRow, getRowClassName, onClickRow, virtualized]
   );
 
   // virtuoso uses "data-index" to identify the row, hence we need additional wrapper specifically for virtuoso
