@@ -47,13 +47,15 @@ it's currently `config.yaml`.
    and is wired into the source sets — you don't manage it manually.
 3. **Implement the generated interface** in the consuming service
    (e.g., `airbyte-server/src/main/kotlin/io/airbyte/server/apis/`).
-4. **Regenerate the frontend client**:
-   `(cd oss/airbyte-webapp && pnpm generate-client)`. This updates
-   `oss/airbyte-webapp/src/core/api/generated/`.
-5. **Commit YAML + generated frontend output together** in the same
-   PR. The backend stubs are not committed (they're in `build/`),
-   but they must compile cleanly.
-6. **Run `make check.oss`** before declaring done.
+4. **Regenerate and type-check the frontend client**:
+   `(cd oss/airbyte-webapp && pnpm generate-client && pnpm exec tsc --noEmit)`.
+   The generated API artifacts are gitignored; type-checking validates
+   them against hand-written hooks and callsites.
+5. **Commit the YAML plus any required hand-written implementations,
+   hooks, callsites, and tests.** Do not commit generated frontend or
+   backend output.
+6. **Run relevant webapp tests and backend checks**, then run
+   `make check.oss` before declaring done.
 7. **If the change affects behavior visible to external API consumers,
    propagate it through the full chain: `server-api` →
    `public-api` spec → public SDKs.**
@@ -113,14 +115,17 @@ it's currently `config.yaml`.
   follow-up, not an optional nice-to-have.
 - `server-api`, `workload-api`, `problems-api`,
   `manifest-server-api` are internal; iterate freely, but still
-  commit the YAML and regenerated frontend client atomically so the
-  webapp stays in sync.
+  regenerate frontend and backend output locally, validate it through
+  type-checking/compilation and relevant tests, and commit the YAML plus
+  required hand-written source and tests. Never commit generated output.
 
 ## Common pitfalls
 
 - Frontend `src/core/api/generated/` is out of sync with the YAML →
-  rerun `pnpm generate-client`. The `pretest` / `prebuild` scripts
-  should normally handle this, but a stale install can skip it.
+  rerun `pnpm generate-client`. `pnpm start` invokes generation
+  directly; the `pretest`, `pretest:ci`, `prebuild`, and
+  `prebuild:storybook` lifecycle hooks invoke it before their matching
+  scripts. There is no Git checkout hook.
 - Codegen task fails on a `schemaMappings` entry → you added a
   schema that needs to be mapped to `JsonNode`. Add it to all three
   `schemaMappings` blocks in the submodule's `build.gradle.kts`

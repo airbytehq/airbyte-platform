@@ -13,11 +13,15 @@ This is validated via an ESLint rule.
 ## Auto generating
 
 We generate the request/response types as well as the actual methods calling
-those endpoints using [Orval](https://orval.dev/) during the `prestart`/`prebuild` phase.
+those endpoints using [Orval](https://orval.dev/). `pnpm start` invokes generation
+directly from `scripts/start-dev.js`; `pnpm test`, `pnpm test:ci`, `pnpm build`, and
+`pnpm build:storybook` invoke it through their matching lifecycle hooks. It does
+not run automatically for `pnpm test:coverage` or `pnpm storybook`.
 
 Those files will be generated into the `generated/` subfolder and are not part of git. Orval
 will also generate the files under `types/` to re-export the types and enums to be consumed
-outside this folder.
+outside this folder. Do not edit or commit generated output; commit required hand-written
+hooks, callsites, and tests.
 
 ## Structure
 

@@ -35,18 +35,23 @@ Run all commands from `oss/airbyte-webapp/`. Bash CWD doesn't persist
 between calls — use `(cd oss/airbyte-webapp && pnpm <cmd>)`.
 
 - `pnpm generate-client` — runs `load-declarative-schema.sh` then
-  Orval; regenerates `src/core/api/generated/`. Auto-runs as `pretest`
-  and `prebuild`.
-- `pnpm test` — Jest in watch mode (interactive).
+  Orval; regenerates the gitignored API artifacts, including
+  `src/core/api/generated/`. `pnpm start` invokes it directly, and the
+  `pretest`, `pretest:ci`, `prebuild`, and `prebuild:storybook`
+  lifecycle hooks invoke it before their matching scripts.
+- `pnpm test` — Jest in watch mode (interactive); its `pretest` hook
+  regenerates the client first.
 - `pnpm test:ci` — Jest non-watch with 3 retries; **use this in CI and
-  in agent workflows**, not the watch version.
-- `pnpm test:coverage` — coverage report.
+  in agent workflows**, not the watch version. Its `pretest:ci` hook
+  regenerates the client first.
+- `pnpm test:coverage` — coverage report; it has no generation hook.
 - `pnpm lint` — ESLint on `.js`/`.ts`/`.tsx`.
 - `pnpm format` — Prettier write on src files.
 - `pnpm stylelint` — Stylelint for SCSS / CSS.
 - `pnpm build` — Vite production build (runs `prebuild` first, which
   regenerates the client).
 - `pnpm storybook` / `pnpm build:storybook` — Storybook dev / build.
+  Only `build:storybook` has a generation hook (`prebuild:storybook`).
 
 There is **no `typecheck` script**. To run a type check in isolation
 (faster than `pnpm build`):
@@ -60,11 +65,12 @@ There is **no `typecheck` script**. To run a type check in isolation
 - **All user-facing text uses React Intl.** Add keys to
   `src/locales/en.json` (or `en.errors.json` for error messages). When
   removing code, also remove the unused i18n keys.
-- **Don't edit anything under `src/core/api/generated/`.** It's
-  overwritten by `pnpm generate-client` on every test and build. If
-  the generated shape is wrong, the fix lives in the OpenAPI YAML
-  under `oss/airbyte-api/<submodule>/src/main/openapi/` —
-  see [`oss/airbyte-api/AGENTS.md`](../airbyte-api/AGENTS.md).
+- **Don't edit or commit generated API artifacts.** They are gitignored
+  and overwritten whenever `pnpm generate-client` runs. If the generated
+  shape is wrong, the fix lives in the OpenAPI YAML under
+  `oss/airbyte-api/<submodule>/src/main/openapi/` — see
+  [`oss/airbyte-api/AGENTS.md`](../airbyte-api/AGENTS.md). Commit required
+  hand-written hooks, callsites, and tests instead.
 - **Custom hooks belong in `src/core/api/hooks/`**, not co-located
   with components.
 - **Co-locate test files** with the component or module they test
@@ -73,14 +79,16 @@ There is **no `typecheck` script**. To run a type check in isolation
   migrated to Tailwind. Don't introduce Tailwind without explicit
   approval; follow existing styling patterns.
 - **Run `pnpm generate-client` after pulling backend OpenAPI changes**
-  — the prebuild and pretest hooks usually handle this, but a stale
-  `node_modules` cache can leave the generated client out of sync.
+  — there is no Git checkout hook. `pnpm start` invokes generation
+  directly, while only the `pretest`, `pretest:ci`, `prebuild`, and
+  `prebuild:storybook` lifecycle hooks run it automatically.
 
 ## Verification (after any webapp change)
 
 In order:
 
 ```bash
+(cd oss/airbyte-webapp && pnpm generate-client)
 (cd oss/airbyte-webapp && pnpm format)
 (cd oss/airbyte-webapp && pnpm lint)
 (cd oss/airbyte-webapp && pnpm exec tsc --noEmit)
