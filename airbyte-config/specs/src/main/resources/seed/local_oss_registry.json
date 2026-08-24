@@ -1423,6 +1423,480 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery-migrations",
+        "releaseCandidates": {
+          "3.0.24": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 300,
+              "requireVersionIncrementsInPullRequests": false,
+              "sl": 300
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.1@sha256:ec89bd1a89e825514dd2fc8730ba299a3ae1544580a078df0e35c5202c2085b3"
+            },
+            "connectorIPCOptions": {
+              "dataChannel": {
+                "supportedSerialization": [
+                  "JSONL",
+                  "PROTOBUF"
+                ],
+                "supportedTransport": [
+                  "SOCKET",
+                  "STDIO"
+                ],
+                "version": "0.0.2"
+              }
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "credentials-1s1t-gcs.json",
+                    "name": "SECRET_DESTINATION-BIGQUERY_CREDENTIALS_1S1T_GCS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "credentials-1s1t-standard.json",
+                    "name": "SECRET_DESTINATION-BIGQUERY_CREDENTIALS_1S1T_STANDARD",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "credentials-badproject.json",
+                    "name": "SECRET_DESTINATION-BIGQUERY_CREDENTIALS_BAD_PROJECT_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "credentials-no-edit-public-schema-role.json",
+                    "name": "SECRET_DESTINATION-BIGQUERY_CREDENTIALS_NO_PUBLIC_SCHEMA_EDIT_ROLE",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "credentials-standard-no-dataset-creation.json",
+                    "name": "SECRET_DESTINATION-BIGQUERY_STANDARD-NO-DATASET-CREATION__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "credentials-1s1t-gcs-bad-copy-permission.json",
+                    "name": "SECRET_DESTINATION-BIGQUERY_CREDENTIALS_1S1T_GCS_BAD_COPY",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "destinationDefinitionId": "22f6c74f-5699-40ff-833c-4a879ea40133",
+            "dockerImageTag": "3.0.24",
+            "dockerRepository": "airbyte/destination-bigquery",
+            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery",
+            "externalDocumentationUrls": [
+              {
+                "title": "Release notes",
+                "type": "api_release_history",
+                "url": "https://cloud.google.com/bigquery/docs/release-notes"
+              },
+              {
+                "title": "Service account authentication",
+                "type": "authentication_guide",
+                "url": "https://cloud.google.com/iam/docs/service-accounts"
+              },
+              {
+                "title": "Access control and permissions",
+                "type": "permissions_scopes",
+                "url": "https://cloud.google.com/bigquery/docs/access-control"
+              },
+              {
+                "title": "Quotas and limits",
+                "type": "rate_limits",
+                "url": "https://cloud.google.com/bigquery/quotas"
+              },
+              {
+                "title": "Standard SQL reference",
+                "type": "sql_reference",
+                "url": "https://cloud.google.com/bigquery/docs/reference/standard-sql"
+              },
+              {
+                "title": "Google Cloud Status",
+                "type": "status_page",
+                "url": "https://status.cloud.google.com/"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "octavia-bot[bot]",
+                "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
+                "commit_sha": "5506601e260b7e78f801477182e37548e71efd8d",
+                "commit_timestamp": "2026-08-24T15:05:38-07:00"
+              },
+              "release": {
+                "attributed_to": "sunil-kuruba",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "5506601e260b7e78f801477182e37548e71efd8d",
+                "merged_at": "2026-08-24T22:05:38Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 108746235,
+                "pr_author_login": "octavia-bot",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "sunil-kuruba",
+                "pr_merged_by_type": "User",
+                "pr_number": 84985,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84985",
+                "released_at": "2026-08-24T22:05:38Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-bigquery/3.0.24.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/destination-bigquery/3.0.24/metadata.yaml",
+                "metadata_last_modified": "2026-08-24T22:12:18.379849+00:00",
+                "registry_entry_generated_at": "2026-08-24T22:12:18.379849+00:00"
+              }
+            },
+            "githubIssueLabel": "destination-bigquery",
+            "icon": "bigquery.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-bigquery/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "name": "BigQuery",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "2.0.0": {
+                  "message": "**Do not upgrade until you have run a test upgrade as outlined [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#testing-destinations-v2-for-a-single-connection)**.\nThis version introduces [Destinations V2](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#what-is-destinations-v2), which provides better error handling, incremental delivery of data for large syncs, and improved final table structures. To review the breaking changes, and how to upgrade, see [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#quick-start-to-upgrading). These changes will likely require updates to downstream dbt / SQL models, which we walk through [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#updating-downstream-transformations).\nSelecting `Upgrade` will upgrade **all** connections using this destination at their next sync. You can manually sync existing connections prior to the next scheduled sync to start the upgrade early.\n",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery-migrations#2.0.0",
+                  "upgradeDeadline": "2023-11-07"
+                },
+                "3.0.0": {
+                  "message": "If you never interact with the raw tables, you can upgrade without taking any action. Otherwise, make sure to read the migration guide for more details.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery-migrations#3.0.0",
+                  "upgradeDeadline": "2026-07-31"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "slow"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "resourceRequirements": {
+              "jobSpecific": [
+                {
+                  "jobType": "sync",
+                  "resourceRequirements": {
+                    "memory_request": "1Gi"
+                  }
+                }
+              ]
+            },
+            "sourceType": "database",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "groups": [
+                  {
+                    "id": "connection",
+                    "title": "Connection"
+                  },
+                  {
+                    "id": "sync_behavior",
+                    "title": "Sync Behavior"
+                  },
+                  {
+                    "id": "advanced",
+                    "title": "Advanced"
+                  }
+                ],
+                "properties": {
+                  "cdc_deletion_mode": {
+                    "always_show": true,
+                    "default": "Hard delete",
+                    "description": "Whether to execute CDC deletions as hard deletes (i.e. propagate source deletions to the destination), or soft deletes (i.e. leave a tombstone record in the destination). Defaults to hard deletes.",
+                    "enum": [
+                      "Hard delete",
+                      "Soft delete"
+                    ],
+                    "group": "sync_behavior",
+                    "order": 5,
+                    "title": "CDC deletion mode",
+                    "type": "string"
+                  },
+                  "credentials_json": {
+                    "airbyte_secret": true,
+                    "always_show": true,
+                    "description": "The contents of the JSON service account key. Check out the <a href=\"https://docs.airbyte.com/integrations/destinations/bigquery#service-account-key\">docs</a> if you need help generating this key. Default credentials will be used if this field is left empty.",
+                    "group": "connection",
+                    "order": 4,
+                    "title": "Service Account Key JSON (Required for cloud, optional for open-source)",
+                    "type": "string"
+                  },
+                  "dataset_id": {
+                    "description": "The default BigQuery Dataset ID that tables are replicated to if the source does not specify a namespace. Read more <a href=\"https://cloud.google.com/bigquery/docs/datasets#create-dataset\">here</a>.",
+                    "group": "connection",
+                    "order": 2,
+                    "title": "Default Dataset ID",
+                    "type": "string"
+                  },
+                  "dataset_location": {
+                    "description": "The location of the dataset. Warning: Changes made after creation will not be applied. Read more <a href=\"https://cloud.google.com/bigquery/docs/locations\">here</a>.",
+                    "enum": [
+                      "EU",
+                      "US",
+                      "africa-south1",
+                      "asia-east1",
+                      "asia-east2",
+                      "asia-northeast1",
+                      "asia-northeast2",
+                      "asia-northeast3",
+                      "asia-south1",
+                      "asia-south2",
+                      "asia-southeast1",
+                      "asia-southeast2",
+                      "australia-southeast1",
+                      "australia-southeast2",
+                      "europe-central2",
+                      "europe-north1",
+                      "europe-north2",
+                      "europe-southwest1",
+                      "europe-west1",
+                      "europe-west2",
+                      "europe-west3",
+                      "europe-west4",
+                      "europe-west6",
+                      "europe-west8",
+                      "europe-west9",
+                      "europe-west10",
+                      "europe-west12",
+                      "me-central1",
+                      "me-central2",
+                      "me-west1",
+                      "northamerica-northeast1",
+                      "northamerica-northeast2",
+                      "northamerica-south1",
+                      "southamerica-east1",
+                      "southamerica-west1",
+                      "us-central1",
+                      "us-east1",
+                      "us-east4",
+                      "us-east5",
+                      "us-south1",
+                      "us-west1",
+                      "us-west2",
+                      "us-west3",
+                      "us-west4"
+                    ],
+                    "group": "connection",
+                    "order": 1,
+                    "title": "Dataset Location",
+                    "type": "string"
+                  },
+                  "disable_type_dedupe": {
+                    "default": false,
+                    "description": "Write the legacy \"raw tables\" format, to enable backwards compatibility with older versions of this connector.",
+                    "group": "advanced",
+                    "order": 7,
+                    "title": "Legacy raw tables",
+                    "type": "boolean"
+                  },
+                  "loading_method": {
+                    "description": "The way data will be uploaded to BigQuery.",
+                    "display_type": "radio",
+                    "group": "connection",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "Direct loading using batched SQL INSERT statements. This method uses the BigQuery driver to convert large INSERT statements into file uploads automatically.",
+                        "properties": {
+                          "method": {
+                            "default": "Standard",
+                            "enum": [
+                              "Standard"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "method"
+                        ],
+                        "title": "Batched Standard Inserts",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Writes large batches of records to a file, uploads the file to GCS, then uses COPY INTO to load your data into BigQuery.",
+                        "properties": {
+                          "credential": {
+                            "description": "An HMAC key is a type of credential and can be associated with a service account or a user account in Cloud Storage. Read more <a href=\"https://cloud.google.com/storage/docs/authentication/hmackeys\">here</a>.",
+                            "oneOf": [
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "credential_type": {
+                                    "default": "HMAC_KEY",
+                                    "enum": [
+                                      "HMAC_KEY"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "hmac_key_access_id": {
+                                    "airbyte_secret": true,
+                                    "description": "HMAC key access ID. When linked to a service account, this ID is 61 characters long; when linked to a user account, it is 24 characters long.",
+                                    "examples": [
+                                      "1234567890abcdefghij1234"
+                                    ],
+                                    "order": 0,
+                                    "title": "HMAC Access Key",
+                                    "type": "string"
+                                  },
+                                  "hmac_key_secret": {
+                                    "airbyte_secret": true,
+                                    "description": "The corresponding secret for the access ID. It is a 40-character base-64 encoded string.",
+                                    "examples": [
+                                      "1234567890abcdefghij1234567890ABCDEFGHIJ"
+                                    ],
+                                    "order": 1,
+                                    "title": "HMAC Secret",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "credential_type",
+                                  "hmac_key_access_id",
+                                  "hmac_key_secret"
+                                ],
+                                "title": "HMAC key",
+                                "type": "object"
+                              }
+                            ],
+                            "order": 0,
+                            "title": "Credential",
+                            "type": "object"
+                          },
+                          "gcs_bucket_name": {
+                            "description": "The name of the GCS bucket. Read more <a href=\"https://cloud.google.com/storage/docs/naming-buckets\">here</a>.",
+                            "examples": [
+                              "airbyte_sync"
+                            ],
+                            "order": 1,
+                            "title": "GCS Bucket Name",
+                            "type": "string"
+                          },
+                          "gcs_bucket_path": {
+                            "description": "Directory under the GCS bucket where data will be written.",
+                            "examples": [
+                              "data_sync/test"
+                            ],
+                            "order": 2,
+                            "title": "GCS Bucket Path",
+                            "type": "string"
+                          },
+                          "keep_files_in_gcs-bucket": {
+                            "default": "Delete all tmp files from GCS",
+                            "description": "This upload method is supposed to temporary store records in GCS bucket. By this select you can chose if these records should be removed from GCS when migration has finished. The default \"Delete all tmp files from GCS\" value is used if not set explicitly.",
+                            "enum": [
+                              "Delete all tmp files from GCS",
+                              "Keep all tmp files in GCS"
+                            ],
+                            "order": 3,
+                            "title": "GCS Tmp Files Post-Processing",
+                            "type": "string"
+                          },
+                          "method": {
+                            "default": "GCS Staging",
+                            "enum": [
+                              "GCS Staging"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "method",
+                          "credential",
+                          "gcs_bucket_name",
+                          "gcs_bucket_path"
+                        ],
+                        "title": "GCS Staging",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 3,
+                    "title": "Loading Method",
+                    "type": "object"
+                  },
+                  "project_id": {
+                    "description": "The GCP project ID for the project containing the target BigQuery dataset. Read more <a href=\"https://cloud.google.com/resource-manager/docs/creating-managing-projects#identifying_projects\">here</a>.",
+                    "group": "connection",
+                    "order": 0,
+                    "title": "Project ID",
+                    "type": "string"
+                  },
+                  "raw_data_dataset": {
+                    "description": "Airbyte will use this dataset for various internal tables. In legacy raw tables mode, the raw tables will be stored in this dataset. Defaults to \"airbyte_internal\".",
+                    "group": "advanced",
+                    "order": 8,
+                    "title": "Airbyte Internal Table Dataset Name",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "project_id",
+                  "dataset_location",
+                  "dataset_id"
+                ],
+                "title": "Bigquery Specification",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery",
+              "supported_destination_sync_modes": [
+                "overwrite",
+                "append",
+                "append_dedup"
+              ],
+              "supportsDBT": false,
+              "supportsIncremental": true,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsDbt": true,
+            "supportsRefreshes": true,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "enableProgressiveRollout": false,
@@ -2480,6 +2954,359 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/clickhouse-migrations",
+        "releaseCandidates": {
+          "2.1.28": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 300,
+              "requireVersionIncrementsInPullRequests": false,
+              "sl": 300
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.1@sha256:ec89bd1a89e825514dd2fc8730ba299a3ae1544580a078df0e35c5202c2085b3"
+            },
+            "connectorIPCOptions": {
+              "dataChannel": {
+                "supportedSerialization": [
+                  "JSONL",
+                  "PROTOBUF"
+                ],
+                "supportedTransport": [
+                  "SOCKET",
+                  "STDIO"
+                ],
+                "version": "0.0.2"
+              }
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests"
+              }
+            ],
+            "custom": false,
+            "destinationDefinitionId": "ce0d828e-1dc4-496c-b122-2da42e637e48",
+            "dockerImageTag": "2.1.28",
+            "dockerRepository": "airbyte/destination-clickhouse",
+            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/clickhouse",
+            "externalDocumentationUrls": [
+              {
+                "title": "ClickHouse documentation",
+                "type": "api_reference",
+                "url": "https://clickhouse.com/docs"
+              },
+              {
+                "title": "Changelog",
+                "type": "api_release_history",
+                "url": "https://clickhouse.com/docs/whats-new/changelog"
+              },
+              {
+                "title": "User authentication",
+                "type": "authentication_guide",
+                "url": "https://clickhouse.com/docs/en/operations/access-rights"
+              },
+              {
+                "title": "SQL reference",
+                "type": "sql_reference",
+                "url": "https://clickhouse.com/docs/en/sql-reference"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "octavia-bot[bot]",
+                "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
+                "commit_sha": "fa38d0222441a5b875ec54baef61a0afa5e25a3d",
+                "commit_timestamp": "2026-08-24T15:04:14-07:00"
+              },
+              "release": {
+                "attributed_to": "sunil-kuruba",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "fa38d0222441a5b875ec54baef61a0afa5e25a3d",
+                "merged_at": "2026-08-24T22:04:15Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 108746235,
+                "pr_author_login": "octavia-bot",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "sunil-kuruba",
+                "pr_merged_by_type": "User",
+                "pr_number": 84983,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84983",
+                "released_at": "2026-08-24T22:04:15Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-clickhouse/2.1.28.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/destination-clickhouse/2.1.28/metadata.yaml",
+                "metadata_last_modified": "2026-08-24T22:09:27.820933+00:00",
+                "registry_entry_generated_at": "2026-08-24T22:09:27.820933+00:00"
+              }
+            },
+            "githubIssueLabel": "destination-clickhouse",
+            "icon": "clickhouse.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-clickhouse/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "name": "ClickHouse",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "2.0.0": {
+                  "message": "This connector has been re-written from scratch. Data will now be typed and stored in final (non-raw) tables. The connector may require changes to its configuration to function properly and downstream pipelines may be affected. Warning: SSH tunneling is in Beta.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/clickhouse-migrations#2.0.0",
+                  "upgradeDeadline": "2025-08-19"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/clickhouse-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "slow"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "sourceType": "database",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "groups": [
+                  {
+                    "id": "connection",
+                    "title": "Connection"
+                  },
+                  {
+                    "id": "advanced",
+                    "title": "Advanced"
+                  }
+                ],
+                "properties": {
+                  "database": {
+                    "default": "default",
+                    "description": "Name of the database.",
+                    "order": 3,
+                    "title": "Database",
+                    "type": "string"
+                  },
+                  "enable_json": {
+                    "default": false,
+                    "description": "Use the JSON type for Object fields. If disabled, the JSON will be converted to a string.",
+                    "order": 6,
+                    "title": "Enable JSON",
+                    "type": "boolean"
+                  },
+                  "host": {
+                    "description": "Hostname of the database.",
+                    "order": 0,
+                    "title": "Hostname",
+                    "type": "string"
+                  },
+                  "password": {
+                    "airbyte_secret": true,
+                    "description": "Password associated with the username.",
+                    "order": 5,
+                    "title": "Password",
+                    "type": "string"
+                  },
+                  "port": {
+                    "default": "8443",
+                    "description": "HTTP port of the database. Default(s) HTTP: 8123 \u2014 HTTPS: 8443",
+                    "order": 1,
+                    "title": "Port",
+                    "type": "string"
+                  },
+                  "protocol": {
+                    "default": "https",
+                    "description": "Protocol for the database connection string.",
+                    "enum": [
+                      "http",
+                      "https"
+                    ],
+                    "order": 2,
+                    "title": "Protocol",
+                    "type": "string"
+                  },
+                  "record_window_size": {
+                    "description": "Warning: Tuning this parameter can impact the performances. The maximum number of records that should be written to a batch. The batch size limit is still limited to 70 Mb",
+                    "order": 8,
+                    "title": "Record Window Size",
+                    "type": "integer"
+                  },
+                  "tunnel_method": {
+                    "description": "Whether to initiate an SSH tunnel before connecting to the database, and if so, which kind of authentication to use.",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "No ssh tunnel needed to connect to database",
+                        "properties": {
+                          "tunnel_method": {
+                            "default": "NO_TUNNEL",
+                            "enum": [
+                              "NO_TUNNEL"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method"
+                        ],
+                        "title": "No Tunnel",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Connect through a jump server tunnel host using username and ssh key",
+                        "properties": {
+                          "ssh_key": {
+                            "airbyte_secret": true,
+                            "description": "OS-level user account ssh key credentials in RSA PEM format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )",
+                            "multiline": true,
+                            "order": 4,
+                            "title": "SSH Private Key",
+                            "type": "string"
+                          },
+                          "tunnel_host": {
+                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
+                            "order": 1,
+                            "title": "SSH Tunnel Jump Server Host",
+                            "type": "string"
+                          },
+                          "tunnel_method": {
+                            "default": "SSH_KEY_AUTH",
+                            "enum": [
+                              "SSH_KEY_AUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "tunnel_port": {
+                            "default": 22,
+                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
+                            "maximum": 65536,
+                            "minimum": 0,
+                            "order": 2,
+                            "title": "SSH Connection Port",
+                            "type": "integer"
+                          },
+                          "tunnel_user": {
+                            "description": "OS-level username for logging into the jump server host",
+                            "order": 3,
+                            "title": "SSH Login Username",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method",
+                          "tunnel_host",
+                          "tunnel_port",
+                          "tunnel_user",
+                          "ssh_key"
+                        ],
+                        "title": "SSH Key Authentication",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Connect through a jump server tunnel host using username and password authentication",
+                        "properties": {
+                          "tunnel_host": {
+                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
+                            "order": 1,
+                            "title": "SSH Tunnel Jump Server Host",
+                            "type": "string"
+                          },
+                          "tunnel_method": {
+                            "default": "SSH_PASSWORD_AUTH",
+                            "enum": [
+                              "SSH_PASSWORD_AUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "tunnel_port": {
+                            "default": 22,
+                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
+                            "maximum": 65536,
+                            "minimum": 0,
+                            "order": 2,
+                            "title": "SSH Connection Port",
+                            "type": "integer"
+                          },
+                          "tunnel_user": {
+                            "description": "OS-level username for logging into the jump server host",
+                            "order": 3,
+                            "title": "SSH Login Username",
+                            "type": "string"
+                          },
+                          "tunnel_user_password": {
+                            "airbyte_secret": true,
+                            "description": "OS-level password for logging into the jump server host",
+                            "order": 4,
+                            "title": "Password",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method",
+                          "tunnel_host",
+                          "tunnel_port",
+                          "tunnel_user",
+                          "tunnel_user_password"
+                        ],
+                        "title": "Password Authentication",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 5,
+                    "title": "SSH Tunnel Method",
+                    "type": "object"
+                  },
+                  "username": {
+                    "default": "default",
+                    "description": "Username to use to access the database.",
+                    "order": 4,
+                    "title": "Username",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "host",
+                  "port",
+                  "protocol",
+                  "database",
+                  "username",
+                  "password"
+                ],
+                "title": "Clickhouse Specification Oss",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/clickhouse",
+              "supported_destination_sync_modes": [
+                "overwrite",
+                "append",
+                "append_dedup"
+              ],
+              "supportsDBT": false,
+              "supportsIncremental": true,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsRefreshes": true,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -10810,15 +11637,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           }
         },
@@ -17306,6 +18133,478 @@
       "public": true,
       "releaseStage": "alpha",
       "releases": {
+        "releaseCandidates": {
+          "0.3.53": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 100,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 100
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.1@sha256:ec89bd1a89e825514dd2fc8730ba299a3ae1544580a078df0e35c5202c2085b3"
+            },
+            "connectorIPCOptions": {
+              "dataChannel": {
+                "supportedSerialization": [
+                  "JSONL",
+                  "PROTOBUF"
+                ],
+                "supportedTransport": [
+                  "SOCKET",
+                  "STDIO"
+                ],
+                "version": "0.0.2"
+              }
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "glue.json",
+                    "name": "SECRET_DESTINATION-ICEBERG_V2_S3_GLUE_CONFIG",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "glue_assume_role.json",
+                    "name": "SECRET_DESTINATION-ICEBERG_V2_S3_GLUE_ASSUME_ROLE_CONFIG",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "glue_aws_assume_role.json",
+                    "name": "SECRET_DESTINATION-ICEBERG_V2_S3_GLUE_ASSUME_ROLE_SYSTEM_AWS_CONFIG",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "destinationDefinitionId": "716ca874-520b-4902-9f80-9fad66754b89",
+            "dockerImageTag": "0.3.53",
+            "dockerRepository": "airbyte/destination-s3-data-lake",
+            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/s3-data-lake",
+            "externalDocumentationUrls": [
+              {
+                "title": "AWS S3 documentation",
+                "type": "api_reference",
+                "url": "https://docs.aws.amazon.com/s3/"
+              },
+              {
+                "title": "IAM authentication",
+                "type": "authentication_guide",
+                "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html"
+              },
+              {
+                "title": "Bucket policies and permissions",
+                "type": "permissions_scopes",
+                "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-policy-language-overview.html"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "octavia-bot[bot]",
+                "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
+                "commit_sha": "2416b0ecf6433cd3b151c5f79ef77e0736ee9970",
+                "commit_timestamp": "2026-08-24T15:06:16-07:00"
+              },
+              "release": {
+                "attributed_to": "sunil-kuruba",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "2416b0ecf6433cd3b151c5f79ef77e0736ee9970",
+                "merged_at": "2026-08-24T22:06:16Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 108746235,
+                "pr_author_login": "octavia-bot",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "sunil-kuruba",
+                "pr_merged_by_type": "User",
+                "pr_number": 84994,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84994",
+                "released_at": "2026-08-24T22:06:16Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-s3-data-lake/0.3.53.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/destination-s3-data-lake/0.3.53/metadata.yaml",
+                "metadata_last_modified": "2026-08-24T22:15:40.194202+00:00",
+                "registry_entry_generated_at": "2026-08-24T22:15:40.194202+00:00"
+              }
+            },
+            "githubIssueLabel": "destination-s3-data-lake",
+            "icon": "icon.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-s3-data-lake/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "name": "S3 Data Lake",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "alpha",
+            "releases": {
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "sourceType": "file",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "description": "Defines the configurations required to connect to an Iceberg catalog, including warehouse location, main branch name, and catalog type specifics.",
+                "properties": {
+                  "access_key_id": {
+                    "airbyte_secret": true,
+                    "always_show": true,
+                    "description": "The AWS Access Key ID with permissions for S3 and Glue operations.",
+                    "order": 0,
+                    "title": "AWS Access Key ID",
+                    "type": "string"
+                  },
+                  "catalog_type": {
+                    "always_show": true,
+                    "description": "Specifies the type of Iceberg catalog (e.g., NESSIE, GLUE, REST, POLARIS) and its associated configuration.",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "Configuration details for connecting to a Nessie-based Iceberg catalog.",
+                        "properties": {
+                          "access_token": {
+                            "airbyte_secret": true,
+                            "description": "Optional token for authentication with the Nessie server.",
+                            "examples": [
+                              "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                            ],
+                            "order": 2,
+                            "title": "Nessie Access Token",
+                            "type": "string"
+                          },
+                          "catalog_type": {
+                            "default": "NESSIE",
+                            "enum": [
+                              "NESSIE"
+                            ],
+                            "type": "string"
+                          },
+                          "namespace": {
+                            "description": "The Nessie namespace to be used in the Table identifier. \n           This will ONLY be used if the `Destination Namespace` setting for the connection is set to\n           `Destination-defined` or `Source-defined`",
+                            "title": "Default namespace",
+                            "type": "string"
+                          },
+                          "server_uri": {
+                            "description": "The base URL of the Nessie server used to connect to the Nessie catalog.",
+                            "order": 1,
+                            "title": "Nessie Server URI",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "catalog_type",
+                          "server_uri",
+                          "namespace"
+                        ],
+                        "title": "Nessie Catalog",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Configuration details for connecting to an AWS Glue-based Iceberg catalog.",
+                        "properties": {
+                          "catalog_type": {
+                            "default": "GLUE",
+                            "enum": [
+                              "GLUE"
+                            ],
+                            "type": "string"
+                          },
+                          "database_name": {
+                            "description": "The Glue database name. This will ONLY be used if the `Destination Namespace` setting for the connection is set to `Destination-defined` or `Source-defined`",
+                            "title": "Default database",
+                            "type": "string"
+                          },
+                          "glue_id": {
+                            "description": "The AWS Account ID associated with the Glue service used by the Iceberg catalog.",
+                            "order": 1,
+                            "title": "AWS Account ID",
+                            "type": "string"
+                          },
+                          "role_arn": {
+                            "description": "The ARN of the AWS role to assume. Only usable in Airbyte Cloud.",
+                            "title": "Role ARN",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "catalog_type",
+                          "glue_id",
+                          "database_name"
+                        ],
+                        "title": "Glue Catalog",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Configuration details for connecting to a REST catalog.",
+                        "properties": {
+                          "catalog_type": {
+                            "default": "REST",
+                            "enum": [
+                              "REST"
+                            ],
+                            "type": "string"
+                          },
+                          "namespace": {
+                            "description": "The namespace to be used in the Table identifier. \n           This will ONLY be used if the `Destination Namespace` setting for the connection is set to\n           `Destination-defined` or `Source-defined`",
+                            "title": "Default namespace",
+                            "type": "string"
+                          },
+                          "server_uri": {
+                            "description": "The base URL of the Rest server used to connect to the Rest catalog.",
+                            "order": 1,
+                            "title": "Rest Server URI",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "catalog_type",
+                          "server_uri",
+                          "namespace"
+                        ],
+                        "title": "Rest Catalog",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Configuration details for connecting to an Apache Polaris-based Iceberg catalog.",
+                        "properties": {
+                          "catalog_name": {
+                            "description": "The name of the catalog in Polaris. This corresponds to the catalog name created via the Polaris Management API.",
+                            "order": 2,
+                            "title": "Polaris Catalog Name",
+                            "type": "string"
+                          },
+                          "catalog_type": {
+                            "default": "POLARIS",
+                            "enum": [
+                              "POLARIS"
+                            ],
+                            "type": "string"
+                          },
+                          "client_id": {
+                            "airbyte_secret": true,
+                            "description": "The OAuth Client ID for authenticating with the Polaris server.",
+                            "examples": [
+                              "abc123clientid"
+                            ],
+                            "order": 3,
+                            "title": "Client ID",
+                            "type": "string"
+                          },
+                          "client_secret": {
+                            "airbyte_secret": true,
+                            "description": "The OAuth Client Secret for authenticating with the Polaris server.",
+                            "examples": [
+                              "secretkey123"
+                            ],
+                            "order": 4,
+                            "title": "Client Secret",
+                            "type": "string"
+                          },
+                          "namespace": {
+                            "description": "The Polaris namespace to be used in the Table identifier.\n           This will ONLY be used if the `Destination Namespace` setting for the connection is set to\n           `Destination-defined` or `Source-defined`",
+                            "order": 7,
+                            "title": "Default namespace",
+                            "type": "string"
+                          },
+                          "oauth2_server_uri": {
+                            "description": "The OAuth2 token endpoint URI. If not provided, a deprecation warning may be issued as this will become required in future versions.",
+                            "examples": [
+                              "https://polaris.example.com/oauth/tokens"
+                            ],
+                            "order": 6,
+                            "title": "OAuth2 Server URI",
+                            "type": "string"
+                          },
+                          "scope": {
+                            "description": "The OAuth scope for authentication. Must be in the format PRINCIPAL_ROLE:<role_name>.",
+                            "examples": [
+                              "PRINCIPAL_ROLE:catalog_admin"
+                            ],
+                            "order": 5,
+                            "title": "OAuth Scope",
+                            "type": "string"
+                          },
+                          "server_uri": {
+                            "description": "The base URL of the Polaris server used to connect to the Polaris catalog.",
+                            "order": 1,
+                            "title": "Polaris Server URI",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "catalog_type",
+                          "server_uri",
+                          "catalog_name",
+                          "client_id",
+                          "client_secret",
+                          "scope",
+                          "namespace"
+                        ],
+                        "title": "Polaris Catalog",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 7,
+                    "title": "Catalog Type",
+                    "type": "object"
+                  },
+                  "flush_batch_size_mb": {
+                    "airbyte_hidden": true,
+                    "default": 200,
+                    "description": "The approximate size in megabytes of each batch of data written to Iceberg. Smaller values flush more frequently, improving data freshness and reducing data loss on failure, but will create more small files that require compaction. Must be between 1 and 500 MB. Default is 200 MB.",
+                    "examples": [
+                      200
+                    ],
+                    "order": 8,
+                    "title": "Flush Batch Size (MB)",
+                    "type": "integer"
+                  },
+                  "main_branch_name": {
+                    "always_show": true,
+                    "default": "main",
+                    "description": "The primary or default branch name in the catalog. Most query engines will use \"main\" by default. See <a href=\"https://iceberg.apache.org/docs/latest/branching/\">Iceberg documentation</a> for more information.",
+                    "order": 6,
+                    "title": "Main Branch Name",
+                    "type": "string"
+                  },
+                  "s3_bucket_name": {
+                    "always_show": true,
+                    "description": "The name of the S3 bucket that will host the Iceberg data.",
+                    "order": 2,
+                    "title": "S3 Bucket Name",
+                    "type": "string"
+                  },
+                  "s3_bucket_region": {
+                    "always_show": true,
+                    "description": "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\">here</a> for all region codes.",
+                    "enum": [
+                      "",
+                      "af-south-1",
+                      "ap-east-1",
+                      "ap-northeast-1",
+                      "ap-northeast-2",
+                      "ap-northeast-3",
+                      "ap-south-1",
+                      "ap-south-2",
+                      "ap-southeast-1",
+                      "ap-southeast-2",
+                      "ap-southeast-3",
+                      "ap-southeast-4",
+                      "ca-central-1",
+                      "ca-west-1",
+                      "cn-north-1",
+                      "cn-northwest-1",
+                      "eu-central-1",
+                      "eu-central-2",
+                      "eu-north-1",
+                      "eu-south-1",
+                      "eu-south-2",
+                      "eu-west-1",
+                      "eu-west-2",
+                      "eu-west-3",
+                      "il-central-1",
+                      "me-central-1",
+                      "me-south-1",
+                      "sa-east-1",
+                      "us-east-1",
+                      "us-east-2",
+                      "us-gov-east-1",
+                      "us-gov-west-1",
+                      "us-west-1",
+                      "us-west-2"
+                    ],
+                    "examples": [
+                      "us-east-1"
+                    ],
+                    "order": 3,
+                    "title": "S3 Bucket Region",
+                    "type": "string"
+                  },
+                  "s3_endpoint": {
+                    "description": "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\">here</a>",
+                    "order": 4,
+                    "title": "S3 Endpoint",
+                    "type": "string"
+                  },
+                  "secret_access_key": {
+                    "airbyte_secret": true,
+                    "always_show": true,
+                    "description": "The AWS Secret Access Key paired with the Access Key ID for AWS authentication.",
+                    "order": 1,
+                    "title": "AWS Secret Access Key",
+                    "type": "string"
+                  },
+                  "warehouse_location": {
+                    "always_show": true,
+                    "description": "The root location of the data warehouse used by the Iceberg catalog. Typically includes a bucket name and path within that bucket. For AWS Glue and Nessie, must include the storage protocol (such as \"s3://\" for Amazon S3).",
+                    "examples": [
+                      "s3://your-bucket/path/to/store/files/in"
+                    ],
+                    "order": 5,
+                    "title": "Warehouse Location",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "s3_bucket_name",
+                  "s3_bucket_region",
+                  "warehouse_location",
+                  "main_branch_name",
+                  "catalog_type"
+                ],
+                "title": "Iceberg V2 Destination Specification",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/s3-data-lake",
+              "supported_destination_sync_modes": [
+                "overwrite",
+                "append",
+                "append_dedup"
+              ],
+              "supportsDBT": false,
+              "supportsIncremental": true,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsRefreshes": true,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -18778,7 +20077,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations",
         "releaseCandidates": {
-          "4.1.1": {
+          "4.1.2": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 300,
@@ -18861,7 +20160,7 @@
             ],
             "custom": false,
             "destinationDefinitionId": "424892c4-daac-4491-b35d-c6688ba547ba",
-            "dockerImageTag": "4.1.1",
+            "dockerImageTag": "4.1.2",
             "dockerRepository": "airbyte/destination-snowflake",
             "documentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake",
             "externalDocumentationUrls": [
@@ -18898,33 +20197,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "0442fa3d47c30b61448ad919f61dee6df7168c5a",
-                "commit_timestamp": "2026-08-18T22:28:54+00:00"
+                "commit_author": "Sunil Kuruba",
+                "commit_author_email": "sunil.kuruba@airbyte.io",
+                "commit_sha": "03bd033f62605c6686a27399cce5ad4c667f0c07",
+                "commit_timestamp": "2026-08-24T12:49:13-07:00"
               },
               "release": {
                 "attributed_to": "sunil-kuruba",
                 "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "0442fa3d47c30b61448ad919f61dee6df7168c5a",
-                "merged_at": "2026-08-18T22:28:54Z",
+                "merge_commit_sha": "03bd033f62605c6686a27399cce5ad4c667f0c07",
+                "merged_at": "2026-08-24T19:49:14Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 158243242,
-                "pr_author_login": "devin-ai-integration",
-                "pr_author_type": "Bot",
+                "pr_author_id": 270477162,
+                "pr_author_login": "sunil-kuruba",
+                "pr_author_type": "User",
                 "pr_merged_by_login": "sunil-kuruba",
                 "pr_merged_by_type": "User",
-                "pr_number": 76313,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/76313",
-                "released_at": "2026-08-18T22:28:54Z",
+                "pr_number": 84979,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84979",
+                "released_at": "2026-08-24T19:49:14Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake/4.1.1.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake/4.1.2.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/destination-snowflake/4.1.1/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T22:33:46.487545+00:00",
-                "registry_entry_generated_at": "2026-08-18T22:33:46.487545+00:00"
+                "metadata_file_path": "metadata/airbyte/destination-snowflake/4.1.2/metadata.yaml",
+                "metadata_last_modified": "2026-08-24T19:54:13.223530+00:00",
+                "registry_entry_generated_at": "2026-08-24T19:54:13.223530+00:00"
               }
             },
             "githubIssueLabel": "destination-snowflake",
@@ -23796,15 +25095,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-aha/0.4.24.spdx.json",
@@ -24076,15 +25375,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           }
         },
@@ -26481,7 +27780,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner-migrations",
         "releaseCandidates": {
-          "5.9.5": {
+          "5.10.0": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -26529,7 +27828,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "5.9.5",
+            "dockerImageTag": "5.10.0",
             "dockerRepository": "airbyte/source-amazon-seller-partner",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner",
             "erdUrl": "https://dbdocs.io/airbyteio/source-amazon-seller-partner?view=relationships",
@@ -26562,29 +27861,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "1034460afb52e9a4c2115a17d9cc66ee62b139b8",
-                "commit_timestamp": "2026-08-18T08:33:04+00:00"
+                "commit_author": "Takahiro HARADA",
+                "commit_author_email": "162398678+ml-tharada@users.noreply.github.com",
+                "commit_sha": "a91e189b8408364a44f86cb0c81b074470513d15",
+                "commit_timestamp": "2026-08-24T20:25:00+09:00"
               },
               "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "1034460afb52e9a4c2115a17d9cc66ee62b139b8",
-                "merged_at": "2026-08-18T08:33:05Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
-                "pr_author_type": "Bot",
-                "pr_number": 84482,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84482",
-                "released_at": "2026-08-18T08:33:05Z",
+                "attributed_to": "bazarnov",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "a91e189b8408364a44f86cb0c81b074470513d15",
+                "merged_at": "2026-08-24T11:25:01Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 162398678,
+                "pr_author_login": "ml-tharada",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "bazarnov",
+                "pr_merged_by_type": "User",
+                "pr_number": 76434,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/76434",
+                "released_at": "2026-08-24T11:25:01Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-seller-partner/5.9.5.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-seller-partner/5.10.0.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-amazon-seller-partner/5.9.5/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T08:37:07.359859+00:00",
-                "registry_entry_generated_at": "2026-08-18T08:37:07.359859+00:00"
+                "metadata_file_path": "metadata/airbyte/source-amazon-seller-partner/5.10.0/metadata.yaml",
+                "metadata_last_modified": "2026-08-24T11:29:56.278923+00:00",
+                "registry_entry_generated_at": "2026-08-24T11:29:56.278923+00:00"
               }
             },
             "githubIssueLabel": "source-amazon-seller-partner",
@@ -26813,6 +28116,47 @@
                     ],
                     "order": 13,
                     "title": "Financial Events Step Size",
+                    "type": "string"
+                  },
+                  "inbound_end_datetime": {
+                    "description": "Only used when inbound_replication_mode=fixed. Optional when inbound_replication_mode=fixed. If not set, the connector uses the current UTC time. UTC datetime in format 2026-01-25T00:00:00Z.",
+                    "examples": [
+                      "2026-02-25T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 24,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "title": "Inbound End Datetime",
+                    "type": "string"
+                  },
+                  "inbound_replication_mode": {
+                    "default": "rolling_days",
+                    "description": "Settings only for Fulfillment Inbound streams. Use fixed datetimes or rolling window (last N days). When inbound_replication_mode=fixed, inbound_start_datetime is required. When inbound_replication_mode=rolling_days, inbound_rolling_days is required.",
+                    "enum": [
+                      "fixed",
+                      "rolling_days"
+                    ],
+                    "order": 22,
+                    "title": "Inbound Replication Mode",
+                    "type": "string"
+                  },
+                  "inbound_rolling_days": {
+                    "default": 30,
+                    "description": "Only used when inbound_replication_mode=rolling_days. Required when inbound_replication_mode=rolling_days. Fetch data including today, for the last N days.",
+                    "minimum": 1,
+                    "order": 25,
+                    "title": "Inbound Rolling Days",
+                    "type": "integer"
+                  },
+                  "inbound_start_datetime": {
+                    "description": "Only used when inbound_replication_mode=fixed. Required when inbound_replication_mode=fixed. UTC datetime in format 2026-01-25T00:00:00Z.",
+                    "examples": [
+                      "2026-01-25T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 23,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "title": "Inbound Start Datetime",
                     "type": "string"
                   },
                   "include_pii": {
@@ -30660,15 +32004,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           }
         },
@@ -35728,15 +37072,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -38151,15 +39495,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "release": {
@@ -38277,16 +39621,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "release": {
@@ -43460,16 +44804,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "release": {
@@ -44471,15 +45815,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-convertkit/0.3.3.spdx.json",
@@ -57567,7 +58911,7 @@
         "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
       },
       "custom": false,
-      "dockerImageTag": "0.0.57",
+      "dockerImageTag": "0.1.0",
       "dockerRepository": "airbyte/source-float",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/float",
       "externalDocumentationUrls": [
@@ -57589,10 +58933,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "cc62ae91093e9d093f9afc21f865892e36f5d805",
-          "commit_timestamp": "2026-08-18T05:12:52+00:00"
+          "commit_author": "Pradip",
+          "commit_author_email": "masterpradipg@gmail.com",
+          "commit_sha": "ee653a2d6eda83315f338c7a0c5802b22beaeb96",
+          "commit_timestamp": "2026-08-24T17:11:26+05:45"
         },
         "metrics": {
           "all": {
@@ -57609,23 +58953,27 @@
           }
         },
         "release": {
-          "attributed_to": null,
-          "merge_commit_sha": "cc62ae91093e9d093f9afc21f865892e36f5d805",
-          "merged_at": "2026-08-18T05:12:52Z",
-          "pr_author_id": 230633153,
-          "pr_author_login": "octavia-bot-hoard",
-          "pr_author_type": "Bot",
-          "pr_number": 84594,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84594",
-          "released_at": "2026-08-18T05:12:52Z",
+          "attributed_to": "bazarnov",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "ee653a2d6eda83315f338c7a0c5802b22beaeb96",
+          "merged_at": "2026-08-24T11:26:27Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 12377660,
+          "pr_author_login": "masterpradipg",
+          "pr_author_type": "User",
+          "pr_merged_by_login": "bazarnov",
+          "pr_merged_by_type": "User",
+          "pr_number": 79087,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/79087",
+          "released_at": "2026-08-24T11:26:27Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-float/0.0.57.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-float/0.1.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-float/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-18T05:16:50.890960+00:00",
-          "registry_entry_generated_at": "2026-08-18T05:16:50.890960+00:00"
+          "metadata_last_modified": "2026-08-24T11:30:13.419718+00:00",
+          "registry_entry_generated_at": "2026-08-24T11:30:13.419718+00:00"
         }
       },
       "githubIssueLabel": "source-float",
@@ -57658,6 +59006,16 @@
               "name": "float_access_token",
               "order": 0,
               "title": "Access Token",
+              "type": "string"
+            },
+            "end_date": {
+              "description": "End date for reports streams (YYYY-MM-DD). Defaults to today if not set. Does not affect non-report streams.",
+              "examples": [
+                "2024-12-31"
+              ],
+              "order": 2,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+              "title": "End date",
               "type": "string"
             },
             "start_date": {
@@ -58766,7 +60124,7 @@
       "releaseStage": "generally_available",
       "releases": {
         "releaseCandidates": {
-          "3.2.27": {
+          "3.3.0": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 200,
@@ -58775,7 +60133,10 @@
             },
             "allowedHosts": {
               "hosts": [
-                "*.freshdesk.com"
+                "*.freshdesk.com",
+                "s3.amazonaws.com",
+                "*.s3.amazonaws.com",
+                "*.cloudfront.net"
               ]
             },
             "connectorBuildOptions": {
@@ -58809,7 +60170,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "3.2.27",
+            "dockerImageTag": "3.3.0",
             "dockerRepository": "airbyte/source-freshdesk",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/freshdesk",
             "externalDocumentationUrls": [
@@ -58821,29 +60182,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "da873f6b02c9e999337101e45eb2b34b7dd956f2",
-                "commit_timestamp": "2026-08-18T04:53:18+00:00"
+                "commit_author": "deepinsight coder",
+                "commit_author_email": "32898216+Vamsi-klu@users.noreply.github.com",
+                "commit_sha": "00907da1ebb2dae919c24b08ca0c8f281faeecbc",
+                "commit_timestamp": "2026-08-24T04:22:37-07:00"
               },
               "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "da873f6b02c9e999337101e45eb2b34b7dd956f2",
-                "merged_at": "2026-08-18T04:53:19Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
-                "pr_author_type": "Bot",
-                "pr_number": 84563,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84563",
-                "released_at": "2026-08-18T04:53:19Z",
+                "attributed_to": "bazarnov",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "00907da1ebb2dae919c24b08ca0c8f281faeecbc",
+                "merged_at": "2026-08-24T11:22:39Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 32898216,
+                "pr_author_login": "Vamsi-klu",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "bazarnov",
+                "pr_merged_by_type": "User",
+                "pr_number": 80306,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/80306",
+                "released_at": "2026-08-24T11:22:39Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-freshdesk/3.2.27.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-freshdesk/3.3.0.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-freshdesk/3.2.27/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T04:57:14.761858+00:00",
-                "registry_entry_generated_at": "2026-08-18T04:57:14.761858+00:00"
+                "metadata_file_path": "metadata/airbyte/source-freshdesk/3.3.0/metadata.yaml",
+                "metadata_last_modified": "2026-08-24T11:26:47.478521+00:00",
+                "registry_entry_generated_at": "2026-08-24T11:26:47.478521+00:00"
               }
             },
             "githubIssueLabel": "source-freshdesk",
@@ -60168,16 +61533,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-gainsight-px/0.2.34.spdx.json",
@@ -74408,15 +75773,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "low"
           }
         },
@@ -77007,7 +78372,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.2.14",
+      "dockerImageTag": "0.3.0",
       "dockerRepository": "airbyte/source-granola",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/granola",
       "externalDocumentationUrls": [
@@ -77021,45 +78386,45 @@
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "patrick.nilan@airbyte.io",
-          "commit_sha": "bf1ba4883d96cb1043583fd54be8ebd96673f9ea",
-          "commit_timestamp": "2026-08-20T20:23:29-07:00"
+          "commit_sha": "700c920756554107a7c01d4e99ac651231cbc2dc",
+          "commit_timestamp": "2026-08-21T08:55:02-07:00"
         },
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           }
         },
         "release": {
           "attributed_to": "pnilan",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "bf1ba4883d96cb1043583fd54be8ebd96673f9ea",
-          "merged_at": "2026-08-21T03:23:30Z",
+          "merge_commit_sha": "700c920756554107a7c01d4e99ac651231cbc2dc",
+          "merged_at": "2026-08-21T15:55:03Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 158243242,
           "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
           "pr_merged_by_login": "pnilan",
           "pr_merged_by_type": "User",
-          "pr_number": 84898,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84898",
-          "released_at": "2026-08-21T03:23:30Z",
+          "pr_number": 84907,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84907",
+          "released_at": "2026-08-21T15:55:03Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-granola/0.2.14.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-granola/0.3.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-granola/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-21T03:27:38.307950+00:00",
-          "registry_entry_generated_at": "2026-08-21T03:27:38.307950+00:00"
+          "metadata_last_modified": "2026-08-21T15:59:15.474429+00:00",
+          "registry_entry_generated_at": "2026-08-21T15:59:15.474429+00:00"
         }
       },
       "githubIssueLabel": "source-granola",
@@ -77071,160 +78436,15 @@
       "public": true,
       "releaseStage": "alpha",
       "releases": {
-        "releaseCandidates": {
-          "0.3.0": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 100,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 100
-            },
-            "allowedHosts": {
-              "hosts": [
-                "public-api.granola.ai"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-GRANOLA__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "0.3.0",
-            "dockerRepository": "airbyte/source-granola",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/granola",
-            "externalDocumentationUrls": [
-              {
-                "title": "Granola Enterprise API documentation",
-                "type": "api_reference",
-                "url": "https://docs.granola.ai/introduction"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "patrick.nilan@airbyte.io",
-                "commit_sha": "700c920756554107a7c01d4e99ac651231cbc2dc",
-                "commit_timestamp": "2026-08-21T08:55:02-07:00"
-              },
-              "release": {
-                "attributed_to": "pnilan",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "700c920756554107a7c01d4e99ac651231cbc2dc",
-                "merged_at": "2026-08-21T15:55:03Z",
-                "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 158243242,
-                "pr_author_login": "devin-ai-integration",
-                "pr_author_type": "Bot",
-                "pr_merged_by_login": "pnilan",
-                "pr_merged_by_type": "User",
-                "pr_number": 84907,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84907",
-                "released_at": "2026-08-21T15:55:03Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-granola/0.3.0.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-granola/0.3.0/metadata.yaml",
-                "metadata_last_modified": "2026-08-21T15:59:15.474429+00:00",
-                "registry_entry_generated_at": "2026-08-21T15:59:15.474429+00:00"
-              }
-            },
-            "githubIssueLabel": "source-granola",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-granola/latest/icon.svg",
-            "language": "manifest-only",
-            "license": "ELv2",
-            "name": "Granola",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "alpha",
-            "releases": {
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": false,
-                "packageName": "airbyte-source-granola"
-              }
-            },
-            "sourceDefinitionId": "9023923c-002f-4131-9554-3ebdf56540a4",
-            "sourceType": "api",
-            "spec": {
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "api_key": {
-                    "airbyte_secret": true,
-                    "description": "Your Granola API key. For a personal key, open the Granola desktop app and go to Settings > Connectors > API keys > Create new key. For an Enterprise API key, go to Settings > API > Create new key. On Enterprise plans, workspace admins must enable \"Allow personal API keys\" in Settings > Workspace > General before personal keys can be created.",
-                    "order": 0,
-                    "title": "API Key",
-                    "type": "string"
-                  },
-                  "start_date": {
-                    "description": "The earliest date from which to start replicating notes, in YYYY-MM-DD format.",
-                    "examples": [
-                      "2024-01-01"
-                    ],
-                    "format": "date",
-                    "order": 1,
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-                    "pattern_descriptor": "YYYY-MM-DD",
-                    "title": "Start Date",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "api_key"
-                ],
-                "type": "object"
-              },
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "suggestedStreams": {
-              "streams": [
-                "detailed_notes"
-              ]
-            },
-            "supportLevel": "community",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "cdk:low-code",
-              "language:manifest-only"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
-          "enableProgressiveRollout": false,
+          "autopilotConfig": {
+            "autoPromoteStages": true,
+            "autoStart": true,
+            "strategy": "fast"
+          },
+          "defaultRolloutMode": "autopilot",
+          "enableProgressiveRollout": true,
           "initialPercentage": 0,
           "maxPercentage": 50
         }
@@ -90396,15 +91616,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           }
         },
@@ -96884,16 +98104,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "release": {
@@ -111793,7 +113013,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/pinterest-migrations",
         "releaseCandidates": {
-          "2.2.12": {
+          "2.3.0": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -111848,7 +113068,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "2.2.12",
+            "dockerImageTag": "2.3.0",
             "dockerRepository": "airbyte/source-pinterest",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/pinterest",
             "externalDocumentationUrls": [
@@ -111865,29 +113085,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "d83edc0334003633aae7fd2f97c9d390abf71f7c",
-                "commit_timestamp": "2026-08-18T07:19:06+00:00"
+                "commit_author": "deepinsight coder",
+                "commit_author_email": "32898216+Vamsi-klu@users.noreply.github.com",
+                "commit_sha": "7a615370654a51c565b4dbaf81a53794fd3c9d32",
+                "commit_timestamp": "2026-08-24T07:48:02-07:00"
               },
               "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "d83edc0334003633aae7fd2f97c9d390abf71f7c",
-                "merged_at": "2026-08-18T07:19:06Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
-                "pr_author_type": "Bot",
-                "pr_number": 84706,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84706",
-                "released_at": "2026-08-18T07:19:06Z",
+                "attributed_to": "bazarnov",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "7a615370654a51c565b4dbaf81a53794fd3c9d32",
+                "merged_at": "2026-08-24T14:48:02Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 32898216,
+                "pr_author_login": "Vamsi-klu",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "bazarnov",
+                "pr_merged_by_type": "User",
+                "pr_number": 80303,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/80303",
+                "released_at": "2026-08-24T14:48:02Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pinterest/2.2.12.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pinterest/2.3.0.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-pinterest/2.2.12/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T07:23:43.869546+00:00",
-                "registry_entry_generated_at": "2026-08-18T07:23:43.869546+00:00"
+                "metadata_file_path": "metadata/airbyte/source-pinterest/2.3.0/metadata.yaml",
+                "metadata_last_modified": "2026-08-24T14:52:39.399701+00:00",
+                "registry_entry_generated_at": "2026-08-24T14:52:39.399701+00:00"
               }
             },
             "githubIssueLabel": "source-pinterest",
@@ -112059,7 +113283,7 @@
                       "description": "Config for custom report",
                       "properties": {
                         "ad_group_statuses": {
-                          "description": "Select at most 6 ad group status values for filtering custom report rows.",
+                          "description": "Filter custom report rows by ad group status. Selections exceeding Pinterest's per-request limit of 6 are automatically split into multiple API calls; this requires a report level at or below AD_GROUP.",
                           "items": {
                             "enum": [
                               "RUNNING",
@@ -112073,9 +113297,8 @@
                             ],
                             "type": "string"
                           },
-                          "maxItems": 6,
                           "order": 10,
-                          "title": "Ad group statuses (max 6 values)",
+                          "title": "Ad group statuses",
                           "type": [
                             "array",
                             "null"
@@ -112083,7 +113306,7 @@
                           "uniqueItems": true
                         },
                         "ad_statuses": {
-                          "description": "Select at most 6 ad status values for filtering custom report rows.",
+                          "description": "Filter custom report rows by ad status. Selections exceeding Pinterest's per-request limit of 6 are automatically split into multiple API calls; this requires a PIN_PROMOTION report level.",
                           "items": {
                             "enum": [
                               "APPROVED",
@@ -112097,9 +113320,8 @@
                             ],
                             "type": "string"
                           },
-                          "maxItems": 6,
                           "order": 11,
-                          "title": "Ad statuses (max 6 values)",
+                          "title": "Ad statuses",
                           "type": [
                             "array",
                             "null"
@@ -112125,7 +113347,7 @@
                           "type": "array"
                         },
                         "campaign_statuses": {
-                          "description": "Select at most 6 campaign status values for filtering custom report rows.",
+                          "description": "Filter custom report rows by campaign status. Selections exceeding Pinterest's per-request limit of 6 are automatically split into multiple API calls; this requires a report level at or below CAMPAIGN.",
                           "items": {
                             "enum": [
                               "RUNNING",
@@ -112139,9 +113361,8 @@
                             ],
                             "type": "string"
                           },
-                          "maxItems": 6,
                           "order": 9,
-                          "title": "Campaign statuses (max 6 values)",
+                          "title": "Campaign statuses",
                           "type": [
                             "array",
                             "null"
@@ -114272,7 +115493,7 @@
       "releaseStage": "alpha",
       "releases": {
         "releaseCandidates": {
-          "0.3.68": {
+          "0.3.69": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 100,
@@ -114312,7 +115533,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "0.3.68",
+            "dockerImageTag": "0.3.69",
             "dockerRepository": "airbyte/source-pokeapi",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/pokeapi",
             "externalDocumentationUrls": [
@@ -114324,29 +115545,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "61ba2acc1b952160976d5ab4f8da87003f6be823",
-                "commit_timestamp": "2026-08-18T06:44:54+00:00"
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "b18b22373293fd826c81619b3a08da1c8d879ac8",
+                "commit_timestamp": "2026-08-24T14:50:36-07:00"
               },
               "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "61ba2acc1b952160976d5ab4f8da87003f6be823",
-                "merged_at": "2026-08-18T06:44:55Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
+                "attributed_to": "pnilan",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "b18b22373293fd826c81619b3a08da1c8d879ac8",
+                "merged_at": "2026-08-24T21:50:37Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
                 "pr_author_type": "Bot",
-                "pr_number": 84696,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84696",
-                "released_at": "2026-08-18T06:44:55Z",
+                "pr_merged_by_login": "pnilan",
+                "pr_merged_by_type": "User",
+                "pr_number": 84977,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84977",
+                "released_at": "2026-08-24T21:50:37Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pokeapi/0.3.68.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pokeapi/0.3.69.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-pokeapi/0.3.68/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T06:48:57.967818+00:00",
-                "registry_entry_generated_at": "2026-08-18T06:48:57.967818+00:00"
+                "metadata_file_path": "metadata/airbyte/source-pokeapi/0.3.69/metadata.yaml",
+                "metadata_last_modified": "2026-08-24T21:55:11.635034+00:00",
+                "registry_entry_generated_at": "2026-08-24T21:55:11.635034+00:00"
               }
             },
             "githubIssueLabel": "source-pokeapi",
@@ -139701,15 +140926,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "release": {
@@ -142048,15 +143273,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "release": {
@@ -154272,15 +155497,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-yotpo/0.2.16.spdx.json",
@@ -159701,7 +160926,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.1.3",
+      "dockerImageTag": "0.1.4",
       "dockerRepository": "airbyte/source-zoho-crm",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/zoho-crm",
       "externalDocumentationUrls": [
@@ -159728,10 +160953,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "381ca5533e9d5e4b12bc8fa9ed4c648dd665af61",
-          "commit_timestamp": "2025-11-18T18:13:26-08:00"
+          "commit_author": "Abdalrahman-Bebars",
+          "commit_author_email": "70929153+Abdalrahman-Bebars@users.noreply.github.com",
+          "commit_sha": "69b62fedd0fdaa7bdd3c3152eb2d1f30e9dc16b9",
+          "commit_timestamp": "2026-08-24T14:17:55+03:00"
         },
         "metrics": {
           "all": {
@@ -159747,12 +160972,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zoho-crm/0.1.3.spdx.json",
+        "release": {
+          "attributed_to": "bazarnov",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "69b62fedd0fdaa7bdd3c3152eb2d1f30e9dc16b9",
+          "merged_at": "2026-08-24T11:17:55Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 70929153,
+          "pr_author_login": "Abdalrahman-Bebars",
+          "pr_author_type": "User",
+          "pr_merged_by_login": "bazarnov",
+          "pr_merged_by_type": "User",
+          "pr_number": 80278,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/80278",
+          "released_at": "2026-08-24T11:17:55Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zoho-crm/0.1.4.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-zoho-crm/latest/metadata.yaml",
-          "metadata_last_modified": "2025-11-19T02:30:01.765000+00:00",
-          "registry_entry_generated_at": "2025-11-19T02:39:58.021429"
+          "metadata_last_modified": "2026-08-24T11:23:33.617763+00:00",
+          "registry_entry_generated_at": "2026-08-24T11:23:33.617763+00:00"
         }
       },
       "githubIssueLabel": "source-zoho-crm",
