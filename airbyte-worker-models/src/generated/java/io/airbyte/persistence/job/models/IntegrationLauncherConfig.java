@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.AllowedHosts;
@@ -32,6 +33,7 @@ import java.util.UUID;
   "connectionId",
   "workspaceId",
   "dockerImage",
+  "connectorDefinitionName",
   "protocolVersion",
   "isCustomConnector",
   "allowedHosts",
@@ -67,6 +69,14 @@ public class IntegrationLauncherConfig {
    */
   @JsonProperty("dockerImage")
   private String dockerImage;
+  /**
+   * Resolved connector definition name for metric attribution when the runtime docker image is a
+   * shared base image.
+   *
+   */
+  @JsonProperty("connectorDefinitionName")
+  @JsonPropertyDescription("Resolved connector definition name for metric attribution when the runtime docker image is a shared base image.")
+  private String connectorDefinitionName;
   @JsonProperty("protocolVersion")
   private Version protocolVersion;
   @JsonProperty("isCustomConnector")
@@ -184,6 +194,21 @@ public class IntegrationLauncherConfig {
 
   public IntegrationLauncherConfig withDockerImage(String dockerImage) {
     this.dockerImage = dockerImage;
+    return this;
+  }
+
+  @JsonProperty("connectorDefinitionName")
+  public String getConnectorDefinitionName() {
+    return connectorDefinitionName;
+  }
+
+  @JsonProperty("connectorDefinitionName")
+  public void setConnectorDefinitionName(String connectorDefinitionName) {
+    this.connectorDefinitionName = connectorDefinitionName;
+  }
+
+  public IntegrationLauncherConfig withConnectorDefinitionName(String connectorDefinitionName) {
+    this.connectorDefinitionName = connectorDefinitionName;
     return this;
   }
 
@@ -316,6 +341,10 @@ public class IntegrationLauncherConfig {
     sb.append('=');
     sb.append(((this.dockerImage == null) ? "<null>" : this.dockerImage));
     sb.append(',');
+    sb.append("connectorDefinitionName");
+    sb.append('=');
+    sb.append(((this.connectorDefinitionName == null) ? "<null>" : this.connectorDefinitionName));
+    sb.append(',');
     sb.append("protocolVersion");
     sb.append('=');
     sb.append(((this.protocolVersion == null) ? "<null>" : this.protocolVersion));
@@ -360,6 +389,7 @@ public class IntegrationLauncherConfig {
     result = ((result * 31) + ((this.jobId == null) ? 0 : this.jobId.hashCode()));
     result = ((result * 31) + ((this.additionalEnvironmentVariables == null) ? 0 : this.additionalEnvironmentVariables.hashCode()));
     result = ((result * 31) + ((this.dockerImage == null) ? 0 : this.dockerImage.hashCode()));
+    result = ((result * 31) + ((this.connectorDefinitionName == null) ? 0 : this.connectorDefinitionName.hashCode()));
     result = ((result * 31) + ((this.connectionId == null) ? 0 : this.connectionId.hashCode()));
     result = ((result * 31) + ((this.additionalLabels == null) ? 0 : this.additionalLabels.hashCode()));
     result = ((result * 31) + ((this.protocolVersion == null) ? 0 : this.protocolVersion.hashCode()));
@@ -381,6 +411,7 @@ public class IntegrationLauncherConfig {
     return (Objects.equals(this.isCustomConnector, rhs.isCustomConnector)) && (Objects.equals(this.allowedHosts, rhs.allowedHosts))
         && Objects.equals(this.jobId, rhs.jobId) && (Objects.equals(this.additionalEnvironmentVariables, rhs.additionalEnvironmentVariables))
         && Objects.equals(this.dockerImage, rhs.dockerImage) && (Objects.equals(this.connectionId, rhs.connectionId))
+        && Objects.equals(this.connectorDefinitionName, rhs.connectorDefinitionName)
         && (Objects.equals(this.additionalLabels, rhs.additionalLabels)) && (Objects.equals(this.protocolVersion, rhs.protocolVersion))
         && (this.additionalProperties == rhs.additionalProperties || this.additionalProperties.equals(rhs.additionalProperties))
         && (Objects.equals(this.priority, rhs.priority)) && Objects.equals(this.attemptId, rhs.attemptId)

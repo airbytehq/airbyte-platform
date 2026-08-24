@@ -20,11 +20,18 @@ class ReplicationMetricReporter(
   private val dockerImage = replicationInput.sourceLauncherConfig.dockerImage
   private lateinit var dockerRepo: String
   private lateinit var dockerVersion: String
+  private lateinit var connector: String
 
   @PostConstruct
   fun initialize() {
     dockerRepo = dockerImage.split(":").first()
     dockerVersion = dockerImage.split(":").last()
+    // Fall back to the Docker repository when no connector definition name is provided.
+    connector =
+      replicationInput.sourceLauncherConfig.connectorDefinitionName
+        ?.takeIf { it.isNotBlank() }
+        ?.replace(",", "")
+        ?: dockerRepo
   }
 
   /**
@@ -46,6 +53,7 @@ class ReplicationMetricReporter(
         .toMutableList()
     attributes.add(MetricAttribute("docker_repo", dockerRepo))
     attributes.add(MetricAttribute("docker_version", dockerVersion))
+    attributes.add(MetricAttribute("connector", connector))
     attributes.add(MetricAttribute("stream", stream.toString()))
     metricClient.count(
       metric = OssMetricsRegistry.NUM_DISTINCT_SCHEMA_VALIDATION_ERRORS_IN_STREAMS,
@@ -73,6 +81,7 @@ class ReplicationMetricReporter(
         .toMutableList()
     attributes.add(MetricAttribute("docker_repo", dockerRepo))
     attributes.add(MetricAttribute("docker_version", dockerVersion))
+    attributes.add(MetricAttribute("connector", connector))
     attributes.add(MetricAttribute("stream", stream.toString()))
     val attributesArr = attributes.toTypedArray<MetricAttribute>()
     metricClient.count(

@@ -356,6 +356,7 @@ class JobInputService(
         attemptId = attemptNumber,
         allowedHosts = sourceDefinitionVersion.allowedHosts,
         connectionId = connectionId,
+        connectorDefinitionName = sourceDefinition.name,
       )
 
     val destinationIntegrationLauncherConfig =
@@ -368,6 +369,7 @@ class JobInputService(
         attemptId = attemptNumber,
         allowedHosts = destinationDefinitionVersion.allowedHosts,
         connectionId = connectionId,
+        connectorDefinitionName = destinationDefinition.name,
       )
 
     val jobConfigData = getJobConfig(currentJob, currentAttempt)
@@ -690,6 +692,7 @@ class JobInputService(
           attemptId = attemptId,
           allowedHosts = allowedHosts,
           connectionId = null,
+          connectorDefinitionName = null,
         ),
       checkConnectionInput =
         StandardCheckConnectionInput()
@@ -711,6 +714,7 @@ class JobInputService(
     attemptId: Long,
     allowedHosts: AllowedHosts?,
     connectionId: UUID?,
+    connectorDefinitionName: String?,
   ): IntegrationLauncherConfig =
     IntegrationLauncherConfig()
       .withJobId(jobId)
@@ -721,6 +725,7 @@ class JobInputService(
       .withAttemptId(attemptId)
       .withAllowedHosts(allowedHosts)
       .withConnectionId(connectionId)
+      .withConnectorDefinitionName(connectorDefinitionName)
 
   private fun buildJobDiscoverConfig(
     actorType: ConfigActorType,

@@ -134,6 +134,7 @@ internal class JobInputHandlerTest {
     val destinationDefinition =
       mockk<StandardDestinationDefinition> {
         every { resourceRequirements } returns null
+        every { name } returns "Destination"
       }
     every { destinationService.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID) } returns destinationDefinition
     every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, DESTINATION_ID) } returns
@@ -144,6 +145,7 @@ internal class JobInputHandlerTest {
     val sourceDefinition =
       mockk<StandardSourceDefinition> {
         every { resourceRequirements } returns null
+        every { name } returns "Source"
       }
     every { sourceService.getStandardSourceDefinition(any()) } returns sourceDefinition
     every { actorDefinitionVersionHelper.getSourceVersion(any<StandardSourceDefinition>(), any(), any()) } returns
@@ -208,6 +210,7 @@ internal class JobInputHandlerTest {
     every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns
       mockk<StandardSourceDefinition> {
         every { resourceRequirements } returns null
+        every { name } returns "Source"
       }
 
     every {
@@ -284,6 +287,7 @@ internal class JobInputHandlerTest {
         .withConnectionId(CONNECTION_ID)
         .withWorkspaceId(WORKSPACE_ID)
         .withDockerImage(jobSyncConfig.sourceDockerImage)
+        .withConnectorDefinitionName("Source")
 
     val expectedDestinationLauncherConfig =
       IntegrationLauncherConfig()
@@ -292,6 +296,7 @@ internal class JobInputHandlerTest {
         .withConnectionId(CONNECTION_ID)
         .withWorkspaceId(jobSyncConfig.workspaceId)
         .withDockerImage(jobSyncConfig.destinationDockerImage)
+        .withConnectorDefinitionName("Destination")
         .withAdditionalEnvironmentVariables(mutableMapOf<String?, String?>())
 
     val expectedJobInput =
@@ -414,6 +419,7 @@ internal class JobInputHandlerTest {
         .withConnectionId(CONNECTION_ID)
         .withWorkspaceId(jobResetConfig.workspaceId)
         .withDockerImage(jobResetConfig.destinationDockerImage)
+        .withConnectorDefinitionName("Destination")
         .withAdditionalEnvironmentVariables(mutableMapOf<String?, String?>())
 
     val expectedJobInput =

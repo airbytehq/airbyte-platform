@@ -107,12 +107,15 @@ open class JobInputHandler(
       }
 
       val jobConfigType = job.config.configType
+      var sourceDefinitionName: String? = null
 
       if (Job.SYNC_REPLICATION_TYPES.contains(jobConfigType)) {
         val source = sourceService.getSourceConnection(standardSync.sourceId)
+        val sourceDefinition = sourceService.getStandardSourceDefinition(source.sourceDefinitionId)
+        sourceDefinitionName = sourceDefinition.name
         sourceVersion =
           actorDefinitionVersionHelper.getSourceVersion(
-            sourceService.getStandardSourceDefinition(source.sourceDefinitionId),
+            sourceDefinition,
             source.workspaceId,
             source.sourceId,
           )
@@ -129,9 +132,10 @@ open class JobInputHandler(
       val jobRunConfig = createJobRunConfig(jobId, attempt)
 
       val destination = destinationService.getDestinationConnection(standardSync.destinationId)
+      val destinationDefinition = destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)
       val destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(
-          destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId),
+          destinationDefinition,
           destination.workspaceId,
           destination.destinationId,
         )
@@ -147,6 +151,7 @@ open class JobInputHandler(
           config,
           sourceVersion,
           attemptSyncConfig.sourceConfiguration,
+          sourceDefinitionName,
         )
 
       val destinationLauncherConfig =
@@ -158,6 +163,7 @@ open class JobInputHandler(
           destinationVersion,
           attemptSyncConfig.destinationConfiguration,
           emptyMap(),
+          destinationDefinition.name,
         )
 
       val featureFlagContext: MutableList<Context> = ArrayList()
@@ -327,6 +333,7 @@ open class JobInputHandler(
     config: JobSyncConfig,
     @Nullable sourceVersion: ActorDefinitionVersion?,
     sourceConfiguration: JsonNode,
+    sourceDefinitionName: String?,
   ): IntegrationLauncherConfig {
     val configReplacer = ConfigReplacer()
 
@@ -337,6 +344,7 @@ open class JobInputHandler(
         .withConnectionId(connectionId)
         .withWorkspaceId(config.workspaceId)
         .withDockerImage(config.sourceDockerImage)
+        .withConnectorDefinitionName(sourceDefinitionName)
         .withProtocolVersion(config.sourceProtocolVersion)
         .withIsCustomConnector(config.isSourceCustomConnector)
 
@@ -355,6 +363,7 @@ open class JobInputHandler(
     destinationVersion: ActorDefinitionVersion,
     destinationConfiguration: JsonNode,
     additionalEnviornmentVariables: Map<String, String>,
+    destinationDefinitionName: String?,
   ): IntegrationLauncherConfig {
     val configReplacer = ConfigReplacer()
 
@@ -364,6 +373,7 @@ open class JobInputHandler(
       .withConnectionId(connectionId)
       .withWorkspaceId(config.workspaceId)
       .withDockerImage(config.destinationDockerImage)
+      .withConnectorDefinitionName(destinationDefinitionName)
       .withProtocolVersion(config.destinationProtocolVersion)
       .withIsCustomConnector(config.isDestinationCustomConnector)
       .withAllowedHosts(configReplacer.getAllowedHosts(destinationVersion.allowedHosts, destinationConfiguration))

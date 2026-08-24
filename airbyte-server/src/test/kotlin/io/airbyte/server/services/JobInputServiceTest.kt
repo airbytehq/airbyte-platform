@@ -700,6 +700,7 @@ class JobInputServiceTest {
     every { mockSourceDefinition.sourceDefinitionId } returns sourceDefinitionId
     every { mockSourceDefinition.custom } returns false
     every { mockSourceDefinition.sourceType } returns StandardSourceDefinition.SourceType.DATABASE
+    every { mockSourceDefinition.name } returns "Source"
 
     val sourceICPOption =
       Jsons.jsonNode(
@@ -729,6 +730,7 @@ class JobInputServiceTest {
     val mockDestinationDefinition = mockk<StandardDestinationDefinition>()
     every { mockDestinationDefinition.destinationDefinitionId } returns destinationDefinitionId
     every { mockDestinationDefinition.custom } returns true
+    every { mockDestinationDefinition.name } returns "Destination"
 
     val mockDestinationDefinitionVersion = mockk<ActorDefinitionVersion>()
     every { mockDestinationDefinitionVersion.dockerImageTag } returns destinationImageTag
@@ -856,7 +858,8 @@ class JobInputServiceTest {
             ).withIsCustomConnector(false)
             .withAttemptId(attemptNumber.toLong())
             .withAllowedHosts(AllowedHosts())
-            .withConnectionId(connectionId),
+            .withConnectionId(connectionId)
+            .withConnectorDefinitionName("Source"),
         destinationLauncherConfig =
           IntegrationLauncherConfig()
             .withJobId(jobId.toString())
@@ -867,7 +870,8 @@ class JobInputServiceTest {
             ).withIsCustomConnector(true)
             .withAttemptId(attemptNumber.toLong())
             .withAllowedHosts(AllowedHosts())
-            .withConnectionId(connectionId),
+            .withConnectionId(connectionId)
+            .withConnectorDefinitionName("Destination"),
         namespaceDefinition = expectedNamespaceDefinition,
         namespaceFormat = expectedNamespaceFormat,
         prefix = expectedPrefix,
