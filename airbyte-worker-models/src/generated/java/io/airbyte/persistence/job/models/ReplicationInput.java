@@ -18,6 +18,7 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
+import io.airbyte.workers.models.DeclaredStreamFields;
 import jakarta.annotation.Generated;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,6 +45,7 @@ import java.util.UUID;
   "operationSequence",
   "webhookOperationConfigs",
   "catalog",
+  "declaredStreamFields",
   "state",
   "syncResourceRequirements",
   "workspaceId",
@@ -131,6 +133,8 @@ public class ReplicationInput {
   @JsonProperty("catalog")
   @JsonPropertyDescription("the configured airbyte catalog")
   private ConfiguredAirbyteCatalog catalog;
+  @JsonProperty("declaredStreamFields")
+  private List<DeclaredStreamFields> declaredStreamFields;
   /**
    * optional state of the previous run. this object is defined per integration.
    *
@@ -495,6 +499,21 @@ public class ReplicationInput {
 
   public ReplicationInput withCatalog(ConfiguredAirbyteCatalog catalog) {
     this.catalog = catalog;
+    return this;
+  }
+
+  @JsonProperty("declaredStreamFields")
+  public List<DeclaredStreamFields> getDeclaredStreamFields() {
+    return declaredStreamFields;
+  }
+
+  @JsonProperty("declaredStreamFields")
+  public void setDeclaredStreamFields(List<DeclaredStreamFields> declaredStreamFields) {
+    this.declaredStreamFields = declaredStreamFields;
+  }
+
+  public ReplicationInput withDeclaredStreamFields(List<DeclaredStreamFields> declaredStreamFields) {
+    this.declaredStreamFields = declaredStreamFields;
     return this;
   }
 
@@ -1027,6 +1046,10 @@ public class ReplicationInput {
     sb.append('=');
     sb.append(((this.catalog == null) ? "<null>" : this.catalog));
     sb.append(',');
+    sb.append("declaredStreamFields");
+    sb.append('=');
+    sb.append(((this.declaredStreamFields == null) ? "<null>" : this.declaredStreamFields));
+    sb.append(',');
     sb.append("state");
     sb.append('=');
     sb.append(((this.state == null) ? "<null>" : this.state));
@@ -1126,6 +1149,7 @@ public class ReplicationInput {
     result = ((result * 31) + ((this.operationSequence == null) ? 0 : this.operationSequence.hashCode()));
     result = ((result * 31) + ((this.prefix == null) ? 0 : this.prefix.hashCode()));
     result = ((result * 31) + ((this.catalog == null) ? 0 : this.catalog.hashCode()));
+    result = ((result * 31) + ((this.declaredStreamFields == null) ? 0 : this.declaredStreamFields.hashCode()));
     result = ((result * 31) + ((this.useFileTransfer == null) ? 0 : this.useFileTransfer.hashCode()));
     result = ((result * 31) + ((this.networkSecurityTokens == null) ? 0 : this.networkSecurityTokens.hashCode()));
     result = ((result * 31) + ((this.destinationId == null) ? 0 : this.destinationId.hashCode()));
@@ -1166,6 +1190,7 @@ public class ReplicationInput {
     }
     return Objects.equals(this.sourceId, rhs.sourceId) && Objects.equals(this.operationSequence, rhs.operationSequence)
         && Objects.equals(this.prefix, rhs.prefix) && Objects.equals(this.catalog, rhs.catalog)
+        && Objects.equals(this.declaredStreamFields, rhs.declaredStreamFields)
         && Objects.equals(this.useFileTransfer, rhs.useFileTransfer) && Objects.equals(this.networkSecurityTokens, rhs.networkSecurityTokens)
         && Objects.equals(this.destinationId, rhs.destinationId) && Objects.equals(this.jobRunConfig, rhs.jobRunConfig)
         && Objects.equals(this.taskQueue, rhs.taskQueue) && Objects.equals(this.sourceIPCOptions, rhs.sourceIPCOptions)

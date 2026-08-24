@@ -14,6 +14,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 private const val DOCKER_IMAGE = "test/image:1.2.3"
@@ -51,6 +52,14 @@ internal class ReplicationMetricReporterTest {
 
     reporter.trackSchemaValidationErrors(stream = stream, validationErrors = validationErrors)
 
+    assertEquals(
+      setOf("error1", "error2"),
+      capturedAttributes
+        .single()
+        .filter { it.key == "validation_error" }
+        .map { it.value }
+        .toSet(),
+    )
     verify(exactly = 1) {
       metricClient.count(
         metric = OssMetricsRegistry.NUM_DISTINCT_SCHEMA_VALIDATION_ERRORS_IN_STREAMS,
@@ -175,6 +184,14 @@ internal class ReplicationMetricReporterTest {
 
     reporter.trackUnexpectedFields(stream = stream, unexpectedFieldNames = unexpectedFieldNames)
 
+    assertEquals(
+      setOf("field1", "field2"),
+      capturedAttributes
+        .single()
+        .filter { it.key == "field_name" }
+        .map { it.value }
+        .toSet(),
+    )
     verify(exactly = 1) {
       metricClient.count(
         metric = OssMetricsRegistry.NUM_UNEXPECTED_FIELDS_IN_STREAMS,

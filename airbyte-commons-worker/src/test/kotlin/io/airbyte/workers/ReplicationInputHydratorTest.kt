@@ -223,6 +223,166 @@ internal class ReplicationInputHydratorTest {
     )
   }
 
+  @Test
+  fun testDeclaredStreamFieldsAreComputedBeforeFieldSelectionPrunesCatalog() {
+    val schema =
+      Jsons.deserialize(
+        """
+        {
+          "type": ["null", "object"],
+          "properties": {
+            "id": {"type": ["null", "string"]},
+            "deselected": {"type": ["null", "string"]}
+          }
+        }
+        """.trimIndent(),
+      )
+    val selectedStream =
+      AirbyteStream(
+        name = "selected",
+        jsonSchema = schema,
+        supportedSyncModes = listOf(io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL),
+        sourceDefinedCursor = null,
+        sourceDefinedPrimaryKey = null,
+        defaultCursorField = null,
+        namespace = TEST_STREAM_NAMESPACE,
+        isResumable = null,
+        isFileBased = null,
+      )
+    val unselectedStream =
+      AirbyteStream(
+        name = "unselected",
+        jsonSchema = schema.deepCopy(),
+        supportedSyncModes = listOf(io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL),
+        sourceDefinedCursor = null,
+        sourceDefinedPrimaryKey = null,
+        defaultCursorField = null,
+        namespace = TEST_STREAM_NAMESPACE,
+        isResumable = null,
+        isFileBased = null,
+      )
+    val selectedConfiguration =
+      AirbyteStreamConfiguration(
+        syncMode = io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL,
+        destinationSyncMode = DestinationSyncMode.APPEND,
+        cursorField = null,
+        primaryKey = null,
+        aliasName = null,
+        selected = true,
+        includeFiles = false,
+        suggested = null,
+        fieldSelectionEnabled = true,
+        selectedFields =
+          listOf(
+            io.airbyte.api.client.model.generated
+              .SelectedFieldInfo(fieldPath = listOf("id")),
+          ),
+        hashedFields = null,
+        mappers = null,
+        minimumGenerationId = null,
+        generationId = null,
+        syncId = null,
+      )
+    val unselectedConfiguration =
+      AirbyteStreamConfiguration(
+        syncMode = io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL,
+        destinationSyncMode = DestinationSyncMode.APPEND,
+        cursorField = null,
+        primaryKey = null,
+        aliasName = null,
+        selected = false,
+        includeFiles = false,
+        suggested = null,
+        fieldSelectionEnabled = false,
+        selectedFields = null,
+        hashedFields = null,
+        mappers = null,
+        minimumGenerationId = null,
+        generationId = null,
+        syncId = null,
+      )
+    val nullNamespaceStream =
+      AirbyteStream(
+        name = "null-namespace",
+        jsonSchema = schema.deepCopy(),
+        supportedSyncModes = listOf(io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL),
+        sourceDefinedCursor = null,
+        sourceDefinedPrimaryKey = null,
+        defaultCursorField = null,
+        namespace = null,
+        isResumable = null,
+        isFileBased = null,
+      )
+    val nullNamespaceConfiguration =
+      AirbyteStreamConfiguration(
+        syncMode = io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL,
+        destinationSyncMode = DestinationSyncMode.APPEND,
+        cursorField = null,
+        primaryKey = null,
+        aliasName = null,
+        selected = true,
+        includeFiles = false,
+        suggested = null,
+        fieldSelectionEnabled = false,
+        selectedFields = null,
+        hashedFields = null,
+        mappers = null,
+        minimumGenerationId = null,
+        generationId = null,
+        syncId = null,
+      )
+    val connectionCatalog =
+      AirbyteCatalog(
+        listOf(
+          AirbyteStreamAndConfiguration(selectedStream, selectedConfiguration),
+          AirbyteStreamAndConfiguration(unselectedStream, unselectedConfiguration),
+          AirbyteStreamAndConfiguration(nullNamespaceStream, nullNamespaceConfiguration),
+        ),
+      )
+    every { jobsApi.getJobInput(any()) } returns
+      mockk<JobInput> {
+        every { jobRunConfig } returns null
+        every { sourceLauncherConfig } returns null
+        every { destinationLauncherConfig } returns null
+        every { syncInput } returns null
+      }
+    every { connectionApi.getConnection(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+      mockk<ConnectionRead>(relaxed = true) {
+        every { syncCatalog } returns connectionCatalog
+      }
+
+    val replicationInput =
+      replicationInputHydrator.getHydratedReplicationInput(
+        getDefaultReplicationActivityInputForTest(supportsRefresh = false),
+      )
+
+    assertEquals(2, replicationInput.declaredStreamFields.size)
+    assertEquals(
+      io.airbyte.config
+        .StreamDescriptor()
+        .withName("selected")
+        .withNamespace(TEST_STREAM_NAMESPACE),
+      replicationInput.declaredStreamFields[0].streamDescriptor,
+    )
+    assertEquals(
+      io.airbyte.config
+        .StreamDescriptor()
+        .withName("null-namespace"),
+      replicationInput.declaredStreamFields[1].streamDescriptor,
+    )
+    assertEquals(null, replicationInput.declaredStreamFields[1].streamDescriptor.namespace)
+    assertEquals(listOf("id", "deselected"), replicationInput.declaredStreamFields[0].fields)
+    assertEquals(
+      listOf("id"),
+      replicationInput.catalog.streams[0]
+        .stream.jsonSchema
+        .findPath("properties")
+        .fieldNames()
+        .asSequence()
+        .toList(),
+    )
+  }
+
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   fun testGenerateReplicationInputHandlesResets(withRefresh: Boolean) {

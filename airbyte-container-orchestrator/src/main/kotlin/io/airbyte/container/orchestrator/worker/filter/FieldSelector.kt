@@ -50,7 +50,7 @@ private fun getUnexpectedFieldNames(
 class FieldSelector(
   private val recordSchemaValidator: RecordSchemaValidator,
   private val metricReporter: ReplicationMetricReporter,
-  replicationInput: ReplicationInput,
+  private val replicationInput: ReplicationInput,
   replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
 ) {
   private val removeValidationLimit: Boolean =
@@ -85,6 +85,24 @@ class FieldSelector(
       validateSchemaUncounted(airbyteMessage)
     } else {
       validateSchemaWithCount(airbyteMessage)
+    }
+  }
+
+  /**
+   * Track fields present in records but absent from the declared stream schema.
+   *
+   * @param airbyteMessage message to inspect.
+   */
+  fun trackUnexpectedFields(airbyteMessage: AirbyteMessage) {
+    val record = airbyteMessage.record ?: return
+    val messageStream = AirbyteStreamNameNamespacePair.fromRecordMessage(record)
+    val unexpectedFieldNames = getUnexpectedFieldNames(record, streamToAllFields.getOrDefault(messageStream, emptySet()))
+    if (unexpectedFieldNames.isNotEmpty()) {
+      val fields =
+        unexpectedFields.computeIfAbsent(messageStream) {
+          if (removeValidationLimit) ConcurrentHashMap.newKeySet() else mutableSetOf()
+        }
+      fields.addAll(unexpectedFieldNames)
     }
   }
 
@@ -165,16 +183,31 @@ class FieldSelector(
    * @param catalog catalog
    */
   private fun populateStreamToAllFields(catalog: ConfiguredAirbyteCatalog) {
+    val declaredFieldsByStream =
+      replicationInput.declaredStreamFields
+        .orEmpty()
+        .associate { declaredStream ->
+          AirbyteStreamNameNamespacePair(declaredStream.streamDescriptor.name, declaredStream.streamDescriptor.namespace) to
+            declaredStream.fields.map(::replaceEscapeCharacter).toSet()
+        }
+
     catalog.streams.forEach { s ->
-      val fields = mutableSetOf<String>()
-      val propertiesNode = s.stream.jsonSchema.findPath("properties")
-      if (propertiesNode.isObject) {
-        propertiesNode.fieldNames().forEachRemaining { fieldName -> fields.add(replaceEscapeCharacter(fieldName)) }
-      } else {
-        throw RuntimeException("No properties node in stream schema")
-      }
-      streamToAllFields.put(extractStream(s), fields)
+      val stream = extractStream(s)
+      // Fall back per stream because declared field metadata may be incomplete for older or mixed inputs.
+      streamToAllFields[stream] = declaredFieldsByStream[stream] ?: fieldsFromCatalogSchema(s)
     }
+  }
+
+  private fun fieldsFromCatalogSchema(stream: ConfiguredAirbyteStream): Set<String> {
+    val propertiesNode = stream.stream.jsonSchema.findPath("properties")
+    if (!propertiesNode.isObject) {
+      throw RuntimeException("No properties node in stream schema")
+    }
+    return propertiesNode
+      .fieldNames()
+      .asSequence()
+      .map(::replaceEscapeCharacter)
+      .toSet()
   }
 
   private fun extractStream(stream: ConfiguredAirbyteStream) = AirbyteStreamNameNamespacePair(stream.stream.name, stream.stream.namespace)
@@ -188,10 +221,6 @@ class FieldSelector(
     val messageStream = AirbyteStreamNameNamespacePair.fromRecordMessage(record)
 
     recordSchemaValidator.validateSchemaWithoutCounting(record, messageStream, uncountedValidationErrors)
-    val unexpectedFieldNames = getUnexpectedFieldNames(record, streamToAllFields.getOrDefault(messageStream, emptySet()))
-    if (unexpectedFieldNames.isNotEmpty()) {
-      unexpectedFields.computeIfAbsent(messageStream, { _ -> ConcurrentHashMap.newKeySet() }).addAll(unexpectedFieldNames)
-    }
   }
 
   private fun validateSchemaWithCount(message: AirbyteMessage) {
@@ -205,10 +234,6 @@ class FieldSelector(
     val streamHasLessThenTenErrs = validationErrors[messageStream] == null || validationErrors[messageStream]?.second!! < 10
     if (streamHasLessThenTenErrs) {
       recordSchemaValidator.validateSchema(record, messageStream, validationErrors)
-      val unexpectedFieldNames = getUnexpectedFieldNames(record, streamToAllFields.getOrDefault(messageStream, emptySet()))
-      if (!unexpectedFieldNames.isEmpty()) {
-        unexpectedFields.computeIfAbsent(messageStream, { _ -> mutableSetOf() }).addAll(unexpectedFieldNames)
-      }
     }
   }
 

@@ -47,6 +47,7 @@ import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.hydration.ConnectorSecretsHydrator
 import io.airbyte.workers.hydration.SecretHydrationContext
 import io.airbyte.workers.input.ReplicationInputMapper
+import io.airbyte.workers.models.DeclaredStreamFields
 import io.airbyte.workers.models.JobInput
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.models.ReplicationActivityInput
@@ -128,6 +129,24 @@ class ReplicationInputHydrator(
         airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(replicationActivityInput.connectionId!!))
       }
 
+    val declaredStreamFields =
+      connectionInfo.syncCatalog
+        ?.streams
+        ?.filter { it?.config?.selected == true }
+        ?.mapNotNull { streamAndConfiguration ->
+          val stream = streamAndConfiguration?.stream ?: return@mapNotNull null
+          val properties = stream.jsonSchema?.findPath("properties")
+          val fields =
+            if (properties?.isObject == true) {
+              properties.fieldNames().asSequence().toList()
+            } else {
+              emptyList()
+            }
+          DeclaredStreamFields(
+            StreamDescriptor().withName(stream.name).withNamespace(stream.namespace),
+            fields,
+          )
+        } ?: emptyList()
     val catalog = retrieveCatalog(connectionInfo)
     if (replicationActivityInput.isReset!!) {
       // If this is a reset, we need to set the streams being reset to Full Refresh | Overwrite.
@@ -216,6 +235,7 @@ class ReplicationInputHydrator(
       .withSourceConfiguration(fullSourceConfig)
       .withDestinationConfiguration(fullDestinationConfig)
       .withCatalog(hydratedCatalog)
+      .withDeclaredStreamFields(declaredStreamFields)
       .withState(state)
       .withDestinationSupportsRefreshes(replicationActivityInput.supportsRefreshes)
   }

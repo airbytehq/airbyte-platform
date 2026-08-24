@@ -259,6 +259,7 @@ class ReplicationWorkerHelper(
   @InternalForTesting
   fun internalProcessMessageFromSource(sourceRawMessage: AirbyteMessage): AirbyteMessage? {
     updateRecordsCount()
+    fieldSelector?.trackUnexpectedFields(sourceRawMessage)
     fieldSelector?.filterSelectedFields(sourceRawMessage)
     fieldSelector?.validateSchema(sourceRawMessage)
     messageTracker.acceptFromSource(sourceRawMessage)

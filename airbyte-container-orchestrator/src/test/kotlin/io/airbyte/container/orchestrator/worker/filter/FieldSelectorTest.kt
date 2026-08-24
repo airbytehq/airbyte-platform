@@ -9,17 +9,22 @@ import io.airbyte.config.AirbyteStream
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationSyncMode
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.SyncMode
 import io.airbyte.container.orchestrator.worker.RecordSchemaValidator
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
+import io.airbyte.container.orchestrator.worker.util.ReplicationMetricReporter
 import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.workers.WorkerUtils
+import io.airbyte.workers.models.DeclaredStreamFields
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -212,10 +217,185 @@ internal class FieldSelectorTest {
     Assertions.assertEquals(expectedMessage, message)
   }
 
+  @Test
+  internal fun `test that unexpected fields are tracked before filtering`() {
+    val configuredCatalog =
+      ConfiguredAirbyteCatalog()
+        .withStreams(
+          listOf(
+            ConfiguredAirbyteStream(
+              stream = AirbyteStream(STREAM_NAME, Jsons.deserialize(SCHEMA), listOf(SyncMode.INCREMENTAL)),
+              syncMode = SyncMode.INCREMENTAL,
+              destinationSyncMode = DestinationSyncMode.APPEND,
+            ),
+          ),
+        )
+    val replicationInput =
+      mockk<ReplicationInput> {
+        every { workspaceId } returns UUID.randomUUID()
+      }
+    val metricReporter = mockk<ReplicationMetricReporter>(relaxed = true)
+
+    val fieldSelector =
+      createFieldSelector(configuredCatalog = configuredCatalog, replicationInput = replicationInput, metricReporter = metricReporter)
+
+    val message = createRecord(RECORD_WITH_EXTRA)
+    fieldSelector.trackUnexpectedFields(message)
+    fieldSelector.filterSelectedFields(message)
+    fieldSelector.validateSchema(message)
+
+    Assertions.assertEquals(createRecord(RECORD_WITHOUT_EXTRA), message)
+    fieldSelector.reportMetrics(UUID.randomUUID())
+    verify(exactly = 1) {
+      metricReporter.trackUnexpectedFields(AirbyteStreamNameNamespacePair(STREAM_NAME, null), mutableSetOf("id", "unexpected"))
+    }
+  }
+
+  @Test
+  internal fun `test declared fields include deselected fields for unexpected field tracking`() {
+    val configuredCatalog =
+      ConfiguredAirbyteCatalog()
+        .withStreams(
+          listOf(
+            ConfiguredAirbyteStream(
+              stream = AirbyteStream(STREAM_NAME, Jsons.deserialize(SCHEMA), listOf(SyncMode.INCREMENTAL)),
+              syncMode = SyncMode.INCREMENTAL,
+              destinationSyncMode = DestinationSyncMode.APPEND,
+            ),
+          ),
+        )
+    val replicationInput =
+      mockk<ReplicationInput> {
+        every { workspaceId } returns UUID.randomUUID()
+      }
+    val metricReporter = mockk<ReplicationMetricReporter>(relaxed = true)
+    val declaredFields =
+      listOf(
+        DeclaredStreamFields(
+          StreamDescriptor().withName(STREAM_NAME),
+          listOf("key", "value", "id"),
+        ),
+      )
+
+    val fieldSelector =
+      createFieldSelector(
+        configuredCatalog = configuredCatalog,
+        replicationInput = replicationInput,
+        metricReporter = metricReporter,
+        declaredStreamFields = declaredFields,
+      )
+
+    val message = createRecord(RECORD_WITH_EXTRA)
+    fieldSelector.trackUnexpectedFields(message)
+    fieldSelector.filterSelectedFields(message)
+    fieldSelector.validateSchema(message)
+
+    Assertions.assertEquals(createRecord(RECORD_WITHOUT_EXTRA), message)
+    fieldSelector.reportMetrics(UUID.randomUUID())
+    verify(exactly = 1) {
+      metricReporter.trackUnexpectedFields(AirbyteStreamNameNamespacePair(STREAM_NAME, null), mutableSetOf("unexpected"))
+    }
+  }
+
+  @Test
+  internal fun `test empty declared fields fall back to configured catalog`() {
+    val configuredCatalog =
+      ConfiguredAirbyteCatalog()
+        .withStreams(
+          listOf(
+            ConfiguredAirbyteStream(
+              stream = AirbyteStream(STREAM_NAME, Jsons.deserialize(SCHEMA), listOf(SyncMode.INCREMENTAL)),
+              syncMode = SyncMode.INCREMENTAL,
+              destinationSyncMode = DestinationSyncMode.APPEND,
+            ),
+          ),
+        )
+    val replicationInput =
+      mockk<ReplicationInput> {
+        every { workspaceId } returns UUID.randomUUID()
+      }
+    val metricReporter = mockk<ReplicationMetricReporter>(relaxed = true)
+    val fieldSelector =
+      createFieldSelector(
+        configuredCatalog = configuredCatalog,
+        replicationInput = replicationInput,
+        metricReporter = metricReporter,
+        declaredStreamFields = emptyList(),
+      )
+
+    val message = createRecord(RECORD_WITH_EXTRA)
+    fieldSelector.trackUnexpectedFields(message)
+    fieldSelector.filterSelectedFields(message)
+    fieldSelector.validateSchema(message)
+
+    Assertions.assertEquals(createRecord(RECORD_WITHOUT_EXTRA), message)
+    fieldSelector.reportMetrics(UUID.randomUUID())
+    verify(exactly = 1) {
+      metricReporter.trackUnexpectedFields(AirbyteStreamNameNamespacePair(STREAM_NAME, null), mutableSetOf("id", "unexpected"))
+    }
+  }
+
+  @Test
+  internal fun `test declared fields fall back to configured catalog per stream`() {
+    val fallbackStreamName = "fallback"
+    val configuredCatalog =
+      ConfiguredAirbyteCatalog()
+        .withStreams(
+          listOf(
+            ConfiguredAirbyteStream(
+              stream = AirbyteStream(STREAM_NAME, Jsons.deserialize(SCHEMA), listOf(SyncMode.INCREMENTAL)),
+              syncMode = SyncMode.INCREMENTAL,
+              destinationSyncMode = DestinationSyncMode.APPEND,
+            ),
+            ConfiguredAirbyteStream(
+              stream = AirbyteStream(fallbackStreamName, Jsons.deserialize(SCHEMA), listOf(SyncMode.INCREMENTAL)),
+              syncMode = SyncMode.INCREMENTAL,
+              destinationSyncMode = DestinationSyncMode.APPEND,
+            ),
+          ),
+        )
+    val replicationInput =
+      mockk<ReplicationInput> {
+        every { workspaceId } returns UUID.randomUUID()
+      }
+    val metricReporter = mockk<ReplicationMetricReporter>(relaxed = true)
+    val fieldSelector =
+      createFieldSelector(
+        configuredCatalog = configuredCatalog,
+        replicationInput = replicationInput,
+        metricReporter = metricReporter,
+        declaredStreamFields =
+          listOf(
+            DeclaredStreamFields(
+              StreamDescriptor().withName(STREAM_NAME),
+              listOf("key", "value", "id"),
+            ),
+          ),
+      )
+
+    val declaredStreamMessage = createRecord(STREAM_NAME, RECORD_WITH_EXTRA)
+    fieldSelector.trackUnexpectedFields(declaredStreamMessage)
+    fieldSelector.filterSelectedFields(declaredStreamMessage)
+    val fallbackStreamMessage = createRecord(fallbackStreamName, RECORD_WITH_EXTRA)
+    fieldSelector.trackUnexpectedFields(fallbackStreamMessage)
+    fieldSelector.filterSelectedFields(fallbackStreamMessage)
+
+    Assertions.assertEquals(createRecord(STREAM_NAME, RECORD_WITHOUT_EXTRA), declaredStreamMessage)
+    Assertions.assertEquals(createRecord(fallbackStreamName, RECORD_WITHOUT_EXTRA), fallbackStreamMessage)
+    fieldSelector.reportMetrics(UUID.randomUUID())
+    verify(exactly = 1) {
+      metricReporter.trackUnexpectedFields(AirbyteStreamNameNamespacePair(STREAM_NAME, null), mutableSetOf("unexpected"))
+      metricReporter.trackUnexpectedFields(AirbyteStreamNameNamespacePair(fallbackStreamName, null), mutableSetOf("id", "unexpected"))
+    }
+  }
+
   private fun createFieldSelector(
     configuredCatalog: ConfiguredAirbyteCatalog,
     replicationInput: ReplicationInput,
+    metricReporter: ReplicationMetricReporter = mockk(),
+    declaredStreamFields: List<DeclaredStreamFields>? = null,
   ): FieldSelector {
+    every { replicationInput.declaredStreamFields } returns declaredStreamFields
     val replicationInputFeatureFlagReader =
       mockk<ReplicationInputFeatureFlagReader> {
         every { read(RemoveValidationLimit) } returns false
@@ -229,7 +409,7 @@ internal class FieldSelectorTest {
     val fieldSelector =
       FieldSelector(
         recordSchemaValidator = schemaValidator,
-        metricReporter = mockk(),
+        metricReporter = metricReporter,
         replicationInput = replicationInput,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
       )
@@ -237,12 +417,17 @@ internal class FieldSelectorTest {
     return fieldSelector
   }
 
-  private fun createRecord(jsonData: String): AirbyteMessage =
+  private fun createRecord(jsonData: String): AirbyteMessage = createRecord(STREAM_NAME, jsonData)
+
+  private fun createRecord(
+    streamName: String,
+    jsonData: String,
+  ): AirbyteMessage =
     AirbyteMessage()
       .withType(AirbyteMessage.Type.RECORD)
       .withRecord(
         AirbyteRecordMessage()
-          .withStream(STREAM_NAME)
+          .withStream(streamName)
           .withData(Jsons.deserialize(jsonData)),
       )
 }

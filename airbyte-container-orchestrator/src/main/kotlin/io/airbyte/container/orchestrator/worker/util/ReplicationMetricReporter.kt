@@ -44,7 +44,7 @@ class ReplicationMetricReporter(
   ) {
     // Create a copy of the validationErrors set to prevent ConcurrentModificationExceptions
     // that can occur while iterating over the set.
-    val copiedErrors = setOf(validationErrors)
+    val copiedErrors = validationErrors?.toSet() ?: emptySet()
     val attributes: MutableList<MetricAttribute> =
       copiedErrors
         .mapNotNull { f ->
@@ -72,7 +72,7 @@ class ReplicationMetricReporter(
   ) {
     // Create a copy of the unexpectedFieldNames set to prevent ConcurrentModificationExceptions
     // that can occur while iterating over the set.
-    val copiedUnexpected = setOf(unexpectedFieldNames)
+    val copiedUnexpected = unexpectedFieldNames.toSet()
     val attributes: MutableList<MetricAttribute> =
       copiedUnexpected
         .stream()

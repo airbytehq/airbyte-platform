@@ -45,6 +45,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -198,6 +199,17 @@ class ReplicationWorkerHelperTest {
 
     helper.processMessageFromDestination(raw)
     verify(exactly = 1) { helper.internalProcessMessageFromDestination(reverted) }
+  }
+
+  @Test
+  fun `unexpected fields are tracked before filtering and schema validation`() {
+    val msg = mockk<AirbyteMessage>(relaxed = true)
+    helper.internalProcessMessageFromSource(msg)
+    verifyOrder {
+      fieldSelector.trackUnexpectedFields(msg)
+      fieldSelector.filterSelectedFields(msg)
+      fieldSelector.validateSchema(msg)
+    }
   }
 
   @Test
