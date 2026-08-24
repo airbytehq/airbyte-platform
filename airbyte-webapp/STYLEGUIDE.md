@@ -415,7 +415,7 @@ Use your IDE's search or grep to find similar class names:
 
 ### Color variables cannot be used inside of rgba() functions
 
-Our SCSS color variables compile to `rgb(X, Y, Z)`, which is an invalid value in the CSS `rgba()` function. A custom stylelint rule, `airbyte/no-color-variables-in-rgba`, enforces this rule.
+Our SCSS color variables are aliases for CSS Custom Properties (e.g. `$blue-400` is `var(--color-blue-400)`), which the browser resolves at runtime. SASS therefore compiles `rgba(colors.$blue-400, 50%)` to `rgba(var(--color-blue-400), 50%)`, which is invalid CSS: the custom property holds a complete color value, not the channel components `rgba()` expects. A custom stylelint rule, `airbyte/no-color-variables-in-rgba`, enforces this rule.
 
 ❌ Incorrect
 
@@ -427,13 +427,13 @@ Our SCSS color variables compile to `rgb(X, Y, Z)`, which is an invalid value in
 }
 ```
 
-✅ Correct - define a color variable with transparency and use it directly
+✅ Correct - use a semi-transparent color variable, or add one. Semi-transparent colors are defined as `hsla(...)` custom properties in **both** `src/scss/_theme-light.scss` and `src/scss/_theme-dark.scss`, then exposed in `src/scss/_colors.scss` (e.g. `--color-overlay-background` → `$overlay-background`):
 
 ```scss
 @use "scss/colors";
 
 .myClass {
-  background-color: colors.$blue-transparent;
+  background-color: colors.$overlay-background;
 }
 ```
 
