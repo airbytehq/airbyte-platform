@@ -1,54 +1,75 @@
 import dayjs from "dayjs";
 import { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { FormattedMessage, useIntl } from "react-intl";
 
-import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useOrganizationWorkerUsage } from "core/api";
+import { DataWorkerUsageBarChart } from "area/organization/DataWorkerUsage/DataWorkerUsageBarChart";
+import { enumerateTimeBuckets } from "area/organization/DataWorkerUsage/enumerateTimeBuckets";
+import { useCurrentWorkspace, useOrganizationWorkerUsage } from "core/api";
 
 import { WorkspaceDataWorkerGraphTooltip } from "./WorkspaceDataWorkerGraphTooltip";
 import styles from "./WorkspaceDataWorkerUsageGraph.module.scss";
 
 const DATE_FORMAT = "YYYY-MM-DD";
-const CHART_HEIGHT = 250;
-
-interface HourlyDataPoint {
-  date: string;
-  used: number;
-}
 
 export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
-  const workspaceId = useCurrentWorkspaceId();
+  const { workspaceId, name: workspaceName } = useCurrentWorkspace();
+  const { formatMessage } = useIntl();
 
-  const startDate = useMemo(() => dayjs().subtract(7, "day").startOf("day").format(DATE_FORMAT), []);
-  const endDate = useMemo(() => dayjs().endOf("day").format(DATE_FORMAT), []);
+  const { startDate, endDate, chartStart, chartEnd } = useMemo(() => {
+    const now = dayjs();
+    const chartStart = now.subtract(7, "day").startOf("day");
+
+    return {
+      startDate: chartStart.utc().format(DATE_FORMAT),
+      endDate: now.utc().format(DATE_FORMAT),
+      chartStart: chartStart.toISOString(),
+      chartEnd: now.toISOString(),
+    };
+  }, []);
 
   const allUsage = useOrganizationWorkerUsage({ startDate, endDate });
 
   // Extract and aggregate hourly data points for the current workspace across all regions
-  const hourlyData: HourlyDataPoint[] = useMemo(() => {
-    const hourlyMap = new Map<string, number>();
+  const { hourlyData, hasCurrentWorkspaceUsage } = useMemo(() => {
+    const hourlyBuckets = enumerateTimeBuckets([chartStart, chartEnd], "hour");
+    const hourlyMap = new Map<string, number>(hourlyBuckets.map((hour) => [hour.toISOString(), 0]));
+    const firstBucketTimestamp = hourlyBuckets[0]?.valueOf();
+    let hasCurrentWorkspaceUsage = false;
 
     allUsage?.regions.forEach((region) => {
       region.workspaces
         .filter((ws) => ws.id === workspaceId)
         .forEach((ws) => {
           ws.dataWorkers.forEach(({ date, used }) => {
-            const existing = hourlyMap.get(date) ?? 0;
-            hourlyMap.set(date, existing + used);
+            if (firstBucketTimestamp === undefined) {
+              return;
+            }
+
+            const hourIndex = Math.floor((dayjs(date).valueOf() - firstBucketTimestamp) / (60 * 60 * 1000));
+            const hourBucket = hourlyBuckets[hourIndex];
+            if (!hourBucket) {
+              return;
+            }
+
+            const hour = hourBucket.toISOString();
+            hasCurrentWorkspaceUsage = true;
+            const existing = hourlyMap.get(hour) ?? 0;
+            hourlyMap.set(hour, existing + used);
           });
         });
     });
 
-    return Array.from(hourlyMap.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, used]) => ({ date, used }));
-  }, [allUsage, workspaceId]);
+    return {
+      hourlyData: Array.from(hourlyMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, used]) => ({ date, used })),
+      hasCurrentWorkspaceUsage,
+    };
+  }, [allUsage, chartEnd, chartStart, workspaceId]);
 
   // Compute one tick per unique calendar day, placed at the midpoint (noon) of each day's data range
   const dailyTicks = useMemo(() => {
@@ -67,7 +88,7 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
     return ticks;
   }, [hourlyData]);
 
-  if (hourlyData.length === 0) {
+  if (!hasCurrentWorkspaceUsage) {
     return (
       <FlexContainer className={styles.graphContainer} alignItems="center" justifyContent="center">
         <FlexContainer alignItems="center" gap="sm">
@@ -81,46 +102,23 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
   }
 
   return (
-    <Box className={styles.graphContainer}>
-      <ResponsiveContainer width="99%" height={CHART_HEIGHT}>
-        <LineChart data={hourlyData} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-          <XAxis
-            dataKey="date"
-            ticks={dailyTicks}
-            tickFormatter={(value) => dayjs(value).format("MMM D")}
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 10 }}
-            stroke={styles.tickColor}
-            padding={{ left: 20, right: 20 }}
-          />
-          <YAxis
-            axisLine={false}
-            tickLine={false}
-            tick={{ fontSize: 12 }}
-            minTickGap={10}
-            allowDecimals={false}
-            tickMargin={10}
-            stroke={styles.tickColor}
-          />
-          <Tooltip
-            content={WorkspaceDataWorkerGraphTooltip}
-            wrapperStyle={{ outline: "none", zIndex: styles.tooltipZindex }}
-            isAnimationActive={false}
-            allowEscapeViewBox={{ x: false, y: true }}
-          />
-          <CartesianGrid stroke={styles.gridLine} vertical={false} />
-          <Line
-            type="monotone"
-            dataKey="used"
-            stroke={styles.lineColor}
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4 }}
-            animationDuration={300}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </Box>
+    <DataWorkerUsageBarChart
+      data={hourlyData}
+      xAxisDataKey="date"
+      barDataKey="used"
+      xAxisTicks={dailyTicks}
+      xAxisTickFormatter={(value) => dayjs(value).format("MMM D")}
+      xAxisPadding={{ left: 20, right: 20 }}
+      chartMargin={{ top: 0, right: 20, left: 0, bottom: 0 }}
+      renderTooltipContent={() => <WorkspaceDataWorkerGraphTooltip workspaceName={workspaceName} />}
+      referenceLine={
+        allUsage?.committedDataWorkers != null && allUsage.committedDataWorkers > 0
+          ? {
+              value: allUsage.committedDataWorkers,
+              label: formatMessage({ id: "settings.organization.usage.graph.committedCapacity" }),
+            }
+          : undefined
+      }
+    />
   );
 };

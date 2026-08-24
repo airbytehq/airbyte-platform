@@ -1,12 +1,20 @@
-import type { ReactNode } from "react";
-
 import { screen } from "@testing-library/react";
 
 import { render } from "test-utils";
 
 import { useOrganizationWorkerUsage } from "core/api";
 
+import { GraphTooltip } from "./GraphTooltip";
 import { UsageByWorkspaceGraph } from "./UsageByWorkspaceGraph";
+
+interface MockDataWorkerUsageBarChartProps {
+  data: Array<Record<string, unknown>>;
+  xAxisDataKey: string;
+  xAxisTickFormatter?: (value: unknown, index: number) => string;
+  [key: string]: unknown;
+}
+
+const mockDataWorkerUsageBarChart = jest.fn();
 
 jest.mock("core/api", () => ({
   useOrganizationWorkerUsage: jest.fn(() => ({
@@ -26,44 +34,35 @@ jest.mock("core/api", () => ({
   })),
 }));
 
-jest.mock("core/utils/useAirbyteTheme", () => ({
-  useAirbyteTheme: () => ({ colorValues: mockColorValues }),
-}));
-
-const mockColorValues = {};
-
-jest.mock("recharts", () => {
+jest.mock("./DataWorkerUsageBarChart", () => {
   const React = jest.requireActual<typeof import("react")>("react");
-  const ChartDataContext = React.createContext<Array<Record<string, unknown>>>([]);
 
   return {
-    Bar: () => null,
-    BarChart: ({ data, children }: { data: Array<Record<string, unknown>>; children: ReactNode }) =>
-      React.createElement(ChartDataContext.Provider, { value: data }, children),
-    CartesianGrid: () => null,
-    ReferenceLine: () => null,
-    ResponsiveContainer: ({ children }: { children: ReactNode }) => React.createElement(React.Fragment, null, children),
-    Tooltip: () => null,
-    XAxis: ({ dataKey, tickFormatter }: { dataKey: string; tickFormatter: (value: unknown) => string }) => {
-      const data = React.useContext(ChartDataContext);
-
+    DataWorkerUsageBarChart: (props: MockDataWorkerUsageBarChartProps) => {
+      mockDataWorkerUsageBarChart(props);
       return React.createElement(
         React.Fragment,
         null,
-        data.map((item) =>
+        props.data.map((item, index) =>
           React.createElement(
             "span",
-            { key: String(item[dataKey]), "data-testid": "x-axis-tick" },
-            tickFormatter(item[dataKey])
+            { key: String(item[props.xAxisDataKey]), "data-testid": "x-axis-tick" },
+            props.xAxisTickFormatter?.(item[props.xAxisDataKey], index)
           )
         )
       );
     },
-    YAxis: () => null,
   };
 });
 
+const lastChartProps = (): MockDataWorkerUsageBarChartProps =>
+  mockDataWorkerUsageBarChart.mock.calls[mockDataWorkerUsageBarChart.mock.calls.length - 1][0];
+
 describe(`${UsageByWorkspaceGraph.name}`, () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it("renders date-only x-axis categories as local calendar dates", async () => {
     expect(process.env.TZ).toBe("US/Pacific");
 
@@ -71,7 +70,7 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
       <UsageByWorkspaceGraph
         selectedRegionId="region-1"
         dateRange={["2026-06-01", "2026-06-03"]}
-        committedDataWorkers={null}
+        committedDataWorkers={4}
       />
     );
 
@@ -81,5 +80,38 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
     });
     expect(screen.getAllByTestId("x-axis-tick").map((tick) => tick.textContent)).toEqual(["Jun 1", "Jun 2", "Jun 3"]);
     expect(screen.queryByText("May 31")).not.toBeInTheDocument();
+
+    const chartProps = lastChartProps();
+    expect(chartProps).toEqual(
+      expect.objectContaining({
+        xAxisDataKey: "formattedDate",
+        barDataKey: "maxWorkspaceUsage",
+        chartKey: "region-1",
+        barSize: 16,
+        referenceLine: { value: 4, label: "Contracted capacity" },
+      })
+    );
+
+    const tooltip = (chartProps.renderTooltipContent as (barColor: string) => React.ReactElement)("#605cff");
+    expect(tooltip.type).toBe(GraphTooltip);
+    expect(tooltip.props).toEqual(
+      expect.objectContaining({
+        regionName: "Region 1",
+        hasOtherCategory: false,
+        barColor: "#605cff",
+      })
+    );
+  });
+
+  it.each([null, 0])("omits the capacity line when committed capacity is %s", async (committedDataWorkers) => {
+    await render(
+      <UsageByWorkspaceGraph
+        selectedRegionId="region-1"
+        dateRange={["2026-06-01", "2026-06-03"]}
+        committedDataWorkers={committedDataWorkers}
+      />
+    );
+
+    expect(lastChartProps().referenceLine).toBeUndefined();
   });
 });

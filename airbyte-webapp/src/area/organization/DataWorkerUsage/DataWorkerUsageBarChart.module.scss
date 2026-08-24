@@ -1,0 +1,19 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+:export {
+  tooltipZindex: z-indices.$tooltip;
+  gridLine: colors.$grey-100;
+  barColor: colors.$blue-400;
+  barHover: colors.$blue-40;
+  committedLine: colors.$grey-400;
+  tickColor: colors.$grey-500;
+}
+
+.dataWorkerUsageBarChart {
+  min-height: 250px;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-md;
+  padding: variables.$spacing-xl variables.$spacing-md variables.$spacing-md;
+}

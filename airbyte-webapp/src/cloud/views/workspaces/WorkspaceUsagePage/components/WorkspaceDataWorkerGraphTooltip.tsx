@@ -1,6 +1,6 @@
+import type { TooltipProps } from "recharts";
+
 import dayjs from "dayjs";
-import { FormattedMessage } from "react-intl";
-import { ContentType } from "recharts/types/component/Tooltip";
 
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
@@ -11,7 +11,15 @@ const formatWorkerUsageNumber = (value: number) => {
   return Number(value.toFixed(1));
 };
 
-export const WorkspaceDataWorkerGraphTooltip: ContentType<number, string> = ({ active, payload }) => {
+interface WorkspaceDataWorkerGraphTooltipProps extends TooltipProps<number, string> {
+  workspaceName: string;
+}
+
+export const WorkspaceDataWorkerGraphTooltip = ({
+  active,
+  payload,
+  workspaceName,
+}: WorkspaceDataWorkerGraphTooltipProps) => {
   if (!active || !payload?.length) {
     return null;
   }
@@ -26,9 +34,7 @@ export const WorkspaceDataWorkerGraphTooltip: ContentType<number, string> = ({ a
         <FlexContainer direction="column" gap="xs">
           <Text bold>{formattedDate}</Text>
           <FlexContainer alignItems="center" justifyContent="space-between" gap="md">
-            <Text>
-              <FormattedMessage id="settings.workspace.usage.dataWorker.tooltipLabel" />
-            </Text>
+            <Text>{workspaceName}</Text>
             <Text color="grey">{usageValue}</Text>
           </FlexContainer>
         </FlexContainer>

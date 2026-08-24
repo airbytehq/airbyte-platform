@@ -2,6 +2,8 @@ import dayjs from "dayjs";
 
 import { RegionDataWorkerUsage } from "core/api/types/AirbyteClient";
 
+import { enumerateTimeBuckets } from "./enumerateTimeBuckets";
+
 export interface RegionDataBar {
   formattedDate: string;
   regionUsage: number;
@@ -33,22 +35,18 @@ export const calculateGraphData = (
   top10WorkspaceIds?: string[],
   otherWorkspaceIds?: string[]
 ): RegionDataBar[] => {
-  const firstDay = dayjs(dateRange[0]).startOf("day");
-  const lastDay = dayjs(dateRange[1]).endOf("day");
-  let cursor = firstDay;
   const days: Map<string, RegionDataBar> = new Map();
 
   // Create a data point for each day in the range
-  while (cursor.isBefore(lastDay)) {
-    const formattedDate = cursor.format(DATE_FORMAT);
+  enumerateTimeBuckets(dateRange, "day").forEach((day) => {
+    const formattedDate = day.format(DATE_FORMAT);
     days.set(formattedDate, {
       formattedDate,
       regionUsage: 0,
       maxWorkspaceUsage: 0,
       workspaceUsage: {},
     });
-    cursor = cursor.add(1, "day");
-  }
+  });
 
   // Populate workspace usage data
   if (regionDataWorkerUsage) {

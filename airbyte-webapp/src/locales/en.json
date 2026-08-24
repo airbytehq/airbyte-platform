@@ -1305,7 +1305,6 @@
   "settings.workspace.usage.tooltip": "Workspace usage is measured in <lnk>credits</lnk>.",
   "settings.workspace.usage.dataWorker.description": "Data worker usage for this workspace over the last 7 days.",
   "settings.workspace.usage.dataWorker.noData": "No usage data found for the selected date range.",
-  "settings.workspace.usage.dataWorker.tooltipLabel": "Data workers",
   "settings.workspace.tags.title": "Connection tags",
   "settings.workspace.tags.description": "Connection tags can be used to organize and filter your connections in this workspace.",
   "settings.workspace.tags.tagColumn": "Tag",
