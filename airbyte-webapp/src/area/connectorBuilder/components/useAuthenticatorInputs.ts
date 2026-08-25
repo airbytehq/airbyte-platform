@@ -17,7 +17,7 @@ import {
 import { OAUTH_INPUT_SPEC_PATH } from "./Builder/BuilderDeclarativeOAuth";
 import { convertToBuilderFormInputs, convertToConnectionSpecification } from "./Builder/InputsView";
 import { INPUT_REFERENCE_KEYWORD, VALID_AUTHENTICATOR_TYPES } from "./constants";
-import { AuthenticatorType, BuilderFormInput } from "./types";
+import { BuilderFormInput } from "./types";
 import { extractInterpolatedConfigPath } from "./utils";
 
 export const isHttpRequesterAuthenticator = (authenticator: unknown): authenticator is HttpRequesterAuthenticator => {
@@ -210,7 +210,9 @@ const modifyInputsForDeclarativeOAuth = (inputs: BuilderFormInput[], declarative
   });
 };
 
-export const AUTO_CREATED_INPUTS_BY_AUTH_TYPE: Partial<Record<AuthenticatorType, Record<string, BuilderFormInput>>> = {
+export const AUTO_CREATED_INPUTS_BY_AUTH_TYPE: Partial<
+  Record<NonNullable<HttpRequesterAuthenticator>["type"], Record<string, BuilderFormInput>>
+> = {
   [ApiKeyAuthenticatorType.ApiKeyAuthenticator]: {
     api_token: {
       key: "api_key",
