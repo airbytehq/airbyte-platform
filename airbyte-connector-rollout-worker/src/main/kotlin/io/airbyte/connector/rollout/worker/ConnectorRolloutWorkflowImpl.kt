@@ -481,11 +481,21 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
   }
 
   override fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize): ConnectorRolloutOutput {
-    // Start a GH workflow to make the release candidate available as `latest`, if the rollout was successful
-    // Delete the release candidate on either success or failure (but not cancellation)
-    if (input.result == ConnectorRolloutFinalState.SUCCEEDED || input.result == ConnectorRolloutFinalState.FAILED_ROLLED_BACK) {
+    // Start a GH workflow to finalize the release candidate in the registry.
+    // Promote makes it available as `latest`; rollback and cancel abort the active
+    // progressive-rollout marker so the candidate stops being served (otherwise a
+    // canceled rollout is re-created on the next definitions refresh).
+    // Guard the CANCELED dispatch with a version marker so replays of histories
+    // recorded before this command sequence existed remain deterministic.
+    val dispatchOnCancel =
+      input.result == ConnectorRolloutFinalState.CANCELED &&
+        Workflow.getVersion("DispatchFinalizeRolloutOnCancel", Workflow.DEFAULT_VERSION, 1) >= 1
+    if (input.result == ConnectorRolloutFinalState.SUCCEEDED ||
+      input.result == ConnectorRolloutFinalState.FAILED_ROLLED_BACK ||
+      dispatchOnCancel
+    ) {
       if (connectorRollout?.state == ConnectorEnumRolloutState.FINALIZING) {
-        logger.info { "finalizeRollout: already promoted/rolled back, skipping; if you need to re-run the GHA please do so manually " }
+        logger.info { "finalizeRollout: already promoted/rolled back/canceled, skipping; if you need to re-run the GHA please do so manually " }
       } else {
         logger.info { "finalizeRollout: calling promoteOrRollback" }
         val output =
@@ -498,6 +508,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
                 when (input.result) {
                   ConnectorRolloutFinalState.SUCCEEDED -> ActionType.PROMOTE
                   ConnectorRolloutFinalState.FAILED_ROLLED_BACK -> ActionType.ROLLBACK
+                  ConnectorRolloutFinalState.CANCELED -> ActionType.CANCEL
                   else -> throw IllegalArgumentException("Unrecognized status: $input.result")
                 },
               rolloutId = input.rolloutId,

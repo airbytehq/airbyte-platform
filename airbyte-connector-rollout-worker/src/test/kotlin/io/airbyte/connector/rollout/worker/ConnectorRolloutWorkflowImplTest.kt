@@ -10,10 +10,12 @@ import io.airbyte.commons.temporal.converter.AirbyteTemporalDataConverter
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.airbyte.connector.rollout.shared.models.ActionType
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFind
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputGet
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
+import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPromoteOrRollback
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityOutputVerifyDefaultVersion
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
@@ -40,6 +42,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowClientOptions
@@ -571,10 +574,10 @@ internal class ConnectorRolloutWorkflowImplTest {
       ),
     )
 
+    every {
+      promoteOrRollbackActivity.promoteOrRollback(any())
+    } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.FINALIZING)
     if (finalState != ConnectorRolloutFinalState.CANCELED) {
-      every {
-        promoteOrRollbackActivity.promoteOrRollback(any())
-      } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.FINALIZING)
       every { verifyDefaultVersionActivity.getAndVerifyDefaultVersion(any()) } returns
         ConnectorRolloutActivityOutputVerifyDefaultVersion(true)
     }
@@ -603,9 +606,7 @@ internal class ConnectorRolloutWorkflowImplTest {
     assertEquals(finalState.toString(), result)
 
     verify { startRolloutActivity.startRollout(any(), any()) }
-    if (finalState != ConnectorRolloutFinalState.CANCELED) {
-      verify { promoteOrRollbackActivity.promoteOrRollback(any()) }
-    }
+    verify { promoteOrRollbackActivity.promoteOrRollback(any()) }
     verify { finalizeRolloutActivity.finalizeRollout(any()) }
   }
 
@@ -901,7 +902,7 @@ internal class ConnectorRolloutWorkflowImplTest {
   }
 
   @Test
-  fun `test finalizeRollout update handler only calls finalize on CANCELED`() {
+  fun `test finalizeRollout update handler calls cancel and finalize on CANCELED`() {
     WorkflowClient.start(
       workflowStub::run,
       ConnectorRolloutWorkflowInput(
@@ -922,6 +923,9 @@ internal class ConnectorRolloutWorkflowImplTest {
       ),
     )
 
+    val promoteOrRollbackInput = slot<ConnectorRolloutActivityInputPromoteOrRollback>()
+    every { promoteOrRollbackActivity.promoteOrRollback(capture(promoteOrRollbackInput)) } returns
+      getMockOutput(ConnectorEnumRolloutState.FINALIZING)
     every { finalizeRolloutActivity.finalizeRollout(any()) } returns
       getMockOutput(ConnectorEnumRolloutState.CANCELED)
 
@@ -939,7 +943,8 @@ internal class ConnectorRolloutWorkflowImplTest {
         ROLLOUT_STRATEGY,
       ),
     )
-    verify(exactly = 0) { promoteOrRollbackActivity.promoteOrRollback(any()) }
+    verify { promoteOrRollbackActivity.promoteOrRollback(any()) }
+    assertEquals(ActionType.CANCEL, promoteOrRollbackInput.captured.action)
     verify(exactly = 0) { verifyDefaultVersionActivity.getAndVerifyDefaultVersion(any()) }
     verify { finalizeRolloutActivity.finalizeRollout(any()) }
   }
