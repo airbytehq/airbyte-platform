@@ -2955,7 +2955,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/clickhouse-migrations",
         "releaseCandidates": {
-          "2.1.28": {
+          "2.1.29": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 300,
@@ -2988,7 +2988,7 @@
             ],
             "custom": false,
             "destinationDefinitionId": "ce0d828e-1dc4-496c-b122-2da42e637e48",
-            "dockerImageTag": "2.1.28",
+            "dockerImageTag": "2.1.29",
             "dockerRepository": "airbyte/destination-clickhouse",
             "documentationUrl": "https://docs.airbyte.com/integrations/destinations/clickhouse",
             "externalDocumentationUrls": [
@@ -3015,33 +3015,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "octavia-bot[bot]",
-                "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
-                "commit_sha": "fa38d0222441a5b875ec54baef61a0afa5e25a3d",
-                "commit_timestamp": "2026-08-24T15:04:14-07:00"
+                "commit_author": "Ant",
+                "commit_author_email": "antonz@constructor.tech",
+                "commit_sha": "f90ef08aa3c2ab45653f89014cd5874c7863efaf",
+                "commit_timestamp": "2026-08-25T23:47:29+03:00"
               },
               "release": {
-                "attributed_to": "sunil-kuruba",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "fa38d0222441a5b875ec54baef61a0afa5e25a3d",
-                "merged_at": "2026-08-24T22:04:15Z",
+                "attributed_to": "octavia-bot-admin",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "f90ef08aa3c2ab45653f89014cd5874c7863efaf",
+                "merged_at": "2026-08-25T20:47:30Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 108746235,
-                "pr_author_login": "octavia-bot",
-                "pr_author_type": "Bot",
-                "pr_merged_by_login": "sunil-kuruba",
-                "pr_merged_by_type": "User",
-                "pr_number": 84983,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84983",
-                "released_at": "2026-08-24T22:04:15Z",
+                "pr_author_id": 270971350,
+                "pr_author_login": "cyberantonz",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "octavia-bot-admin",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 85033,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85033",
+                "released_at": "2026-08-25T20:47:30Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-clickhouse/2.1.28.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-clickhouse/2.1.29.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/destination-clickhouse/2.1.28/metadata.yaml",
-                "metadata_last_modified": "2026-08-24T22:09:27.820933+00:00",
-                "registry_entry_generated_at": "2026-08-24T22:09:27.820933+00:00"
+                "metadata_file_path": "metadata/airbyte/destination-clickhouse/2.1.29/metadata.yaml",
+                "metadata_last_modified": "2026-08-25T20:51:30.955398+00:00",
+                "registry_entry_generated_at": "2026-08-25T20:51:30.955398+00:00"
               }
             },
             "githubIssueLabel": "destination-clickhouse",
@@ -3091,6 +3091,15 @@
                   }
                 ],
                 "properties": {
+                  "cluster_name": {
+                    "default": "",
+                    "description": "Name of your ClickHouse cluster. When provided, table definitions are automatically propagated to all cluster nodes. Required for clusters using the Atomic database engine. Leave empty for single-node setups, ClickHouse Cloud, or databases using the <a href=\"https://clickhouse.com/docs/engines/database-engines/replicated\">Replicated database engine</a>.",
+                    "group": "advanced",
+                    "order": 10,
+                    "pattern": "^[A-Za-z0-9_.-]*$",
+                    "title": "Cluster Name",
+                    "type": "string"
+                  },
                   "database": {
                     "default": "default",
                     "description": "Name of the database.",
@@ -3268,6 +3277,14 @@
                     "order": 5,
                     "title": "SSH Tunnel Method",
                     "type": "object"
+                  },
+                  "use_replicated_engines": {
+                    "default": false,
+                    "description": "Enable this to ensure synced data is replicated across all nodes in a self-managed ClickHouse cluster. Not needed for single-node deployments or ClickHouse Cloud. See the <a href=\"https://clickhouse.com/docs/engines/table-engines/mergetree-family/replication\">ClickHouse replication docs</a> for more information.",
+                    "group": "advanced",
+                    "order": 9,
+                    "title": "Enable Replication",
+                    "type": "boolean"
                   },
                   "username": {
                     "default": "default",
@@ -20843,15 +20860,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -27780,7 +27797,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner-migrations",
         "releaseCandidates": {
-          "5.10.0": {
+          "5.10.1": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -27828,7 +27845,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "5.10.0",
+            "dockerImageTag": "5.10.1",
             "dockerRepository": "airbyte/source-amazon-seller-partner",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner",
             "erdUrl": "https://dbdocs.io/airbyteio/source-amazon-seller-partner?view=relationships",
@@ -27861,33 +27878,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "Takahiro HARADA",
-                "commit_author_email": "162398678+ml-tharada@users.noreply.github.com",
-                "commit_sha": "a91e189b8408364a44f86cb0c81b074470513d15",
-                "commit_timestamp": "2026-08-24T20:25:00+09:00"
+                "commit_author": "Anatolii Yatsuk",
+                "commit_author_email": "tolikyatsuk@gmail.com",
+                "commit_sha": "e35526acdd78cf2977029f4b09aa525c0a00513a",
+                "commit_timestamp": "2026-08-25T18:48:30+03:00"
               },
               "release": {
-                "attributed_to": "bazarnov",
+                "attributed_to": "tolik0",
                 "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "a91e189b8408364a44f86cb0c81b074470513d15",
-                "merged_at": "2026-08-24T11:25:01Z",
+                "merge_commit_sha": "e35526acdd78cf2977029f4b09aa525c0a00513a",
+                "merged_at": "2026-08-25T15:48:31Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 162398678,
-                "pr_author_login": "ml-tharada",
+                "pr_author_id": 35109939,
+                "pr_author_login": "tolik0",
                 "pr_author_type": "User",
-                "pr_merged_by_login": "bazarnov",
+                "pr_merged_by_login": "tolik0",
                 "pr_merged_by_type": "User",
-                "pr_number": 76434,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/76434",
-                "released_at": "2026-08-24T11:25:01Z",
+                "pr_number": 84913,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84913",
+                "released_at": "2026-08-25T15:48:31Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-seller-partner/5.10.0.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-seller-partner/5.10.1.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-amazon-seller-partner/5.10.0/metadata.yaml",
-                "metadata_last_modified": "2026-08-24T11:29:56.278923+00:00",
-                "registry_entry_generated_at": "2026-08-24T11:29:56.278923+00:00"
+                "metadata_file_path": "metadata/airbyte/source-amazon-seller-partner/5.10.1/metadata.yaml",
+                "metadata_last_modified": "2026-08-25T15:53:41.990612+00:00",
+                "registry_entry_generated_at": "2026-08-25T15:53:41.990612+00:00"
               }
             },
             "githubIssueLabel": "source-amazon-seller-partner",
@@ -31049,7 +31066,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.0.0",
+      "dockerImageTag": "1.0.1",
       "dockerRepository": "airbyte/source-ashby",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/ashby",
       "externalDocumentationUrls": [
@@ -31068,8 +31085,8 @@
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "e5fffc0b70cb00de45cd82c4917103062f25c018",
-          "commit_timestamp": "2026-08-18T13:03:22-07:00"
+          "commit_sha": "47804231b61606036e1a1e56733732e3c177c902",
+          "commit_timestamp": "2026-08-25T21:15:22+00:00"
         },
         "metrics": {
           "all": {
@@ -31088,25 +31105,25 @@
         "release": {
           "attributed_to": "pnilan",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "e5fffc0b70cb00de45cd82c4917103062f25c018",
-          "merged_at": "2026-08-18T20:03:23Z",
+          "merge_commit_sha": "47804231b61606036e1a1e56733732e3c177c902",
+          "merged_at": "2026-08-25T21:15:23Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 158243242,
           "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
           "pr_merged_by_login": "pnilan",
           "pr_merged_by_type": "User",
-          "pr_number": 84274,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84274",
-          "released_at": "2026-08-18T20:03:23Z",
+          "pr_number": 84405,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84405",
+          "released_at": "2026-08-25T21:15:23Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ashby/1.0.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ashby/1.0.1.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-ashby/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-18T20:08:44.808357+00:00",
-          "registry_entry_generated_at": "2026-08-18T20:08:44.808357+00:00"
+          "metadata_last_modified": "2026-08-25T21:20:01.699220+00:00",
+          "registry_entry_generated_at": "2026-08-25T21:20:01.699220+00:00"
         }
       },
       "githubIssueLabel": "source-ashby",
@@ -32521,7 +32538,7 @@
       "releaseStage": "generally_available",
       "releases": {
         "releaseCandidates": {
-          "0.8.30": {
+          "0.8.31": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -32855,7 +32872,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "0.8.30",
+            "dockerImageTag": "0.8.31",
             "dockerRepository": "airbyte/source-azure-blob-storage",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/azure-blob-storage",
             "externalDocumentationUrls": [
@@ -32869,27 +32886,31 @@
               "git": {
                 "commit_author": "octavia-bot-hoard[bot]",
                 "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "a63b92f908ecf46b0644e97b962f1d718ff353eb",
-                "commit_timestamp": "2026-08-18T03:35:19+00:00"
+                "commit_sha": "5a6da97c8f74dee1abd673f78745f410d2739e91",
+                "commit_timestamp": "2026-08-25T03:53:08+00:00"
               },
               "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "a63b92f908ecf46b0644e97b962f1d718ff353eb",
-                "merged_at": "2026-08-18T03:35:20Z",
+                "attributed_to": "octavia-bot-hoard",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "5a6da97c8f74dee1abd673f78745f410d2739e91",
+                "merged_at": "2026-08-25T03:53:09Z",
+                "pr_author_association": "CONTRIBUTOR",
                 "pr_author_id": 230633153,
                 "pr_author_login": "octavia-bot-hoard",
                 "pr_author_type": "Bot",
-                "pr_number": 84471,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84471",
-                "released_at": "2026-08-18T03:35:20Z",
+                "pr_merged_by_login": "octavia-bot-hoard",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 85007,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85007",
+                "released_at": "2026-08-25T03:53:09Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-azure-blob-storage/0.8.30.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-azure-blob-storage/0.8.31.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-azure-blob-storage/0.8.30/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T03:42:21.397959+00:00",
-                "registry_entry_generated_at": "2026-08-18T03:42:21.397959+00:00"
+                "metadata_file_path": "metadata/airbyte/source-azure-blob-storage/0.8.31/metadata.yaml",
+                "metadata_last_modified": "2026-08-25T04:01:06.093583+00:00",
+                "registry_entry_generated_at": "2026-08-25T04:01:06.093583+00:00"
               }
             },
             "githubIssueLabel": "source-azure-blob-storage",
@@ -32900,7 +32921,7 @@
             "maxSecondsBetweenMessages": 1,
             "name": "Azure Blob Storage",
             "packageInfo": {
-              "cdk_version": "python:7.25.1"
+              "cdk_version": "python:7.28.2"
             },
             "public": true,
             "releaseStage": "generally_available",
@@ -37375,7 +37396,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.3.39",
+      "dockerImageTag": "0.3.40",
       "dockerRepository": "airbyte/source-braintree",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/braintree",
       "externalDocumentationUrls": [
@@ -37409,8 +37430,8 @@
         "git": {
           "commit_author": "octavia-bot-hoard[bot]",
           "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "db52b7fe43b84a7a4291beb50f8c53047a70ba85",
-          "commit_timestamp": "2026-08-18T03:54:44+00:00"
+          "commit_sha": "c3e79fd8caa82902b06f947aec114b32d9e286bf",
+          "commit_timestamp": "2026-08-25T04:00:42+00:00"
         },
         "metrics": {
           "all": {
@@ -37427,23 +37448,27 @@
           }
         },
         "release": {
-          "attributed_to": null,
-          "merge_commit_sha": "db52b7fe43b84a7a4291beb50f8c53047a70ba85",
-          "merged_at": "2026-08-18T03:54:45Z",
+          "attributed_to": "octavia-bot-hoard",
+          "attributed_to_kind": "bot",
+          "merge_commit_sha": "c3e79fd8caa82902b06f947aec114b32d9e286bf",
+          "merged_at": "2026-08-25T04:00:43Z",
+          "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 230633153,
           "pr_author_login": "octavia-bot-hoard",
           "pr_author_type": "Bot",
-          "pr_number": 84498,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84498",
-          "released_at": "2026-08-18T03:54:45Z",
+          "pr_merged_by_login": "octavia-bot-hoard",
+          "pr_merged_by_type": "Bot",
+          "pr_number": 85008,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85008",
+          "released_at": "2026-08-25T04:00:43Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-braintree/0.3.39.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-braintree/0.3.40.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-braintree/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-18T04:00:26.300699+00:00",
-          "registry_entry_generated_at": "2026-08-18T04:00:26.300699+00:00"
+          "metadata_last_modified": "2026-08-25T04:06:50.834006+00:00",
+          "registry_entry_generated_at": "2026-08-25T04:06:50.834006+00:00"
         }
       },
       "githubIssueLabel": "source-braintree",
@@ -53631,7 +53656,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/facebook-marketing-migrations",
         "releaseCandidates": {
-          "6.1.0": {
+          "6.1.1": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -53707,7 +53732,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "6.1.0",
+            "dockerImageTag": "6.1.1",
             "dockerRepository": "airbyte/source-facebook-marketing",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/facebook-marketing",
             "erdUrl": "https://dbdocs.io/airbyteio/source-facebook-marketing?view=relationships",
@@ -53747,15 +53772,31 @@
               "git": {
                 "commit_author": "devin-ai-integration[bot]",
                 "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "a690ef0b0af1facaa041d25fd361dbcb7e55917b",
-                "commit_timestamp": "2026-08-12T11:59:20+03:00"
+                "commit_sha": "ae7200eb7dfdae047a6a4f9d920022bcdcb3a5d0",
+                "commit_timestamp": "2026-08-25T14:03:58-04:00"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-facebook-marketing/6.1.0.spdx.json",
+              "release": {
+                "attributed_to": "maddiekashyapAB",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "ae7200eb7dfdae047a6a4f9d920022bcdcb3a5d0",
+                "merged_at": "2026-08-25T18:03:59Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "maddiekashyapAB",
+                "pr_merged_by_type": "User",
+                "pr_number": 74266,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/74266",
+                "released_at": "2026-08-25T18:03:59Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-facebook-marketing/6.1.1.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-facebook-marketing/6.1.0/metadata.yaml",
-                "metadata_last_modified": "2026-08-12T09:06:10.011391+00:00",
-                "registry_entry_generated_at": "2026-08-12T09:06:10.011391+00:00"
+                "metadata_file_path": "metadata/airbyte/source-facebook-marketing/6.1.1/metadata.yaml",
+                "metadata_last_modified": "2026-08-25T18:10:29.129318+00:00",
+                "registry_entry_generated_at": "2026-08-25T18:10:29.129318+00:00"
               }
             },
             "githubIssueLabel": "source-facebook-marketing",
@@ -54442,6 +54483,12 @@
                           "title": "Fields",
                           "type": "array"
                         },
+                        "include_engaged_view": {
+                          "default": false,
+                          "description": "If enabled, the engaged view (ev) attribution window will be included in the action attribution windows for this custom insight. This allows you to retrieve attribution data for users who had an engaged view of a video ad (watched 10+ seconds or 97%+ of a short video).",
+                          "title": "Include Engaged View",
+                          "type": "boolean"
+                        },
                         "include_incrementality": {
                           "default": false,
                           "description": "If enabled, the incrementality attribution window will be included in the action attribution windows for this custom insight. This allows you to retrieve incrementality data for action metrics.",
@@ -54578,6 +54625,13 @@
                     "description": "Set to active if you want to fetch the thumbnail_url and store the result in thumbnail_data_url for each Ad Creative.",
                     "order": 7,
                     "title": "Fetch Thumbnail Images from Ad Creative",
+                    "type": "boolean"
+                  },
+                  "include_engaged_view": {
+                    "default": false,
+                    "description": "If enabled, the engaged view (ev) attribution window will be included in the action attribution windows for all built-in insight streams. This surfaces attribution data for users who had an engaged view of a video ad (watched 10+ seconds or 97%+ of a short video). See the Facebook Marketing API documentation for more details: https://developers.facebook.com/docs/marketing-api/reference/ads-action-stats/",
+                    "order": 14,
+                    "title": "Include Engaged View",
                     "type": "boolean"
                   },
                   "include_incrementality": {
@@ -61781,7 +61835,7 @@
       "releaseStage": "alpha",
       "releases": {
         "releaseCandidates": {
-          "0.10.28": {
+          "0.10.29": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 200,
@@ -61898,7 +61952,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "0.10.28",
+            "dockerImageTag": "0.10.29",
             "dockerRepository": "airbyte/source-gcs",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/gcs",
             "externalDocumentationUrls": [
@@ -61922,27 +61976,31 @@
               "git": {
                 "commit_author": "octavia-bot-hoard[bot]",
                 "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "090d035e77eb2db06d2818080ae6f2da64871c2d",
-                "commit_timestamp": "2026-08-18T04:59:59+00:00"
+                "commit_sha": "1e64aaf070a0100ab9d93d70154c84cc139d175f",
+                "commit_timestamp": "2026-08-25T05:12:05+00:00"
               },
               "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "090d035e77eb2db06d2818080ae6f2da64871c2d",
-                "merged_at": "2026-08-18T05:00:00Z",
+                "attributed_to": "octavia-bot-hoard",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "1e64aaf070a0100ab9d93d70154c84cc139d175f",
+                "merged_at": "2026-08-25T05:12:06Z",
+                "pr_author_association": "CONTRIBUTOR",
                 "pr_author_id": 230633153,
                 "pr_author_login": "octavia-bot-hoard",
                 "pr_author_type": "Bot",
-                "pr_number": 84572,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84572",
-                "released_at": "2026-08-18T05:00:00Z",
+                "pr_merged_by_login": "octavia-bot-hoard",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 85012,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85012",
+                "released_at": "2026-08-25T05:12:06Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-gcs/0.10.28.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-gcs/0.10.29.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-gcs/0.10.28/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T05:07:46.888347+00:00",
-                "registry_entry_generated_at": "2026-08-18T05:07:46.888347+00:00"
+                "metadata_file_path": "metadata/airbyte/source-gcs/0.10.29/metadata.yaml",
+                "metadata_last_modified": "2026-08-25T05:19:08.734777+00:00",
+                "registry_entry_generated_at": "2026-08-25T05:19:08.734777+00:00"
               }
             },
             "githubIssueLabel": "source-gcs",
@@ -61953,7 +62011,7 @@
             "maxSecondsBetweenMessages": 5400,
             "name": "Google Cloud Storage (GCS)",
             "packageInfo": {
-              "cdk_version": "python:7.25.1"
+              "cdk_version": "python:7.28.2"
             },
             "public": true,
             "releaseStage": "alpha",
@@ -64226,7 +64284,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "2.1.40",
+      "dockerImageTag": "2.1.42",
       "dockerRepository": "airbyte/source-github",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/github",
       "erdUrl": "https://dbdocs.io/airbyteio/source-github?view=relationships",
@@ -64276,8 +64334,8 @@
         "git": {
           "commit_author": "octavia-bot-hoard[bot]",
           "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "0f585edfc882827984355e6f162ee133bdf0af23",
-          "commit_timestamp": "2026-08-11T05:19:36+00:00"
+          "commit_sha": "a1742bf1a56b02b5c474967f50c0453f64bef1e2",
+          "commit_timestamp": "2026-08-25T04:56:49+00:00"
         },
         "metrics": {
           "all": {
@@ -64293,12 +64351,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.1.40.spdx.json",
+        "release": {
+          "attributed_to": "octavia-bot-hoard",
+          "attributed_to_kind": "bot",
+          "merge_commit_sha": "a1742bf1a56b02b5c474967f50c0453f64bef1e2",
+          "merged_at": "2026-08-25T04:56:49Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 230633153,
+          "pr_author_login": "octavia-bot-hoard",
+          "pr_author_type": "Bot",
+          "pr_merged_by_login": "octavia-bot-hoard",
+          "pr_merged_by_type": "Bot",
+          "pr_number": 85011,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85011",
+          "released_at": "2026-08-25T04:56:49Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.1.42.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-github/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-11T05:25:35.674273+00:00",
-          "registry_entry_generated_at": "2026-08-11T05:25:35.674273+00:00"
+          "metadata_last_modified": "2026-08-25T05:03:30.772275+00:00",
+          "registry_entry_generated_at": "2026-08-25T05:03:30.772275+00:00"
         }
       },
       "githubIssueLabel": "source-github",
@@ -64309,7 +64383,7 @@
       "maxSecondsBetweenMessages": 3600,
       "name": "GitHub",
       "packageInfo": {
-        "cdk_version": "python:7.24.0"
+        "cdk_version": "python:7.28.2"
       },
       "public": true,
       "releaseStage": "generally_available",
@@ -64335,469 +64409,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/github-migrations",
-        "releaseCandidates": {
-          "2.1.41": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 400,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 300
-            },
-            "allowedHosts": {
-              "hosts": [
-                "${api_url}"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/python-connector-base:4.1.1@sha256:a268b44c733ae699a60f5fbc06a324945dba98945c6e2ab7f8609f2f895b0d28"
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "liveTests",
-                "testConnections": [
-                  {
-                    "id": "00d7a7eb-9922-4463-9d9d-fac37438bc12",
-                    "name": "github_config_dev_null"
-                  },
-                  {
-                    "id": "65c98c6e-c8e5-4ff4-a822-32b79d10468b",
-                    "name": "github_config_oauth_dev_null"
-                  }
-                ]
-              },
-              {
-                "suite": "unitTests"
-              },
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-GITHUB_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_oauth.json",
-                    "name": "SECRET_SOURCE-GITHUB_OAUTH_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "2.1.41",
-            "dockerRepository": "airbyte/source-github",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/github",
-            "erdUrl": "https://dbdocs.io/airbyteio/source-github?view=relationships",
-            "externalDocumentationUrls": [
-              {
-                "title": "Breaking changes",
-                "type": "api_deprecations",
-                "url": "https://docs.github.com/en/rest/about-the-rest-api/breaking-changes"
-              },
-              {
-                "title": "GitHub REST API reference",
-                "type": "api_reference",
-                "url": "https://docs.github.com/en/rest"
-              },
-              {
-                "title": "API Versions",
-                "type": "api_release_history",
-                "url": "https://docs.github.com/en/rest/about-the-rest-api/api-versions"
-              },
-              {
-                "title": "GitHub API changelog",
-                "type": "api_release_history",
-                "url": "https://github.blog/changelog/"
-              },
-              {
-                "title": "GitHub authentication",
-                "type": "authentication_guide",
-                "url": "https://docs.github.com/en/rest/overview/authenticating-to-the-rest-api"
-              },
-              {
-                "title": "GitHub REST API OpenAPI specification",
-                "type": "openapi_spec",
-                "url": "https://github.com/github/rest-api-description"
-              },
-              {
-                "title": "GitHub rate limits",
-                "type": "rate_limits",
-                "url": "https://docs.github.com/en/rest/overview/rate-limits-for-the-rest-api"
-              },
-              {
-                "title": "GitHub Status",
-                "type": "status_page",
-                "url": "https://www.githubstatus.com/"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "1cf5ccde8fa27459d2f9c293f889831f866e50ec",
-                "commit_timestamp": "2026-08-18T04:57:52+00:00"
-              },
-              "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "1cf5ccde8fa27459d2f9c293f889831f866e50ec",
-                "merged_at": "2026-08-18T04:57:53Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
-                "pr_author_type": "Bot",
-                "pr_number": 84569,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84569",
-                "released_at": "2026-08-18T04:57:53Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.1.41.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-github/2.1.41/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T05:04:39.872907+00:00",
-                "registry_entry_generated_at": "2026-08-18T05:04:39.872907+00:00"
-              }
-            },
-            "githubIssueLabel": "source-github",
-            "icon": "github.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-github/latest/icon.svg",
-            "language": "python",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 3600,
-            "name": "GitHub",
-            "packageInfo": {
-              "cdk_version": "python:7.25.1"
-            },
-            "public": true,
-            "releaseStage": "generally_available",
-            "releases": {
-              "breakingChanges": {
-                "2.0.0": {
-                  "message": "This release renames reaction fields for compatibility across all destinations. The +1 and -1 fields have been renamed to plus_one and minus_one in streams containing reactions (comments, commit_comments, issue_events, issues, releases, review_comments). Users should refresh their source schema and reset affected streams after upgrading.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/github-migrations#2.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "comments",
-                        "commit_comments",
-                        "issue_events",
-                        "issues",
-                        "releases",
-                        "review_comments"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2025-11-21"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/github-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": true,
-                "packageName": "airbyte-source-github"
-              }
-            },
-            "sourceDefinitionId": "ef69ef6e-aa7f-4af1-a01d-ef775033524e",
-            "sourceType": "api",
-            "spec": {
-              "advanced_auth": {
-                "auth_flow_type": "oauth2.0",
-                "oauth_config_specification": {
-                  "complete_oauth_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "access_token": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "access_token"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_input_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_id"
-                        ],
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_secret"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "oauth_connector_input_specification": {
-                    "access_token_url": "https://github.com/login/oauth/access_token?{{client_id_param}}&{{client_secret_param}}&{{auth_code_param}}&{{redirect_uri_param}}",
-                    "consent_url": "https://github.com/login/oauth/authorize?{{client_id_param}}&{{redirect_uri_param}}&{{scopes_param}}&{{state_param}}",
-                    "extract_output": [
-                      "access_token"
-                    ],
-                    "scopes": [
-                      {
-                        "scope": "repo"
-                      },
-                      {
-                        "scope": "read:org"
-                      },
-                      {
-                        "scope": "read:repo_hook"
-                      },
-                      {
-                        "scope": "read:user"
-                      },
-                      {
-                        "scope": "read:project"
-                      },
-                      {
-                        "scope": "read:discussion"
-                      },
-                      {
-                        "scope": "workflow"
-                      }
-                    ]
-                  }
-                },
-                "predicate_key": [
-                  "credentials",
-                  "option_title"
-                ],
-                "predicate_value": "OAuth Credentials"
-              },
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "api_url": {
-                    "default": "https://api.github.com/",
-                    "description": "Please enter your basic URL from self-hosted GitHub instance or leave it empty to use GitHub.",
-                    "examples": [
-                      "https://github.com",
-                      "https://github.company.org"
-                    ],
-                    "order": 3,
-                    "title": "API URL",
-                    "type": "string"
-                  },
-                  "branch": {
-                    "airbyte_hidden": true,
-                    "description": "(DEPRCATED) Space-delimited list of GitHub repository branches to pull commits for, e.g. `airbytehq/airbyte/master`. If no branches are specified for a repository, the default branch will be pulled.",
-                    "examples": [
-                      "airbytehq/airbyte/master airbytehq/airbyte/my-branch"
-                    ],
-                    "pattern_descriptor": "org/repo/branch1 org/repo/branch2",
-                    "title": "Branch",
-                    "type": "string"
-                  },
-                  "branches": {
-                    "description": "List of GitHub repository branches to pull commits for, e.g. `airbytehq/airbyte/master`. If no branches are specified for a repository, the default branch will be pulled.",
-                    "examples": [
-                      "airbytehq/airbyte/master",
-                      "airbytehq/airbyte/my-branch"
-                    ],
-                    "items": {
-                      "type": "string"
-                    },
-                    "order": 4,
-                    "pattern_descriptor": "org/repo/branch1 org/repo/branch2",
-                    "title": "Branches",
-                    "type": "array"
-                  },
-                  "credentials": {
-                    "description": "Choose how to authenticate to GitHub",
-                    "group": "auth",
-                    "oneOf": [
-                      {
-                        "properties": {
-                          "access_token": {
-                            "airbyte_secret": true,
-                            "description": "OAuth access token",
-                            "title": "Access Token",
-                            "type": "string"
-                          },
-                          "client_id": {
-                            "airbyte_secret": true,
-                            "description": "OAuth Client Id",
-                            "title": "Client Id",
-                            "type": "string"
-                          },
-                          "client_secret": {
-                            "airbyte_secret": true,
-                            "description": "OAuth Client secret",
-                            "title": "Client secret",
-                            "type": "string"
-                          },
-                          "option_title": {
-                            "const": "OAuth Credentials",
-                            "order": 0,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "access_token"
-                        ],
-                        "title": "OAuth",
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "option_title": {
-                            "const": "PAT Credentials",
-                            "order": 0,
-                            "type": "string"
-                          },
-                          "personal_access_token": {
-                            "airbyte_secret": true,
-                            "description": "Log into GitHub and then generate a <a href=\"https://github.com/settings/tokens\">personal access token</a>. To load balance your API quota consumption across multiple API tokens, input multiple tokens separated with \",\"",
-                            "title": "Personal Access Tokens",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "personal_access_token"
-                        ],
-                        "title": "Personal Access Token",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 0,
-                    "title": "Authentication",
-                    "type": "object"
-                  },
-                  "max_waiting_time": {
-                    "default": 120,
-                    "description": "Max time (in minutes) the connector will wait when all API tokens are rate-limited before failing. GitHub rate limits reset every 60 minutes, so values above 60 allow the connector to wait for a full reset cycle.",
-                    "examples": [
-                      10,
-                      60,
-                      120
-                    ],
-                    "maximum": 240,
-                    "minimum": 1,
-                    "order": 5,
-                    "title": "Max Waiting Time (in minutes)",
-                    "type": "integer"
-                  },
-                  "repositories": {
-                    "description": "List of GitHub organizations/repositories, e.g. `airbytehq/airbyte` for single repository, `airbytehq/*` for get all repositories from organization and `airbytehq/a* for matching multiple repositories by pattern.",
-                    "examples": [
-                      "airbytehq/airbyte",
-                      "airbytehq/another-repo",
-                      "airbytehq/*",
-                      "airbytehq/a*"
-                    ],
-                    "items": {
-                      "pattern": "^[\\w.-]+/(([\\w.-]*\\*)|[\\w.-]+(?<!\\.git))$",
-                      "type": "string"
-                    },
-                    "minItems": 1,
-                    "order": 1,
-                    "pattern_descriptor": "org/repo org/another-repo org/* org/a*",
-                    "title": "GitHub Repositories",
-                    "type": "array"
-                  },
-                  "repository": {
-                    "airbyte_hidden": true,
-                    "description": "(DEPRCATED) Space-delimited list of GitHub organizations/repositories, e.g. `airbytehq/airbyte` for single repository, `airbytehq/*` for get all repositories from organization and `airbytehq/airbyte airbytehq/another-repo` for multiple repositories.",
-                    "examples": [
-                      "airbytehq/airbyte airbytehq/another-repo",
-                      "airbytehq/*",
-                      "airbytehq/airbyte"
-                    ],
-                    "pattern": "^([\\w.-]+/(\\*|[\\w.-]+(?<!\\.git))\\s+)*[\\w.-]+/(\\*|[\\w.-]+(?<!\\.git))$",
-                    "pattern_descriptor": "org/repo org/another-repo org/*",
-                    "title": "GitHub Repositories",
-                    "type": "string"
-                  },
-                  "start_date": {
-                    "description": "The date from which you'd like to replicate data from GitHub in the format YYYY-MM-DDT00:00:00Z. If the date is not set, all data will be replicated.  For the streams which support this configuration, only data generated on or after the start date will be replicated. This field doesn't apply to all streams, see the <a href=\"https://docs.airbyte.com/integrations/sources/github\">docs</a> for more info",
-                    "examples": [
-                      "2021-03-01T00:00:00Z"
-                    ],
-                    "format": "date-time",
-                    "order": 2,
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-                    "pattern_descriptor": "YYYY-MM-DDTHH:mm:ssZ",
-                    "title": "Start date",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "credentials",
-                  "repositories"
-                ],
-                "title": "GitHub Source Spec",
-                "type": "object"
-              },
-              "documentationUrl": "https://docs.airbyte.com/integrations/sources/github",
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "suggestedStreams": {
-              "streams": [
-                "branches",
-                "comments",
-                "issues",
-                "organizations",
-                "pull_requests",
-                "repositories",
-                "stargazers",
-                "tags",
-                "teams",
-                "users"
-              ]
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "language:python",
-              "cdk:low-code"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -74209,7 +73820,7 @@
       "releaseStage": "alpha",
       "releases": {
         "releaseCandidates": {
-          "0.5.31": {
+          "0.5.32": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 300,
@@ -74248,7 +73859,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "0.5.31",
+            "dockerImageTag": "0.5.32",
             "dockerRepository": "airbyte/source-google-drive",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/google-drive",
             "externalDocumentationUrls": [
@@ -74275,33 +73886,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "a694a6f0911b8e079ad253c5f86bddff445348c7",
-                "commit_timestamp": "2026-08-19T16:08:29-07:00"
+                "commit_author": "octavia-bot-hoard[bot]",
+                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
+                "commit_sha": "efc426d7254015e7971224140eb38d895cf05f95",
+                "commit_timestamp": "2026-08-25T05:39:28+00:00"
               },
               "release": {
-                "attributed_to": "pnilan",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "a694a6f0911b8e079ad253c5f86bddff445348c7",
-                "merged_at": "2026-08-19T23:08:29Z",
+                "attributed_to": "octavia-bot-hoard",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "efc426d7254015e7971224140eb38d895cf05f95",
+                "merged_at": "2026-08-25T05:39:29Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 158243242,
-                "pr_author_login": "devin-ai-integration",
+                "pr_author_id": 230633153,
+                "pr_author_login": "octavia-bot-hoard",
                 "pr_author_type": "Bot",
-                "pr_merged_by_login": "pnilan",
-                "pr_merged_by_type": "User",
-                "pr_number": 83838,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/83838",
-                "released_at": "2026-08-19T23:08:29Z",
+                "pr_merged_by_login": "octavia-bot-hoard",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 85013,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85013",
+                "released_at": "2026-08-25T05:39:29Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-google-drive/0.5.31.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-google-drive/0.5.32.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-google-drive/0.5.31/metadata.yaml",
-                "metadata_last_modified": "2026-08-19T23:15:48.146473+00:00",
-                "registry_entry_generated_at": "2026-08-19T23:15:48.146473+00:00"
+                "metadata_file_path": "metadata/airbyte/source-google-drive/0.5.32/metadata.yaml",
+                "metadata_last_modified": "2026-08-25T05:47:23.884995+00:00",
+                "registry_entry_generated_at": "2026-08-25T05:47:23.884995+00:00"
               }
             },
             "githubIssueLabel": "source-google-drive",
@@ -74312,7 +73923,7 @@
             "maxSecondsBetweenMessages": 3600,
             "name": "Google Drive",
             "packageInfo": {
-              "cdk_version": "python:7.25.1"
+              "cdk_version": "python:7.28.2"
             },
             "public": true,
             "releaseStage": "alpha",
@@ -78097,7 +77708,7 @@
         "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
       },
       "custom": false,
-      "dockerImageTag": "0.1.50",
+      "dockerImageTag": "0.1.51",
       "dockerRepository": "airbyte/source-gorgias",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/gorgias",
       "externalDocumentationUrls": [
@@ -78119,10 +77730,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "a307a4cb87fc6fda76cfcaca38852510f8933d66",
-          "commit_timestamp": "2026-08-18T05:56:24+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "5802a7bada6a5a48334146af31092449ad21c2bb",
+          "commit_timestamp": "2026-08-25T14:28:19-04:00"
         },
         "metrics": {
           "all": {
@@ -78139,23 +77750,27 @@
           }
         },
         "release": {
-          "attributed_to": null,
-          "merge_commit_sha": "a307a4cb87fc6fda76cfcaca38852510f8933d66",
-          "merged_at": "2026-08-18T05:56:25Z",
-          "pr_author_id": 230633153,
-          "pr_author_login": "octavia-bot-hoard",
+          "attributed_to": "maddiekashyapAB",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "5802a7bada6a5a48334146af31092449ad21c2bb",
+          "merged_at": "2026-08-25T18:28:20Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
-          "pr_number": 84643,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84643",
-          "released_at": "2026-08-18T05:56:25Z",
+          "pr_merged_by_login": "maddiekashyapAB",
+          "pr_merged_by_type": "User",
+          "pr_number": 84910,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84910",
+          "released_at": "2026-08-25T18:28:20Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-gorgias/0.1.50.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-gorgias/0.1.51.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-gorgias/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-18T06:00:35.005138+00:00",
-          "registry_entry_generated_at": "2026-08-18T06:00:35.005138+00:00"
+          "metadata_last_modified": "2026-08-25T18:32:37.945170+00:00",
+          "registry_entry_generated_at": "2026-08-25T18:32:37.945170+00:00"
         }
       },
       "githubIssueLabel": "source-gorgias",
@@ -79488,15 +79103,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-hardcoded-records/0.0.46.spdx.json",
@@ -85791,7 +85406,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.7.2",
+      "dockerImageTag": "1.0.0",
       "dockerRepository": "airbyte/source-iterable",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/iterable",
       "externalDocumentationUrls": [
@@ -85818,10 +85433,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "JaydanPB",
-          "commit_author_email": "150052765+JaydanPB@users.noreply.github.com",
-          "commit_sha": "45bfc1d3ac1db1dd25fecd79d2dbcbf78dbe7f33",
-          "commit_timestamp": "2026-05-07T17:10:03+01:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "b1cdf4f2803a9995f7447462b5ac9ea579d13074",
+          "commit_timestamp": "2026-08-25T11:27:24+03:00"
         },
         "metrics": {
           "all": {
@@ -85837,12 +85452,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-iterable/0.7.2.spdx.json",
+        "release": {
+          "attributed_to": "bazarnov",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "b1cdf4f2803a9995f7447462b5ac9ea579d13074",
+          "merged_at": "2026-08-25T08:27:25Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
+          "pr_author_type": "Bot",
+          "pr_merged_by_login": "bazarnov",
+          "pr_merged_by_type": "User",
+          "pr_number": 79635,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/79635",
+          "released_at": "2026-08-25T08:27:25Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-iterable/1.0.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-iterable/latest/metadata.yaml",
-          "metadata_last_modified": "2026-05-07T16:16:06.550938+00:00",
-          "registry_entry_generated_at": "2026-05-07T16:16:06.550938+00:00"
+          "metadata_last_modified": "2026-08-25T08:33:06.998416+00:00",
+          "registry_entry_generated_at": "2026-08-25T08:33:06.998416+00:00"
         }
       },
       "githubIssueLabel": "source-iterable",
@@ -85857,7 +85488,25 @@
       },
       "public": true,
       "releaseStage": "generally_available",
-      "releases": {},
+      "releases": {
+        "breakingChanges": {
+          "1.0.0": {
+            "deadlineAction": "disable",
+            "message": "The `users` stream schema has changed. Tenant-specific custom fields (e.g. Shopify fields like `addresses`, `default_address`, `aov`, `totalOrders`) are now nested inside a generic `data` object instead of being top-level properties. The `itblInternal` field changed from a nested object to flat dotted-key fields (e.g. `itblInternal.emailDomain`), and timestamp values are normalized to RFC3339 format. Refresh the source schema for the `users` stream after upgrading. Clearing the stream is optional: `users` has no primary key, so without a clear previously synced rows keep the old shape next to new rows; a clear rebuilds the table uniformly but only backfills profiles updated after your configured start date. See the [Iterable migration guide](https://docs.airbyte.com/integrations/sources/iterable-migrations#upgrading-to-100) for the full list of moved fields and steps.",
+            "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/iterable-migrations#1.0.0",
+            "scopedImpact": [
+              {
+                "impactedScopes": [
+                  "users"
+                ],
+                "scopeType": "stream"
+              }
+            ],
+            "upgradeDeadline": "2026-09-21"
+          }
+        },
+        "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/iterable-migrations"
+      },
       "remoteRegistries": {
         "pypi": {
           "enabled": true,
@@ -90443,7 +90092,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.2.18",
+      "dockerImageTag": "0.2.23",
       "dockerRepository": "airbyte/source-linear",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/linear",
       "externalDocumentationUrls": [
@@ -90472,8 +90121,8 @@
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "41cd3a2fcb2ae6822d3c7c439a538d107c985779",
-          "commit_timestamp": "2026-08-21T21:43:05+00:00"
+          "commit_sha": "5ea3687418ec976c4583e7a529f4c32af728c15f",
+          "commit_timestamp": "2026-08-24T21:08:26-07:00"
         },
         "metrics": {
           "all": {
@@ -90492,25 +90141,25 @@
         "release": {
           "attributed_to": "pnilan",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "41cd3a2fcb2ae6822d3c7c439a538d107c985779",
-          "merged_at": "2026-08-21T21:43:05Z",
+          "merge_commit_sha": "5ea3687418ec976c4583e7a529f4c32af728c15f",
+          "merged_at": "2026-08-25T04:08:26Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 158243242,
           "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
           "pr_merged_by_login": "pnilan",
           "pr_merged_by_type": "User",
-          "pr_number": 84948,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84948",
-          "released_at": "2026-08-21T21:43:05Z",
+          "pr_number": 84949,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84949",
+          "released_at": "2026-08-25T04:08:26Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-linear/0.2.18.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-linear/0.2.23.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-linear/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-21T21:47:05.364353+00:00",
-          "registry_entry_generated_at": "2026-08-21T21:47:05.364353+00:00"
+          "metadata_last_modified": "2026-08-25T04:13:16.062452+00:00",
+          "registry_entry_generated_at": "2026-08-25T04:13:16.062452+00:00"
         }
       },
       "githubIssueLabel": "source-linear",
@@ -90547,10 +90196,24 @@
             "complete_oauth_output_specification": {
               "additionalProperties": false,
               "properties": {
+                "access_token": {
+                  "path_in_connector_config": [
+                    "credentials",
+                    "access_token"
+                  ],
+                  "type": "string"
+                },
                 "refresh_token": {
                   "path_in_connector_config": [
                     "credentials",
                     "refresh_token"
+                  ],
+                  "type": "string"
+                },
+                "token_expiry_date": {
+                  "path_in_connector_config": [
+                    "credentials",
+                    "token_expiry_date"
                   ],
                   "type": "string"
                 }
@@ -90603,7 +90266,9 @@
               "access_token_url": "https://api.linear.app/oauth/token",
               "consent_url": "https://linear.app/oauth/authorize?{{client_id_param}}&{{redirect_uri_param}}&response_type=code&{{state_param}}&{{scopes_param}}&actor=app&prompt=consent",
               "extract_output": [
-                "refresh_token"
+                "access_token",
+                "refresh_token",
+                "expires_in"
               ],
               "scopes": [
                 {
@@ -90613,7 +90278,7 @@
                   "scope": "customer:read"
                 }
               ],
-              "scopes_join_strategy": "space"
+              "scopes_join_strategy": "comma"
             }
           },
           "predicate_key": [
@@ -90631,29 +90296,13 @@
               "oneOf": [
                 {
                   "properties": {
-                    "api_key": {
+                    "access_token": {
                       "airbyte_secret": true,
-                      "description": "Your Linear personal API key. In Linear, go to Settings \u2192 Security & access \u2192 Personal API keys, then click Create key and copy the generated key. The key inherits your Linear user's workspace permissions.",
-                      "order": 1,
-                      "title": "API Key",
+                      "description": "The access token that Linear returns when the connector refreshes your OAuth 2.0 credentials.",
+                      "order": 4,
+                      "title": "Access Token",
                       "type": "string"
                     },
-                    "auth_type": {
-                      "const": "API Key",
-                      "order": 0,
-                      "title": "Authentication Method",
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "auth_type",
-                    "api_key"
-                  ],
-                  "title": "API Key",
-                  "type": "object"
-                },
-                {
-                  "properties": {
                     "auth_type": {
                       "const": "OAuth2.0",
                       "order": 0,
@@ -90680,6 +90329,13 @@
                       "order": 3,
                       "title": "Refresh Token",
                       "type": "string"
+                    },
+                    "token_expiry_date": {
+                      "description": "The date and time when the current OAuth 2.0 access token expires.",
+                      "format": "date-time",
+                      "order": 5,
+                      "title": "Token Expiry Date",
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -90690,6 +90346,29 @@
                   ],
                   "title": "OAuth2.0",
                   "type": "object"
+                },
+                {
+                  "properties": {
+                    "api_key": {
+                      "airbyte_secret": true,
+                      "description": "Your Linear personal API key. In Linear, go to Settings \u2192 Security & access \u2192 Personal API keys, then click Create key and copy the generated key. The key inherits your Linear user's workspace permissions.",
+                      "order": 1,
+                      "title": "API Key",
+                      "type": "string"
+                    },
+                    "auth_type": {
+                      "const": "API Key",
+                      "order": 0,
+                      "title": "Authentication Method",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "auth_type",
+                    "api_key"
+                  ],
+                  "title": "API Key",
+                  "type": "object"
                 }
               ],
               "order": 0,
@@ -90698,7 +90377,7 @@
             },
             "num_workers": {
               "default": 4,
-              "description": "Number of worker threads used to read streams in parallel. Higher values can speed up syncs but increase the risk of hitting Linear's rate limits. The Linear API limits per-user requests by authentication type: API key auth allows 2,500 requests/hour, OAuth allows 5,000 requests/hour, and workspace OAuth scales dynamically with paid seats. Stay at the default unless you are on OAuth and have observed headroom in your rate-limit usage. See <a href=\"https://linear.app/developers/rate-limiting\">Linear API rate limits</a> for details.",
+              "description": "Number of worker threads used to read streams in parallel. Higher values can speed up syncs but increase the risk of hitting Linear's rate limits. The Linear API limits per-user requests by authentication type: API key auth allows 2,500 requests/hour, OAuth allows 5,000 requests/hour, and workspace OAuth scales dynamically with paid seats. OAuth has a lower hourly complexity budget (2,000,000 points versus 3,000,000 for API keys), which is usually the binding limit for this GraphQL connector. Stay at the default unless you have observed headroom in your rate-limit usage. See <a href=\"https://linear.app/developers/rate-limiting\">Linear API rate limits</a> for details.",
               "maximum": 10,
               "minimum": 1,
               "order": 2,
@@ -125799,7 +125478,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/s3-migrations",
         "releaseCandidates": {
-          "4.15.19": {
+          "4.15.20": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -126334,7 +126013,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "4.15.19",
+            "dockerImageTag": "4.15.20",
             "dockerRepository": "airbyte/source-s3",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/s3",
             "externalDocumentationUrls": [
@@ -126348,27 +126027,31 @@
               "git": {
                 "commit_author": "octavia-bot-hoard[bot]",
                 "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "2a3c985d3e7c5be053abbf0415f90f8649d5d0d6",
-                "commit_timestamp": "2026-08-18T07:40:54+00:00"
+                "commit_sha": "50a7b9e7d8e2df8d06e0e18e0831330bb0b2afef",
+                "commit_timestamp": "2026-08-25T08:03:26+00:00"
               },
               "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "2a3c985d3e7c5be053abbf0415f90f8649d5d0d6",
-                "merged_at": "2026-08-18T07:40:54Z",
+                "attributed_to": "octavia-bot-hoard",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "50a7b9e7d8e2df8d06e0e18e0831330bb0b2afef",
+                "merged_at": "2026-08-25T08:03:26Z",
+                "pr_author_association": "CONTRIBUTOR",
                 "pr_author_id": 230633153,
                 "pr_author_login": "octavia-bot-hoard",
                 "pr_author_type": "Bot",
-                "pr_number": 84738,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84738",
-                "released_at": "2026-08-18T07:40:54Z",
+                "pr_merged_by_login": "octavia-bot-hoard",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 85018,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85018",
+                "released_at": "2026-08-25T08:03:26Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-s3/4.15.19.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-s3/4.15.20.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-s3/4.15.19/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T07:48:40.288695+00:00",
-                "registry_entry_generated_at": "2026-08-18T07:48:40.288695+00:00"
+                "metadata_file_path": "metadata/airbyte/source-s3/4.15.20/metadata.yaml",
+                "metadata_last_modified": "2026-08-25T08:12:01.706896+00:00",
+                "registry_entry_generated_at": "2026-08-25T08:12:01.706896+00:00"
               }
             },
             "githubIssueLabel": "source-s3",
@@ -126379,7 +126062,7 @@
             "maxSecondsBetweenMessages": 1,
             "name": "S3",
             "packageInfo": {
-              "cdk_version": "python:7.25.1"
+              "cdk_version": "python:7.28.2"
             },
             "public": true,
             "releaseStage": "generally_available",
@@ -128642,6 +128325,450 @@
       "public": true,
       "releaseStage": "generally_available",
       "releases": {
+        "releaseCandidates": {
+          "2.9.0": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 400,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "*.salesforce.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/python-connector-base:4.0.2@sha256:9fdb1888c4264cf6fee473649ecb593f56f58e5d0096a87ee0b231777e2e3e73"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "liveTests",
+                "testConnections": [
+                  {
+                    "id": "114d8a58-804d-49cd-be0f-14d8f20012b6",
+                    "name": "salesforce_config_bulk_dev_null"
+                  },
+                  {
+                    "id": "36b229e8-cea8-4d92-8b3d-cdfe488b00a5",
+                    "name": "salesforce_config_dev_null"
+                  },
+                  {
+                    "id": "4cfaad00-8911-450e-a8f0-d31c6acd2fe2",
+                    "name": "salesforce_config_sandbox_dev_null"
+                  }
+                ]
+              },
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config_bulk.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_BULK_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_REST_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config_sandbox.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_SANDBOX_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config_bulk.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_BULK_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_REST_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config_sandbox.json",
+                    "name": "SECRET_SOURCE-SALESFORCE_SANDBOX_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "2.9.0",
+            "dockerRepository": "airbyte/source-salesforce",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/salesforce",
+            "externalDocumentationUrls": [
+              {
+                "title": "REST API Release Notes",
+                "type": "api_release_history",
+                "url": "https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/rest_rns.htm"
+              },
+              {
+                "title": "Winter 2026 release notes - API",
+                "type": "api_release_history",
+                "url": "https://help.salesforce.com/s/articleView?id=release-notes.salesforce_release_notes.htm&release=258&type=5"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "Harshith Iyer",
+                "commit_author_email": "harbar2021@gmail.com",
+                "commit_sha": "f914a5d5f94612ffb58503fd579801029acc8568",
+                "commit_timestamp": "2026-08-25T10:53:10-04:00"
+              },
+              "release": {
+                "attributed_to": "bazarnov",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "f914a5d5f94612ffb58503fd579801029acc8568",
+                "merged_at": "2026-08-25T14:53:11Z",
+                "pr_author_association": "NONE",
+                "pr_author_id": 30803341,
+                "pr_author_login": "harbar20",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "bazarnov",
+                "pr_merged_by_type": "User",
+                "pr_number": 82722,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/82722",
+                "released_at": "2026-08-25T14:53:11Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-salesforce/2.9.0.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-salesforce/2.9.0/metadata.yaml",
+                "metadata_last_modified": "2026-08-25T15:00:20.127176+00:00",
+                "registry_entry_generated_at": "2026-08-25T15:00:20.127176+00:00"
+              }
+            },
+            "githubIssueLabel": "source-salesforce",
+            "icon": "salesforce.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-salesforce/latest/icon.svg",
+            "language": "python",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 86400,
+            "name": "Salesforce",
+            "packageInfo": {
+              "cdk_version": "python:7.23.5"
+            },
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "slow"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": true,
+                "packageName": "airbyte-source-salesforce"
+              }
+            },
+            "sourceDefinitionId": "b117307c-14b6-41aa-9422-947e34922962",
+            "sourceType": "api",
+            "spec": {
+              "advanced_auth": {
+                "auth_flow_type": "oauth2.0",
+                "oauth_config_specification": {
+                  "complete_oauth_output_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "refresh_token": {
+                        "path_in_connector_config": [
+                          "refresh_token"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_input_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "client_id": {
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_output_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "client_id": {
+                        "path_in_connector_config": [
+                          "client_id"
+                        ],
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "path_in_connector_config": [
+                          "client_secret"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "oauth_connector_input_specification": {
+                    "access_token_headers": {
+                      "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    "access_token_params": {
+                      "client_id": "{{ client_id_value }}",
+                      "client_secret": "{{ client_secret_value }}",
+                      "code": "{{ auth_code_value }}",
+                      "grant_type": "authorization_code",
+                      "redirect_uri": "{{ redirect_uri_value }}"
+                    },
+                    "access_token_url": "https://{% if is_sandbox %}test{% else %}login{% endif %}.salesforce.com/services/oauth2/token",
+                    "consent_url": "https://{% if is_sandbox %}test{% else %}login{% endif %}.salesforce.com/services/oauth2/authorize?{{client_id_param}}&{{redirect_uri_param}}&response_type=code&{{scopes_param}}&{{state_param}}",
+                    "extract_output": [
+                      "refresh_token"
+                    ],
+                    "scopes": [
+                      {
+                        "scope": "api"
+                      },
+                      {
+                        "scope": "web"
+                      },
+                      {
+                        "scope": "refresh_token"
+                      },
+                      {
+                        "scope": "lightning"
+                      }
+                    ]
+                  },
+                  "oauth_user_input_from_connector_config_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "is_sandbox": {
+                        "path_in_connector_config": [
+                          "is_sandbox"
+                        ],
+                        "type": "boolean"
+                      }
+                    },
+                    "type": "object"
+                  }
+                },
+                "predicate_key": [
+                  "auth_type"
+                ],
+                "predicate_value": "Client"
+              },
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "auth_type": {
+                    "const": "Client",
+                    "type": "string"
+                  },
+                  "client_id": {
+                    "description": "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\">Client ID</a>",
+                    "order": 2,
+                    "title": "Client ID",
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "airbyte_secret": true,
+                    "description": "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\">Client secret</a>",
+                    "order": 3,
+                    "title": "Client Secret",
+                    "type": "string"
+                  },
+                  "end_date": {
+                    "description": "Enter the date (or date-time) in the YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format. For streams synced incrementally, Airbyte will replicate data updated before this date; the bound is exclusive, so a date-only value means midnight UTC and the named day itself is not included. Streams synced in full refresh mode ignore this field and replicate all data. If this field is blank, Airbyte will replicate data up to the current time.",
+                    "examples": [
+                      "2021-07-26",
+                      "2021-07-26T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 6,
+                    "pattern": "^$|^([0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?)$",
+                    "pattern_descriptor": "YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ",
+                    "title": "End Date",
+                    "type": "string"
+                  },
+                  "force_use_bulk_api": {
+                    "default": false,
+                    "description": "Toggle to use Bulk API (this might cause empty fields for some streams)",
+                    "order": 7,
+                    "title": "Force to use BULK API",
+                    "type": "boolean"
+                  },
+                  "is_sandbox": {
+                    "default": false,
+                    "description": "Toggle if you're using a <a href=\"https://help.salesforce.com/s/articleView?id=sf.deploy_sandboxes_parent.htm&type=5\">Salesforce Sandbox</a>",
+                    "order": 1,
+                    "title": "Sandbox",
+                    "type": "boolean"
+                  },
+                  "lookback_window": {
+                    "default": "PT10M",
+                    "description": "The duration (ISO8601 duration) to re-read data from the source when running incremental syncs. This compensates for records that may not be immediately available when querying the Salesforce API due to eventual consistency delays. The connector will re-query this amount of time before the last cursor position on each sync. Increase this value if you observe missing records in your destination. See <a href=\"https://docs.airbyte.com/integrations/sources/salesforce#limitations--troubleshooting\">Limitations & Troubleshooting</a> for details.",
+                    "examples": [
+                      "PT10M",
+                      "PT30M",
+                      "PT1H"
+                    ],
+                    "order": 9,
+                    "title": "Lookback Window for Incremental sync",
+                    "type": "string"
+                  },
+                  "preserve_na_values": {
+                    "default": false,
+                    "description": "By default, string values such as \"NA\", \"N/A\", \"NULL\", \"None\" and \"NaN\" returned by the Salesforce Bulk API are treated as missing and synced as null. Enable this option to keep these values as literal strings (for example, \"NA\" meaning \"North America\"). Empty fields are still synced as null. Leaving this disabled preserves the connector's historical behavior.",
+                    "order": 11,
+                    "title": "Preserve \"NA\" and similar string values",
+                    "type": "boolean"
+                  },
+                  "refresh_token": {
+                    "airbyte_secret": true,
+                    "description": "Enter your application's <a href=\"https://developer.salesforce.com/docs/atlas.en-us.mobile_sdk.meta/mobile_sdk/oauth_refresh_token_flow.htm\">Salesforce Refresh Token</a> used for Airbyte to access your Salesforce account.",
+                    "order": 4,
+                    "title": "Refresh Token",
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "description": "Enter the date (or date-time) in the YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ format. Airbyte will replicate the data updated on and after this date. If this field is blank, Airbyte will replicate the data for last two years.",
+                    "examples": [
+                      "2021-07-25",
+                      "2021-07-25T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 5,
+                    "pattern": "^([0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?)$",
+                    "pattern_descriptor": "YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ",
+                    "title": "Start Date",
+                    "type": "string"
+                  },
+                  "stream_slice_step": {
+                    "default": "P30D",
+                    "description": "The size of the time window (ISO8601 duration) to slice requests.",
+                    "examples": [
+                      "PT12H",
+                      "P7D",
+                      "P30D",
+                      "P1M",
+                      "P1Y"
+                    ],
+                    "order": 8,
+                    "title": "Stream Slice Step for Incremental sync",
+                    "type": "string"
+                  },
+                  "streams_criteria": {
+                    "description": "Add filters to select only required stream based on `SObject` name. Use this field to filter which tables are displayed by this connector. This is useful if your Salesforce account has a large number of tables (>1000), in which case you may find it easier to navigate the UI and speed up the connector's performance if you restrict the tables displayed by this connector.",
+                    "items": {
+                      "properties": {
+                        "criteria": {
+                          "default": "contains",
+                          "enum": [
+                            "starts with",
+                            "ends with",
+                            "contains",
+                            "exacts",
+                            "starts not with",
+                            "ends not with",
+                            "not contains",
+                            "not exacts"
+                          ],
+                          "order": 1,
+                          "title": "Search criteria",
+                          "type": "string"
+                        },
+                        "value": {
+                          "order": 2,
+                          "title": "Search value",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "criteria",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    "order": 10,
+                    "title": "Filter Salesforce Objects",
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "client_id",
+                  "client_secret",
+                  "refresh_token"
+                ],
+                "title": "Salesforce Source Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/salesforce",
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "suggestedStreams": {
+              "streams": [
+                "Account",
+                "Contact",
+                "Lead",
+                "Opportunity",
+                "OpportunityStage",
+                "Stage",
+                "Task",
+                "User"
+              ]
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "language:python",
+              "cdk:python"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -136639,7 +136766,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/slack-migrations",
         "releaseCandidates": {
-          "3.2.19": {
+          "3.2.20": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -136694,7 +136821,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "3.2.19",
+            "dockerImageTag": "3.2.20",
             "dockerRepository": "airbyte/source-slack",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/slack",
             "externalDocumentationUrls": [
@@ -136716,29 +136843,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "73bfbe9c54a2701d06d61c963416edce7b34755f",
-                "commit_timestamp": "2026-08-18T07:59:40+00:00"
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "b945b0f20582a61d5e940cd9f20b1a5d9f463c53",
+                "commit_timestamp": "2026-08-25T15:14:57-07:00"
               },
               "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "73bfbe9c54a2701d06d61c963416edce7b34755f",
-                "merged_at": "2026-08-18T07:59:41Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
+                "attributed_to": "sophiecuiy",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "b945b0f20582a61d5e940cd9f20b1a5d9f463c53",
+                "merged_at": "2026-08-25T22:14:58Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
                 "pr_author_type": "Bot",
-                "pr_number": 84762,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84762",
-                "released_at": "2026-08-18T07:59:41Z",
+                "pr_merged_by_login": "sophiecuiy",
+                "pr_merged_by_type": "User",
+                "pr_number": 84839,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84839",
+                "released_at": "2026-08-25T22:14:58Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-slack/3.2.19.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-slack/3.2.20.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-slack/3.2.19/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T08:03:50.237959+00:00",
-                "registry_entry_generated_at": "2026-08-18T08:03:50.237959+00:00"
+                "metadata_file_path": "metadata/airbyte/source-slack/3.2.20/metadata.yaml",
+                "metadata_last_modified": "2026-08-25T22:19:56.801690+00:00",
+                "registry_entry_generated_at": "2026-08-25T22:19:56.801690+00:00"
               }
             },
             "githubIssueLabel": "source-slack",
@@ -139121,7 +139252,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.1.1",
+      "dockerImageTag": "1.1.2",
       "dockerRepository": "airbyte/source-snowflake",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake",
       "externalDocumentationUrls": [
@@ -139148,10 +139279,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "ANDRIANINA HERIZO Jouissant Michel",
-          "commit_author_email": "herizojouissant@gmail.com",
-          "commit_sha": "92d1a7d0e48d514a20e35cb0c84b5ba8c7464951",
-          "commit_timestamp": "2026-08-13T00:37:11+03:00"
+          "commit_author": "Matt Bayley",
+          "commit_author_email": "matt.bayley@airbyte.io",
+          "commit_sha": "acbd22b0a0abe7026bbf05ccb0f2cdf4ac3a06d2",
+          "commit_timestamp": "2026-08-21T11:13:04-07:00"
         },
         "metrics": {
           "all": {
@@ -139167,12 +139298,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-snowflake/1.1.1.spdx.json",
+        "release": {
+          "attributed_to": "mwbayley",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "acbd22b0a0abe7026bbf05ccb0f2cdf4ac3a06d2",
+          "merged_at": "2026-08-21T18:13:05Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 31358253,
+          "pr_author_login": "mwbayley",
+          "pr_author_type": "User",
+          "pr_merged_by_login": "mwbayley",
+          "pr_merged_by_type": "User",
+          "pr_number": 84927,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84927",
+          "released_at": "2026-08-21T18:13:05Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-snowflake/1.1.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-snowflake/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-12T21:42:05.389559+00:00",
-          "registry_entry_generated_at": "2026-08-12T21:42:05.389559+00:00"
+          "metadata_last_modified": "2026-08-21T18:17:30.938527+00:00",
+          "registry_entry_generated_at": "2026-08-21T18:17:30.938527+00:00"
         }
       },
       "githubIssueLabel": "source-snowflake",
@@ -139194,351 +139341,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake-migrations",
-        "releaseCandidates": {
-          "1.1.2": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 200,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 100
-            },
-            "allowedHosts": {
-              "hosts": [
-                "${host}"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/java-connector-base:2.0.4@sha256:5f343797cfcf021ca98ba9bdf5970ef66cbf6222d8cc17b0d61d13860a5bcc2b"
-            },
-            "connectorIPCOptions": {
-              "dataChannel": {
-                "supportedSerialization": [
-                  "JSONL",
-                  "PROTOBUF"
-                ],
-                "supportedTransport": [
-                  "SOCKET",
-                  "STDIO"
-                ],
-                "version": "0.0.2"
-              }
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "acceptanceTests"
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "1.1.2",
-            "dockerRepository": "airbyte/source-snowflake",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake",
-            "externalDocumentationUrls": [
-              {
-                "title": "Snowflake documentation",
-                "type": "api_reference",
-                "url": "https://docs.snowflake.com/"
-              },
-              {
-                "title": "Snowflake server release notes and feature updates",
-                "type": "api_release_history",
-                "url": "https://docs.snowflake.com/en/release-notes/new-features"
-              },
-              {
-                "title": "Snowflake authentication",
-                "type": "authentication_guide",
-                "url": "https://docs.snowflake.com/en/user-guide/admin-user-management"
-              },
-              {
-                "title": "Snowflake Status",
-                "type": "status_page",
-                "url": "https://status.snowflake.com/"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "Matt Bayley",
-                "commit_author_email": "matt.bayley@airbyte.io",
-                "commit_sha": "acbd22b0a0abe7026bbf05ccb0f2cdf4ac3a06d2",
-                "commit_timestamp": "2026-08-21T11:13:04-07:00"
-              },
-              "release": {
-                "attributed_to": "mwbayley",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "acbd22b0a0abe7026bbf05ccb0f2cdf4ac3a06d2",
-                "merged_at": "2026-08-21T18:13:05Z",
-                "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 31358253,
-                "pr_author_login": "mwbayley",
-                "pr_author_type": "User",
-                "pr_merged_by_login": "mwbayley",
-                "pr_merged_by_type": "User",
-                "pr_number": 84927,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84927",
-                "released_at": "2026-08-21T18:13:05Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-snowflake/1.1.2.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-snowflake/1.1.2/metadata.yaml",
-                "metadata_last_modified": "2026-08-21T18:17:30.938527+00:00",
-                "registry_entry_generated_at": "2026-08-21T18:17:30.938527+00:00"
-              }
-            },
-            "githubIssueLabel": "source-snowflake",
-            "icon": "icon.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-snowflake/latest/icon.svg",
-            "language": "java",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 7200,
-            "name": "Snowflake",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "alpha",
-            "releases": {
-              "breakingChanges": {
-                "1.0.0": {
-                  "message": "**Important: This version introduces Airbyte certified source connector to replace community supported connector.**\n**What to expect when upgrading:**\n1. The certified connector configuration spec should be compatible with community version. 2. Full refresh sync mode should remain the same. 3. For incremental sync mode, a full refresh will be triggered for next sync because the connection state will not be compatible. New state will be populated after full refresh is completed.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake-migrations#1.0.0",
-                  "upgradeDeadline": "2025-09-30"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "slow"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "sourceDefinitionId": "e2d65910-8c8b-40a1-ae7d-ee2416b2bfa2",
-            "sourceType": "database",
-            "spec": {
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "check_privileges": {
-                    "default": true,
-                    "description": "When this feature is enabled, during schema discovery the connector will query each table or view individually to check access privileges and inaccessible tables, views, or columns therein will be removed. In large schemas, this might cause schema discovery to take too long, in which case it might be advisable to disable this feature.",
-                    "order": 10,
-                    "title": "Check Table and Column Access Privileges",
-                    "type": "boolean"
-                  },
-                  "checkpoint_target_interval_seconds": {
-                    "default": 300,
-                    "description": "How often (in seconds) a stream should checkpoint, when possible.",
-                    "order": 8,
-                    "title": "Checkpoint Target Time Interval",
-                    "type": "integer"
-                  },
-                  "concurrency": {
-                    "default": 1,
-                    "description": "Maximum number of concurrent queries to the database.",
-                    "order": 9,
-                    "title": "Concurrency",
-                    "type": "integer"
-                  },
-                  "credentials": {
-                    "oneOf": [
-                      {
-                        "additionalProperties": true,
-                        "order": 1,
-                        "properties": {
-                          "auth_type": {
-                            "default": "Key Pair Authentication",
-                            "enum": [
-                              "Key Pair Authentication"
-                            ],
-                            "type": "string"
-                          },
-                          "private_key": {
-                            "airbyte_secret": true,
-                            "description": "RSA Private key to use for Snowflake connection. See the <a href=\"https://docs.airbyte.com/integrations/sources/snowflake#key-pair-authentication\">docs</a> for more information on how to obtain this key.",
-                            "multiline": true,
-                            "order": 2,
-                            "title": "Private Key",
-                            "type": "string"
-                          },
-                          "private_key_password": {
-                            "airbyte_secret": true,
-                            "description": "Passphrase for private key",
-                            "order": 3,
-                            "title": "Passphrase",
-                            "type": "string"
-                          },
-                          "username": {
-                            "description": "The username you created to allow Airbyte to access the database.",
-                            "order": 1,
-                            "title": "Username",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "username",
-                          "private_key"
-                        ],
-                        "title": "Key Pair Authentication",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "order": 2,
-                        "properties": {
-                          "auth_type": {
-                            "default": "username/password",
-                            "enum": [
-                              "username/password"
-                            ],
-                            "type": "string"
-                          },
-                          "password": {
-                            "airbyte_secret": true,
-                            "description": "The password associated with the username.",
-                            "order": 2,
-                            "title": "Password",
-                            "type": "string"
-                          },
-                          "username": {
-                            "description": "The username you created to allow Airbyte to access the database.",
-                            "order": 1,
-                            "title": "Username",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "username",
-                          "password"
-                        ],
-                        "title": "Username and Password",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "order": 3,
-                        "properties": {
-                          "auth_type": {
-                            "default": "Programmatic Access Token",
-                            "enum": [
-                              "Programmatic Access Token"
-                            ],
-                            "type": "string"
-                          },
-                          "programmatic_access_token": {
-                            "airbyte_secret": true,
-                            "description": "The programmatic access token used to authenticate to Snowflake.",
-                            "order": 1,
-                            "title": "Programmatic Access Token",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "programmatic_access_token"
-                        ],
-                        "title": "Programmatic Access Token",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 0,
-                    "title": "Authorization Method",
-                    "type": "object"
-                  },
-                  "cursor": {
-                    "description": "Configures how data is extracted from the database.",
-                    "display_type": "radio",
-                    "oneOf": [
-                      {
-                        "additionalProperties": true,
-                        "description": "Incrementally detects new inserts and updates using the <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\">cursor column</a> chosen when configuring a connection (e.g. created_at, updated_at).",
-                        "properties": {
-                          "cursor_method": {
-                            "default": "user_defined",
-                            "enum": [
-                              "user_defined"
-                            ],
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "cursor_method"
-                        ],
-                        "title": "Scan Changes with User Defined Cursor",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 7,
-                    "title": "Update Method",
-                    "type": "object"
-                  },
-                  "database": {
-                    "description": "The database you created for Airbyte to access data.",
-                    "order": 4,
-                    "title": "Database",
-                    "type": "string"
-                  },
-                  "host": {
-                    "description": "The host domain of the snowflake instance (must include the account, region, cloud environment, and end with snowflakecomputing.com).",
-                    "order": 1,
-                    "title": "Server URL",
-                    "type": "string"
-                  },
-                  "jdbc_url_params": {
-                    "description": "Additional properties to pass to the JDBC URL string when connecting to the database formatted as 'key=value' pairs separated by the symbol '&'. (example: key1=value1&key2=value2&key3=value3).",
-                    "order": 6,
-                    "title": "JDBC URL Params",
-                    "type": "string"
-                  },
-                  "role": {
-                    "description": "The role you created for Airbyte to access Snowflake.",
-                    "order": 2,
-                    "title": "Role",
-                    "type": "string"
-                  },
-                  "schema": {
-                    "description": "The source Snowflake schema tables. Leave empty to access tables from multiple schemas.",
-                    "order": 5,
-                    "title": "Schema",
-                    "type": "string"
-                  },
-                  "warehouse": {
-                    "description": "The warehouse you created for Airbyte to access data.",
-                    "order": 3,
-                    "title": "Warehouse",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "host",
-                  "role",
-                  "warehouse",
-                  "database"
-                ],
-                "title": "Snowflake Source Spec",
-                "type": "object"
-              },
-              "documentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake",
-              "supported_destination_sync_modes": [],
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "language:java"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -160883,7 +160685,7 @@
         "sl": 100
       },
       "connectorBuildOptions": {
-        "baseImage": "docker.io/airbyte/python-connector-base:3.0.0@sha256:1a0845ff2b30eafa793c6eee4e8f4283c2e52e1bbd44eed6cb9e9abd5d34d844"
+        "baseImage": "docker.io/airbyte/python-connector-base:3.0.2@sha256:73697fbe1c0e2ebb8ed58e2268484bb4bfb2cb56b653808e1680cbc50bafef75"
       },
       "connectorTestSuitesOptions": [
         {
@@ -160926,7 +160728,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.1.4",
+      "dockerImageTag": "0.1.5",
       "dockerRepository": "airbyte/source-zoho-crm",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/zoho-crm",
       "externalDocumentationUrls": [
@@ -160953,10 +160755,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Abdalrahman-Bebars",
-          "commit_author_email": "70929153+Abdalrahman-Bebars@users.noreply.github.com",
-          "commit_sha": "69b62fedd0fdaa7bdd3c3152eb2d1f30e9dc16b9",
-          "commit_timestamp": "2026-08-24T14:17:55+03:00"
+          "commit_author": "octavia-bot-hoard[bot]",
+          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
+          "commit_sha": "74bf6b98ea5c5f166699cfda569eeb9be93153d1",
+          "commit_timestamp": "2026-08-25T08:37:54+00:00"
         },
         "metrics": {
           "all": {
@@ -160973,27 +160775,27 @@
           }
         },
         "release": {
-          "attributed_to": "bazarnov",
-          "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "69b62fedd0fdaa7bdd3c3152eb2d1f30e9dc16b9",
-          "merged_at": "2026-08-24T11:17:55Z",
+          "attributed_to": "octavia-bot-hoard",
+          "attributed_to_kind": "bot",
+          "merge_commit_sha": "74bf6b98ea5c5f166699cfda569eeb9be93153d1",
+          "merged_at": "2026-08-25T08:37:55Z",
           "pr_author_association": "CONTRIBUTOR",
-          "pr_author_id": 70929153,
-          "pr_author_login": "Abdalrahman-Bebars",
-          "pr_author_type": "User",
-          "pr_merged_by_login": "bazarnov",
-          "pr_merged_by_type": "User",
-          "pr_number": 80278,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/80278",
-          "released_at": "2026-08-24T11:17:55Z",
+          "pr_author_id": 230633153,
+          "pr_author_login": "octavia-bot-hoard",
+          "pr_author_type": "Bot",
+          "pr_merged_by_login": "octavia-bot-hoard",
+          "pr_merged_by_type": "Bot",
+          "pr_number": 79062,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/79062",
+          "released_at": "2026-08-25T08:37:55Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zoho-crm/0.1.4.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zoho-crm/0.1.5.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-zoho-crm/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-24T11:23:33.617763+00:00",
-          "registry_entry_generated_at": "2026-08-24T11:23:33.617763+00:00"
+          "metadata_last_modified": "2026-08-25T08:43:54.240086+00:00",
+          "registry_entry_generated_at": "2026-08-25T08:43:54.240086+00:00"
         }
       },
       "githubIssueLabel": "source-zoho-crm",
