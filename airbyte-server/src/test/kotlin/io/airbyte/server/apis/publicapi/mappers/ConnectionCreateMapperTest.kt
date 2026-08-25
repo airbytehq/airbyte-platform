@@ -16,6 +16,7 @@ import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
 import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnum
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
+import io.airbyte.server.apis.publicapi.helpers.AirbyteCatalogHelper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -45,6 +46,7 @@ class ConnectionCreateMapperTest {
           AirbyteApiConnectionSchedule(
             scheduleType = ScheduleTypeEnum.CRON,
             cronExpression = "0 0 0 0 0 0",
+            cronTimeZone = "America/New_York",
           ),
         status = ConnectionStatusEnum.INACTIVE,
       )
@@ -66,7 +68,7 @@ class ConnectionCreateMapperTest {
         val connectionScheduleDataCron =
           io.airbyte.api.model.generated.ConnectionScheduleDataCron().apply {
             this.cronExpression = "0 0 0 0 0 0"
-            this.cronTimeZone = "UTC"
+            this.cronTimeZone = "America/New_York"
           }
         val connectionScheduleData =
           io.airbyte.api.model.generated.ConnectionScheduleData().apply {
@@ -75,5 +77,72 @@ class ConnectionCreateMapperTest {
         this.scheduleData = connectionScheduleData
       }
     assertEquals(expectedOssConnectionCreateRequest, ConnectionCreateMapper.from(connectionCreateRequest, catalogId, destinationCatalogId, catalog))
+  }
+
+  @Test
+  fun `maps a suffixed timezone after normalization`() {
+    val request =
+      ConnectionCreateRequest(
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        name = "test",
+        nonBreakingSchemaUpdatesBehavior =
+          io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION,
+        namespaceDefinition = NamespaceDefinitionEnum.DESTINATION,
+        namespaceFormat = "test",
+        prefix = "test",
+        dataResidency = US_DATAPLANE_GROUP,
+        schedule =
+          AirbyteCatalogHelper.normalizeCronExpression(
+            AirbyteApiConnectionSchedule(
+              scheduleType = ScheduleTypeEnum.CRON,
+              cronExpression = "0 0 0 * * ? America/Los_Angeles",
+            ),
+          ),
+        status = ConnectionStatusEnum.INACTIVE,
+      )
+
+    val result =
+      ConnectionCreateMapper.from(
+        request,
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        AirbyteCatalog().apply { streams = emptyList() },
+      )
+
+    assertEquals("0 0 0 * * ?", result.scheduleData.cron.cronExpression)
+    assertEquals("America/Los_Angeles", result.scheduleData.cron.cronTimeZone)
+  }
+
+  @Test
+  fun `defaults timezone to UTC when omitted`() {
+    val request =
+      ConnectionCreateRequest(
+        sourceId = UUID.randomUUID(),
+        destinationId = UUID.randomUUID(),
+        name = "test",
+        nonBreakingSchemaUpdatesBehavior =
+          io.airbyte.publicApi.server.generated.models.NonBreakingSchemaUpdatesBehaviorEnum.DISABLE_CONNECTION,
+        namespaceDefinition = NamespaceDefinitionEnum.DESTINATION,
+        namespaceFormat = "test",
+        prefix = "test",
+        dataResidency = US_DATAPLANE_GROUP,
+        schedule =
+          AirbyteApiConnectionSchedule(
+            scheduleType = ScheduleTypeEnum.CRON,
+            cronExpression = "0 0 0 0 0 0",
+          ),
+        status = ConnectionStatusEnum.INACTIVE,
+      )
+
+    val result =
+      ConnectionCreateMapper.from(
+        request,
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        AirbyteCatalog().apply { streams = emptyList() },
+      )
+
+    assertEquals("UTC", result.scheduleData.cron.cronTimeZone)
   }
 }

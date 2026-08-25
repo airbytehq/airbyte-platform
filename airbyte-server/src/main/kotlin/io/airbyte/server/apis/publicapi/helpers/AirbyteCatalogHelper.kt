@@ -35,7 +35,9 @@ import io.airbyte.publicApi.server.generated.models.StreamMapperType
 import io.airbyte.server.apis.publicapi.mappers.ConnectionReadMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.validation.Valid
+import org.joda.time.DateTimeZone
 import java.io.IOException
+import java.util.Locale
 
 private val log = KotlinLogging.logger {}
 
@@ -46,6 +48,14 @@ object AirbyteCatalogHelper {
   private val cronDefinition: CronDefinition = CronDefinitionBuilder.instanceDefinitionFor(QUARTZ)
   private val parser: CronParser = CronParser(cronDefinition)
   private const val MAX_LENGTH_OF_CRON = 7
+  private const val DEFAULT_CRON_TIME_ZONE = "UTC"
+  private const val QUARTZ_CRON_DOCUMENTATION =
+    "https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html"
+  private const val INVALID_CRON_EXPRESSION_MESSAGE =
+    "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'. See $QUARTZ_CRON_DOCUMENTATION."
+  private const val INVALID_CRON_TIMEZONE_MESSAGE =
+    "Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'."
+  private val IANA_TIMEZONE_PATTERN = Regex("^[A-Za-z]+(?:/[A-Za-z0-9_+-]+)+$")
 
   /**
    * Check whether stream configurations exist.
@@ -214,7 +224,12 @@ object AirbyteCatalogHelper {
           ProblemMessageData().message("Missing cron expression in the schedule."),
         )
       }
-      val cronExpression = normalizeCronExpression(connectionSchedule)?.cronExpression
+      val originalCronExpression = connectionSchedule.cronExpression!!.trim()
+      findTrailingCronTimeZone(originalCronExpression)?.let(::validateCronTimeZone)
+      val normalizedSchedule = normalizeCronExpression(connectionSchedule)!!
+      val cronExpression = normalizedSchedule.cronExpression!!
+      val cronTimeZone = normalizedSchedule.cronTimeZone ?: DEFAULT_CRON_TIME_ZONE
+      validateCronTimeZone(cronTimeZone)
       try {
         val cron: Cron = parser.parse(cronExpression)
         cron.validate()
@@ -230,8 +245,7 @@ object AirbyteCatalogHelper {
         log.debug { "NumberFormatException: $e" }
         throw BadRequestProblem(
           ProblemMessageData().message(
-            "The cron expression ${connectionSchedule.cronExpression}" +
-              " is not valid or is less than the one hour minimum. The seconds and minutes values cannot be `*`.",
+            INVALID_CRON_EXPRESSION_MESSAGE,
           ),
         )
       } catch (e: IllegalArgumentException) {
@@ -239,8 +253,7 @@ object AirbyteCatalogHelper {
         log.debug { "IllegalArgumentException: $e" }
         throw BadRequestProblem(
           ProblemMessageData().message(
-            "The cron expression ${connectionSchedule.cronExpression} is not valid. Error: ${e.message}" +
-              ". Please check the cron expression format at https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html",
+            INVALID_CRON_EXPRESSION_MESSAGE,
           ),
         )
       }
@@ -252,11 +265,53 @@ object AirbyteCatalogHelper {
 
   fun normalizeCronExpression(connectionSchedule: AirbyteApiConnectionSchedule?): AirbyteApiConnectionSchedule? {
     if (connectionSchedule?.cronExpression == null) return connectionSchedule
-    val cron = connectionSchedule.cronExpression!!
-    return if (cron.endsWith("UTC")) {
-      connectionSchedule.copy(cronExpression = cron.replace("UTC", "").trim())
+    val cron = connectionSchedule.cronExpression!!.trim()
+    val tokens = cron.split(Regex("\\s+"))
+    val trailingTimeZone = findTrailingCronTimeZone(cron)
+    return if (trailingTimeZone != null) {
+      connectionSchedule.copy(
+        cronExpression = tokens.dropLast(1).joinToString(" "),
+        cronTimeZone = connectionSchedule.cronTimeZone ?: trailingTimeZone,
+      )
     } else {
       connectionSchedule
+    }
+  }
+
+  private fun isValidCronExpression(expression: String): Boolean =
+    try {
+      parser.parse(expression).validate()
+      true
+    } catch (e: IllegalArgumentException) {
+      false
+    }
+
+  private fun findTrailingCronTimeZone(cron: String): String? {
+    val tokens = cron.split(Regex("\\s+"))
+    val cronWithoutTrailingToken = tokens.dropLast(1).joinToString(" ")
+    return tokens.lastOrNull()?.takeIf {
+      isCronTimeZoneToken(it) &&
+        !isValidCronExpression(cron) &&
+        isValidCronExpression(cronWithoutTrailingToken)
+    }
+  }
+
+  private fun isCronTimeZoneToken(token: String): Boolean =
+    try {
+      DateTimeZone.forID(token)
+      true
+    } catch (e: IllegalArgumentException) {
+      IANA_TIMEZONE_PATTERN.matches(token)
+    }
+
+  private fun validateCronTimeZone(cronTimeZone: String) {
+    if (cronTimeZone.lowercase(Locale.ROOT).startsWith("etc")) {
+      throw BadRequestProblem(ProblemMessageData().message(INVALID_CRON_TIMEZONE_MESSAGE))
+    }
+    try {
+      DateTimeZone.forID(cronTimeZone)
+    } catch (e: IllegalArgumentException) {
+      throw BadRequestProblem(ProblemMessageData().message(INVALID_CRON_TIMEZONE_MESSAGE))
     }
   }
 

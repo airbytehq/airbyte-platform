@@ -61,7 +61,7 @@ object ConnectionUpdateMapper {
         // This should only be set if we're not manual
         val connectionScheduleDataCron = ConnectionScheduleDataCron()
         connectionScheduleDataCron.cronExpression = connectionPatchRequest.schedule!!.cronExpression
-        connectionScheduleDataCron.cronTimeZone = "UTC"
+        connectionScheduleDataCron.cronTimeZone = connectionPatchRequest.schedule!!.cronTimeZone ?: "UTC"
         val connectionScheduleData = ConnectionScheduleData()
         connectionScheduleData.cron = connectionScheduleDataCron
         connectionUpdateOss.scheduleData = connectionScheduleData

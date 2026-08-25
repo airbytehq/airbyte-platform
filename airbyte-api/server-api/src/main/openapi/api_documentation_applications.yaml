@@ -1098,6 +1098,11 @@ components:
           $ref: "#/components/schemas/ScheduleTypeEnum"
         cronExpression:
           type: "string"
+        cronTimeZone:
+          type: "string"
+          description:
+            "Supported timezone ID or fixed offset for the cron schedule;\
+            \ defaults to UTC and cannot start with Etc."
       x-speakeasy-component: true
     ScheduleTypeEnum:
       type: "string"

@@ -5,6 +5,8 @@
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.ConnectionRead
+import io.airbyte.api.model.generated.ConnectionScheduleData
+import io.airbyte.api.model.generated.ConnectionScheduleDataCron
 import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.DestinationSyncMode
@@ -45,6 +47,32 @@ internal class ConnectionReadMapperTest {
     assertEquals(connectionRead.sourceId.toString(), result.sourceId)
     assertEquals(connectionRead.destinationId.toString(), result.destinationId)
     assertEquals(connectionRead.createdAt, result.createdAt)
+  }
+
+  @Test
+  internal fun `maps cron timezone in the read response suffix`() {
+    val connectionRead =
+      ConnectionRead().apply {
+        connectionId = UUID.randomUUID()
+        name = "testconnection"
+        status = ConnectionStatus.ACTIVE
+        scheduleType = ConnectionScheduleType.CRON
+        scheduleData =
+          ConnectionScheduleData().apply {
+            cron =
+              ConnectionScheduleDataCron().apply {
+                cronExpression = "0 0 0 0 0 0"
+                cronTimeZone = "America/New_York"
+              }
+          }
+        sourceId = UUID.randomUUID()
+        destinationId = UUID.randomUUID()
+        createdAt = 1L
+      }
+
+    val result = ConnectionReadMapper.from(connectionRead, UUID.randomUUID())
+
+    assertEquals("0 0 0 0 0 0 America/New_York", result.schedule.cronExpression)
   }
 
   @ParameterizedTest

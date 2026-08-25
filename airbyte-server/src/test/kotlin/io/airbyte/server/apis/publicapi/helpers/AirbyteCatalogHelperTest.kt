@@ -155,13 +155,70 @@ internal class AirbyteCatalogHelperTest {
   }
 
   @Test
+  internal fun `test that a timezone can be provided explicitly`() {
+    val connectionSchedule =
+      AirbyteApiConnectionSchedule(
+        scheduleType = ScheduleTypeEnum.CRON,
+        cronExpression = "0 15 10 * * ? *",
+        cronTimeZone = "America/New_York",
+      )
+
+    assertTrue(AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule))
+    assertEquals("America/New_York", AirbyteCatalogHelper.normalizeCronExpression(connectionSchedule)?.cronTimeZone)
+  }
+
+  @Test
+  internal fun `test that explicit UTC timezone is preserved`() {
+    val connectionSchedule =
+      AirbyteApiConnectionSchedule(
+        scheduleType = ScheduleTypeEnum.CRON,
+        cronExpression = "0 15 10 * * ? *",
+        cronTimeZone = "UTC",
+      )
+
+    assertTrue(AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule))
+    assertEquals("UTC", AirbyteCatalogHelper.normalizeCronExpression(connectionSchedule)?.cronTimeZone)
+  }
+
+  @Test
+  internal fun `test that a suffixed timezone is normalized`() {
+    val normalized =
+      AirbyteCatalogHelper.normalizeCronExpression(
+        AirbyteApiConnectionSchedule(
+          scheduleType = ScheduleTypeEnum.CRON,
+          cronExpression = "0 15 10 * * ? * America/New_York",
+        ),
+      )
+
+    assertEquals("0 15 10 * * ? *", normalized?.cronExpression)
+    assertEquals("America/New_York", normalized?.cronTimeZone)
+  }
+
+  @Test
+  internal fun `test that an explicit timezone wins over a suffixed timezone`() {
+    val normalized =
+      AirbyteCatalogHelper.normalizeCronExpression(
+        AirbyteApiConnectionSchedule(
+          scheduleType = ScheduleTypeEnum.CRON,
+          cronExpression = "0 15 10 * * ? * America/New_York",
+          cronTimeZone = "Europe/Paris",
+        ),
+      )
+
+    assertEquals("0 15 10 * * ? *", normalized?.cronExpression)
+    assertEquals("Europe/Paris", normalized?.cronTimeZone)
+  }
+
+  @Test
   internal fun `test that the cron expression is normalized`() {
     val connectionSchedule =
       AirbyteApiConnectionSchedule(
         scheduleType = ScheduleTypeEnum.CRON,
         cronExpression = "0 15 10 * * ? * UTC",
       )
+    assertTrue(AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule))
     assertFalse(AirbyteCatalogHelper.normalizeCronExpression(connectionSchedule)?.cronExpression?.contains("UTC") ?: false)
+    assertEquals("UTC", AirbyteCatalogHelper.normalizeCronExpression(connectionSchedule)?.cronTimeZone)
   }
 
   @Test
@@ -199,7 +256,10 @@ internal class AirbyteCatalogHelperTest {
         AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule)
       }
     val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals(true, problemData.message.contains("Cron expression contains 10 parts but we expect one of [6, 7]"))
+    assertEquals(
+      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'. See https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html.",
+      problemData.message,
+    )
   }
 
   @Test
@@ -215,7 +275,151 @@ internal class AirbyteCatalogHelperTest {
         AirbyteCatalogHelper.validateCronConfiguration(connectionSchedule = connectionSchedule)
       }
     val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
-    assertEquals(true, problemData.message.contains("Failed to parse cron expression. Invalid chars in expression!"))
+    assertEquals(
+      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'. See https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html.",
+      problemData.message,
+    )
+  }
+
+  @Test
+  internal fun `test that an invalid timezone is rejected`() {
+    val throwable =
+      assertThrows(BadRequestProblem::class.java) {
+        AirbyteCatalogHelper.validateCronConfiguration(
+          AirbyteApiConnectionSchedule(
+            scheduleType = ScheduleTypeEnum.CRON,
+            cronExpression = "0 15 10 * * ? * Not/AZone",
+          ),
+        )
+      }
+
+    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", problemData.message)
+  }
+
+  @Test
+  internal fun `test that an invalid suffixed timezone is rejected even with an explicit timezone`() {
+    val throwable =
+      assertThrows(BadRequestProblem::class.java) {
+        AirbyteCatalogHelper.validateCronConfiguration(
+          AirbyteApiConnectionSchedule(
+            scheduleType = ScheduleTypeEnum.CRON,
+            cronExpression = "0 0 12 ? * MON Not/AZone",
+            cronTimeZone = "UTC",
+          ),
+        )
+      }
+
+    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", problemData.message)
+  }
+
+  @Test
+  internal fun `test that an unknown bare trailing token is rejected with an explicit timezone`() {
+    val throwable =
+      assertThrows(BadRequestProblem::class.java) {
+        AirbyteCatalogHelper.validateCronConfiguration(
+          AirbyteApiConnectionSchedule(
+            scheduleType = ScheduleTypeEnum.CRON,
+            cronExpression = "0 0 12 ? * MON BOGUS",
+            cronTimeZone = "UTC",
+          ),
+        )
+      }
+
+    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    assertEquals(
+      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'. See https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html.",
+      problemData.message,
+    )
+  }
+
+  @Test
+  internal fun `test that an unknown bare trailing token is rejected without an explicit timezone`() {
+    val throwable =
+      assertThrows(BadRequestProblem::class.java) {
+        AirbyteCatalogHelper.validateCronConfiguration(
+          AirbyteApiConnectionSchedule(
+            scheduleType = ScheduleTypeEnum.CRON,
+            cronExpression = "0 0 12 ? * MON BOGUS",
+          ),
+        )
+      }
+
+    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    assertEquals(
+      "Cron schedules must use a Quartz expression with 6 or 7 space-separated fields, optionally followed by a timezone ID, and run no more than once per hour; seconds and minutes cannot be '*'. See https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html.",
+      problemData.message,
+    )
+  }
+
+  @Test
+  internal fun `test that Etc timezones are rejected`() {
+    val throwable =
+      assertThrows(BadRequestProblem::class.java) {
+        AirbyteCatalogHelper.validateCronConfiguration(
+          AirbyteApiConnectionSchedule(
+            scheduleType = ScheduleTypeEnum.CRON,
+            cronExpression = "0 15 10 * * ? *",
+            cronTimeZone = "Etc/UTC",
+          ),
+        )
+      }
+
+    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", problemData.message)
+  }
+
+  @Test
+  internal fun `test that an Etc suffixed timezone is rejected even with an explicit timezone`() {
+    val throwable =
+      assertThrows(BadRequestProblem::class.java) {
+        AirbyteCatalogHelper.validateCronConfiguration(
+          AirbyteApiConnectionSchedule(
+            scheduleType = ScheduleTypeEnum.CRON,
+            cronExpression = "0 0 12 ? * MON Etc/UTC",
+            cronTimeZone = "US/Pacific",
+          ),
+        )
+      }
+
+    val problemData: ProblemMessageData = throwable.problem.getData() as ProblemMessageData
+    assertEquals("Cron schedule timezone must be a supported timezone ID and cannot start with 'Etc'.", problemData.message)
+  }
+
+  @Test
+  internal fun `preserves Quartz day-of-week increments as cron fields`() {
+    val expression = "0 0 12 ? * MON/2"
+
+    assertDoesNotThrow {
+      AirbyteCatalogHelper.validateCronConfiguration(
+        AirbyteApiConnectionSchedule(
+          scheduleType = ScheduleTypeEnum.CRON,
+          cronExpression = expression,
+        ),
+      )
+    }
+    assertEquals(
+      expression,
+      AirbyteCatalogHelper
+        .normalizeCronExpression(
+          AirbyteApiConnectionSchedule(
+            scheduleType = ScheduleTypeEnum.CRON,
+            cronExpression = expression,
+          ),
+        )!!
+        .cronExpression,
+    )
+
+    val explicitTimezoneSchedule =
+      AirbyteApiConnectionSchedule(
+        scheduleType = ScheduleTypeEnum.CRON,
+        cronExpression = expression,
+        cronTimeZone = "US/Pacific",
+      )
+    assertDoesNotThrow { AirbyteCatalogHelper.validateCronConfiguration(explicitTimezoneSchedule) }
+    assertEquals(expression, AirbyteCatalogHelper.normalizeCronExpression(explicitTimezoneSchedule)!!.cronExpression)
+    assertEquals("US/Pacific", AirbyteCatalogHelper.normalizeCronExpression(explicitTimezoneSchedule)!!.cronTimeZone)
   }
 
   @ParameterizedTest

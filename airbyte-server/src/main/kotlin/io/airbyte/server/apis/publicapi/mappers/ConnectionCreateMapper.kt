@@ -53,7 +53,7 @@ object ConnectionCreateMapper {
       connectionCreateOss.scheduleType = ConnectionScheduleType.fromValue(connectionCreateRequest.schedule!!.scheduleType.toString())
       val connectionScheduleDataCron = ConnectionScheduleDataCron()
       connectionScheduleDataCron.cronExpression = connectionCreateRequest.schedule!!.cronExpression
-      connectionScheduleDataCron.cronTimeZone = "UTC"
+      connectionScheduleDataCron.cronTimeZone = connectionCreateRequest.schedule!!.cronTimeZone ?: "UTC"
       val connectionScheduleData = ConnectionScheduleData()
       connectionScheduleData.cron = connectionScheduleDataCron
       connectionCreateOss.scheduleData = connectionScheduleData
