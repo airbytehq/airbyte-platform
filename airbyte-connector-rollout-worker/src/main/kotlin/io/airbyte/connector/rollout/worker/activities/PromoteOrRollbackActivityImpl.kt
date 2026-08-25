@@ -62,6 +62,7 @@ class PromoteOrRollbackActivityImpl(
           mapOf(
             "connector_name" to connectorName,
             "action" to action.toString().lowercase(),
+            "version" to releaseCandidateVersion,
           ),
       )
     val jsonBodyString = Gson().toJson(jsonBody)
