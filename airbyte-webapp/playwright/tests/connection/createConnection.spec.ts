@@ -5,7 +5,6 @@ import { connectionTestHelpers } from "../../helpers/connection";
 import {
   navigateToConnectionConfig,
   selectSyncMode,
-  setupConnectionCreationIntercept,
   filterAndFindStream,
   completeConnectionCreation,
   namespaceHelpers,
@@ -505,9 +504,6 @@ test.describe("Connection - Create new connection", () => {
     });
 
     test("should set up a connection and redirect to connection overview page", async () => {
-      // Set up API interceptor for connection creation
-      const createConnectionRequests = await setupConnectionCreationIntercept(page);
-
       // Navigate to the configuration page
       await navigateToConnectionConfig(page, workspaceId, source, destination);
 
@@ -529,24 +525,24 @@ test.describe("Connection - Create new connection", () => {
       // Configure sync mode using helper
       await selectSyncMode(page, usersStreamRow, "Full refresh | Overwrite");
 
+      // Register the response listener before triggering the request, so we can't miss a fast reply
+      const responsePromise = page.waitForResponse("**/api/v1/web_backend/connections/create", { timeout: 30000 });
+
       // Complete the connection creation flow with manual schedule to avoid kicking off the sync job on creation
       await completeConnectionCreation(page, { scheduleType: "Manual" });
 
-      // Wait for connection creation request to be made
-      await expect.poll(() => createConnectionRequests.length).toBeGreaterThanOrEqual(1);
+      // Wait for the response and extract connection ID
+      const response = await responsePromise;
+      expect(response.status()).toBe(200);
 
       // Verify the request
-      const createRequest = createConnectionRequests[0];
+      const createRequest = response.request();
       expect(createRequest.method()).toBe("POST");
 
       // Get the request body to verify connection details
-      const requestBody = await createRequest.postDataJSON();
+      const requestBody = createRequest.postDataJSON();
       expect(requestBody.name).toBe(`${source.name} → ${destination.name}`);
       expect(requestBody.scheduleType).toBe("manual");
-
-      // Wait for the response and extract connection ID
-      const response = await page.waitForResponse("**/api/v1/web_backend/connections/create", { timeout: 30000 });
-      expect(response.status()).toBe(200);
 
       const responseBody = await response.json();
       expect(responseBody.name).toBe(`${source.name} → ${destination.name}`);

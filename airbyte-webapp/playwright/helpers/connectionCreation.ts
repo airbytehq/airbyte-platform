@@ -1,4 +1,4 @@
-import { Page, expect, Request, Locator } from "@playwright/test";
+import { Page, expect, Locator } from "@playwright/test";
 import { SourceRead, DestinationRead, SyncMode, DestinationSyncMode } from "@src/core/api/types/AirbyteClient";
 
 // This file contains helper methods for connection creation UI interactions
@@ -154,21 +154,6 @@ export const clickButtonBypassingOverlay = async (
     },
     { selector, errorMessage }
   );
-};
-
-/**
- * Set up API interceptor for connection creation requests
- * Returns the requests array for assertions
- */
-export const setupConnectionCreationIntercept = async (page: Page): Promise<Request[]> => {
-  const createConnectionRequests: Request[] = [];
-
-  await page.route("**/api/v1/web_backend/connections/create", (route) => {
-    createConnectionRequests.push(route.request());
-    return route.continue();
-  });
-
-  return createConnectionRequests;
 };
 
 /**
