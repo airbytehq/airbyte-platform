@@ -4,7 +4,7 @@ import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
-import { RegionDataBar } from "./calculateGraphData";
+import { RegionDataBar, UsageGraphGranularity } from "./calculateGraphData";
 import styles from "./GraphTooltip.module.scss";
 
 interface WorkspaceMetadata {
@@ -19,6 +19,7 @@ interface GraphTooltipProps {
   top10Workspaces: WorkspaceMetadata[];
   hasOtherCategory: boolean;
   barColor: string;
+  granularity: UsageGraphGranularity;
 }
 
 interface WorkspaceUsage {
@@ -54,6 +55,7 @@ export const GraphTooltip = ({
   top10Workspaces,
   hasOtherCategory,
   barColor,
+  granularity,
 }: GraphTooltipProps) => {
   const { formatMessage } = useIntl();
   const graphData = payload?.[0]?.payload;
@@ -74,7 +76,18 @@ export const GraphTooltip = ({
     <Card noPadding className={styles.tooltip}>
       <div className={styles.content}>
         <Text as="div" size="lg" className={styles.date}>
-          <FormattedDate value={localDate} month="short" day="numeric" weekday="short" />
+          {granularity === "hour" ? (
+            <FormattedDate
+              value={localDate}
+              month="short"
+              day="numeric"
+              weekday="short"
+              hour="numeric"
+              minute="2-digit"
+            />
+          ) : (
+            <FormattedDate value={localDate} month="short" day="numeric" weekday="short" />
+          )}
         </Text>
 
         <div className={styles.details}>

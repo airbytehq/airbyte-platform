@@ -1,59 +1,87 @@
+import classNames from "classnames";
 import dayjs from "dayjs";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
-import { RangeDatePicker } from "components/ui/DatePicker";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { ListBox } from "components/ui/ListBox";
+import { Icon } from "components/ui/Icon";
+import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { PageContainer } from "components/ui/PageContainer";
 import { Text } from "components/ui/Text";
-import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useListDataplaneGroups, useOrganizationWorkerUsage } from "core/api";
+import { useCurrentTime } from "core/utils/time";
 
 import styles from "./DataWorkerUsage.module.scss";
-import { UsageByWorkspaceGraph } from "./UsageByWorkspaceGraph";
+import { UsageByWorkspaceGraph, UsageTimeRange } from "./UsageByWorkspaceGraph";
 import { findFirstRegionWithUsage, getRegionOptions, sortByNameAlphabetically } from "./utils";
 
-// Data retention period agreed at PAT session
-// Backend retains data worker usage data for 90 days
-const DATA_RETENTION_DAYS = 90;
-const DATE_FORMAT = "YYYY-MM-DD";
-const NOW = new Date();
-const MIN_DATE = dayjs(NOW).subtract(DATA_RETENTION_DAYS, "day").startOf("day").format(DATE_FORMAT);
+const TIME_RANGE_OPTIONS: Array<{ labelId: string; value: UsageTimeRange }> = [
+  { labelId: "settings.organization.usage.timeRange.1d", value: "1d" },
+  { labelId: "settings.organization.usage.timeRange.1w", value: "1w" },
+  { labelId: "settings.organization.usage.timeRange.1m", value: "1m" },
+];
+
+const RegionControlButtonContent = ({
+  selectedOption,
+  isDisabled,
+  placeholder,
+}: ListBoxControlButtonProps<string | null>) =>
+  selectedOption ? (
+    <FlexContainer as="span" alignItems="center" gap="sm">
+      <Icon type="globe" size="sm" color={isDisabled ? "disabled" : undefined} />
+      <Text as="span" size="lg" color={isDisabled ? "grey300" : "darkBlue"}>
+        {selectedOption.label}
+      </Text>
+    </FlexContainer>
+  ) : (
+    <Text as="span" size="lg" color="grey">
+      {placeholder}
+    </Text>
+  );
 
 export const DataWorkerUsage: React.FC = () => {
-  // RangeDatePicker fires onChange even if only one date is selected. We store that state here, and when both dates
-  // have been selected, they get stored in selectedDateRange, which is what we use to fetch data.
-  const [tempDateRange, setTempDateRange] = useState<[string, string]>([
-    dayjs(NOW).subtract(7, "day").startOf("day").format(DATE_FORMAT),
-    dayjs(NOW).endOf("day").format(DATE_FORMAT),
-  ]);
-  const [selectedDateRange, setSelectedDateRange] = useState<[string, string]>([
-    dayjs(NOW).subtract(7, "day").startOf("day").format(DATE_FORMAT),
-    dayjs(NOW).endOf("day").format(DATE_FORMAT),
-  ]);
+  const [selectedTimeRange, setSelectedTimeRange] = useState<UsageTimeRange>("1w");
   const regions = useListDataplaneGroups();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState<string | null>(null);
   const { formatMessage } = useIntl();
+  const timeRangeOptions = useMemo(
+    () => TIME_RANGE_OPTIONS.map((option) => ({ ...option, label: formatMessage({ id: option.labelId }) })),
+    [formatMessage]
+  );
+
+  const currentTime = useCurrentTime(60_000);
+
+  const timeWindow = useMemo(() => {
+    const granularity = selectedTimeRange === "1m" ? "day" : "hour";
+    const bucketCount = selectedTimeRange === "1d" ? 24 : selectedTimeRange === "1w" ? 7 * 24 : 30;
+    const rangeEnd = dayjs(currentTime).startOf(granularity).add(1, granularity);
+    const rangeStart = rangeEnd.subtract(bucketCount, granularity);
+    const displayRange: [string, string] = [rangeStart.toISOString(), rangeEnd.toISOString()];
+    const requestDateRange: [string, string] = [
+      rangeStart.toISOString().slice(0, 10),
+      rangeEnd.subtract(1, "millisecond").toISOString().slice(0, 10),
+    ];
+
+    return { displayRange, requestDateRange };
+  }, [selectedTimeRange, currentTime]);
+  // The clock tick re-anchors the window with a plain setState, outside any transition.
+  // Deferring the derived window keeps the mounted chart visible while the re-keyed
+  // usage query suspends (at UTC midnight the request dates change and there is no cache).
+  const { displayRange, requestDateRange } = useDeferredValue(timeWindow);
 
   const allUsage = useOrganizationWorkerUsage({
-    startDate: selectedDateRange[0],
-    endDate: selectedDateRange[1],
+    startDate: requestDateRange[0],
+    endDate: requestDateRange[1],
   });
 
-  // Sort regions alphabetically for consistent ordering
   const sortedRegions = useMemo(() => [...regions].sort(sortByNameAlphabetically), [regions]);
-
   const regionOptions = useMemo(() => getRegionOptions(sortedRegions), [sortedRegions]);
 
-  // Auto-select first region with usage data on mount
   useEffect(() => {
-    // Only auto-select if no region is currently selected
     if (selectedRegion !== null || !sortedRegions.length) {
       return;
     }
@@ -66,96 +94,88 @@ export const DataWorkerUsage: React.FC = () => {
     }
   }, [sortedRegions, allUsage, selectedRegion]);
 
-  const computedMaxDate = useMemo(() => {
-    if (!startDate) {
-      // No start date selected yet - allow selecting any date up to today
-      return dayjs(NOW).endOf("day").format(DATE_FORMAT);
-    }
-
-    const maxRangeDate = dayjs(startDate).add(30, "day");
-    const today = dayjs(NOW);
-
-    // MaxDate is the EARLIER of: (startDate + 30) or today
-    // This ensures we never exceed today AND never exceed 30-day range
-    return maxRangeDate.isBefore(today) ? maxRangeDate.format(DATE_FORMAT) : today.format(DATE_FORMAT);
-  }, [startDate]);
-
-  const handleDateChange = (dates: [string, string]) => {
-    setTempDateRange([dates[0], dates[1]]);
-    if (dates[0] !== "") {
-      setStartDate(dates[0]);
-    } else {
-      setStartDate(null);
-    }
-  };
-
-  const handleDatePickerClose = () => {
-    if (tempDateRange[0] !== "" && tempDateRange[1] !== "") {
-      setSelectedDateRange([tempDateRange[0], tempDateRange[1]]);
-    } else {
-      setTempDateRange(selectedDateRange);
-    }
-  };
-
   return (
     <Box mt="xl">
       <PageContainer>
-        <FlexContainer direction="column" alignItems="stretch">
-          <FlexContainer alignItems="center" justifyContent="space-between">
+        <FlexContainer direction="column" alignItems="stretch" gap="lg">
+          <FlexContainer direction="column" alignItems="stretch" gap="sm">
+            <Heading as="h2" size="sm">
+              <FormattedMessage id="settings.organization.usageByWorkspace" />
+            </Heading>
+            <Text color="grey" size="lg">
+              <FormattedMessage id="settings.organization.usageByWorkspace.description" />
+            </Text>
+          </FlexContainer>
+          <FlexContainer alignItems="center" gap="md">
+            <fieldset className={styles.dataWorkerUsage__timeRangeControl}>
+              <legend className={styles.dataWorkerUsage__timeRangeLegend}>
+                <FormattedMessage id="settings.organization.usage.timeRange.legend" />
+              </legend>
+              {timeRangeOptions.map((option) => (
+                <label
+                  key={option.value}
+                  htmlFor={`organization-data-worker-usage-time-range-${option.value}`}
+                  className={classNames(styles.dataWorkerUsage__timeRangeOption, {
+                    [styles["dataWorkerUsage__timeRangeOption--selected"]]: option.value === selectedTimeRange,
+                  })}
+                >
+                  <input
+                    id={`organization-data-worker-usage-time-range-${option.value}`}
+                    type="radio"
+                    name="organization-data-worker-usage-time-range"
+                    value={option.value}
+                    checked={selectedTimeRange === option.value}
+                    onChange={() => startTransition(() => setSelectedTimeRange(option.value))}
+                    className={styles.dataWorkerUsage__timeRangeInput}
+                  />
+                  <Text
+                    color={option.value === selectedTimeRange ? "darkBlue" : "grey"}
+                    className={styles.dataWorkerUsage__timeRangeLabel}
+                    as="span"
+                    size="lg"
+                    bold
+                  >
+                    {option.label}
+                  </Text>
+                </label>
+              ))}
+            </fieldset>
             <FlexItem>
               <ListBox
                 options={regionOptions}
                 onSelect={setSelectedRegion}
                 selectedValue={selectedRegion}
                 placeholder={formatMessage({ id: "settings.organization.usage.selectRegion" })}
-              />
-            </FlexItem>
-            <FlexItem>
-              <RangeDatePicker
-                minDate={MIN_DATE}
-                maxDate={computedMaxDate}
-                value={tempDateRange}
-                onChange={handleDateChange}
-                onClose={handleDatePickerClose}
+                controlButtonContent={RegionControlButtonContent}
               />
             </FlexItem>
           </FlexContainer>
-          <Box mt="xl">
-            <FlexContainer direction="column" gap="lg">
-              <FlexContainer alignItems="center" gap="sm">
-                <Heading as="h2" size="sm">
-                  <FormattedMessage id="settings.organization.usageByWorkspace" />
-                </Heading>
-                <InfoTooltip>
-                  <FormattedMessage id="settings.organization.usageByWorkspace.tooltip" />
-                </InfoTooltip>
-              </FlexContainer>
-              {selectedRegion && (
-                <Suspense
-                  fallback={
-                    <FlexContainer
-                      className={styles.dataWorkerUsage__loadingPlaceholder}
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <FlexContainer alignItems="center" gap="md">
-                        <LoadingSpinner />
-                        <Text>
-                          <FormattedMessage id="settings.organization.usage.loadingUsageData" />
-                        </Text>
-                      </FlexContainer>
-                    </FlexContainer>
-                  }
+          {selectedRegion && (
+            <Suspense
+              fallback={
+                <FlexContainer
+                  className={styles.dataWorkerUsage__loadingPlaceholder}
+                  alignItems="center"
+                  justifyContent="center"
                 >
-                  <UsageByWorkspaceGraph
-                    selectedRegionId={selectedRegion}
-                    dateRange={selectedDateRange}
-                    committedDataWorkers={allUsage?.committedDataWorkers}
-                  />
-                </Suspense>
-              )}
-            </FlexContainer>
-          </Box>
+                  <FlexContainer alignItems="center" gap="md">
+                    <LoadingSpinner />
+                    <Text>
+                      <FormattedMessage id="settings.organization.usage.loadingUsageData" />
+                    </Text>
+                  </FlexContainer>
+                </FlexContainer>
+              }
+            >
+              <UsageByWorkspaceGraph
+                selectedRegionId={selectedRegion}
+                requestDateRange={requestDateRange}
+                displayRange={displayRange}
+                selectedTimeRange={selectedTimeRange}
+                committedDataWorkers={allUsage?.committedDataWorkers}
+              />
+            </Suspense>
+          )}
         </FlexContainer>
       </PageContainer>
     </Box>

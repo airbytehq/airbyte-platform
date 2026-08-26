@@ -1,4 +1,5 @@
 @use "scss/colors";
+@use "scss/mixins";
 @use "scss/variables";
 
 .graphContainer {
@@ -6,4 +7,45 @@
   border: variables.$border-thin solid colors.$grey-100;
   border-radius: variables.$border-radius-md;
   padding: variables.$spacing-xl variables.$spacing-md variables.$spacing-md;
+}
+
+.workspaceDataWorkerUsageGraph {
+  &__timeRangeControl {
+    all: unset;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: variables.$form-input-height;
+    gap: variables.$spacing-xs;
+    padding: variables.$spacing-xs;
+    border: variables.$border-thin solid colors.$grey-200;
+    border-radius: variables.$border-radius-sm;
+
+    &:has(.workspaceDataWorkerUsageGraph__timeRangeInput:focus-visible) {
+      outline: auto;
+    }
+  }
+
+  &__timeRangeLegend,
+  &__timeRangeInput {
+    @include mixins.visually-hidden;
+  }
+
+  &__timeRangeOption {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    cursor: pointer;
+    padding: 0 variables.$spacing-md;
+    border-radius: variables.$border-radius-xs;
+
+    &--selected {
+      background: colors.$blue-100;
+    }
+  }
+
+  &__timeRangeLabel {
+    line-height: 1;
+    user-select: none;
+  }
 }

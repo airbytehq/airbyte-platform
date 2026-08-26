@@ -8,59 +8,97 @@ import { Text } from "components/ui/Text";
 
 import { useOrganizationWorkerUsage } from "core/api";
 
-import { calculateGraphData } from "./calculateGraphData";
+import { calculateGraphData, UsageGraphGranularity } from "./calculateGraphData";
 import { DataWorkerUsageBarChart } from "./DataWorkerUsageBarChart";
 import { GraphTooltip } from "./GraphTooltip";
 import styles from "./UsageByWorkspaceGraph.module.scss";
 
+export type UsageTimeRange = "1d" | "1w" | "1m";
+
 interface UsageByWorkspaceGraphProps {
   selectedRegionId: string;
-  dateRange: [string, string];
+  requestDateRange: [string, string];
+  displayRange: [string, string];
+  selectedTimeRange: UsageTimeRange;
   committedDataWorkers?: number | null;
 }
 
+const TICK_STEP_BY_RANGE: Record<UsageTimeRange, number> = {
+  "1d": 6,
+  "1w": 24,
+  "1m": 5,
+};
+
+const BAR_SIZE_BY_RANGE: Record<UsageTimeRange, number> = {
+  "1d": 16,
+  "1w": 4,
+  "1m": 16,
+};
+
 export const UsageByWorkspaceGraph = ({
   selectedRegionId,
-  dateRange,
+  requestDateRange,
+  displayRange,
+  selectedTimeRange,
   committedDataWorkers,
 }: UsageByWorkspaceGraphProps) => {
   const { formatDate, formatMessage } = useIntl();
+  const granularity: UsageGraphGranularity = selectedTimeRange === "1m" ? "day" : "hour";
   const allUsage = useOrganizationWorkerUsage({
-    startDate: dateRange[0],
-    endDate: dateRange[1],
+    startDate: requestDateRange[0],
+    endDate: requestDateRange[1],
   });
   const selectedRegionUsage = useMemo(
     () => allUsage?.regions.find((region) => region.id === selectedRegionId),
     [selectedRegionId, allUsage]
   );
-  // Sort workspaces by total usage descending and filter out zero-usage workspaces
+
   const sortedWorkspaces = useMemo(() => {
+    const rangeStart = dayjs(displayRange[0]).valueOf();
+    const rangeEnd = dayjs(displayRange[1]).valueOf();
     const workspacesWithTotals =
-      selectedRegionUsage?.workspaces.map((ws) => ({
-        workspace: ws,
-        totalUsage: ws.dataWorkers.reduce((sum, dw) => sum + dw.used, 0),
+      selectedRegionUsage?.workspaces.map((workspace) => ({
+        workspace,
+        totalUsage: workspace.dataWorkers.reduce((sum, dataWorkerUsage) => {
+          const timestamp = dayjs(dataWorkerUsage.date).valueOf();
+          return timestamp >= rangeStart && timestamp < rangeEnd ? sum + dataWorkerUsage.used : sum;
+        }, 0),
       })) ?? [];
 
-    return workspacesWithTotals.filter((w) => w.totalUsage > 0).sort((a, b) => b.totalUsage - a.totalUsage);
-  }, [selectedRegionUsage?.workspaces]);
+    return workspacesWithTotals.filter(({ totalUsage }) => totalUsage > 0).sort((a, b) => b.totalUsage - a.totalUsage);
+  }, [displayRange, selectedRegionUsage?.workspaces]);
 
-  // Split into top 10 and others
-  const top10Workspaces = useMemo(() => sortedWorkspaces.slice(0, 10).map((w) => w.workspace), [sortedWorkspaces]);
-  const otherWorkspaces = useMemo(() => sortedWorkspaces.slice(10).map((w) => w.workspace), [sortedWorkspaces]);
+  const top10Workspaces = useMemo(
+    () => sortedWorkspaces.slice(0, 10).map(({ workspace }) => workspace),
+    [sortedWorkspaces]
+  );
+  const otherWorkspaces = useMemo(
+    () => sortedWorkspaces.slice(10).map(({ workspace }) => workspace),
+    [sortedWorkspaces]
+  );
   const hasOtherCategory = otherWorkspaces.length > 0;
 
   const data = useMemo(
     () =>
       calculateGraphData(
-        dateRange,
+        displayRange,
+        granularity,
         selectedRegionUsage,
-        top10Workspaces.map((w) => w.id),
-        otherWorkspaces.map((w) => w.id)
+        top10Workspaces.map(({ id }) => id),
+        otherWorkspaces.map(({ id }) => id)
       ),
-    [dateRange, selectedRegionUsage, top10Workspaces, otherWorkspaces]
+    [displayRange, granularity, selectedRegionUsage, top10Workspaces, otherWorkspaces]
   );
 
-  if (!selectedRegionUsage || selectedRegionUsage.workspaces.length === 0) {
+  const xAxisTicks = useMemo(
+    () =>
+      data
+        .filter((_, index) => index % TICK_STEP_BY_RANGE[selectedTimeRange] === 0)
+        .map(({ formattedDate }) => formattedDate),
+    [data, selectedTimeRange]
+  );
+
+  if (!selectedRegionUsage || selectedRegionUsage.workspaces.length === 0 || sortedWorkspaces.length === 0) {
     return (
       <FlexContainer className={styles.usageByWorkspaceGraph} alignItems="center" justifyContent="center">
         <FlexContainer alignItems="center">
@@ -78,8 +116,14 @@ export const UsageByWorkspaceGraph = ({
       data={data}
       xAxisDataKey="formattedDate"
       barDataKey="maxWorkspaceUsage"
-      xAxisTickFormatter={(value) => formatDate(dayjs(value).toDate(), { month: "short", day: "numeric" })}
-      xAxisInterval={1}
+      xAxisTicks={xAxisTicks}
+      xAxisTickFormatter={(value) =>
+        formatDate(
+          dayjs(value).toDate(),
+          selectedTimeRange === "1d" ? { hour: "numeric" } : { month: "short", day: "numeric" }
+        )
+      }
+      xAxisInterval={0}
       yAxisTickFormatter={(value) => formatMessage({ id: "settings.organization.usage.graph.yAxisTick" }, { value })}
       renderTooltipContent={(barColor) => (
         <GraphTooltip
@@ -87,12 +131,13 @@ export const UsageByWorkspaceGraph = ({
           top10Workspaces={top10Workspaces}
           hasOtherCategory={hasOtherCategory}
           barColor={barColor}
+          granularity={granularity}
         />
       )}
-      chartKey={selectedRegionId}
+      chartKey={`${selectedRegionId}-${selectedTimeRange}`}
       chartMargin={{ top: 0, right: 0, left: 0, bottom: 0 }}
       tooltipPosition={{ y: 20 }}
-      barSize={16}
+      barSize={BAR_SIZE_BY_RANGE[selectedTimeRange]}
       referenceLine={
         committedDataWorkers != null && committedDataWorkers > 0
           ? {

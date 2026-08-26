@@ -184,8 +184,13 @@ export const useOrganizationWorkerUsage = (
   const requestOptions = useRequestOptions();
   const organizationId = useCurrentOrganizationId();
 
-  return useSuspenseQuery(organizationKeys.workerUsage(organizationId, params.startDate, params.endDate), () =>
-    getOrganizationDataWorkerUsage({ organizationId, ...params }, requestOptions)
+  return useSuspenseQuery(
+    organizationKeys.workerUsage(organizationId, params.startDate, params.endDate),
+    () => getOrganizationDataWorkerUsage({ organizationId, ...params }, requestOptions),
+    // A refetch on mount can land mid-animation and cancel the chart's mount animation,
+    // so range switches must always render straight from cache. The polling interval is
+    // the sole freshness mechanism; it starts a minute after mount, safely past the animation.
+    { staleTime: Infinity, refetchInterval: 60_000 }
   );
 };
 

@@ -33,6 +33,7 @@ describe("GraphTooltip", () => {
         top10Workspaces={top10Workspaces}
         hasOtherCategory
         barColor="#605cff"
+        granularity="day"
       />
     );
 
@@ -48,6 +49,7 @@ describe("GraphTooltip", () => {
         top10Workspaces={top10Workspaces}
         hasOtherCategory
         barColor="#605cff"
+        granularity="day"
       />
     );
 
@@ -80,11 +82,37 @@ describe("GraphTooltip", () => {
         top10Workspaces={top10Workspaces}
         hasOtherCategory={false}
         barColor="#605cff"
+        granularity="day"
       />
     );
 
     const workspaceList = screen.getByRole("list", { name: "Per-workspace max" });
     expect(within(workspaceList).queryByText("Other")).not.toBeInTheDocument();
     expect(within(workspaceList).queryByText("Zero")).not.toBeInTheDocument();
+  });
+
+  it("includes the local time for an hourly bucket", async () => {
+    expect(process.env.TZ).toBe("US/Pacific");
+
+    await render(
+      <GraphTooltip
+        active
+        payload={[
+          {
+            payload: {
+              ...graphData,
+              formattedDate: "2025-01-15T18:00:00.000Z",
+            },
+          },
+        ]}
+        regionName="US East (N. Virginia)"
+        top10Workspaces={top10Workspaces}
+        hasOtherCategory
+        barColor="#605cff"
+        granularity="hour"
+      />
+    );
+
+    expect(screen.getByText("Wed, Jan 15, 10:00 AM")).toBeInTheDocument();
   });
 });
