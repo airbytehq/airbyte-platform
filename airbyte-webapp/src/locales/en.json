@@ -1302,6 +1302,7 @@
   "settings.instanceSettings": "Instance",
   "settings.workspace.general.title": "General workspace settings",
   "settings.workspace.usage.title": "Workspace usage",
+  "settings.workspace.usage.region": "Region: {regionName}",
   "settings.workspace.usage.tooltip": "Workspace usage is measured in <lnk>credits</lnk>.",
   "settings.workspace.usage.dataWorker.description": "Data worker usage for this workspace.",
   "settings.workspace.usage.dataWorker.noData": "No usage data found for the selected date range.",
