@@ -261,9 +261,10 @@ test.describe("Connection Configuration", () => {
 
     test("should not be listed on connection list page", async () => {
       await page.goto(`/workspaces/${workspaceId}/connections`, { timeout: 20000 });
+      await expect(page.locator('[data-testid="connectionsTable"]')).toBeVisible({ timeout: 10000 });
 
       const connectionNameCell = page.locator("td").filter({ hasText: connection.name });
-      await expect(connectionNameCell).not.toBeVisible();
+      await expect(connectionNameCell).not.toBeVisible({ timeout: 10000 });
     });
 
     test("should show deleted message on timeline page", async () => {

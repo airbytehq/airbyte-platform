@@ -59,8 +59,12 @@ export const connectionList = {
    * Verifies a connection does NOT have a schema change warning icon
    */
   verifyNoWarningIcon: async (page: Page, connection: WebBackendConnectionRead): Promise<void> => {
+    // Anchor on the connection switch input: the warnings cell renders nothing when there is no schema
+    // change, and the switch input is always in the DOM but zero-size, so attached (not visible) is the check
+    await expect(connectionList.getConnectionSwitch(page, connection)).toBeAttached({ timeout: 10000 });
+
     const warningIcon = connectionList.getSchemaChangeIcon(page, connection, "warning");
-    return expect(warningIcon).not.toBeVisible();
+    return expect(warningIcon).not.toBeVisible({ timeout: 10000 });
   },
 
   /**
@@ -75,8 +79,12 @@ export const connectionList = {
    * Verifies a connection does NOT have a schema change error icon
    */
   verifyNoErrorIcon: async (page: Page, connection: WebBackendConnectionRead): Promise<void> => {
+    // Anchor on the connection switch input: the warnings cell renders nothing when there is no schema
+    // change, and the switch input is always in the DOM but zero-size, so attached (not visible) is the check
+    await expect(connectionList.getConnectionSwitch(page, connection)).toBeAttached({ timeout: 10000 });
+
     const errorIcon = connectionList.getSchemaChangeIcon(page, connection, "error");
-    return expect(errorIcon).not.toBeVisible();
+    return expect(errorIcon).not.toBeVisible({ timeout: 10000 });
   },
 
   /**
@@ -93,7 +101,7 @@ export const connectionList = {
    */
   verifyConnectionDisabled: async (page: Page, connection: WebBackendConnectionRead): Promise<void> => {
     const connectionSwitch = connectionList.getConnectionSwitch(page, connection);
-    await expect(connectionSwitch).not.toBeChecked();
+    await expect(connectionSwitch).not.toBeChecked({ timeout: 10000 });
     return expect(connectionSwitch).toBeDisabled();
   },
 };

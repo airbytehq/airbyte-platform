@@ -601,7 +601,7 @@ export const connectionForm = {
   // Verify a preview element is not visible
   verifyPreviewNotVisible: async (page: Page, testId: string): Promise<void> => {
     const preview = page.locator(`[data-testid="${testId}"]`);
-    return expect(preview).not.toBeVisible();
+    return expect(preview).not.toBeVisible({ timeout: 10000 });
   },
 };
 

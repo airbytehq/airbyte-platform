@@ -150,7 +150,7 @@ test.describe("Unsaved changes modal on create source page", () => {
 
     // Should redirect successfully without modal
     await expect(page).toHaveURL(/.*\/workspaces\/[^/]+\/connections/, { timeout: 15000 });
-    await expect(page.locator("[data-testid='confirmationModal']")).not.toBeVisible();
+    await expect(page.locator("[data-testid='confirmationModal']")).not.toBeVisible({ timeout: 10000 });
   });
 
   test("Check leaving Source page after failing testing", async ({ page }) => {

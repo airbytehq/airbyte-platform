@@ -74,7 +74,7 @@ export const connectionSettings = {
   // Verify element is not visible
   verifyElementNotVisible: async (page: Page, selector: string): Promise<void> => {
     const element = page.locator(selector);
-    return expect(element).not.toBeVisible();
+    return expect(element).not.toBeVisible({ timeout: 10000 });
   },
 };
 

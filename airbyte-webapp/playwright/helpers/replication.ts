@@ -59,7 +59,7 @@ export const schemaChange = {
     if (breaking) {
       await expect(backdrop).toBeVisible();
     } else {
-      await expect(backdrop).not.toBeVisible();
+      await expect(backdrop).not.toBeVisible({ timeout: 10000 });
     }
   },
 
@@ -67,8 +67,8 @@ export const schemaChange = {
    * Verifies the schema change banner is not visible
    */
   verifySchemaChangeBannerCleared: async (page: Page): Promise<void> => {
-    await expect(page.locator('[data-testid="schemaChangesDetected"]')).not.toBeVisible();
-    return expect(page.locator('[data-testid="schemaChangesBackdrop"]')).not.toBeVisible();
+    await expect(page.locator('[data-testid="schemaChangesDetected"]')).not.toBeVisible({ timeout: 10000 });
+    return expect(page.locator('[data-testid="schemaChangesBackdrop"]')).not.toBeVisible({ timeout: 10000 });
   },
 
   /**
@@ -107,7 +107,7 @@ export const catalogDiffModal = {
    * Verifies the catalog diff modal is not visible
    */
   verifyModalNotVisible: async (page: Page): Promise<void> => {
-    return expect(page.locator('[data-testid="catalog-diff-modal"]')).not.toBeVisible();
+    return expect(page.locator('[data-testid="catalog-diff-modal"]')).not.toBeVisible({ timeout: 10000 });
   },
 
   /**
@@ -139,7 +139,7 @@ export const catalogDiffModal = {
    */
   verifyNoRemovedStreams: async (page: Page): Promise<void> => {
     const removedTable = page.locator('table[aria-label="removed streams table"]');
-    return expect(removedTable).not.toBeVisible();
+    return expect(removedTable).not.toBeVisible({ timeout: 10000 });
   },
 
   /**
@@ -147,7 +147,7 @@ export const catalogDiffModal = {
    */
   verifyNoNewStreams: async (page: Page): Promise<void> => {
     const newTable = page.locator('table[aria-label="new streams table"]');
-    return expect(newTable).not.toBeVisible();
+    return expect(newTable).not.toBeVisible({ timeout: 10000 });
   },
 
   /**
@@ -187,7 +187,7 @@ export const catalogDiffModal = {
    */
   verifyNoNewFields: async (page: Page): Promise<void> => {
     const newFieldsTable = page.locator('table[aria-label="new fields"]');
-    return expect(newFieldsTable).not.toBeVisible();
+    return expect(newFieldsTable).not.toBeVisible({ timeout: 10000 });
   },
 
   /**
@@ -196,7 +196,7 @@ export const catalogDiffModal = {
   closeModal: async (page: Page): Promise<void> => {
     const closeButton = page.locator('[data-testid="update-schema-confirm-btn"]');
     await closeButton.click();
-    return expect(page.locator('[data-testid="catalog-diff-modal"]')).not.toBeVisible();
+    return expect(page.locator('[data-testid="catalog-diff-modal"]')).not.toBeVisible({ timeout: 10000 });
   },
 };
 
