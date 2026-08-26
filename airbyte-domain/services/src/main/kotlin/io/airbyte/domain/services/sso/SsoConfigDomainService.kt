@@ -45,6 +45,7 @@ import io.airbyte.data.services.impls.keycloak.RealmValuesExistException
 import io.airbyte.data.services.impls.keycloak.TokenExpiredException
 import io.airbyte.domain.models.DEFAULT_SSO_ROLE
 import io.airbyte.domain.models.DomainVerificationStatus
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigRetrieval
 import io.airbyte.domain.models.SsoConfigStatus
@@ -72,6 +73,16 @@ private const val SSO_OP_CREATE_DRAFT = "create_draft"
 private const val SSO_OP_CREATE_ACTIVE = "create_active"
 private const val SSO_OP_ACTIVATE = "activate"
 
+internal data class SsoPermissionGrantPlan(
+  val emailDomain: String,
+  val role: SsoDefaultRole,
+)
+
+internal data class SsoActivationPreflight(
+  val useVerifiedDomains: Boolean,
+  val permissionGrantPlan: SsoPermissionGrantPlan?,
+)
+
 @Singleton
 open class SsoConfigDomainService internal constructor(
   private val ssoConfigService: SsoConfigService,
@@ -81,6 +92,7 @@ open class SsoConfigDomainService internal constructor(
   private val userPersistence: UserPersistence,
   private val organizationDomainVerificationService: OrganizationDomainVerificationService,
   private val featureFlagClient: FeatureFlagClient,
+  private val ssoRbacEntitlementChecker: SsoRbacEntitlementChecker,
   private val permissionService: PermissionService,
   private val metricClient: MetricClient,
 ) {
@@ -298,13 +310,13 @@ open class SsoConfigDomainService internal constructor(
           .companyIdentifier(config.companyIdentifier)
           .errorMessage("An email domain is required when creating an active SSO configuration."),
       )
-    // Read-only validation up front so we fail fast before creating any resources. The permission
-    // grant is deferred into createActiveSsoConfigWithEmailDomain so it commits or rolls back
-    // atomically with the SSO config and email domain, and only after the realm has been created.
+    val autoGrantEnabled = isAutoGrantEnabled(config.organizationId)
+    // Read-only validation up front so we fail fast before creating any resources.
     validateEmailDomainForActivationGated(
       organizationId = config.organizationId,
       emailDomain = configEmailDomain,
       companyIdentifier = config.companyIdentifier,
+      autoGrantEnabled = autoGrantEnabled,
     )
 
     val existingConfig = ssoConfigService.getSsoConfig(config.organizationId)
@@ -318,9 +330,17 @@ open class SsoConfigDomainService internal constructor(
       )
     }
 
+    val permissionGrantPlan =
+      preparePermissionGrantPlan(
+        organizationId = config.organizationId,
+        emailDomain = configEmailDomain,
+        defaultRole = config.defaultRole ?: DEFAULT_SSO_ROLE,
+        autoGrantEnabled = autoGrantEnabled,
+      )
+
     createKeycloakRealmWithErrorHandling(config)
     try {
-      createActiveSsoConfigWithEmailDomain(config)
+      createActiveSsoConfigWithEmailDomain(config, permissionGrantPlan)
     } catch (ex: Exception) {
       var cleanupSucceeded = true
       try {
@@ -344,7 +364,10 @@ open class SsoConfigDomainService internal constructor(
    * transacting database operations here; the realm is compensated by the caller if this fails.
    */
   @Transactional("config")
-  internal open fun createActiveSsoConfigWithEmailDomain(config: SsoConfig) {
+  internal open fun createActiveSsoConfigWithEmailDomain(
+    config: SsoConfig,
+    permissionGrantPlan: SsoPermissionGrantPlan?,
+  ) {
     val configEmailDomain =
       config.emailDomain ?: throw SSOSetupProblem(
         ProblemSSOSetupData()
@@ -361,13 +384,7 @@ open class SsoConfigDomainService internal constructor(
         this.emailDomain = configEmailDomain
       },
     )
-    // Grant permissions within this transaction so they roll back together with the config and
-    // email-domain records on failure (no-op unless AutoGrantOrgPermissionsOnSsoActivation is on).
-    grantPermissionsIfAutoGrantEnabled(
-      organizationId = config.organizationId,
-      emailDomain = configEmailDomain,
-      defaultRole = config.defaultRole ?: DEFAULT_SSO_ROLE,
-    )
+    applyPermissionGrantPlan(config.organizationId, permissionGrantPlan)
   }
 
   private fun createSsoConfigIfIdentifierUnused(config: SsoConfig) {
@@ -683,39 +700,16 @@ open class SsoConfigDomainService internal constructor(
   }
 
   /**
-   * Validates the email domain and grants permissions to users if the auto-grant flag is enabled.
-   * When AutoGrantOrgPermissionsOnSsoActivation is ON, skips the blocking validation and instead
-   * grants the configured default SSO permission to users with the email domain who don't have org access.
-   * When OFF, uses the old behavior that blocks activation if users exist outside the org.
-   *
-   * This is a convenience for callers that are already inside a transaction (e.g. activateSsoConfig).
-   * Callers that perform external (Keycloak) work first should instead run
-   * [validateEmailDomainForActivationGated] up front and defer [grantPermissionsIfAutoGrantEnabled]
-   * into their transaction, so a grant cannot be orphaned if a later step fails.
-   */
-  private fun validateEmailDomainAndGrantPermissionsIfNeeded(
-    organizationId: UUID,
-    emailDomain: String,
-    companyIdentifier: String,
-    defaultRole: SsoDefaultRole = DEFAULT_SSO_ROLE,
-  ) {
-    validateEmailDomainForActivationGated(organizationId, emailDomain, companyIdentifier)
-    grantPermissionsIfAutoGrantEnabled(organizationId, emailDomain, defaultRole)
-  }
-
-  /**
    * Read-only email-domain validation for SSO activation, gated by AutoGrantOrgPermissionsOnSsoActivation.
-   * When the flag is ON we skip the blocking "users outside the org" check (those users are granted access
-   * instead, see [grantPermissionsIfAutoGrantEnabled]); when OFF we run the full blocking validation.
-   * Performs no writes, so callers can run it up front to fail fast before creating any resources.
+   * When the flag is ON we skip the blocking "users outside the org" check because those users are
+   * included in the permission grant plan; when OFF we run the full blocking validation.
    */
   private fun validateEmailDomainForActivationGated(
     organizationId: UUID,
     emailDomain: String,
     companyIdentifier: String,
+    autoGrantEnabled: Boolean,
   ) {
-    val autoGrantEnabled = featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, Organization(organizationId))
-
     if (autoGrantEnabled) {
       // NEW BEHAVIOR: Skip blocking validation, auto-grant permissions instead
       validateEmailDomainMatchesOrganization(organizationId, emailDomain, companyIdentifier)
@@ -728,30 +722,46 @@ open class SsoConfigDomainService internal constructor(
   }
 
   /**
-   * Grants the configured default role to users with the email domain who lack org access, but only when
-   * AutoGrantOrgPermissionsOnSsoActivation is ON (otherwise a no-op). This performs writes and must run
-   * inside the caller's transaction so the grants roll back with the rest of the SSO config persistence.
+   * Resolves the role before a config transaction begins. User selection is performed by the
+   * transaction so that concurrent permission grants are reflected in the final write.
    */
-  private fun grantPermissionsIfAutoGrantEnabled(
+  private fun preparePermissionGrantPlan(
     organizationId: UUID,
     emailDomain: String,
     defaultRole: SsoDefaultRole = DEFAULT_SSO_ROLE,
-  ) {
-    val autoGrantEnabled = featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, Organization(organizationId))
+    autoGrantEnabled: Boolean,
+  ): SsoPermissionGrantPlan? {
     if (!autoGrantEnabled) {
-      return
+      return null
     }
 
-    // Find and grant permissions to users who need them
+    return SsoPermissionGrantPlan(
+      emailDomain = emailDomain,
+      role = effectiveDefaultRole(organizationId, defaultRole),
+    )
+  }
+
+  private fun applyPermissionGrantPlan(
+    organizationId: UUID,
+    permissionGrantPlan: SsoPermissionGrantPlan?,
+  ) {
+    if (permissionGrantPlan == null) {
+      return
+    }
     val usersNeedingPermission =
       userPersistence.findUsersWithEmailDomainWithoutOrgPermission(
-        emailDomain,
+        permissionGrantPlan.emailDomain,
         organizationId,
       )
-    val effectiveRole = effectiveDefaultRole(organizationId, defaultRole)
-    grantOrgMembershipToUsers(usersNeedingPermission, organizationId, effectiveRole)
-    recordPermissionGrant(organizationId, usersNeedingPermission.size, effectiveRole)
+    if (usersNeedingPermission.isEmpty()) {
+      return
+    }
+    grantOrgMembershipToUsers(usersNeedingPermission, organizationId, permissionGrantPlan.role)
+    recordPermissionGrant(organizationId, usersNeedingPermission.size, permissionGrantPlan.role)
   }
+
+  private fun isAutoGrantEnabled(organizationId: UUID): Boolean =
+    featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, Organization(organizationId))
 
   /**
    * Resolves the SSO default role to apply during JIT provisioning, gated by
@@ -763,12 +773,19 @@ open class SsoConfigDomainService internal constructor(
   private fun effectiveDefaultRole(
     organizationId: UUID,
     configured: SsoDefaultRole,
-  ): SsoDefaultRole =
-    if (featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, Organization(organizationId))) {
+  ): SsoDefaultRole {
+    val entitlementResult = ssoRbacEntitlementChecker.check(OrganizationId(organizationId))
+    // A definitive denial means the organization cannot manage roles, so grant a role it can keep
+    // without adjustment. Indeterminate checks preserve the existing flag/configured-role behavior.
+    if (!entitlementResult.isEntitled && entitlementResult.isEntitlementCheckSuccessful) {
+      return SsoDefaultRole.ORGANIZATION_ADMIN
+    }
+    return if (featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, Organization(organizationId))) {
       configured
     } else {
       DEFAULT_SSO_ROLE
     }
+  }
 
   open fun activateSsoConfig(
     organizationId: UUID,
@@ -780,14 +797,71 @@ open class SsoConfigDomainService internal constructor(
     // result. This mirrors the create path (createAndStoreSsoConfig wrapping the @Transactional
     // createActiveSsoConfigWithEmailDomain), which keeps the metric outside the transaction boundary.
     recordSsoConfigOperation(organizationId, SSO_OP_ACTIVATE) {
-      activateSsoConfigTransactional(organizationId, emailDomain)
+      val preflight = prepareActivationPreflight(organizationId, emailDomain)
+      activateSsoConfigTransactional(organizationId, emailDomain, preflight)
     }
+  }
+
+  private fun prepareActivationPreflight(
+    organizationId: UUID,
+    emailDomain: String?,
+  ): SsoActivationPreflight {
+    val currentSsoConfig =
+      ssoConfigService.getSsoConfig(organizationId) ?: throw SSOActivationProblem(
+        ProblemSSOActivationData()
+          .organizationId(organizationId)
+          .errorMessage("No SSO configuration exists for this organization. Please create one first."),
+      )
+    if (currentSsoConfig.status.toDomain() == SsoConfigStatus.ACTIVE) {
+      throw SSOActivationProblem(
+        ProblemSSOActivationData()
+          .organizationId(organizationId)
+          .companyIdentifier(currentSsoConfig.keycloakRealm)
+          .errorMessage("This SSO configuration is already active."),
+      )
+    }
+
+    val useVerifiedDomains = featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, Organization(organizationId))
+    if (useVerifiedDomains) {
+      return SsoActivationPreflight(
+        useVerifiedDomains = true,
+        permissionGrantPlan = null,
+      )
+    }
+
+    if (emailDomain.isNullOrEmpty()) {
+      throw SSOActivationProblem(
+        ProblemSSOActivationData()
+          .organizationId(organizationId)
+          .companyIdentifier(currentSsoConfig.keycloakRealm)
+          .errorMessage("Email domain is required for SSO activation."),
+      )
+    }
+
+    val autoGrantEnabled = isAutoGrantEnabled(organizationId)
+    validateEmailDomainForActivationGated(
+      organizationId = organizationId,
+      emailDomain = emailDomain,
+      companyIdentifier = currentSsoConfig.keycloakRealm,
+      autoGrantEnabled = autoGrantEnabled,
+    )
+    return SsoActivationPreflight(
+      useVerifiedDomains = false,
+      permissionGrantPlan =
+        preparePermissionGrantPlan(
+          organizationId = organizationId,
+          emailDomain = emailDomain,
+          defaultRole = currentSsoConfig.defaultRole?.toSsoDefaultRole() ?: DEFAULT_SSO_ROLE,
+          autoGrantEnabled = autoGrantEnabled,
+        ),
+    )
   }
 
   @Transactional("config")
   internal open fun activateSsoConfigTransactional(
     organizationId: UUID,
     emailDomain: String?,
+    preflight: SsoActivationPreflight,
   ) {
     val currentSsoConfig =
       ssoConfigService.getSsoConfig(organizationId) ?: throw SSOActivationProblem(
@@ -804,10 +878,7 @@ open class SsoConfigDomainService internal constructor(
       )
     }
 
-    // FeatureFlag check
-    val useVerifiedDomains = featureFlagClient.boolVariation(UseVerifiedDomainsForSsoActivate, Organization(organizationId))
-
-    if (useVerifiedDomains) {
+    if (preflight.useVerifiedDomains) {
       // fetching all the verified domains from the organizationDomainVerification table
       val verifiedDomains =
         organizationDomainVerificationService.findByOrganizationId(organizationId).filter {
@@ -849,22 +920,19 @@ open class SsoConfigDomainService internal constructor(
         )
       }
     } else {
-      // since now the email domain is not in required so need add check
-      if (emailDomain.isNullOrEmpty()) {
-        throw SSOActivationProblem(
-          ProblemSSOActivationData()
-            .organizationId(organizationId)
-            .companyIdentifier(currentSsoConfig.keycloakRealm)
-            .errorMessage("Email domain is required for SSO activation."),
-        )
-      }
+      val requiredEmailDomain =
+        if (emailDomain.isNullOrEmpty()) {
+          throw SSOActivationProblem(
+            ProblemSSOActivationData()
+              .organizationId(organizationId)
+              .companyIdentifier(currentSsoConfig.keycloakRealm)
+              .errorMessage("Email domain is required for SSO activation."),
+          )
+        } else {
+          emailDomain
+        }
 
-      validateEmailDomainAndGrantPermissionsIfNeeded(
-        organizationId,
-        emailDomain,
-        currentSsoConfig.keycloakRealm,
-        currentSsoConfig.defaultRole?.toSsoDefaultRole() ?: DEFAULT_SSO_ROLE,
-      )
+      applyPermissionGrantPlan(organizationId, preflight.permissionGrantPlan)
 
       try {
         ssoConfigService.updateSsoConfigStatus(organizationId, SsoConfigStatus.ACTIVE)
@@ -872,11 +940,11 @@ open class SsoConfigDomainService internal constructor(
           OrganizationEmailDomain().apply {
             id = UUID.randomUUID()
             this.organizationId = organizationId
-            this.emailDomain = emailDomain
+            this.emailDomain = requiredEmailDomain
           },
         )
       } catch (e: Exception) {
-        logger.error(e) { "Failed to activate SSO config for organization $organizationId with email domain $emailDomain" }
+        logger.error(e) { "Failed to activate SSO config for organization $organizationId with email domain $requiredEmailDomain" }
         throw SSOActivationProblem(
           ProblemSSOActivationData()
             .organizationId(organizationId)

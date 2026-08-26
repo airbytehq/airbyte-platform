@@ -48,6 +48,7 @@ import io.airbyte.domain.services.scim.ScimFirstLoginAttachmentResult
 import io.airbyte.domain.services.scim.ScimFirstLoginService
 import io.airbyte.domain.services.scim.ScimMutationService
 import io.airbyte.domain.services.scim.ScimUserLifecycleService
+import io.airbyte.domain.services.sso.SsoRbacEntitlementChecker
 import io.airbyte.featureflag.FeatureFlagClient
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.env.PropertySource
@@ -462,6 +463,7 @@ class ScimVerifiedEmailDomainGateTest {
       Optional.empty<InitialUserConfig>(),
       mockk<ResourceBootstrapHandlerInterface>(relaxed = true),
       mockk<FeatureFlagClient>(relaxed = true),
+      mockk<SsoRbacEntitlementChecker>(relaxed = true),
       firstLoginService,
       transactions,
     )

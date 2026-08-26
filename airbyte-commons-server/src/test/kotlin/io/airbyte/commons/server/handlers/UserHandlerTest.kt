@@ -25,6 +25,8 @@ import io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem
 import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.config.InitialUserConfig
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver
+import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.RbacRolesEntitlement
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.config.Application
@@ -46,8 +48,10 @@ import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.services.scim.ScimFirstLoginAttachmentResult
 import io.airbyte.domain.services.scim.ScimFirstLoginService
+import io.airbyte.domain.services.sso.SsoRbacEntitlementChecker
 import io.airbyte.featureflag.BypassSsoDomainValidationEnforcement
 import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.FeatureFlagClient
@@ -105,6 +109,7 @@ class UserHandlerTest {
   lateinit var externalUserService: ExternalUserService
   lateinit var applicationService: ApplicationService
   lateinit var featureFlagClient: FeatureFlagClient
+  lateinit var ssoRbacEntitlementChecker: SsoRbacEntitlementChecker
   lateinit var scimFirstLoginService: ScimFirstLoginService
   private var transactionCallbackActive = false
   private val transactionOperations =
@@ -154,6 +159,7 @@ class UserHandlerTest {
     externalUserService = mock()
     applicationService = mock()
     featureFlagClient = mock<TestClient>()
+    ssoRbacEntitlementChecker = mock()
     scimFirstLoginService = mock()
 
     whenever(featureFlagClient.boolVariation(eq(RestrictLoginsForSSODomains), any()))
@@ -162,6 +168,8 @@ class UserHandlerTest {
     // role; prod default is OFF (dark launch). Flag-off behavior is covered explicitly below.
     whenever(featureFlagClient.boolVariation(eq(ConfigurableSsoDefaultRole), any()))
       .thenReturn(true)
+    whenever(ssoRbacEntitlementChecker.check(any()))
+      .thenReturn(EntitlementResult(RbacRolesEntitlement.featureId, true))
     whenever(featureFlagClient.boolVariation(eq(BypassSsoDomainValidationEnforcement), any()))
       .thenReturn(true)
 
@@ -199,6 +207,7 @@ class UserHandlerTest {
         Optional.of(initialUserConfig),
         resourceBootstrapHandler,
         featureFlagClient,
+        ssoRbacEntitlementChecker,
         scimFirstLoginService,
         transactionOperations,
       )
@@ -1469,6 +1478,7 @@ class UserHandlerTest {
             Optional.of(initialUserConfig),
             resourceBootstrapHandler,
             TestClient(emptyMap()),
+            ssoRbacEntitlementChecker,
             scimFirstLoginService,
             transactionOperations,
           )
@@ -1588,6 +1598,7 @@ class UserHandlerTest {
               Optional.empty<InitialUserConfig>(),
               resourceBootstrapHandler,
               featureFlagClient,
+              ssoRbacEntitlementChecker,
               scimFirstLoginService,
               transactionOperations,
             )
@@ -1734,6 +1745,102 @@ class UserHandlerTest {
             .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
             .withOrganizationId(organization.organizationId)
             .withUserId(newUserId),
+        )
+      }
+
+      @Test
+      fun testNewSsoUserCreationFallsBackToAdminWhenRbacRolesEntitlementIsAbsent() {
+        whenever(
+          ssoRbacEntitlementChecker.check(OrganizationId(organization.organizationId)),
+        ).thenReturn(EntitlementResult(RbacRolesEntitlement.featureId, false))
+        whenever(featureFlagClient.boolVariation(eq(ConfigurableSsoDefaultRole), any())).thenReturn(false)
+        newAuthedUser!!.authProvider = AuthProvider.KEYCLOAK
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn("airbyte-realm")
+        whenever(organizationService.getOrganizationBySsoConfigRealm("airbyte-realm")).thenReturn(Optional.of(organization))
+        whenever(ssoConfigService.getSsoConfig(organization.organizationId)).thenReturn(
+          SsoConfig().withDefaultRole(Permission.PermissionType.ORGANIZATION_EDITOR),
+        )
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId)).thenReturn(
+          listOf(
+            UserPermission()
+              .withUser(existingUser)
+              .withPermission(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)),
+          ),
+        )
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf<@Valid WorkspaceRead?>(defaultWorkspace)))
+        newUser!!.defaultWorkspaceId = defaultWorkspace!!.workspaceId
+
+        userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Mockito.verify(permissionHandler).createPermission(
+          Permission()
+            .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+            .withOrganizationId(organization.organizationId)
+            .withUserId(newUserId),
+        )
+        Mockito.verify(ssoRbacEntitlementChecker).check(OrganizationId(organization.organizationId))
+        Mockito.verify(featureFlagClient, Mockito.never()).boolVariation(
+          eq(ConfigurableSsoDefaultRole),
+          any(),
+        )
+      }
+
+      @ParameterizedTest
+      @CsvSource(
+        "false,ORGANIZATION_MEMBER",
+        "true,ORGANIZATION_EDITOR",
+      )
+      fun testNewSsoUserCreationPreservesExistingRoleSelectionWhenRbacRolesEntitlementCheckIsIndeterminate(
+        configurableRoleEnabled: Boolean,
+        expectedPermissionType: Permission.PermissionType,
+      ) {
+        whenever(
+          ssoRbacEntitlementChecker.check(OrganizationId(organization.organizationId)),
+        ).thenReturn(
+          EntitlementResult(
+            RbacRolesEntitlement.featureId,
+            false,
+            isEntitlementCheckSuccessful = false,
+          ),
+        )
+        whenever(featureFlagClient.boolVariation(eq(ConfigurableSsoDefaultRole), any()))
+          .thenReturn(configurableRoleEnabled)
+        newAuthedUser!!.authProvider = AuthProvider.KEYCLOAK
+        whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn("airbyte-realm")
+        whenever(organizationService.getOrganizationBySsoConfigRealm("airbyte-realm")).thenReturn(Optional.of(organization))
+        whenever(ssoConfigService.getSsoConfig(organization.organizationId)).thenReturn(
+          SsoConfig().withDefaultRole(Permission.PermissionType.ORGANIZATION_EDITOR),
+        )
+        whenever(permissionHandler.listPermissionsForOrganization(organization.organizationId)).thenReturn(
+          listOf(
+            UserPermission()
+              .withUser(existingUser)
+              .withPermission(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)),
+          ),
+        )
+        whenever(
+          workspacesHandler.listWorkspacesInOrganization(
+            ListWorkspacesInOrganizationRequestBody().organizationId(organization.organizationId),
+          ),
+        ).thenReturn(WorkspaceReadList().workspaces(listOf<@Valid WorkspaceRead?>(defaultWorkspace)))
+        newUser!!.defaultWorkspaceId = defaultWorkspace!!.workspaceId
+
+        userHandler.getOrCreateUserByAuthId(UserAuthIdRequestBody().authUserId(newAuthUserId))
+
+        Mockito.verify(permissionHandler).createPermission(
+          Permission()
+            .withPermissionType(expectedPermissionType)
+            .withOrganizationId(organization.organizationId)
+            .withUserId(newUserId),
+        )
+        Mockito.verify(ssoRbacEntitlementChecker).check(OrganizationId(organization.organizationId))
+        Mockito.verify(featureFlagClient).boolVariation(
+          ConfigurableSsoDefaultRole,
+          FeatureFlagOrganization(organization.organizationId),
         )
       }
 

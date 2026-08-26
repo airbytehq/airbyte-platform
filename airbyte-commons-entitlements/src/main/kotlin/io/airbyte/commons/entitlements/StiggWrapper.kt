@@ -227,6 +227,7 @@ internal class StiggWrapper(
         featureId = entitlement.featureId,
         isEntitled = false,
         reason = "BYPASSED_BY_FEATURE_FLAG",
+        isEntitlementCheckSuccessful = false,
       )
     }
 
@@ -261,6 +262,7 @@ internal class StiggWrapper(
       entitlement.featureId,
       result.hasAccess,
       result.accessDeniedReason.name,
+      isEntitlementCheckSuccessful = !result.isFallback,
     )
   }
 

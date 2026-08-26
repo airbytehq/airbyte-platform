@@ -97,6 +97,7 @@ import io.airbyte.domain.services.scim.ScimFirstLoginAttachmentResult
 import io.airbyte.domain.services.scim.ScimFirstLoginService
 import io.airbyte.domain.services.scim.ScimMutationService
 import io.airbyte.domain.services.scim.ScimUserLifecycleService
+import io.airbyte.domain.services.sso.SsoRbacEntitlementChecker
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
@@ -2166,6 +2167,7 @@ class ScimUserLifecycleIntegrationTest {
         Optional.empty<InitialUserConfig>(),
         resourceBootstrapHandler,
         mockk<FeatureFlagClient>(relaxed = true),
+        mockk<SsoRbacEntitlementChecker>(relaxed = true),
         concurrentFirstLoginService,
         transactions,
       )
@@ -2258,6 +2260,7 @@ class ScimUserLifecycleIntegrationTest {
         Optional.empty<InitialUserConfig>(),
         resourceBootstrapHandler,
         mockk<FeatureFlagClient>(relaxed = true),
+        mockk<SsoRbacEntitlementChecker>(relaxed = true),
         firstLoginService,
         transactions,
       )
@@ -3930,6 +3933,7 @@ class ScimUserLifecycleIntegrationTest {
         Optional.empty<InitialUserConfig>(),
         resourceBootstrapHandler,
         mockk<FeatureFlagClient>(relaxed = true),
+        mockk<SsoRbacEntitlementChecker>(relaxed = true),
         firstLoginService,
         transactions,
       )
@@ -4552,6 +4556,7 @@ class ScimUserLifecycleIntegrationTest {
       Optional.empty<InitialUserConfig>(),
       resourceBootstrapHandler,
       featureFlagClient,
+      mockk<SsoRbacEntitlementChecker>(relaxed = true),
       attachmentService,
       transactionOperations,
     )

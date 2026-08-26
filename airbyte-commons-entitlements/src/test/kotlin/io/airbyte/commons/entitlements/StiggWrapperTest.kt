@@ -20,6 +20,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import io.stigg.api.operations.GetPaywallQuery
 import io.stigg.sidecar.proto.v1.EnumEntitlement
+import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
+import io.stigg.sidecar.proto.v1.GetBooleanEntitlementResponse
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementResponse
 import io.stigg.sidecar.proto.v1.GetNumericEntitlementRequest
@@ -66,6 +68,25 @@ internal class StiggWrapperTest {
 
     assertEquals("missing-feature", result.featureId)
     assertEquals(false, result.isEntitled)
+  }
+
+  @Test
+  fun `checkEntitlement returns an indeterminate result for a Stigg fallback`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+    val entitlement = FeatureEntitlement("missing-feature")
+    val response =
+      GetBooleanEntitlementResponse
+        .newBuilder()
+        .setHasAccess(false)
+        .setIsFallback(true)
+        .build()
+
+    every { stigg.getBooleanEntitlement(any<GetBooleanEntitlementRequest>()) } returns response
+
+    val result = StiggWrapper(stigg, metricClient).checkEntitlement(organizationId, entitlement)
+
+    assertEquals(false, result.isEntitled)
+    assertEquals(false, result.isEntitlementCheckSuccessful)
   }
 
   @Test
@@ -281,6 +302,7 @@ internal class StiggWrapperTest {
     assertEquals("test-feature", result.featureId)
     assertEquals(false, result.isEntitled)
     assertEquals("BYPASSED_BY_FEATURE_FLAG", result.reason)
+    assertEquals(false, result.isEntitlementCheckSuccessful)
 
     // Verify Stigg was never called
     verify(exactly = 0) { stigg.getBooleanEntitlement(any()) }

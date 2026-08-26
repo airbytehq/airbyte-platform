@@ -8,6 +8,8 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.SSOActivationProblem
 import io.airbyte.api.problems.throwable.generated.SSODeletionProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
+import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.RbacRolesEntitlement
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.config.persistence.UserPersistence
@@ -24,6 +26,7 @@ import io.airbyte.data.services.impls.keycloak.RealmDeletionException
 import io.airbyte.domain.models.DomainVerificationMethod
 import io.airbyte.domain.models.DomainVerificationStatus
 import io.airbyte.domain.models.OrganizationDomainVerification
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigStatus
 import io.airbyte.domain.models.SsoDefaultRole
@@ -40,11 +43,14 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -59,6 +65,7 @@ class SsoConfigDomainServiceTest {
   private lateinit var userPersistence: UserPersistence
   private lateinit var organizationDomainVerificationService: OrganizationDomainVerificationService
   private lateinit var featureFlagClient: FeatureFlagClient
+  private lateinit var ssoRbacEntitlementChecker: SsoRbacEntitlementChecker
   private lateinit var permissionService: PermissionService
   private lateinit var metricClient: MetricClient
 
@@ -73,6 +80,7 @@ class SsoConfigDomainServiceTest {
     userPersistence = mockk()
     organizationDomainVerificationService = mockk()
     featureFlagClient = mockk()
+    ssoRbacEntitlementChecker = mockk()
     permissionService = mockk()
     // relaxed so metric emission is a no-op unless a test asserts on it
     metricClient = mockk(relaxed = true)
@@ -85,6 +93,7 @@ class SsoConfigDomainServiceTest {
         userPersistence,
         organizationDomainVerificationService,
         featureFlagClient,
+        ssoRbacEntitlementChecker,
         permissionService,
         metricClient,
       )
@@ -94,6 +103,8 @@ class SsoConfigDomainServiceTest {
     // ConfigurableSsoDefaultRole defaults to ON in tests so existing grant assertions exercise the
     // configured role; prod default is OFF (dark launch). Flag-off behavior is covered explicitly below.
     every { featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, any()) } returns true
+    every { ssoRbacEntitlementChecker.check(any()) } returns
+      EntitlementResult(RbacRolesEntitlement.featureId, true)
   }
 
   @Test
@@ -1126,6 +1137,10 @@ class SsoConfigDomainServiceTest {
         },
       )
     }
+    verifyOrder {
+      ssoRbacEntitlementChecker.check(OrganizationId(orgId))
+      ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE)
+    }
     verify(exactly = 1) { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) }
   }
 
@@ -1229,6 +1244,7 @@ class SsoConfigDomainServiceTest {
     verify(exactly = 1) { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) }
     // No permissions should be created
     verify(exactly = 0) { permissionService.createPermission(any()) }
+    verify(exactly = 1) { ssoRbacEntitlementChecker.check(OrganizationId(orgId)) }
     verify(exactly = 1) { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) }
   }
 
@@ -1283,6 +1299,40 @@ class SsoConfigDomainServiceTest {
         MetricAttribute(MetricTags.ORGANIZATION_ID, orgId.toString()),
         MetricAttribute(MetricTags.SSO_DEFAULT_ROLE, SsoDefaultRole.ORGANIZATION_EDITOR.name),
       )
+    }
+  }
+
+  @Test
+  fun `createActiveSsoConfigWithEmailDomain rechecks users inside transaction before granting permissions`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val config = buildTestSsoConfig(orgId, emailDomain)
+    val permissionGrantPlan =
+      SsoPermissionGrantPlan(
+        emailDomain = emailDomain,
+        role = SsoDefaultRole.ORGANIZATION_EDITOR,
+      )
+
+    every { ssoConfigService.getSsoConfigByCompanyIdentifier(config.companyIdentifier) } returns null
+    every { ssoConfigService.createSsoConfig(config) } returns mockk()
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+    every { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) } returns emptyList()
+
+    ssoConfigDomainService.createActiveSsoConfigWithEmailDomain(config, permissionGrantPlan)
+
+    verify(exactly = 0) { permissionService.createPermission(any()) }
+    verify(exactly = 0) {
+      metricClient.count(
+        OssMetricsRegistry.SSO_PERMISSION_GRANTED,
+        any(),
+        any(),
+        any(),
+      )
+    }
+    verifyOrder {
+      ssoConfigService.createSsoConfig(config)
+      organizationEmailDomainService.createEmailDomain(any())
+      userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId)
     }
   }
 
@@ -1351,6 +1401,103 @@ class SsoConfigDomainServiceTest {
         },
       )
     }
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig without RbacRolesEntitlement - grants ORGANIZATION_ADMIN despite configured role`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+    val outsideUserId = UUID.randomUUID()
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val config =
+      buildTestSsoConfig(orgId, emailDomain).copy(
+        defaultRole = SsoDefaultRole.ORGANIZATION_EDITOR,
+      )
+
+    every { ssoRbacEntitlementChecker.check(OrganizationId(orgId)) } returns
+      EntitlementResult(RbacRolesEntitlement.featureId, false)
+    every { featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, any()) } returns true
+    every { featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, any()) } returns false
+    every { airbyteKeycloakClient.createOidcSsoConfig(config) } just Runs
+    every { ssoConfigService.createSsoConfig(any()) } returns mockk()
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+    every { ssoConfigService.getSsoConfigByCompanyIdentifier(any()) } returns null
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
+    every { organizationService.getOrganization(any()) } returns Optional.of(org)
+    every { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) } returns listOf(outsideUserId)
+    every { permissionService.createPermission(any()) } returns mockk()
+
+    ssoConfigDomainService.createAndStoreSsoConfig(config)
+
+    verify(exactly = 1) {
+      permissionService.createPermission(
+        withArg { permission ->
+          assertEquals(outsideUserId, permission.userId)
+          assertEquals(orgId, permission.organizationId)
+          assertEquals(Permission.PermissionType.ORGANIZATION_ADMIN, permission.permissionType)
+        },
+      )
+    }
+    verify(exactly = 1) { ssoRbacEntitlementChecker.check(OrganizationId(orgId)) }
+    verifyOrder {
+      ssoRbacEntitlementChecker.check(OrganizationId(orgId))
+      airbyteKeycloakClient.createOidcSsoConfig(config)
+      ssoConfigService.createSsoConfig(any())
+    }
+    verify(exactly = 0) { featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, any()) }
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    "false,ORGANIZATION_MEMBER",
+    "true,ORGANIZATION_EDITOR",
+  )
+  fun `createAndStoreSsoConfig preserves existing role selection when RbacRolesEntitlement check is indeterminate`(
+    configurableRoleEnabled: Boolean,
+    expectedPermissionType: Permission.PermissionType,
+  ) {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val outsideUserId = UUID.randomUUID()
+    val config =
+      buildTestSsoConfig(orgId, emailDomain).copy(
+        defaultRole = SsoDefaultRole.ORGANIZATION_EDITOR,
+      )
+
+    every { ssoRbacEntitlementChecker.check(OrganizationId(orgId)) } returns
+      EntitlementResult(
+        RbacRolesEntitlement.featureId,
+        false,
+        isEntitlementCheckSuccessful = false,
+      )
+    every { featureFlagClient.boolVariation(AutoGrantOrgPermissionsOnSsoActivation, any()) } returns true
+    every { featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, any()) } returns configurableRoleEnabled
+    every { airbyteKeycloakClient.createOidcSsoConfig(config) } just Runs
+    every { ssoConfigService.createSsoConfig(any()) } returns mockk()
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+    every { ssoConfigService.getSsoConfigByCompanyIdentifier(any()) } returns null
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
+    every { organizationService.getOrganization(any()) } returns Optional.of(buildTestOrganization(orgId, "test@airbyte.com"))
+    every { userPersistence.findUsersWithEmailDomainWithoutOrgPermission(emailDomain, orgId) } returns listOf(outsideUserId)
+    every { permissionService.createPermission(any()) } returns mockk()
+
+    ssoConfigDomainService.createAndStoreSsoConfig(config)
+
+    verify(exactly = 1) {
+      permissionService.createPermission(
+        withArg { permission ->
+          assertEquals(outsideUserId, permission.userId)
+          assertEquals(orgId, permission.organizationId)
+          assertEquals(expectedPermissionType, permission.permissionType)
+        },
+      )
+    }
+    verify(exactly = 1) { ssoRbacEntitlementChecker.check(OrganizationId(orgId)) }
+    verify(exactly = 1) { featureFlagClient.boolVariation(ConfigurableSsoDefaultRole, io.airbyte.featureflag.Organization(orgId)) }
   }
 
   @Test

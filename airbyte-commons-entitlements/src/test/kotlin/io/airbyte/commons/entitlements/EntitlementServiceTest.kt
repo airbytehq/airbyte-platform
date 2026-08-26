@@ -54,6 +54,21 @@ class EntitlementServiceTest {
   }
 
   @Test
+  fun `checkEntitlement returns an indeterminate result when the client throws`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val entitlement = FeatureEntitlement("some-id")
+
+    every { entitlementClient.checkEntitlement(orgId, entitlement) } throws RuntimeException("Stigg API error")
+
+    val result = entitlementService.checkEntitlement(orgId, entitlement)
+
+    assertEquals("some-id", result.featureId)
+    assertEquals(false, result.isEntitled)
+    assertEquals(false, result.isEntitlementCheckSuccessful)
+    assertEquals("Exception while checking entitlement: Stigg API error", result.reason)
+  }
+
+  @Test
   fun `getNumericEntitlement delegates to entitlementClient`() {
     val orgId = OrganizationId(UUID.randomUUID())
     val entitlement = FeatureEntitlement("feature-committed-data-workers")
@@ -159,6 +174,24 @@ class EntitlementServiceTest {
   }
 
   @Test
+  fun `checkEntitlement for ConfigTemplateEntitlement preserves an indeterminate client result when provider grants access`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    every { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) } returns
+      EntitlementResult(
+        featureId = ConfigTemplateEntitlement.featureId,
+        isEntitled = false,
+        isEntitlementCheckSuccessful = false,
+      )
+    every { entitlementProvider.hasConfigTemplateEntitlements(orgId) } returns true
+
+    val result = entitlementService.checkEntitlement(orgId, ConfigTemplateEntitlement)
+
+    assertEquals(true, result.isEntitled)
+    assertEquals(false, result.isEntitlementCheckSuccessful)
+  }
+
+  @Test
   fun `checkEntitlement for ConfigTemplateEntitlement returns true when Stigg is true`() {
     val orgId = OrganizationId(UUID.randomUUID())
 
@@ -220,6 +253,7 @@ class EntitlementServiceTest {
     assertEquals(true, result.isEntitled)
     assertEquals("feature-embedded", result.featureId)
     assertEquals("Error while checking entitlement: Stigg API error; falling back to feature flag", result.reason)
+    assertEquals(false, result.isEntitlementCheckSuccessful)
     verify { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) }
     verify { entitlementProvider.hasConfigTemplateEntitlements(orgId) }
   }
@@ -237,6 +271,7 @@ class EntitlementServiceTest {
     assertEquals(false, result.isEntitled)
     assertEquals("feature-embedded", result.featureId)
     assertEquals("Error while checking entitlement: Stigg API error; falling back to feature flag", result.reason)
+    assertEquals(false, result.isEntitlementCheckSuccessful)
     verify { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) }
     verify { entitlementProvider.hasConfigTemplateEntitlements(orgId) }
   }

@@ -58,8 +58,10 @@ import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.services.scim.ScimFirstLoginAttachmentResult
 import io.airbyte.domain.services.scim.ScimFirstLoginService
+import io.airbyte.domain.services.sso.SsoRbacEntitlementChecker
 import io.airbyte.featureflag.BypassSsoDomainValidationEnforcement
 import io.airbyte.featureflag.ConfigurableSsoDefaultRole
 import io.airbyte.featureflag.EmailAttribute
@@ -106,6 +108,7 @@ open class UserHandler
     private val initialUserConfig: Optional<InitialUserConfig>,
     private val resourceBootstrapHandler: ResourceBootstrapHandlerInterface,
     private val featureFlagClient: FeatureFlagClient,
+    private val ssoRbacEntitlementChecker: SsoRbacEntitlementChecker,
     private val scimFirstLoginService: ScimFirstLoginService,
     @param:Named("config") private val transactionOperations: TransactionOperations<Connection>,
   ) {
@@ -1249,6 +1252,12 @@ open class UserHandler
     }
 
     private fun getSsoDefaultRole(organizationId: UUID): Permission.PermissionType {
+      val entitlementResult = ssoRbacEntitlementChecker.check(OrganizationId(organizationId))
+      // A definitive denial means the organization cannot manage roles, so grant a role it can keep
+      // without adjustment. Indeterminate checks preserve the existing flag/configured-role behavior.
+      if (!entitlementResult.isEntitled && entitlementResult.isEntitlementCheckSuccessful) {
+        return Permission.PermissionType.ORGANIZATION_ADMIN
+      }
       // ConfigurableSsoDefaultRole (temporary, default OFF) dark-launches per-config SSO default roles.
       // While the flag is off for the org, ignore the configured role and fall back to ORGANIZATION_MEMBER,
       // matching pre-feature behavior so the deploy can be separated from the release.

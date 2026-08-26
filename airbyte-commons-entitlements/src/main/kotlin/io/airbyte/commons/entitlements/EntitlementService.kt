@@ -158,6 +158,7 @@ internal class EntitlementServiceImpl(
         featureId = entitlement.featureId,
         isEntitled = false,
         reason = "Exception while checking entitlement: ${e.message}",
+        isEntitlementCheckSuccessful = false,
       )
     }
 
@@ -303,20 +304,24 @@ internal class EntitlementServiceImpl(
   }
 
   private fun hasConfigTemplateEntitlement(organizationId: OrganizationId): EntitlementResult {
-    val (clientResult, clientReason) =
+    val entitlementResult =
       try {
-        entitlementClient.checkEntitlement(organizationId, ConfigTemplateEntitlement).let {
-          Pair(it.isEntitled, it.reason)
-        }
+        entitlementClient.checkEntitlement(organizationId, ConfigTemplateEntitlement)
       } catch (e: Exception) {
         logger.error(e) { "Error checking entitlement" }
-        Pair(false, "Error while checking entitlement: ${e.message}; falling back to feature flag")
+        EntitlementResult(
+          featureId = ConfigTemplateEntitlement.featureId,
+          isEntitled = false,
+          reason = "Error while checking entitlement: ${e.message}; falling back to feature flag",
+          isEntitlementCheckSuccessful = false,
+        )
       }
     val ffResult = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
     return EntitlementResult(
       featureId = ConfigTemplateEntitlement.featureId,
-      isEntitled = clientResult || ffResult,
-      reason = clientReason,
+      isEntitled = entitlementResult.isEntitled || ffResult,
+      reason = entitlementResult.reason,
+      isEntitlementCheckSuccessful = entitlementResult.isEntitlementCheckSuccessful,
     )
   }
 
@@ -327,6 +332,7 @@ internal class EntitlementServiceImpl(
       featureId = DestinationObjectStorageEntitlement.featureId,
       isEntitled = entitlementResult.isEntitled || ffResult,
       reason = entitlementResult.reason,
+      isEntitlementCheckSuccessful = entitlementResult.isEntitlementCheckSuccessful,
     )
   }
 
@@ -337,6 +343,7 @@ internal class EntitlementServiceImpl(
       featureId = SsoEntitlement.featureId,
       isEntitled = entitlementResult.isEntitled || ffResult,
       reason = entitlementResult.reason,
+      isEntitlementCheckSuccessful = entitlementResult.isEntitlementCheckSuccessful,
     )
   }
 
@@ -347,6 +354,7 @@ internal class EntitlementServiceImpl(
       featureId = SelfManagedRegionsEntitlement.featureId,
       isEntitled = entitlementResult.isEntitled || ffResult,
       reason = entitlementResult.reason,
+      isEntitlementCheckSuccessful = entitlementResult.isEntitlementCheckSuccessful,
     )
   }
 
