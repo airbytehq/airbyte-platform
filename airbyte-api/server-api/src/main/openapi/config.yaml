@@ -7758,6 +7758,82 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/data_worker_allocation/list:
+    post:
+      summary: List the Data Worker capacity an organization holds in each region
+      tags:
+        - data_worker_allocation
+      operationId: listDataWorkerAllocations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataWorkerAllocationListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: The organization's capacity per region, and the total across them
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataWorkerAllocationListResponse"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/data_worker_allocation/get:
+    post:
+      summary: Get the Data Worker capacity an organization holds in one region
+      tags:
+        - data_worker_allocation
+      operationId: getDataWorkerAllocation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataWorkerAllocationGetRequestBody"
+        required: true
+      responses:
+        "200":
+          description: The organization's capacity in the requested region
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataWorkerAllocationRead"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/data_worker_allocation/reallocate:
+    post:
+      summary: Reallocate Data Worker capacity from one of an organization's regions to another
+      tags:
+        - data_worker_allocation
+      operationId: reallocateDataWorkerCapacity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataWorkerReallocateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: The organization's capacity per region after the move
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataWorkerAllocationListResponse"
+        "400":
+          description: Same region, invalid amount, unknown or unusable region
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "409":
+          description: The source region holds less than the requested amount
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/dataplanes/create:
     post:
       summary: Create a dataplane
@@ -22918,6 +22994,86 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DataplaneGroupRead"
+    DataWorkerAllocationListRequestBody:
+      type: object
+      required:
+        - organization_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+    DataWorkerAllocationGetRequestBody:
+      type: object
+      required:
+        - organization_id
+        - dataplane_group_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        dataplane_group_id:
+          type: string
+          format: uuid
+    DataWorkerReallocateRequestBody:
+      type: object
+      required:
+        - organization_id
+        - from_dataplane_group_id
+        - to_dataplane_group_id
+        - amount
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        from_dataplane_group_id:
+          type: string
+          format: uuid
+        to_dataplane_group_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+          description: >-
+            Capacity to move out of the source region and into the destination
+            region. Must be positive. The organization's total capacity is
+            unchanged by this operation.
+    DataWorkerAllocationRead:
+      type: object
+      required:
+        - dataplane_group_id
+        - allocated_capacity
+      properties:
+        dataplane_group_id:
+          type: string
+          format: uuid
+        allocated_capacity:
+          type: number
+          format: double
+          description: >-
+            Capacity recorded against this region. Zero when the organization
+            holds no capacity here.
+    DataWorkerAllocationListResponse:
+      type: object
+      required:
+        - organization_id
+        - total_allocated_capacity
+        - allocations
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        total_allocated_capacity:
+          type: number
+          format: double
+          description: >-
+            Sum of allocated_capacity across every region below. This is what
+            the allocation table records, which is not necessarily what the
+            organization is entitled to.
+        allocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataWorkerAllocationRead"
     DataplaneCreateRequestBody:
       type: object
       required:

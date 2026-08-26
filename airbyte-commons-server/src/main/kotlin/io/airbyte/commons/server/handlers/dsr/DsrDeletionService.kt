@@ -1688,6 +1688,7 @@ open class DsrDeletionService(
     deleteDataWorkerUsageRows(ctx, "data_worker_usage_reservation", workspaceIds, organizationIds, workspaceOrganizationIds)
     deleteDataWorkerUsageRows(ctx, "data_worker_usage", workspaceIds, organizationIds, workspaceOrganizationIds)
 
+    deleteByUuidField(ctx, "data_worker_allocated_capacity", "organization_id", organizationIds)
     deleteByUuidField(ctx, "connection_operation", "connection_id", connectionIds)
     deleteByUuidField(ctx, "connection_tag", "connection_id", connectionIds)
     deleteByUuidField(ctx, "connection_timeline_event", "connection_id", connectionIds)
