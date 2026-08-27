@@ -21,9 +21,19 @@ airbyte {
   }
 }
 
+// The OpenAPI-generated sources contain no Micronaut beans, so keep KSP from walking them.
+// KSP matches excludedSources against source roots, so list the exact generated roots (a fileTree would be ignored).
+ksp {
+  excludedSources.from(
+    layout.buildDirectory.dir("generated/api/server/src/gen/java"),
+    layout.buildDirectory.dir("generated/api/server2/src/main/kotlin"),
+    layout.buildDirectory.dir("generated/api/scim-server/src/main/kotlin"),
+    layout.buildDirectory.dir("generated/api/client/src/main/kotlin"),
+  )
+}
+
 dependencies {
 
-  ksp(libs.micronaut.openapi)
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(libs.v3.swagger.annotations)

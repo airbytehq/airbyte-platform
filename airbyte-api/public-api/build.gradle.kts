@@ -6,7 +6,6 @@ plugins {
 
 dependencies {
 
-  ksp(libs.micronaut.openapi)
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(libs.v3.swagger.annotations)
