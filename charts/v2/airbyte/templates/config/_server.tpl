@@ -110,7 +110,7 @@ Renders the server.data.organizationCustomerTiersObjectPrefix environment variab
 Renders the server.httpIdleTimeout value
 */}}
 {{- define "airbyte.server.httpIdleTimeout" }}
-    {{- .Values.server.httpIdleTimeout }}
+    {{- .Values.server.httpIdleTimeout | default "5m" }}
 {{- end }}
 
 {{/*
@@ -153,7 +153,7 @@ Renders the server.openai.syncAssistantApiKey environment variable
 Renders the server.publicApiExecutor.numThreads value
 */}}
 {{- define "airbyte.server.publicApiExecutor.numThreads" }}
-    {{- .Values.server.publicApiExecutor.numThreads }}
+    {{- .Values.server.publicApiExecutor.numThreads | default 5 }}
 {{- end }}
 
 {{/*
@@ -171,7 +171,7 @@ Renders the server.publicApiExecutor.numThreads environment variable
 Renders the server.ioExecutor.numThreads value
 */}}
 {{- define "airbyte.server.ioExecutor.numThreads" }}
-    {{- .Values.server.ioExecutor.numThreads }}
+    {{- .Values.server.ioExecutor.numThreads | default 100 }}
 {{- end }}
 
 {{/*
@@ -189,7 +189,7 @@ Renders the server.ioExecutor.numThreads environment variable
 Renders the server.scheduler.numThreads value
 */}}
 {{- define "airbyte.server.scheduler.numThreads" }}
-    {{- .Values.server.scheduler.numThreads }}
+    {{- .Values.server.scheduler.numThreads | default 25 }}
 {{- end }}
 
 {{/*

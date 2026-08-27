@@ -9,7 +9,7 @@
 Renders the worker.activityMaxAttempt value
 */}}
 {{- define "airbyte.worker.activityMaxAttempt" }}
-    {{- .Values.worker.activityMaxAttempt }}
+    {{- .Values.worker.activityMaxAttempt | default 5 }}
 {{- end }}
 
 {{/*
@@ -27,7 +27,7 @@ Renders the worker.activityMaxAttempt environment variable
 Renders the worker.activityInitialDelayBetweenAttemptsSeconds value
 */}}
 {{- define "airbyte.worker.activityInitialDelayBetweenAttemptsSeconds" }}
-    {{- .Values.worker.activityInitialDelayBetweenAttemptsSeconds }}
+    {{- .Values.worker.activityInitialDelayBetweenAttemptsSeconds | default 30 }}
 {{- end }}
 
 {{/*
@@ -45,7 +45,7 @@ Renders the worker.activityInitialDelayBetweenAttemptsSeconds environment variab
 Renders the worker.activityMaxDelayBetweenAttemptsSeconds value
 */}}
 {{- define "airbyte.worker.activityMaxDelayBetweenAttemptsSeconds" }}
-    {{- .Values.worker.activityMaxDelayBetweenAttemptsSeconds }}
+    {{- .Values.worker.activityMaxDelayBetweenAttemptsSeconds | default 600 }}
 {{- end }}
 
 {{/*
@@ -81,7 +81,7 @@ Renders the worker.configRoot environment variable
 Renders the worker.discoverRefreshWindowMinutes value
 */}}
 {{- define "airbyte.worker.discoverRefreshWindowMinutes" }}
-    {{- .Values.worker.discoverRefreshWindowMinutes }}
+    {{- .Values.worker.discoverRefreshWindowMinutes | default 1440 }}
 {{- end }}
 
 {{/*
@@ -251,7 +251,7 @@ Renders the worker.useStreamCapableState environment variable
 Renders the worker.workflowFailureRestartDelaySeconds value
 */}}
 {{- define "airbyte.worker.workflowFailureRestartDelaySeconds" }}
-    {{- .Values.worker.workflowFailureRestartDelaySeconds }}
+    {{- .Values.worker.workflowFailureRestartDelaySeconds | default 600 }}
 {{- end }}
 
 {{/*

@@ -931,6 +931,7 @@ server:
 
     - env: HTTP_IDLE_TIMEOUT
       key: httpIdleTimeout
+      defaultValue: 5m
 
     - env: OPENAI_API_KEY_PROJ_FAILED_SYNC_ASSISTANT
       key: openai.syncAssistantApiKey
@@ -938,12 +939,15 @@ server:
 
     - env: PUBLIC_API_EXECUTOR_THREADS
       key: publicApiExecutor.numThreads
+      defaultValue: 5
 
     - env: IO_TASK_EXECUTOR_THREADS
       key: ioExecutor.numThreads
+      defaultValue: 100
 
     - env: SCHEDULER_TASK_EXECUTOR_THREADS
       key: scheduler.numThreads
+      defaultValue: 25
 
     - env: AI_ASSIST_URL_BASE
       key: connectorBuilder.aiAssistUrlBase
@@ -1343,13 +1347,15 @@ worker:
   config:
     - env: ACTIVITY_MAX_ATTEMPT
       key: activityMaxAttempt
-      default: ""
+      defaultValue: 5
 
     - env: ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS
       key: activityInitialDelayBetweenAttemptsSeconds
+      defaultValue: 30
 
     - env: ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS
       key: activityMaxDelayBetweenAttemptsSeconds
+      defaultValue: 600
 
     - env: CONFIG_ROOT
       key: configRoot
@@ -1357,6 +1363,7 @@ worker:
 
     - env: DISCOVER_REFRESH_WINDOW_MINUTES
       key: discoverRefreshWindowMinutes
+      defaultValue: 1440
 
     - env: MAX_CHECK_WORKERS
       key: maxCheckWorkers
@@ -1424,6 +1431,7 @@ worker:
 
     - env: WORKFLOW_FAILURE_RESTART_DELAY_SECONDS
       key: workflowFailureRestartDelaySeconds
+      defaultValue: 600
 
     - env: WORKSPACE_DOCKER_MOUNT
       key: workspaceDockerMount

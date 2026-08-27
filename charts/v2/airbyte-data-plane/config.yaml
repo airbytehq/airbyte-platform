@@ -444,13 +444,15 @@ worker:
   config:
     - env: ACTIVITY_MAX_ATTEMPT
       key: activityMaxAttempt
-      default: ""
+      defaultValue: 5
 
     - env: ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS
       key: activityInitialDelayBetweenAttemptsSeconds
+      defaultValue: 30
 
     - env: ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS
       key: activityMaxDelayBetweenAttemptsSeconds
+      defaultValue: 600
 
     - env: CONFIG_ROOT
       key: configRoot
@@ -514,6 +516,7 @@ worker:
 
     - env: WORKFLOW_FAILURE_RESTART_DELAY_SECONDS
       key: workflowFailureRestartDelaySeconds
+      defaultValue: 600
 
     - env: WORKSPACE_DOCKER_MOUNT
       key: workspaceDockerMount
