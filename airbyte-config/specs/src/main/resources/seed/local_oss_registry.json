@@ -26980,7 +26980,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations",
         "releaseCandidates": {
-          "9.1.0": {
+          "9.1.1": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -26996,7 +26996,7 @@
               ]
             },
             "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.24.0@sha256:e34fb609bccdeb77474763c77e3621ea9d5adf9f65f2d9851102cc14a1caa281"
+              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.28.2@sha256:f30cf2745046c06dd1e903742d835d13faea085354690679d06cab083d5a63c7"
             },
             "connectorTestSuitesOptions": [
               {
@@ -27038,7 +27038,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "9.1.0",
+            "dockerImageTag": "9.1.1",
             "dockerRepository": "airbyte/source-amazon-ads",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads",
             "externalDocumentationUrls": [
@@ -27070,33 +27070,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "Patrick Nilan",
-                "commit_author_email": "nilan.patrick@gmail.com",
-                "commit_sha": "918fb0ab6a0c3352ad5cc551655accff34212e0f",
-                "commit_timestamp": "2026-08-20T03:24:36-07:00"
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "86f186f108168516f14312dbe5669b8270b789f9",
+                "commit_timestamp": "2026-08-26T12:15:36+00:00"
               },
               "release": {
-                "attributed_to": "pnilan",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "918fb0ab6a0c3352ad5cc551655accff34212e0f",
-                "merged_at": "2026-08-20T10:24:37Z",
-                "pr_author_association": "COLLABORATOR",
-                "pr_author_id": 6109223,
-                "pr_author_login": "pnilan",
-                "pr_author_type": "User",
-                "pr_merged_by_login": "tolik0",
-                "pr_merged_by_type": "User",
-                "pr_number": 83744,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/83744",
-                "released_at": "2026-08-20T10:24:37Z",
+                "attributed_to": "devin-ai-integration",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "86f186f108168516f14312dbe5669b8270b789f9",
+                "merged_at": "2026-08-26T12:15:37Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "octavia-bot-hoard",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 84981,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84981",
+                "released_at": "2026-08-26T12:15:37Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-ads/9.1.0.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-ads/9.1.1.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-amazon-ads/9.1.0/metadata.yaml",
-                "metadata_last_modified": "2026-08-20T10:29:16.630653+00:00",
-                "registry_entry_generated_at": "2026-08-20T10:29:16.630653+00:00"
+                "metadata_file_path": "metadata/airbyte/source-amazon-ads/9.1.1/metadata.yaml",
+                "metadata_last_modified": "2026-08-26T12:20:26.086676+00:00",
+                "registry_entry_generated_at": "2026-08-26T12:20:26.086676+00:00"
               }
             },
             "githubIssueLabel": "source-amazon-ads",
@@ -31066,7 +31066,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.0.1",
+      "dockerImageTag": "1.1.0",
       "dockerRepository": "airbyte/source-ashby",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/ashby",
       "externalDocumentationUrls": [
@@ -31085,8 +31085,8 @@
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "47804231b61606036e1a1e56733732e3c177c902",
-          "commit_timestamp": "2026-08-25T21:15:22+00:00"
+          "commit_sha": "909062a646bc56f745b328e985e304992c777ea3",
+          "commit_timestamp": "2026-08-25T20:30:31-07:00"
         },
         "metrics": {
           "all": {
@@ -31105,25 +31105,25 @@
         "release": {
           "attributed_to": "pnilan",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "47804231b61606036e1a1e56733732e3c177c902",
-          "merged_at": "2026-08-25T21:15:23Z",
+          "merge_commit_sha": "909062a646bc56f745b328e985e304992c777ea3",
+          "merged_at": "2026-08-26T03:30:32Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 158243242,
           "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
           "pr_merged_by_login": "pnilan",
           "pr_merged_by_type": "User",
-          "pr_number": 84405,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84405",
-          "released_at": "2026-08-25T21:15:23Z",
+          "pr_number": 84392,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84392",
+          "released_at": "2026-08-26T03:30:32Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ashby/1.0.1.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ashby/1.1.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-ashby/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-25T21:20:01.699220+00:00",
-          "registry_entry_generated_at": "2026-08-25T21:20:01.699220+00:00"
+          "metadata_last_modified": "2026-08-26T03:34:36.978160+00:00",
+          "registry_entry_generated_at": "2026-08-26T03:34:36.978160+00:00"
         }
       },
       "githubIssueLabel": "source-ashby",
@@ -37436,15 +37436,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "release": {
@@ -46855,16 +46855,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "release": {
@@ -49088,15 +49088,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-dixa/0.4.21.spdx.json",
@@ -50296,16 +50296,31 @@
       "connectorBuildOptions": {
         "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
       },
+      "connectorTestSuitesOptions": [
+        {
+          "suite": "acceptanceTests",
+          "testSecrets": [
+            {
+              "fileName": "config.json",
+              "name": "SECRET_SOURCE-DUST__CREDS",
+              "secretStore": {
+                "alias": "airbyte-connector-testing-secret-store",
+                "type": "GSM"
+              }
+            }
+          ]
+        }
+      ],
       "custom": false,
-      "dockerImageTag": "0.0.5",
+      "dockerImageTag": "0.0.6",
       "dockerRepository": "airbyte/source-dust",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/dust",
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "e47e6045454f4d88834c7104223a6e706f2a4c9b",
-          "commit_timestamp": "2026-08-18T05:00:53+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "90672a7be9520c6548f4f942da38a1405d42b0c5",
+          "commit_timestamp": "2026-08-26T19:10:40+03:00"
         },
         "metrics": {
           "all": {
@@ -50322,23 +50337,27 @@
           }
         },
         "release": {
-          "attributed_to": null,
-          "merge_commit_sha": "e47e6045454f4d88834c7104223a6e706f2a4c9b",
-          "merged_at": "2026-08-18T05:00:54Z",
-          "pr_author_id": 230633153,
-          "pr_author_login": "octavia-bot-hoard",
+          "attributed_to": "DanyloGL",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "90672a7be9520c6548f4f942da38a1405d42b0c5",
+          "merged_at": "2026-08-26T16:10:41Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
-          "pr_number": 84577,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84577",
-          "released_at": "2026-08-18T05:00:54Z",
+          "pr_merged_by_login": "DanyloGL",
+          "pr_merged_by_type": "User",
+          "pr_number": 85031,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85031",
+          "released_at": "2026-08-26T16:10:41Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-dust/0.0.5.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-dust/0.0.6.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-dust/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-18T05:05:15.341433+00:00",
-          "registry_entry_generated_at": "2026-08-18T05:05:15.341433+00:00"
+          "metadata_last_modified": "2026-08-26T16:30:50.118657+00:00",
+          "registry_entry_generated_at": "2026-08-26T16:30:50.118657+00:00"
         }
       },
       "githubIssueLabel": "source-dust",
@@ -52668,16 +52687,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "release": {
@@ -65804,15 +65823,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           }
         },
@@ -67306,6 +67325,502 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/google-ads-migrations",
+        "releaseCandidates": {
+          "6.1.1": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 400,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "accounts.google.com",
+                "googleads.googleapis.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/python-connector-base:4.0.2@sha256:9fdb1888c4264cf6fee473649ecb593f56f58e5d0096a87ee0b231777e2e3e73"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config_click_view.json",
+                    "name": "SECRET_SOURCE-GOOGLE-ADS_CLICK_VIEW__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "incremental_config.json",
+                    "name": "SECRET_SOURCE-GOOGLE-ADS_INCREMENTAL__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config_manager_account.json",
+                    "name": "SECRET_SOURCE-GOOGLE-ADS_MANAGER_ACCOUNT_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-GOOGLE-ADS__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config_click_view.json",
+                    "name": "SECRET_SOURCE-GOOGLE-ADS_CLICK_VIEW__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "incremental_config.json",
+                    "name": "SECRET_SOURCE-GOOGLE-ADS_INCREMENTAL__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config_manager_account.json",
+                    "name": "SECRET_SOURCE-GOOGLE-ADS_MANAGER_ACCOUNT_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-GOOGLE-ADS__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "6.1.1",
+            "dockerRepository": "airbyte/source-google-ads",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/google-ads",
+            "externalDocumentationUrls": [
+              {
+                "title": "Release notes",
+                "type": "api_release_history",
+                "url": "https://developers.google.com/google-ads/api/docs/release-notes"
+              },
+              {
+                "title": "Deprecation and sunset dates",
+                "type": "api_deprecations",
+                "url": "https://developers.google.com/google-ads/api/docs/sunset-dates"
+              },
+              {
+                "title": "Developer blog",
+                "type": "api_release_history",
+                "url": "https://ads-developers.googleblog.com/"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "0af71c976bf3776077b4d6e6858facfb0a0075c4",
+                "commit_timestamp": "2026-08-26T13:17:30-07:00"
+              },
+              "release": {
+                "attributed_to": "sophiecuiy",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "0af71c976bf3776077b4d6e6858facfb0a0075c4",
+                "merged_at": "2026-08-26T20:17:31Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "sophiecuiy",
+                "pr_merged_by_type": "User",
+                "pr_number": 85023,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85023",
+                "released_at": "2026-08-26T20:17:31Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-google-ads/6.1.1.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-google-ads/6.1.1/metadata.yaml",
+                "metadata_last_modified": "2026-08-26T20:24:57.888647+00:00",
+                "registry_entry_generated_at": "2026-08-26T20:24:57.888647+00:00"
+              }
+            },
+            "githubIssueLabel": "source-google-ads",
+            "icon": "google-adwords.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-google-ads/latest/icon.svg",
+            "language": "python",
+            "license": "Elv2",
+            "maxSecondsBetweenMessages": 14400,
+            "name": "Google Ads",
+            "packageInfo": {
+              "cdk_version": "python:7.19.2"
+            },
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "1.0.0": {
+                  "message": "This release introduces fixes to custom query schema creation. Users should refresh the source schema and reset affected streams after upgrading to ensure uninterrupted syncs.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/google-ads-migrations#1.0.0",
+                  "upgradeDeadline": "2023-10-31"
+                },
+                "2.0.0": {
+                  "message": "This release updates the Source Google Ads connector so that its default streams and stream names match the related resources in Google Ads API. Users should refresh the source schema and reset affected streams after upgrading to ensure uninterrupted syncs.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/google-ads-migrations#2.0.0",
+                  "upgradeDeadline": "2023-11-30"
+                },
+                "3.0.0": {
+                  "message": "Google is deprecating v13 of the Google Ads API in January. This release upgrades the Google Ads API to the latest version (v15), which causes changes in several schemas. Users should refresh the source schema and reset affected streams after upgrading to ensure uninterrupted syncs.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/google-ads-migrations#3.0.0",
+                  "upgradeDeadline": "2024-01-12"
+                },
+                "4.0.0": {
+                  "message": "Google is deprecating v18 of the Google Ads API August 20. This release upgrades the Google Ads API to the latest version (v20), which causes changes in several schemas. Users should refresh the source schema and reset affected streams after upgrading to ensure uninterrupted syncs.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/google-ads-migrations#4.0.0",
+                  "upgradeDeadline": "2025-08-19"
+                },
+                "5.0.0": {
+                  "message": "This release upgrades the Google Ads API from v20 to v23. Several built-in stream schemas have renamed fields (e.g., video metrics renamed to TrueView equivalents, `campaign.start_date` / `end_date` renamed to `start_date_time` / `end_date_time`) and removed fields (`CallAd` / `CallAdInfo` on `ad_group_ad`). It also removes the nullable `bidding_strategy.id` field from the primary keys of the `campaign_bidding_strategy` and `ad_group_bidding_strategy` streams. Users should refresh the source schema and reset affected streams after upgrading to ensure uninterrupted syncs. See the migration guide for full details.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/google-ads-migrations#5.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "campaign",
+                        "campaign_budget",
+                        "account_performance_report",
+                        "ad_group_ad",
+                        "ad_group_ad_legacy",
+                        "display_keyword_view",
+                        "geographic_view_with_metrics",
+                        "topic_view",
+                        "user_location_view",
+                        "ad_group_bidding_strategy",
+                        "campaign_bidding_strategy"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2026-05-30"
+                },
+                "6.0.0": {
+                  "message": "This release limits incremental report streams and custom queries that use `segments.date` to the 37-month granular data retention window enforced by the Google Ads API. The affected built-in streams are `account_performance_report`, `ad_group`, `ad_group_ad`, `ad_group_ad_legacy`, `ad_group_bidding_strategy`, `campaign`, `campaign_bidding_strategy`, `campaign_budget`, `click_view`, `customer`, `display_keyword_view`, `geographic_view`, `geographic_view_with_metrics`, `keyword_view`, `shopping_performance_view`, `topic_view`, and `user_location_view`; custom queries using `segments.date` are also affected. Data older than 37 months will be skipped. If you use the Full Refresh | Overwrite sync mode, store historical data older than 37 months before upgrading or that data will be permanently lost. If you use the Incremental | Append or Incremental | Append and Deduped sync modes, historical destination data older than 37 months is preserved, but the connector will not be able to sync it again. See the migration guide for full details.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/google-ads-migrations#6.0.0",
+                  "upgradeDeadline": "2026-05-31"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/google-ads-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": true,
+                "packageName": "airbyte-source-google-ads"
+              }
+            },
+            "sourceDefinitionId": "253487c0-2246-43ba-a21f-5116b20a2c50",
+            "sourceType": "api",
+            "spec": {
+              "advanced_auth": {
+                "auth_flow_type": "oauth2.0",
+                "oauth_config_specification": {
+                  "complete_oauth_output_specification": {
+                    "properties": {
+                      "access_token": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "access_token"
+                        ],
+                        "type": "string"
+                      },
+                      "refresh_token": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "refresh_token"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_input_specification": {
+                    "properties": {
+                      "client_id": {
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_output_specification": {
+                    "properties": {
+                      "client_id": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "client_id"
+                        ],
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "client_secret"
+                        ],
+                        "type": "string"
+                      },
+                      "developer_token": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "developer_token"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  }
+                }
+              },
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "conversion_window_days": {
+                    "default": 14,
+                    "description": "A conversion window is the number of days after an ad interaction (such as an ad click or video view) during which a conversion, such as a purchase, is recorded in Google Ads. For more information, see <a href=\"https://support.google.com/google-ads/answer/3123169?hl=en\">Google's documentation</a>.",
+                    "examples": [
+                      14
+                    ],
+                    "maximum": 1095,
+                    "minimum": 0,
+                    "order": 6,
+                    "title": "Conversion Window",
+                    "type": "integer"
+                  },
+                  "credentials": {
+                    "description": "",
+                    "order": 0,
+                    "properties": {
+                      "access_token": {
+                        "airbyte_secret": true,
+                        "description": "The Access Token for making authenticated requests. For detailed instructions on finding this value, refer to our <a href=\"https://docs.airbyte.com/integrations/sources/google-ads#setup-guide\">documentation</a>.",
+                        "order": 4,
+                        "title": "Access Token",
+                        "type": "string"
+                      },
+                      "client_id": {
+                        "description": "The Client ID of your Google Ads developer application. For detailed instructions on finding this value, refer to our <a href=\"https://docs.airbyte.com/integrations/sources/google-ads#setup-guide\">documentation</a>.",
+                        "order": 1,
+                        "title": "Client ID",
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "airbyte_secret": true,
+                        "description": "The Client Secret of your Google Ads developer application. For detailed instructions on finding this value, refer to our <a href=\"https://docs.airbyte.com/integrations/sources/google-ads#setup-guide\">documentation</a>.",
+                        "order": 2,
+                        "title": "Client Secret",
+                        "type": "string"
+                      },
+                      "developer_token": {
+                        "airbyte_secret": true,
+                        "description": "The Developer Token granted by Google to use their APIs. For detailed instructions on finding this value, refer to our <a href=\"https://docs.airbyte.com/integrations/sources/google-ads#setup-guide\">documentation</a>.",
+                        "order": 0,
+                        "title": "Developer Token",
+                        "type": "string"
+                      },
+                      "refresh_token": {
+                        "airbyte_secret": true,
+                        "description": "The token used to obtain a new Access Token. For detailed instructions on finding this value, refer to our <a href=\"https://docs.airbyte.com/integrations/sources/google-ads#setup-guide\">documentation</a>.",
+                        "order": 3,
+                        "title": "Refresh Token",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "developer_token",
+                      "client_id",
+                      "client_secret",
+                      "refresh_token"
+                    ],
+                    "title": "Google Credentials",
+                    "type": "object"
+                  },
+                  "custom_queries_array": {
+                    "description": "",
+                    "items": {
+                      "properties": {
+                        "query": {
+                          "description": "A custom defined GAQL query for building the report. Avoid including the segments.date field; wherever possible, Airbyte will automatically include it for incremental syncs. For more information, refer to <a href=\"https://developers.google.com/google-ads/api/fields/v11/overview_query_builder\">Google's documentation</a>.",
+                          "examples": [
+                            "SELECT segments.ad_destination_type, campaign.advertising_channel_sub_type FROM campaign WHERE campaign.status = 'PAUSED'"
+                          ],
+                          "multiline": true,
+                          "title": "Custom Query",
+                          "type": "string"
+                        },
+                        "table_name": {
+                          "description": "The table name in your destination database for the chosen query.",
+                          "title": "Destination Table Name",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "query",
+                        "table_name"
+                      ],
+                      "type": "object"
+                    },
+                    "order": 5,
+                    "title": "Custom GAQL Queries",
+                    "type": "array"
+                  },
+                  "customer_id": {
+                    "description": "Comma-separated list of (client) customer IDs. Each customer ID must be specified as a 10-digit number without dashes. For detailed instructions on finding this value, refer to our <a href=\"https://docs.airbyte.com/integrations/sources/google-ads#setup-guide\">documentation</a>.",
+                    "examples": [
+                      "6783948572,5839201945"
+                    ],
+                    "order": 1,
+                    "pattern": "^[0-9]{10}(,[0-9]{10})*$",
+                    "pattern_descriptor": "The customer ID must be 10 digits. Separate multiple customer IDs using commas.",
+                    "title": "Customer ID(s)",
+                    "type": "string"
+                  },
+                  "customer_status_filter": {
+                    "default": [],
+                    "description": "A list of customer statuses to filter on. For detailed info about what each status mean refer to Google Ads <a href=\"https://developers.google.com/google-ads/api/reference/rpc/v15/CustomerStatusEnum.CustomerStatus\">documentation</a>.",
+                    "items": {
+                      "description": "An enumeration.",
+                      "enum": [
+                        "UNKNOWN",
+                        "ENABLED",
+                        "CANCELED",
+                        "SUSPENDED",
+                        "CLOSED"
+                      ],
+                      "title": "CustomerStatus"
+                    },
+                    "order": 2,
+                    "title": "Customer Statuses Filter",
+                    "type": "array"
+                  },
+                  "end_date": {
+                    "description": "UTC date in the format YYYY-MM-DD. Any data after this date will not be replicated. (Default value of today is used if not set)",
+                    "examples": [
+                      "2017-01-30"
+                    ],
+                    "format": "date",
+                    "order": 4,
+                    "pattern": "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                    "pattern_descriptor": "YYYY-MM-DD",
+                    "title": "End Date",
+                    "type": "string"
+                  },
+                  "num_workers": {
+                    "default": 3,
+                    "description": "The number of concurrent threads to use for syncing. Increasing this value may speed up syncs for accounts with many customers or streams. Adjust based on your API usage and rate limits.",
+                    "examples": [
+                      2,
+                      3,
+                      5
+                    ],
+                    "maximum": 25,
+                    "minimum": 2,
+                    "order": 7,
+                    "title": "Number of Concurrent Threads",
+                    "type": "integer"
+                  },
+                  "start_date": {
+                    "description": "UTC date in the format YYYY-MM-DD. Any data before this date will not be replicated. (Default value of two years ago is used if not set)",
+                    "examples": [
+                      "2017-01-25"
+                    ],
+                    "format": "date",
+                    "order": 3,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                    "pattern_descriptor": "YYYY-MM-DD",
+                    "title": "Start Date",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "credentials"
+                ],
+                "title": "Google Ads Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/google-ads",
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "suggestedStreams": {
+              "streams": [
+                "campaigns",
+                "accounts",
+                "ad_group_ads",
+                "ad_group_ad_report",
+                "ad_groups",
+                "click_view",
+                "account_performance_report",
+                "keyword_report",
+                "campaign_labels",
+                "ad_group_labels",
+                "ad_group_ad_labels",
+                "user_location_report",
+                "geographic_view_with_metrics",
+                "display_keyword_performance_report",
+                "shopping_performance_report",
+                "display_topics_performance_report"
+              ]
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "language:python",
+              "cdk:low-code"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -78006,15 +78521,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "medium"
           }
         },
@@ -90092,7 +90607,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.2.23",
+      "dockerImageTag": "0.3.1",
       "dockerRepository": "airbyte/source-linear",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/linear",
       "externalDocumentationUrls": [
@@ -90121,8 +90636,8 @@
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "5ea3687418ec976c4583e7a529f4c32af728c15f",
-          "commit_timestamp": "2026-08-24T21:08:26-07:00"
+          "commit_sha": "74112508ce5057419459344e9f39677fe0b25c65",
+          "commit_timestamp": "2026-08-26T02:45:58+00:00"
         },
         "metrics": {
           "all": {
@@ -90141,25 +90656,25 @@
         "release": {
           "attributed_to": "pnilan",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "5ea3687418ec976c4583e7a529f4c32af728c15f",
-          "merged_at": "2026-08-25T04:08:26Z",
+          "merge_commit_sha": "74112508ce5057419459344e9f39677fe0b25c65",
+          "merged_at": "2026-08-26T02:45:59Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 158243242,
           "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
           "pr_merged_by_login": "pnilan",
           "pr_merged_by_type": "User",
-          "pr_number": 84949,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84949",
-          "released_at": "2026-08-25T04:08:26Z",
+          "pr_number": 85053,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85053",
+          "released_at": "2026-08-26T02:45:59Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-linear/0.2.23.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-linear/0.3.1.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-linear/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-25T04:13:16.062452+00:00",
-          "registry_entry_generated_at": "2026-08-25T04:13:16.062452+00:00"
+          "metadata_last_modified": "2026-08-26T02:50:22.471063+00:00",
+          "registry_entry_generated_at": "2026-08-26T02:50:22.471063+00:00"
         }
       },
       "githubIssueLabel": "source-linear",
@@ -98273,16 +98788,31 @@
       "connectorBuildOptions": {
         "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
       },
+      "connectorTestSuitesOptions": [
+        {
+          "suite": "acceptanceTests",
+          "testSecrets": [
+            {
+              "fileName": "config.json",
+              "name": "SECRET_SOURCE-MNTN__CREDS",
+              "secretStore": {
+                "alias": "airbyte-connector-testing-secret-store",
+                "type": "GSM"
+              }
+            }
+          ]
+        }
+      ],
       "custom": false,
-      "dockerImageTag": "0.0.5",
+      "dockerImageTag": "0.0.6",
       "dockerRepository": "airbyte/source-mntn",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/mntn",
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "09ab9b47ac2f782272791474c885dcd36ad88244",
-          "commit_timestamp": "2026-08-18T05:59:52+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "4a0bd1b3824c595bbe5659246a8dafe12aae24de",
+          "commit_timestamp": "2026-08-26T19:10:53+03:00"
         },
         "metrics": {
           "all": {
@@ -98299,23 +98829,27 @@
           }
         },
         "release": {
-          "attributed_to": null,
-          "merge_commit_sha": "09ab9b47ac2f782272791474c885dcd36ad88244",
-          "merged_at": "2026-08-18T05:59:53Z",
-          "pr_author_id": 230633153,
-          "pr_author_login": "octavia-bot-hoard",
+          "attributed_to": "DanyloGL",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "4a0bd1b3824c595bbe5659246a8dafe12aae24de",
+          "merged_at": "2026-08-26T16:10:54Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
-          "pr_number": 84647,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84647",
-          "released_at": "2026-08-18T05:59:53Z",
+          "pr_merged_by_login": "DanyloGL",
+          "pr_merged_by_type": "User",
+          "pr_number": 85027,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85027",
+          "released_at": "2026-08-26T16:10:54Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mntn/0.0.5.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mntn/0.0.6.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-mntn/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-18T06:04:07.434971+00:00",
-          "registry_entry_generated_at": "2026-08-18T06:04:07.434971+00:00"
+          "metadata_last_modified": "2026-08-26T16:41:46.377911+00:00",
+          "registry_entry_generated_at": "2026-08-26T16:41:46.377911+00:00"
         }
       },
       "githubIssueLabel": "source-mntn",
@@ -109667,15 +110201,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "release": {
@@ -140728,15 +141262,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           }
         },
         "release": {
@@ -152122,15 +152656,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-weatherstack/1.1.14.spdx.json",
@@ -153029,7 +153563,7 @@
       "releaseStage": "generally_available",
       "releases": {
         "releaseCandidates": {
-          "0.5.48": {
+          "0.5.49": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -153069,7 +153603,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "0.5.48",
+            "dockerImageTag": "0.5.49",
             "dockerRepository": "airbyte/source-woocommerce",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/woocommerce",
             "externalDocumentationUrls": [
@@ -153087,33 +153621,42 @@
                 "title": "WooCommerce Developer Changelog",
                 "type": "api_release_history",
                 "url": "https://developer.woocommerce.com/changelog/"
+              },
+              {
+                "title": "WooCommerce plugin source code",
+                "type": "code_repository",
+                "url": "https://github.com/woocommerce/woocommerce"
               }
             ],
             "generated": {
               "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "de435525e5445b3e1b0858da9435fbfd86634e1f",
-                "commit_timestamp": "2026-08-18T08:50:08+00:00"
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "9abc94f09c169d44b5f7f7aa26e8fda44626067e",
+                "commit_timestamp": "2026-08-26T14:44:23-07:00"
               },
               "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "de435525e5445b3e1b0858da9435fbfd86634e1f",
-                "merged_at": "2026-08-18T08:50:09Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
+                "attributed_to": "sophiecuiy",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "9abc94f09c169d44b5f7f7aa26e8fda44626067e",
+                "merged_at": "2026-08-26T21:44:24Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
                 "pr_author_type": "Bot",
-                "pr_number": 84829,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84829",
-                "released_at": "2026-08-18T08:50:09Z",
+                "pr_merged_by_login": "sophiecuiy",
+                "pr_merged_by_type": "User",
+                "pr_number": 85030,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85030",
+                "released_at": "2026-08-26T21:44:24Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-woocommerce/0.5.48.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-woocommerce/0.5.49.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-woocommerce/0.5.48/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T08:54:12.061489+00:00",
-                "registry_entry_generated_at": "2026-08-18T08:54:12.061489+00:00"
+                "metadata_file_path": "metadata/airbyte/source-woocommerce/0.5.49/metadata.yaml",
+                "metadata_last_modified": "2026-08-26T21:48:50.655726+00:00",
+                "registry_entry_generated_at": "2026-08-26T21:48:50.655726+00:00"
               }
             },
             "githubIssueLabel": "source-woocommerce",
@@ -157916,7 +158459,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support-migrations",
         "releaseCandidates": {
-          "5.5.1": {
+          "5.5.2": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -157984,7 +158527,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "5.5.1",
+            "dockerImageTag": "5.5.2",
             "dockerRepository": "airbyte/source-zendesk-support",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support",
             "externalDocumentationUrls": [
@@ -158026,17 +158569,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "1c55a2158a4407742725b9991fb32e64d296b81e",
-                "commit_timestamp": "2026-08-11T17:21:42-07:00"
+                "commit_author": "Anatolii Yatsuk",
+                "commit_author_email": "tolikyatsuk@gmail.com",
+                "commit_sha": "016dc8994b891d15510d8999971063f5256de9e5",
+                "commit_timestamp": "2026-08-26T10:47:40+03:00"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zendesk-support/5.5.1.spdx.json",
+              "release": {
+                "attributed_to": "tolik0",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "016dc8994b891d15510d8999971063f5256de9e5",
+                "merged_at": "2026-08-26T07:47:41Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 35109939,
+                "pr_author_login": "tolik0",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "tolik0",
+                "pr_merged_by_type": "User",
+                "pr_number": 84353,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84353",
+                "released_at": "2026-08-26T07:47:41Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zendesk-support/5.5.2.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-zendesk-support/5.5.1/metadata.yaml",
-                "metadata_last_modified": "2026-08-12T00:25:40.613290+00:00",
-                "registry_entry_generated_at": "2026-08-12T00:25:40.613290+00:00"
+                "metadata_file_path": "metadata/airbyte/source-zendesk-support/5.5.2/metadata.yaml",
+                "metadata_last_modified": "2026-08-26T07:52:05.176609+00:00",
+                "registry_entry_generated_at": "2026-08-26T07:52:05.176609+00:00"
               }
             },
             "githubIssueLabel": "source-zendesk-support",
