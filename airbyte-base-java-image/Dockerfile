@@ -3,7 +3,7 @@ FROM amazoncorretto:21
 WORKDIR /app
 
 RUN <<EOF
-yum install -y tar shadow-utils
+yum install -y tar shadow-utils findutils
 yum update -y --security
 yum clean all
 rm -rf /var/cache/yum
