@@ -7,6 +7,7 @@ package io.airbyte.workers.temporal.scheduling.activities
 import io.airbyte.config.AttemptFailureSummary
 import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.StandardSyncOutput
+import io.airbyte.metrics.MetricAttribute
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
 import java.util.Objects
@@ -112,10 +113,22 @@ interface JobCreationAndStatusUpdateActivity {
     @JvmField
     var jobId: Long? = null
 
+    @JvmField
+    var metricAttributes: Array<MetricAttribute>? = null
+
+    @JvmField
+    var queueDurationSeconds: Double? = null
+
     constructor()
 
     constructor(jobId: Long?) {
       this.jobId = jobId
+    }
+
+    constructor(jobId: Long?, metricAttributes: Array<MetricAttribute>?, queueDurationSeconds: Double?) {
+      this.jobId = jobId
+      this.metricAttributes = metricAttributes
+      this.queueDurationSeconds = queueDurationSeconds
     }
 
     override fun equals(o: Any?): Boolean {
@@ -123,12 +136,15 @@ interface JobCreationAndStatusUpdateActivity {
         return false
       }
       val that = o as AttemptCreationInput
-      return jobId == that.jobId
+      return jobId == that.jobId &&
+        Objects.deepEquals(metricAttributes, that.metricAttributes) &&
+        queueDurationSeconds == that.queueDurationSeconds
     }
 
-    override fun hashCode(): Int = Objects.hashCode(jobId)
+    override fun hashCode(): Int = Objects.hash(jobId, metricAttributes.contentHashCode(), queueDurationSeconds)
 
-    override fun toString(): String = "AttemptCreationInput{jobId=" + jobId + '}'
+    override fun toString(): String =
+      "AttemptCreationInput{jobId=$jobId, metricAttributes=${metricAttributes.contentToString()}, queueDurationSeconds=$queueDurationSeconds}"
   }
 
   /**
@@ -504,10 +520,18 @@ interface JobCreationAndStatusUpdateActivity {
     @JvmField
     var jobId: Long? = null
 
+    @JvmField
+    var metricAttributes: Array<MetricAttribute>? = null
+
     constructor()
 
     constructor(jobId: Long?) {
       this.jobId = jobId
+    }
+
+    constructor(jobId: Long?, metricAttributes: Array<MetricAttribute>?) {
+      this.jobId = jobId
+      this.metricAttributes = metricAttributes
     }
 
     override fun equals(o: Any?): Boolean {
@@ -515,12 +539,12 @@ interface JobCreationAndStatusUpdateActivity {
         return false
       }
       val that = o as SetJobQueuedInput
-      return jobId == that.jobId
+      return jobId == that.jobId && Objects.deepEquals(metricAttributes, that.metricAttributes)
     }
 
-    override fun hashCode(): Int = Objects.hashCode(jobId)
+    override fun hashCode(): Int = Objects.hash(jobId, metricAttributes.contentHashCode())
 
-    override fun toString(): String = "SetJobQueuedInput{jobId=$jobId}"
+    override fun toString(): String = "SetJobQueuedInput{jobId=$jobId, metricAttributes=${metricAttributes.contentToString()}}"
   }
 
   /**
@@ -542,6 +566,15 @@ interface JobCreationAndStatusUpdateActivity {
     @JvmField
     var reason: String? = null
 
+    @JvmField
+    var metricAttributes: Array<MetricAttribute>? = null
+
+    @JvmField
+    var queueDurationSeconds: Double? = null
+
+    @JvmField
+    var queueExitReason: String? = null
+
     constructor()
 
     constructor(jobId: Long?, connectionId: UUID?, reason: String?) {
@@ -550,17 +583,40 @@ interface JobCreationAndStatusUpdateActivity {
       this.reason = reason
     }
 
+    constructor(
+      jobId: Long?,
+      connectionId: UUID?,
+      reason: String?,
+      metricAttributes: Array<MetricAttribute>?,
+      queueDurationSeconds: Double?,
+      queueExitReason: String?,
+    ) {
+      this.jobId = jobId
+      this.connectionId = connectionId
+      this.reason = reason
+      this.metricAttributes = metricAttributes
+      this.queueDurationSeconds = queueDurationSeconds
+      this.queueExitReason = queueExitReason
+    }
+
     override fun equals(o: Any?): Boolean {
       if (o == null || javaClass != o.javaClass) {
         return false
       }
       val that = o as CancelJobInput
-      return jobId == that.jobId && connectionId == that.connectionId && reason == that.reason
+      return jobId == that.jobId &&
+        connectionId == that.connectionId &&
+        reason == that.reason &&
+        Objects.deepEquals(metricAttributes, that.metricAttributes) &&
+        queueDurationSeconds == that.queueDurationSeconds &&
+        queueExitReason == that.queueExitReason
     }
 
-    override fun hashCode(): Int = Objects.hash(jobId, connectionId, reason)
+    override fun hashCode(): Int =
+      Objects.hash(jobId, connectionId, reason, metricAttributes.contentHashCode(), queueDurationSeconds, queueExitReason)
 
-    override fun toString(): String = "CancelJobInput{jobId=$jobId, connectionId=$connectionId, reason=$reason}"
+    override fun toString(): String =
+      "CancelJobInput{jobId=$jobId, connectionId=$connectionId, reason=$reason, metricAttributes=${metricAttributes.contentToString()}, queueDurationSeconds=$queueDurationSeconds, queueExitReason=$queueExitReason}"
   }
 
   /**

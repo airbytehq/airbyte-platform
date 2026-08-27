@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.temporal.scheduling.activities
 
+import io.airbyte.metrics.MetricAttribute
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
 import java.util.Objects
@@ -34,6 +35,12 @@ interface CapacityCheckActivity {
     @JvmField
     var enforcementEnabled: Boolean = false
 
+    @JvmField
+    var metricAttributes: Array<MetricAttribute>? = null
+
+    @JvmField
+    var queueAgeSeconds: Double? = null
+
     constructor()
 
     constructor(jobId: Long?, connectionId: UUID?, organizationId: UUID?, enforcementEnabled: Boolean = false) {
@@ -41,6 +48,22 @@ interface CapacityCheckActivity {
       this.connectionId = connectionId
       this.organizationId = organizationId
       this.enforcementEnabled = enforcementEnabled
+    }
+
+    constructor(
+      jobId: Long?,
+      connectionId: UUID?,
+      organizationId: UUID?,
+      enforcementEnabled: Boolean,
+      metricAttributes: Array<MetricAttribute>?,
+      queueAgeSeconds: Double?,
+    ) {
+      this.jobId = jobId
+      this.connectionId = connectionId
+      this.organizationId = organizationId
+      this.enforcementEnabled = enforcementEnabled
+      this.metricAttributes = metricAttributes
+      this.queueAgeSeconds = queueAgeSeconds
     }
 
     override fun equals(o: Any?): Boolean {
@@ -51,13 +74,16 @@ interface CapacityCheckActivity {
       return jobId == that.jobId &&
         connectionId == that.connectionId &&
         organizationId == that.organizationId &&
-        enforcementEnabled == that.enforcementEnabled
+        enforcementEnabled == that.enforcementEnabled &&
+        Objects.deepEquals(metricAttributes, that.metricAttributes) &&
+        queueAgeSeconds == that.queueAgeSeconds
     }
 
-    override fun hashCode(): Int = Objects.hash(jobId, connectionId, organizationId, enforcementEnabled)
+    override fun hashCode(): Int =
+      Objects.hash(jobId, connectionId, organizationId, enforcementEnabled, metricAttributes.contentHashCode(), queueAgeSeconds)
 
     override fun toString(): String =
-      "CapacityCheckInput{jobId=$jobId, connectionId=$connectionId, organizationId=$organizationId, enforcementEnabled=$enforcementEnabled}"
+      "CapacityCheckInput{jobId=$jobId, connectionId=$connectionId, organizationId=$organizationId, enforcementEnabled=$enforcementEnabled, metricAttributes=${metricAttributes.contentToString()}, queueAgeSeconds=$queueAgeSeconds}"
   }
 
   /**

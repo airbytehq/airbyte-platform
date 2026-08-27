@@ -174,6 +174,26 @@ enum class OssMetricsRegistry(
     metricName = "dataplane_initialize",
     metricDescription = "increments when a dataplane initialize is called",
   ),
+  DATA_WORKER_CAPACITY_ADMISSION(
+    metricName = "data_worker_capacity_admission",
+    metricDescription = "increments after a Data Worker capacity admission, tagged by admission result",
+  ),
+  DATA_WORKER_CAPACITY_QUEUE_ENTERED(
+    metricName = "data_worker_capacity_queue_entered",
+    metricDescription = "increments after a job enters the Data Worker capacity queue",
+  ),
+  DATA_WORKER_CAPACITY_QUEUE_AGE_SECONDS(
+    metricName = "data_worker_capacity_queue_age_seconds",
+    metricDescription = "distribution of Data Worker capacity queue age in seconds",
+  ),
+  DATA_WORKER_CAPACITY_QUEUE_EXITED(
+    metricName = "data_worker_capacity_queue_exited",
+    metricDescription = "increments after a job exits the Data Worker capacity queue",
+  ),
+  DATA_WORKER_CAPACITY_QUEUE_DURATION_SECONDS(
+    metricName = "data_worker_capacity_queue_duration_seconds",
+    metricDescription = "distribution of Data Worker capacity queue duration in seconds",
+  ),
   ERROR_REPORTING_EVENT_COUNT(
     metricName = "error_reporting_event_count",
     metricDescription = "whenever when we report an error event",

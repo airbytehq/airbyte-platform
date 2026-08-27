@@ -56,6 +56,9 @@ object MetricTags {
   const val PRIVATE: String = "private"
   const val PUBLIC: String = "public"
   const val DATA_WORKER_USAGE_OPERATION: String = "data_worker_usage_operation"
+  const val DATA_WORKER_CAPACITY_ADMISSION_RESULT: String = "admission_result"
+  const val DATA_WORKER_CAPACITY_QUEUE_OUTCOME: String = "outcome"
+  const val DATA_WORKER_CAPACITY_QUEUE_EXIT_REASON: String = "exit_reason"
   const val ORB_PLAN: String = "orb_plan"
   const val ORB_ENDPOINT: String = "orb_endpoint"
 

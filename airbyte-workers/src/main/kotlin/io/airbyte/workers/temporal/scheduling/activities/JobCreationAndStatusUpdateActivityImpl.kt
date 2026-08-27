@@ -28,7 +28,11 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.SkipCheckBeforeSync
 import io.airbyte.featureflag.Workspace
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils.addExceptionToTrace
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workers.context.AttemptContext
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
@@ -66,6 +70,7 @@ class JobCreationAndStatusUpdateActivityImpl(
   private val airbyteApiClient: AirbyteApiClient,
   private val featureFlagClient: FeatureFlagClient,
   @param:Named("outputStateClient") private val stateClient: OutputStorageClient<State>?,
+  private val metricClient: MetricClient,
 ) : JobCreationAndStatusUpdateActivity {
   @WithSpan
   override fun createNewJob(input: JobCreationInput): JobCreationOutput {
@@ -105,6 +110,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     try {
       val jobId: Long = input.jobId!!
       val response = airbyteApiClient.attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(jobId))
+      emitQueueExitMetric(input.metricAttributes, input.queueDurationSeconds, "running", "capacity_available")
       return AttemptNumberCreationOutput(response.attemptNumber)
     } catch (e: ClientException) {
       if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
@@ -263,6 +269,22 @@ class JobCreationAndStatusUpdateActivityImpl(
   override fun setJobQueued(input: SetJobQueuedInput) {
     try {
       airbyteApiClient.jobsApi.setJobQueued(SetJobQueuedRequest(input.jobId!!))
+      input.metricAttributes?.let { metricAttributes ->
+        if (
+          metricAttributes.none { it.key == MetricTags.CONNECTION_ID } ||
+          metricAttributes.none { it.key == MetricTags.WORKSPACE_ID } ||
+          metricAttributes.none { it.key == MetricTags.ORGANIZATION_ID } ||
+          metricAttributes.none { it.key == MetricTags.JOB_ID }
+        ) {
+          return@let
+        }
+        emitMetric {
+          metricClient.count(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_ENTERED, 1L, *metricAttributes)
+        }
+        emitMetric {
+          metricClient.distribution(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_AGE_SECONDS, 0.0, *metricAttributes)
+        }
+      }
     } catch (e: ClientException) {
       if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
         throw e
@@ -278,6 +300,7 @@ class JobCreationAndStatusUpdateActivityImpl(
     AttemptContext(input.connectionId, input.jobId, null).addTagsToTrace()
     try {
       airbyteApiClient.jobsApi.cancelQueuedJob(CancelQueuedJobRequest(input.jobId!!))
+      emitQueueExitMetric(input.metricAttributes, input.queueDurationSeconds, "cancelled", input.queueExitReason)
     } catch (e: ClientException) {
       if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
         throw e
@@ -285,6 +308,44 @@ class JobCreationAndStatusUpdateActivityImpl(
       throw RetryableException(e)
     } catch (e: IOException) {
       throw RetryableException(e)
+    }
+  }
+
+  private fun emitQueueExitMetric(
+    metricAttributes: Array<MetricAttribute>?,
+    queueDurationSeconds: Double?,
+    outcome: String,
+    exitReason: String?,
+  ) {
+    if (metricAttributes == null || queueDurationSeconds == null || exitReason == null) {
+      return
+    }
+    if (
+      metricAttributes.none { it.key == MetricTags.CONNECTION_ID } ||
+      metricAttributes.none { it.key == MetricTags.WORKSPACE_ID } ||
+      metricAttributes.none { it.key == MetricTags.ORGANIZATION_ID } ||
+      metricAttributes.none { it.key == MetricTags.JOB_ID }
+    ) {
+      return
+    }
+
+    val exitAttributes =
+      metricAttributes +
+        MetricAttribute(MetricTags.DATA_WORKER_CAPACITY_QUEUE_OUTCOME, outcome) +
+        MetricAttribute(MetricTags.DATA_WORKER_CAPACITY_QUEUE_EXIT_REASON, exitReason)
+    emitMetric {
+      metricClient.count(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_EXITED, 1L, *exitAttributes)
+    }
+    emitMetric {
+      metricClient.distribution(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_DURATION_SECONDS, queueDurationSeconds, *exitAttributes)
+    }
+  }
+
+  private fun emitMetric(action: () -> Unit) {
+    try {
+      action()
+    } catch (e: Exception) {
+      log.warn("Failed to emit Data Worker capacity metric", e)
     }
   }
 

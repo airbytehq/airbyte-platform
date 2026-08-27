@@ -25,6 +25,7 @@ import io.airbyte.api.client.model.generated.JobRead
 import io.airbyte.api.client.model.generated.JobStatus
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest
 import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody
+import io.airbyte.api.client.model.generated.SetJobQueuedRequest
 import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.config.AttemptFailureSummary
 import io.airbyte.config.FailureReason
@@ -37,15 +38,21 @@ import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.SkipCheckBeforeSync
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.Workspace
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput
+import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.CancelJobInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.EnsureCleanJobStateInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCheckFailureInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobFailureInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber
+import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.SetJobQueuedInput
 import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk
@@ -69,6 +76,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
   private lateinit var attemptApi: AttemptApi
   private lateinit var connectionApi: ConnectionApi
   private lateinit var featureFlagClient: TestClient
+  private lateinit var metricClient: MetricClient
   private lateinit var outputStateStorageClient: OutputStorageClient<State>
   private lateinit var jobCreationAndStatusUpdateActivity: JobCreationAndStatusUpdateActivityImpl
 
@@ -79,12 +87,14 @@ internal class JobCreationAndStatusUpdateActivityTest {
     attemptApi = mockk(relaxed = true)
     connectionApi = mockk()
     featureFlagClient = mockk(relaxed = true)
+    metricClient = mockk(relaxed = true)
     outputStateStorageClient = mockk()
     jobCreationAndStatusUpdateActivity =
       JobCreationAndStatusUpdateActivityImpl(
         airbyteApiClient,
         featureFlagClient,
         outputStateStorageClient,
+        metricClient,
       )
   }
 
@@ -595,6 +605,135 @@ internal class JobCreationAndStatusUpdateActivityTest {
   @Nested
   internal inner class Update {
     @Test
+    fun `setJobQueued emits queue entry and zero age after the api call`() {
+      val metricAttributes =
+        arrayOf(
+          MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString()),
+          MetricAttribute(MetricTags.WORKSPACE_ID, "workspace-id"),
+          MetricAttribute(MetricTags.ORGANIZATION_ID, ORGANIZATION_ID.toString()),
+          MetricAttribute(MetricTags.JOB_ID, JOB_ID.toString()),
+        )
+      every { airbyteApiClient.jobsApi } returns jobsApi
+
+      jobCreationAndStatusUpdateActivity.setJobQueued(SetJobQueuedInput(JOB_ID, metricAttributes))
+
+      verify { jobsApi.setJobQueued(SetJobQueuedRequest(JOB_ID)) }
+      verify(exactly = 1) { metricClient.count(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_ENTERED, 1L, *metricAttributes) }
+      verify(exactly = 1) {
+        metricClient.distribution(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_AGE_SECONDS, 0.0, *metricAttributes)
+      }
+    }
+
+    @Test
+    fun `createNewAttemptNumber emits running queue exit and duration after the api call`() {
+      val metricAttributes =
+        arrayOf(
+          MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString()),
+          MetricAttribute(MetricTags.WORKSPACE_ID, "workspace-id"),
+          MetricAttribute(MetricTags.ORGANIZATION_ID, ORGANIZATION_ID.toString()),
+          MetricAttribute(MetricTags.JOB_ID, JOB_ID.toString()),
+        )
+      val exitAttributes =
+        metricAttributes +
+          MetricAttribute(MetricTags.DATA_WORKER_CAPACITY_QUEUE_OUTCOME, "running") +
+          MetricAttribute(MetricTags.DATA_WORKER_CAPACITY_QUEUE_EXIT_REASON, "capacity_available")
+      every { airbyteApiClient.attemptApi } returns attemptApi
+      every { attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(JOB_ID)) } returns CreateNewAttemptNumberResponse(1)
+
+      jobCreationAndStatusUpdateActivity.createNewAttemptNumber(AttemptCreationInput(JOB_ID, metricAttributes, 3.25))
+
+      verify(exactly = 1) { metricClient.count(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_EXITED, 1L, *exitAttributes) }
+      verify(exactly = 1) {
+        metricClient.distribution(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_DURATION_SECONDS, 3.25, *exitAttributes)
+      }
+    }
+
+    @Test
+    fun `cancelJob emits cancelled queue exit and duration after the api call`() {
+      val metricAttributes =
+        arrayOf(
+          MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString()),
+          MetricAttribute(MetricTags.WORKSPACE_ID, "workspace-id"),
+          MetricAttribute(MetricTags.ORGANIZATION_ID, ORGANIZATION_ID.toString()),
+          MetricAttribute(MetricTags.JOB_ID, JOB_ID.toString()),
+        )
+      val exitAttributes =
+        metricAttributes +
+          MetricAttribute(MetricTags.DATA_WORKER_CAPACITY_QUEUE_OUTCOME, "cancelled") +
+          MetricAttribute(MetricTags.DATA_WORKER_CAPACITY_QUEUE_EXIT_REASON, "cancelled_by_user")
+      every { airbyteApiClient.jobsApi } returns jobsApi
+
+      jobCreationAndStatusUpdateActivity.cancelJob(
+        CancelJobInput(JOB_ID, CONNECTION_ID, "ignored", metricAttributes, 4.5, "cancelled_by_user"),
+      )
+
+      verify(exactly = 1) { metricClient.count(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_EXITED, 1L, *exitAttributes) }
+      verify(exactly = 1) {
+        metricClient.distribution(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_DURATION_SECONDS, 4.5, *exitAttributes)
+      }
+    }
+
+    @Test
+    fun `queue lifecycle metrics are not emitted for unqueued inputs or failed api calls`() {
+      every { airbyteApiClient.attemptApi } returns attemptApi
+      every { attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(JOB_ID)) } returns CreateNewAttemptNumberResponse(1)
+
+      jobCreationAndStatusUpdateActivity.createNewAttemptNumber(AttemptCreationInput(JOB_ID))
+
+      verify(exactly = 0) { metricClient.count(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_EXITED, any(), *anyVararg()) }
+      verify(exactly = 0) { metricClient.distribution(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_DURATION_SECONDS, any(), *anyVararg()) }
+
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { jobsApi.setJobQueued(SetJobQueuedRequest(JOB_ID)) } throws java.io.IOException("queue unavailable")
+
+      Assertions.assertThrows(RetryableException::class.java) {
+        jobCreationAndStatusUpdateActivity.setJobQueued(SetJobQueuedInput(JOB_ID, emptyArray()))
+      }
+      verify(exactly = 0) { metricClient.count(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_ENTERED, any(), *anyVararg()) }
+      verify(exactly = 0) { metricClient.distribution(OssMetricsRegistry.DATA_WORKER_CAPACITY_QUEUE_AGE_SECONDS, any(), *anyVararg()) }
+    }
+
+    @Test
+    fun `queue lifecycle metrics are not emitted for empty or partial identity tags`() {
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { airbyteApiClient.attemptApi } returns attemptApi
+      every { attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(JOB_ID)) } returns CreateNewAttemptNumberResponse(1)
+
+      jobCreationAndStatusUpdateActivity.setJobQueued(SetJobQueuedInput(JOB_ID, emptyArray()))
+      jobCreationAndStatusUpdateActivity.createNewAttemptNumber(
+        AttemptCreationInput(
+          JOB_ID,
+          arrayOf(
+            MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString()),
+            MetricAttribute(MetricTags.WORKSPACE_ID, "workspace-id"),
+            MetricAttribute(MetricTags.ORGANIZATION_ID, ORGANIZATION_ID.toString()),
+          ),
+          1.0,
+        ),
+      )
+
+      verify(exactly = 0) { metricClient.count(any(), any(), *anyVararg()) }
+      verify(exactly = 0) { metricClient.distribution(any(), any(), *anyVararg()) }
+    }
+
+    @Test
+    fun `queue lifecycle metric failures do not change a successful api result`() {
+      every { airbyteApiClient.jobsApi } returns jobsApi
+      every { metricClient.count(any(), any(), *anyVararg()) } throws RuntimeException("metrics unavailable")
+      val metricAttributes =
+        arrayOf(
+          MetricAttribute(MetricTags.CONNECTION_ID, CONNECTION_ID.toString()),
+          MetricAttribute(MetricTags.WORKSPACE_ID, "workspace-id"),
+          MetricAttribute(MetricTags.ORGANIZATION_ID, ORGANIZATION_ID.toString()),
+          MetricAttribute(MetricTags.JOB_ID, JOB_ID.toString()),
+        )
+
+      Assertions.assertDoesNotThrow {
+        jobCreationAndStatusUpdateActivity.setJobQueued(SetJobQueuedInput(JOB_ID, metricAttributes))
+      }
+    }
+
+    @Test
     fun setJobSuccess() {
       every { airbyteApiClient.jobsApi } returns jobsApi
       every { jobsApi.jobSuccessWithAttemptNumber(any<JobSuccessWithAttemptNumberRequest>()) } returns mockk(relaxed = true)
@@ -780,6 +919,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
     private const val EXCEPTION_MESSAGE = "bang"
 
     private val CONNECTION_ID: UUID = UUID.randomUUID()
+    private val ORGANIZATION_ID: UUID = UUID.randomUUID()
     private const val JOB_ID = 123L
     private const val ATTEMPT_NUMBER = 0
     private const val ATTEMPT_NUMBER_1 = 1

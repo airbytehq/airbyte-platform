@@ -154,6 +154,12 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
   private var connectionContext: ConnectionContext? = null
 
+  private var capacityQueueMetricAttributes: Array<MetricAttribute>? = null
+
+  private var capacityQueueStartTimeMillis: Long? = null
+
+  private var capacityQueueMetricsEnabled: Boolean = false
+
   @Suppress("UNUSED")
   @WithSpan
   override fun run(connectionUpdaterInput: ConnectionUpdaterInput) {
@@ -346,7 +352,11 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
             connectionUpdaterInput.connectionId,
             e.interruptionReason,
           )
-          cancelJobBeforeAttempt(connectionUpdaterInput, e.interruptionReason.cancellationReason)
+          cancelJobBeforeAttempt(
+            connectionUpdaterInput,
+            e.interruptionReason.cancellationReason,
+            e.interruptionReason.queueExitReason,
+          )
           if (e.interruptionReason == CapacityWaitInterruptionReason.UPDATED) {
             resetNewConnectionInput(connectionUpdaterInput)
             prepareForNextRunAndContinueAsNew(connectionUpdaterInput)
@@ -355,7 +365,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         } catch (e: CapacityWaitExceededException) {
           log.info("Capacity wait exceeded for connection {}, cancelling queued job and continuing", connectionUpdaterInput.connectionId)
           // Cancel the job that was waiting for capacity
-          cancelJobBeforeAttempt(connectionUpdaterInput, e.cancellationReason)
+          cancelJobBeforeAttempt(connectionUpdaterInput, e.cancellationReason, e.queueExitReason)
           // Record metric for queued job being skipped
           recordMetric(
             RecordMetricInput(
@@ -1115,6 +1125,13 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       return
     }
 
+    val capacityQueueMetricsVersion =
+      Workflow.getVersion(CAPACITY_QUEUE_METRICS_TAG, Workflow.DEFAULT_VERSION, CAPACITY_QUEUE_METRICS_CURRENT_VERSION)
+
+    capacityQueueMetricAttributes = null
+    capacityQueueStartTimeMillis = null
+    capacityQueueMetricsEnabled = capacityQueueMetricsVersion == CAPACITY_QUEUE_METRICS_CURRENT_VERSION
+
     val enforcementEnabled = featureFlags[EnforceDataWorkerCapacity.key] ?: false
     if (!enforcementEnabled) {
       return
@@ -1126,7 +1143,26 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       return
     }
 
-    val input = CapacityCheckInput(workflowInternalState.jobId, connectionUpdaterInput.connectionId, organizationId, enforcementEnabled)
+    val metricAttributes =
+      if (capacityQueueMetricsVersion == CAPACITY_QUEUE_METRICS_CURRENT_VERSION) {
+        buildCapacityQueueMetricAttributes(connectionUpdaterInput.connectionId, workflowInternalState.jobId)
+      } else {
+        null
+      }
+
+    val input =
+      if (capacityQueueMetricsVersion == CAPACITY_QUEUE_METRICS_CURRENT_VERSION) {
+        CapacityCheckInput(
+          workflowInternalState.jobId,
+          connectionUpdaterInput.connectionId,
+          organizationId,
+          enforcementEnabled,
+          metricAttributes,
+          null,
+        )
+      } else {
+        CapacityCheckInput(workflowInternalState.jobId, connectionUpdaterInput.connectionId, organizationId, enforcementEnabled)
+      }
 
     // Initial capacity check
     var capacityCheckOutput = checkCapacity(input)
@@ -1150,9 +1186,16 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     )
 
     // Set the job status to QUEUED while waiting for capacity
-    setJobQueued(workflowInternalState.jobId!!)
+    setJobQueued(
+      workflowInternalState.jobId!!,
+      metricAttributes,
+      capacityQueueMetricsEnabled,
+    )
 
-    val startTime = Workflow.currentTimeMillis()
+    capacityQueueStartTimeMillis = Workflow.currentTimeMillis()
+    if (capacityQueueMetricsEnabled) {
+      capacityQueueMetricAttributes = metricAttributes
+    }
 
     // Get the time until the next scheduled run to ensure we don't wait past the next job time.
     val scheduleInfo = getScheduleInfo(connectionUpdaterInput.connectionId)
@@ -1161,7 +1204,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
     while (!capacityCheckOutput.capacityAvailable) {
       throwIfCapacityWaitInterrupted()
-      val elapsedMs = Workflow.currentTimeMillis() - startTime
+      val elapsedMs = Workflow.currentTimeMillis() - capacityQueueStartTimeMillis!!
 
       // Check if we've exceeded the next scheduled job time
       if (elapsedMs >= nextScheduledRunMs) {
@@ -1177,6 +1220,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         throw CapacityWaitExceededException(
           "Capacity wait exceeded next scheduled job time for connection ${connectionUpdaterInput.connectionId}",
           NEXT_SCHEDULED_CAPACITY_WAIT_CANCELLATION_REASON,
+          "next_scheduled_run",
         )
       }
 
@@ -1193,6 +1237,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         throw CapacityWaitExceededException(
           "Manual capacity wait exceeded 8 hours for connection ${connectionUpdaterInput.connectionId}",
           MANUAL_CAPACITY_WAIT_CANCELLATION_REASON,
+          "manual_timeout",
         )
       }
 
@@ -1201,7 +1246,21 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       throwIfCapacityWaitInterrupted()
 
       // Re-check capacity
-      capacityCheckOutput = checkCapacity(input)
+      capacityCheckOutput =
+        if (capacityQueueMetricsEnabled) {
+          checkCapacity(
+            CapacityCheckInput(
+              workflowInternalState.jobId,
+              connectionUpdaterInput.connectionId,
+              organizationId,
+              enforcementEnabled,
+              capacityQueueMetricAttributes,
+              queueDurationSeconds(),
+            ),
+          )
+        } else {
+          checkCapacity(input)
+        }
       throwIfCapacityWaitInterrupted()
 
       if (capacityCheckOutput.capacityAvailable) {
@@ -1233,6 +1292,29 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       } ?: 0L
     }
 
+  private fun buildCapacityQueueMetricAttributes(
+    connectionId: UUID?,
+    jobId: Long?,
+  ): Array<MetricAttribute>? {
+    val workspaceId = connectionContext?.workspaceId
+    val organizationId = connectionContext?.organizationId
+    if (connectionId == null || workspaceId == null || organizationId == null || jobId == null) {
+      return null
+    }
+
+    return arrayOf(
+      MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+      MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()),
+      MetricAttribute(MetricTags.ORGANIZATION_ID, organizationId.toString()),
+      MetricAttribute(MetricTags.JOB_ID, jobId.toString()),
+    )
+  }
+
+  private fun queueDurationSeconds(): Double? =
+    capacityQueueStartTimeMillis?.let { queueStartTimeMillis ->
+      ((Workflow.currentTimeMillis() - queueStartTimeMillis).coerceAtLeast(0) / 1_000).toDouble()
+    }
+
   private fun getCapacityWaitInterruptionReason(): CapacityWaitInterruptionReason? =
     when {
       workflowState.isDeleted -> CapacityWaitInterruptionReason.DELETED
@@ -1253,15 +1335,17 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   class CapacityWaitExceededException(
     message: String,
     val cancellationReason: String,
+    val queueExitReason: String,
   ) : RuntimeException(message)
 
   private enum class CapacityWaitInterruptionReason(
     val cancellationReason: String,
+    val queueExitReason: String,
   ) {
-    DELETED("Job cancelled: connection deleted while waiting for Data Worker capacity"),
-    RESET("Job cancelled: reset requested while waiting for Data Worker capacity"),
-    CANCELLED("Job cancelled: cancellation requested while waiting for Data Worker capacity"),
-    UPDATED("Job cancelled: connection updated while waiting for Data Worker capacity"),
+    DELETED("Job cancelled: connection deleted while waiting for Data Worker capacity", "connection_deleted"),
+    RESET("Job cancelled: reset requested while waiting for Data Worker capacity", "connection_reset"),
+    CANCELLED("Job cancelled: cancellation requested while waiting for Data Worker capacity", "connection_cancelled"),
+    UPDATED("Job cancelled: connection updated while waiting for Data Worker capacity", "connection_updated"),
   }
 
   private class CapacityWaitInterruptedException(
@@ -1288,7 +1372,11 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     val attemptNumberCreationOutput =
       runMandatoryActivityWithOutput<AttemptCreationInput?, AttemptNumberCreationOutput>(
         { input: AttemptCreationInput? -> jobCreationAndStatusUpdateActivity?.createNewAttemptNumber(input!!) },
-        AttemptCreationInput(jobId),
+        if (capacityQueueMetricsEnabled) {
+          AttemptCreationInput(jobId, capacityQueueMetricAttributes, queueDurationSeconds())
+        } else {
+          AttemptCreationInput(jobId)
+        },
       )!!
     return attemptNumberCreationOutput.attemptNumber
   }
@@ -1316,10 +1404,14 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
    *
    * @param jobId The job ID to mark as queued.
    */
-  private fun setJobQueued(jobId: Long) {
+  private fun setJobQueued(
+    jobId: Long,
+    metricAttributes: Array<MetricAttribute>?,
+    capacityQueueMetricsEnabled: Boolean,
+  ) {
     runMandatoryActivity<SetJobQueuedInput?>(
       { input: SetJobQueuedInput? -> jobCreationAndStatusUpdateActivity!!.setJobQueued(input!!) },
-      SetJobQueuedInput(jobId),
+      if (capacityQueueMetricsEnabled) SetJobQueuedInput(jobId, metricAttributes) else SetJobQueuedInput(jobId),
     )
   }
 
@@ -1452,6 +1544,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   private fun cancelJobBeforeAttempt(
     connectionUpdaterInput: ConnectionUpdaterInput,
     reason: String,
+    queueExitReason: String,
   ) {
     val jobId = workflowInternalState.jobId
 
@@ -1460,13 +1553,23 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       return
     }
 
+    val input =
+      if (capacityQueueMetricsEnabled && capacityQueueStartTimeMillis != null) {
+        CancelJobInput(
+          jobId,
+          connectionUpdaterInput.connectionId,
+          reason,
+          capacityQueueMetricAttributes,
+          queueDurationSeconds(),
+          queueExitReason,
+        )
+      } else {
+        CancelJobInput(jobId, connectionUpdaterInput.connectionId, reason)
+      }
+
     runMandatoryActivity<CancelJobInput?>(
       { input: CancelJobInput? -> jobCreationAndStatusUpdateActivity!!.cancelJob(input!!) },
-      CancelJobInput(
-        jobId,
-        connectionUpdaterInput.connectionId,
-        reason,
-      ),
+      input,
     )
 
     // Note: We don't run end-of-sync hooks here because the job never actually started running.
@@ -1681,6 +1784,8 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
     private const val CAPACITY_CHECK_TAG = "capacity_check"
     private const val CAPACITY_CHECK_CURRENT_VERSION = 1
+    private const val CAPACITY_QUEUE_METRICS_TAG = "capacity_queue_metrics"
+    private const val CAPACITY_QUEUE_METRICS_CURRENT_VERSION = 1
     private const val ATTEMPT_CREATION_CONFLICT_FAST_FAIL_TAG = "attempt_creation_conflict_fast_fail"
     private const val ATTEMPT_CREATION_CONFLICT_FAST_FAIL_CURRENT_VERSION = 1
     private val CAPACITY_CHECK_POLL_INTERVAL: Duration = Duration.ofMinutes(1)
