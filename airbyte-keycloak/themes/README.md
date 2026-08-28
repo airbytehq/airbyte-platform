@@ -23,7 +23,7 @@ Then you can use the `make deploy.cloud` command to deploy Airbyte Cloud locally
 
 ## Making CSS changes
 
-It's easiest to make CSS changes directly in the browser. Once you are happy with your changes, you can copy them all (e.g. from Chrome's `inspector-stylesheet.css`) into the appropriate CSS file in the Keycloak theme. Then `airbyte-keycloak` can be rebuilt and redeployed (`make deploy`) for your changes to be baked into the docker image.
+It's easiest to make CSS changes directly in the browser. Once you are happy with your changes, you can copy them all (e.g. from Chrome's `inspector-stylesheet.css`) into the appropriate CSS file in the Keycloak theme. Then `airbyte-keycloak` can be rebuilt and redeployed (`make deploy.cloud`) for your changes to be baked into the docker image.
 
 ## Overriding templates
 
