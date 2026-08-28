@@ -165,6 +165,7 @@ export const connectionAPI = {
 
     const response = await request.post(`${apiBaseUrl}/connections/delete`, {
       data: { connectionId },
+      timeout: 30_000,
     });
 
     if (!response.ok()) {
@@ -462,23 +463,19 @@ export const connectionTestHelpers = {
       await tryDelete(() => connectionAPI.delete(request, connectionId), "connection", connectionId);
     }
 
-    // Delete source and destination in parallel
+    // Delete source and destination in parallel. Every connector API variant issues the same
+    // sources/delete or destinations/delete request (CONNECTOR_CONFIGS share endpoint and idField),
+    // so one delete per actor works regardless of which connector type the test created. Duplicate
+    // concurrent deletes of the same actor can hang server-side and time out the afterAll hook.
     const cleanupPromises: Array<Promise<void>> = [];
 
     if (sourceId) {
-      // Delete whichever source API was used in a given test
-      cleanupPromises.push(
-        tryDelete(() => pokeSourceAPI.delete(request, sourceId), "source", sourceId),
-        tryDelete(() => postgresSourceAPI.delete(request, sourceId), "source", sourceId),
-        tryDelete(() => fakerSourceAPI.delete(request, sourceId), "source", sourceId)
-      );
+      cleanupPromises.push(tryDelete(() => pokeSourceAPI.delete(request, sourceId), "source", sourceId));
     }
 
     if (destinationId) {
-      // Try both destination APIs since we don't know which was used
       cleanupPromises.push(
-        tryDelete(() => e2eDestinationAPI.delete(request, destinationId), "destination", destinationId),
-        tryDelete(() => postgresDestinationAPI.delete(request, destinationId), "destination", destinationId)
+        tryDelete(() => e2eDestinationAPI.delete(request, destinationId), "destination", destinationId)
       );
     }
 

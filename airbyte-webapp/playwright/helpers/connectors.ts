@@ -156,6 +156,7 @@ export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS
 
       const response = await request.post(`${apiBaseUrl}/${config.endpoint}/delete`, {
         data: deleteRequest,
+        timeout: 30_000,
       });
 
       if (!response.ok()) {
