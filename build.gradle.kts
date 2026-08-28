@@ -174,11 +174,10 @@ tasks.register<Tar>("archiveReports") {
 
 // todo (cgardens) - move this into the plugin.
 // By default ./gradlew :oss:build doesn't do anything, so we need to manually set the dependencies.
-val taskNames = listOf("assemble", "build", "check", "clean", "format", "jar", "publishToMavenLocal", "test", "integrationTest")
+val taskNames = listOf("assemble", "build", "check", "clean", "format", "jar", "test", "integrationTest")
 // For tasks that don't exist gradle by default, we need to register them first.
 tasks.register("format")
 tasks.register("jar")
-tasks.register("publishToMavenLocal")
 tasks.register("test")
 tasks.register("integrationTest")
 // For each task type register its subprojects instance of that task type as a dependency. It is
