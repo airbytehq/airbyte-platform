@@ -79126,16 +79126,12 @@
         ]
       },
       "connectorBuildOptions": {
-        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.24.0@sha256:e34fb609bccdeb77474763c77e3621ea9d5adf9f65f2d9851102cc14a1caa281"
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
       },
       "connectorTestSuitesOptions": [
         {
           "suite": "liveTests",
           "testConnections": [
-            {
-              "id": "2234aee5-c67b-48f7-8c6d-45a1e0303ea1",
-              "name": "greenhouse_config_users_only_dev_null"
-            },
             {
               "id": "2bcce6b2-2c89-46a4-9980-82a299266774",
               "name": "greenhouse_config_dev_null"
@@ -79149,16 +79145,8 @@
           "suite": "acceptanceTests",
           "testSecrets": [
             {
-              "fileName": "config_users_only.json",
-              "name": "SECRET_SOURCE-GREENHOUSE_USERS_ONLY__CREDS",
-              "secretStore": {
-                "alias": "airbyte-connector-testing-secret-store",
-                "type": "GSM"
-              }
-            },
-            {
-              "fileName": "config.json",
-              "name": "SECRET_SOURCE-GREENHOUSE__CREDS",
+              "fileName": "config_oauth.json",
+              "name": "SECRET_SOURCE-GREENHOUSE__CREDS_OAUTH",
               "secretStore": {
                 "alias": "airbyte-connector-testing-secret-store",
                 "type": "GSM"
@@ -79168,7 +79156,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.8.0",
+      "dockerImageTag": "1.0.0",
       "dockerRepository": "airbyte/source-greenhouse",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/greenhouse",
       "externalDocumentationUrls": [
@@ -79192,8 +79180,8 @@
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "722558adc073c1c36f8bd65d36fb9edeb69e2658",
-          "commit_timestamp": "2026-08-12T05:40:40+00:00"
+          "commit_sha": "d967099cade84039b4975d3412fd150287e9ac2c",
+          "commit_timestamp": "2026-08-28T08:59:18-07:00"
         },
         "metrics": {
           "all": {
@@ -79209,12 +79197,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-greenhouse/0.8.0.spdx.json",
+        "release": {
+          "attributed_to": "pnilan",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "d967099cade84039b4975d3412fd150287e9ac2c",
+          "merged_at": "2026-08-28T15:59:18Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
+          "pr_author_type": "Bot",
+          "pr_merged_by_login": "pnilan",
+          "pr_merged_by_type": "User",
+          "pr_number": 84846,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84846",
+          "released_at": "2026-08-28T15:59:18Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-greenhouse/1.0.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-greenhouse/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-12T05:45:41.684917+00:00",
-          "registry_entry_generated_at": "2026-08-12T05:45:41.684917+00:00"
+          "metadata_last_modified": "2026-08-28T16:03:55.164904+00:00",
+          "registry_entry_generated_at": "2026-08-28T16:03:55.164904+00:00"
         }
       },
       "githubIssueLabel": "source-greenhouse",
@@ -79222,193 +79226,64 @@
       "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-greenhouse/latest/icon.svg",
       "language": "manifest-only",
       "license": "ELv2",
-      "maxSecondsBetweenMessages": 10,
+      "maxSecondsBetweenMessages": 3600,
       "name": "Greenhouse",
       "packageInfo": {},
       "public": true,
       "releaseStage": "generally_available",
       "releases": {
-        "releaseCandidates": {
-          "0.8.1": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 200,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 100
-            },
-            "allowedHosts": {
-              "hosts": [
-                "harvest.greenhouse.io",
-                "auth.greenhouse.io"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
-            },
-            "connectorTestSuitesOptions": [
+        "breakingChanges": {
+          "1.0.0": {
+            "deadlineAction": "disable",
+            "message": "This release migrates all Greenhouse streams from Harvest v1 to Harvest v3 because Greenhouse is sunsetting Harvest v1 and v2 on 2026-08-31, and replaces API-key authentication with OAuth Authorization Code authentication. Every deployment now authenticates with the client ID and secret of a Greenhouse partner OAuth application, authorizes the requested scopes through the Greenhouse consent flow, and lets Airbyte manage the access and refresh tokens. This release also removes three duplicate streams: use demographics_answers, interviews, and job_stages instead of applications_demographics_answers, applications_interviews, and jobs_stages. Because no stream is a one-to-one replacement, there are two upgrade paths: we strongly recommend setting up a new connection on 1.0.0 that writes to a new destination namespace or table prefix, keeping your existing Harvest v1 tables as history. If you upgrade this connection in place instead, update the source configuration, refresh the schemas, and clear the affected streams so v3 records do not land beside v1 records. See the [Greenhouse migration guide](https://docs.airbyte.com/integrations/sources/greenhouse-migrations) for details.",
+            "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/greenhouse-migrations#1.0.0",
+            "scopedImpact": [
               {
-                "suite": "liveTests",
-                "testConnections": [
-                  {
-                    "id": "2234aee5-c67b-48f7-8c6d-45a1e0303ea1",
-                    "name": "greenhouse_config_users_only_dev_null"
-                  },
-                  {
-                    "id": "2bcce6b2-2c89-46a4-9980-82a299266774",
-                    "name": "greenhouse_config_dev_null"
-                  }
-                ]
-              },
-              {
-                "suite": "unitTests"
-              },
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config_users_only.json",
-                    "name": "SECRET_SOURCE-GREENHOUSE_USERS_ONLY__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-GREENHOUSE__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "0.8.1",
-            "dockerRepository": "airbyte/source-greenhouse",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/greenhouse",
-            "externalDocumentationUrls": [
-              {
-                "title": "Greenhouse Harvest API",
-                "type": "api_reference",
-                "url": "https://harvestdocs.greenhouse.io/"
-              },
-              {
-                "title": "Greenhouse authentication",
-                "type": "authentication_guide",
-                "url": "https://harvestdocs.greenhouse.io/docs/authentication"
-              },
-              {
-                "title": "Greenhouse rate limits",
-                "type": "rate_limits",
-                "url": "https://harvestdocs.greenhouse.io/docs/api-rate-limiting"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "ea3d15ab449b9c7e79c578d32826925425f84bfc",
-                "commit_timestamp": "2026-08-18T05:53:19+00:00"
-              },
-              "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "ea3d15ab449b9c7e79c578d32826925425f84bfc",
-                "merged_at": "2026-08-18T05:53:19Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
-                "pr_author_type": "Bot",
-                "pr_number": 84641,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84641",
-                "released_at": "2026-08-18T05:53:19Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-greenhouse/0.8.1.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-greenhouse/0.8.1/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T05:57:28.605017+00:00",
-                "registry_entry_generated_at": "2026-08-18T05:57:28.605017+00:00"
-              }
-            },
-            "githubIssueLabel": "source-greenhouse",
-            "icon": "greenhouse.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-greenhouse/latest/icon.svg",
-            "language": "manifest-only",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 10,
-            "name": "Greenhouse",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "generally_available",
-            "releases": {
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": false,
-                "packageName": "airbyte-source-greenhouse"
-              }
-            },
-            "sourceDefinitionId": "59f1e50a-331f-4f09-b3e8-2e8d4d355f44",
-            "sourceType": "api",
-            "spec": {
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "api_key": {
-                    "airbyte_secret": true,
-                    "description": "Greenhouse API Key. See the <a href=\"https://docs.airbyte.com/integrations/sources/greenhouse\">docs</a> for more information on how to generate this key.",
-                    "order": 0,
-                    "title": "API Key",
-                    "type": "string"
-                  },
-                  "num_workers": {
-                    "default": 2,
-                    "description": "The number of worker threads to use for syncing. The default is tuned against Greenhouse's documented Harvest API rate limit. Increase this only if your Greenhouse account can support higher API usage, or lower it if you see rate-limit errors.",
-                    "examples": [
-                      1,
-                      2,
-                      3
-                    ],
-                    "maximum": 8,
-                    "minimum": 1,
-                    "order": 1,
-                    "title": "Number of concurrent threads",
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "api_key"
+                "impactedScopes": [
+                  "applications",
+                  "applications_demographics_answers",
+                  "applications_interviews",
+                  "candidates",
+                  "close_reasons",
+                  "custom_fields",
+                  "degrees",
+                  "demographics_answers",
+                  "demographics_answer_options",
+                  "demographics_questions",
+                  "demographics_answers_answer_options",
+                  "demographics_question_sets",
+                  "demographics_question_sets_questions",
+                  "departments",
+                  "jobs",
+                  "jobs_openings",
+                  "interviews",
+                  "job_posts",
+                  "job_stages",
+                  "jobs_stages",
+                  "offers",
+                  "rejection_reasons",
+                  "scorecards",
+                  "sources",
+                  "users",
+                  "activity_feed",
+                  "approvals",
+                  "disciplines",
+                  "schools",
+                  "eeoc",
+                  "email_templates",
+                  "offices",
+                  "prospect_pools",
+                  "tags",
+                  "user_roles",
+                  "user_permissions"
                 ],
-                "type": "object"
-              },
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "supportLevel": "community",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "language:manifest-only",
-              "cdk:low-code"
+                "scopeType": "stream"
+              }
             ],
-            "tombstone": false
+            "upgradeDeadline": "2026-08-31"
           }
         },
+        "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/greenhouse-migrations",
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -79417,7 +79292,7 @@
             "strategy": "fast"
           },
           "defaultRolloutMode": "autopilot",
-          "enableProgressiveRollout": true,
+          "enableProgressiveRollout": false,
           "initialPercentage": 0,
           "maxPercentage": 50
         }
@@ -79431,20 +79306,166 @@
       "sourceDefinitionId": "59f1e50a-331f-4f09-b3e8-2e8d4d355f44",
       "sourceType": "api",
       "spec": {
+        "advanced_auth": {
+          "auth_flow_type": "oauth2.0",
+          "oauth_config_specification": {
+            "complete_oauth_output_specification": {
+              "properties": {
+                "access_token": {
+                  "path_in_connector_config": [
+                    "credentials",
+                    "access_token"
+                  ],
+                  "type": "string"
+                },
+                "expires_at": {
+                  "format": "date-time",
+                  "path_in_connector_config": [
+                    "credentials",
+                    "token_expiry_date"
+                  ],
+                  "type": "string"
+                },
+                "refresh_token": {
+                  "path_in_connector_config": [
+                    "credentials",
+                    "refresh_token"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "refresh_token"
+              ]
+            },
+            "complete_oauth_server_input_specification": {
+              "properties": {
+                "client_id": {
+                  "type": "string"
+                },
+                "client_secret": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "client_id",
+                "client_secret"
+              ]
+            },
+            "complete_oauth_server_output_specification": {
+              "properties": {
+                "client_id": {
+                  "path_in_connector_config": [
+                    "credentials",
+                    "client_id"
+                  ],
+                  "type": "string"
+                },
+                "client_secret": {
+                  "path_in_connector_config": [
+                    "credentials",
+                    "client_secret"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "client_id",
+                "client_secret"
+              ]
+            },
+            "oauth_connector_input_specification": {
+              "access_token_headers": {
+                "Authorization": "Basic {{ (client_id_value ~ ':' ~ client_secret_value) | b64encode }}",
+                "Content-Type": "application/x-www-form-urlencoded"
+              },
+              "access_token_params": {
+                "code": "{{ auth_code_value }}",
+                "grant_type": "authorization_code",
+                "redirect_uri": "{{ redirect_uri_value }}"
+              },
+              "access_token_url": "https://auth.greenhouse.io/token",
+              "consent_url": "https://auth.greenhouse.io/authorize?client_id={{client_id_value}}&redirect_uri={{redirect_uri_value}}&response_type=code&state={{state_value}}&{{scopes_param}}",
+              "extract_output": [
+                "access_token",
+                "refresh_token",
+                "expires_at"
+              ],
+              "scope": "harvest:applications:list harvest:approval_flows:list harvest:candidate_tags:list harvest:candidates:list harvest:close_reasons:list harvest:custom_field_options:list harvest:custom_fields:list harvest:demographic_answer_options:list harvest:demographic_answers:list harvest:demographic_question_sets:list harvest:demographic_questions:list harvest:departments:list harvest:eeoc:list harvest:email_templates:list harvest:interviews:list harvest:job_interview_stages:list harvest:job_posts:list harvest:jobs:list harvest:notes:list harvest:offers:list harvest:offices:list harvest:openings:list harvest:prospect_pools:list harvest:rejection_reasons:list harvest:scorecards:list harvest:sources:list harvest:user_job_permissions:list harvest:user_roles:list harvest:users:list",
+              "scopes_join_strategy": "space"
+            }
+          },
+          "predicate_key": [
+            "credentials",
+            "auth_type"
+          ],
+          "predicate_value": "Client"
+        },
         "connectionSpecification": {
           "$schema": "http://json-schema.org/draft-07/schema#",
           "additionalProperties": true,
           "properties": {
-            "api_key": {
-              "airbyte_secret": true,
-              "description": "Greenhouse API Key. See the <a href=\"https://docs.airbyte.com/integrations/sources/greenhouse\">docs</a> for more information on how to generate this key.",
+            "credentials": {
+              "oneOf": [
+                {
+                  "description": "Authorize with Greenhouse and Airbyte manages the access and refresh tokens for you.",
+                  "properties": {
+                    "access_token": {
+                      "airbyte_secret": true,
+                      "order": 4,
+                      "title": "Access token",
+                      "type": "string"
+                    },
+                    "auth_type": {
+                      "const": "Client",
+                      "order": 0,
+                      "type": "string"
+                    },
+                    "client_id": {
+                      "airbyte_secret": true,
+                      "description": "The client ID of your Greenhouse partner OAuth application.",
+                      "order": 1,
+                      "title": "OAuth client ID",
+                      "type": "string"
+                    },
+                    "client_secret": {
+                      "airbyte_secret": true,
+                      "description": "The client secret of your Greenhouse partner OAuth application.",
+                      "order": 2,
+                      "title": "OAuth client secret",
+                      "type": "string"
+                    },
+                    "refresh_token": {
+                      "airbyte_secret": true,
+                      "description": "The refresh token obtained from the Greenhouse authorization code exchange. Populated automatically when you authorize above.",
+                      "order": 3,
+                      "title": "Refresh token",
+                      "type": "string"
+                    },
+                    "token_expiry_date": {
+                      "format": "date-time",
+                      "order": 5,
+                      "title": "Token expiry date",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "auth_type",
+                    "client_id",
+                    "client_secret",
+                    "refresh_token"
+                  ],
+                  "title": "OAuth",
+                  "type": "object"
+                }
+              ],
               "order": 0,
-              "title": "API Key",
-              "type": "string"
+              "title": "Authentication",
+              "type": "object"
             },
             "num_workers": {
               "default": 2,
-              "description": "The number of worker threads to use for syncing. The default is tuned against Greenhouse's documented Harvest API rate limit. Increase this only if your Greenhouse account can support higher API usage, or lower it if you see rate-limit errors.",
+              "description": "The number of worker threads to use for syncing. Greenhouse publishes no Harvest v3 rate-limit ceiling, so the default is conservative and all threads share a single budget. Increase this only if your Greenhouse account can support higher API usage, or lower it if you see rate-limit errors.",
               "examples": [
                 1,
                 2,
@@ -79452,13 +79473,24 @@
               ],
               "maximum": 8,
               "minimum": 1,
-              "order": 1,
+              "order": 2,
               "title": "Number of concurrent threads",
               "type": "integer"
+            },
+            "start_date": {
+              "description": "UTC date and time in the format YYYY-MM-DDTHH:MM:SSZ. Records updated before this date will not be replicated. If omitted, the connector replicates all history.",
+              "examples": [
+                "2024-01-01T00:00:00Z"
+              ],
+              "format": "date-time",
+              "order": 1,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "title": "Start date",
+              "type": "string"
             }
           },
           "required": [
-            "api_key"
+            "credentials"
           ],
           "type": "object"
         },
@@ -91085,7 +91117,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.4.0",
+      "dockerImageTag": "1.0.0",
       "dockerRepository": "airbyte/source-linear",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/linear",
       "externalDocumentationUrls": [
@@ -91114,8 +91146,8 @@
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "fdf8dc25c70ac956c382b84e92a807cc6e210763",
-          "commit_timestamp": "2026-08-26T18:20:35-07:00"
+          "commit_sha": "3989bb2aed31c5030f9b1638a4af2086f07827e9",
+          "commit_timestamp": "2026-08-28T09:06:06-07:00"
         },
         "metrics": {
           "all": {
@@ -91134,25 +91166,25 @@
         "release": {
           "attributed_to": "pnilan",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "fdf8dc25c70ac956c382b84e92a807cc6e210763",
-          "merged_at": "2026-08-27T01:20:35Z",
+          "merge_commit_sha": "3989bb2aed31c5030f9b1638a4af2086f07827e9",
+          "merged_at": "2026-08-28T16:06:06Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 158243242,
           "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
           "pr_merged_by_login": "pnilan",
           "pr_merged_by_type": "User",
-          "pr_number": 85056,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/85056",
-          "released_at": "2026-08-27T01:20:35Z",
+          "pr_number": 85095,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85095",
+          "released_at": "2026-08-28T16:06:06Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-linear/0.4.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-linear/1.0.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-linear/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-27T01:24:37.818895+00:00",
-          "registry_entry_generated_at": "2026-08-27T01:24:37.818895+00:00"
+          "metadata_last_modified": "2026-08-28T16:10:47.440350+00:00",
+          "registry_entry_generated_at": "2026-08-28T16:10:47.440350+00:00"
         }
       },
       "githubIssueLabel": "source-linear",
@@ -91167,6 +91199,38 @@
       "releaseDate": "2025-04-11",
       "releaseStage": "alpha",
       "releases": {
+        "breakingChanges": {
+          "1.0.0": {
+            "deadlineAction": "disable",
+            "message": "This release corrects Linear date and datetime schemas so destinations receive accurate date and timestamp column types, and removes fields deprecated by Linear: `users.inviteHash`, `users.calendarHash`, `teams.inviteHash`, `teams.private`, `teams.markedAsDuplicateWorkflowState` (with its derived `teams.markedAsDuplicateWorkflowStateId`), and `customer_statuses.type` (`teams.visibility` replaces `teams.private`). Users syncing any of these streams are affected: `attachments`, `comments`, `customer_needs`, `customer_statuses`, `customer_tiers`, `customers`, `cycles`, `issue_labels`, `issue_relations`, `issues`, `project_milestones`, `project_statuses`, `projects`, `teams`, `users`, and `workflow_states`. After upgrading and before the first sync, refresh the source schema, update downstream references to removed fields or string casts, and clear those streams. See the [Linear 1.0.0 migration guide](https://docs.airbyte.com/integrations/sources/linear-migrations#upgrading-to-100) for field-level details and steps.",
+            "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/linear-migrations#1.0.0",
+            "scopedImpact": [
+              {
+                "impactedScopes": [
+                  "attachments",
+                  "comments",
+                  "customer_needs",
+                  "customer_statuses",
+                  "customer_tiers",
+                  "customers",
+                  "cycles",
+                  "issue_labels",
+                  "issue_relations",
+                  "issues",
+                  "project_milestones",
+                  "project_statuses",
+                  "projects",
+                  "teams",
+                  "users",
+                  "workflow_states"
+                ],
+                "scopeType": "stream"
+              }
+            ],
+            "upgradeDeadline": "2026-09-11"
+          }
+        },
+        "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/linear-migrations",
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "enableProgressiveRollout": false,
@@ -94929,7 +94993,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "2.1.1",
+      "dockerImageTag": "2.1.2",
       "dockerRepository": "airbyte/source-marketo",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/marketo",
       "externalDocumentationUrls": [
@@ -94951,10 +95015,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Ella6882",
-          "commit_author_email": "64746286+Ella6882@users.noreply.github.com",
-          "commit_sha": "699618d17f8e46b59f52f4618f82c0f1dadea87b",
-          "commit_timestamp": "2026-07-27T14:09:12-06:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "2d565dbc8483bed3c339b7d3826a84ce0d3344df",
+          "commit_timestamp": "2026-08-28T11:49:38-07:00"
         },
         "metrics": {
           "all": {
@@ -94970,12 +95034,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-marketo/2.1.1.spdx.json",
+        "release": {
+          "attributed_to": "sophiecuiy",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "2d565dbc8483bed3c339b7d3826a84ce0d3344df",
+          "merged_at": "2026-08-28T18:49:39Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
+          "pr_author_type": "Bot",
+          "pr_merged_by_login": "sophiecuiy",
+          "pr_merged_by_type": "User",
+          "pr_number": 85097,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85097",
+          "released_at": "2026-08-28T18:49:39Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-marketo/2.1.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-marketo/latest/metadata.yaml",
-          "metadata_last_modified": "2026-07-27T20:15:13.345810+00:00",
-          "registry_entry_generated_at": "2026-07-27T20:15:13.345810+00:00"
+          "metadata_last_modified": "2026-08-28T18:55:43.373077+00:00",
+          "registry_entry_generated_at": "2026-08-28T18:55:43.373077+00:00"
         }
       },
       "githubIssueLabel": "source-marketo",
@@ -106115,7 +106195,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.3.21",
+      "dockerImageTag": "0.3.23",
       "dockerRepository": "airbyte/source-okta",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/okta",
       "externalDocumentationUrls": [
@@ -106142,10 +106222,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "f589f89217fcd99c0f9bde1874730559aa8f0eeb",
-          "commit_timestamp": "2025-11-18T18:09:21-08:00"
+          "commit_author": "Airbyte Support Bot",
+          "commit_author_email": "airbyte-support-bot@airbyte.io",
+          "commit_sha": "297eaa98a9d9ad6f38f6df873ad57c4694ce32d4",
+          "commit_timestamp": "2026-08-28T11:41:06-07:00"
         },
         "metrics": {
           "all": {
@@ -106161,12 +106241,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-okta/0.3.21.spdx.json",
+        "release": {
+          "attributed_to": "pnilan",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "297eaa98a9d9ad6f38f6df873ad57c4694ce32d4",
+          "merged_at": "2026-08-28T18:41:07Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 274123553,
+          "pr_author_login": "airbyte-support-bot",
+          "pr_author_type": "User",
+          "pr_merged_by_login": "pnilan",
+          "pr_merged_by_type": "User",
+          "pr_number": 85169,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85169",
+          "released_at": "2026-08-28T18:41:07Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-okta/0.3.23.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-okta/latest/metadata.yaml",
-          "metadata_last_modified": "2025-11-19T02:29:36.485000+00:00",
-          "registry_entry_generated_at": "2025-11-19T02:45:22.529801"
+          "metadata_last_modified": "2026-08-28T18:46:58.689661+00:00",
+          "registry_entry_generated_at": "2026-08-28T18:46:58.689661+00:00"
         }
       },
       "githubIssueLabel": "source-okta",
@@ -106255,6 +106351,7 @@
                     "private_key": {
                       "airbyte_secret": true,
                       "description": "The private key in PEM format",
+                      "multiline": true,
                       "order": 3,
                       "title": "Private key",
                       "type": "string"
@@ -139694,6 +139791,112 @@
       "tags": [
         "language:python",
         "cdk:python"
+      ],
+      "tombstone": false
+    },
+    {
+      "ab_internal": {
+        "isEnterprise": false,
+        "ql": 100,
+        "requireVersionIncrementsInPullRequests": true,
+        "sl": 100
+      },
+      "allowedHosts": {
+        "hosts": [
+          "rest.smsmode.com"
+        ]
+      },
+      "connectorBuildOptions": {
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.23.1@sha256:f71ff70e2761f634c080233f6d718bb4bcf96fa310351d56e98ba58d43ab1c9f"
+      },
+      "connectorTestSuitesOptions": [
+        {
+          "suite": "unitTests"
+        }
+      ],
+      "custom": false,
+      "dockerImageTag": "0.0.1",
+      "dockerRepository": "airbyte/source-smsmode-sms",
+      "documentationUrl": "https://docs.airbyte.com/integrations/sources/smsmode-sms",
+      "generated": {
+        "git": {
+          "commit_author": "SMSMODE",
+          "commit_author_email": "33345549+CaladeTechnologies@users.noreply.github.com",
+          "commit_sha": "67109b1fcd86f0b0fc377953e6051b56122b7aee",
+          "commit_timestamp": "2026-08-28T20:42:18+02:00"
+        },
+        "release": {
+          "attributed_to": "pnilan",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "67109b1fcd86f0b0fc377953e6051b56122b7aee",
+          "merged_at": "2026-08-28T18:42:19Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 33345549,
+          "pr_author_login": "CaladeTechnologies",
+          "pr_author_type": "User",
+          "pr_merged_by_login": "pnilan",
+          "pr_merged_by_type": "User",
+          "pr_number": 79709,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/79709",
+          "released_at": "2026-08-28T18:42:19Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-smsmode-sms/0.0.1.spdx.json",
+        "source_file_info": {
+          "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+          "metadata_file_path": "metadata/airbyte/source-smsmode-sms/latest/metadata.yaml",
+          "metadata_last_modified": "2026-08-28T18:51:28.937912+00:00",
+          "registry_entry_generated_at": "2026-08-28T18:51:28.937912+00:00"
+        }
+      },
+      "githubIssueLabel": "source-smsmode-sms",
+      "icon": "icon.svg",
+      "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-smsmode-sms/latest/icon.svg",
+      "language": "manifest-only",
+      "license": "ELv2",
+      "name": "smsmode SMS",
+      "packageInfo": {},
+      "public": true,
+      "releaseDate": "2026-08-28",
+      "releaseStage": "alpha",
+      "releases": {},
+      "remoteRegistries": {
+        "pypi": {
+          "enabled": false,
+          "packageName": "airbyte-source-smsmode-sms"
+        }
+      },
+      "sourceDefinitionId": "58bf5021-0dc4-46d3-b834-bf576ee27748",
+      "sourceType": "api",
+      "spec": {
+        "connectionSpecification": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "additionalProperties": true,
+          "properties": {
+            "api_key": {
+              "airbyte_secret": true,
+              "description": "Your smsmode API key. You can generate and manage API keys in the smsmode dashboard under the 'Credentials' section: https://dev.smsmode.com/commons/v1/#tag/Credential. Make sure the key is active and has the required permissions for your use case.",
+              "name": "api_key",
+              "order": 0,
+              "title": "API Key",
+              "type": "string"
+            }
+          },
+          "required": [
+            "api_key"
+          ],
+          "type": "object"
+        },
+        "documentationUrl": "https://dev.smsmode.com/sms/v1/#tag/Callback/operation/receive-sms-mo-message",
+        "supportsDBT": false,
+        "supportsNormalization": false
+      },
+      "supportLevel": "community",
+      "supportsDataActivation": false,
+      "supportsFileTransfer": false,
+      "tags": [
+        "language:manifest-only",
+        "cdk:low-code"
       ],
       "tombstone": false
     },
