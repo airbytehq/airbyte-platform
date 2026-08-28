@@ -22,7 +22,7 @@ dependencies {
   implementation(libs.retrofit)
   implementation(libs.sentry.java)
 
-  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-commons"))

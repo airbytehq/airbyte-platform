@@ -11,6 +11,8 @@ Canonical list is in repo-root `settings.gradle.kts`. As of writing:
 
 - `:oss:airbyte-api:commons` — shared OpenAPI types
 - `:oss:airbyte-api:server-api` — internal server API (the big one)
+- `:oss:airbyte-api:server-api-client` — generated Kotlin client for the
+  internal server API (generated from `server-api`'s spec)
 - `:oss:airbyte-api:public-api` — externally documented Airbyte API
 - `:oss:airbyte-api:problems-api` — RFC 7807 problem details
 - `:oss:airbyte-api:workload-api` — workload service API
@@ -38,11 +40,14 @@ it's currently `config.yaml`.
 1. **Edit the YAML.** Treat it as the contract. Don't add an endpoint
    class in `airbyte-server` that doesn't have a corresponding
    operation in the spec.
-2. **Build the submodule** — `./gradlew :oss:airbyte-api:server-api:build`.
-   Gradle runs three codegen tasks automatically:
-   - `generateApiServer` — JAX-RS Java interfaces
-   - `genApiServer2` — Kotlin server interfaces
-   - `genApiClient` — Kotlin client classes
+2. **Build the API modules** — `./gradlew :oss:airbyte-api:build` (the
+   aggregator builds every submodule). Codegen runs automatically:
+   - `generateApiServer` — JAX-RS Java interfaces (`server-api`)
+   - `genApiServer2` — Kotlin server interfaces (`server-api`)
+   - `genApiClient` — Kotlin client classes (`server-api-client`,
+     generated from `server-api`'s spec)
+   Building only `:oss:airbyte-api:server-api` skips the client — build
+   the aggregator after a spec change so both sides regenerate.
    Generated output goes under `<submodule>/build/generated/api/...`
    and is wired into the source sets — you don't manage it manually.
 3. **Implement the generated interface** in the consuming service
@@ -90,7 +95,7 @@ it's currently `config.yaml`.
   examples.
 - **Generated Kotlin client uses Failsafe retry policies** —
   injected via post-codegen file rewrites (`updateApiClientWithFailsafe`,
-  `updateDomainClientsWithFailsafe` in `server-api/build.gradle.kts`).
+  `updateDomainClientsWithFailsafe` in `server-api-client/build.gradle.kts`).
   Don't try to manage retry behavior at call sites; configure the
   policy at client construction.
 - **One operation per route + verb**. Don't piggyback flags onto an
@@ -127,9 +132,13 @@ it's currently `config.yaml`.
   `prebuild:storybook` lifecycle hooks invoke it before their matching
   scripts. There is no Git checkout hook.
 - Codegen task fails on a `schemaMappings` entry → you added a
-  schema that needs to be mapped to `JsonNode`. Add it to all three
-  `schemaMappings` blocks in the submodule's `build.gradle.kts`
-  (server, server2, client).
+  schema that needs to be mapped to `JsonNode`. Add it to every
+  `schemaMappings` block in **both** build files:
+  `server-api/build.gradle.kts` (server, server2, docs) and
+  `server-api-client/build.gradle.kts` (client). An entry mapped on
+  the server side but missing on the client still compiles, yet
+  generates a typed client model where the server sees `JsonNode` —
+  a wire mismatch you only meet at runtime.
 - "Bean of type `XyzApi` not found" at server runtime → the
   generated interface is present but the handler implementing it
   isn't annotated `@Singleton` or isn't on the classpath.

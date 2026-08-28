@@ -17,7 +17,7 @@ dependencies {
   ksp(libs.moshi.kotlin)
 
   api(project(":oss:airbyte-api:commons"))
-  api(project(":oss:airbyte-api:server-api"))
+  api(project(":oss:airbyte-api:server-api-client"))
   api(project(":oss:airbyte-commons-micronaut"))
 
   implementation(platform(libs.micronaut.platform))
@@ -112,7 +112,7 @@ val genManifestServerApiClient =
       updateDomainClientsToIncludeHttpResponseBodyOnClientException(generatedDomainClientsPath)
     }
 
-    dependsOn(":oss:airbyte-api:server-api:genApiClient")
+    dependsOn(":oss:airbyte-api:server-api-client:genApiClient")
   }
 
 sourceSets {

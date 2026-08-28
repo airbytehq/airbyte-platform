@@ -35,7 +35,7 @@ dependencies {
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.retrofit)
 
-  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-commons-converters"))

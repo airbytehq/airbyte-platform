@@ -41,6 +41,7 @@ dependencies {
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-api:public-api"))
   implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-workload-api-server"))
   implementation(project(":oss:airbyte-audit-logging"))

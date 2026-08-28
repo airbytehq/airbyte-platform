@@ -11,7 +11,7 @@ dependencies {
   ksp(libs.jackson.kotlin)
   ksp(libs.moshi.kotlin)
 
-  api(project(":oss:airbyte-api:server-api"))
+  api(project(":oss:airbyte-api:server-api-client"))
   api(project(":oss:airbyte-api:commons"))
 
   implementation(platform(libs.micronaut.platform))

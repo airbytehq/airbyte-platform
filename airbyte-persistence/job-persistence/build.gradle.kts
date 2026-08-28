@@ -8,7 +8,7 @@ dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-protocol"))

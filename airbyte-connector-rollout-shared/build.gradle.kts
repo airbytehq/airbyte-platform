@@ -9,7 +9,8 @@ dependencies {
 
   implementation(libs.otel.annotations)
   implementation(libs.bundles.temporal)
-  implementation(project(":oss:airbyte-api:server-api"))
+  api(project(":oss:airbyte-api:server-api"))
+  api(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))

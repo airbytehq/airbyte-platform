@@ -64,7 +64,7 @@ dependencies {
   implementation("com.datadoghq:dd-trace-api:1.55.0")
 
   implementation(project(":oss:airbyte-analytics"))
-  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-converters"))

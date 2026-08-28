@@ -11,7 +11,8 @@ dependencies {
   implementation(libs.bundles.micronaut)
 
   implementation("org.apache.commons:commons-text:1.10.0")
-  implementation(project(":oss:airbyte-api:server-api"))
+  api(project(":oss:airbyte-api:server-api"))
+  api(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))

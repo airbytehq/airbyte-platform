@@ -49,7 +49,7 @@ dependencies {
   implementation(libs.micronaut.http.client)
   implementation(libs.retrofit)
 
-  implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-converters"))
