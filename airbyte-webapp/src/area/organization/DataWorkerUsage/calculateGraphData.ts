@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 
 import { RegionDataWorkerUsage } from "core/api/types/AirbyteClient";
 
-export type UsageGraphGranularity = "hour" | "day";
+export type UsageGraphGranularity = "hour" | "day" | "week";
 
 export interface RegionDataBar {
   formattedDate: string;
@@ -17,11 +17,16 @@ interface TimeBucket extends RegionDataBar {
 
 const DATE_FORMAT = "YYYY-MM-DD";
 const HOUR_IN_MS = 60 * 60 * 1000;
+const startOfCalendarWeek = (date: dayjs.Dayjs) => date.startOf("day").subtract(date.day(), "day");
 
 const createDisplayBuckets = (displayRange: [string, string], granularity: UsageGraphGranularity): TimeBucket[] => {
   const rangeEnd = dayjs(displayRange[1]);
   const buckets: TimeBucket[] = [];
   let cursor = dayjs(displayRange[0]);
+
+  if (granularity === "week") {
+    cursor = startOfCalendarWeek(cursor);
+  }
 
   while (cursor.isBefore(rangeEnd)) {
     buckets.push({
@@ -39,8 +44,9 @@ const createDisplayBuckets = (displayRange: [string, string], granularity: Usage
 
 /**
  * Creates a bar for each bucket in an end-exclusive display range and populates it with concurrent usage data.
- * Hourly ranges retain every absolute hour. Daily ranges use the workspace values from the hour when the region's
- * total usage peaked. API data outside the exact display range is ignored because date-only requests can over-fetch.
+ * Hourly ranges retain every absolute hour. Daily and weekly ranges use the workspace values from the hour when the
+ * region's total usage peaked. API data outside the exact display range is ignored because date-only requests can
+ * over-fetch.
  */
 export const calculateGraphData = (
   displayRange: [string, string],
@@ -80,6 +86,8 @@ export const calculateGraphData = (
       const bucketKey =
         granularity === "hour"
           ? String(rangeStartTimestamp + Math.floor((timestampValue - rangeStartTimestamp) / HOUR_IN_MS) * HOUR_IN_MS)
+          : granularity === "week"
+          ? startOfCalendarWeek(timestamp).format(DATE_FORMAT)
           : timestamp.format(DATE_FORMAT);
       const bucket = bucketsByKey.get(bucketKey);
 

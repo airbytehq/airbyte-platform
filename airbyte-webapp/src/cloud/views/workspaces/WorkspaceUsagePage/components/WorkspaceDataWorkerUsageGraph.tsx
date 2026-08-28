@@ -18,26 +18,42 @@ import styles from "./WorkspaceDataWorkerUsageGraph.module.scss";
 const DATE_FORMAT = "YYYY-MM-DD";
 const HOUR_IN_MS = 60 * 60 * 1000;
 
-type UsageTimeRange = "1d" | "1w" | "1m";
-type UsageGranularity = "hour" | "day";
+type UsageTimeRange = "1d" | "1w" | "1m" | "1q" | "1y";
+type UsageGranularity = "hour" | "day" | "week";
 
 const TIME_RANGE_OPTIONS: Array<{ labelId: string; value: UsageTimeRange }> = [
   { labelId: "settings.organization.usage.timeRange.1d", value: "1d" },
   { labelId: "settings.organization.usage.timeRange.1w", value: "1w" },
   { labelId: "settings.organization.usage.timeRange.1m", value: "1m" },
+  { labelId: "settings.organization.usage.timeRange.1q", value: "1q" },
+  { labelId: "settings.organization.usage.timeRange.1y", value: "1y" },
 ];
 
 const TICK_STEP_BY_RANGE: Record<UsageTimeRange, number> = {
   "1d": 6,
   "1w": 24,
   "1m": 5,
+  "1q": 15,
+  "1y": 1,
 };
 
 const BAR_SIZE_BY_RANGE: Record<UsageTimeRange, number> = {
   "1d": 16,
   "1w": 4,
   "1m": 16,
+  "1q": 4,
+  "1y": 8,
 };
+
+const USAGE_UPDATE_INTERVAL_BY_RANGE: Record<UsageTimeRange, number> = {
+  "1d": 60_000,
+  "1w": 60_000,
+  "1m": 60_000,
+  "1q": 300_000,
+  "1y": 300_000,
+};
+
+const startOfCalendarWeek = (date: dayjs.Dayjs) => date.startOf("day").subtract(date.day(), "day");
 
 export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
   const { workspaceId, name: workspaceName } = useCurrentWorkspace();
@@ -48,13 +64,24 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
     [formatMessage]
   );
 
-  const currentTime = useCurrentTime(60_000);
+  const usageUpdateInterval = USAGE_UPDATE_INTERVAL_BY_RANGE[selectedTimeRange];
+  const currentTime = useCurrentTime(usageUpdateInterval);
 
   const timeWindow = useMemo(() => {
-    const granularity: UsageGranularity = selectedTimeRange === "1m" ? "day" : "hour";
-    const bucketCount = selectedTimeRange === "1d" ? 24 : selectedTimeRange === "1w" ? 7 * 24 : 30;
-    const rangeEnd = dayjs(currentTime).startOf(granularity).add(1, granularity);
-    const rangeStart = rangeEnd.subtract(bucketCount, granularity);
+    const granularity: UsageGranularity =
+      selectedTimeRange === "1y" ? "week" : selectedTimeRange === "1m" || selectedTimeRange === "1q" ? "day" : "hour";
+    const boundaryGranularity = granularity === "hour" ? "hour" : "day";
+    const rangeEnd = dayjs(currentTime).startOf(boundaryGranularity).add(1, boundaryGranularity);
+    const rangeStart =
+      selectedTimeRange === "1d"
+        ? rangeEnd.subtract(24, "hour")
+        : selectedTimeRange === "1w"
+        ? rangeEnd.subtract(7 * 24, "hour")
+        : selectedTimeRange === "1m"
+        ? rangeEnd.subtract(1, "month")
+        : selectedTimeRange === "1q"
+        ? rangeEnd.subtract(3, "month")
+        : rangeEnd.subtract(1, "year");
     const displayRange: [string, string] = [rangeStart.toISOString(), rangeEnd.toISOString()];
     const requestDateRange: [string, string] = [
       rangeStart.toISOString().slice(0, 10),
@@ -68,10 +95,13 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
   // usage query suspends (at UTC midnight the request dates change and there is no cache).
   const { displayRange, granularity, requestDateRange } = useDeferredValue(timeWindow);
 
-  const allUsage = useOrganizationWorkerUsage({
-    startDate: requestDateRange[0],
-    endDate: requestDateRange[1],
-  });
+  const allUsage = useOrganizationWorkerUsage(
+    {
+      startDate: requestDateRange[0],
+      endDate: requestDateRange[1],
+    },
+    usageUpdateInterval
+  );
 
   const { data, hasCurrentWorkspaceUsage } = useMemo(() => {
     const rangeStartTimestamp = dayjs(displayRange[0]).valueOf();
@@ -107,25 +137,32 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
       };
     }
 
-    const dailyPeakUsage = new Map<string, number>();
+    const peakUsageByBucket = new Map<string, number>();
     hourlyUsage.forEach((used, timestamp) => {
-      const date = dayjs(timestamp).format(DATE_FORMAT);
-      dailyPeakUsage.set(date, Math.max(dailyPeakUsage.get(date) ?? 0, used));
+      const date = dayjs(timestamp);
+      const bucketKey =
+        granularity === "week" ? startOfCalendarWeek(date).format(DATE_FORMAT) : date.format(DATE_FORMAT);
+      peakUsageByBucket.set(bucketKey, Math.max(peakUsageByBucket.get(bucketKey) ?? 0, used));
     });
 
     return {
       data: buckets.map((bucket) => ({
         date: bucket.toISOString(),
-        used: dailyPeakUsage.get(bucket.format(DATE_FORMAT)) ?? 0,
+        used: peakUsageByBucket.get(bucket.format(DATE_FORMAT)) ?? 0,
       })),
       hasCurrentWorkspaceUsage,
     };
   }, [allUsage, displayRange, granularity, workspaceId]);
 
-  const xAxisTicks = useMemo(
-    () => data.filter((_, index) => index % TICK_STEP_BY_RANGE[selectedTimeRange] === 0).map(({ date }) => date),
-    [data, selectedTimeRange]
-  );
+  const xAxisTicks = useMemo(() => {
+    if (selectedTimeRange === "1y") {
+      return data
+        .filter(({ date }, index) => index === 0 || dayjs(date).month() !== dayjs(data[index - 1].date).month())
+        .map(({ date }) => date);
+    }
+
+    return data.filter((_, index) => index % TICK_STEP_BY_RANGE[selectedTimeRange] === 0).map(({ date }) => date);
+  }, [data, selectedTimeRange]);
 
   return (
     <FlexContainer direction="column" alignItems="stretch" gap="2xl">
@@ -174,7 +211,11 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
           xAxisTickFormatter={(value) =>
             formatDate(
               dayjs(value).toDate(),
-              selectedTimeRange === "1d" ? { hour: "numeric" } : { month: "short", day: "numeric" }
+              selectedTimeRange === "1d"
+                ? { hour: "numeric" }
+                : selectedTimeRange === "1y"
+                ? { month: "short" }
+                : { month: "short", day: "numeric" }
             )
           }
           xAxisInterval={0}

@@ -125,10 +125,15 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
     expect(screen.getByRole("radio", { name: "1D" })).not.toBeChecked();
     expect(screen.getByRole("radio", { name: "1W" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "1M" })).not.toBeChecked();
-    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith({
-      startDate: "2026-08-17",
-      endDate: "2026-08-24",
-    });
+    expect(screen.getByRole("radio", { name: "1Q" })).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: "1Y" })).not.toBeChecked();
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      {
+        startDate: "2026-08-17",
+        endDate: "2026-08-24",
+      },
+      60_000
+    );
     expect(useCurrentWorkspace).toHaveBeenCalled();
     expect(screen.getByTestId("data-worker-bar-chart")).toBeInTheDocument();
 
@@ -204,7 +209,10 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
     fireEvent.click(screen.getByRole("radio", { name: "1D" }));
 
     expect(screen.getByRole("radio", { name: "1D" })).toBeChecked();
-    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith({ startDate: "2026-08-23", endDate: "2026-08-24" });
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      { startDate: "2026-08-23", endDate: "2026-08-24" },
+      60_000
+    );
     expect(lastChartProps().data).toHaveLength(24);
     expect(lastChartProps().data[0]).toEqual({ date: "2026-08-23T20:00:00.000Z", used: 1.5 });
     expect(lastChartProps().data.at(-1)).toEqual({ date: "2026-08-24T19:00:00.000Z", used: 0.5 });
@@ -217,18 +225,64 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
     fireEvent.click(screen.getByRole("radio", { name: "1M" }));
 
     expect(screen.getByRole("radio", { name: "1M" })).toBeChecked();
-    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith({ startDate: "2026-07-26", endDate: "2026-08-25" });
-    expect(lastChartProps().data).toHaveLength(30);
-    expect(lastChartProps().data[0]).toEqual({ date: "2026-07-26T07:00:00.000Z", used: 0 });
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      { startDate: "2026-07-25", endDate: "2026-08-25" },
+      60_000
+    );
+    expect(lastChartProps().data).toHaveLength(31);
+    expect(lastChartProps().data[0]).toEqual({ date: "2026-07-25T07:00:00.000Z", used: 0 });
     expect(lastChartProps().data.at(-1)).toEqual({ date: "2026-08-24T07:00:00.000Z", used: 0.5 });
     expect(lastChartProps().data).toEqual(expect.arrayContaining([{ date: "2026-08-23T07:00:00.000Z", used: 2 }]));
     expect(lastChartProps().data).not.toContainEqual({ date: "2026-08-25T07:00:00.000Z", used: 100 });
-    expect(lastChartProps().xAxisTicks).toHaveLength(6);
-    expect(lastChartProps().xAxisTickFormatter?.(lastChartProps().xAxisTicks?.[0], 0)).toBe("Jul 26");
+    expect(lastChartProps().xAxisTicks).toHaveLength(7);
+    expect(lastChartProps().xAxisTickFormatter?.(lastChartProps().xAxisTicks?.[0], 0)).toBe("Jul 25");
     expect(lastChartProps().barSize).toBe(16);
     expect(lastChartProps().chartKey).toBe("1m");
     expect(lastChartProps().renderTooltipContent("#605cff").props.granularity).toBe("day");
     expect(window.location.search).toBe("");
+  });
+
+  it("uses daily quarter buckets and Sunday-starting weekly year buckets with five-minute polling", async () => {
+    mockOrganizationUsage = workspaceUsage([
+      { date: "2026-08-18T16:15:00Z", used: 3 },
+      { date: "2026-08-23T16:15:00Z", used: 1.2 },
+      { date: "2026-08-23T20:15:00Z", used: 1.5 },
+      { date: "2026-08-24T19:15:00Z", used: 0.5 },
+      { date: "2026-08-25T07:00:00Z", used: 100 },
+    ]);
+
+    await render(<WorkspaceDataWorkerUsageGraph />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "1Q" }));
+
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      { startDate: "2026-05-25", endDate: "2026-08-25" },
+      300_000
+    );
+    expect(lastChartProps().data).toHaveLength(92);
+    expect(lastChartProps().data[0]).toEqual({ date: "2026-05-25T07:00:00.000Z", used: 0 });
+    expect(lastChartProps().data.at(-1)).toEqual({ date: "2026-08-24T07:00:00.000Z", used: 0.5 });
+    expect(lastChartProps().data).toEqual(expect.arrayContaining([{ date: "2026-08-23T07:00:00.000Z", used: 1.5 }]));
+    expect(lastChartProps().xAxisTicks).toHaveLength(7);
+    expect(lastChartProps().xAxisTickFormatter?.(lastChartProps().xAxisTicks?.[0], 0)).toBe("May 25");
+    expect(lastChartProps().barSize).toBe(4);
+    expect(lastChartProps().renderTooltipContent("#605cff").props.granularity).toBe("day");
+
+    fireEvent.click(screen.getByRole("radio", { name: "1Y" }));
+
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      { startDate: "2025-08-25", endDate: "2026-08-25" },
+      300_000
+    );
+    expect(lastChartProps().data).toHaveLength(53);
+    expect(lastChartProps().data[0]).toEqual({ date: "2025-08-24T07:00:00.000Z", used: 0 });
+    expect(lastChartProps().data.at(-1)).toEqual({ date: "2026-08-23T07:00:00.000Z", used: 1.5 });
+    expect(lastChartProps().data).toEqual(expect.arrayContaining([{ date: "2026-08-16T07:00:00.000Z", used: 3 }]));
+    expect(lastChartProps().data).not.toContainEqual({ date: "2026-08-30T07:00:00.000Z", used: 100 });
+    expect(lastChartProps().xAxisTicks).toHaveLength(13);
+    expect(lastChartProps().xAxisTickFormatter?.(lastChartProps().xAxisTicks?.[0], 0)).toBe("Aug");
+    expect(lastChartProps().barSize).toBe(8);
+    expect(lastChartProps().renderTooltipContent("#605cff").props.granularity).toBe("week");
   });
 
   it("renders the no-data state and range controls when the current workspace has no usage", async () => {
@@ -284,10 +338,13 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
 
     await render(<WorkspaceDataWorkerUsageGraph />);
 
-    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith({
-      startDate: "2026-08-18",
-      endDate: "2026-08-25",
-    });
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      {
+        startDate: "2026-08-18",
+        endDate: "2026-08-25",
+      },
+      60_000
+    );
     expect(lastChartProps().data).toHaveLength(168);
     expect(lastChartProps().data).toEqual(expect.arrayContaining([{ date: "2026-08-25T00:00:00.000Z", used: 2 }]));
     expect(lastChartProps().data.at(-1)).toEqual({ date: "2026-08-25T01:00:00.000Z", used: 0 });

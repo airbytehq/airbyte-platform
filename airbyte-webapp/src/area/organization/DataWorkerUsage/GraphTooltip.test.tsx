@@ -115,4 +115,28 @@ describe("GraphTooltip", () => {
 
     expect(screen.getByText("Wed, Jan 15, 10:00 AM")).toBeInTheDocument();
   });
+
+  it("shows only the weekly bucket start date for a weekly bucket", async () => {
+    await render(
+      <GraphTooltip
+        active
+        payload={[
+          {
+            payload: {
+              ...graphData,
+              formattedDate: "2026-08-02T07:00:00.000Z",
+            },
+          },
+        ]}
+        regionName="US East (N. Virginia)"
+        top10Workspaces={top10Workspaces}
+        hasOtherCategory
+        barColor="#605cff"
+        granularity="week"
+      />
+    );
+
+    expect(screen.getByText("Aug 2, 2026")).toBeInTheDocument();
+    expect(screen.queryByText(/Aug 9/)).not.toBeInTheDocument();
+  });
 });

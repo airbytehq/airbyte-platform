@@ -61,8 +61,16 @@ const rangeProps: Record<UsageTimeRange, { requestDateRange: [string, string]; d
     displayRange: ["2026-08-17T20:00:00.000Z", "2026-08-24T20:00:00.000Z"],
   },
   "1m": {
-    requestDateRange: ["2026-07-26", "2026-08-25"],
-    displayRange: ["2026-07-26T07:00:00.000Z", "2026-08-25T07:00:00.000Z"],
+    requestDateRange: ["2026-07-25", "2026-08-25"],
+    displayRange: ["2026-07-25T07:00:00.000Z", "2026-08-25T07:00:00.000Z"],
+  },
+  "1q": {
+    requestDateRange: ["2026-05-25", "2026-08-25"],
+    displayRange: ["2026-05-25T07:00:00.000Z", "2026-08-25T07:00:00.000Z"],
+  },
+  "1y": {
+    requestDateRange: ["2025-08-25", "2026-08-25"],
+    displayRange: ["2025-08-25T07:00:00.000Z", "2026-08-25T07:00:00.000Z"],
   },
 };
 
@@ -84,7 +92,7 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
   it("renders the 1D range with 24 hourly bars and time ticks", async () => {
     await renderGraph("1d");
 
-    expect(useOrganizationWorkerUsage).toHaveBeenCalledWith({ startDate: "2026-08-23", endDate: "2026-08-24" });
+    expect(useOrganizationWorkerUsage).toHaveBeenCalledWith({ startDate: "2026-08-23", endDate: "2026-08-24" }, 60_000);
     expect(screen.getByTestId("data-worker-bar-chart")).toBeInTheDocument();
 
     const chartProps = lastChartProps();
@@ -125,17 +133,51 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
     expect(chartProps.renderTooltipContent("#605cff").props.granularity).toBe("hour");
   });
 
-  it("renders the 1M range with 30 daily peak bars and spaced date ticks", async () => {
+  it("renders the calendar 1M range with daily peak bars and spaced date ticks", async () => {
     await renderGraph("1m");
 
-    expect(useOrganizationWorkerUsage).toHaveBeenCalledWith({ startDate: "2026-07-26", endDate: "2026-08-25" });
+    expect(useOrganizationWorkerUsage).toHaveBeenCalledWith({ startDate: "2026-07-25", endDate: "2026-08-25" }, 60_000);
 
     const chartProps = lastChartProps();
-    expect(chartProps.data).toHaveLength(30);
-    expect(chartProps.xAxisTicks).toHaveLength(6);
-    expect(chartProps.xAxisTickFormatter?.(chartProps.xAxisTicks?.[0], 0)).toBe("Jul 26");
+    expect(chartProps.data).toHaveLength(31);
+    expect(chartProps.xAxisTicks).toHaveLength(7);
+    expect(chartProps.xAxisTickFormatter?.(chartProps.xAxisTicks?.[0], 0)).toBe("Jul 25");
     expect(chartProps.barSize).toBe(16);
     expect(chartProps.renderTooltipContent("#605cff").props.granularity).toBe("day");
+  });
+
+  it("renders the 1Q range with daily bars and five-minute polling", async () => {
+    await renderGraph("1q");
+
+    expect(useOrganizationWorkerUsage).toHaveBeenCalledWith(
+      { startDate: "2026-05-25", endDate: "2026-08-25" },
+      300_000
+    );
+
+    const chartProps = lastChartProps();
+    expect(chartProps.data).toHaveLength(92);
+    expect(chartProps.xAxisTicks).toHaveLength(7);
+    expect(chartProps.xAxisTickFormatter?.(chartProps.xAxisTicks?.[0], 0)).toBe("May 25");
+    expect(chartProps.barSize).toBe(4);
+    expect(chartProps.renderTooltipContent("#605cff").props.granularity).toBe("day");
+  });
+
+  it("renders the 1Y range with Sunday-starting weekly bars and month ticks", async () => {
+    await renderGraph("1y");
+
+    expect(useOrganizationWorkerUsage).toHaveBeenCalledWith(
+      { startDate: "2025-08-25", endDate: "2026-08-25" },
+      300_000
+    );
+
+    const chartProps = lastChartProps();
+    expect(chartProps.data).toHaveLength(53);
+    expect(chartProps.data[0]).toEqual(expect.objectContaining({ formattedDate: "2025-08-24T07:00:00.000Z" }));
+    expect(chartProps.data.at(-1)).toEqual(expect.objectContaining({ formattedDate: "2026-08-23T07:00:00.000Z" }));
+    expect(chartProps.xAxisTicks).toHaveLength(13);
+    expect(chartProps.xAxisTickFormatter?.(chartProps.xAxisTicks?.[0], 0)).toBe("Aug");
+    expect(chartProps.barSize).toBe(8);
+    expect(chartProps.renderTooltipContent("#605cff").props.granularity).toBe("week");
   });
 
   it("retains the no-data state when the selected region has no workspaces", async () => {

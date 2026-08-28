@@ -39,6 +39,31 @@ describe(`${calculateGraphData.name}`, () => {
       expect(result[0].formattedDate).toBe("2026-10-15T07:00:00.000Z");
       expect(result.at(-1)?.formattedDate).toBe("2026-11-13T08:00:00.000Z");
     });
+
+    it("generates Sunday-starting weekly buckets including partial boundary weeks", () => {
+      const result = calculateGraphData(["2025-08-25T07:00:00.000Z", "2026-08-25T07:00:00.000Z"], "week", undefined);
+
+      expect(result).toHaveLength(53);
+      expect(result[0]).toEqual({
+        formattedDate: "2025-08-24T07:00:00.000Z",
+        regionUsage: 0,
+        maxWorkspaceUsage: 0,
+        workspaceUsage: {},
+      });
+      expect(result.at(-1)?.formattedDate).toBe("2026-08-23T07:00:00.000Z");
+    });
+
+    it("keeps weekly buckets on local Sunday across a daylight-saving change", () => {
+      expect(process.env.TZ).toBe("US/Pacific");
+
+      const result = calculateGraphData(["2026-10-28T07:00:00.000Z", "2026-11-10T08:00:00.000Z"], "week", undefined);
+
+      expect(result.map(({ formattedDate }) => formattedDate)).toEqual([
+        "2026-10-25T07:00:00.000Z",
+        "2026-11-01T07:00:00.000Z",
+        "2026-11-08T08:00:00.000Z",
+      ]);
+    });
   });
 
   describe("hourly aggregation", () => {
@@ -226,6 +251,63 @@ describe(`${calculateGraphData.name}`, () => {
 
       expect(result[0]).toEqual(
         expect.objectContaining({ regionUsage: 4, maxWorkspaceUsage: 4, workspaceUsage: { "workspace-1": 4 } })
+      );
+    });
+  });
+
+  describe("weekly peak aggregation", () => {
+    it("uses workspace values from the region's peak hour and clips data outside partial weeks", () => {
+      const result = calculateGraphData(
+        ["2025-08-25T07:00:00.000Z", "2025-09-08T07:00:00.000Z"],
+        "week",
+        regionUsage([
+          {
+            id: "workspace-1",
+            name: "Workspace 1",
+            dataWorkers: [
+              { date: "2025-08-24T18:00:00.000Z", used: 100 },
+              { date: "2025-08-26T18:00:00.000Z", used: 10 },
+              { date: "2025-08-30T19:00:00.000Z", used: 5 },
+            ],
+          },
+          {
+            id: "workspace-2",
+            name: "Workspace 2",
+            dataWorkers: [
+              { date: "2025-08-26T18:00:00.000Z", used: 2 },
+              { date: "2025-08-30T19:00:00.000Z", used: 20 },
+              { date: "2025-09-08T07:00:00.000Z", used: 100 },
+            ],
+          },
+        ])
+      );
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toEqual({
+        formattedDate: "2025-08-24T07:00:00.000Z",
+        regionUsage: 25,
+        maxWorkspaceUsage: 20,
+        workspaceUsage: { "workspace-1": 5, "workspace-2": 20 },
+      });
+      expect(result[1]).toEqual(expect.objectContaining({ regionUsage: 0, maxWorkspaceUsage: 0, workspaceUsage: {} }));
+      expect(result[2]).toEqual(expect.objectContaining({ regionUsage: 0, maxWorkspaceUsage: 0, workspaceUsage: {} }));
+    });
+
+    it("preserves explicit zero usage in a weekly bucket", () => {
+      const result = calculateGraphData(
+        ["2025-08-25T07:00:00.000Z", "2025-09-01T07:00:00.000Z"],
+        "week",
+        regionUsage([
+          {
+            id: "workspace-1",
+            name: "Workspace 1",
+            dataWorkers: [{ date: "2025-08-26T18:00:00.000Z", used: 0 }],
+          },
+        ])
+      );
+
+      expect(result[0]).toEqual(
+        expect.objectContaining({ regionUsage: 0, maxWorkspaceUsage: 0, workspaceUsage: { "workspace-1": 0 } })
       );
     });
   });

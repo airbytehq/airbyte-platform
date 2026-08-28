@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { ReactNode, Suspense } from "react";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 
-import { useCurrentOrganizationInfo, useOrgInfo } from "./organizations";
-import { getOrgInfo } from "../generated/AirbyteClient";
-import { OrganizationInfoRead } from "../types/AirbyteClient";
+import { useCurrentOrganizationInfo, useOrganizationWorkerUsage, useOrgInfo } from "./organizations";
+import { getOrganizationDataWorkerUsage, getOrgInfo } from "../generated/AirbyteClient";
+import { OrganizationDataWorkerUsageRead, OrganizationInfoRead } from "../types/AirbyteClient";
 
 jest.mock("area/organization/utils", () => ({
   useCurrentOrganizationId: jest.fn(),
@@ -17,6 +17,7 @@ jest.mock("core/services/auth", () => ({
 }));
 
 jest.mock("../generated/AirbyteClient", () => ({
+  getOrganizationDataWorkerUsage: jest.fn(),
   getOrgInfo: jest.fn(),
 }));
 
@@ -35,6 +36,9 @@ jest.mock("./workspaces", () => ({
 
 const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunction<typeof useCurrentOrganizationId>;
 const mockGetOrgInfo = getOrgInfo as jest.MockedFunction<typeof getOrgInfo>;
+const mockGetOrganizationDataWorkerUsage = getOrganizationDataWorkerUsage as jest.MockedFunction<
+  typeof getOrganizationDataWorkerUsage
+>;
 
 describe("organization info hooks", () => {
   let queryClient: QueryClient;
@@ -52,6 +56,7 @@ describe("organization info hooks", () => {
 
   afterEach(() => {
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   it("does not request current organization info without an organization id", () => {
@@ -79,5 +84,46 @@ describe("organization info hooks", () => {
 
     await waitFor(() => expect(result.current).toEqual(organizationInfo));
     expect(mockGetOrgInfo).toHaveBeenCalledWith({ organizationId: "org-123" }, {});
+  });
+
+  it("polls organization worker usage every 60 seconds by default", async () => {
+    jest.useFakeTimers();
+    const usage: OrganizationDataWorkerUsageRead = { organizationId: "org-123", committedDataWorkers: 4, regions: [] };
+    mockUseCurrentOrganizationId.mockReturnValue("org-123");
+    mockGetOrganizationDataWorkerUsage.mockResolvedValue(usage);
+
+    const { result } = renderHook(
+      () => useOrganizationWorkerUsage({ startDate: "2026-08-01", endDate: "2026-08-25" }),
+      { wrapper }
+    );
+
+    await waitFor(() => expect(result.current).toEqual(usage));
+    expect(mockGetOrganizationDataWorkerUsage).toHaveBeenCalledTimes(1);
+
+    await act(async () => jest.advanceTimersByTime(60_000));
+
+    await waitFor(() => expect(mockGetOrganizationDataWorkerUsage).toHaveBeenCalledTimes(2));
+  });
+
+  it("uses an explicit five-minute worker usage polling interval", async () => {
+    jest.useFakeTimers();
+    const usage: OrganizationDataWorkerUsageRead = { organizationId: "org-123", committedDataWorkers: 4, regions: [] };
+    mockUseCurrentOrganizationId.mockReturnValue("org-123");
+    mockGetOrganizationDataWorkerUsage.mockResolvedValue(usage);
+
+    const { result } = renderHook(
+      () => useOrganizationWorkerUsage({ startDate: "2025-08-25", endDate: "2026-08-25" }, 300_000),
+      { wrapper }
+    );
+
+    await waitFor(() => expect(result.current).toEqual(usage));
+    expect(mockGetOrganizationDataWorkerUsage).toHaveBeenCalledTimes(1);
+
+    await act(async () => jest.advanceTimersByTime(60_000));
+    expect(mockGetOrganizationDataWorkerUsage).toHaveBeenCalledTimes(1);
+
+    await act(async () => jest.advanceTimersByTime(240_000));
+
+    await waitFor(() => expect(mockGetOrganizationDataWorkerUsage).toHaveBeenCalledTimes(2));
   });
 });

@@ -14,7 +14,7 @@ const formatWorkerUsageNumber = (value: number) => {
 
 interface WorkspaceDataWorkerGraphTooltipProps extends TooltipProps<number, string> {
   workspaceName: string;
-  granularity: "hour" | "day";
+  granularity: "hour" | "day" | "week";
 }
 
 export const WorkspaceDataWorkerGraphTooltip = ({
@@ -35,6 +35,8 @@ export const WorkspaceDataWorkerGraphTooltip = ({
         dayjs(dateString).toDate(),
         granularity === "hour"
           ? { month: "short", day: "numeric", weekday: "short", hour: "numeric", minute: "2-digit" }
+          : granularity === "week"
+          ? { month: "short", day: "numeric", year: "numeric" }
           : { month: "short", day: "numeric", weekday: "short" }
       )
     : undefined;

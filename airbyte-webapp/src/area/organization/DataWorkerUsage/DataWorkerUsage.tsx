@@ -23,7 +23,17 @@ const TIME_RANGE_OPTIONS: Array<{ labelId: string; value: UsageTimeRange }> = [
   { labelId: "settings.organization.usage.timeRange.1d", value: "1d" },
   { labelId: "settings.organization.usage.timeRange.1w", value: "1w" },
   { labelId: "settings.organization.usage.timeRange.1m", value: "1m" },
+  { labelId: "settings.organization.usage.timeRange.1q", value: "1q" },
+  { labelId: "settings.organization.usage.timeRange.1y", value: "1y" },
 ];
+
+const USAGE_UPDATE_INTERVAL_BY_RANGE: Record<UsageTimeRange, number> = {
+  "1d": 60_000,
+  "1w": 60_000,
+  "1m": 60_000,
+  "1q": 300_000,
+  "1y": 300_000,
+};
 
 const RegionControlButtonContent = ({
   selectedOption,
@@ -53,13 +63,22 @@ export const DataWorkerUsage: React.FC = () => {
     [formatMessage]
   );
 
-  const currentTime = useCurrentTime(60_000);
+  const usageUpdateInterval = USAGE_UPDATE_INTERVAL_BY_RANGE[selectedTimeRange];
+  const currentTime = useCurrentTime(usageUpdateInterval);
 
   const timeWindow = useMemo(() => {
-    const granularity = selectedTimeRange === "1m" ? "day" : "hour";
-    const bucketCount = selectedTimeRange === "1d" ? 24 : selectedTimeRange === "1w" ? 7 * 24 : 30;
-    const rangeEnd = dayjs(currentTime).startOf(granularity).add(1, granularity);
-    const rangeStart = rangeEnd.subtract(bucketCount, granularity);
+    const boundaryGranularity = selectedTimeRange === "1d" || selectedTimeRange === "1w" ? "hour" : "day";
+    const rangeEnd = dayjs(currentTime).startOf(boundaryGranularity).add(1, boundaryGranularity);
+    const rangeStart =
+      selectedTimeRange === "1d"
+        ? rangeEnd.subtract(24, "hour")
+        : selectedTimeRange === "1w"
+        ? rangeEnd.subtract(7 * 24, "hour")
+        : selectedTimeRange === "1m"
+        ? rangeEnd.subtract(1, "month")
+        : selectedTimeRange === "1q"
+        ? rangeEnd.subtract(3, "month")
+        : rangeEnd.subtract(1, "year");
     const displayRange: [string, string] = [rangeStart.toISOString(), rangeEnd.toISOString()];
     const requestDateRange: [string, string] = [
       rangeStart.toISOString().slice(0, 10),
@@ -73,10 +92,13 @@ export const DataWorkerUsage: React.FC = () => {
   // usage query suspends (at UTC midnight the request dates change and there is no cache).
   const { displayRange, requestDateRange } = useDeferredValue(timeWindow);
 
-  const allUsage = useOrganizationWorkerUsage({
-    startDate: requestDateRange[0],
-    endDate: requestDateRange[1],
-  });
+  const allUsage = useOrganizationWorkerUsage(
+    {
+      startDate: requestDateRange[0],
+      endDate: requestDateRange[1],
+    },
+    usageUpdateInterval
+  );
 
   const sortedRegions = useMemo(() => [...regions].sort(sortByNameAlphabetically), [regions]);
   const regionOptions = useMemo(() => getRegionOptions(sortedRegions), [sortedRegions]);

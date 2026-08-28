@@ -56,6 +56,20 @@ describe(`${WorkspaceDataWorkerGraphTooltip.name}`, () => {
     expect(screen.queryByText("Mon, Jun 1, 12:00 PM")).not.toBeInTheDocument();
   });
 
+  it("shows only the weekly bucket start date for a weekly peak", async () => {
+    await render(
+      <WorkspaceDataWorkerGraphTooltip
+        active
+        payload={[{ value: 1.46, payload: { date: "2026-08-02T07:00:00Z", used: 1.46 } }]}
+        workspaceName={workspaceName}
+        granularity="week"
+      />
+    );
+
+    expect(screen.getByText("Aug 2, 2026")).toBeInTheDocument();
+    expect(screen.queryByText(/Aug 9/)).not.toBeInTheDocument();
+  });
+
   it("renders zero usage", async () => {
     await render(
       <WorkspaceDataWorkerGraphTooltip

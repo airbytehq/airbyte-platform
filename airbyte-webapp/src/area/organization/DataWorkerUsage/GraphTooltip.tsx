@@ -85,6 +85,8 @@ export const GraphTooltip = ({
               hour="numeric"
               minute="2-digit"
             />
+          ) : granularity === "week" ? (
+            <FormattedDate value={localDate} month="short" day="numeric" year="numeric" />
           ) : (
             <FormattedDate value={localDate} month="short" day="numeric" weekday="short" />
           )}

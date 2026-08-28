@@ -13,7 +13,7 @@ import { DataWorkerUsageBarChart } from "./DataWorkerUsageBarChart";
 import { GraphTooltip } from "./GraphTooltip";
 import styles from "./UsageByWorkspaceGraph.module.scss";
 
-export type UsageTimeRange = "1d" | "1w" | "1m";
+export type UsageTimeRange = "1d" | "1w" | "1m" | "1q" | "1y";
 
 interface UsageByWorkspaceGraphProps {
   selectedRegionId: string;
@@ -27,12 +27,24 @@ const TICK_STEP_BY_RANGE: Record<UsageTimeRange, number> = {
   "1d": 6,
   "1w": 24,
   "1m": 5,
+  "1q": 15,
+  "1y": 1,
 };
 
 const BAR_SIZE_BY_RANGE: Record<UsageTimeRange, number> = {
   "1d": 16,
   "1w": 4,
   "1m": 16,
+  "1q": 4,
+  "1y": 8,
+};
+
+const USAGE_REFETCH_INTERVAL_BY_RANGE: Record<UsageTimeRange, number> = {
+  "1d": 60_000,
+  "1w": 60_000,
+  "1m": 60_000,
+  "1q": 300_000,
+  "1y": 300_000,
 };
 
 export const UsageByWorkspaceGraph = ({
@@ -43,11 +55,15 @@ export const UsageByWorkspaceGraph = ({
   committedDataWorkers,
 }: UsageByWorkspaceGraphProps) => {
   const { formatDate, formatMessage } = useIntl();
-  const granularity: UsageGraphGranularity = selectedTimeRange === "1m" ? "day" : "hour";
-  const allUsage = useOrganizationWorkerUsage({
-    startDate: requestDateRange[0],
-    endDate: requestDateRange[1],
-  });
+  const granularity: UsageGraphGranularity =
+    selectedTimeRange === "1y" ? "week" : selectedTimeRange === "1m" || selectedTimeRange === "1q" ? "day" : "hour";
+  const allUsage = useOrganizationWorkerUsage(
+    {
+      startDate: requestDateRange[0],
+      endDate: requestDateRange[1],
+    },
+    USAGE_REFETCH_INTERVAL_BY_RANGE[selectedTimeRange]
+  );
   const selectedRegionUsage = useMemo(
     () => allUsage?.regions.find((region) => region.id === selectedRegionId),
     [selectedRegionId, allUsage]
@@ -90,13 +106,20 @@ export const UsageByWorkspaceGraph = ({
     [displayRange, granularity, selectedRegionUsage, top10Workspaces, otherWorkspaces]
   );
 
-  const xAxisTicks = useMemo(
-    () =>
-      data
-        .filter((_, index) => index % TICK_STEP_BY_RANGE[selectedTimeRange] === 0)
-        .map(({ formattedDate }) => formattedDate),
-    [data, selectedTimeRange]
-  );
+  const xAxisTicks = useMemo(() => {
+    if (selectedTimeRange === "1y") {
+      return data
+        .filter(
+          ({ formattedDate }, index) =>
+            index === 0 || dayjs(formattedDate).month() !== dayjs(data[index - 1].formattedDate).month()
+        )
+        .map(({ formattedDate }) => formattedDate);
+    }
+
+    return data
+      .filter((_, index) => index % TICK_STEP_BY_RANGE[selectedTimeRange] === 0)
+      .map(({ formattedDate }) => formattedDate);
+  }, [data, selectedTimeRange]);
 
   if (!selectedRegionUsage || selectedRegionUsage.workspaces.length === 0 || sortedWorkspaces.length === 0) {
     return (
@@ -120,7 +143,11 @@ export const UsageByWorkspaceGraph = ({
       xAxisTickFormatter={(value) =>
         formatDate(
           dayjs(value).toDate(),
-          selectedTimeRange === "1d" ? { hour: "numeric" } : { month: "short", day: "numeric" }
+          selectedTimeRange === "1d"
+            ? { hour: "numeric" }
+            : selectedTimeRange === "1y"
+            ? { month: "short" }
+            : { month: "short", day: "numeric" }
         )
       }
       xAxisInterval={0}

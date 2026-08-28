@@ -10,7 +10,7 @@ interface MockUsageByWorkspaceGraphProps {
   selectedRegionId: string;
   requestDateRange: [string, string];
   displayRange: [string, string];
-  selectedTimeRange: "1d" | "1w" | "1m";
+  selectedTimeRange: "1d" | "1w" | "1m" | "1q" | "1y";
 }
 
 const mockUsageByWorkspaceGraph = jest.fn();
@@ -96,11 +96,16 @@ describe(`${DataWorkerUsage.name}`, () => {
     expect(screen.getByRole("radio", { name: "1D" })).not.toBeChecked();
     expect(screen.getByRole("radio", { name: "1W" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "1M" })).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: "1Q" })).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: "1Y" })).not.toBeChecked();
     expect(screen.queryByTestId("range-date-picker")).not.toBeInTheDocument();
-    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith({
-      startDate: "2026-08-17",
-      endDate: "2026-08-24",
-    });
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      {
+        startDate: "2026-08-17",
+        endDate: "2026-08-24",
+      },
+      60_000
+    );
 
     expect(lastGraphProps()).toEqual(
       expect.objectContaining({
@@ -123,10 +128,13 @@ describe(`${DataWorkerUsage.name}`, () => {
     fireEvent.click(screen.getByRole("radio", { name: "1D" }));
 
     expect(screen.getByRole("radio", { name: "1D" })).toBeChecked();
-    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith({
-      startDate: "2026-08-23",
-      endDate: "2026-08-24",
-    });
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      {
+        startDate: "2026-08-23",
+        endDate: "2026-08-24",
+      },
+      60_000
+    );
     expect(lastGraphProps()).toEqual(
       expect.objectContaining({
         selectedTimeRange: "1d",
@@ -138,18 +146,73 @@ describe(`${DataWorkerUsage.name}`, () => {
     fireEvent.click(screen.getByRole("radio", { name: "1M" }));
 
     expect(screen.getByRole("radio", { name: "1M" })).toBeChecked();
-    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith({
-      startDate: "2026-07-26",
-      endDate: "2026-08-25",
-    });
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      {
+        startDate: "2026-07-25",
+        endDate: "2026-08-25",
+      },
+      60_000
+    );
     expect(lastGraphProps()).toEqual(
       expect.objectContaining({
         selectedTimeRange: "1m",
-        requestDateRange: ["2026-07-26", "2026-08-25"],
-        displayRange: ["2026-07-26T07:00:00.000Z", "2026-08-25T07:00:00.000Z"],
+        requestDateRange: ["2026-07-25", "2026-08-25"],
+        displayRange: ["2026-07-25T07:00:00.000Z", "2026-08-25T07:00:00.000Z"],
       })
     );
     expect(window.location.search).toBe("");
+  });
+
+  it("uses calendar quarter and year windows with five-minute polling", async () => {
+    await render(<DataWorkerUsage />);
+    await waitFor(() => expect(screen.getByTestId("usage-by-workspace-graph")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("radio", { name: "1Q" }));
+
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      { startDate: "2026-05-25", endDate: "2026-08-25" },
+      300_000
+    );
+    expect(lastGraphProps()).toEqual(
+      expect.objectContaining({
+        selectedTimeRange: "1q",
+        requestDateRange: ["2026-05-25", "2026-08-25"],
+        displayRange: ["2026-05-25T07:00:00.000Z", "2026-08-25T07:00:00.000Z"],
+      })
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "1Y" }));
+
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      { startDate: "2025-08-25", endDate: "2026-08-25" },
+      300_000
+    );
+    expect(lastGraphProps()).toEqual(
+      expect.objectContaining({
+        selectedTimeRange: "1y",
+        requestDateRange: ["2025-08-25", "2026-08-25"],
+        displayRange: ["2025-08-25T07:00:00.000Z", "2026-08-25T07:00:00.000Z"],
+      })
+    );
+  });
+
+  it("uses calendar-year arithmetic when the rolling range ends on leap day", async () => {
+    jest.setSystemTime(new Date("2024-02-28T12:34:00-08:00"));
+
+    await render(<DataWorkerUsage />);
+    await waitFor(() => expect(screen.getByTestId("usage-by-workspace-graph")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("radio", { name: "1Y" }));
+
+    expect(useOrganizationWorkerUsage).toHaveBeenLastCalledWith(
+      { startDate: "2023-02-28", endDate: "2024-02-29" },
+      300_000
+    );
+    expect(lastGraphProps()).toEqual(
+      expect.objectContaining({
+        displayRange: ["2023-02-28T08:00:00.000Z", "2024-02-29T08:00:00.000Z"],
+      })
+    );
   });
 
   it("renders the region placeholder and no graph when there are no regions", async () => {
