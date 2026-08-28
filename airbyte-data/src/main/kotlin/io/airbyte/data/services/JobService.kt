@@ -7,6 +7,7 @@ package io.airbyte.data.services
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobStatus
+import io.airbyte.data.services.shared.LatestJobHealthSummary
 import java.time.OffsetDateTime
 
 interface JobService {
@@ -33,13 +34,14 @@ interface JobService {
   ): List<Job>
 
   /**
-   * List the latest job per scope with the given filters.
+   * Latest job per scope across all of [configTypes], projected to the fields rollout health
+   * evaluation reads.
    */
   fun findLatestJobPerScope(
     configTypes: Set<ConfigType>,
     scopes: Set<String>,
     createdAtStart: OffsetDateTime,
-  ): List<Job>
+  ): List<LatestJobHealthSummary>
 
   /**
    * Get the first successful job for a given scope.

@@ -10,19 +10,14 @@ import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ConnectionSummary
-import io.airbyte.config.ConnectionWithLatestJob
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFilters
 import io.airbyte.config.CustomerTier
 import io.airbyte.config.CustomerTierFilter
-import io.airbyte.config.Job
 import io.airbyte.config.JobBypassFilter
-import io.airbyte.config.JobConfig
-import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobStatus
-import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.Operator
 import io.airbyte.config.Schedule
 import io.airbyte.config.ScopedConfiguration
@@ -40,6 +35,7 @@ import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
+import io.airbyte.data.services.shared.LatestJobHealthSummary
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -161,48 +157,18 @@ class RolloutActorFinderTest {
       syncs: List<ConnectionSummary>,
       nFailure: Int,
       nPinnedToReleaseCandidate: Int,
-    ): List<Job> =
+    ): List<LatestJobHealthSummary> =
       syncs.mapIndexed { index, connection ->
         val jobStatus = if (index < nFailure) JobStatus.FAILED else JobStatus.SUCCEEDED
-        Job(
-          0,
-          ConfigType.SYNC,
-          connection.connectionId.toString(),
-          JobConfig().apply {
-            sync =
-              JobSyncConfig().apply {
-                sourceDockerImageIsDefault =
-                  if (index < nPinnedToReleaseCandidate) {
-                    false
-                  } else {
-                    true
-                  }
-                sourceDefinitionVersionId =
-                  if (index < nPinnedToReleaseCandidate) {
-                    RELEASE_CANDIDATE_VERSION_ID
-                  } else {
-                    SOURCE_ACTOR_DEFINITION_VERSION_ID
-                  }
-                destinationDockerImageIsDefault =
-                  if (index < nPinnedToReleaseCandidate) {
-                    false
-                  } else {
-                    true
-                  }
-                destinationDefinitionVersionId =
-                  if (index < nPinnedToReleaseCandidate) {
-                    RELEASE_CANDIDATE_VERSION_ID
-                  } else {
-                    DESTINATION_ACTOR_DEFINITION_VERSION_ID
-                  }
-              }
-          },
-          emptyList(),
-          jobStatus,
-          0L,
-          0L,
-          0L,
-          true,
+        LatestJobHealthSummary(
+          scope = connection.connectionId.toString(),
+          status = jobStatus,
+          sourceDefinitionVersionId =
+            if (index < nPinnedToReleaseCandidate) RELEASE_CANDIDATE_VERSION_ID else SOURCE_ACTOR_DEFINITION_VERSION_ID,
+          destinationDefinitionVersionId =
+            if (index < nPinnedToReleaseCandidate) RELEASE_CANDIDATE_VERSION_ID else DESTINATION_ACTOR_DEFINITION_VERSION_ID,
+          sourceDockerImageIsDefault = index >= nPinnedToReleaseCandidate,
+          destinationDockerImageIsDefault = index >= nPinnedToReleaseCandidate,
         )
       }
 
@@ -229,38 +195,16 @@ class RolloutActorFinderTest {
       versionId: UUID?,
       isDefault: Boolean,
       scope: String = UUID.randomUUID().toString(),
-      createdAt: Long = System.currentTimeMillis(),
       status: JobStatus = JobStatus.SUCCEEDED,
-    ): Job {
-      val syncConfig =
-        JobSyncConfig().apply {
-          if (actorType == ActorType.SOURCE) {
-            sourceDefinitionVersionId = versionId
-            sourceDockerImageIsDefault = isDefault
-          } else {
-            destinationDefinitionVersionId = versionId
-            destinationDockerImageIsDefault = isDefault
-          }
-        }
-
-      val jobConfig =
-        JobConfig().apply {
-          sync = syncConfig
-        }
-
-      return Job(
-        0,
-        ConfigType.SYNC,
-        scope,
-        jobConfig,
-        emptyList(),
-        status,
-        createdAt,
-        createdAt,
-        createdAt,
-        true,
+    ): LatestJobHealthSummary =
+      LatestJobHealthSummary(
+        scope = scope,
+        status = status,
+        sourceDefinitionVersionId = if (actorType == ActorType.SOURCE) versionId else null,
+        destinationDefinitionVersionId = if (actorType == ActorType.DESTINATION) versionId else null,
+        sourceDockerImageIsDefault = if (actorType == ActorType.SOURCE) isDefault else null,
+        destinationDockerImageIsDefault = if (actorType == ActorType.DESTINATION) isDefault else null,
       )
-    }
   }
 
   @BeforeEach
@@ -465,35 +409,15 @@ class RolloutActorFinderTest {
     val paginatedJobBatches =
       mockConnectionSyncs
         .map { connection ->
-          Job(
-            0,
-            ConfigType.SYNC,
-            connection.connectionId.toString(),
-            JobConfig().apply {
-              sync =
-                JobSyncConfig().apply {
-                  sourceDockerImageIsDefault = true
-                  sourceDefinitionVersionId =
-                    if (actorType == ActorType.SOURCE) {
-                      RELEASE_CANDIDATE_VERSION_ID
-                    } else {
-                      SOURCE_ACTOR_DEFINITION_VERSION_ID
-                    }
-                  destinationDockerImageIsDefault = true
-                  destinationDefinitionVersionId =
-                    if (actorType == ActorType.DESTINATION) {
-                      RELEASE_CANDIDATE_VERSION_ID
-                    } else {
-                      DESTINATION_ACTOR_DEFINITION_VERSION_ID
-                    }
-                }
-            },
-            emptyList(),
-            JobStatus.SUCCEEDED,
-            0L,
-            0L,
-            0L,
-            true,
+          LatestJobHealthSummary(
+            scope = connection.connectionId.toString(),
+            status = JobStatus.SUCCEEDED,
+            sourceDefinitionVersionId =
+              if (actorType == ActorType.SOURCE) RELEASE_CANDIDATE_VERSION_ID else SOURCE_ACTOR_DEFINITION_VERSION_ID,
+            destinationDefinitionVersionId =
+              if (actorType == ActorType.DESTINATION) RELEASE_CANDIDATE_VERSION_ID else DESTINATION_ACTOR_DEFINITION_VERSION_ID,
+            sourceDockerImageIsDefault = true,
+            destinationDockerImageIsDefault = true,
           )
         }.chunked(1000)
 
@@ -540,26 +464,14 @@ class RolloutActorFinderTest {
     destinationVersion: UUID = UUID.randomUUID(),
     sourceVersionIsDefault: Boolean = false,
     destinationVersionIsDefault: Boolean = false,
-  ): Job =
-    Job(
-      0,
-      ConfigType.SYNC,
-      UUID.randomUUID().toString(),
-      JobConfig().apply {
-        sync =
-          JobSyncConfig().apply {
-            sourceDockerImageIsDefault = sourceVersionIsDefault
-            sourceDefinitionVersionId = sourceVersion
-            destinationDockerImageIsDefault = destinationVersionIsDefault
-            destinationDefinitionVersionId = destinationVersion
-          }
-      },
-      emptyList(),
-      status,
-      0L,
-      0L,
-      0L,
-      true,
+  ): LatestJobHealthSummary =
+    LatestJobHealthSummary(
+      scope = UUID.randomUUID().toString(),
+      status = status,
+      sourceDefinitionVersionId = sourceVersion,
+      destinationDefinitionVersionId = destinationVersion,
+      sourceDockerImageIsDefault = sourceVersionIsDefault,
+      destinationDockerImageIsDefault = destinationVersionIsDefault,
     )
 
   private fun createMockConnectionWithJob(
@@ -643,43 +555,23 @@ class RolloutActorFinderTest {
       actorDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID
     }
     val job1 =
-      Job(
-        1,
-        ConfigType.SYNC,
-        ORGANIZATION_1_WORKSPACE_1_ACTOR_ID.toString(),
-        JobConfig().apply {
-          sync =
-            JobSyncConfig().apply {
-              sourceDefinitionVersionId = SOURCE_ACTOR_DEFINITION_VERSION_ID
-              destinationDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID
-            }
-        },
-        emptyList(),
-        JobStatus.SUCCEEDED,
-        0L,
-        0L,
-        0L,
-        true,
+      LatestJobHealthSummary(
+        scope = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID.toString(),
+        status = JobStatus.SUCCEEDED,
+        sourceDefinitionVersionId = SOURCE_ACTOR_DEFINITION_VERSION_ID,
+        destinationDefinitionVersionId = DESTINATION_ACTOR_DEFINITION_VERSION_ID,
+        sourceDockerImageIsDefault = null,
+        destinationDockerImageIsDefault = null,
       )
 
     val job2 =
-      Job(
-        2,
-        ConfigType.SYNC,
-        ORGANIZATION_1_WORKSPACE_2_ACTOR_ID.toString(),
-        JobConfig().apply {
-          sync =
-            JobSyncConfig().apply {
-              sourceDefinitionVersionId = UUID.randomUUID()
-              destinationDefinitionVersionId = UUID.randomUUID()
-            }
-        },
-        emptyList(),
-        JobStatus.SUCCEEDED,
-        0L,
-        0L,
-        0L,
-        true,
+      LatestJobHealthSummary(
+        scope = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID.toString(),
+        status = JobStatus.SUCCEEDED,
+        sourceDefinitionVersionId = UUID.randomUUID(),
+        destinationDefinitionVersionId = UUID.randomUUID(),
+        sourceDockerImageIsDefault = null,
+        destinationDockerImageIsDefault = null,
       )
 
     assertEquals(true, rolloutActorFinder.jobDefinitionVersionIdEq(actorType, job1, actorDefinitionVersionId))
@@ -690,47 +582,44 @@ class RolloutActorFinderTest {
   @EnumSource(ActorType::class)
   fun `test jobDockerImageIsDefault`(actorType: ActorType) {
     val job1 =
-      Job(
-        1,
-        ConfigType.SYNC,
-        ORGANIZATION_1_WORKSPACE_1_ACTOR_ID.toString(),
-        JobConfig().apply {
-          sync =
-            JobSyncConfig().apply {
-              sourceDockerImageIsDefault = true
-              destinationDockerImageIsDefault = true
-            }
-        },
-        emptyList(),
-        JobStatus.SUCCEEDED,
-        0L,
-        0L,
-        0L,
-        true,
+      LatestJobHealthSummary(
+        scope = ORGANIZATION_1_WORKSPACE_1_ACTOR_ID.toString(),
+        status = JobStatus.SUCCEEDED,
+        sourceDefinitionVersionId = null,
+        destinationDefinitionVersionId = null,
+        sourceDockerImageIsDefault = true,
+        destinationDockerImageIsDefault = true,
       )
 
     val job2 =
-      Job(
-        2,
-        ConfigType.SYNC,
-        ORGANIZATION_1_WORKSPACE_2_ACTOR_ID.toString(),
-        JobConfig().apply {
-          sync =
-            JobSyncConfig().apply {
-              sourceDockerImageIsDefault = false
-              destinationDockerImageIsDefault = false
-            }
-        },
-        emptyList(),
-        JobStatus.SUCCEEDED,
-        0L,
-        0L,
-        0L,
-        true,
+      LatestJobHealthSummary(
+        scope = ORGANIZATION_1_WORKSPACE_2_ACTOR_ID.toString(),
+        status = JobStatus.SUCCEEDED,
+        sourceDefinitionVersionId = null,
+        destinationDefinitionVersionId = null,
+        sourceDockerImageIsDefault = false,
+        destinationDockerImageIsDefault = false,
       )
 
     assertEquals(true, rolloutActorFinder.jobDockerImageIsDefault(actorType, job1))
     assertEquals(false, rolloutActorFinder.jobDockerImageIsDefault(actorType, job2))
+  }
+
+  @ParameterizedTest
+  @EnumSource(ActorType::class)
+  fun `missing health fields do not match`(actorType: ActorType) {
+    val job =
+      LatestJobHealthSummary(
+        scope = UUID.randomUUID().toString(),
+        status = JobStatus.SUCCEEDED,
+        sourceDefinitionVersionId = null,
+        destinationDefinitionVersionId = null,
+        sourceDockerImageIsDefault = null,
+        destinationDockerImageIsDefault = null,
+      )
+
+    assertFalse(rolloutActorFinder.jobDefinitionVersionIdEq(actorType, job, UUID.randomUUID()))
+    assertFalse(rolloutActorFinder.jobDockerImageIsDefault(actorType, job))
   }
 
   @ParameterizedTest

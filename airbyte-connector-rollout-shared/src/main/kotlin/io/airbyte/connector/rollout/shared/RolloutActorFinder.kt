@@ -9,12 +9,10 @@ import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ConnectionSummary
-import io.airbyte.config.ConnectionWithLatestJob
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFilters
 import io.airbyte.config.CustomerTier
 import io.airbyte.config.CustomerTierFilter
-import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobStatus
 import io.airbyte.config.Schedule
@@ -29,6 +27,7 @@ import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.ConfigScopeMapWithId
 import io.airbyte.data.services.shared.ConnectorVersionKey
+import io.airbyte.data.services.shared.LatestJobHealthSummary
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.opentelemetry.instrumentation.annotations.WithSpan
 import jakarta.inject.Singleton
@@ -287,7 +286,7 @@ class RolloutActorFinder(
 
   internal fun updateActorSyncJobInfo(
     jobInfo: ActorSyncJobInfo,
-    job: Job,
+    job: LatestJobHealthSummary,
   ) {
     if (job.status == JobStatus.SUCCEEDED) jobInfo.nSucceeded++
     if (job.status == JobStatus.FAILED) jobInfo.nFailed++
@@ -296,23 +295,23 @@ class RolloutActorFinder(
 
   internal fun jobDefinitionVersionIdEq(
     actorType: ActorType,
-    job: Job,
+    job: LatestJobHealthSummary,
     versionId: UUID,
   ): Boolean =
     if (actorType == ActorType.SOURCE) {
-      job.config.sync.sourceDefinitionVersionId == versionId
+      job.sourceDefinitionVersionId == versionId
     } else {
-      job.config.sync.destinationDefinitionVersionId == versionId
+      job.destinationDefinitionVersionId == versionId
     }
 
   internal fun jobDockerImageIsDefault(
     actorType: ActorType,
-    job: Job,
+    job: LatestJobHealthSummary,
   ): Boolean =
     if (actorType == ActorType.SOURCE) {
-      job.config.sync.sourceDockerImageIsDefault
+      job.sourceDockerImageIsDefault == true
     } else {
-      job.config.sync.destinationDockerImageIsDefault
+      job.destinationDockerImageIsDefault == true
     }
 
   internal fun getActorType(actorDefinitionId: UUID): ActorType =
@@ -553,7 +552,7 @@ class RolloutActorFinder(
     configTypes: Set<JobConfig.ConfigType>,
     connectionIds: Set<String>,
     createdAt: OffsetDateTime?,
-    processJobs: (Map<UUID, Job>) -> Unit,
+    processJobs: (Map<UUID, LatestJobHealthSummary>) -> Unit,
   ) {
     connectionIds.chunked(SCOPE_FETCH_LIMIT).forEachIndexed { batchIndex, batch ->
       logger.info {
@@ -589,7 +588,7 @@ class RolloutActorFinder(
 
   internal fun isJobCompatibleWithVersion(
     actorType: ActorType,
-    job: Job,
+    job: LatestJobHealthSummary,
     versionId: UUID?,
   ): Boolean =
     versionId?.let {

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.UUID
 
 @MicronautTest(environments = [Environment.TEST])
 internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
@@ -23,7 +24,31 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
   private val scope2 = "scope2"
   private val scope3 = "scope3"
   private val scope4 = "scope4"
-  private val config = Jsons.jsonNode(mapOf<String, String>())
+  private val sourceDefinitionVersionId = UUID.fromString("0d1777a3-0000-0000-0000-000000000001")
+  private val destinationDefinitionVersionId = UUID.fromString("0d1777a3-0000-0000-0000-000000000002")
+
+  /**
+   * Job configs nest the replication config under a per-config-type key, so the health summary
+   * query has to read from a different path for each type.
+   */
+  private fun configFor(configType: JobConfigType) =
+    Jsons.jsonNode(
+      mapOf(
+        when (configType) {
+          JobConfigType.refresh -> "refresh"
+          JobConfigType.reset_connection -> "resetConnection"
+          else -> "sync"
+        } to
+          mapOf(
+            "sourceDefinitionVersionId" to sourceDefinitionVersionId,
+            "destinationDefinitionVersionId" to destinationDefinitionVersionId,
+            "sourceDockerImageIsDefault" to true,
+            "destinationDockerImageIsDefault" to false,
+            "configuredAirbyteCatalog" to mapOf("streams" to listOf("stream")),
+          ),
+      ),
+    )
+
   private var nextCreatedAt = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)
 
   @AfterEach
@@ -46,11 +71,18 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
     scope = scope,
     status = status,
     configType = configType,
-    config = config,
+    config = configFor(configType),
     createdAt = nextCreatedAt,
     updatedAt = nextCreatedAt,
     isScheduled = false,
   ).also { nextCreatedAt = nextCreatedAt.plusDays(1) }
+
+  private fun assertHealthSummary(summary: LatestJobHealthSummaryRow) {
+    summary.sourceDefinitionVersionId.shouldBe(sourceDefinitionVersionId)
+    summary.destinationDefinitionVersionId.shouldBe(destinationDefinitionVersionId)
+    summary.sourceDockerImageIsDefault.shouldBe(true)
+    summary.destinationDockerImageIsDefault.shouldBe(false)
+  }
 
   @Nested
   inner class CountFailedJobsSinceLastSuccessForScope {
@@ -176,7 +208,7 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
       val createdAtThreshold = OffsetDateTime.of(2021, 1, 2, 0, 0, 0, 0, ZoneOffset.UTC)
       val result =
         jobsRepository.findLatestJobPerScope(
-          configType = JobConfigType.sync.toString(),
+          configTypes = listOf(JobConfigType.sync.literal),
           scopes = setOf(scope1, scope2, scope3),
           createdAtStart = createdAtThreshold,
         )
@@ -187,9 +219,88 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
       // - scope3: job 5 (created Jan 5)
       result.size.shouldBe(3)
 
-      result.find { it.scope == scope1 }!!.id.shouldBe(2)
-      result.find { it.scope == scope2 }!!.id.shouldBe(3)
-      result.find { it.scope == scope3 }!!.id.shouldBe(5)
+      result.map { it.scope }.toSet().shouldBe(setOf(scope1, scope2, scope3))
+      result.forEach(::assertHealthSummary)
+      result.find { it.scope == scope1 }!!.status.shouldBe(JobStatus.succeeded)
+      result.find { it.scope == scope2 }!!.status.shouldBe(JobStatus.running)
+      result.find { it.scope == scope3 }!!.status.shouldBe(JobStatus.succeeded)
+    }
+
+    @Test
+    fun `picks the newest job across every requested config type`() {
+      // scope1's refresh (Jan 2) is newer than its sync (Jan 1), so refresh must win.
+      jobsRepository.saveAll(
+        listOf(
+          createJob(1, scope1, JobStatus.succeeded, JobConfigType.sync),
+          createJob(2, scope1, JobStatus.failed, JobConfigType.refresh),
+          createJob(3, scope2, JobStatus.succeeded, JobConfigType.reset_connection),
+        ),
+      )
+
+      val result =
+        jobsRepository.findLatestJobPerScope(
+          configTypes = listOf(JobConfigType.sync.literal, JobConfigType.refresh.literal),
+          scopes = setOf(scope1, scope2),
+          createdAtStart = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC),
+        )
+
+      // scope2 only has reset_connection, which was not requested
+      result.map { it.scope }.shouldBe(listOf(scope1))
+      result[0].status.shouldBe(JobStatus.failed)
+      assertHealthSummary(result[0])
+    }
+
+    @Test
+    fun `reads the replication config from the key matching the requested config type`() {
+      val jobs =
+        listOf(
+          createJob(1, scope1, JobStatus.succeeded, JobConfigType.sync),
+          createJob(2, scope2, JobStatus.failed, JobConfigType.refresh),
+        )
+
+      jobsRepository.saveAll(jobs)
+
+      val result =
+        jobsRepository.findLatestJobPerScope(
+          configTypes = listOf(JobConfigType.refresh.literal),
+          scopes = setOf(scope1, scope2, scope3),
+          createdAtStart = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC),
+        )
+
+      // sync was not requested, so scope1 drops out; scope2's fields come from config->'refresh'
+      result.map { it.scope }.toSet().shouldBe(setOf(scope2))
+      result.forEach(::assertHealthSummary)
+      result[0].status.shouldBe(JobStatus.failed)
+    }
+
+    @Test
+    fun `returns null health fields when the replication config is absent`() {
+      jobsRepository.save(
+        Job(
+          id = 1,
+          scope = scope1,
+          status = JobStatus.succeeded,
+          configType = JobConfigType.sync,
+          config = Jsons.jsonNode(mapOf<String, String>()),
+          createdAt = nextCreatedAt,
+          updatedAt = nextCreatedAt,
+          isScheduled = false,
+        ),
+      )
+
+      val result =
+        jobsRepository.findLatestJobPerScope(
+          configTypes = listOf(JobConfigType.sync.literal),
+          scopes = setOf(scope1),
+          createdAtStart = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC),
+        )
+
+      result.size.shouldBe(1)
+      result[0].status.shouldBe(JobStatus.succeeded)
+      result[0].sourceDefinitionVersionId.shouldBe(null)
+      result[0].destinationDefinitionVersionId.shouldBe(null)
+      result[0].sourceDockerImageIsDefault.shouldBe(null)
+      result[0].destinationDockerImageIsDefault.shouldBe(null)
     }
   }
 
@@ -215,7 +326,7 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
     val createdAtThreshold = OffsetDateTime.of(2021, 1, 2, 0, 0, 0, 0, ZoneOffset.UTC)
     val result =
       jobsRepository.findLatestJobPerScope(
-        configType = JobConfigType.sync.toString(),
+        configTypes = listOf(JobConfigType.sync.literal),
         scopes = setOf(scope1, scope2, scope3),
         createdAtStart = createdAtThreshold,
       )
@@ -226,8 +337,10 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
     // - scope3: job 5 (created Jan 5)
     result.size.shouldBe(3)
 
-    result.find { it.scope == scope1 }!!.id.shouldBe(2)
-    result.find { it.scope == scope2 }!!.id.shouldBe(3)
-    result.find { it.scope == scope3 }!!.id.shouldBe(5)
+    result.map { it.scope }.toSet().shouldBe(setOf(scope1, scope2, scope3))
+    result.forEach(::assertHealthSummary)
+    result.find { it.scope == scope1 }!!.status.shouldBe(JobStatus.succeeded)
+    result.find { it.scope == scope2 }!!.status.shouldBe(JobStatus.running)
+    result.find { it.scope == scope3 }!!.status.shouldBe(JobStatus.failed)
   }
 }

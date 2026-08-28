@@ -12,18 +12,16 @@ import io.airbyte.data.repositories.JobsRepository
 import io.airbyte.data.repositories.JobsWithAttemptsRepository
 import io.airbyte.data.repositories.Specifications
 import io.airbyte.data.services.JobService
+import io.airbyte.data.services.impls.data.mappers.toConfig
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
-import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
-import io.github.oshai.kotlinlogging.KotlinLogging
+import io.airbyte.data.services.shared.LatestJobHealthSummary
 import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.Sort
 import io.micronaut.data.model.Sort.Order
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import kotlin.jvm.optionals.getOrNull
-
-private val logger = KotlinLogging.logger {}
 
 const val DEFAULT_SORT_FIELD = "createdAt"
 
@@ -70,19 +68,21 @@ class JobServiceDataImpl(
     configTypes: Set<JobConfig.ConfigType>,
     scopes: Set<String>,
     createdAtStart: OffsetDateTime,
-  ): List<Job> =
+  ): List<LatestJobHealthSummary> =
     jobsRepository
       .findLatestJobPerScope(
-        JobConfigType.sync.toString(),
+        configTypes.map { it.toEntity().literal },
         scopes,
         createdAtStart,
-      ).mapNotNull {
-        try {
-          it.toConfigModel()
-        } catch (e: Exception) {
-          logger.info(e) { "Failed to convert job to config model id=${it.id} configType=${it.configType} scope=${it.scope}" }
-          null
-        }
+      ).map {
+        LatestJobHealthSummary(
+          scope = it.scope,
+          status = it.status.toConfig(),
+          sourceDefinitionVersionId = it.sourceDefinitionVersionId,
+          destinationDefinitionVersionId = it.destinationDefinitionVersionId,
+          sourceDockerImageIsDefault = it.sourceDockerImageIsDefault,
+          destinationDockerImageIsDefault = it.destinationDockerImageIsDefault,
+        )
       }
 
   override fun firstSuccessfulJobForScope(scope: String): Job? = jobsRepository.firstSuccessfulJobForScope(scope)?.toConfigModel()
