@@ -5,6 +5,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
+import { InfoTooltip } from "components/ui/Tooltip";
 
 import { links } from "core/utils/links";
 
@@ -31,6 +32,11 @@ export const ProPlanCard: React.FC = () => {
             id="plans.pro.features"
             values={{
               li: (node: React.ReactNode) => <li>{node}</li>,
+              supportInfo: () => (
+                <InfoTooltip>
+                  <FormattedMessage id="plans.pro.supportDetails" />
+                </InfoTooltip>
+              ),
             }}
           />
         </ul>

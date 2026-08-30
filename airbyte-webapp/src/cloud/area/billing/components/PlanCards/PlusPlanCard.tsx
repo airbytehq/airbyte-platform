@@ -6,6 +6,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
+import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useRedirectToCustomerPortal } from "cloud/area/billing/utils/useRedirectToCustomerPortal";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
@@ -75,6 +76,11 @@ export const PlusPlanCard: React.FC<PlusPlanCardProps> = ({ disabled = false, is
                 <ExternalLink href={links.creditDescription} variant="primary">
                   {node}
                 </ExternalLink>
+              ),
+              supportInfo: () => (
+                <InfoTooltip>
+                  <FormattedMessage id="plans.plus.supportDetails" />
+                </InfoTooltip>
               ),
             }}
           />

@@ -34,6 +34,13 @@ beforeEach(() => {
 });
 
 describe("PlusPlanCard", () => {
+  it("lists the Plus support level as the last feature", async () => {
+    await render(<PlusPlanCard />);
+
+    const features = screen.getAllByRole("listitem");
+    expect(features[features.length - 1]).toHaveTextContent("Support, weekdays · 24-hour response");
+  });
+
   it("uses the plus setup flow", async () => {
     await render(<PlusPlanCard />);
 
