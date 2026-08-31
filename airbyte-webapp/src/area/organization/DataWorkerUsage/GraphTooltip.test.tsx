@@ -65,7 +65,8 @@ describe("GraphTooltip", () => {
     expect(screen.queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
     expect(screen.getByText("Region max")).toBeInTheDocument();
     expect(screen.getByText("US East (N. Virginia)")).toBeInTheDocument();
-    expect(screen.getByText("1.45 DW")).toBeInTheDocument();
+    expect(screen.getByText("0.67 DW")).toBeInTheDocument();
+    expect(screen.queryByText("1.45 DW")).not.toBeInTheDocument();
     expect(screen.getByText("Per-workspace max")).toBeInTheDocument();
     expect(screen.getByText("top 10")).toBeInTheDocument();
     expect(

@@ -236,7 +236,7 @@ export const GraphTooltip = (props: GraphTooltipProps) => {
               <Text as="span" size="lg" className={styles.usageValue}>
                 <FormattedMessage
                   id="settings.organization.usage.graph.yAxisTick"
-                  values={{ value: formatWorkerUsageNumber(graphData.regionUsage) }}
+                  values={{ value: formatWorkerUsageNumber(graphData.maxWorkspaceUsage) }}
                 />
               </Text>
             </div>
