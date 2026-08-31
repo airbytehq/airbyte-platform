@@ -14,16 +14,17 @@ open class CodeChallengeS256Filter : Filter {
   override fun getName(): String = "codechallengeS256"
 
   /**
-   * Generates a code challenge using the SHA-256 hashing algorithm. The input value is hashed and
-   * then encoded to a Base64 string.
+   * Generates an RFC 7636 S256 code challenge: base64url(SHA-256(value)) without padding. Standard
+   * Base64 output (`+`, `/`, `=`) is rejected by providers that validate the challenge charset, e.g.
+   * Salesforce.
    *
    * @param value the input string to be hashed and encoded
-   * @return the Base64 encoded SHA-256 hash of the input value
+   * @return the unpadded base64url encoded SHA-256 hash of the input value
    * @throws Exception if the SHA-256 algorithm is not available
    */
   protected open fun getCodeChallenge(value: String): String {
     val digest = MessageDigest.getInstance("SHA-256")
-    return Base64.getEncoder().encodeToString(digest.digest(value.toByteArray(StandardCharsets.UTF_8)))
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(digest.digest(value.toByteArray(StandardCharsets.UTF_8)))
   }
 
   /**

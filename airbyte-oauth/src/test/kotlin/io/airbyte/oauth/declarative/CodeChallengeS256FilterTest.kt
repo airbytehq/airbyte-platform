@@ -26,7 +26,8 @@ internal class CodeChallengeS256FilterTest {
   @Test
   fun testFilterWithValidString() {
     val input = "testValue"
-    val expectedHash = "gv4Mg0y+oGkBPF63go5Zmmk+DSQRiH4qsnMnFmKXMII="
+    // Standard Base64 would be "gv4Mg0y+oGkBPF63go5Zmmk+DSQRiH4qsnMnFmKXMII="; PKCE requires base64url without padding.
+    val expectedHash = "gv4Mg0y-oGkBPF63go5Zmmk-DSQRiH4qsnMnFmKXMII"
     val result = filter!!.filter(input, interpreter!!)
     Assertions.assertEquals(expectedHash, result)
   }

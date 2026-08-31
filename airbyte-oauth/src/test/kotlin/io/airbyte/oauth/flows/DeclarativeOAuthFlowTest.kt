@@ -37,8 +37,8 @@ internal class DeclarativeOAuthFlowTest : BaseOAuthFlowTest() {
       val expectedScope = "test_scope_1+test_scope_2+test_scope_3"
       val expectedState = "state"
       val expectedSubdomain = "test_subdomain"
-      // Base64 from (String) of `state`, using `SHA-256`.
-      val expectedCodeChallenge = "S6aXNcpTdl7WpwnttWxuoja3GTo7KaazkMNG8PQ0Dk4="
+      // Unpadded base64url of SHA-256(`state`).
+      val expectedCodeChallenge = "S6aXNcpTdl7WpwnttWxuoja3GTo7KaazkMNG8PQ0Dk4"
 
       return "https://some.domain.com/oauth2/authorize?my_client_id_key=$expectedClientId&callback_uri=$expectedRedirectUri&scope=$expectedScope&my_state_key=$expectedState&subdomain=$expectedSubdomain&code_challenge=$expectedCodeChallenge"
     }
@@ -183,7 +183,7 @@ internal class DeclarativeOAuthFlowScopesArrayTest : BaseOAuthFlowTest() {
       val expectedScope = "test_scope_1+test_scope_2+test_scope_3"
       val expectedState = "state"
       val expectedSubdomain = "test_subdomain"
-      val expectedCodeChallenge = "S6aXNcpTdl7WpwnttWxuoja3GTo7KaazkMNG8PQ0Dk4="
+      val expectedCodeChallenge = "S6aXNcpTdl7WpwnttWxuoja3GTo7KaazkMNG8PQ0Dk4"
 
       return "https://some.domain.com/oauth2/authorize?my_client_id_key=$expectedClientId&callback_uri=$expectedRedirectUri&scope=$expectedScope&my_state_key=$expectedState&subdomain=$expectedSubdomain&code_challenge=$expectedCodeChallenge"
     }
