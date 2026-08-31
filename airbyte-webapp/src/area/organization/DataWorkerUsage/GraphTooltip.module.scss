@@ -13,6 +13,7 @@
 }
 
 .date,
+.comparisonHeading,
 .workspaceName,
 .usageValue {
   line-height: 20px;
@@ -20,6 +21,10 @@
 
 .date {
   font-weight: 400;
+}
+
+.comparisonHeading {
+  font-weight: 600;
 }
 
 .details {
@@ -45,6 +50,7 @@
 }
 
 .regionRow,
+.comparisonRow,
 .workspaceRow,
 .workspaceHeader {
   display: flex;
@@ -52,10 +58,29 @@
 }
 
 .regionRow,
+.comparisonRow,
 .workspaceRow {
   min-height: 20px;
   align-items: center;
   gap: 12px;
+}
+
+.comparisonList {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-md;
+  padding: 0;
+  margin: variables.$spacing-md 0 0;
+  list-style: none;
+}
+
+.comparisonSeries {
+  display: flex;
+  flex-direction: column;
+}
+
+.comparisonDate {
+  line-height: 16px;
 }
 
 .regionIdentity {

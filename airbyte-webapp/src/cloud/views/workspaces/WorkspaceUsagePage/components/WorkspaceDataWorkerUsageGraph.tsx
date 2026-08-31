@@ -1,15 +1,17 @@
 import classNames from "classnames";
 import dayjs from "dayjs";
-import { startTransition, useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
+import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { DataWorkerUsageBarChart } from "area/organization/DataWorkerUsage/DataWorkerUsageBarChart";
 import { enumerateTimeBuckets } from "area/organization/DataWorkerUsage/enumerateTimeBuckets";
-import { useCurrentWorkspace, useOrganizationWorkerUsage } from "core/api";
+import { useCurrentWorkspace, useOrganizationHistoricalWorkerUsage, useOrganizationWorkerUsage } from "core/api";
 import { useCurrentTime } from "core/utils/time";
 
 import { WorkspaceDataWorkerGraphTooltip } from "./WorkspaceDataWorkerGraphTooltip";
@@ -20,6 +22,19 @@ const HOUR_IN_MS = 60 * 60 * 1000;
 
 type UsageTimeRange = "1d" | "1w" | "1m" | "1q" | "1y";
 type UsageGranularity = "hour" | "day" | "week";
+
+interface WorkspaceUsageDataBar {
+  date: string;
+  used: number;
+}
+
+interface WorkspaceComparisonDataBar {
+  date: string;
+  currentDate?: string;
+  previousDate?: string;
+  currentUsage: number | null;
+  previousUsage: number | null;
+}
 
 const TIME_RANGE_OPTIONS: Array<{ labelId: string; value: UsageTimeRange }> = [
   { labelId: "settings.organization.usage.timeRange.1d", value: "1d" },
@@ -45,6 +60,14 @@ const BAR_SIZE_BY_RANGE: Record<UsageTimeRange, number> = {
   "1y": 8,
 };
 
+const COMPARISON_BAR_SIZE_BY_RANGE: Record<UsageTimeRange, number> = {
+  "1d": 8,
+  "1w": 2,
+  "1m": 8,
+  "1q": 4,
+  "1y": 4,
+};
+
 const USAGE_UPDATE_INTERVAL_BY_RANGE: Record<UsageTimeRange, number> = {
   "1d": 60_000,
   "1w": 60_000,
@@ -59,13 +82,13 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
   const { workspaceId, name: workspaceName } = useCurrentWorkspace();
   const { formatDate, formatMessage } = useIntl();
   const [selectedTimeRange, setSelectedTimeRange] = useState<UsageTimeRange>("1w");
+  const [comparisonEnabled, setComparisonEnabled] = useState(false);
   const timeRangeOptions = useMemo(
     () => TIME_RANGE_OPTIONS.map((option) => ({ ...option, label: formatMessage({ id: option.labelId }) })),
     [formatMessage]
   );
 
-  const usageUpdateInterval = USAGE_UPDATE_INTERVAL_BY_RANGE[selectedTimeRange];
-  const currentTime = useCurrentTime(usageUpdateInterval);
+  const currentTime = useCurrentTime(USAGE_UPDATE_INTERVAL_BY_RANGE[selectedTimeRange]);
 
   const timeWindow = useMemo(() => {
     const granularity: UsageGranularity =
@@ -87,13 +110,48 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
       rangeStart.toISOString().slice(0, 10),
       rangeEnd.subtract(1, "millisecond").toISOString().slice(0, 10),
     ];
+    const historicalRangeEnd = rangeStart;
+    const historicalRangeStart =
+      selectedTimeRange === "1d"
+        ? historicalRangeEnd.subtract(24, "hour")
+        : selectedTimeRange === "1w"
+        ? historicalRangeEnd.subtract(7 * 24, "hour")
+        : selectedTimeRange === "1m"
+        ? historicalRangeEnd.subtract(1, "month")
+        : selectedTimeRange === "1q"
+        ? historicalRangeEnd.subtract(3, "month")
+        : historicalRangeEnd.subtract(1, "year");
+    const historicalDisplayRange: [string, string] = [
+      historicalRangeStart.toISOString(),
+      historicalRangeEnd.toISOString(),
+    ];
+    const historicalRequestDateRange: [string, string] = [
+      historicalRangeStart.toISOString().slice(0, 10),
+      historicalRangeEnd.subtract(1, "millisecond").toISOString().slice(0, 10),
+    ];
 
-    return { displayRange, granularity, requestDateRange };
+    return {
+      displayRange,
+      granularity,
+      requestDateRange,
+      historicalDisplayRange,
+      historicalRequestDateRange,
+      timeRange: selectedTimeRange,
+    };
   }, [selectedTimeRange, currentTime]);
   // The clock tick re-anchors the window with a plain setState, outside any transition.
   // Deferring the derived window keeps the mounted chart visible while the re-keyed
   // usage query suspends (at UTC midnight the request dates change and there is no cache).
-  const { displayRange, granularity, requestDateRange } = useDeferredValue(timeWindow);
+  const {
+    displayRange,
+    granularity,
+    requestDateRange,
+    historicalDisplayRange,
+    historicalRequestDateRange,
+    timeRange: displayedTimeRange,
+  } = useDeferredValue(timeWindow);
+  const usageUpdateInterval = USAGE_UPDATE_INTERVAL_BY_RANGE[displayedTimeRange];
+  const isLoadingTimeRange = selectedTimeRange !== displayedTimeRange;
 
   const allUsage = useOrganizationWorkerUsage(
     {
@@ -102,6 +160,18 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
     },
     usageUpdateInterval
   );
+  const {
+    data: historicalUsage,
+    isError: isHistoricalUsageError,
+    isInitialLoading: isLoadingHistoricalUsage,
+  } = useOrganizationHistoricalWorkerUsage(
+    {
+      startDate: historicalRequestDateRange[0],
+      endDate: historicalRequestDateRange[1],
+    },
+    { enabled: comparisonEnabled }
+  );
+  const comparisonReady = comparisonEnabled && historicalUsage !== undefined && !isHistoricalUsageError;
 
   const { data, hasCurrentWorkspaceUsage } = useMemo(() => {
     const rangeStartTimestamp = dayjs(displayRange[0]).valueOf();
@@ -154,19 +224,99 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
     };
   }, [allUsage, displayRange, granularity, workspaceId]);
 
+  const { data: historicalData, hasHistoricalWorkspaceUsage } = useMemo(() => {
+    if (!comparisonReady) {
+      return { data: [], hasHistoricalWorkspaceUsage: false };
+    }
+
+    const rangeStartTimestamp = dayjs(historicalDisplayRange[0]).valueOf();
+    const rangeEndTimestamp = dayjs(historicalDisplayRange[1]).valueOf();
+    const buckets = enumerateTimeBuckets(
+      [historicalDisplayRange[0], dayjs(historicalDisplayRange[1]).subtract(1, "millisecond").toISOString()],
+      granularity
+    );
+    const hourlyUsage = new Map<number, number>();
+    let hasHistoricalWorkspaceUsage = false;
+
+    historicalUsage?.regions.forEach((region) => {
+      region.workspaces
+        .filter((ws) => ws.id === workspaceId)
+        .forEach((ws) => {
+          ws.dataWorkers.forEach(({ date, used }) => {
+            const timestamp = dayjs(date).valueOf();
+            if (timestamp < rangeStartTimestamp || timestamp >= rangeEndTimestamp) {
+              return;
+            }
+
+            const hour = rangeStartTimestamp + Math.floor((timestamp - rangeStartTimestamp) / HOUR_IN_MS) * HOUR_IN_MS;
+            hasHistoricalWorkspaceUsage = true;
+            hourlyUsage.set(hour, (hourlyUsage.get(hour) ?? 0) + used);
+          });
+        });
+    });
+
+    if (granularity === "hour") {
+      return {
+        data: buckets.map((bucket) => ({ date: bucket.toISOString(), used: hourlyUsage.get(bucket.valueOf()) ?? 0 })),
+        hasHistoricalWorkspaceUsage,
+      };
+    }
+
+    const peakUsageByBucket = new Map<string, number>();
+    hourlyUsage.forEach((used, timestamp) => {
+      const date = dayjs(timestamp);
+      const bucketKey =
+        granularity === "week" ? startOfCalendarWeek(date).format(DATE_FORMAT) : date.format(DATE_FORMAT);
+      peakUsageByBucket.set(bucketKey, Math.max(peakUsageByBucket.get(bucketKey) ?? 0, used));
+    });
+
+    return {
+      data: buckets.map((bucket) => ({
+        date: bucket.toISOString(),
+        used: peakUsageByBucket.get(bucket.format(DATE_FORMAT)) ?? 0,
+      })),
+      hasHistoricalWorkspaceUsage,
+    };
+  }, [comparisonReady, granularity, historicalDisplayRange, historicalUsage, workspaceId]);
+
+  const comparisonData = useMemo<WorkspaceComparisonDataBar[]>(
+    () =>
+      Array.from({ length: Math.max(data.length, historicalData.length) }, (_, index) => {
+        const currentBucket = data[index];
+        const historicalBucket = historicalData[index];
+
+        return {
+          date: currentBucket?.date ?? historicalBucket.date,
+          currentDate: currentBucket?.date,
+          previousDate: historicalBucket?.date,
+          currentUsage: currentBucket?.used ?? null,
+          previousUsage: historicalBucket?.used ?? null,
+        };
+      }),
+    [data, historicalData]
+  );
+
+  const chartData: Array<
+    Partial<WorkspaceUsageDataBar & WorkspaceComparisonDataBar> & Pick<WorkspaceUsageDataBar, "date">
+  > = comparisonReady ? comparisonData : data;
+
   const xAxisTicks = useMemo(() => {
-    if (selectedTimeRange === "1y") {
-      return data
-        .filter(({ date }, index) => index === 0 || dayjs(date).month() !== dayjs(data[index - 1].date).month())
+    if (displayedTimeRange === "1y") {
+      return chartData
+        .filter(({ date }, index) => index === 0 || dayjs(date).month() !== dayjs(chartData[index - 1].date).month())
         .map(({ date }) => date);
     }
 
-    return data.filter((_, index) => index % TICK_STEP_BY_RANGE[selectedTimeRange] === 0).map(({ date }) => date);
-  }, [data, selectedTimeRange]);
+    return chartData.filter((_, index) => index % TICK_STEP_BY_RANGE[displayedTimeRange] === 0).map(({ date }) => date);
+  }, [chartData, displayedTimeRange]);
+
+  const hasNoData = comparisonReady
+    ? !hasCurrentWorkspaceUsage && !hasHistoricalWorkspaceUsage
+    : !hasCurrentWorkspaceUsage;
 
   return (
     <FlexContainer direction="column" alignItems="stretch" gap="2xl">
-      <FlexContainer>
+      <FlexContainer alignItems="center" gap="md">
         <fieldset className={styles.workspaceDataWorkerUsageGraph__timeRangeControl}>
           <legend className={styles.workspaceDataWorkerUsageGraph__timeRangeLegend}>
             <FormattedMessage id="settings.organization.usage.timeRange.legend" />
@@ -186,7 +336,7 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
                 name="workspace-data-worker-usage-time-range"
                 value={option.value}
                 checked={selectedTimeRange === option.value}
-                onChange={() => startTransition(() => setSelectedTimeRange(option.value))}
+                onChange={() => setSelectedTimeRange(option.value)}
                 className={styles.workspaceDataWorkerUsageGraph__timeRangeInput}
               />
               <Text
@@ -201,31 +351,73 @@ export const WorkspaceDataWorkerUsageGraph: React.FC = () => {
             </label>
           ))}
         </fieldset>
+        <FlexItem grow />
+        <FlexContainer alignItems="center" gap="sm">
+          {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- the input is rendered by Switch */}
+          <label htmlFor="workspace-data-worker-usage-comparison">
+            <Text as="span" size="lg">
+              <FormattedMessage id="dataWorkerUsage.comparison.toggle" />
+            </Text>
+          </label>
+          <Switch
+            id="workspace-data-worker-usage-comparison"
+            checked={comparisonEnabled}
+            onChange={(event) => setComparisonEnabled(event.target.checked)}
+            size="sm"
+          />
+        </FlexContainer>
       </FlexContainer>
-      {hasCurrentWorkspaceUsage ? (
+      {comparisonEnabled && isHistoricalUsageError && (
+        <FlexContainer alignItems="center" gap="sm">
+          <Icon type="infoOutline" color="disabled" />
+          <Text color="grey">
+            <FormattedMessage id="dataWorkerUsage.comparison.error" />
+          </Text>
+        </FlexContainer>
+      )}
+      {isLoadingTimeRange || (comparisonEnabled && isLoadingHistoricalUsage && hasNoData) ? (
+        <FlexContainer className={styles.graphContainer} alignItems="center" justifyContent="center">
+          <FlexContainer alignItems="center" gap="md">
+            <LoadingSpinner />
+            <Text>
+              <FormattedMessage id="settings.organization.usage.loadingUsageData" />
+            </Text>
+          </FlexContainer>
+        </FlexContainer>
+      ) : !hasNoData ? (
         <DataWorkerUsageBarChart
-          data={data}
+          data={chartData}
           xAxisDataKey="date"
-          barDataKey="used"
+          barDataKey={comparisonReady ? "currentUsage" : "used"}
+          comparisonBarDataKey={comparisonReady ? "previousUsage" : undefined}
           xAxisTicks={xAxisTicks}
           xAxisTickFormatter={(value) =>
             formatDate(
               dayjs(value).toDate(),
-              selectedTimeRange === "1d"
+              displayedTimeRange === "1d"
                 ? { hour: "numeric" }
-                : selectedTimeRange === "1y"
+                : displayedTimeRange === "1y"
                 ? { month: "short" }
                 : { month: "short", day: "numeric" }
             )
           }
           xAxisInterval={0}
           xAxisPadding={{ left: 20, right: 20 }}
-          chartKey={selectedTimeRange}
+          chartKey={`${displayedTimeRange}${comparisonReady ? "-comparison" : ""}`}
           chartMargin={{ top: 0, right: 20, left: 0, bottom: 0 }}
-          renderTooltipContent={() => (
-            <WorkspaceDataWorkerGraphTooltip workspaceName={workspaceName} granularity={granularity} />
-          )}
-          barSize={BAR_SIZE_BY_RANGE[selectedTimeRange]}
+          renderTooltipContent={(barColor, comparisonBarColor) =>
+            comparisonReady ? (
+              <WorkspaceDataWorkerGraphTooltip
+                granularity={granularity}
+                comparison={{ barColor, comparisonBarColor, selectedTimeRange: displayedTimeRange }}
+              />
+            ) : (
+              <WorkspaceDataWorkerGraphTooltip workspaceName={workspaceName} granularity={granularity} />
+            )
+          }
+          barSize={
+            comparisonReady ? COMPARISON_BAR_SIZE_BY_RANGE[displayedTimeRange] : BAR_SIZE_BY_RANGE[displayedTimeRange]
+          }
           referenceLine={
             allUsage?.committedDataWorkers != null && allUsage.committedDataWorkers > 0
               ? {

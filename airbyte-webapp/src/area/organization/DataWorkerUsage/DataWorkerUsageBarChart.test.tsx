@@ -18,6 +18,7 @@ const mockYAxis = jest.fn();
 const mockColorValues = {
   gridLine: "#grid",
   barColor: "#bar",
+  comparisonBarColor: "#comparison",
   barHover: "#hover",
   committedLine: "#committed",
   tickColor: "#tick",
@@ -121,7 +122,7 @@ describe(`${DataWorkerUsageBarChart.name}`, () => {
     expect(lastProps(mockYAxis)).toEqual(
       expect.objectContaining({ tickFormatter: yAxisTickFormatter, allowDecimals: false, stroke: "#tick" })
     );
-    expect(renderTooltipContent).toHaveBeenLastCalledWith("#bar");
+    expect(renderTooltipContent).toHaveBeenLastCalledWith("#bar", "#comparison");
     expect(screen.getByTestId("tooltip-content")).toHaveTextContent("#bar");
     expect(lastProps(mockTooltip)).toEqual(
       expect.objectContaining({
@@ -149,6 +150,7 @@ describe(`${DataWorkerUsageBarChart.name}`, () => {
         animationEasing: "linear",
       })
     );
+    expect(new Set(mockBar.mock.calls.map(([props]) => props.dataKey))).toEqual(new Set(["maxWorkspaceUsage"]));
   });
 
   it("omits the optional capacity line", async () => {
@@ -163,6 +165,7 @@ describe(`${DataWorkerUsageBarChart.name}`, () => {
 
     expect(mockReferenceLine).not.toHaveBeenCalled();
     expect(lastProps(mockBar)).toEqual(expect.objectContaining({ barSize: undefined }));
+    expect(new Set(mockBar.mock.calls.map(([props]) => props.dataKey))).toEqual(new Set(["maxWorkspaceUsage"]));
   });
 
   it("renders the dense hourly workspace configuration without changing its data points", async () => {
@@ -200,5 +203,59 @@ describe(`${DataWorkerUsageBarChart.name}`, () => {
     expect(lastProps(mockBar)).toEqual(expect.objectContaining({ dataKey: "used", barSize: undefined }));
     expect(screen.getByTestId("workspace-tooltip")).toHaveTextContent("Current workspace");
     expect(mockReferenceLine).not.toHaveBeenCalled();
+    expect(new Set(mockBar.mock.calls.map(([props]) => props.dataKey))).toEqual(new Set(["used"]));
+  });
+
+  it("renders unstacked Current and Previous bars with shared comparison behavior", async () => {
+    const comparisonData = [
+      { formattedDate: "2026-08-01", currentUsage: 2, previousUsage: 1 },
+      { formattedDate: "2026-08-02", currentUsage: 3, previousUsage: 4 },
+    ];
+    const renderTooltipContent = jest.fn((barColor: string, comparisonBarColor: string) => (
+      <span data-testid="comparison-tooltip">{`${barColor}:${comparisonBarColor}`}</span>
+    ));
+
+    await render(
+      <DataWorkerUsageBarChart
+        data={comparisonData}
+        xAxisDataKey="formattedDate"
+        barDataKey="currentUsage"
+        comparisonBarDataKey="previousUsage"
+        renderTooltipContent={renderTooltipContent}
+        barSize={8}
+        referenceLine={{ value: 12, label: "Contracted capacity" }}
+      />
+    );
+
+    expect(new Set(mockBar.mock.calls.map(([props]) => props.dataKey))).toEqual(
+      new Set(["currentUsage", "previousUsage"])
+    );
+    const currentBarProps = mockBar.mock.calls.filter(([props]) => props.dataKey === "currentUsage").at(-1)?.[0];
+    const previousBarProps = mockBar.mock.calls.filter(([props]) => props.dataKey === "previousUsage").at(-1)?.[0];
+    expect(currentBarProps).toEqual(
+      expect.objectContaining({
+        dataKey: "currentUsage",
+        fill: "#bar",
+        barSize: 8,
+        animationDuration: 300,
+        animationEasing: "linear",
+      })
+    );
+    expect(previousBarProps).toEqual(
+      expect.objectContaining({
+        dataKey: "previousUsage",
+        fill: "#comparison",
+        barSize: 8,
+        animationDuration: 300,
+        animationEasing: "linear",
+      })
+    );
+    expect(currentBarProps).not.toHaveProperty("stackId");
+    expect(previousBarProps).not.toHaveProperty("stackId");
+    expect(renderTooltipContent).toHaveBeenLastCalledWith("#bar", "#comparison");
+    expect(screen.getByTestId("comparison-tooltip")).toHaveTextContent("#bar:#comparison");
+    expect(lastProps(mockReferenceLine)).toEqual(
+      expect.objectContaining({ y: 12, stroke: "#committed", ifOverflow: "extendDomain" })
+    );
   });
 });

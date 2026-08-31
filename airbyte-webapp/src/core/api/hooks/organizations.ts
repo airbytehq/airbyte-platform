@@ -195,6 +195,29 @@ export const useOrganizationWorkerUsage = (
   );
 };
 
+/**
+ * Deliberately a plain `useQuery` rather than `useSuspenseQuery`. Historical comparison data is
+ * fetched only when the caller enables comparison, and the current-period chart must remain
+ * visible while this query loads or fails. Callers render query failures inline. Unlike the
+ * current-period query above, completed historical periods do not poll.
+ */
+export const useOrganizationHistoricalWorkerUsage = (
+  params: Pick<OrganizationDataWorkerUsageRequestBody, "startDate" | "endDate">,
+  options?: { enabled?: boolean }
+) => {
+  const requestOptions = useRequestOptions();
+  const organizationId = useCurrentOrganizationId();
+
+  return useQuery(
+    organizationKeys.workerUsage(organizationId, params.startDate, params.endDate),
+    () => getOrganizationDataWorkerUsage({ organizationId, ...params }, requestOptions),
+    {
+      enabled: options?.enabled ?? true,
+      staleTime: Infinity,
+    }
+  );
+};
+
 // Sometimes we need to get the first workspace in and organization, for example if the URL only contains an
 // organization id, but we still want to populate the workspace selector with a default workspace.
 export const useDefaultWorkspaceInOrganization = (organizationId: string, enabled: boolean = true) => {

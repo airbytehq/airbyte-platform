@@ -13,6 +13,7 @@ import styles from "./DataWorkerUsageBarChart.module.scss";
 interface ColorMap {
   gridLine: string;
   barColor: string;
+  comparisonBarColor: string;
   barHover: string;
   committedLine: string;
   tickColor: string;
@@ -34,7 +35,8 @@ export interface DataWorkerUsageBarChartProps<ChartData extends object> {
   data: ChartData[];
   xAxisDataKey: Extract<keyof ChartData, string>;
   barDataKey: Extract<keyof ChartData, string>;
-  renderTooltipContent: (barColor: string) => ReactElement;
+  comparisonBarDataKey?: Extract<keyof ChartData, string>;
+  renderTooltipContent: (barColor: string, comparisonBarColor: string) => ReactElement;
   xAxisTicks?: XAxisProps["ticks"];
   xAxisTickFormatter?: XAxisProps["tickFormatter"];
   xAxisInterval?: XAxisProps["interval"];
@@ -60,6 +62,7 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
   data,
   xAxisDataKey,
   barDataKey,
+  comparisonBarDataKey,
   renderTooltipContent,
   xAxisTicks,
   xAxisTickFormatter,
@@ -75,6 +78,7 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
   const [colorMap, setColorMap] = useState<ColorMap>({
     gridLine: "",
     barColor: "",
+    comparisonBarColor: "",
     barHover: "",
     committedLine: "",
     tickColor: "",
@@ -85,6 +89,7 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
     setColorMap({
       gridLine: colorValues[styles.gridLine],
       barColor: colorValues[styles.barColor],
+      comparisonBarColor: colorValues[styles.comparisonBarColor],
       barHover: colorValues[styles.barHover],
       committedLine: colorValues[styles.committedLine],
       tickColor: colorValues[styles.tickColor],
@@ -119,7 +124,7 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
           <Tooltip
             wrapperStyle={{ outline: "none", zIndex: styles.tooltipZindex }}
             position={tooltipPosition}
-            content={renderTooltipContent(colorMap.barColor)}
+            content={renderTooltipContent(colorMap.barColor, colorMap.comparisonBarColor)}
             cursor={{ fill: colorMap.barHover }}
             {...tooltipConfig}
           />
@@ -146,6 +151,15 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
             animationDuration={300}
             animationEasing="linear"
           />
+          {comparisonBarDataKey && (
+            <Bar
+              dataKey={comparisonBarDataKey}
+              fill={colorMap.comparisonBarColor}
+              barSize={barSize}
+              animationDuration={300}
+              animationEasing="linear"
+            />
+          )}
         </BarChart>
       </ResponsiveContainer>
     </Box>
