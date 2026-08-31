@@ -16689,14 +16689,17 @@ components:
           required:
             - currency
             - amount
+            - invoiceDate
           properties:
             currency:
               type: string
             amount:
               type: string
               description: The amount of the next upcoming invoice formatted as a decimal number wrapped inside a string.
-            dueDate:
-              $ref: "#/components/schemas/LocalDate"
+            invoiceDate:
+              allOf:
+                - $ref: "#/components/schemas/LocalDate"
+              description: The calendar date of the next scheduled invoice.
         credits:
           type: object
           required:

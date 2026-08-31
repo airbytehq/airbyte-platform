@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -80,8 +81,8 @@ export const DeleteWorkspace: React.FC = () => {
 
   const { mutateAsync: deleteWorkspace, isLoading: isDeletingWorkspace } = useDeleteWorkspace();
 
-  const cancellationDate = subscriptionInfo?.upcomingInvoice?.dueDate
-    ? formatDate(new Date(subscriptionInfo.upcomingInvoice.dueDate), { dateStyle: "medium" })
+  const cancellationDate = subscriptionInfo?.upcomingInvoice?.invoiceDate
+    ? formatDate(dayjs(subscriptionInfo.upcomingInvoice.invoiceDate).toDate(), { dateStyle: "medium" })
     : "";
 
   const onRemoveWorkspaceClick = () => {

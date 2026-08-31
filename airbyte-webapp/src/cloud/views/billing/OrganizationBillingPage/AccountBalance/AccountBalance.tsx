@@ -100,7 +100,7 @@ export const AccountBalance = () => {
                   </Text>
                   <Text size="lg">
                     <FormattedDate
-                      value={dayjs(subscriptionInfo.upcomingInvoice.dueDate).toDate()}
+                      value={dayjs(subscriptionInfo.upcomingInvoice.invoiceDate).toDate()}
                       dateStyle="medium"
                     />
                   </Text>

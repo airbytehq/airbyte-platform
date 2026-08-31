@@ -89,7 +89,7 @@ describe("DeleteWorkspace", () => {
         name: "Airbyte Plus",
         selfServeSubscription: true,
         upcomingInvoice: {
-          dueDate: "2026-06-01T00:00:00Z",
+          invoiceDate: "2026-06-01",
         },
       },
       isLoading: false,
