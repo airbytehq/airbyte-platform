@@ -4,9 +4,11 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.model.generated.DataWorkerAddCapacityRequestBody
 import io.airbyte.api.model.generated.DataWorkerAllocationGetRequestBody
 import io.airbyte.api.model.generated.DataWorkerAllocationListRequestBody
 import io.airbyte.api.model.generated.DataWorkerReallocateRequestBody
+import io.airbyte.api.model.generated.DataWorkerRemoveCapacityRequestBody
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
@@ -222,6 +224,85 @@ internal class DataWorkerAllocationApiControllerTest {
         DataplaneGroupId(usRegion),
         1.0,
       )
+    }
+  }
+
+  @Test
+  fun `addDataWorkerCapacity raises the organization's capacity without naming a region`() {
+    controller.addDataWorkerCapacity(
+      DataWorkerAddCapacityRequestBody().organizationId(organizationId).amount(5.0),
+    )
+
+    verify { allocatedCapacityService.addCapacity(OrganizationId(organizationId), 5.0) }
+  }
+
+  @Test
+  fun `addDataWorkerCapacity returns the organization's capacity after the grant`() {
+    every { allocatedCapacityService.getAllocations(OrganizationId(organizationId)) } returns
+      OrganizationDataWorkerAllocations(
+        organizationId = OrganizationId(organizationId),
+        totalAllocatedCapacity = 5.0,
+        allocations = listOf(DataWorkerAllocation(DataplaneGroupId(usRegion), 5.0)),
+      )
+
+    val result =
+      controller.addDataWorkerCapacity(
+        DataWorkerAddCapacityRequestBody().organizationId(organizationId).amount(5.0),
+      )
+
+    assertEquals(5.0, result.totalAllocatedCapacity)
+    assertEquals(usRegion, result.allocations.single().dataplaneGroupId)
+  }
+
+  @Test
+  fun `addDataWorkerCapacity does not check whether the organization may use any region`() {
+    // The service picks the region rather than the caller, so there is nothing caller-supplied to
+    // check. Failing to stub the region lookup would blow up if the controller consulted it.
+    controller.addDataWorkerCapacity(
+      DataWorkerAddCapacityRequestBody().organizationId(organizationId).amount(1.0),
+    )
+
+    verify(exactly = 0) { dataplaneGroupService.listDataplaneGroups(any(), any()) }
+  }
+
+  @Test
+  fun `removeDataWorkerCapacity takes capacity from the region the caller names`() {
+    controller.removeDataWorkerCapacity(
+      DataWorkerRemoveCapacityRequestBody().organizationId(organizationId).dataplaneGroupId(euRegion).amount(2.0),
+    )
+
+    verify { allocatedCapacityService.removeCapacity(OrganizationId(organizationId), DataplaneGroupId(euRegion), 2.0) }
+  }
+
+  @Test
+  fun `removeDataWorkerCapacity returns the organization's capacity after the removal`() {
+    every { allocatedCapacityService.getAllocations(OrganizationId(organizationId)) } returns
+      OrganizationDataWorkerAllocations(
+        organizationId = OrganizationId(organizationId),
+        totalAllocatedCapacity = 1.0,
+        allocations = listOf(DataWorkerAllocation(DataplaneGroupId(usRegion), 1.0)),
+      )
+
+    val result =
+      controller.removeDataWorkerCapacity(
+        DataWorkerRemoveCapacityRequestBody().organizationId(organizationId).dataplaneGroupId(euRegion).amount(2.0),
+      )
+
+    assertEquals(1.0, result.totalAllocatedCapacity)
+  }
+
+  @Test
+  fun `removeDataWorkerCapacity takes capacity from a region the organization may no longer use`() {
+    // Same reasoning as reallocating out of a revoked region: gating removal on the usable list
+    // would strand capacity in a region whose entitlement has since been revoked.
+    val revokedRegion = UUID.randomUUID()
+
+    controller.removeDataWorkerCapacity(
+      DataWorkerRemoveCapacityRequestBody().organizationId(organizationId).dataplaneGroupId(revokedRegion).amount(1.0),
+    )
+
+    verify {
+      allocatedCapacityService.removeCapacity(OrganizationId(organizationId), DataplaneGroupId(revokedRegion), 1.0)
     }
   }
 

@@ -5,15 +5,19 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.DataWorkerAllocationApi
+import io.airbyte.api.model.generated.DataWorkerAddCapacityRequestBody
 import io.airbyte.api.model.generated.DataWorkerAllocationGetRequestBody
 import io.airbyte.api.model.generated.DataWorkerAllocationListRequestBody
 import io.airbyte.api.model.generated.DataWorkerAllocationListResponse
 import io.airbyte.api.model.generated.DataWorkerAllocationRead
 import io.airbyte.api.model.generated.DataWorkerReallocateRequestBody
+import io.airbyte.api.model.generated.DataWorkerRemoveCapacityRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.PRIVATELINK_DATAPLANE_GROUP_ORGANIZATION_ID
+import io.airbyte.commons.annotation.AuditLogging
+import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.PrivateLinkEntitlement
@@ -37,9 +41,13 @@ import java.util.UUID
 /**
  * Reads and edits the Data Worker capacity an organization holds in each region.
  *
- * `AuthorizationServerHandler` strips any client-supplied `X-Airbyte-Organization-Id` and
- * repopulates it from the request body's `organization_id`, so `@Secured` checks the role against
- * the same organization the route goes on to read or modify.
+ * `/list`, `/get` and `/reallocate` are organization-scoped. `AuthorizationServerHandler` strips any
+ * client-supplied `X-Airbyte-Organization-Id` and repopulates it from the request body's
+ * `organization_id`, so `@Secured` checks the role against the same organization the route goes on
+ * to read or modify.
+ *
+ * `/add_capacity` and `/remove_capacity` change what the organization holds in total, so they are
+ * instance-admin provisioning routes rather than something an organization does to itself.
  */
 @Controller("/api/v1/data_worker_allocation")
 @Context
@@ -95,6 +103,59 @@ open class DataWorkerAllocationApiController(
       from = DataplaneGroupId(dataWorkerReallocateRequestBody.fromDataplaneGroupId),
       to = DataplaneGroupId(dataWorkerReallocateRequestBody.toDataplaneGroupId),
       amount = dataWorkerReallocateRequestBody.amount,
+    )
+
+    return dataWorkerAllocatedCapacityService
+      .getAllocations(OrganizationId(organizationId))
+      .toListResponse()
+  }
+
+  /**
+   * Grants the organization more capacity, landing it in the default region.
+   *
+   * No region check runs here. The service picks the region rather than the caller, and the default
+   * region is "US".
+   */
+  @Post("/add_capacity")
+  @Secured(AuthRoleConstants.ADMIN)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun addDataWorkerCapacity(
+    @Body dataWorkerAddCapacityRequestBody: DataWorkerAddCapacityRequestBody,
+  ): DataWorkerAllocationListResponse {
+    val organizationId = dataWorkerAddCapacityRequestBody.organizationId
+
+    dataWorkerAllocatedCapacityService.addCapacity(
+      organizationId = OrganizationId(organizationId),
+      amount = dataWorkerAddCapacityRequestBody.amount,
+    )
+
+    return dataWorkerAllocatedCapacityService
+      .getAllocations(OrganizationId(organizationId))
+      .toListResponse()
+  }
+
+  /**
+   * Removes capacity from one of the organization's regions.
+   *
+   * `requireRegionIsUsableBy` deliberately does not run. It gates which regions an organization may
+   * *take on* capacity in, and an entitlement can be revoked while the organization still holds
+   * capacity in that region — gating removal on it would strand that capacity with no way to
+   * reclaim it.
+   */
+  @Post("/remove_capacity")
+  @Secured(AuthRoleConstants.ADMIN)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun removeDataWorkerCapacity(
+    @Body dataWorkerRemoveCapacityRequestBody: DataWorkerRemoveCapacityRequestBody,
+  ): DataWorkerAllocationListResponse {
+    val organizationId = dataWorkerRemoveCapacityRequestBody.organizationId
+
+    dataWorkerAllocatedCapacityService.removeCapacity(
+      organizationId = OrganizationId(organizationId),
+      dataplaneGroupId = DataplaneGroupId(dataWorkerRemoveCapacityRequestBody.dataplaneGroupId),
+      amount = dataWorkerRemoveCapacityRequestBody.amount,
     )
 
     return dataWorkerAllocatedCapacityService

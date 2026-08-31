@@ -7834,6 +7834,60 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/data_worker_allocation/add_capacity:
+    post:
+      summary: Grant an organization additional Data Worker capacity in the default region
+      tags:
+        - data_worker_allocation
+      operationId: addDataWorkerCapacity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataWorkerAddCapacityRequestBody"
+        required: true
+      responses:
+        "200":
+          description: The organization's capacity per region after the grant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataWorkerAllocationListResponse"
+        "400":
+          description: Invalid amount, or the default region is unknown or deleted
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/data_worker_allocation/remove_capacity:
+    post:
+      summary: Take Data Worker capacity away from one of an organization's regions
+      tags:
+        - data_worker_allocation
+      operationId: removeDataWorkerCapacity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataWorkerRemoveCapacityRequestBody"
+        required: true
+      responses:
+        "200":
+          description: The organization's capacity per region after the removal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataWorkerAllocationListResponse"
+        "400":
+          description: >-
+            Invalid amount, unknown region, or the region holds less than the
+            requested amount
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/dataplanes/create:
     post:
       summary: Create a dataplane
@@ -23041,6 +23095,45 @@ components:
             Capacity to move out of the source region and into the destination
             region. Must be positive. The organization's total capacity is
             unchanged by this operation.
+    DataWorkerAddCapacityRequestBody:
+      type: object
+      required:
+        - organization_id
+        - amount
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+          description: >-
+            Capacity to add to the organization's default region, raising its
+            total. Must be positive. Use /reallocate afterwards to move any of
+            it to another region.
+    DataWorkerRemoveCapacityRequestBody:
+      type: object
+      required:
+        - organization_id
+        - dataplane_group_id
+        - amount
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        dataplane_group_id:
+          type: string
+          format: uuid
+          description: >-
+            The region to take capacity from. Required because capacity is held
+            per region, so there is no single place to remove it from.
+        amount:
+          type: number
+          format: double
+          description: >-
+            Capacity to remove from the region, lowering the organization's
+            total. Must be positive, and no greater than what the region
+            currently holds.
     DataWorkerAllocationRead:
       type: object
       required:

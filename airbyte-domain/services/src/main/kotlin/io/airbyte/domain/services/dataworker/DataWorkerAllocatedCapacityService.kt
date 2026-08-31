@@ -10,6 +10,7 @@ import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.data.repositories.DataWorkerAllocatedCapacityRepository
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.entities.DataWorkerAllocatedCapacity
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.dataworker.DataWorkerAllocation
@@ -18,6 +19,19 @@ import io.micronaut.transaction.TransactionOperations
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.sql.Connection
+
+/**
+ * The capacity change an amount is being validated for. Renders lowercase so it reads as the verb
+ * in the rejection message.
+ */
+private enum class CapacityOperation {
+  ADD,
+  REMOVE,
+  REALLOCATE,
+  ;
+
+  override fun toString(): String = name.lowercase()
+}
 
 /**
  * Reads and edits the Data Worker capacity an organization holds in each region.
@@ -30,6 +44,7 @@ import java.sql.Connection
 open class DataWorkerAllocatedCapacityService(
   private val dataWorkerAllocatedCapacityRepository: DataWorkerAllocatedCapacityRepository,
   private val dataplaneGroupRepository: DataplaneGroupRepository,
+  private val dataplaneGroupService: DataplaneGroupService,
   @param:Named("config") private val configTransactionOperations: TransactionOperations<Connection>,
 ) {
   /**
@@ -83,17 +98,9 @@ open class DataWorkerAllocatedCapacityService(
     if (from == to) {
       throw BadRequestProblem(ProblemMessageData().message("Source and destination regions must be different."))
     }
-    // NaN fails every comparison, so `amount <= 0` alone would let it through and poison the row.
-    // The upper bound is the column's: `allocated_capacity` is REAL, and when the addition runs
-    // first the write happens before any sufficiency check, so an amount past what float4 holds
-    // reaches Postgres and fails there as a 500 instead of here as a 400.
-    if (!amount.isFinite() || amount <= 0 || amount > Float.MAX_VALUE) {
-      throw BadRequestProblem(
-        ProblemMessageData().message("Amount to move must be a positive number no greater than ${Float.MAX_VALUE}, but was $amount."),
-      )
-    }
+    requireValidAmount(amount, CapacityOperation.REALLOCATE)
 
-    requireRegionExists(from, "Source")
+    requireRegionExists(from)
     requireDestinationRegionIsUsable(to)
 
     configTransactionOperations.executeWrite { _ ->
@@ -107,6 +114,84 @@ open class DataWorkerAllocatedCapacityService(
         dataWorkerAllocatedCapacityRepository.addCapacity(organizationId.value, to.value, amount)
         subtractOrThrow(organizationId, from, amount)
       }
+    }
+  }
+
+  /**
+   * Raises the organization's total capacity by [amount].
+   *
+   * This changes what the organization holds overall, so it added by the admin user to an organization.
+   * Capacity is stored per region, so the new capacity goes to the default region.
+   * Use [reallocateCapacity] afterwards to move capacity across regions.
+   *
+   * @throws BadRequestProblem if the amount is not a positive finite number the capacity column can
+   *   hold.
+   */
+  open fun addCapacity(
+    organizationId: OrganizationId,
+    amount: Double,
+  ) {
+    requireValidAmount(amount, CapacityOperation.ADD)
+
+    // The default region is configuration rather than caller input, so it is not validated the way
+    // a supplied region is — a missing default is our own misconfiguration, not a bad request.
+    val defaultRegionId = dataplaneGroupService.getDefaultDataplaneGroup().id
+
+    dataWorkerAllocatedCapacityRepository.addCapacity(organizationId.value, defaultRegionId, amount)
+  }
+
+  /**
+   * This removed the organization's total capacity by [amount], taking it from [dataplaneGroupId].
+   *
+   * The region is required here because this capacity is already allocated,
+   * and only the caller knows which region it should come out of.
+   *
+   * @throws BadRequestProblem if the amount is not a positive finite number the capacity column can
+   *   hold, the region does not exist, or the region holds less than [amount].
+   */
+  open fun removeCapacity(
+    organizationId: OrganizationId,
+    dataplaneGroupId: DataplaneGroupId,
+    amount: Double,
+  ) {
+    requireValidAmount(amount, CapacityOperation.REMOVE)
+    requireRegionExists(dataplaneGroupId)
+
+    val updated =
+      dataWorkerAllocatedCapacityRepository.subtractCapacityIfSufficient(
+        organizationId.value,
+        dataplaneGroupId.value,
+        amount,
+      )
+    // The repository cannot tell "deficit capacity" apart from "no capacity", so this
+    // message covers both rather than claiming which one happened.
+    if (updated == 0) {
+      throw BadRequestProblem(
+        ProblemMessageData().message(
+          "Region ${dataplaneGroupId.value} does not have $amount Data Workers of capacity available to remove.",
+        ),
+      )
+    }
+  }
+
+  /**
+   * Rejects an amount the capacity column cannot hold.
+   *
+   * NaN fails every comparison, so `amount <= 0` alone would let it through and poison the row.
+   * The upper bound is the column's: `allocated_capacity` is REAL, and where the write happens
+   * before any sufficiency check, an amount past what float4 holds reaches Postgres and fails there
+   * as a 500 instead of here as a 400.
+   */
+  private fun requireValidAmount(
+    amount: Double,
+    operation: CapacityOperation,
+  ) {
+    if (!amount.isFinite() || amount <= 0 || amount > Float.MAX_VALUE) {
+      throw BadRequestProblem(
+        ProblemMessageData().message(
+          "Amount to $operation must be a positive number no greater than ${Float.MAX_VALUE}, but was $amount.",
+        ),
+      )
     }
   }
 
@@ -140,12 +225,9 @@ open class DataWorkerAllocatedCapacityService(
    * The allocation table has no foreign key to `dataplane_group`, so an unrecognized region id
    * would otherwise create capacity in a region that does not exist.
    */
-  private fun requireRegionExists(
-    dataplaneGroupId: DataplaneGroupId,
-    role: String,
-  ) {
+  private fun requireRegionExists(dataplaneGroupId: DataplaneGroupId) {
     if (dataplaneGroupRepository.findById(dataplaneGroupId.value).isEmpty) {
-      throw BadRequestProblem(ProblemMessageData().message("$role region ${dataplaneGroupId.value} does not exist."))
+      throw BadRequestProblem(ProblemMessageData().message("Region ${dataplaneGroupId.value} does not exist."))
     }
   }
 
@@ -156,7 +238,7 @@ open class DataWorkerAllocatedCapacityService(
   private fun requireDestinationRegionIsUsable(dataplaneGroupId: DataplaneGroupId) {
     val region =
       dataplaneGroupRepository.findById(dataplaneGroupId.value).orElse(null)
-        ?: throw BadRequestProblem(ProblemMessageData().message("Destination region ${dataplaneGroupId.value} does not exist."))
+        ?: throw BadRequestProblem(ProblemMessageData().message("Region ${dataplaneGroupId.value} does not exist."))
     if (region.tombstone) {
       throw BadRequestProblem(ProblemMessageData().message("Destination region ${dataplaneGroupId.value} has been deleted."))
     }

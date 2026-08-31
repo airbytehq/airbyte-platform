@@ -10,6 +10,7 @@ import io.airbyte.data.repositories.DataWorkerAllocatedCapacityRepository
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.entities.DataWorkerAllocatedCapacity
 import io.airbyte.data.repositories.entities.DataplaneGroup
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.dataworker.DataWorkerAllocation
@@ -29,10 +30,12 @@ import org.junit.jupiter.api.Test
 import java.sql.Connection
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.config.DataplaneGroup as ConfigDataplaneGroup
 
 internal class DataWorkerAllocatedCapacityServiceTest {
   private lateinit var allocatedCapacityRepository: DataWorkerAllocatedCapacityRepository
   private lateinit var dataplaneGroupRepository: DataplaneGroupRepository
+  private lateinit var dataplaneGroupService: DataplaneGroupService
   private lateinit var service: DataWorkerAllocatedCapacityService
 
   private val organizationId = OrganizationId(UUID.randomUUID())
@@ -40,20 +43,24 @@ internal class DataWorkerAllocatedCapacityServiceTest {
   // Fixed so the ordering tests can rely on which id sorts first.
   private val lowerRegion = DataplaneGroupId(UUID.fromString("11111111-1111-1111-1111-111111111111"))
   private val higherRegion = DataplaneGroupId(UUID.fromString("22222222-2222-2222-2222-222222222222"))
+  private val defaultRegion = DataplaneGroupId(UUID.fromString("33333333-3333-3333-3333-333333333333"))
 
   @BeforeEach
   fun setUp() {
     allocatedCapacityRepository = mockk(relaxed = true)
     dataplaneGroupRepository = mockk()
+    dataplaneGroupService = mockk()
     service =
       DataWorkerAllocatedCapacityService(
         allocatedCapacityRepository,
         dataplaneGroupRepository,
+        dataplaneGroupService,
         ImmediateAllocationTransactionOperations(),
       )
 
     givenRegionExists(lowerRegion)
     givenRegionExists(higherRegion)
+    givenDefaultRegionIs(defaultRegion)
   }
 
   @Test
@@ -272,6 +279,169 @@ internal class DataWorkerAllocatedCapacityServiceTest {
     verify { allocatedCapacityRepository.addCapacity(otherOrganizationId.value, higherRegion.value, 1.0) }
     verify(exactly = 0) { allocatedCapacityRepository.subtractCapacityIfSufficient(organizationId.value, any(), any()) }
     verify(exactly = 0) { allocatedCapacityRepository.addCapacity(organizationId.value, any(), any()) }
+  }
+
+  @Test
+  fun `addCapacity adds to the default region`() {
+    service.addCapacity(organizationId, 5.0)
+
+    verify { allocatedCapacityRepository.addCapacity(organizationId.value, defaultRegion.value, 5.0) }
+  }
+
+  @Test
+  fun `addCapacity does not touch any other region`() {
+    service.addCapacity(organizationId, 5.0)
+
+    verify(exactly = 0) { allocatedCapacityRepository.addCapacity(any(), lowerRegion.value, any()) }
+    verify(exactly = 0) { allocatedCapacityRepository.subtractCapacityIfSufficient(any(), any(), any()) }
+  }
+
+  @Test
+  fun `addCapacity rejects a zero amount`() {
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, 0.0) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `addCapacity rejects a negative amount`() {
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, -1.0) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `addCapacity rejects a NaN amount`() {
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, Double.NaN) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `addCapacity rejects an infinite amount`() {
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, Double.POSITIVE_INFINITY) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `addCapacity rejects an amount larger than the capacity column can hold`() {
+    assertThrows(BadRequestProblem::class.java) { service.addCapacity(organizationId, Float.MAX_VALUE.toDouble() * 2) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `addCapacity scopes the write to the organization`() {
+    val otherOrganizationId = OrganizationId(UUID.randomUUID())
+
+    service.addCapacity(otherOrganizationId, 1.0)
+
+    verify { allocatedCapacityRepository.addCapacity(otherOrganizationId.value, defaultRegion.value, 1.0) }
+    verify(exactly = 0) { allocatedCapacityRepository.addCapacity(organizationId.value, any(), any()) }
+  }
+
+  @Test
+  fun `removeCapacity subtracts from the given region`() {
+    givenSourceHasEnough(lowerRegion)
+
+    service.removeCapacity(organizationId, lowerRegion, 4.0)
+
+    verify { allocatedCapacityRepository.subtractCapacityIfSufficient(organizationId.value, lowerRegion.value, 4.0) }
+    verify(exactly = 0) { allocatedCapacityRepository.addCapacity(any(), any(), any()) }
+  }
+
+  @Test
+  fun `removeCapacity rejects a zero amount`() {
+    assertThrows(BadRequestProblem::class.java) { service.removeCapacity(organizationId, lowerRegion, 0.0) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `removeCapacity rejects a negative amount`() {
+    assertThrows(BadRequestProblem::class.java) { service.removeCapacity(organizationId, lowerRegion, -1.0) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `removeCapacity rejects a NaN amount`() {
+    assertThrows(BadRequestProblem::class.java) { service.removeCapacity(organizationId, lowerRegion, Double.NaN) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `removeCapacity rejects an infinite amount`() {
+    assertThrows(BadRequestProblem::class.java) {
+      service.removeCapacity(organizationId, lowerRegion, Double.POSITIVE_INFINITY)
+    }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `removeCapacity rejects an amount larger than the capacity column can hold`() {
+    assertThrows(BadRequestProblem::class.java) {
+      service.removeCapacity(organizationId, lowerRegion, Float.MAX_VALUE.toDouble() * 2)
+    }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `removeCapacity rejects a region that does not exist`() {
+    every { dataplaneGroupRepository.findById(lowerRegion.value) } returns Optional.empty()
+
+    assertThrows(BadRequestProblem::class.java) { service.removeCapacity(organizationId, lowerRegion, 1.0) }
+
+    verifyNothingWasWritten()
+  }
+
+  @Test
+  fun `removeCapacity allows taking capacity out of a deleted region`() {
+    givenRegionExists(lowerRegion, tombstone = true)
+    givenSourceHasEnough(lowerRegion)
+
+    service.removeCapacity(organizationId, lowerRegion, 3.0)
+
+    verify { allocatedCapacityRepository.subtractCapacityIfSufficient(organizationId.value, lowerRegion.value, 3.0) }
+  }
+
+  @Test
+  fun `removeCapacity fails as a bad request when the region holds less than the amount`() {
+    // 0 rows changed covers both "not enough capacity" and "no capacity there at all".
+    every {
+      allocatedCapacityRepository.subtractCapacityIfSufficient(organizationId.value, lowerRegion.value, 3.0)
+    } returns 0
+
+    assertThrows(BadRequestProblem::class.java) { service.removeCapacity(organizationId, lowerRegion, 3.0) }
+  }
+
+  @Test
+  fun `removeCapacity fails as a bad request when the organization holds nothing in the region`() {
+    every {
+      allocatedCapacityRepository.subtractCapacityIfSufficient(organizationId.value, higherRegion.value, 1.0)
+    } returns 0
+
+    assertThrows(BadRequestProblem::class.java) { service.removeCapacity(organizationId, higherRegion, 1.0) }
+  }
+
+  @Test
+  fun `removeCapacity scopes the write to the organization`() {
+    val otherOrganizationId = OrganizationId(UUID.randomUUID())
+    givenSourceHasEnough(lowerRegion, otherOrganizationId)
+
+    service.removeCapacity(otherOrganizationId, lowerRegion, 1.0)
+
+    verify { allocatedCapacityRepository.subtractCapacityIfSufficient(otherOrganizationId.value, lowerRegion.value, 1.0) }
+    verify(exactly = 0) { allocatedCapacityRepository.subtractCapacityIfSufficient(organizationId.value, any(), any()) }
+  }
+
+  private fun givenDefaultRegionIs(dataplaneGroupId: DataplaneGroupId) {
+    every { dataplaneGroupService.getDefaultDataplaneGroup() } returns
+      ConfigDataplaneGroup().apply { id = dataplaneGroupId.value }
   }
 
   private fun givenRegionExists(
