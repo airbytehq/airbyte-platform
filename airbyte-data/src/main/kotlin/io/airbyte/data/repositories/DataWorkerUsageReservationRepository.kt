@@ -5,6 +5,7 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.DataWorkerUsageReservation
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -26,6 +27,80 @@ interface DataWorkerUsageReservationRepository : CrudRepository<DataWorkerUsageR
     """,
   )
   fun sumReservedCpuForActiveJobsByOrganizationId(organizationId: UUID): Double
+
+  @Query(
+    """
+      SELECT
+        r.job_id AS job_id,
+        r.organization_id AS organization_id,
+        j.updated_at AS terminal_at
+      FROM data_worker_usage_reservation r
+      JOIN jobs j ON j.id = r.job_id
+      WHERE r.organization_id IN (:organizationIds)
+        AND j.status IN ('failed', 'succeeded', 'cancelled')
+        AND j.updated_at <= :terminalBefore
+      ORDER BY j.updated_at ASC, r.job_id ASC
+      LIMIT :limit
+    """,
+  )
+  fun findTerminalReservationCandidates(
+    organizationIds: List<UUID>,
+    terminalBefore: OffsetDateTime,
+    limit: Int,
+  ): List<DataWorkerUsageReservationCandidate>
+
+  @Query(
+    """
+      SELECT
+        r.job_id AS job_id,
+        r.organization_id AS organization_id,
+        j.updated_at AS terminal_at
+      FROM data_worker_usage_reservation r
+      JOIN jobs j ON j.id = r.job_id
+      WHERE r.organization_id IN (:organizationIds)
+        AND j.status IN ('failed', 'succeeded', 'cancelled')
+        AND j.updated_at <= :terminalBefore
+        AND (
+          j.updated_at > :terminalAfter
+          OR (j.updated_at = :terminalAfter AND r.job_id > :jobIdAfter)
+        )
+      ORDER BY j.updated_at ASC, r.job_id ASC
+      LIMIT :limit
+    """,
+  )
+  fun findTerminalReservationCandidatesAfter(
+    organizationIds: List<UUID>,
+    terminalBefore: OffsetDateTime,
+    terminalAfter: OffsetDateTime,
+    jobIdAfter: Long,
+    limit: Int,
+  ): List<DataWorkerUsageReservationCandidate>
+
+  @Query(
+    """
+      SELECT *
+      FROM data_worker_usage_reservation
+      WHERE job_id = :jobId
+        AND organization_id = :organizationId
+      FOR UPDATE
+    """,
+  )
+  fun findByJobIdAndOrganizationIdForUpdate(
+    jobId: Long,
+    organizationId: UUID,
+  ): java.util.Optional<DataWorkerUsageReservation>
+
+  @Query(
+    """
+      DELETE FROM data_worker_usage_reservation
+      WHERE job_id = :jobId
+        AND organization_id = :organizationId
+    """,
+  )
+  fun deleteByJobIdAndOrganizationId(
+    jobId: Long,
+    organizationId: UUID,
+  ): Long
 
   /**
    * Atomically reserves capacity for a job only if that job is still in a non-terminal state.
@@ -71,3 +146,10 @@ interface DataWorkerUsageReservationRepository : CrudRepository<DataWorkerUsageR
     createdAt: OffsetDateTime,
   ): Int
 }
+
+@Introspected
+data class DataWorkerUsageReservationCandidate(
+  val jobId: Long,
+  val organizationId: UUID,
+  val terminalAt: OffsetDateTime,
+)

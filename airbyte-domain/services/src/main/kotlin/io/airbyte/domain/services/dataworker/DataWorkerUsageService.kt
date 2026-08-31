@@ -9,7 +9,9 @@ import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.StandardWorkspace
+import io.airbyte.data.repositories.DataWorkerUsageReservationCandidate
 import io.airbyte.data.repositories.DataWorkerUsageReservationRepository
+import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.data.repositories.entities.DataWorkerUsage
 import io.airbyte.data.repositories.entities.DataWorkerUsageReservation
 import io.airbyte.data.services.DataWorkerUsageDataService
@@ -32,6 +34,8 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.data.model.Pageable
+import io.micronaut.data.model.Sort
 import io.micronaut.transaction.TransactionOperations
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -46,6 +50,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 open class DataWorkerUsageService(
   private val organizationService: OrganizationService,
+  private val organizationRepository: OrganizationRepository,
   private val dataplaneGroupService: DataplaneGroupService,
   private val dataWorkerUsageDataService: DataWorkerUsageDataService,
   private val dataWorkerUsageReservationRepository: DataWorkerUsageReservationRepository,
@@ -553,31 +558,113 @@ open class DataWorkerUsageService(
   }
 
   /**
+   * Finds the globally oldest eligible terminal-job reservations across all organizations after an
+   * optional candidate cursor.
+   *
+   * Organizations are paged in deterministic ID order. Each page contributes at most one bounded
+   * candidate batch, and only the globally oldest batch is retained while all pages are scanned.
+   */
+  open fun findTerminalReservationCandidates(
+    terminalBefore: OffsetDateTime,
+    afterCandidate: DataWorkerUsageReservationCandidate? = null,
+  ): List<DataWorkerUsageReservationCandidate> {
+    var pageNumber = 0
+    var oldestCandidates = emptyList<DataWorkerUsageReservationCandidate>()
+
+    while (true) {
+      val organizations =
+        organizationRepository
+          .findAll(
+            Pageable
+              .from(pageNumber, ORGANIZATION_PAGE_SIZE, Sort.of(Sort.Order.asc("id")))
+              .withoutTotal(),
+          ).content
+      val organizationIds = organizations.mapNotNull { it.id }
+
+      if (organizationIds.isEmpty()) {
+        break
+      }
+
+      val pageCandidates =
+        if (afterCandidate == null) {
+          dataWorkerUsageReservationRepository.findTerminalReservationCandidates(
+            organizationIds = organizationIds,
+            terminalBefore = terminalBefore,
+            limit = RECONCILIATION_BATCH_SIZE,
+          )
+        } else {
+          dataWorkerUsageReservationRepository.findTerminalReservationCandidatesAfter(
+            organizationIds = organizationIds,
+            terminalBefore = terminalBefore,
+            terminalAfter = afterCandidate.terminalAt,
+            jobIdAfter = afterCandidate.jobId,
+            limit = RECONCILIATION_BATCH_SIZE,
+          )
+        }
+
+      oldestCandidates =
+        (oldestCandidates + pageCandidates)
+          .sortedWith(TERMINAL_CANDIDATE_COMPARATOR)
+          .take(RECONCILIATION_BATCH_SIZE)
+
+      if (organizations.size < ORGANIZATION_PAGE_SIZE) {
+        break
+      }
+      pageNumber++
+    }
+
+    return oldestCandidates
+  }
+
+  /**
    * Releases Data Worker usage that was previously reserved for a job.
    *
    * If no reservation exists, this method is a no-op so terminal job cleanup remains idempotent.
    */
   open fun releaseReservedUsageForJob(jobId: Long) {
+    val reservation = dataWorkerUsageReservationRepository.findById(jobId).orElse(null)
+    if (reservation == null) {
+      logger.info { "No data worker usage reservation found for job $jobId, skipping release." }
+      return
+    }
+
+    releaseReservedUsageForJob(jobId, reservation.organizationId)
+  }
+
+  /**
+   * Atomically releases a reservation scoped to its organization.
+   *
+   * The reservation lock, usage subtraction, and deletion share one config transaction. A missing
+   * row means another caller already completed the release and is treated as an idempotent no-op.
+   */
+  open fun releaseReservedUsageForJob(
+    jobId: Long,
+    organizationId: UUID,
+  ): Boolean {
     var reservationForFailureMetric: DataWorkerUsageReservation? = null
 
     try {
       val releasedReservation =
         configTransactionOperations.executeWrite { _ ->
-          val reservation = dataWorkerUsageReservationRepository.findById(jobId).orElse(null)
+          val reservation =
+            dataWorkerUsageReservationRepository
+              .findByJobIdAndOrganizationIdForUpdate(jobId, organizationId)
+              .orElse(null)
           if (reservation == null) {
-            logger.info { "No data worker usage reservation found for job $jobId, skipping release." }
+            logger.info { "No data worker usage reservation found for job $jobId and org $organizationId, skipping release." }
             return@executeWrite null
           }
 
           reservationForFailureMetric = reservation
           performUsageSubtraction(reservation.toDataWorkerUsage(), jobId)
-          dataWorkerUsageReservationRepository.deleteById(jobId)
+          dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(jobId, organizationId)
           reservation
-        } ?: return
+        } ?: return false
 
       recordUsageMetric(jobId, true, DECREMENT_OPERATION, releasedReservation.toDataWorkerUsage())
+      return true
     } catch (e: Exception) {
-      logger.error(e) { "${e.message}: failed to release data worker usage for job $jobId" }
+      logger.error(e) { "${e.message}: failed to release data worker usage for job $jobId and org $organizationId" }
       reservationForFailureMetric?.let {
         recordUsageMetric(jobId, false, DECREMENT_OPERATION, it.toDataWorkerUsage())
       }
@@ -603,6 +690,11 @@ open class DataWorkerUsageService(
   }
 
   companion object {
+    private const val ORGANIZATION_PAGE_SIZE = 1_000
+    const val RECONCILIATION_BATCH_SIZE = 100
+    private val TERMINAL_CANDIDATE_COMPARATOR =
+      compareBy<DataWorkerUsageReservationCandidate> { it.terminalAt.toInstant() }
+        .thenBy { it.jobId }
     val VALID_PLANS = setOf(EntitlementPlan.PRO.id, EntitlementPlan.FLEX.id, EntitlementPlan.SME.id)
     const val INCREMENT_OPERATION = "INCREMENT"
     const val DECREMENT_OPERATION = "DECREMENT"

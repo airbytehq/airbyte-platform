@@ -13,7 +13,9 @@ import io.airbyte.config.Organization
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SyncResourceRequirements
+import io.airbyte.data.repositories.DataWorkerUsageReservationCandidate
 import io.airbyte.data.repositories.DataWorkerUsageReservationRepository
+import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.data.repositories.entities.DataWorkerUsage
 import io.airbyte.data.repositories.entities.DataWorkerUsageReservation
 import io.airbyte.data.repositories.entities.DataplaneGroup
@@ -25,6 +27,9 @@ import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfig
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.micronaut.data.model.Page
+import io.micronaut.data.model.Pageable
 import io.micronaut.transaction.TransactionCallback
 import io.micronaut.transaction.TransactionDefinition
 import io.micronaut.transaction.TransactionOperations
@@ -34,6 +39,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.sql.Connection
@@ -42,9 +49,11 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.data.repositories.entities.Organization as OrganizationEntity
 
 class DataWorkerUsageServiceTest {
   private lateinit var organizationService: OrganizationService
+  private lateinit var organizationRepository: OrganizationRepository
   private lateinit var dataplaneGroupService: DataplaneGroupService
   private lateinit var dataWorkerUsageDataService: DataWorkerUsageDataService
   private lateinit var dataWorkerUsageReservationRepository: DataWorkerUsageReservationRepository
@@ -58,6 +67,7 @@ class DataWorkerUsageServiceTest {
   @BeforeEach
   fun setup() {
     organizationService = mockk()
+    organizationRepository = mockk()
     dataplaneGroupService = mockk()
     dataWorkerUsageDataService = mockk()
     dataWorkerUsageReservationRepository = mockk(relaxed = true)
@@ -82,6 +92,7 @@ class DataWorkerUsageServiceTest {
     service =
       DataWorkerUsageService(
         organizationService,
+        organizationRepository,
         dataplaneGroupService,
         dataWorkerUsageDataService,
         dataWorkerUsageReservationRepository,
@@ -515,6 +526,196 @@ class DataWorkerUsageServiceTest {
   }
 
   @Test
+  fun `findTerminalReservationCandidates keeps the global oldest candidates across organization pages`() {
+    val firstPageOrganizationIds = (0 until 1_000).map { UUID.randomUUID() }
+    val secondPageOrganizationIds = listOf(UUID.randomUUID())
+    every { organizationRepository.findAll(any<Pageable>()) } returnsMany
+      listOf(
+        organizationPage(firstPageOrganizationIds),
+        organizationPage(secondPageOrganizationIds),
+      )
+
+    val firstPageStart = OffsetDateTime.of(2026, 8, 26, 10, 0, 0, 0, ZoneOffset.UTC)
+    val firstPageCandidates =
+      (0 until 100).map {
+        DataWorkerUsageReservationCandidate(
+          jobId = 1_000L + it,
+          organizationId = firstPageOrganizationIds.first(),
+          terminalAt = firstPageStart.plusMinutes(it.toLong()),
+        )
+      }
+    val secondPageCandidates =
+      (0 until 75).map {
+        DataWorkerUsageReservationCandidate(
+          jobId = 2_000L + it,
+          organizationId = secondPageOrganizationIds.first(),
+          terminalAt = firstPageStart.minusHours(2).plusMinutes(it.toLong()),
+        )
+      }
+    every {
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidates(any(), any(), any())
+    } returnsMany listOf(firstPageCandidates, secondPageCandidates)
+    val terminalBefore = firstPageStart.plusDays(1)
+
+    val result = service.findTerminalReservationCandidates(terminalBefore)
+
+    val expected =
+      (firstPageCandidates + secondPageCandidates)
+        .sortedWith(compareBy<DataWorkerUsageReservationCandidate> { it.terminalAt.toInstant() }.thenBy { it.jobId })
+        .take(100)
+    assertEquals(expected, result)
+    verify(exactly = 1) {
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidates(
+        firstPageOrganizationIds,
+        terminalBefore,
+        DataWorkerUsageService.RECONCILIATION_BATCH_SIZE,
+      )
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidates(
+        secondPageOrganizationIds,
+        terminalBefore,
+        DataWorkerUsageService.RECONCILIATION_BATCH_SIZE,
+      )
+    }
+  }
+
+  @Test
+  fun `findTerminalReservationCandidates skips candidate query for an empty organization page`() {
+    every { organizationRepository.findAll(any<Pageable>()) } returns organizationPage(emptyList())
+
+    val result = service.findTerminalReservationCandidates(OffsetDateTime.now(ZoneOffset.UTC))
+
+    assertTrue(result.isEmpty())
+    verify(exactly = 0) {
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidates(any(), any(), any())
+    }
+  }
+
+  @Test
+  fun `findTerminalReservationCandidates applies cursor across organization pages`() {
+    val firstPageOrganizationIds = (0 until 1_000).map { UUID.randomUUID() }
+    val secondPageOrganizationIds = listOf(UUID.randomUUID())
+    every { organizationRepository.findAll(any<Pageable>()) } returnsMany
+      listOf(
+        organizationPage(firstPageOrganizationIds),
+        organizationPage(secondPageOrganizationIds),
+      )
+    val cursor =
+      DataWorkerUsageReservationCandidate(
+        jobId = 100L,
+        organizationId = firstPageOrganizationIds.first(),
+        terminalAt = OffsetDateTime.of(2026, 8, 26, 10, 0, 0, 0, ZoneOffset.UTC),
+      )
+    val laterCandidate =
+      DataWorkerUsageReservationCandidate(
+        jobId = 101L,
+        organizationId = secondPageOrganizationIds.first(),
+        terminalAt = cursor.terminalAt.plusMinutes(1),
+      )
+    every {
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidatesAfter(any(), any(), any(), any(), any())
+    } returnsMany listOf(emptyList(), listOf(laterCandidate))
+    val terminalBefore = cursor.terminalAt.plusDays(1)
+
+    val result = service.findTerminalReservationCandidates(terminalBefore, cursor)
+
+    assertEquals(listOf(laterCandidate), result)
+    verify(exactly = 1) {
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidatesAfter(
+        firstPageOrganizationIds,
+        terminalBefore,
+        cursor.terminalAt,
+        cursor.jobId,
+        DataWorkerUsageService.RECONCILIATION_BATCH_SIZE,
+      )
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidatesAfter(
+        secondPageOrganizationIds,
+        terminalBefore,
+        cursor.terminalAt,
+        cursor.jobId,
+        DataWorkerUsageService.RECONCILIATION_BATCH_SIZE,
+      )
+    }
+    verify(exactly = 0) {
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidates(any(), any(), any())
+    }
+  }
+
+  @Test
+  fun `scoped release returns false without decrement when reservation is absent`() {
+    val jobId = 778L
+    val organizationId = UUID.randomUUID()
+    every {
+      dataWorkerUsageReservationRepository.findByJobIdAndOrganizationIdForUpdate(jobId, organizationId)
+    } returns Optional.empty()
+
+    val result = service.releaseReservedUsageForJob(jobId, organizationId)
+
+    assertFalse(result)
+    verify(exactly = 0) { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) }
+    verify(exactly = 0) { dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any()) }
+    verify(exactly = 0) { dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(any(), any()) }
+    verify(exactly = 0) {
+      metricClient.count(eq(OssMetricsRegistry.DATA_WORKER_USAGE_RECORDED), any(), *anyVararg())
+    }
+  }
+
+  @Test
+  fun `scoped release remains retryable when subtraction fails`() {
+    val organizationId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val jobId = 778L
+    val reservation =
+      DataWorkerUsageReservation(
+        jobId = jobId,
+        organizationId = organizationId,
+        workspaceId = workspaceId,
+        dataplaneGroupId = dataplaneGroupId,
+        sourceCpuRequest = 2.0,
+        destinationCpuRequest = 3.0,
+        orchestratorCpuRequest = 1.0,
+        usedOnDemandCapacity = false,
+        createdAt = OffsetDateTime.now(),
+      )
+    val existingBucket =
+      DataWorkerUsage(
+        organizationId = organizationId,
+        workspaceId = workspaceId,
+        dataplaneGroupId = dataplaneGroupId,
+        sourceCpuRequest = 5.0,
+        destinationCpuRequest = 6.0,
+        orchestratorCpuRequest = 3.0,
+        bucketStart = OffsetDateTime.now().minusMinutes(30),
+        createdAt = OffsetDateTime.now(),
+        maxSourceCpuRequest = 5.0,
+        maxDestinationCpuRequest = 6.0,
+        maxOrchestratorCpuRequest = 3.0,
+      )
+    every {
+      dataWorkerUsageReservationRepository.findByJobIdAndOrganizationIdForUpdate(jobId, organizationId)
+    } returns Optional.of(reservation)
+    every {
+      dataWorkerUsageDataService.findMostRecentUsageBucket(organizationId, workspaceId, dataplaneGroupId, any())
+    } throws IllegalStateException("subtraction failed") andThen existingBucket
+    every { dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any()) } returns 1
+    every { dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(jobId, organizationId) } returns 1
+
+    assertThrows(IllegalStateException::class.java) {
+      service.releaseReservedUsageForJob(jobId, organizationId)
+    }
+    verify(exactly = 0) { dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(jobId, organizationId) }
+    verify(exactly = 1) {
+      metricClient.count(eq(OssMetricsRegistry.DATA_WORKER_USAGE_RECORDED), any(), *anyVararg())
+    }
+
+    assertTrue(service.releaseReservedUsageForJob(jobId, organizationId))
+    verify(exactly = 1) { dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(jobId, organizationId) }
+    verify(exactly = 2) {
+      metricClient.count(eq(OssMetricsRegistry.DATA_WORKER_USAGE_RECORDED), any(), *anyVararg())
+    }
+  }
+
+  @Test
   fun `releaseReservedUsageForJob should subtract usage and delete reservation`() {
     val organizationId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -548,9 +749,12 @@ class DataWorkerUsageServiceTest {
       )
 
     every { dataWorkerUsageReservationRepository.findById(job.id) } returns Optional.of(reservation)
+    every {
+      dataWorkerUsageReservationRepository.findByJobIdAndOrganizationIdForUpdate(job.id, organizationId)
+    } returns Optional.of(reservation)
     every { dataWorkerUsageDataService.findMostRecentUsageBucket(organizationId, workspaceId, dataplaneGroupId, any()) } returns existingBucket
     every { dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any()) } returns 1
-    every { dataWorkerUsageReservationRepository.deleteById(job.id) } returns Unit
+    every { dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(job.id, organizationId) } returns 1
 
     service.releaseReservedUsageForJob(job.id)
 
@@ -566,7 +770,12 @@ class DataWorkerUsageServiceTest {
         },
       )
     }
-    verify(exactly = 1) { dataWorkerUsageReservationRepository.deleteById(job.id) }
+    verify(exactly = 1) { dataWorkerUsageReservationRepository.findById(job.id) }
+    verify(exactly = 1) { dataWorkerUsageReservationRepository.findByJobIdAndOrganizationIdForUpdate(job.id, organizationId) }
+    verify(exactly = 1) { dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(job.id, organizationId) }
+    verify(exactly = 1) {
+      metricClient.count(eq(OssMetricsRegistry.DATA_WORKER_USAGE_RECORDED), any(), *anyVararg())
+    }
   }
 
   @Test
@@ -877,10 +1086,13 @@ class DataWorkerUsageServiceTest {
       )
 
     every { dataWorkerUsageReservationRepository.findById(jobId) } returns Optional.of(reservation)
+    every {
+      dataWorkerUsageReservationRepository.findByJobIdAndOrganizationIdForUpdate(jobId, organizationId)
+    } returns Optional.of(reservation)
     every { dataWorkerUsageDataService.findMostRecentUsageBucket(organizationId, workspaceId, dataplaneGroupId, any()) } returns existingBucket
     every { dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any()) } returns 0
     every { dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any()) } returns Unit
-    every { dataWorkerUsageReservationRepository.deleteById(jobId) } returns Unit
+    every { dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(jobId, organizationId) } returns 1
 
     service.releaseReservedUsageForJob(jobId)
 
@@ -907,7 +1119,7 @@ class DataWorkerUsageServiceTest {
       )
     }
 
-    verify(exactly = 1) { dataWorkerUsageReservationRepository.deleteById(jobId) }
+    verify(exactly = 1) { dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(jobId, organizationId) }
   }
 
   private fun buildTestJob(
@@ -961,6 +1173,18 @@ class DataWorkerUsageServiceTest {
     )
   }
 }
+
+private fun organizationPage(organizationIds: List<UUID>): Page<OrganizationEntity> =
+  mockk {
+    every { content } returns
+      organizationIds.map {
+        OrganizationEntity(
+          id = it,
+          name = "Organization $it",
+          email = "$it@example.com",
+        )
+      }
+  }
 
 private class ImmediateConfigTransactionOperations : TransactionOperations<Connection> {
   override fun getConnection(): Connection = mockk(relaxed = true)

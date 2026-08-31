@@ -8,24 +8,39 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.data.repositories.entities.DataWorkerUsageReservation
 import io.airbyte.data.repositories.entities.Job
 import io.airbyte.data.repositories.entities.NON_TERMINAL_STATUSES
+import io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.kotest.matchers.doubles.plusOrMinus
 import io.kotest.matchers.shouldBe
 import io.micronaut.context.env.Environment
+import io.micronaut.inject.qualifiers.Qualifiers
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
+import io.micronaut.transaction.TransactionOperations
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
+import java.sql.Connection
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 @MicronautTest(environments = [Environment.TEST])
 internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigRepositoryTest() {
   private val config = Jsons.jsonNode(mapOf<String, String>())
   private var nextCreatedAt = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)
+
+  @Suppress("UNCHECKED_CAST")
+  private val configTransactionOperations =
+    context.getBean(TransactionOperations::class.java, Qualifiers.byName("config")) as TransactionOperations<Connection>
 
   @AfterEach
   fun cleanup() {
@@ -98,6 +113,226 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
     val result = dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId)
 
     result.shouldBe(expected plusOrMinus 0.0001)
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = JobStatus::class, names = ["failed", "succeeded", "cancelled"])
+  fun `findTerminalReservationCandidates includes every terminal status`(status: JobStatus) {
+    val organizationId = UUID.randomUUID()
+    val terminalAt = OffsetDateTime.of(2026, 8, 26, 10, 0, 0, 0, ZoneOffset.UTC)
+    jobsRepository.save(createJob(1L, status))
+    setJobUpdatedAt(1L, terminalAt)
+    dataWorkerUsageReservationRepository.save(createReservation(1L, organizationId))
+
+    val result =
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidates(
+        organizationIds = listOf(organizationId),
+        terminalBefore = terminalAt,
+        limit = 100,
+      )
+
+    result.map { it.jobId } shouldBe listOf(1L)
+    result.single().organizationId shouldBe organizationId
+    result.single().terminalAt.toInstant() shouldBe terminalAt.toInstant()
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = JobStatus::class, mode = EnumSource.Mode.EXCLUDE, names = ["failed", "succeeded", "cancelled"])
+  fun `findTerminalReservationCandidates excludes every non-terminal status`(status: JobStatus) {
+    val organizationId = UUID.randomUUID()
+    val terminalAt = OffsetDateTime.of(2026, 8, 26, 10, 0, 0, 0, ZoneOffset.UTC)
+    jobsRepository.save(createJob(1L, status))
+    setJobUpdatedAt(1L, terminalAt)
+    dataWorkerUsageReservationRepository.save(createReservation(1L, organizationId))
+
+    val result =
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidates(
+        organizationIds = listOf(organizationId),
+        terminalBefore = terminalAt,
+        limit = 100,
+      )
+
+    result shouldBe emptyList()
+  }
+
+  @Test
+  fun `findTerminalReservationCandidates includes the cutoff and excludes newer jobs`() {
+    val organizationId = UUID.randomUUID()
+    val cutoff = OffsetDateTime.of(2026, 8, 26, 10, 0, 0, 0, ZoneOffset.UTC)
+    jobsRepository.saveAll(
+      listOf(
+        createJob(1L, JobStatus.failed),
+        createJob(2L, JobStatus.failed),
+      ),
+    )
+    setJobUpdatedAt(1L, cutoff)
+    setJobUpdatedAt(2L, cutoff.plusSeconds(1))
+    dataWorkerUsageReservationRepository.saveAll(
+      listOf(
+        createReservation(1L, organizationId),
+        createReservation(2L, organizationId),
+      ),
+    )
+
+    val result =
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidates(
+        organizationIds = listOf(organizationId),
+        terminalBefore = cutoff,
+        limit = 100,
+      )
+
+    result.map { it.jobId } shouldBe listOf(1L)
+  }
+
+  @Test
+  fun `findTerminalReservationCandidates is organization scoped`() {
+    val targetOrganizationId = UUID.randomUUID()
+    val otherOrganizationId = UUID.randomUUID()
+    val terminalAt = OffsetDateTime.of(2026, 8, 26, 10, 0, 0, 0, ZoneOffset.UTC)
+    jobsRepository.saveAll(
+      listOf(
+        createJob(1L, JobStatus.succeeded),
+        createJob(2L, JobStatus.succeeded),
+      ),
+    )
+    setJobUpdatedAt(1L, terminalAt)
+    setJobUpdatedAt(2L, terminalAt)
+    dataWorkerUsageReservationRepository.saveAll(
+      listOf(
+        createReservation(1L, targetOrganizationId),
+        createReservation(2L, otherOrganizationId),
+      ),
+    )
+
+    val result =
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidates(
+        organizationIds = listOf(targetOrganizationId),
+        terminalBefore = terminalAt,
+        limit = 100,
+      )
+
+    result.map { it.jobId } shouldBe listOf(1L)
+  }
+
+  @Test
+  fun `findTerminalReservationCandidates orders deterministically and applies the limit`() {
+    val organizationId = UUID.randomUUID()
+    val oldest = OffsetDateTime.of(2026, 8, 26, 8, 0, 0, 0, ZoneOffset.UTC)
+    jobsRepository.saveAll((1L..5L).map { createJob(it, JobStatus.cancelled) })
+    setJobUpdatedAt(1L, oldest.plusHours(2))
+    setJobUpdatedAt(2L, oldest)
+    setJobUpdatedAt(3L, oldest.plusHours(1))
+    setJobUpdatedAt(4L, oldest)
+    setJobUpdatedAt(5L, oldest.plusHours(3))
+    dataWorkerUsageReservationRepository.saveAll((1L..5L).map { createReservation(it, organizationId) })
+
+    val result =
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidates(
+        organizationIds = listOf(organizationId),
+        terminalBefore = oldest.plusHours(3),
+        limit = 3,
+      )
+
+    result.map { it.jobId } shouldBe listOf(2L, 4L, 3L)
+  }
+
+  @Test
+  fun `findTerminalReservationCandidatesAfter starts strictly after timestamp and job ID cursor`() {
+    val organizationId = UUID.randomUUID()
+    val otherOrganizationId = UUID.randomUUID()
+    val cursorTime = OffsetDateTime.of(2026, 8, 26, 8, 0, 0, 0, ZoneOffset.UTC)
+    jobsRepository.saveAll((1L..5L).map { createJob(it, JobStatus.cancelled) })
+    setJobUpdatedAt(1L, cursorTime.minusSeconds(1))
+    setJobUpdatedAt(2L, cursorTime)
+    setJobUpdatedAt(3L, cursorTime)
+    setJobUpdatedAt(4L, cursorTime.plusSeconds(1))
+    setJobUpdatedAt(5L, cursorTime.plusSeconds(1))
+    dataWorkerUsageReservationRepository.saveAll(
+      (1L..4L).map { createReservation(it, organizationId) } + createReservation(5L, otherOrganizationId),
+    )
+
+    val result =
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidatesAfter(
+        organizationIds = listOf(organizationId),
+        terminalBefore = cursorTime.plusSeconds(1),
+        terminalAfter = cursorTime,
+        jobIdAfter = 2L,
+        limit = 100,
+      )
+
+    result.map { it.jobId } shouldBe listOf(3L, 4L)
+  }
+
+  @Test
+  fun `findTerminalReservationCandidatesAfter returns empty at end of candidates`() {
+    val organizationId = UUID.randomUUID()
+    val terminalAt = OffsetDateTime.of(2026, 8, 26, 8, 0, 0, 0, ZoneOffset.UTC)
+    jobsRepository.save(createJob(1L, JobStatus.succeeded))
+    setJobUpdatedAt(1L, terminalAt)
+    dataWorkerUsageReservationRepository.save(createReservation(1L, organizationId))
+
+    val result =
+      dataWorkerUsageReservationRepository.findTerminalReservationCandidatesAfter(
+        organizationIds = listOf(organizationId),
+        terminalBefore = terminalAt,
+        terminalAfter = terminalAt,
+        jobIdAfter = 1L,
+        limit = 100,
+      )
+
+    result shouldBe emptyList()
+  }
+
+  @Test
+  fun `scoped reservation lock serializes concurrent deletion`() {
+    val organizationId = UUID.randomUUID()
+    val jobId = 1L
+    jobsRepository.save(createJob(jobId, JobStatus.succeeded))
+    dataWorkerUsageReservationRepository.save(createReservation(jobId, organizationId))
+    val firstHasDeleted = CountDownLatch(1)
+    val allowFirstCommit = CountDownLatch(1)
+    val secondStarted = CountDownLatch(1)
+    val executor = Executors.newFixedThreadPool(2)
+
+    try {
+      val first =
+        executor.submit(
+          Callable {
+            configTransactionOperations.executeWrite { _ ->
+              dataWorkerUsageReservationRepository
+                .findByJobIdAndOrganizationIdForUpdate(jobId, organizationId)
+                .isPresent shouldBe true
+              dataWorkerUsageReservationRepository.deleteByJobIdAndOrganizationId(jobId, organizationId) shouldBe 1L
+              firstHasDeleted.countDown()
+              allowFirstCommit.await(10, TimeUnit.SECONDS) shouldBe true
+              true
+            }
+          },
+        )
+      firstHasDeleted.await(10, TimeUnit.SECONDS) shouldBe true
+
+      val second =
+        executor.submit(
+          Callable {
+            configTransactionOperations.executeWrite { _ ->
+              secondStarted.countDown()
+              dataWorkerUsageReservationRepository
+                .findByJobIdAndOrganizationIdForUpdate(jobId, organizationId)
+                .isPresent
+            }
+          },
+        )
+      secondStarted.await(10, TimeUnit.SECONDS) shouldBe true
+      assertThrows(TimeoutException::class.java) { second.get(300, TimeUnit.MILLISECONDS) }
+
+      allowFirstCommit.countDown()
+      first.get(10, TimeUnit.SECONDS) shouldBe true
+      second.get(10, TimeUnit.SECONDS) shouldBe false
+      assertFalse(dataWorkerUsageReservationRepository.existsById(jobId))
+    } finally {
+      allowFirstCommit.countDown()
+      executor.shutdownNow()
+    }
   }
 
   @Test
@@ -177,9 +412,9 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
   private fun createReservation(
     jobId: Long,
     organizationId: UUID,
-    sourceCpu: Double,
-    destinationCpu: Double,
-    orchestratorCpu: Double,
+    sourceCpu: Double = 1.0,
+    destinationCpu: Double = 1.0,
+    orchestratorCpu: Double = 1.0,
   ) = DataWorkerUsageReservation(
     jobId = jobId,
     organizationId = organizationId,
@@ -191,4 +426,15 @@ internal class DataWorkerUsageReservationRepositoryTest : AbstractConfigReposito
     usedOnDemandCapacity = false,
     createdAt = OffsetDateTime.now(),
   )
+
+  private fun setJobUpdatedAt(
+    jobId: Long,
+    updatedAt: OffsetDateTime,
+  ) {
+    jooqDslContext
+      .update(JOBS)
+      .set(JOBS.UPDATED_AT, updatedAt)
+      .where(JOBS.ID.eq(jobId))
+      .execute() shouldBe 1
+  }
 }

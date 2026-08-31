@@ -210,6 +210,9 @@ object EnableDefaultSecretStorage : Temporary<Boolean>(key = "platform.use-defau
 
 object EnableDataObservability : Temporary<Boolean>(key = "platform.enable-data-observability", default = false)
 
+object DataWorkerUsageReconciliationMode :
+  Temporary<String>(key = "platform.data-worker-usage-reconciliation-mode", default = "disabled")
+
 object CleanupDanglingSecretConfigs : Temporary<Boolean>(key = "platform.cleanup-dangling-secret-configs", default = false)
 
 object OrphanedSecretCleanupLimit : Temporary<Int>(key = "platform.orphaned-secret-cleanup-limit", default = 100)

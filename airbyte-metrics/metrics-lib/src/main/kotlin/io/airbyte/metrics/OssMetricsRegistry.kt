@@ -768,6 +768,14 @@ enum class OssMetricsRegistry(
     metricName = "data_worker_usage_recorded",
     metricDescription = "a sync was recorded in the data_worker_usage table",
   ),
+  DATA_WORKER_USAGE_RECONCILIATION_RUN(
+    metricName = "data_worker_usage_reconciliation_run",
+    metricDescription = "outcome of a data worker usage reconciliation run",
+  ),
+  DATA_WORKER_USAGE_RECONCILIATION_CANDIDATE_COUNT(
+    metricName = "data_worker_usage_reconciliation_candidate_count",
+    metricDescription = "number of candidates found in a data worker usage reconciliation run",
+  ),
   DOMAIN_VERIFICATION_RUN(
     metricName = "domain_verification_run",
     metricDescription = "number of cron runs for the domain verification cron",
