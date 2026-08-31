@@ -16,7 +16,8 @@ CMD="bin/kc.sh start \
   --proxy-headers xforwarded \
   --log-level=$LOG_LEVEL \
   --cache=ispn \
-  --cache-stack=kubernetes \
+  --cache-stack=jdbc-ping \
+  --spi-cache-embedded--default--authentication-sessions-owners=3 \
   --health-enabled=true \
   --http-relative-path /auth \
   --cache-config-file=cache-ispn-override.xml \
