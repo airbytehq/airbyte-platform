@@ -16,7 +16,7 @@ jna = "5.18.1"
 jmh = "1.37"
 jooq = "3.19.18"
 junit-jupiter = "6.0.3"
-keycloak-client = "26.7.2" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
+keycloak-client = "26.7.3" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 # The admin-client version won't match keycloak-client directly, but should correspond to the major version:
 # https://mvnrepository.com/artifact/org.keycloak/keycloak-admin-client
 keycloak-admin-client = "26.0.12"

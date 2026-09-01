@@ -4,7 +4,7 @@
 # This also lets us take advantage of our pull-through cache.
 # Thus, when upgrading this image, be sure to also upgrade the mirrored image on dockerhub.
 # See README.md for instructions.
-FROM airbyte/mirrored-keycloak:26.7.2
+FROM airbyte/mirrored-keycloak:26.7.3
 
 WORKDIR /opt/keycloak
 
