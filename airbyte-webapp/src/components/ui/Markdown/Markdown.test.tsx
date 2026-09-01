@@ -138,6 +138,29 @@ visible content after
     expect(container.querySelectorAll("tr").length).toBe(3); // Including the header row
   });
 
+  it("renders links with inline-code text in GFM table cells", () => {
+    const md = `
+| Stream |
+| :--- |
+| [\`activity_feed\`](https://example.com/a) |
+
+[Activity feed](https://example.com/activity-feed)
+`;
+
+    const { container } = render(<Markdown content={md} />);
+
+    const inlineCodeLink = screen.getByRole("link", { name: "activity_feed" });
+    expect(inlineCodeLink).toHaveAttribute("href", "https://example.com/a");
+    expect(inlineCodeLink.querySelector("code")).toHaveTextContent("activity_feed");
+    expect(container.querySelector("table")).toBeInTheDocument();
+    expect(inlineCodeLink.closest("td")).not.toBeNull();
+
+    expect(screen.getByRole("link", { name: "Activity feed" })).toHaveAttribute(
+      "href",
+      "https://example.com/activity-feed"
+    );
+  });
+
   it("fancy code blocks", () => {
     const md = "```\nthis is a code block\n```";
     const { queryByStyle } = render(<Markdown content={md} />);

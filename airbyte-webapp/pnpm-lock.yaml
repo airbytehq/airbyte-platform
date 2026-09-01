@@ -153,8 +153,8 @@ dependencies:
     specifier: ^4.18.0
     version: 4.18.0
   markdown-to-jsx:
-    specifier: ^7.4.7
-    version: 7.4.7(react@18.2.0)
+    specifier: ^7.7.17
+    version: 7.7.17(react@18.2.0)
   monaco-editor:
     specifier: ^0.34.1
     version: 0.34.1
@@ -10414,11 +10414,14 @@ packages:
     resolution: {integrity: sha512-Z1NL3Tb1M9wH4XESsCDEksWoKTdlUafKc4pt0GRwjUyXaCFZ+dc3g2erqB6zm3szA2IUSi7VnPI+o/9jnxh9hw==}
     dev: false
 
-  /markdown-to-jsx@7.4.7(react@18.2.0):
-    resolution: {integrity: sha512-0+ls1IQZdU6cwM1yu0ZjjiVWYtkbExSyUIFU2ZeDIFuZM1W42Mh4OlJ4nb4apX4H8smxDHRdFaoIVJGwfv5hkg==}
+  /markdown-to-jsx@7.7.17(react@18.2.0):
+    resolution: {integrity: sha512-7mG/1feQ0TX5I7YyMZVDgCC/y2I3CiEhIRQIhyov9nGBP5eoVrOXXHuL5ZP8GRfxVZKRiXWJgwXkb9It+nQZfQ==}
     engines: {node: '>= 10'}
     peerDependencies:
       react: '>= 0.14.0'
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 18.2.0
     dev: false
