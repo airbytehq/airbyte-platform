@@ -1062,6 +1062,329 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/azure-blob-storage-migrations",
+        "releaseCandidates": {
+          "1.1.9": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 300,
+              "requireVersionIncrementsInPullRequests": false,
+              "sl": 200
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.1@sha256:ec89bd1a89e825514dd2fc8730ba299a3ae1544580a078df0e35c5202c2085b3"
+            },
+            "connectorIPCOptions": {
+              "dataChannel": {
+                "supportedSerialization": [
+                  "JSONL",
+                  "PROTOBUF"
+                ],
+                "supportedTransport": [
+                  "SOCKET",
+                  "STDIO"
+                ],
+                "version": "0.0.2"
+              }
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_DESTINATION-AZURE-BLOB-STORAGE__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config_sas.json",
+                    "name": "SECRET_DESTINATION-AZURE-BLOB-STORAGE-SAS__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "destinationDefinitionId": "b4c5d105-31fd-4817-96b6-cb923bfc04cb",
+            "dockerImageTag": "1.1.9",
+            "dockerRepository": "airbyte/destination-azure-blob-storage",
+            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/azure-blob-storage",
+            "externalDocumentationUrls": [
+              {
+                "title": "Azure Blob Storage documentation",
+                "type": "api_reference",
+                "url": "https://learn.microsoft.com/en-us/azure/storage/blobs/"
+              },
+              {
+                "title": "Authorize access",
+                "type": "authentication_guide",
+                "url": "https://learn.microsoft.com/en-us/azure/storage/common/authorize-data-access"
+              },
+              {
+                "title": "Access control",
+                "type": "permissions_scopes",
+                "url": "https://learn.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-access-control"
+              },
+              {
+                "title": "Scalability and performance",
+                "type": "rate_limits",
+                "url": "https://learn.microsoft.com/en-us/azure/storage/blobs/scalability-targets"
+              },
+              {
+                "title": "Azure Status",
+                "type": "status_page",
+                "url": "https://status.azure.com/"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "octavia-bot[bot]",
+                "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
+                "commit_sha": "e6048644b3b1890d5a895e34569cb0e9bbcb1683",
+                "commit_timestamp": "2026-09-01T20:42:38+00:00"
+              },
+              "release": {
+                "attributed_to": "octavia-bot",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "e6048644b3b1890d5a895e34569cb0e9bbcb1683",
+                "merged_at": "2026-09-01T20:42:39Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 108746235,
+                "pr_author_login": "octavia-bot",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "octavia-bot-admin",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 84984,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84984",
+                "released_at": "2026-09-01T20:42:39Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-azure-blob-storage/1.1.9.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/destination-azure-blob-storage/1.1.9/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T20:46:45.567395+00:00",
+                "registry_entry_generated_at": "2026-09-01T20:46:45.567395+00:00"
+              }
+            },
+            "githubIssueLabel": "destination-azure-blob-storage",
+            "icon": "azureblobstorage.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-azure-blob-storage/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "name": "Azure Blob Storage",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "1.0.0": {
+                  "message": "'This version updates the connector's behavior to match other certified destinations' behavior. In particular, the `_airbyte_*` columns have been renamed, and files are now placed in `<container>/<stream namespace>/<stream name>/**` (previously, stream namespace was not used in the path).\nSome options have been renamed for clarity. Notably, the \"spill size\" option is now named \"file split size\"; additionally, this option is now correctly applied to CSV files (previously it only applied to JSONL files).\nThis connector now writes \"block\" blobs, instead of \"append\" blobs. This means that you may assume that as soon as a blob shows up in your Azure blob container, it is ready for consumption. (Previously, with append blobs, the connector would first write an empty blob, and fill it gradually.)\n'\n",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/azure-blob-storage-migrations#1.0.0",
+                  "upgradeDeadline": "2026-03-31"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/azure-blob-storage-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "resourceRequirements": {
+              "jobSpecific": [
+                {
+                  "jobType": "sync",
+                  "resourceRequirements": {
+                    "memory_request": "1Gi"
+                  }
+                }
+              ]
+            },
+            "sourceType": "file",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "azure_blob_storage_account_key": {
+                    "airbyte_secret": true,
+                    "always_show": true,
+                    "description": "The Azure Blob Storage account key. If you set this value, you must not set the \"Shared Access Signature\", \"Azure Tenant ID\", \"Azure Client ID\", or \"Azure Client Secret\" fields.",
+                    "examples": [
+                      "Z8ZkZpteggFx394vm+PJHnGTvdRncaYS+JhLKdj789YNmD+iyGTnG+PV+POiuYNhBg/ACS+LKjd%4FG3FHGN12Nd=="
+                    ],
+                    "title": "Azure Blob Storage Account Key",
+                    "type": "string"
+                  },
+                  "azure_blob_storage_account_name": {
+                    "description": "The name of the Azure Blob Storage Account. Read more <a href=\"https://learn.microsoft.com/en-gb/azure/storage/blobs/storage-blobs-introduction#storage-accounts\">here</a>.",
+                    "examples": [
+                      "mystorageaccount"
+                    ],
+                    "title": "Azure Blob Storage Account Name",
+                    "type": "string"
+                  },
+                  "azure_blob_storage_container_name": {
+                    "description": "The name of the Azure Blob Storage Container. Read more <a href=\"https://learn.microsoft.com/en-gb/azure/storage/blobs/storage-blobs-introduction#containers\">here</a>.",
+                    "examples": [
+                      "mycontainer"
+                    ],
+                    "title": "Azure Blob Storage Container Name",
+                    "type": "string"
+                  },
+                  "azure_blob_storage_endpoint_domain_name": {
+                    "description": "This is Azure Blob Storage endpoint domain name. Leave default value (or leave it empty if run container from command line) to use Microsoft native from example.",
+                    "title": "Azure Blob Storage Endpoint Domain Name",
+                    "type": "string"
+                  },
+                  "azure_blob_storage_spill_size": {
+                    "default": 500,
+                    "description": "The amount of megabytes after which the connector should spill the records in a new blob object. Make sure to configure size greater than individual records. Enter 0 if not applicable.",
+                    "title": "Azure Blob Storage Target Blob Size (MB)",
+                    "type": "integer"
+                  },
+                  "azure_client_id": {
+                    "airbyte_secret": false,
+                    "description": "The Azure Active Directory (Entra ID) client ID. Required for Entra ID authentication.",
+                    "examples": [
+                      "87654321-4321-4321-4321-210987654321"
+                    ],
+                    "title": "Azure Client ID",
+                    "type": "string"
+                  },
+                  "azure_client_secret": {
+                    "airbyte_secret": true,
+                    "always_show": true,
+                    "description": "The Azure Active Directory (Entra ID) client secret. Required for Entra ID authentication.",
+                    "examples": [
+                      "your-client-secret"
+                    ],
+                    "title": "Azure Client Secret",
+                    "type": "string"
+                  },
+                  "azure_tenant_id": {
+                    "airbyte_secret": false,
+                    "description": "The Azure Active Directory (Entra ID) tenant ID. Required for Entra ID authentication.",
+                    "examples": [
+                      "12345678-1234-1234-1234-123456789012"
+                    ],
+                    "title": "Azure Tenant ID",
+                    "type": "string"
+                  },
+                  "format": {
+                    "description": "Format of the data output.",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "properties": {
+                          "flattening": {
+                            "default": "No flattening",
+                            "enum": [
+                              "No flattening",
+                              "Root level flattening"
+                            ],
+                            "title": "Flattening",
+                            "type": "string"
+                          },
+                          "format_type": {
+                            "default": "CSV",
+                            "enum": [
+                              "CSV"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "format_type",
+                          "flattening"
+                        ],
+                        "title": "CSV: Comma-Separated Values",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "properties": {
+                          "flattening": {
+                            "default": "No flattening",
+                            "enum": [
+                              "No flattening",
+                              "Root level flattening"
+                            ],
+                            "title": "Flattening",
+                            "type": "string"
+                          },
+                          "format_type": {
+                            "default": "JSONL",
+                            "enum": [
+                              "JSONL"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "format_type"
+                        ],
+                        "title": "JSON Lines: Newline-delimited JSON",
+                        "type": "object"
+                      }
+                    ],
+                    "title": "Output Format",
+                    "type": "object"
+                  },
+                  "shared_access_signature": {
+                    "airbyte_secret": true,
+                    "always_show": true,
+                    "description": "A shared access signature (SAS) provides secure delegated access to resources in your storage account. Read more <a href=\"https://learn.microsoft.com/en-gb/azure/storage/common/storage-sas-overview?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json\">here</a>. If you set this value, you must not set the \"Azure Blob Storage Account Key\", \"Azure Tenant ID\", \"Azure Client ID\", or \"Azure Client Secret\" fields.",
+                    "examples": [
+                      "sv=2021-08-06&st=2025-04-11T00%3A00%3A00Z&se=2025-04-12T00%3A00%3A00Z&sr=b&sp=rw&sig=abcdefghijklmnopqrstuvwxyz1234567890%2Fabcdefg%3D"
+                    ],
+                    "title": "Shared Access Signature",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "azure_blob_storage_account_name",
+                  "azure_blob_storage_container_name",
+                  "format"
+                ],
+                "title": "Azure Blob Storage Destination Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/azure-blob-storage",
+              "supported_destination_sync_modes": [
+                "overwrite",
+                "append"
+              ],
+              "supportsDBT": false,
+              "supportsIncremental": true,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": true,
+            "supportsRefreshes": true,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -4327,7 +4650,7 @@
       ],
       "custom": false,
       "destinationDefinitionId": "072d5540-f236-4294-ba7c-ade8fd918496",
-      "dockerImageTag": "4.0.2",
+      "dockerImageTag": "4.0.3",
       "dockerRepository": "airbyte/destination-databricks",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/databricks",
       "externalDocumentationUrls": [
@@ -4359,10 +4682,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "ebac5070521e9b7e32ccb8b0945b44ff507e3cae",
-          "commit_timestamp": "2026-08-10T12:51:34-07:00"
+          "commit_author": "octavia-bot[bot]",
+          "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
+          "commit_sha": "d539914de33db887b6cf69b48f78baf4b9c26d8e",
+          "commit_timestamp": "2026-09-01T21:06:48+00:00"
         },
         "metrics": {
           "all": {
@@ -4378,12 +4701,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-databricks/4.0.2.spdx.json",
+        "release": {
+          "attributed_to": "octavia-bot",
+          "attributed_to_kind": "bot",
+          "merge_commit_sha": "d539914de33db887b6cf69b48f78baf4b9c26d8e",
+          "merged_at": "2026-09-01T21:06:49Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 108746235,
+          "pr_author_login": "octavia-bot",
+          "pr_author_type": "Bot",
+          "pr_merged_by_login": "octavia-bot-admin",
+          "pr_merged_by_type": "Bot",
+          "pr_number": 84988,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84988",
+          "released_at": "2026-09-01T21:06:49Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-databricks/4.0.3.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-databricks/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-10T19:54:10.352436+00:00",
-          "registry_entry_generated_at": "2026-08-10T19:54:10.352436+00:00"
+          "metadata_last_modified": "2026-09-01T21:11:16.122127+00:00",
+          "registry_entry_generated_at": "2026-09-01T21:11:16.122127+00:00"
         }
       },
       "githubIssueLabel": "destination-databricks",
@@ -4423,7 +4762,7 @@
             "strategy": "slow"
           },
           "defaultRolloutMode": "autopilot",
-          "enableProgressiveRollout": true,
+          "enableProgressiveRollout": false,
           "initialPercentage": 0,
           "maxPercentage": 50
         }
@@ -10115,6 +10454,553 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/mssql-migrations",
+        "releaseCandidates": {
+          "2.2.21": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 100,
+              "requireVersionIncrementsInPullRequests": false,
+              "sl": 100
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.1@sha256:ec89bd1a89e825514dd2fc8730ba299a3ae1544580a078df0e35c5202c2085b3"
+            },
+            "connectorIPCOptions": {
+              "dataChannel": {
+                "supportedSerialization": [
+                  "JSONL",
+                  "PROTOBUF"
+                ],
+                "supportedTransport": [
+                  "SOCKET",
+                  "STDIO"
+                ],
+                "version": "0.0.2"
+              }
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "bulk_upload_config.json",
+                    "name": "SECRET_DESTINATION_MSSQL_V2_BULK_LOAD_CONFIG",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "azure_bulk_config.json",
+                    "name": "SECRET_DESTINATION_MSSQL_AZURE_BULK_LOAD_CONFIG",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "destinationDefinitionId": "d4353156-9217-4cad-8dd7-c108fd4f74cf",
+            "dockerImageTag": "2.2.21",
+            "dockerRepository": "airbyte/destination-mssql",
+            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/mssql",
+            "externalDocumentationUrls": [
+              {
+                "title": "SQL Server documentation",
+                "type": "api_reference",
+                "url": "https://learn.microsoft.com/en-us/sql/sql-server/"
+              },
+              {
+                "title": "SQL Server 2022 release notes",
+                "type": "api_release_history",
+                "url": "https://learn.microsoft.com/en-us/sql/sql-server/sql-server-2022-release-notes"
+              },
+              {
+                "title": "Authentication and authorization",
+                "type": "authentication_guide",
+                "url": "https://learn.microsoft.com/en-us/sql/relational-databases/security/authentication-access/getting-started-with-database-engine-permissions"
+              },
+              {
+                "title": "Permissions",
+                "type": "permissions_scopes",
+                "url": "https://learn.microsoft.com/en-us/sql/relational-databases/security/permissions-database-engine"
+              },
+              {
+                "title": "Transact-SQL reference",
+                "type": "sql_reference",
+                "url": "https://learn.microsoft.com/en-us/sql/t-sql/language-reference"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "octavia-bot[bot]",
+                "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
+                "commit_sha": "2139072ab520636392829f81b8f0e4b0e7139ab8",
+                "commit_timestamp": "2026-09-01T20:42:28+00:00"
+              },
+              "release": {
+                "attributed_to": "octavia-bot",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "2139072ab520636392829f81b8f0e4b0e7139ab8",
+                "merged_at": "2026-09-01T20:42:29Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 108746235,
+                "pr_author_login": "octavia-bot",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "octavia-bot-admin",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 84990,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84990",
+                "released_at": "2026-09-01T20:42:29Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-mssql/2.2.21.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/destination-mssql/2.2.21/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T20:47:19.609825+00:00",
+                "registry_entry_generated_at": "2026-09-01T20:47:19.609825+00:00"
+              }
+            },
+            "githubIssueLabel": "destination-mssql",
+            "icon": "icon.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-mssql/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "name": "MS SQL Server",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "2.0.0": {
+                  "message": "'This version introduces new configuration options (bulk insert via Azure Cloud Storage) and removes\n the use of a raw table prior to final insertion in the destination table.  These changes will either\n require the execution of a truncate refresh on an existing connection or the creation of a new connection.\n If a new connection is set up, you may delete the old connection and the raw table in the destination after\na successful initial sync of the new connection.\n'\n",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/mssql-migrations#2.0.0",
+                  "upgradeDeadline": "2025-09-11"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/mssql-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "slow"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "sourceType": "database",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "database": {
+                    "description": "The name of the MSSQL database.",
+                    "order": 2,
+                    "title": "DB Name",
+                    "type": "string"
+                  },
+                  "host": {
+                    "description": "The host name of the MSSQL database.",
+                    "order": 0,
+                    "title": "Host",
+                    "type": "string"
+                  },
+                  "jdbc_url_params": {
+                    "description": "Additional properties to pass to the JDBC URL string when connecting to the database formatted as 'key=value' pairs separated by the symbol '&'. (example: key1=value1&key2=value2&key3=value3).",
+                    "order": 6,
+                    "title": "JDBC URL Params",
+                    "type": "string"
+                  },
+                  "load_type": {
+                    "always_show": true,
+                    "description": "Specifies the type of load mechanism (e.g., BULK, INSERT) and its associated configuration.",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "Configuration details for using the INSERT loading mechanism.",
+                        "properties": {
+                          "load_type": {
+                            "default": "INSERT",
+                            "enum": [
+                              "INSERT"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "load_type"
+                        ],
+                        "title": "Insert Load",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Configuration details for using the BULK loading mechanism.",
+                        "properties": {
+                          "azure_blob_storage_account_key": {
+                            "airbyte_secret": true,
+                            "always_show": true,
+                            "description": "The Azure blob storage account key. Mutually exclusive with a Shared Access Signature",
+                            "examples": [
+                              "Z8ZkZpteggFx394vm+PJHnGTvdRncaYS+JhLKdj789YNmD+iyGTnG+PV+POiuYNhBg/ACS+LKjd%4FG3FHGN12Nd=="
+                            ],
+                            "title": "Azure Blob Storage account key",
+                            "type": "string"
+                          },
+                          "azure_blob_storage_account_name": {
+                            "description": "The name of the Azure Blob Storage account. See: https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#storage-accounts",
+                            "examples": [
+                              "mystorageaccount"
+                            ],
+                            "title": "Azure Blob Storage Account Name",
+                            "type": "string"
+                          },
+                          "azure_blob_storage_container_name": {
+                            "description": "The name of the Azure Blob Storage container. See: https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction#containers",
+                            "examples": [
+                              "mycontainer"
+                            ],
+                            "title": "Azure Blob Storage Container Name",
+                            "type": "string"
+                          },
+                          "bulk_load_data_source": {
+                            "always_show": true,
+                            "description": "Specifies the external data source name configured in MSSQL, which references the Azure Blob container. See: https://learn.microsoft.com/sql/t-sql/statements/bulk-insert-transact-sql",
+                            "examples": [
+                              "MyAzureBlobStorage"
+                            ],
+                            "order": 5,
+                            "title": "BULK Load Data Source",
+                            "type": "string"
+                          },
+                          "bulk_load_validate_values_pre_load": {
+                            "always_show": false,
+                            "default": false,
+                            "description": "When enabled, Airbyte will validate all values before loading them into the destination table. This provides stronger data integrity guarantees but may significantly impact performance.",
+                            "examples": [
+                              "false"
+                            ],
+                            "order": 6,
+                            "title": "Pre-Load Value Validation",
+                            "type": "boolean"
+                          },
+                          "load_type": {
+                            "default": "BULK",
+                            "enum": [
+                              "BULK"
+                            ],
+                            "type": "string"
+                          },
+                          "shared_access_signature": {
+                            "airbyte_secret": true,
+                            "always_show": true,
+                            "description": "A shared access signature (SAS) provides secure delegated access to resources in your storage account. See: https://learn.microsoft.com/azure/storage/common/storage-sas-overview.Mutually exclusive with an account key",
+                            "examples": [
+                              "sv=2021-08-06&st=2025-04-11T00%3A00%3A00Z&se=2025-04-12T00%3A00%3A00Z&sr=b&sp=rw&sig=abcdefghijklmnopqrstuvwxyz1234567890%2Fabcdefg%3D"
+                            ],
+                            "title": "Shared Access Signature",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "load_type",
+                          "azure_blob_storage_account_name",
+                          "azure_blob_storage_container_name",
+                          "bulk_load_data_source"
+                        ],
+                        "title": "Bulk Load",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 8,
+                    "title": "Load Type",
+                    "type": "object"
+                  },
+                  "password": {
+                    "airbyte_secret": true,
+                    "description": "The password associated with this username.",
+                    "order": 5,
+                    "title": "Password",
+                    "type": "string"
+                  },
+                  "port": {
+                    "description": "The port of the MSSQL database.",
+                    "examples": [
+                      "1433"
+                    ],
+                    "maximum": 65536,
+                    "minimum": 0,
+                    "order": 1,
+                    "title": "Port",
+                    "type": "integer"
+                  },
+                  "schema": {
+                    "default": "public",
+                    "description": "The default schema tables are written to if the source does not specify a namespace. The usual value for this field is \"public\".",
+                    "examples": [
+                      "public"
+                    ],
+                    "order": 3,
+                    "title": "Default Schema",
+                    "type": "string"
+                  },
+                  "ssl_method": {
+                    "description": "The encryption method which is used to communicate with the database.",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "The data transfer will not be encrypted.",
+                        "properties": {
+                          "name": {
+                            "default": "unencrypted",
+                            "enum": [
+                              "unencrypted"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "title": "Unencrypted",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Use the certificate provided by the server without verification. (For testing purposes only!)",
+                        "properties": {
+                          "name": {
+                            "default": "encrypted_trust_server_certificate",
+                            "enum": [
+                              "encrypted_trust_server_certificate"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "title": "Encrypted (trust server certificate)",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Verify and use the certificate provided by the server.",
+                        "properties": {
+                          "hostNameInCertificate": {
+                            "description": "Specifies the host name of the server. The value of this property must match the subject property of the certificate.",
+                            "order": 3,
+                            "title": "Host Name In Certificate",
+                            "type": "string"
+                          },
+                          "name": {
+                            "default": "encrypted_verify_certificate",
+                            "enum": [
+                              "encrypted_verify_certificate"
+                            ],
+                            "type": "string"
+                          },
+                          "trustStoreName": {
+                            "description": "Specifies the name of the trust store.",
+                            "order": 1,
+                            "title": "Trust Store Name",
+                            "type": "string"
+                          },
+                          "trustStorePassword": {
+                            "airbyte_secret": true,
+                            "description": "Specifies the password of the trust store.",
+                            "order": 2,
+                            "title": "Trust Store Password",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ],
+                        "title": "Encrypted (verify certificate)",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 7,
+                    "title": "SSL Method",
+                    "type": "object"
+                  },
+                  "tunnel_method": {
+                    "description": "Whether to initiate an SSH tunnel before connecting to the database, and if so, which kind of authentication to use.",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "No ssh tunnel needed to connect to database",
+                        "properties": {
+                          "tunnel_method": {
+                            "default": "NO_TUNNEL",
+                            "enum": [
+                              "NO_TUNNEL"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method"
+                        ],
+                        "title": "No Tunnel",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Connect through a jump server tunnel host using username and ssh key",
+                        "properties": {
+                          "ssh_key": {
+                            "airbyte_secret": true,
+                            "description": "OS-level user account ssh key credentials in RSA PEM format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )",
+                            "multiline": true,
+                            "order": 4,
+                            "title": "SSH Private Key",
+                            "type": "string"
+                          },
+                          "tunnel_host": {
+                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
+                            "order": 1,
+                            "title": "SSH Tunnel Jump Server Host",
+                            "type": "string"
+                          },
+                          "tunnel_method": {
+                            "default": "SSH_KEY_AUTH",
+                            "enum": [
+                              "SSH_KEY_AUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "tunnel_port": {
+                            "default": 22,
+                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
+                            "maximum": 65536,
+                            "minimum": 0,
+                            "order": 2,
+                            "title": "SSH Connection Port",
+                            "type": "integer"
+                          },
+                          "tunnel_user": {
+                            "description": "OS-level username for logging into the jump server host",
+                            "order": 3,
+                            "title": "SSH Login Username",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method",
+                          "tunnel_host",
+                          "tunnel_port",
+                          "tunnel_user",
+                          "ssh_key"
+                        ],
+                        "title": "SSH Key Authentication",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Connect through a jump server tunnel host using username and password authentication",
+                        "properties": {
+                          "tunnel_host": {
+                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
+                            "order": 1,
+                            "title": "SSH Tunnel Jump Server Host",
+                            "type": "string"
+                          },
+                          "tunnel_method": {
+                            "default": "SSH_PASSWORD_AUTH",
+                            "enum": [
+                              "SSH_PASSWORD_AUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "tunnel_port": {
+                            "default": 22,
+                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
+                            "maximum": 65536,
+                            "minimum": 0,
+                            "order": 2,
+                            "title": "SSH Connection Port",
+                            "type": "integer"
+                          },
+                          "tunnel_user": {
+                            "description": "OS-level username for logging into the jump server host",
+                            "order": 3,
+                            "title": "SSH Login Username",
+                            "type": "string"
+                          },
+                          "tunnel_user_password": {
+                            "airbyte_secret": true,
+                            "description": "OS-level password for logging into the jump server host",
+                            "order": 4,
+                            "title": "Password",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method",
+                          "tunnel_host",
+                          "tunnel_port",
+                          "tunnel_user",
+                          "tunnel_user_password"
+                        ],
+                        "title": "Password Authentication",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 5,
+                    "title": "SSH Tunnel Method",
+                    "type": "object"
+                  },
+                  "user": {
+                    "description": "The username which is used to access the database.",
+                    "order": 4,
+                    "title": "User",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "host",
+                  "port",
+                  "database",
+                  "schema",
+                  "user",
+                  "ssl_method",
+                  "load_type"
+                ],
+                "title": "MSSQL Destination Specification",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/mssql",
+              "supported_destination_sync_modes": [
+                "overwrite",
+                "append",
+                "append_dedup"
+              ],
+              "supportsDBT": false,
+              "supportsIncremental": true,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsRefreshes": true,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -13533,7 +14419,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/postgres-migrations",
         "releaseCandidates": {
-          "3.0.17": {
+          "3.0.18": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 200,
@@ -13563,7 +14449,7 @@
             ],
             "custom": false,
             "destinationDefinitionId": "25c5221d-dce2-4163-ade9-739ef790f503",
-            "dockerImageTag": "3.0.17",
+            "dockerImageTag": "3.0.18",
             "dockerRepository": "airbyte/destination-postgres",
             "documentationUrl": "https://docs.airbyte.com/integrations/destinations/postgres",
             "externalDocumentationUrls": [
@@ -13591,37 +14477,42 @@
                 "title": "SQL commands",
                 "type": "sql_reference",
                 "url": "https://www.postgresql.org/docs/current/sql-commands.html"
+              },
+              {
+                "title": "PostgreSQL server source code",
+                "type": "code_repository",
+                "url": "https://github.com/postgres/postgres"
               }
             ],
             "generated": {
               "git": {
-                "commit_author": "Matt Bayley",
-                "commit_author_email": "matt.bayley@airbyte.io",
-                "commit_sha": "a4ff7ba501a0ee3db488b1685d2f546a8c91d397",
-                "commit_timestamp": "2026-08-20T13:04:20-07:00"
+                "commit_author": "octavia-bot[bot]",
+                "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
+                "commit_sha": "14787750ba2703ca46fd8f5c3877b3fbdf21a30f",
+                "commit_timestamp": "2026-09-01T21:04:28+00:00"
               },
               "release": {
-                "attributed_to": "mwbayley",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "a4ff7ba501a0ee3db488b1685d2f546a8c91d397",
-                "merged_at": "2026-08-20T20:04:21Z",
+                "attributed_to": "octavia-bot",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "14787750ba2703ca46fd8f5c3877b3fbdf21a30f",
+                "merged_at": "2026-09-01T21:04:30Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 31358253,
-                "pr_author_login": "mwbayley",
-                "pr_author_type": "User",
-                "pr_merged_by_login": "mwbayley",
-                "pr_merged_by_type": "User",
-                "pr_number": 84853,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84853",
-                "released_at": "2026-08-20T20:04:21Z",
+                "pr_author_id": 108746235,
+                "pr_author_login": "octavia-bot",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "octavia-bot-admin",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 84989,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84989",
+                "released_at": "2026-09-01T21:04:30Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-postgres/3.0.17.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-postgres/3.0.18.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/destination-postgres/3.0.17/metadata.yaml",
-                "metadata_last_modified": "2026-08-20T20:09:10.483155+00:00",
-                "registry_entry_generated_at": "2026-08-20T20:09:10.483155+00:00"
+                "metadata_file_path": "metadata/airbyte/destination-postgres/3.0.18/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T21:09:26.712296+00:00",
+                "registry_entry_generated_at": "2026-09-01T21:09:26.712296+00:00"
               }
             },
             "githubIssueLabel": "destination-postgres",
@@ -16245,7 +17136,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/redshift-migrations",
         "releaseCandidates": {
-          "4.0.7": {
+          "4.0.9": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 200,
@@ -16336,7 +17227,7 @@
             ],
             "custom": false,
             "destinationDefinitionId": "f7a7d195-377f-cf5b-70a5-be6b819019dc",
-            "dockerImageTag": "4.0.7",
+            "dockerImageTag": "4.0.9",
             "dockerRepository": "airbyte/destination-redshift",
             "documentationUrl": "https://docs.airbyte.com/integrations/destinations/redshift",
             "externalDocumentationUrls": [
@@ -16378,33 +17269,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "Saiyam Shah",
-                "commit_author_email": "31028359+saiyamjain143@users.noreply.github.com",
-                "commit_sha": "d6566f948402f2e78aa3ad1a8e705586656a6f03",
-                "commit_timestamp": "2026-08-19T03:43:21+05:30"
+                "commit_author": "Sunil Kuruba",
+                "commit_author_email": "sunil.kuruba@airbyte.io",
+                "commit_sha": "6e15da9a42e69ab055fd3cceafbf11ad1972710f",
+                "commit_timestamp": "2026-09-01T15:28:37-07:00"
               },
               "release": {
                 "attributed_to": "octavia-bot-admin",
                 "attributed_to_kind": "bot",
-                "merge_commit_sha": "d6566f948402f2e78aa3ad1a8e705586656a6f03",
-                "merged_at": "2026-08-18T22:13:22Z",
+                "merge_commit_sha": "6e15da9a42e69ab055fd3cceafbf11ad1972710f",
+                "merged_at": "2026-09-01T22:28:38Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 31028359,
-                "pr_author_login": "saiyamjain143",
+                "pr_author_id": 270477162,
+                "pr_author_login": "sunil-kuruba",
                 "pr_author_type": "User",
                 "pr_merged_by_login": "octavia-bot-admin",
                 "pr_merged_by_type": "Bot",
-                "pr_number": 84459,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84459",
-                "released_at": "2026-08-18T22:13:22Z",
+                "pr_number": 85046,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85046",
+                "released_at": "2026-09-01T22:28:38Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-redshift/4.0.7.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-redshift/4.0.9.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/destination-redshift/4.0.7/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T22:19:01.672293+00:00",
-                "registry_entry_generated_at": "2026-08-18T22:19:01.672293+00:00"
+                "metadata_file_path": "metadata/airbyte/destination-redshift/4.0.9/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T22:33:22.704732+00:00",
+                "registry_entry_generated_at": "2026-09-01T22:33:22.704732+00:00"
               }
             },
             "githubIssueLabel": "destination-redshift",
@@ -17497,6 +18388,809 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/s3-migrations",
+        "releaseCandidates": {
+          "1.9.9": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 300,
+              "requireVersionIncrementsInPullRequests": false,
+              "sl": 300
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.1@sha256:ec89bd1a89e825514dd2fc8730ba299a3ae1544580a078df0e35c5202c2085b3"
+            },
+            "connectorIPCOptions": {
+              "dataChannel": {
+                "supportedSerialization": [
+                  "JSONL",
+                  "PROTOBUF"
+                ],
+                "supportedTransport": [
+                  "SOCKET",
+                  "STDIO"
+                ],
+                "version": "0.0.2"
+              }
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "integrationTests",
+                "testSecrets": [
+                  {
+                    "fileName": "s3_dest_v2_minimal_required_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-MINIMAL-REQUIRED-CONFIG",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_jsonl_root_level_flattening_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-JSONL-ROOT-LEVEL-FLATTENING",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_jsonl_gzip_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-JSONL-GZIP",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_csv_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-CSV",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_csv_root_level_flattening_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-CSV-ROOT-LEVEL-FLATTENING",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_csv_gzip_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-CSV-GZIP",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_avro_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-AVRO",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_avro_bzip2_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-AVRO-BZIP2",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_parquet_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-PARQUET",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_parquet_snappy_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-PARQUET-SNAPPY",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_assume_role_config.json",
+                    "name": "SECRET_DESTINATION-S3-ASSUME-ROLE-CONFIG",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_DESTINATION-S3_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_min_required_permissions_creds.json",
+                    "name": "SECRET_DESTINATION-S3_MIN_REQUIRED_PERMISSIONS_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_policy_manager_credentials.json",
+                    "name": "SECRET_DESTINATION-S3_POLICY_MANAGER_CREDENTIALS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_iam_role_credentials_for_assume_role_auth.json",
+                    "name": "SECRET_DESTINATION-S3_DEST_IAM_ROLE_CREDENTIALS_FOR_ASSUME_ROLE_AUTH",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_endpoint_url_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-ENDPOINT_URL",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_endpoint_empty_url_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2-ENDPOINT_EMPTY_URL",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_ambiguous_filepath_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2_AMBIGUOUS_FILEPATH",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "s3_dest_v2_csv_assume_role_config.json",
+                    "name": "SECRET_DESTINATION-S3-V2_CSV_ASSUME_ROLE",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "destinationDefinitionId": "4816b78f-1489-44c1-9060-4b19d5fa9362",
+            "dockerImageTag": "1.9.9",
+            "dockerRepository": "airbyte/destination-s3",
+            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/s3",
+            "externalDocumentationUrls": [
+              {
+                "title": "AWS S3 documentation",
+                "type": "api_reference",
+                "url": "https://docs.aws.amazon.com/s3/"
+              },
+              {
+                "title": "IAM authentication",
+                "type": "authentication_guide",
+                "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html"
+              },
+              {
+                "title": "Bucket policies and permissions",
+                "type": "permissions_scopes",
+                "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-policy-language-overview.html"
+              },
+              {
+                "title": "Request rate and performance",
+                "type": "rate_limits",
+                "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html"
+              },
+              {
+                "title": "AWS Service Health Dashboard",
+                "type": "status_page",
+                "url": "https://health.aws.amazon.com/health/status"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "octavia-bot[bot]",
+                "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
+                "commit_sha": "9ccd6d7260c82dc05d14f58853cd31f6891c2b0d",
+                "commit_timestamp": "2026-09-01T20:36:46+00:00"
+              },
+              "release": {
+                "attributed_to": "octavia-bot",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "9ccd6d7260c82dc05d14f58853cd31f6891c2b0d",
+                "merged_at": "2026-09-01T20:36:46Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 108746235,
+                "pr_author_login": "octavia-bot",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "octavia-bot-admin",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 84993,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/84993",
+                "released_at": "2026-09-01T20:36:46Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-s3/1.9.9.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/destination-s3/1.9.9/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T20:41:37.598206+00:00",
+                "registry_entry_generated_at": "2026-09-01T20:41:37.598206+00:00"
+              }
+            },
+            "githubIssueLabel": "destination-s3",
+            "icon": "s3.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-s3/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "name": "S3",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "1.0.0": {
+                  "message": "**This release includes breaking changes, including major revisions to the schema of stored data. Do not upgrade without reviewing the migration guide.**\n",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/s3-migrations#1.0.0",
+                  "upgradeDeadline": "2024-10-08"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/s3-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "resourceRequirements": {
+              "jobSpecific": [
+                {
+                  "jobType": "sync",
+                  "resourceRequirements": {
+                    "memory_request": "2Gi"
+                  }
+                }
+              ]
+            },
+            "sourceType": "file",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "access_key_id": {
+                    "airbyte_secret": true,
+                    "always_show": true,
+                    "description": "The access key ID to access the S3 bucket. Airbyte requires Read and Write permissions to the given bucket. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\">here</a>.",
+                    "examples": [
+                      "A012345678910EXAMPLE"
+                    ],
+                    "order": 0,
+                    "title": "Access Key ID",
+                    "type": "string"
+                  },
+                  "file_name_pattern": {
+                    "description": "Pattern to match file names in the bucket directory. Read more <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/ListingKeysUsingAPIs.html\">here</a>",
+                    "examples": [
+                      "{date}",
+                      "{date:yyyy_MM}",
+                      "{timestamp}",
+                      "{part_number}",
+                      "{sync_id}"
+                    ],
+                    "order": 9,
+                    "title": "File Name Pattern",
+                    "type": "string"
+                  },
+                  "format": {
+                    "description": "Format of the data output. See <a href=\"https://docs.airbyte.com/integrations/destinations/s3/#supported-output-schema\">here</a> for more details",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "properties": {
+                          "compression": {
+                            "description": "Whether the output files should be compressed. If compression is selected, the output filename will have an extra extension (GZIP: \".jsonl.gz\").",
+                            "oneOf": [
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "compression_type": {
+                                    "default": "No Compression",
+                                    "enum": [
+                                      "No Compression"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "compression_type"
+                                ],
+                                "title": "No Compression",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "compression_type": {
+                                    "default": "GZIP",
+                                    "enum": [
+                                      "GZIP"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "compression_type"
+                                ],
+                                "title": "GZIP",
+                                "type": "object"
+                              }
+                            ],
+                            "title": "Compression",
+                            "type": "object"
+                          },
+                          "flattening": {
+                            "default": "No flattening",
+                            "enum": [
+                              "No flattening",
+                              "Root level flattening"
+                            ],
+                            "title": "Flattening",
+                            "type": "string"
+                          },
+                          "format_type": {
+                            "default": "CSV",
+                            "enum": [
+                              "CSV"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "format_type",
+                          "flattening"
+                        ],
+                        "title": "CSV: Comma-Separated Values",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "properties": {
+                          "compression": {
+                            "description": "Whether the output files should be compressed. If compression is selected, the output filename will have an extra extension (GZIP: \".jsonl.gz\").",
+                            "oneOf": [
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "compression_type": {
+                                    "default": "No Compression",
+                                    "enum": [
+                                      "No Compression"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "compression_type"
+                                ],
+                                "title": "No Compression",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "compression_type": {
+                                    "default": "GZIP",
+                                    "enum": [
+                                      "GZIP"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "compression_type"
+                                ],
+                                "title": "GZIP",
+                                "type": "object"
+                              }
+                            ],
+                            "title": "Compression",
+                            "type": "object"
+                          },
+                          "flattening": {
+                            "default": "No flattening",
+                            "enum": [
+                              "No flattening",
+                              "Root level flattening"
+                            ],
+                            "title": "Flattening",
+                            "type": "string"
+                          },
+                          "format_type": {
+                            "default": "JSONL",
+                            "enum": [
+                              "JSONL"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "format_type"
+                        ],
+                        "title": "JSON Lines: Newline-delimited JSON",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "properties": {
+                          "compression_codec": {
+                            "description": "The compression algorithm used to compress data. Default to no compression.",
+                            "oneOf": [
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "codec": {
+                                    "default": "no compression",
+                                    "enum": [
+                                      "no compression"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "codec"
+                                ],
+                                "title": "no compression",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "codec": {
+                                    "default": "Deflate",
+                                    "enum": [
+                                      "Deflate"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "compression_level": {
+                                    "title": "Deflate Level",
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "codec",
+                                  "compression_level"
+                                ],
+                                "title": "Deflate",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "codec": {
+                                    "default": "bzip2",
+                                    "enum": [
+                                      "bzip2"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "codec"
+                                ],
+                                "title": "bzip2",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "codec": {
+                                    "default": "xz",
+                                    "enum": [
+                                      "xz"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "compression_level": {
+                                    "title": "Compression Level",
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "codec",
+                                  "compression_level"
+                                ],
+                                "title": "xz",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "codec": {
+                                    "default": "zstandard",
+                                    "enum": [
+                                      "zstandard"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "compression_level": {
+                                    "title": "Compression Level",
+                                    "type": "integer"
+                                  },
+                                  "include_checksum": {
+                                    "title": "Include Checksum",
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "codec",
+                                  "compression_level",
+                                  "include_checksum"
+                                ],
+                                "title": "zstandard",
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": true,
+                                "properties": {
+                                  "codec": {
+                                    "default": "snappy",
+                                    "enum": [
+                                      "snappy"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "codec"
+                                ],
+                                "title": "snappy",
+                                "type": "object"
+                              }
+                            ],
+                            "order": 1,
+                            "title": "Compression Codec",
+                            "type": "object"
+                          },
+                          "format_type": {
+                            "default": "Avro",
+                            "enum": [
+                              "Avro"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "format_type",
+                          "compression_codec"
+                        ],
+                        "title": "Avro: Apache Avro",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "properties": {
+                          "block_size_mb": {
+                            "default": 128,
+                            "description": "This is the size of a row group being buffered in memory. It limits the memory usage when writing. Larger values will improve the IO when reading, but consume more memory when writing. Default: 128 MB.",
+                            "title": "Block Size (Row Group Size) (MB)",
+                            "type": "integer"
+                          },
+                          "compression_codec": {
+                            "default": "UNCOMPRESSED",
+                            "description": "The compression algorithm used to compress data pages.",
+                            "enum": [
+                              "UNCOMPRESSED",
+                              "SNAPPY",
+                              "GZIP",
+                              "LZO",
+                              "BROTLI",
+                              "LZ4",
+                              "ZSTD"
+                            ],
+                            "title": "Compression Codec",
+                            "type": "string"
+                          },
+                          "dictionary_encoding": {
+                            "description": "Default: true.",
+                            "title": "Dictionary Encoding",
+                            "type": "boolean"
+                          },
+                          "dictionary_page_size_kb": {
+                            "default": 1024,
+                            "description": "There is one dictionary page per column per row group when dictionary encoding is used. The dictionary page size works like the page size but for dictionary. Default: 1024 KB.",
+                            "title": "Dictionary Page Size (KB)",
+                            "type": "integer"
+                          },
+                          "format_type": {
+                            "default": "Parquet",
+                            "enum": [
+                              "Parquet"
+                            ],
+                            "type": "string"
+                          },
+                          "max_padding_size_mb": {
+                            "default": 8,
+                            "description": "Maximum size allowed as padding to align row groups. This is also the minimum size of a row group. Default: 8 MB.",
+                            "title": "Max Padding Size (MB)",
+                            "type": "integer"
+                          },
+                          "page_size_kb": {
+                            "default": 1024,
+                            "description": "The page size is for compression. A block is composed of pages. A page is the smallest unit that must be read fully to access a single record. If this value is too small, the compression will deteriorate. Default: 1024 KB.",
+                            "title": "Page Size (KB)",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "format_type"
+                        ],
+                        "title": "Parquet: Columnar Storage",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 6,
+                    "title": "Output Format",
+                    "type": "object"
+                  },
+                  "role_arn": {
+                    "description": "The ARN of the AWS role to assume. Only usable in Airbyte Cloud.",
+                    "examples": [
+                      "arn:aws:iam::123456789:role/ExternalIdIsYourWorkspaceId"
+                    ],
+                    "order": 2,
+                    "title": "Role ARN",
+                    "type": "string"
+                  },
+                  "s3_bucket_name": {
+                    "description": "The name of the S3 bucket. Read more <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html\">here</a>.",
+                    "examples": [
+                      "airbyte_sync"
+                    ],
+                    "order": 3,
+                    "title": "S3 Bucket Name",
+                    "type": "string"
+                  },
+                  "s3_bucket_path": {
+                    "description": "Directory under the S3 bucket where data will be written. Read more <a href=\"https://docs.airbyte.com/integrations/destinations/s3#:~:text=to%20format%20the-,bucket%20path,-%3A\">here</a>",
+                    "examples": [
+                      "data_sync/test"
+                    ],
+                    "order": 4,
+                    "title": "S3 Bucket Path",
+                    "type": "string"
+                  },
+                  "s3_bucket_region": {
+                    "default": "",
+                    "description": "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\">here</a> for all region codes.",
+                    "enum": [
+                      "",
+                      "af-south-1",
+                      "ap-east-1",
+                      "ap-northeast-1",
+                      "ap-northeast-2",
+                      "ap-northeast-3",
+                      "ap-south-1",
+                      "ap-south-2",
+                      "ap-southeast-1",
+                      "ap-southeast-2",
+                      "ap-southeast-3",
+                      "ap-southeast-4",
+                      "ca-central-1",
+                      "ca-west-1",
+                      "cn-north-1",
+                      "cn-northwest-1",
+                      "eu-central-1",
+                      "eu-central-2",
+                      "eu-north-1",
+                      "eu-south-1",
+                      "eu-south-2",
+                      "eu-west-1",
+                      "eu-west-2",
+                      "eu-west-3",
+                      "il-central-1",
+                      "me-central-1",
+                      "me-south-1",
+                      "sa-east-1",
+                      "us-east-1",
+                      "us-east-2",
+                      "us-gov-east-1",
+                      "us-gov-west-1",
+                      "us-west-1",
+                      "us-west-2"
+                    ],
+                    "examples": [
+                      "us-east-1"
+                    ],
+                    "order": 5,
+                    "title": "S3 Bucket Region",
+                    "type": "string"
+                  },
+                  "s3_endpoint": {
+                    "description": "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\">here</a>",
+                    "examples": [
+                      "http://localhost:9000"
+                    ],
+                    "order": 7,
+                    "title": "S3 Endpoint",
+                    "type": "string"
+                  },
+                  "s3_path_format": {
+                    "description": "Format string on how data will be organized inside the bucket directory. Read more <a href=\"https://docs.airbyte.com/integrations/destinations/s3#:~:text=The%20full%20path%20of%20the%20output%20data%20with%20the%20default%20S3%20path%20format\">here</a>",
+                    "examples": [
+                      "${NAMESPACE}/${STREAM_NAME}/${YEAR}_${MONTH}_${DAY}_${EPOCH}_"
+                    ],
+                    "order": 8,
+                    "title": "S3 Path Format",
+                    "type": "string"
+                  },
+                  "secret_access_key": {
+                    "airbyte_secret": true,
+                    "always_show": true,
+                    "description": "The corresponding secret to the access key ID. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\">here</a>",
+                    "examples": [
+                      "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                    ],
+                    "order": 1,
+                    "title": "Secret Access Key",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "s3_bucket_name",
+                  "s3_bucket_path",
+                  "s3_bucket_region",
+                  "format"
+                ],
+                "title": "S3 V2 Destination Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/s3",
+              "supported_destination_sync_modes": [
+                "overwrite",
+                "append"
+              ],
+              "supportsDBT": false,
+              "supportsIncremental": true,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": true,
+            "supportsRefreshes": true,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -32538,7 +34232,7 @@
       "releaseStage": "generally_available",
       "releases": {
         "releaseCandidates": {
-          "0.8.31": {
+          "0.8.32": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -32872,7 +34566,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "0.8.31",
+            "dockerImageTag": "0.8.32",
             "dockerRepository": "airbyte/source-azure-blob-storage",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/azure-blob-storage",
             "externalDocumentationUrls": [
@@ -32886,31 +34580,31 @@
               "git": {
                 "commit_author": "octavia-bot-hoard[bot]",
                 "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "5a6da97c8f74dee1abd673f78745f410d2739e91",
-                "commit_timestamp": "2026-08-25T03:53:08+00:00"
+                "commit_sha": "9b693c048791101c5b71b0a2c247e5743055d30f",
+                "commit_timestamp": "2026-09-01T03:37:51+00:00"
               },
               "release": {
                 "attributed_to": "octavia-bot-hoard",
                 "attributed_to_kind": "bot",
-                "merge_commit_sha": "5a6da97c8f74dee1abd673f78745f410d2739e91",
-                "merged_at": "2026-08-25T03:53:09Z",
+                "merge_commit_sha": "9b693c048791101c5b71b0a2c247e5743055d30f",
+                "merged_at": "2026-09-01T03:37:52Z",
                 "pr_author_association": "CONTRIBUTOR",
                 "pr_author_id": 230633153,
                 "pr_author_login": "octavia-bot-hoard",
                 "pr_author_type": "Bot",
                 "pr_merged_by_login": "octavia-bot-hoard",
                 "pr_merged_by_type": "Bot",
-                "pr_number": 85007,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/85007",
-                "released_at": "2026-08-25T03:53:09Z",
+                "pr_number": 85241,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85241",
+                "released_at": "2026-09-01T03:37:52Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-azure-blob-storage/0.8.31.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-azure-blob-storage/0.8.32.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-azure-blob-storage/0.8.31/metadata.yaml",
-                "metadata_last_modified": "2026-08-25T04:01:06.093583+00:00",
-                "registry_entry_generated_at": "2026-08-25T04:01:06.093583+00:00"
+                "metadata_file_path": "metadata/airbyte/source-azure-blob-storage/0.8.32/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T03:45:03.510600+00:00",
+                "registry_entry_generated_at": "2026-09-01T03:45:03.510600+00:00"
               }
             },
             "githubIssueLabel": "source-azure-blob-storage",
@@ -32921,7 +34615,7 @@
             "maxSecondsBetweenMessages": 1,
             "name": "Azure Blob Storage",
             "packageInfo": {
-              "cdk_version": "python:7.28.2"
+              "cdk_version": "python:7.28.3"
             },
             "public": true,
             "releaseStage": "generally_available",
@@ -37396,7 +39090,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.3.40",
+      "dockerImageTag": "0.3.41",
       "dockerRepository": "airbyte/source-braintree",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/braintree",
       "externalDocumentationUrls": [
@@ -37430,8 +39124,8 @@
         "git": {
           "commit_author": "octavia-bot-hoard[bot]",
           "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "c3e79fd8caa82902b06f947aec114b32d9e286bf",
-          "commit_timestamp": "2026-08-25T04:00:42+00:00"
+          "commit_sha": "1deee74bd0cdbf021c7572e4b92347eabc80df6d",
+          "commit_timestamp": "2026-09-01T03:45:40+00:00"
         },
         "metrics": {
           "all": {
@@ -37450,25 +39144,25 @@
         "release": {
           "attributed_to": "octavia-bot-hoard",
           "attributed_to_kind": "bot",
-          "merge_commit_sha": "c3e79fd8caa82902b06f947aec114b32d9e286bf",
-          "merged_at": "2026-08-25T04:00:43Z",
+          "merge_commit_sha": "1deee74bd0cdbf021c7572e4b92347eabc80df6d",
+          "merged_at": "2026-09-01T03:45:40Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 230633153,
           "pr_author_login": "octavia-bot-hoard",
           "pr_author_type": "Bot",
           "pr_merged_by_login": "octavia-bot-hoard",
           "pr_merged_by_type": "Bot",
-          "pr_number": 85008,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/85008",
-          "released_at": "2026-08-25T04:00:43Z",
+          "pr_number": 85242,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85242",
+          "released_at": "2026-09-01T03:45:40Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-braintree/0.3.40.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-braintree/0.3.41.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-braintree/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-25T04:06:50.834006+00:00",
-          "registry_entry_generated_at": "2026-08-25T04:06:50.834006+00:00"
+          "metadata_last_modified": "2026-09-01T03:50:43.445478+00:00",
+          "registry_entry_generated_at": "2026-09-01T03:50:43.445478+00:00"
         }
       },
       "githubIssueLabel": "source-braintree",
@@ -61854,7 +63548,7 @@
       "releaseStage": "alpha",
       "releases": {
         "releaseCandidates": {
-          "0.10.29": {
+          "0.10.30": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 200,
@@ -61971,7 +63665,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "0.10.29",
+            "dockerImageTag": "0.10.30",
             "dockerRepository": "airbyte/source-gcs",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/gcs",
             "externalDocumentationUrls": [
@@ -61995,31 +63689,31 @@
               "git": {
                 "commit_author": "octavia-bot-hoard[bot]",
                 "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "1e64aaf070a0100ab9d93d70154c84cc139d175f",
-                "commit_timestamp": "2026-08-25T05:12:05+00:00"
+                "commit_sha": "e535c2e4cb750d33ec0bafb03f5947bfc6affdff",
+                "commit_timestamp": "2026-09-01T05:06:48+00:00"
               },
               "release": {
                 "attributed_to": "octavia-bot-hoard",
                 "attributed_to_kind": "bot",
-                "merge_commit_sha": "1e64aaf070a0100ab9d93d70154c84cc139d175f",
-                "merged_at": "2026-08-25T05:12:06Z",
+                "merge_commit_sha": "e535c2e4cb750d33ec0bafb03f5947bfc6affdff",
+                "merged_at": "2026-09-01T05:06:49Z",
                 "pr_author_association": "CONTRIBUTOR",
                 "pr_author_id": 230633153,
                 "pr_author_login": "octavia-bot-hoard",
                 "pr_author_type": "Bot",
                 "pr_merged_by_login": "octavia-bot-hoard",
                 "pr_merged_by_type": "Bot",
-                "pr_number": 85012,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/85012",
-                "released_at": "2026-08-25T05:12:06Z",
+                "pr_number": 85245,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85245",
+                "released_at": "2026-09-01T05:06:49Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-gcs/0.10.29.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-gcs/0.10.30.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-gcs/0.10.29/metadata.yaml",
-                "metadata_last_modified": "2026-08-25T05:19:08.734777+00:00",
-                "registry_entry_generated_at": "2026-08-25T05:19:08.734777+00:00"
+                "metadata_file_path": "metadata/airbyte/source-gcs/0.10.30/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T05:14:18.569172+00:00",
+                "registry_entry_generated_at": "2026-09-01T05:14:18.569172+00:00"
               }
             },
             "githubIssueLabel": "source-gcs",
@@ -62030,7 +63724,7 @@
             "maxSecondsBetweenMessages": 5400,
             "name": "Google Cloud Storage (GCS)",
             "packageInfo": {
-              "cdk_version": "python:7.28.2"
+              "cdk_version": "python:7.28.3"
             },
             "public": true,
             "releaseStage": "alpha",
@@ -64429,7 +66123,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/github-migrations",
         "releaseCandidates": {
-          "2.2.0": {
+          "2.2.1": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -64484,7 +66178,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "2.2.0",
+            "dockerImageTag": "2.2.1",
             "dockerRepository": "airbyte/source-github",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/github",
             "erdUrl": "https://dbdocs.io/airbyteio/source-github?view=relationships",
@@ -64532,33 +66226,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "f6a0f9ac9a23b4747f24c4ad003d25caeeee792e",
-                "commit_timestamp": "2026-08-27T06:45:08-07:00"
+                "commit_author": "octavia-bot-hoard[bot]",
+                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
+                "commit_sha": "82faaa00b5855d43b928aa39ea9b85dcd17c4ae0",
+                "commit_timestamp": "2026-09-01T04:52:33+00:00"
               },
               "release": {
-                "attributed_to": "darynaishchenko",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "f6a0f9ac9a23b4747f24c4ad003d25caeeee792e",
-                "merged_at": "2026-08-27T13:45:08Z",
+                "attributed_to": "octavia-bot-hoard",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "82faaa00b5855d43b928aa39ea9b85dcd17c4ae0",
+                "merged_at": "2026-09-01T04:52:34Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 158243242,
-                "pr_author_login": "devin-ai-integration",
+                "pr_author_id": 230633153,
+                "pr_author_login": "octavia-bot-hoard",
                 "pr_author_type": "Bot",
-                "pr_merged_by_login": "darynaishchenko",
-                "pr_merged_by_type": "User",
-                "pr_number": 81428,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/81428",
-                "released_at": "2026-08-27T13:45:08Z",
+                "pr_merged_by_login": "octavia-bot-hoard",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 85244,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85244",
+                "released_at": "2026-09-01T04:52:34Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.2.0.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.2.1.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-github/2.2.0/metadata.yaml",
-                "metadata_last_modified": "2026-08-27T13:51:34.855795+00:00",
-                "registry_entry_generated_at": "2026-08-27T13:51:34.855795+00:00"
+                "metadata_file_path": "metadata/airbyte/source-github/2.2.1/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T04:58:40.128219+00:00",
+                "registry_entry_generated_at": "2026-09-01T04:58:40.128219+00:00"
               }
             },
             "githubIssueLabel": "source-github",
@@ -64569,7 +66263,7 @@
             "maxSecondsBetweenMessages": 3600,
             "name": "GitHub",
             "packageInfo": {
-              "cdk_version": "python:7.28.2"
+              "cdk_version": "python:7.28.3"
             },
             "public": true,
             "releaseStage": "generally_available",
@@ -74816,6 +76510,821 @@
       "public": true,
       "releaseStage": "alpha",
       "releases": {
+        "releaseCandidates": {
+          "0.5.33": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 300,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 200
+            },
+            "allowedHosts": {
+              "hosts": [
+                "www.googleapis.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/python-connector-base:4.1.1@sha256:a268b44c733ae699a60f5fbc06a324945dba98945c6e2ab7f8609f2f895b0d28"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE_GOOGLE_DRIVE_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "oauth_config.json",
+                    "name": "SECRET_SOURCE_GOOGLE_DRIVE_OAUTH_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "0.5.33",
+            "dockerRepository": "airbyte/source-google-drive",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/google-drive",
+            "externalDocumentationUrls": [
+              {
+                "title": "Google Drive API reference",
+                "type": "api_reference",
+                "url": "https://developers.google.com/drive/api/reference/rest/v3"
+              },
+              {
+                "title": "Google Drive authentication",
+                "type": "authentication_guide",
+                "url": "https://developers.google.com/drive/api/guides/about-auth"
+              },
+              {
+                "title": "Google Drive quotas",
+                "type": "rate_limits",
+                "url": "https://developers.google.com/drive/api/guides/limits"
+              },
+              {
+                "title": "Google Workspace Status",
+                "type": "status_page",
+                "url": "https://www.google.com/appsstatus/"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "octavia-bot-hoard[bot]",
+                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
+                "commit_sha": "1443bc2664e6d28811d79aec45428a5296834f0d",
+                "commit_timestamp": "2026-09-01T05:37:45+00:00"
+              },
+              "release": {
+                "attributed_to": "octavia-bot-hoard",
+                "attributed_to_kind": "bot",
+                "merge_commit_sha": "1443bc2664e6d28811d79aec45428a5296834f0d",
+                "merged_at": "2026-09-01T05:37:46Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 230633153,
+                "pr_author_login": "octavia-bot-hoard",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "octavia-bot-hoard",
+                "pr_merged_by_type": "Bot",
+                "pr_number": 85247,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85247",
+                "released_at": "2026-09-01T05:37:46Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-google-drive/0.5.33.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-google-drive/0.5.33/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T05:45:58.534515+00:00",
+                "registry_entry_generated_at": "2026-09-01T05:45:58.534515+00:00"
+              }
+            },
+            "githubIssueLabel": "source-google-drive",
+            "icon": "google-drive.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-google-drive/latest/icon.svg",
+            "language": "python",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 3600,
+            "name": "Google Drive",
+            "packageInfo": {
+              "cdk_version": "python:7.28.3"
+            },
+            "public": true,
+            "releaseStage": "alpha",
+            "releases": {
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": true,
+                "packageName": "airbyte-source-google-drive"
+              }
+            },
+            "sourceDefinitionId": "9f8dda77-1048-4368-815b-269bf54ee9b8",
+            "sourceType": "file",
+            "spec": {
+              "advanced_auth": {
+                "auth_flow_type": "oauth2.0",
+                "oauth_config_specification": {
+                  "complete_oauth_output_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "refresh_token": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "refresh_token"
+                        ],
+                        "path_in_oauth_response": [
+                          "refresh_token"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_input_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "client_id": {
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_output_specification": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "client_id": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "client_id"
+                        ],
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "client_secret"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "oauth_connector_input_specification": {
+                    "access_token_url": "https://oauth2.googleapis.com/token?{{client_id_param}}&{{client_secret_param}}&{{auth_code_param}}&{{redirect_uri_param}}&grant_type=authorization_code",
+                    "consent_url": "https://accounts.google.com/o/oauth2/v2/auth?{{client_id_param}}&{{redirect_uri_param}}&response_type=code&{{scopes_param}}&access_type=offline&{{state_param}}&include_granted_scopes=true&prompt=consent",
+                    "scopes": [
+                      {
+                        "scope": "https://www.googleapis.com/auth/drive.readonly"
+                      },
+                      {
+                        "scope": "https://www.googleapis.com/auth/admin.directory.group.readonly"
+                      },
+                      {
+                        "scope": "https://www.googleapis.com/auth/admin.directory.group.member.readonly"
+                      },
+                      {
+                        "scope": "https://www.googleapis.com/auth/admin.directory.user.readonly"
+                      }
+                    ]
+                  }
+                },
+                "predicate_key": [
+                  "credentials",
+                  "auth_type"
+                ],
+                "predicate_value": "Client"
+              },
+              "connectionSpecification": {
+                "description": "Used during spec; allows the developer to configure the cloud provider specific options\nthat are needed when users configure a file-based source.",
+                "properties": {
+                  "credentials": {
+                    "description": "Credentials for connecting to the Google Drive API",
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "auth_type": {
+                            "const": "Client",
+                            "default": "Client",
+                            "enum": [
+                              "Client"
+                            ],
+                            "title": "Auth Type",
+                            "type": "string"
+                          },
+                          "client_id": {
+                            "airbyte_secret": true,
+                            "description": "Client ID for the Google Drive API",
+                            "title": "Client ID",
+                            "type": "string"
+                          },
+                          "client_secret": {
+                            "airbyte_secret": true,
+                            "description": "Client Secret for the Google Drive API",
+                            "title": "Client Secret",
+                            "type": "string"
+                          },
+                          "refresh_token": {
+                            "airbyte_secret": true,
+                            "description": "Refresh Token for the Google Drive API",
+                            "title": "Refresh Token",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "client_id",
+                          "client_secret",
+                          "refresh_token",
+                          "auth_type"
+                        ],
+                        "title": "Authenticate via Google (OAuth)",
+                        "type": "object"
+                      },
+                      {
+                        "properties": {
+                          "auth_type": {
+                            "const": "Service",
+                            "default": "Service",
+                            "enum": [
+                              "Service"
+                            ],
+                            "title": "Auth Type",
+                            "type": "string"
+                          },
+                          "service_account_info": {
+                            "airbyte_secret": true,
+                            "description": "The JSON key of the service account to use for authorization. Read more <a href=\"https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating_service_account_keys\">here</a>.",
+                            "title": "Service Account Information",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "service_account_info",
+                          "auth_type"
+                        ],
+                        "title": "Service Account Key Authentication",
+                        "type": "object"
+                      }
+                    ],
+                    "title": "Authentication",
+                    "type": "object"
+                  },
+                  "delivery_method": {
+                    "default": "use_records_transfer",
+                    "display_type": "radio",
+                    "group": "advanced",
+                    "oneOf": [
+                      {
+                        "description": "Recommended - Extract and load structured records into your destination of choice. This is the classic method of moving data in Airbyte. It allows for blocking and hashing individual fields or files from a structured schema. Data can be flattened, typed and deduped depending on the destination.",
+                        "properties": {
+                          "delivery_type": {
+                            "const": "use_records_transfer",
+                            "default": "use_records_transfer",
+                            "enum": [
+                              "use_records_transfer"
+                            ],
+                            "title": "Delivery Type",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "delivery_type"
+                        ],
+                        "title": "Replicate Records",
+                        "type": "object"
+                      },
+                      {
+                        "description": "Copy raw files without parsing their contents. Bits are copied into the destination exactly as they appeared in the source. Recommended for use with unstructured text data, non-text and compressed files.",
+                        "properties": {
+                          "delivery_type": {
+                            "const": "use_file_transfer",
+                            "default": "use_file_transfer",
+                            "enum": [
+                              "use_file_transfer"
+                            ],
+                            "title": "Delivery Type",
+                            "type": "string"
+                          },
+                          "preserve_directory_structure": {
+                            "default": true,
+                            "description": "If enabled, sends subdirectory folder structure along with source file names to the destination. Otherwise, files will be synced by their names only. This option is ignored when file-based replication is not enabled.",
+                            "title": "Preserve Sub-Directories in File Paths",
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "delivery_type"
+                        ],
+                        "title": "Copy Raw Files",
+                        "type": "object"
+                      },
+                      {
+                        "description": "Sends one identity stream and one for more permissions (ACL) streams to the destination. This data can be used in downstream systems to recreate permission restrictions mirroring the original source.",
+                        "properties": {
+                          "delivery_type": {
+                            "const": "use_permissions_transfer",
+                            "default": "use_permissions_transfer",
+                            "enum": [
+                              "use_permissions_transfer"
+                            ],
+                            "title": "Delivery Type",
+                            "type": "string"
+                          },
+                          "domain": {
+                            "airbyte_hidden": false,
+                            "description": "The Google domain of the identities.",
+                            "order": 1,
+                            "title": "Domain",
+                            "type": "string"
+                          },
+                          "include_identities_stream": {
+                            "default": true,
+                            "description": "This data can be used in downstream systems to recreate permission restrictions mirroring the original source",
+                            "title": "Include Identity Stream",
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "delivery_type"
+                        ],
+                        "title": "Replicate Permissions ACL",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 1,
+                    "title": "Delivery Method",
+                    "type": "object"
+                  },
+                  "folder_url": {
+                    "description": "URL for the folder you want to sync. Using individual streams and glob patterns, it's possible to only sync a subset of all files located in the folder.",
+                    "examples": [
+                      "https://drive.google.com/drive/folders/1Xaz0vXXXX2enKnNYU5qSt9NS70gvMyYn"
+                    ],
+                    "order": 0,
+                    "pattern": "^https://drive.google.com/.+",
+                    "pattern_descriptor": "https://drive.google.com/drive/folders/MY-FOLDER-ID",
+                    "title": "Folder Url",
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "description": "UTC date and time in the format 2017-01-25T00:00:00.000000Z. Any file modified before this date will not be replicated.",
+                    "examples": [
+                      "2021-01-01",
+                      "2021-01-01T00:00:00Z",
+                      "2021-01-01T00:00:00.000Z",
+                      "2021-01-01T00:00:00.000000Z"
+                    ],
+                    "format": "date-time",
+                    "order": 1,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})?)?$",
+                    "pattern_descriptor": "YYYY-MM-DD, YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss.SSSSSSZ",
+                    "title": "Start Date",
+                    "type": "string"
+                  },
+                  "streams": {
+                    "description": "Each instance of this configuration defines a <a href=\"https://docs.airbyte.com/cloud/core-concepts#stream\">stream</a>. Use this to define which files belong in the stream, their format, and how they should be parsed and validated. When sending data to warehouse destination such as Snowflake or BigQuery, each stream is a separate table.",
+                    "items": {
+                      "properties": {
+                        "days_to_sync_if_history_is_full": {
+                          "default": 3,
+                          "description": "When the state history of the file store is full, syncs will only read files that were last modified in the provided day range.",
+                          "title": "Days To Sync If History Is Full",
+                          "type": "integer"
+                        },
+                        "format": {
+                          "description": "The configuration options that are used to alter how to read incoming files that deviate from the standard formatting.",
+                          "oneOf": [
+                            {
+                              "properties": {
+                                "double_as_string": {
+                                  "default": false,
+                                  "description": "Whether to convert double fields to strings. This is recommended if you have decimal numbers with a high degree of precision because there can be a loss precision when handling floating point numbers.",
+                                  "title": "Convert Double Fields to Strings",
+                                  "type": "boolean"
+                                },
+                                "filetype": {
+                                  "const": "avro",
+                                  "default": "avro",
+                                  "title": "Filetype",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "filetype"
+                              ],
+                              "title": "Avro Format",
+                              "type": "object"
+                            },
+                            {
+                              "properties": {
+                                "delimiter": {
+                                  "default": ",",
+                                  "description": "The character delimiting individual cells in the CSV data. This may only be a 1-character string. For tab-delimited data enter '\\t'.",
+                                  "title": "Delimiter",
+                                  "type": "string"
+                                },
+                                "double_quote": {
+                                  "default": true,
+                                  "description": "Whether two quotes in a quoted CSV value denote a single quote in the data.",
+                                  "title": "Double Quote",
+                                  "type": "boolean"
+                                },
+                                "encoding": {
+                                  "default": "utf8",
+                                  "description": "The character encoding of the CSV data. Leave blank to default to <strong>UTF8</strong>. See <a href=\"https://docs.python.org/3/library/codecs.html#standard-encodings\" target=\"_blank\">list of python encodings</a> for allowable options.",
+                                  "title": "Encoding",
+                                  "type": "string"
+                                },
+                                "escape_char": {
+                                  "description": "The character used for escaping special characters. To disallow escaping, leave this field blank.",
+                                  "title": "Escape Character",
+                                  "type": "string"
+                                },
+                                "false_values": {
+                                  "default": [
+                                    "n",
+                                    "no",
+                                    "f",
+                                    "false",
+                                    "off",
+                                    "0"
+                                  ],
+                                  "description": "A set of case-sensitive strings that should be interpreted as false values.",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "title": "False Values",
+                                  "type": "array",
+                                  "uniqueItems": true
+                                },
+                                "filetype": {
+                                  "const": "csv",
+                                  "default": "csv",
+                                  "title": "Filetype",
+                                  "type": "string"
+                                },
+                                "header_definition": {
+                                  "default": {
+                                    "header_definition_type": "From CSV"
+                                  },
+                                  "description": "How headers will be defined. `User Provided` assumes the CSV does not have a header row and uses the headers provided and `Autogenerated` assumes the CSV does not have a header row and the CDK will generate headers using for `f{i}` where `i` is the index starting from 0. Else, the default behavior is to use the header from the CSV file. If a user wants to autogenerate or provide column names for a CSV having headers, they can skip rows.",
+                                  "oneOf": [
+                                    {
+                                      "properties": {
+                                        "header_definition_type": {
+                                          "const": "From CSV",
+                                          "default": "From CSV",
+                                          "title": "Header Definition Type",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "header_definition_type"
+                                      ],
+                                      "title": "From CSV",
+                                      "type": "object"
+                                    },
+                                    {
+                                      "properties": {
+                                        "header_definition_type": {
+                                          "const": "Autogenerated",
+                                          "default": "Autogenerated",
+                                          "title": "Header Definition Type",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "header_definition_type"
+                                      ],
+                                      "title": "Autogenerated",
+                                      "type": "object"
+                                    },
+                                    {
+                                      "properties": {
+                                        "column_names": {
+                                          "description": "The column names that will be used while emitting the CSV records",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "title": "Column Names",
+                                          "type": "array"
+                                        },
+                                        "header_definition_type": {
+                                          "const": "User Provided",
+                                          "default": "User Provided",
+                                          "title": "Header Definition Type",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "column_names",
+                                        "header_definition_type"
+                                      ],
+                                      "title": "User Provided",
+                                      "type": "object"
+                                    }
+                                  ],
+                                  "title": "CSV Header Definition",
+                                  "type": "object"
+                                },
+                                "ignore_errors_on_fields_mismatch": {
+                                  "default": false,
+                                  "description": "Whether to ignore errors that occur when the number of fields in the CSV does not match the number of columns in the schema.",
+                                  "title": "Ignore errors on field mismatch",
+                                  "type": "boolean"
+                                },
+                                "null_values": {
+                                  "default": [],
+                                  "description": "A set of case-sensitive strings that should be interpreted as null values. For example, if the value 'NA' should be interpreted as null, enter 'NA' in this field.",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "title": "Null Values",
+                                  "type": "array",
+                                  "uniqueItems": true
+                                },
+                                "quote_char": {
+                                  "default": "\"",
+                                  "description": "The character used for quoting CSV values. To disallow quoting, make this field blank.",
+                                  "title": "Quote Character",
+                                  "type": "string"
+                                },
+                                "skip_rows_after_header": {
+                                  "default": 0,
+                                  "description": "The number of rows to skip after the header row.",
+                                  "title": "Skip Rows After Header",
+                                  "type": "integer"
+                                },
+                                "skip_rows_before_header": {
+                                  "default": 0,
+                                  "description": "The number of rows to skip before the header row. For example, if the header row is on the 3rd row, enter 2 in this field.",
+                                  "title": "Skip Rows Before Header",
+                                  "type": "integer"
+                                },
+                                "strings_can_be_null": {
+                                  "default": true,
+                                  "description": "Whether strings can be interpreted as null values. If true, strings that match the null_values set will be interpreted as null. If false, strings that match the null_values set will be interpreted as the string itself.",
+                                  "title": "Strings Can Be Null",
+                                  "type": "boolean"
+                                },
+                                "true_values": {
+                                  "default": [
+                                    "y",
+                                    "yes",
+                                    "t",
+                                    "true",
+                                    "on",
+                                    "1"
+                                  ],
+                                  "description": "A set of case-sensitive strings that should be interpreted as true values.",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "title": "True Values",
+                                  "type": "array",
+                                  "uniqueItems": true
+                                }
+                              },
+                              "required": [
+                                "filetype"
+                              ],
+                              "title": "CSV Format",
+                              "type": "object"
+                            },
+                            {
+                              "properties": {
+                                "filetype": {
+                                  "const": "jsonl",
+                                  "default": "jsonl",
+                                  "title": "Filetype",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "filetype"
+                              ],
+                              "title": "Jsonl Format",
+                              "type": "object"
+                            },
+                            {
+                              "properties": {
+                                "decimal_as_float": {
+                                  "default": false,
+                                  "description": "Whether to convert decimal fields to floats. There is a loss of precision when converting decimals to floats, so this is not recommended.",
+                                  "title": "Convert Decimal Fields to Floats",
+                                  "type": "boolean"
+                                },
+                                "filetype": {
+                                  "const": "parquet",
+                                  "default": "parquet",
+                                  "title": "Filetype",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "filetype"
+                              ],
+                              "title": "Parquet Format",
+                              "type": "object"
+                            },
+                            {
+                              "description": "Extract text from document formats (.pdf, .docx, .md, .pptx) and emit as one record per file.",
+                              "properties": {
+                                "filetype": {
+                                  "const": "unstructured",
+                                  "default": "unstructured",
+                                  "title": "Filetype",
+                                  "type": "string"
+                                },
+                                "processing": {
+                                  "default": {
+                                    "mode": "local"
+                                  },
+                                  "description": "Processing configuration",
+                                  "oneOf": [
+                                    {
+                                      "description": "Process files locally, supporting `fast` and `ocr` modes. This is the default option.",
+                                      "properties": {
+                                        "mode": {
+                                          "const": "local",
+                                          "default": "local",
+                                          "enum": [
+                                            "local"
+                                          ],
+                                          "title": "Mode",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "mode"
+                                      ],
+                                      "title": "Local",
+                                      "type": "object"
+                                    }
+                                  ],
+                                  "title": "Processing",
+                                  "type": "object"
+                                },
+                                "skip_unprocessable_files": {
+                                  "always_show": true,
+                                  "default": true,
+                                  "description": "If true, skip files that cannot be parsed and pass the error message along as the _ab_source_file_parse_error field. If false, fail the sync.",
+                                  "title": "Skip Unprocessable Files",
+                                  "type": "boolean"
+                                },
+                                "strategy": {
+                                  "always_show": true,
+                                  "default": "auto",
+                                  "description": "The strategy used to parse documents. `fast` extracts text directly from the document which doesn't work for all files. `ocr_only` is more reliable, but slower. `hi_res` is the most reliable, but requires an API key and a hosted instance of unstructured and can't be used with local mode. See the unstructured.io documentation for more details: https://unstructured-io.github.io/unstructured/core/partition.html#partition-pdf",
+                                  "enum": [
+                                    "auto",
+                                    "fast",
+                                    "ocr_only",
+                                    "hi_res"
+                                  ],
+                                  "order": 0,
+                                  "title": "Parsing Strategy",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "filetype"
+                              ],
+                              "title": "Unstructured Document Format",
+                              "type": "object"
+                            },
+                            {
+                              "properties": {
+                                "filetype": {
+                                  "const": "excel",
+                                  "default": "excel",
+                                  "title": "Filetype",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "filetype"
+                              ],
+                              "title": "Excel Format",
+                              "type": "object"
+                            }
+                          ],
+                          "title": "Format",
+                          "type": "object"
+                        },
+                        "globs": {
+                          "default": [
+                            "**"
+                          ],
+                          "description": "The pattern used to specify which files should be selected from the file system. For more information on glob pattern matching look <a href=\"https://en.wikipedia.org/wiki/Glob_(programming)\">here</a>.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "order": 1,
+                          "title": "Globs",
+                          "type": "array"
+                        },
+                        "input_schema": {
+                          "description": "The schema that will be used to validate records extracted from the file. This will override the stream schema that is auto-detected from incoming files.",
+                          "title": "Input Schema",
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "The name of the stream.",
+                          "title": "Name",
+                          "type": "string"
+                        },
+                        "primary_key": {
+                          "airbyte_hidden": true,
+                          "description": "The column or columns (for a composite key) that serves as the unique identifier of a record. If empty, the primary key will default to the parser's default primary key.",
+                          "title": "Primary Key",
+                          "type": "string"
+                        },
+                        "recent_n_files_to_read_for_schema_discovery": {
+                          "description": "The number of resent files which will be used to discover the schema for this stream.",
+                          "exclusiveMinimum": 0,
+                          "title": "Files To Read For Schema Discover",
+                          "type": "integer"
+                        },
+                        "schemaless": {
+                          "default": false,
+                          "description": "When enabled, syncs will not validate or structure records against the stream's schema.",
+                          "title": "Schemaless",
+                          "type": "boolean"
+                        },
+                        "use_first_found_file_for_schema_discovery": {
+                          "default": false,
+                          "description": "When enabled, the source will use the first found file for schema discovery. Helps to avoid long discovery step.",
+                          "title": "Use First Found File For Schema Discover",
+                          "type": "boolean"
+                        },
+                        "validation_policy": {
+                          "default": "Emit Record",
+                          "description": "The name of the validation policy that dictates sync behavior when a record does not adhere to the stream schema.",
+                          "enum": [
+                            "Emit Record",
+                            "Skip Record",
+                            "Wait for Discover"
+                          ],
+                          "title": "Validation Policy"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "format"
+                      ],
+                      "title": "FileBasedStreamConfig",
+                      "type": "object"
+                    },
+                    "order": 10,
+                    "title": "The list of streams to sync",
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "streams",
+                  "folder_url",
+                  "credentials"
+                ],
+                "title": "Google Drive Source Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/google-drive",
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": true,
+            "tags": [
+              "language:python",
+              "cdk:python-file-based"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -89024,11 +91533,11 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           }
         },
@@ -93402,15 +95911,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "high"
+            "usage": "medium"
           }
         },
         "release": {
@@ -101081,6 +103590,673 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/mysql-migrations",
+        "releaseCandidates": {
+          "3.53.4": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 400,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "${host}",
+                "${tunnel_method.tunnel_host}"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.4@sha256:5f343797cfcf021ca98ba9bdf5970ef66cbf6222d8cc17b0d61d13860a5bcc2b"
+            },
+            "connectorIPCOptions": {
+              "dataChannel": {
+                "supportedSerialization": [
+                  "JSONL",
+                  "PROTOBUF"
+                ],
+                "supportedTransport": [
+                  "SOCKET",
+                  "STDIO"
+                ],
+                "version": "0.0.2"
+              }
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "ssh-key-repl-config.json",
+                    "name": "SECRET_SOURCE-MYSQL_SSH-KEY-REPL__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "ssh-key-config.json",
+                    "name": "SECRET_SOURCE-MYSQL_SSH-KEY__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "ssh-pwd-repl-config.json",
+                    "name": "SECRET_SOURCE-MYSQL_SSH-PWD-REPL__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "ssh-pwd-config.json",
+                    "name": "SECRET_SOURCE-MYSQL_SSH-PWD__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "performance-config.json",
+                    "name": "SECRET_SOURCE_MYSQL_PERFORMANCE_TEST_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "cat-config.json",
+                    "name": "SECRET_SOURCE_MYSQL_ACCEPTANCE_TEST_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "cat-config-cdc.json",
+                    "name": "SECRET_SOURCE_MYSQL_ACCEPTANCE_TEST_CDC_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "3.53.4",
+            "dockerRepository": "airbyte/source-mysql",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/mysql",
+            "externalDocumentationUrls": [
+              {
+                "title": "MySQL documentation",
+                "type": "api_reference",
+                "url": "https://dev.mysql.com/doc/"
+              },
+              {
+                "title": "MySQL Release Notes",
+                "type": "api_release_history",
+                "url": "https://dev.mysql.com/doc/relnotes/mysql/en/"
+              },
+              {
+                "title": "MySQL authentication",
+                "type": "authentication_guide",
+                "url": "https://dev.mysql.com/doc/refman/8.0/en/access-control.html"
+              },
+              {
+                "title": "MySQL server source code",
+                "type": "code_repository",
+                "url": "https://github.com/mysql/mysql-server"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "eb4254ea6c5b6774bb7f531930789ea1e71449ee",
+                "commit_timestamp": "2026-09-01T15:10:51-03:00"
+              },
+              "release": {
+                "attributed_to": "dee-airbyte",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "eb4254ea6c5b6774bb7f531930789ea1e71449ee",
+                "merged_at": "2026-09-01T18:10:52Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "dee-airbyte",
+                "pr_merged_by_type": "User",
+                "pr_number": 81413,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/81413",
+                "released_at": "2026-09-01T18:10:52Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mysql/3.53.4.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-mysql/3.53.4/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T18:15:11.902239+00:00",
+                "registry_entry_generated_at": "2026-09-01T18:15:11.902239+00:00"
+              }
+            },
+            "githubIssueLabel": "source-mysql",
+            "icon": "mysql.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-mysql/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 7200,
+            "name": "MySQL",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "alpha",
+            "releases": {
+              "breakingChanges": {
+                "3.0.0": {
+                  "message": "Add default cursor for cdc",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/mysql-migrations#3.0.0",
+                  "upgradeDeadline": "2023-08-17"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/mysql-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "slow"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "sourceDefinitionId": "435bb9a5-7887-4809-aa58-28c27df0d7ad",
+            "sourceType": "database",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "check_privileges": {
+                    "default": true,
+                    "description": "When this feature is enabled, during schema discovery the connector will query each table or view individually to check access privileges and inaccessible tables, views, or columns therein will be removed. In large schemas, this might cause schema discovery to take too long, in which case it might be advisable to disable this feature.",
+                    "order": 13,
+                    "title": "Check Table and Column Access Privileges",
+                    "type": "boolean"
+                  },
+                  "checkpoint_target_interval_seconds": {
+                    "default": 300,
+                    "description": "How often (in seconds) a stream should checkpoint, when possible.",
+                    "order": 12,
+                    "title": "Checkpoint Target Time Interval",
+                    "type": "integer"
+                  },
+                  "concurrency": {
+                    "airbyte_hidden": true,
+                    "default": 1,
+                    "description": "Maximum number of concurrent queries to the database.",
+                    "order": 13,
+                    "title": "Concurrency",
+                    "type": "integer"
+                  },
+                  "database": {
+                    "always_show": true,
+                    "description": "The database name.",
+                    "order": 6,
+                    "title": "Database",
+                    "type": "string"
+                  },
+                  "host": {
+                    "description": "Hostname of the database.",
+                    "order": 1,
+                    "title": "Host",
+                    "type": "string"
+                  },
+                  "jdbc_url_params": {
+                    "description": "Additional properties to pass to the JDBC URL string when connecting to the database formatted as 'key=value' pairs separated by the symbol '&'. (example: key1=value1&key2=value2&key3=value3).",
+                    "order": 8,
+                    "title": "JDBC URL Params",
+                    "type": "string"
+                  },
+                  "max_db_connections": {
+                    "description": "Maximum number of concurrent queries to the database. Leave empty to let Airbyte optimize performance.",
+                    "order": 13,
+                    "title": "Max Concurrent Queries to Database",
+                    "type": "integer"
+                  },
+                  "password": {
+                    "airbyte_secret": true,
+                    "always_show": true,
+                    "description": "The password associated with the username.",
+                    "order": 5,
+                    "title": "Password",
+                    "type": "string"
+                  },
+                  "port": {
+                    "default": 3306,
+                    "description": "Port of the database.",
+                    "maximum": 65536,
+                    "minimum": 0,
+                    "order": 2,
+                    "title": "Port",
+                    "type": "integer"
+                  },
+                  "replication_method": {
+                    "description": "Configures how data is extracted from the database.",
+                    "display_type": "radio",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "Incrementally detects new inserts and updates using the <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\">cursor column</a> chosen when configuring a connection (e.g. created_at, updated_at).",
+                        "properties": {
+                          "method": {
+                            "default": "STANDARD",
+                            "enum": [
+                              "STANDARD"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "method"
+                        ],
+                        "title": "Scan Changes with User Defined Cursor",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "<i>Recommended</i> - Incrementally reads new inserts, updates, and deletes using MySQL's <a href=\"https://docs.airbyte.com/integrations/sources/mysql#change-data-capture-cdc\"> change data capture feature</a>. This must be enabled on your database.",
+                        "properties": {
+                          "initial_load_timeout_hours": {
+                            "always_show": true,
+                            "default": 8,
+                            "description": "The amount of time an initial load is allowed to continue for before catching up on CDC logs.",
+                            "max": 24,
+                            "min": 4,
+                            "order": 3,
+                            "title": "Initial Load Timeout in Hours (Advanced)",
+                            "type": "integer"
+                          },
+                          "invalid_cdc_cursor_position_behavior": {
+                            "always_show": true,
+                            "default": "Fail sync",
+                            "description": "Determines whether Airbyte should fail or re-sync data in case of an stale/invalid cursor value in the mined logs. If 'Fail sync' is chosen, a user will have to manually reset the connection before being able to continue syncing data. If 'Re-sync data' is chosen, Airbyte will automatically trigger a refresh but could lead to higher cloud costs and data loss.",
+                            "enum": [
+                              "Fail sync",
+                              "Re-sync data"
+                            ],
+                            "order": 2,
+                            "title": "Invalid CDC Position Behavior (Advanced)",
+                            "type": "string"
+                          },
+                          "method": {
+                            "default": "CDC",
+                            "enum": [
+                              "CDC"
+                            ],
+                            "type": "string"
+                          },
+                          "server_timezone": {
+                            "always_show": true,
+                            "description": "Enter the configured MySQL server timezone. This should only be done if the configured timezone in your MySQL instance does not conform to IANNA standard.",
+                            "order": 1,
+                            "title": "Configured server timezone for the MySQL source (Advanced)",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "method"
+                        ],
+                        "title": "Read Changes using Change Data Capture (CDC)",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 11,
+                    "title": "Update Method",
+                    "type": "object"
+                  },
+                  "ssl_mode": {
+                    "default": "required",
+                    "description": "The encryption method which is used when communicating with the database.",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "To allow unencrypted communication only when the source doesn't support encryption.",
+                        "properties": {
+                          "mode": {
+                            "default": "preferred",
+                            "enum": [
+                              "preferred"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode"
+                        ],
+                        "title": "preferred",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "To always require encryption. Note: The connection will fail if the source doesn't support encryption.",
+                        "properties": {
+                          "mode": {
+                            "default": "required",
+                            "enum": [
+                              "required"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode"
+                        ],
+                        "title": "required",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "To always require encryption and verify that the source has a valid SSL certificate.",
+                        "properties": {
+                          "ca_certificate": {
+                            "airbyte_secret": true,
+                            "description": "CA certificate",
+                            "multiline": true,
+                            "title": "CA certificate",
+                            "type": "string"
+                          },
+                          "client_certificate": {
+                            "airbyte_secret": true,
+                            "description": "Client certificate (this is not a required field, but if you want to use it, you will need to add the Client key as well)",
+                            "multiline": true,
+                            "title": "Client certificate File",
+                            "type": "string"
+                          },
+                          "client_key": {
+                            "airbyte_secret": true,
+                            "description": "Client key (this is not a required field, but if you want to use it, you will need to add the Client certificate as well)",
+                            "multiline": true,
+                            "title": "Client Key",
+                            "type": "string"
+                          },
+                          "client_key_password": {
+                            "airbyte_secret": true,
+                            "description": "Password for keystorage. This field is optional. If you do not add it - the password will be generated automatically.",
+                            "multiline": true,
+                            "title": "Client key password",
+                            "type": "string"
+                          },
+                          "mode": {
+                            "default": "verify_ca",
+                            "enum": [
+                              "verify_ca"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode",
+                          "ca_certificate"
+                        ],
+                        "title": "verify_ca",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "To always require encryption and verify that the source has a valid SSL certificate.",
+                        "properties": {
+                          "ca_certificate": {
+                            "airbyte_secret": true,
+                            "description": "CA certificate",
+                            "multiline": true,
+                            "title": "CA certificate",
+                            "type": "string"
+                          },
+                          "client_certificate": {
+                            "airbyte_secret": true,
+                            "description": "Client certificate (this is not a required field, but if you want to use it, you will need to add the Client key as well)",
+                            "multiline": true,
+                            "title": "Client certificate File",
+                            "type": "string"
+                          },
+                          "client_key": {
+                            "airbyte_secret": true,
+                            "description": "Client key (this is not a required field, but if you want to use it, you will need to add the Client certificate as well)",
+                            "multiline": true,
+                            "title": "Client Key",
+                            "type": "string"
+                          },
+                          "client_key_password": {
+                            "airbyte_secret": true,
+                            "description": "Password for keystorage. This field is optional. If you do not add it - the password will be generated automatically.",
+                            "multiline": true,
+                            "title": "Client key password",
+                            "type": "string"
+                          },
+                          "mode": {
+                            "default": "verify_identity",
+                            "enum": [
+                              "verify_identity"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode",
+                          "ca_certificate"
+                        ],
+                        "title": "verify_identity",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 9,
+                    "title": "Encryption",
+                    "type": "object"
+                  },
+                  "table_filters": {
+                    "description": "Optional filters to include only specific tables from the specified database.",
+                    "items": {
+                      "additionalProperties": true,
+                      "description": "Inclusion filter configuration for table selection per database.",
+                      "properties": {
+                        "database_name": {
+                          "always_show": true,
+                          "description": "The name of the database to apply this filter to. Should match the database defined in the \"Database\" field above.",
+                          "order": 1,
+                          "title": "Database Name",
+                          "type": "string"
+                        },
+                        "table_name_patterns": {
+                          "always_show": true,
+                          "description": "List of table name patterns to include. Should be a SQL LIKE pattern.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "order": 2,
+                          "title": "Table Filter Patterns",
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "database_name",
+                        "table_name_patterns"
+                      ],
+                      "title": "Table Filter",
+                      "type": "object"
+                    },
+                    "order": 7,
+                    "title": "Table Filters",
+                    "type": "array"
+                  },
+                  "treat_tinyint1_as_integer": {
+                    "default": false,
+                    "description": "When enabled, TINYINT(1) columns are emitted as integers instead of booleans.",
+                    "order": 14,
+                    "title": "Treat TINYINT(1) Columns as Integers",
+                    "type": "boolean"
+                  },
+                  "tunnel_method": {
+                    "description": "Whether to initiate an SSH tunnel before connecting to the database, and if so, which kind of authentication to use.",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "No ssh tunnel needed to connect to database",
+                        "properties": {
+                          "tunnel_method": {
+                            "default": "NO_TUNNEL",
+                            "enum": [
+                              "NO_TUNNEL"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method"
+                        ],
+                        "title": "No Tunnel",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Connect through a jump server tunnel host using username and ssh key",
+                        "properties": {
+                          "ssh_key": {
+                            "airbyte_secret": true,
+                            "description": "OS-level user account ssh key credentials in RSA PEM format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )",
+                            "multiline": true,
+                            "order": 4,
+                            "title": "SSH Private Key",
+                            "type": "string"
+                          },
+                          "tunnel_host": {
+                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
+                            "order": 1,
+                            "title": "SSH Tunnel Jump Server Host",
+                            "type": "string"
+                          },
+                          "tunnel_method": {
+                            "default": "SSH_KEY_AUTH",
+                            "enum": [
+                              "SSH_KEY_AUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "tunnel_port": {
+                            "default": 22,
+                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
+                            "maximum": 65536,
+                            "minimum": 0,
+                            "order": 2,
+                            "title": "SSH Connection Port",
+                            "type": "integer"
+                          },
+                          "tunnel_user": {
+                            "description": "OS-level username for logging into the jump server host",
+                            "order": 3,
+                            "title": "SSH Login Username",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method",
+                          "tunnel_host",
+                          "tunnel_port",
+                          "tunnel_user",
+                          "ssh_key"
+                        ],
+                        "title": "SSH Key Authentication",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Connect through a jump server tunnel host using username and password authentication",
+                        "properties": {
+                          "tunnel_host": {
+                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
+                            "order": 1,
+                            "title": "SSH Tunnel Jump Server Host",
+                            "type": "string"
+                          },
+                          "tunnel_method": {
+                            "default": "SSH_PASSWORD_AUTH",
+                            "enum": [
+                              "SSH_PASSWORD_AUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "tunnel_port": {
+                            "default": 22,
+                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
+                            "maximum": 65536,
+                            "minimum": 0,
+                            "order": 2,
+                            "title": "SSH Connection Port",
+                            "type": "integer"
+                          },
+                          "tunnel_user": {
+                            "description": "OS-level username for logging into the jump server host",
+                            "order": 3,
+                            "title": "SSH Login Username",
+                            "type": "string"
+                          },
+                          "tunnel_user_password": {
+                            "airbyte_secret": true,
+                            "description": "OS-level password for logging into the jump server host",
+                            "order": 4,
+                            "title": "Password",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method",
+                          "tunnel_host",
+                          "tunnel_port",
+                          "tunnel_user",
+                          "tunnel_user_password"
+                        ],
+                        "title": "Password Authentication",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 10,
+                    "title": "SSH Tunnel Method",
+                    "type": "object"
+                  },
+                  "username": {
+                    "description": "The username which is used to access the database.",
+                    "order": 4,
+                    "title": "User",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "host",
+                  "port",
+                  "database",
+                  "username",
+                  "replication_method"
+                ],
+                "title": "MySQL Source Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/mysql",
+              "supported_destination_sync_modes": [],
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -121462,15 +124638,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           }
         },
@@ -125788,7 +128964,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/s3-migrations",
         "releaseCandidates": {
-          "4.15.20": {
+          "4.15.21": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -126323,7 +129499,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "4.15.20",
+            "dockerImageTag": "4.15.21",
             "dockerRepository": "airbyte/source-s3",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/s3",
             "externalDocumentationUrls": [
@@ -126337,31 +129513,31 @@
               "git": {
                 "commit_author": "octavia-bot-hoard[bot]",
                 "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "50a7b9e7d8e2df8d06e0e18e0831330bb0b2afef",
-                "commit_timestamp": "2026-08-25T08:03:26+00:00"
+                "commit_sha": "587f1f4f7064bad082f50ba8b0f0d138ffbadcec",
+                "commit_timestamp": "2026-09-01T07:42:41+00:00"
               },
               "release": {
                 "attributed_to": "octavia-bot-hoard",
                 "attributed_to_kind": "bot",
-                "merge_commit_sha": "50a7b9e7d8e2df8d06e0e18e0831330bb0b2afef",
-                "merged_at": "2026-08-25T08:03:26Z",
+                "merge_commit_sha": "587f1f4f7064bad082f50ba8b0f0d138ffbadcec",
+                "merged_at": "2026-09-01T07:42:42Z",
                 "pr_author_association": "CONTRIBUTOR",
                 "pr_author_id": 230633153,
                 "pr_author_login": "octavia-bot-hoard",
                 "pr_author_type": "Bot",
                 "pr_merged_by_login": "octavia-bot-hoard",
                 "pr_merged_by_type": "Bot",
-                "pr_number": 85018,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/85018",
-                "released_at": "2026-08-25T08:03:26Z",
+                "pr_number": 85248,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85248",
+                "released_at": "2026-09-01T07:42:42Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-s3/4.15.20.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-s3/4.15.21.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-s3/4.15.20/metadata.yaml",
-                "metadata_last_modified": "2026-08-25T08:12:01.706896+00:00",
-                "registry_entry_generated_at": "2026-08-25T08:12:01.706896+00:00"
+                "metadata_file_path": "metadata/airbyte/source-s3/4.15.21/metadata.yaml",
+                "metadata_last_modified": "2026-09-01T07:51:13.325031+00:00",
+                "registry_entry_generated_at": "2026-09-01T07:51:13.325031+00:00"
               }
             },
             "githubIssueLabel": "source-s3",
@@ -126372,7 +129548,7 @@
             "maxSecondsBetweenMessages": 1,
             "name": "S3",
             "packageInfo": {
-              "cdk_version": "python:7.28.2"
+              "cdk_version": "python:7.28.3"
             },
             "public": true,
             "releaseStage": "generally_available",
