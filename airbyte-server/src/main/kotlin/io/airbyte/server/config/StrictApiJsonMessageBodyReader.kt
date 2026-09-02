@@ -14,8 +14,10 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.EnableStrictJsonDeserialization
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.server.apis.controllers.AttemptApiController
 import io.airbyte.server.apis.controllers.ConnectionApiController
 import io.airbyte.server.apis.controllers.DataplaneGroupApiController
+import io.airbyte.server.apis.controllers.JobsApiController
 import io.airbyte.server.apis.controllers.OrganizationApiController
 import io.airbyte.server.apis.controllers.WebBackendApiController
 import io.airbyte.server.apis.controllers.WorkspaceApiController
@@ -124,6 +126,8 @@ class StrictApiJsonMessageBodyReader<T>(
     const val SCIM_BASE_PATH = "/scim/v2"
     val STRICT_API_CONTROLLERS =
       setOf(
+        AttemptApiController::class.java,
+        JobsApiController::class.java,
         OrganizationApiController::class.java,
         WorkspaceApiController::class.java,
         ConnectionApiController::class.java,

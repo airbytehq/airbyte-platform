@@ -6,9 +6,12 @@ package io.airbyte.server.config
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException
+import io.airbyte.server.apis.controllers.AttemptApiController
 import io.airbyte.server.apis.controllers.ConnectionApiController
 import io.airbyte.server.apis.controllers.DataplaneGroupApiController
 import io.airbyte.server.apis.controllers.InstanceConfigurationApiController
+import io.airbyte.server.apis.controllers.JobsApiController
 import io.airbyte.server.apis.controllers.OrganizationApiController
 import io.airbyte.server.apis.controllers.WebBackendApiController
 import io.airbyte.server.apis.controllers.WorkspaceApiController
@@ -16,6 +19,7 @@ import io.micronaut.core.propagation.PropagatedContext
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.MediaType
+import io.micronaut.http.codec.CodecException
 import io.micronaut.http.context.ServerHttpRequestContext
 import io.micronaut.jackson.databind.JacksonDatabindMapper
 import io.micronaut.web.router.RouteAttributes
@@ -23,6 +27,8 @@ import io.micronaut.web.router.RouteInfo
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
@@ -50,6 +56,28 @@ internal class StrictApiJsonMessageBodyReaderTest {
   @Test
   fun `similar non scim path stays strict for an allowlisted controller`() {
     assertThrows(Exception::class.java) { readUnknownProperty("/scim/v20") }
+  }
+
+  @Test
+  fun `attempt controller rejects unknown properties`() {
+    val exception =
+      assertThrows(CodecException::class.java) {
+        readUnknownProperty("/api/v1/attempt/save_stats", AttemptApiController::class.java)
+      }
+
+    val cause = assertInstanceOf(UnrecognizedPropertyException::class.java, exception.cause)
+    assertEquals("unknown", cause.propertyName)
+  }
+
+  @Test
+  fun `jobs controller rejects unknown properties`() {
+    val exception =
+      assertThrows(CodecException::class.java) {
+        readUnknownProperty("/api/v1/jobs/get", JobsApiController::class.java)
+      }
+
+    val cause = assertInstanceOf(UnrecognizedPropertyException::class.java, exception.cause)
+    assertEquals("unknown", cause.propertyName)
   }
 
   @Test
