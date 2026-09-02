@@ -107,6 +107,7 @@ internal class DsrDeletionControllerTest {
         tombstonedUser = true,
         deletedKeycloakUserCount = 1,
         terminatedTemporalWorkflowCount = 2,
+        deletedAuditLogFileCount = 3,
         errors = emptyList(),
       )
 
@@ -160,6 +161,7 @@ internal class DsrDeletionControllerTest {
         tombstonedUser = false,
         deletedKeycloakUserCount = 0,
         terminatedTemporalWorkflowCount = 0,
+        deletedAuditLogFileCount = 0,
         errors = listOf("Background execution failed unexpectedly: background failure"),
       )
 

@@ -52,6 +52,7 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.DbPrune
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
+import jakarta.annotation.Nullable
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.Condition
@@ -79,7 +80,8 @@ private val log = KotlinLogging.logger {}
  * The preview endpoint is intentionally read-only. It resolves every config, jobs, Keycloak, and
  * Temporal target Support needs to review before approving deletion. The execute endpoint is the
  * only destructive path and validates request id, email, DataGrail id, and on-call issue number
- * before doing any work.
+ * before doing any work. Execution also deletes the audit log files stored for each organization
+ * in the deletion manifest via an injected [DsrAuditLogDeletion] collaborator.
  */
 @Singleton
 open class DsrDeletionService(
@@ -99,6 +101,7 @@ open class DsrDeletionService(
   private val dbPrune: DbPrune,
   private val deletionRequestRepository: DataSubjectDeletionRequestRepository,
   private val deletionRequestTimeoutService: DsrDeletionRequestTimeoutService,
+  @param:Nullable private val dsrAuditLogDeletion: DsrAuditLogDeletion?,
   private val objectMapper: ObjectMapper,
   private val metricClient: MetricClient,
   @Named("configDatabase") configDatabase: Database,
@@ -143,6 +146,7 @@ open class DsrDeletionService(
     val tombstonedUser: Boolean,
     val deletedKeycloakUserCount: Int,
     val terminatedTemporalWorkflowCount: Int,
+    val deletedAuditLogFileCount: Int,
     val errors: List<String>,
   )
 
@@ -170,6 +174,7 @@ open class DsrDeletionService(
     PRUNE_JOBS("prune_jobs"),
     CLEANUP_ACTOR_SECRETS("cleanup_actor_secrets"),
     HARD_DELETE_CONFIG_ROWS("hard_delete_config_rows"),
+    DELETE_AUDIT_LOGS("delete_audit_logs"),
     DELETE_KEYCLOAK_USERS("delete_keycloak_users"),
     FINALIZE_EXECUTION("finalize_execution"),
   }
@@ -188,6 +193,7 @@ open class DsrDeletionService(
     val tombstonedUser: Boolean,
     val deletedKeycloakUserCount: Int,
     val terminatedTemporalWorkflowCount: Int,
+    val deletedAuditLogFileCount: Int,
   )
 
   open fun preview(
@@ -551,6 +557,35 @@ open class DsrDeletionService(
         ConfigDeletionCounts.empty()
       }
 
+    // Audit log deletion is organization-scoped: it deletes every file partitioned under the
+    // organizations in the manifest, which are the orgs the data subject owns (resolved from the
+    // organization table's email column, not from memberships). Audit log entries where the data
+    // subject appears only as an actor in an org they did NOT own are not covered by this phase.
+    val deletedAuditLogFileCount =
+      if (errors.isEmpty()) {
+        runExecutionPhase(requestId, ExecutionPhase.DELETE_AUDIT_LOGS, errors) {
+          val auditLogDeletion = dsrAuditLogDeletion
+          if (auditLogDeletion == null) {
+            log.info { "DSR $requestId audit log deletion skipped: no audit log deletion collaborator is wired." }
+            0
+          } else {
+            manifest.organizationIds.fold(0) { total, organizationId ->
+              total +
+                runCatching {
+                  auditLogDeletion.deleteAuditLogsByOrganizationId(organizationId)
+                }.getOrElse {
+                  log.error(it) { "DSR $requestId audit log deletion failed for organization $organizationId" }
+                  errors.add("Audit log deletion failed for organization $organizationId: ${it.message}")
+                  0
+                }
+            }
+          }
+        }
+      } else {
+        recordExecutionPhaseSkipped(requestId, ExecutionPhase.DELETE_AUDIT_LOGS, "previous errors")
+        0
+      }
+
     val deletedKeycloakUsers =
       if (errors.isEmpty()) {
         runExecutionPhase(requestId, ExecutionPhase.DELETE_KEYCLOAK_USERS, errors) {
@@ -586,6 +621,7 @@ open class DsrDeletionService(
         tombstonedUser = configCounts.userTombstoned,
         deletedKeycloakUserCount = deletedKeycloakUsers,
         terminatedTemporalWorkflowCount = terminatedTemporalWorkflows,
+        deletedAuditLogFileCount = deletedAuditLogFileCount,
         errors = persistedErrors,
       )
     val persisted =
@@ -801,6 +837,7 @@ open class DsrDeletionService(
         tombstonedUser = false,
         deletedKeycloakUserCount = 0,
         terminatedTemporalWorkflowCount = 0,
+        deletedAuditLogFileCount = 0,
         errors = persistedErrors,
       )
     val updatedRows =
@@ -1373,6 +1410,7 @@ open class DsrDeletionService(
         tombstonedUser = false,
         deletedKeycloakUserCount = 0,
         terminatedTemporalWorkflowCount = 0,
+        deletedAuditLogFileCount = 0,
         errors = persistedErrors,
       )
     val persisted =
@@ -1477,6 +1515,7 @@ open class DsrDeletionService(
       tombstonedUser = tombstonedUser,
       deletedKeycloakUserCount = deletedKeycloakUserCount,
       terminatedTemporalWorkflowCount = terminatedTemporalWorkflowCount,
+      deletedAuditLogFileCount = deletedAuditLogFileCount,
     )
 
   private fun redactedManifest(

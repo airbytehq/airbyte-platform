@@ -100,6 +100,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
   private lateinit var dbPrune: DbPrune
   private lateinit var deletionRequestRepository: DataSubjectDeletionRequestRepository
   private lateinit var deletionRequestTimeoutService: DsrDeletionRequestTimeoutService
+  private lateinit var dsrAuditLogDeletion: DsrAuditLogDeletion
   private lateinit var metricClient: MetricClient
   private lateinit var objectMapper: ObjectMapper
   private lateinit var executionHeartbeatExecutor: ScheduledExecutorService
@@ -181,6 +182,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
     dbPrune = mockk(relaxed = true)
     deletionRequestRepository = mockk(relaxed = true)
     deletionRequestTimeoutService = mockk(relaxed = true)
+    dsrAuditLogDeletion = mockk(relaxed = true)
     metricClient = mockk(relaxed = true)
     objectMapper = jacksonObjectMapper()
     executionHeartbeatExecutor = mockk(relaxed = true)
@@ -238,6 +240,7 @@ internal class DsrDeletionServiceConfigDbIntegrationTest : BaseConfigDatabaseTes
       dbPrune = dbPrune,
       deletionRequestRepository = deletionRequestRepository,
       deletionRequestTimeoutService = deletionRequestTimeoutService,
+      dsrAuditLogDeletion = dsrAuditLogDeletion,
       objectMapper = objectMapper,
       metricClient = metricClient,
       configDatabase = database!!,

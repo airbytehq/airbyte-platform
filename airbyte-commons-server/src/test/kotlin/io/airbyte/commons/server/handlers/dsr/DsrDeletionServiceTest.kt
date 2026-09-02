@@ -99,6 +99,7 @@ internal class DsrDeletionServiceTest {
   private lateinit var dbPrune: DbPrune
   private lateinit var deletionRequestRepository: DataSubjectDeletionRequestRepository
   private lateinit var deletionRequestTimeoutService: DsrDeletionRequestTimeoutService
+  private lateinit var dsrAuditLogDeletion: DsrAuditLogDeletion
   private lateinit var configDatabase: Database
   private lateinit var metricClient: MetricClient
   private lateinit var objectMapper: ObjectMapper
@@ -148,6 +149,7 @@ internal class DsrDeletionServiceTest {
     dbPrune = mockk(relaxed = true)
     deletionRequestRepository = mockk(relaxed = true)
     deletionRequestTimeoutService = mockk(relaxed = true)
+    dsrAuditLogDeletion = mockk(relaxed = true)
     metricClient = mockk(relaxed = true)
     objectMapper = jacksonObjectMapper()
     executionHeartbeatExecutor = mockk(relaxed = true)
@@ -273,7 +275,7 @@ internal class DsrDeletionServiceTest {
     service = buildService()
   }
 
-  private fun buildService(): DsrDeletionService =
+  private fun buildService(dsrAuditLogDeletion: DsrAuditLogDeletion? = this.dsrAuditLogDeletion): DsrDeletionService =
     object : DsrDeletionService(
       userPersistence = userPersistence,
       workspaceRepository = workspaceRepository,
@@ -291,6 +293,7 @@ internal class DsrDeletionServiceTest {
       dbPrune = dbPrune,
       deletionRequestRepository = deletionRequestRepository,
       deletionRequestTimeoutService = deletionRequestTimeoutService,
+      dsrAuditLogDeletion = dsrAuditLogDeletion,
       objectMapper = objectMapper,
       metricClient = metricClient,
       configDatabase = configDatabase,
@@ -1735,6 +1738,115 @@ internal class DsrDeletionServiceTest {
       result.warnings.any { it.contains("member of other tenants") },
       "Expected a warning about cross-tenant permissions, got: ${result.warnings}",
     )
+  }
+
+  @Test
+  fun `executeClaimedRequest deletes audit logs for every organization in the manifest and records the count`() {
+    val requestId = UUID.randomUUID()
+    val secondOrgId = UUID.randomUUID()
+    every { organizationRepository.findByEmailIgnoreCase(email) } returns
+      listOf(
+        Organization(id = orgId, name = "my-org", userId = userId, email = email),
+        Organization(id = secondOrgId, name = "my-other-org", userId = userId, email = email),
+      )
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(manifest().copy(organizationIds = listOf(orgId, secondOrgId), organizationRefs = emptyList())),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every { connectionManagerUtils.terminateWorkflow(connectionId, any()) } just Runs
+    every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns emptyList()
+    every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
+      DbPrune.JobDeletionCounts(deletedJobsCount = 7, deletedAttemptsCount = 9)
+    every { dsrAuditLogDeletion.deleteAuditLogsByOrganizationId(orgId) } returns 4
+    every { dsrAuditLogDeletion.deleteAuditLogsByOrganizationId(secondOrgId) } returns 3
+    val finalizations = captureActiveFinalization(requestId)
+
+    val result = service.executeClaimedRequest(requestId)
+
+    assertEquals("COMPLETED", result.status)
+    assertEquals(7, result.deletedAuditLogFileCount)
+    verify(exactly = 1) { dsrAuditLogDeletion.deleteAuditLogsByOrganizationId(orgId) }
+    verify(exactly = 1) { dsrAuditLogDeletion.deleteAuditLogsByOrganizationId(secondOrgId) }
+    val executionCounts = objectMapper.readTree(finalizations.single().executionCounts)
+    assertEquals(7, executionCounts.get("deleted_audit_log_file_count").asInt())
+  }
+
+  @Test
+  fun `executeClaimedRequest fails when audit log deletion fails for an organization`() {
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(manifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every { connectionManagerUtils.terminateWorkflow(connectionId, any()) } just Runs
+    every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns emptyList()
+    every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
+      DbPrune.JobDeletionCounts(deletedJobsCount = 7, deletedAttemptsCount = 9)
+    every { dsrAuditLogDeletion.deleteAuditLogsByOrganizationId(orgId) } throws RuntimeException("storage unavailable")
+    val finalizations = captureActiveFinalization(requestId)
+
+    val result = service.executeClaimedRequest(requestId)
+
+    assertEquals("FAILED", result.status)
+    assertEquals(0, result.deletedAuditLogFileCount)
+    assertTrue(result.errors.single().contains("Audit log deletion failed for organization $orgId"))
+    assertTrue(finalizations.single().confirmErrors!!.contains("Audit log deletion failed for organization $orgId"))
+    verify(exactly = 1) {
+      metricClient.count(
+        metric = OssMetricsRegistry.DSR_DELETION_EXECUTION_PHASE,
+        attributes = arrayOf(MetricAttribute("phase", "delete_audit_logs"), MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE)),
+      )
+    }
+  }
+
+  @Test
+  fun `executeClaimedRequest skips audit log deletion when no collaborator is wired`() {
+    val nullCollaboratorService = buildService(dsrAuditLogDeletion = null)
+    val requestId = UUID.randomUUID()
+    val row =
+      DataSubjectDeletionRequest(
+        id = requestId,
+        email = email,
+        emailHash = emailHash,
+        datagrailId = datagrailId,
+        status = DataSubjectDeletionStatus.running,
+        userId = userId,
+        requestedBy = requestedBy,
+        oncallIssueNumber = oncallIssueNumber,
+        manifest = objectMapper.writeValueAsString(manifest()),
+      )
+    every { deletionRequestRepository.findById(requestId) } returns Optional.of(row)
+    every { connectionManagerUtils.terminateWorkflow(connectionId, any()) } just Runs
+    every { dbPrune.listSyncWorkloadIdsByScopes(listOf(connectionId.toString())) } returns emptyList()
+    every { dbPrune.pruneJobsAndAttemptsByScopes(listOf(connectionId.toString())) } returns
+      DbPrune.JobDeletionCounts(deletedJobsCount = 7, deletedAttemptsCount = 9)
+    val finalizations = captureActiveFinalization(requestId)
+
+    val result = nullCollaboratorService.executeClaimedRequest(requestId)
+
+    assertEquals("COMPLETED", result.status)
+    assertEquals(0, result.deletedAuditLogFileCount)
+    verify(exactly = 0) { dsrAuditLogDeletion.deleteAuditLogsByOrganizationId(any()) }
+    val executionCounts = objectMapper.readTree(finalizations.single().executionCounts)
+    assertEquals(0, executionCounts.get("deleted_audit_log_file_count").asInt())
   }
 
   private fun emptyManifest(): DsrManifest =
