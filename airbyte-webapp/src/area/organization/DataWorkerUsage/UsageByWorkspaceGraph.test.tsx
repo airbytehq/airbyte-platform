@@ -291,7 +291,7 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
     expect(lastChartProps().barSize).toBe(expectedBarSize);
   });
 
-  it("pairs Current and Previous hourly regional totals by ordinal bucket", async () => {
+  it("pairs Current and Previous hourly workspace peaks by ordinal bucket", async () => {
     mockHistoricalUsage = {
       regions: [
         {
@@ -344,7 +344,7 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
     expect(tooltip.props.hasOtherCategory).toBeUndefined();
   });
 
-  it("uses regional totals for comparison bars", async () => {
+  it("uses the peak single-workspace usage for comparison bars, matching single-period bars", async () => {
     mockCurrentUsage = {
       regions: [
         {
@@ -396,8 +396,8 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
     );
     expect(lastChartProps().data[22]).toEqual(
       expect.objectContaining({
-        currentUsage: 5,
-        previousUsage: 5,
+        currentUsage: 3,
+        previousUsage: 4,
       })
     );
   });

@@ -185,8 +185,8 @@ export const UsageByWorkspaceGraph = ({
           formattedDate: currentBucket?.formattedDate ?? historicalBucket.formattedDate,
           currentDate: currentBucket?.formattedDate,
           previousDate: historicalBucket?.formattedDate,
-          currentUsage: currentBucket?.regionUsage ?? null,
-          previousUsage: historicalBucket?.regionUsage ?? null,
+          currentUsage: currentBucket?.maxWorkspaceUsage ?? null,
+          previousUsage: historicalBucket?.maxWorkspaceUsage ?? null,
         };
       }),
     [currentData, historicalData]
