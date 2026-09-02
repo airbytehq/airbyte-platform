@@ -86,7 +86,7 @@ class DataWorkerUsageReconciliationCron(
         throw e
       }
 
-    metricClient.distribution(
+    metricClient.gauge(
       metric = OssMetricsRegistry.DATA_WORKER_USAGE_RECONCILIATION_CANDIDATE_COUNT,
       value = candidates.size.toDouble(),
       attributes = arrayOf(MetricAttribute(MetricTags.DRY_RUN, dryRun.toString())),

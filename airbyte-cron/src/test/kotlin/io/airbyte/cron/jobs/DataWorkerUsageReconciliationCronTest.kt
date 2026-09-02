@@ -293,18 +293,18 @@ class DataWorkerUsageReconciliationCronTest {
     }
     if (candidateCount == null) {
       verify(exactly = 0) {
-        metricClient.distribution(metric = any(), value = any(), attributes = anyVararg())
+        metricClient.gauge(metric = any(), value = any(), attributes = anyVararg())
       }
     } else {
       verify(exactly = 1) {
-        metricClient.distribution(
+        metricClient.gauge(
           metric = OssMetricsRegistry.DATA_WORKER_USAGE_RECONCILIATION_CANDIDATE_COUNT,
           value = candidateCount.toDouble(),
           attributes = arrayOf(MetricAttribute(MetricTags.DRY_RUN, dryRun.toString())),
         )
       }
       verify(exactly = 1) {
-        metricClient.distribution(metric = any(), value = any(), attributes = anyVararg())
+        metricClient.gauge(metric = any(), value = any(), attributes = anyVararg())
       }
     }
   }
