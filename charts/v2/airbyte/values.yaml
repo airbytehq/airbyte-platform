@@ -631,6 +631,14 @@ webapp:
     port: 80
     # -- Annotations for the webapp service resource
     annotations: {}
+    # -- Optional internalTrafficPolicy for the webapp service (Cluster or Local)
+    internalTrafficPolicy: ""
+    # -- Optional externalTrafficPolicy for the webapp service, only applied when type is NodePort or LoadBalancer
+    externalTrafficPolicy: ""
+    # -- Optional trafficDistribution for the webapp service (for example PreferClose)
+    trafficDistribution: ""
+    # -- Optional appProtocol for the webapp service port
+    appProtocol: ""
 
   ## Web app resource requests and limits
   ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
@@ -838,6 +846,14 @@ server:
     # -- Optional: specify a NodePort when type is NodePort or LoadBalancer
     nodePort: ""
     annotations: {}
+    # -- Optional internalTrafficPolicy for the server service (Cluster or Local)
+    internalTrafficPolicy: ""
+    # -- Optional externalTrafficPolicy for the server service, only applied when type is NodePort or LoadBalancer
+    externalTrafficPolicy: ""
+    # -- Optional trafficDistribution for the server service (for example PreferClose)
+    trafficDistribution: ""
+    # -- Optional appProtocol for the server service port
+    appProtocol: ""
 
   annotations: {}
 
@@ -1841,6 +1857,16 @@ temporal:
     type: ClusterIP
     # -- The temporal port and exposed kubernetes port
     port: 7233
+    # -- Annotations for the temporal service resource
+    annotations: {}
+    # -- Optional internalTrafficPolicy for the temporal service (Cluster or Local)
+    internalTrafficPolicy: ""
+    # -- Optional externalTrafficPolicy for the temporal service, only applied when type is NodePort or LoadBalancer
+    externalTrafficPolicy: ""
+    # -- Optional trafficDistribution for the temporal service (for example PreferClose)
+    trafficDistribution: ""
+    # -- Optional appProtocol for the temporal service port
+    appProtocol: ""
 
   prometheus:
     endpoint: ""
@@ -1976,6 +2002,14 @@ temporalUi:
     type: ClusterIP
     # -- The temporal-ui port and exposed kubernetes port
     port: 8088
+    # -- Optional internalTrafficPolicy for the temporal-ui service (Cluster or Local)
+    internalTrafficPolicy: ""
+    # -- Optional externalTrafficPolicy for the temporal-ui service, only applied when type is NodePort or LoadBalancer
+    externalTrafficPolicy: ""
+    # -- Optional trafficDistribution for the temporal-ui service (for example PreferClose)
+    trafficDistribution: ""
+    # -- Optional appProtocol for the temporal-ui service port
+    appProtocol: ""
 
   # -- Add extra annotations to the temporal-ui pod
   podAnnotations: {}
@@ -2433,6 +2467,14 @@ keycloak:
     type: ClusterIP
     port: 8180
     annotations: {}
+    # -- Optional internalTrafficPolicy for the keycloak service (Cluster or Local)
+    internalTrafficPolicy: ""
+    # -- Optional externalTrafficPolicy for the keycloak service, only applied when type is NodePort or LoadBalancer
+    externalTrafficPolicy: ""
+    # -- Optional trafficDistribution for the keycloak service (for example PreferClose)
+    trafficDistribution: ""
+    # -- Optional appProtocol for the keycloak service port
+    appProtocol: ""
 
   headlessService:
     annotations: {}
@@ -2669,6 +2711,14 @@ manifestServer:
     type: ClusterIP
     port: 8080
     annotations: {}
+    # -- Optional internalTrafficPolicy for the manifest-server service (Cluster or Local)
+    internalTrafficPolicy: ""
+    # -- Optional externalTrafficPolicy for the manifest-server service, only applied when type is NodePort or LoadBalancer
+    externalTrafficPolicy: ""
+    # -- Optional trafficDistribution for the manifest-server service (for example PreferClose)
+    trafficDistribution: ""
+    # -- Optional appProtocol for the manifest-server service port
+    appProtocol: ""
 
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: { }
@@ -2808,6 +2858,14 @@ workloadApiServer:
     type: ClusterIP
     port: 8001
     annotations: {}
+    # -- Optional internalTrafficPolicy for the workload-api-server service (Cluster or Local)
+    internalTrafficPolicy: ""
+    # -- Optional externalTrafficPolicy for the workload-api-server service, only applied when type is NodePort or LoadBalancer
+    externalTrafficPolicy: ""
+    # -- Optional trafficDistribution for the workload-api-server service (for example PreferClose)
+    trafficDistribution: ""
+    # -- Optional appProtocol for the workload-api-server service port
+    appProtocol: ""
 
   # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
   ingress:
@@ -2944,6 +3002,14 @@ featureflagServer:
   env_vars: {}
   service:
     port: 8007
+    # -- Optional internalTrafficPolicy for the featureflag-server service (Cluster or Local)
+    internalTrafficPolicy: ""
+    # -- Optional externalTrafficPolicy for the featureflag-server service, only applied when type is NodePort or LoadBalancer
+    externalTrafficPolicy: ""
+    # -- Optional trafficDistribution for the featureflag-server service (for example PreferClose)
+    trafficDistribution: ""
+    # -- Optional appProtocol for the featureflag-server service port
+    appProtocol: ""
 
   # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
   ingress:
@@ -2997,6 +3063,14 @@ stiggSidecar:
     type: ClusterIP
     port: 8800
     annotations: {}
+    # -- Optional internalTrafficPolicy for the stigg-sidecar service (Cluster or Local)
+    internalTrafficPolicy: ""
+    # -- Optional externalTrafficPolicy for the stigg-sidecar service, only applied when type is NodePort or LoadBalancer
+    externalTrafficPolicy: ""
+    # -- Optional trafficDistribution for the stigg-sidecar service (for example PreferClose)
+    trafficDistribution: ""
+    # -- Optional appProtocol for the stigg-sidecar service port
+    appProtocol: ""
 
   annotations: {}
 
