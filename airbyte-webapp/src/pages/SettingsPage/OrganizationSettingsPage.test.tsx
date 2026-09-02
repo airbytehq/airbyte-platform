@@ -148,11 +148,24 @@ describe("OrganizationSettingsPage", () => {
     expect(screen.queryByText("Audit Logs")).not.toBeInTheDocument();
   });
 
-  it("shows the Audit Logs nav link for an admin with the audit logging entitlement", async () => {
+  it("hides the Audit Logs nav link for an admin with the audit logging entitlement when audit-log-ui is off", async () => {
     mockUseFeature.mockImplementation((feature) => feature === FeatureItem.AllowAuditLogs);
     mockUseGeneratedIntent.mockImplementation(
       (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.UpdateOrganizationPermissions
     );
+    // The beforeEach default leaves audit-log-ui off.
+
+    await render(<OrganizationSettingsPage />);
+
+    expect(screen.queryByText("Audit Logs")).not.toBeInTheDocument();
+  });
+
+  it("shows the Audit Logs nav link for an admin with the audit logging entitlement when audit-log-ui is on", async () => {
+    mockUseFeature.mockImplementation((feature) => feature === FeatureItem.AllowAuditLogs);
+    mockUseGeneratedIntent.mockImplementation(
+      (intent) => intent === Intent.ViewOrganizationSettings || intent === Intent.UpdateOrganizationPermissions
+    );
+    mockUseExperiment.mockImplementation((key) => key === "audit-log-ui");
 
     await render(<OrganizationSettingsPage />);
 

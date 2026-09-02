@@ -34,6 +34,7 @@ export const OrganizationRoutes: React.FC = () => {
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
   const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
   const isScimProvisioningEnabled = useExperiment("settings.scimProvisioning");
+  const isAuditLogsUiEnabled = useExperiment("audit-log-ui");
   // UpdateOrganizationPermissions is the generated intent whose allow-list
   // (organization_admin, instance_admin) exactly matches the ORGANIZATION_ADMIN
   // security on all eight group endpoints. No group-specific intent exists.
@@ -60,7 +61,7 @@ export const OrganizationRoutes: React.FC = () => {
           {supportsSSO && (
             <Route path={SettingsRoutePaths.OrganizationSSO} element={<SSOAndScimOrganizationSettingsPage />} />
           )}
-          {auditLogsEntitled && canManageOrganizationPermissions && (
+          {auditLogsEntitled && isAuditLogsUiEnabled && canManageOrganizationPermissions && (
             <Route path={SettingsRoutePaths.OrganizationAuditLogs} element={<OrganizationAuditLogsPage />} />
           )}
           {licenseUi && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}

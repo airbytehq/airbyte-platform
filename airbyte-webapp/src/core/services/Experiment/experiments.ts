@@ -9,6 +9,7 @@
 export interface Experiments {
   allowAgentsDataReplicationAccess: boolean;
   asyncSchemaDiscovery: boolean;
+  "audit-log-ui": boolean;
   "billing.early-sync-enabled": boolean;
   "billing.selfServePlusPlan": boolean;
   "connection.allowToSupportAllSyncModes": boolean;
@@ -47,6 +48,7 @@ export interface Experiments {
 export const defaultExperimentValues: Experiments = {
   allowAgentsDataReplicationAccess: false,
   asyncSchemaDiscovery: true,
+  "audit-log-ui": false,
   "billing.early-sync-enabled": false,
   "billing.selfServePlusPlan": false,
   "connection.allowToSupportAllSyncModes": false,

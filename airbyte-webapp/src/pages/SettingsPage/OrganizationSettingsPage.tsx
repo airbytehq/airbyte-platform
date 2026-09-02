@@ -28,6 +28,7 @@ export const OrganizationSettingsPage: React.FC = () => {
   const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
   const isScimProvisioningEnabled = useExperiment("settings.scimProvisioning");
+  const isAuditLogsUiEnabled = useExperiment("audit-log-ui");
   // UpdateOrganizationPermissions is the generated intent whose allow-list
   // (organization_admin, instance_admin) exactly matches the ORGANIZATION_ADMIN
   // security on all eight group endpoints. No group-specific intent exists.
@@ -67,7 +68,7 @@ export const OrganizationSettingsPage: React.FC = () => {
                 to={SettingsRoutePaths.OrganizationGroups}
               />
             )}
-            {auditLogsEntitled && canManageOrganizationPermissions && (
+            {auditLogsEntitled && isAuditLogsUiEnabled && canManageOrganizationPermissions && (
               <SettingsLink
                 iconType="docs"
                 name={formatMessage({ id: "settings.auditLogs" })}
