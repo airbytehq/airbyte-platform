@@ -56,7 +56,16 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
       orchestrator_cpu_request = orchestrator_cpu_request + :orchestratorCpuRequest,
       max_source_cpu_request = GREATEST(max_source_cpu_request, source_cpu_request + :sourceCpuRequest),
       max_destination_cpu_request = GREATEST(max_destination_cpu_request, destination_cpu_request + :destinationCpuRequest),
-      max_orchestrator_cpu_request = GREATEST(max_orchestrator_cpu_request, orchestrator_cpu_request + :orchestratorCpuRequest)
+      max_orchestrator_cpu_request = GREATEST(max_orchestrator_cpu_request, orchestrator_cpu_request + :orchestratorCpuRequest),
+      max_total_cpu_request = GREATEST(
+        COALESCE(
+          max_total_cpu_request,
+          max_source_cpu_request + max_destination_cpu_request + max_orchestrator_cpu_request
+        ),
+        source_cpu_request + :sourceCpuRequest +
+          destination_cpu_request + :destinationCpuRequest +
+          orchestrator_cpu_request + :orchestratorCpuRequest
+      )
     WHERE organization_id = :organizationId
       AND workspace_id = :workspaceId
       AND dataplane_group_id = :dataplaneGroupId
@@ -85,7 +94,8 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
       orchestrator_cpu_request,
       max_source_cpu_request,
       max_destination_cpu_request,
-      max_orchestrator_cpu_request
+      max_orchestrator_cpu_request,
+      max_total_cpu_request
     ) VALUES (
     :organizationId,
     :workspaceId,
@@ -96,7 +106,8 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
     :orchestratorCpuRequest,
     :maxSourceCpuRequest,
     :maxDestinationCpuRequest,
-    :maxOrchestratorCpuRequest
+    :maxOrchestratorCpuRequest,
+    :maxTotalCpuRequest
     )
     """,
   )
@@ -111,6 +122,7 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
     maxSourceCpuRequest: Double,
     maxDestinationCpuRequest: Double,
     maxOrchestratorCpuRequest: Double,
+    maxTotalCpuRequest: Double?,
   )
 
   @Query(

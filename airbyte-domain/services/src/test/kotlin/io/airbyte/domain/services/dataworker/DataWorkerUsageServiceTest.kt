@@ -141,7 +141,8 @@ class DataWorkerUsageServiceTest {
             it.dataplaneGroupId == dataplaneGroupId &&
             it.sourceCpuRequest == 2.0 &&
             it.destinationCpuRequest == 3.0 &&
-            it.orchestratorCpuRequest == 1.0
+            it.orchestratorCpuRequest == 1.0 &&
+            it.maxTotalCpuRequest == 6.0
         },
       )
     }
@@ -367,6 +368,49 @@ class DataWorkerUsageServiceTest {
 
   @Test
   fun `calculateDataWorkers should divide total CPU by 8`() {
+    val dataWorkerUsage =
+      DataWorkerUsage(
+        organizationId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        dataplaneGroupId = UUID.randomUUID(),
+        sourceCpuRequest = 2.0,
+        destinationCpuRequest = 3.0,
+        orchestratorCpuRequest = 1.0,
+        bucketStart = OffsetDateTime.now(),
+        createdAt = OffsetDateTime.now(),
+        maxSourceCpuRequest = 2.0,
+        maxDestinationCpuRequest = 3.0,
+        maxOrchestratorCpuRequest = 1.0,
+      )
+
+    val result = dataWorkerUsage.calculateDataWorkers()
+    assertEquals(0.75, result, 0.001)
+  }
+
+  @Test
+  fun `calculateDataWorkers should use maxTotalCpuRequest when present`() {
+    val dataWorkerUsage =
+      DataWorkerUsage(
+        organizationId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        dataplaneGroupId = UUID.randomUUID(),
+        sourceCpuRequest = 2.0,
+        destinationCpuRequest = 3.0,
+        orchestratorCpuRequest = 1.0,
+        bucketStart = OffsetDateTime.now(),
+        createdAt = OffsetDateTime.now(),
+        maxSourceCpuRequest = 2.0,
+        maxDestinationCpuRequest = 3.0,
+        maxOrchestratorCpuRequest = 1.0,
+        maxTotalCpuRequest = 4.0,
+      )
+
+    val result = dataWorkerUsage.calculateDataWorkers()
+    assertEquals(0.5, result, 0.001)
+  }
+
+  @Test
+  fun `calculateDataWorkers should fall back to per-component maxes when maxTotalCpuRequest is null`() {
     val dataWorkerUsage =
       DataWorkerUsage(
         organizationId = UUID.randomUUID(),
@@ -1046,7 +1090,8 @@ class DataWorkerUsageServiceTest {
             it.orchestratorCpuRequest == 1.5 && // 0.5 + 1.0
             it.maxSourceCpuRequest == 3.0 &&
             it.maxDestinationCpuRequest == 4.5 &&
-            it.maxOrchestratorCpuRequest == 1.5
+            it.maxOrchestratorCpuRequest == 1.5 &&
+            it.maxTotalCpuRequest == 9.0
         },
       )
     }

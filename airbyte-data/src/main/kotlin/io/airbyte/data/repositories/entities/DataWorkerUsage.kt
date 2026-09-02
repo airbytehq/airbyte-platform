@@ -25,10 +25,17 @@ data class DataWorkerUsage(
   var maxSourceCpuRequest: Double,
   var maxDestinationCpuRequest: Double,
   var maxOrchestratorCpuRequest: Double,
+  var maxTotalCpuRequest: Double? = null,
   var createdAt: OffsetDateTime,
 ) {
   fun calculateDataWorkers(): Double {
-    val resources = maxSourceCpuRequest + maxDestinationCpuRequest + maxOrchestratorCpuRequest
+    // maxTotalCpuRequest is the max of the sum of all three CPU components at a single point in
+    // time, so it is preferred when present. Rows written before the column existed have a null
+    // value; for those we fall back to summing the per-component maxes, which is the legacy
+    // behaviour. That sum is an overestimate, since the individual maxes may have been set by
+    // different jobs at different points within the hour.
+    val resources =
+      maxTotalCpuRequest ?: (maxSourceCpuRequest + maxDestinationCpuRequest + maxOrchestratorCpuRequest)
     val dataWorkers = resources / DATA_WORKER_CPU_DIVISOR
     return dataWorkers
   }

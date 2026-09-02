@@ -135,6 +135,7 @@ open class DataWorkerUsageService(
           maxSourceCpuRequest = newSourceCpuRequest,
           maxDestinationCpuRequest = newDestCpuRequest,
           maxOrchestratorCpuRequest = newOrchCpuRequest,
+          maxTotalCpuRequest = newSourceCpuRequest + newDestCpuRequest + newOrchCpuRequest,
         )
       logger.info { "Data worker usage addition detected a new bucket is required. Creating a new bucket with values: $usageWithNewCpuValues" }
 
@@ -164,6 +165,7 @@ open class DataWorkerUsageService(
             maxSourceCpuRequest = newSourceCpuRequest,
             maxDestinationCpuRequest = newDestCpuRequest,
             maxOrchestratorCpuRequest = newOrchCpuRequest,
+            maxTotalCpuRequest = newSourceCpuRequest + newDestCpuRequest + newOrchCpuRequest,
           )
         dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(usageWithNewCpuValues)
       }
@@ -205,6 +207,7 @@ open class DataWorkerUsageService(
           maxSourceCpuRequest = newSourceCpuRequest,
           maxDestinationCpuRequest = newDestCpuRequest,
           maxOrchestratorCpuRequest = newOrchCpuRequest,
+          maxTotalCpuRequest = newSourceCpuRequest + newDestCpuRequest + newOrchCpuRequest,
         )
       logger.info { "Data worker usage subtraction detected a new bucket is required. Creating a new bucket with values: $usageWithNewCpuValues" }
 
@@ -233,6 +236,7 @@ open class DataWorkerUsageService(
             maxSourceCpuRequest = newSourceCpuRequest,
             maxDestinationCpuRequest = newDestCpuRequest,
             maxOrchestratorCpuRequest = newOrchCpuRequest,
+            maxTotalCpuRequest = newSourceCpuRequest + newDestCpuRequest + newOrchCpuRequest,
           )
         dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(usageWithNewCpuValues)
       }
@@ -406,6 +410,7 @@ open class DataWorkerUsageService(
       maxSourceCpuRequest = sourceCpu.toDouble(),
       maxDestinationCpuRequest = destCpu.toDouble(),
       maxOrchestratorCpuRequest = orchCpu.toDouble(),
+      maxTotalCpuRequest = sourceCpu.toDouble() + destCpu.toDouble() + orchCpu.toDouble(),
     )
   }
 
@@ -686,6 +691,7 @@ open class DataWorkerUsageService(
       maxSourceCpuRequest = sourceCpuRequest,
       maxDestinationCpuRequest = destinationCpuRequest,
       maxOrchestratorCpuRequest = orchestratorCpuRequest,
+      maxTotalCpuRequest = sourceCpuRequest + destinationCpuRequest + orchestratorCpuRequest,
     )
   }
 

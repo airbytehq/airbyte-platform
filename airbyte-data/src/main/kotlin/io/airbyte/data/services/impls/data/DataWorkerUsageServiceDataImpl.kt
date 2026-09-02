@@ -34,6 +34,7 @@ class DataWorkerUsageServiceDataImpl(
       dataWorkerUsage.maxSourceCpuRequest,
       dataWorkerUsage.maxDestinationCpuRequest,
       dataWorkerUsage.maxOrchestratorCpuRequest,
+      dataWorkerUsage.maxTotalCpuRequest,
     )
   }
 
