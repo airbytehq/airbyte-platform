@@ -11832,11 +11832,11 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           }
         },
@@ -21695,7 +21695,7 @@
       ],
       "custom": false,
       "destinationDefinitionId": "424892c4-daac-4491-b35d-c6688ba547ba",
-      "dockerImageTag": "4.0.49",
+      "dockerImageTag": "4.1.2",
       "dockerRepository": "airbyte/destination-snowflake",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake",
       "externalDocumentationUrls": [
@@ -21732,10 +21732,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "ebac5070521e9b7e32ccb8b0945b44ff507e3cae",
-          "commit_timestamp": "2026-08-10T12:51:34-07:00"
+          "commit_author": "Sunil Kuruba",
+          "commit_author_email": "sunil.kuruba@airbyte.io",
+          "commit_sha": "03bd033f62605c6686a27399cce5ad4c667f0c07",
+          "commit_timestamp": "2026-08-24T12:49:13-07:00"
         },
         "metrics": {
           "all": {
@@ -21751,12 +21751,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake/4.0.49.spdx.json",
+        "release": {
+          "attributed_to": "sunil-kuruba",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "03bd033f62605c6686a27399cce5ad4c667f0c07",
+          "merged_at": "2026-08-24T19:49:14Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 270477162,
+          "pr_author_login": "sunil-kuruba",
+          "pr_author_type": "User",
+          "pr_merged_by_login": "sunil-kuruba",
+          "pr_merged_by_type": "User",
+          "pr_number": 84979,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84979",
+          "released_at": "2026-08-24T19:49:14Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake/4.1.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-snowflake/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-10T19:58:59.281411+00:00",
-          "registry_entry_generated_at": "2026-08-10T19:58:59.281411+00:00"
+          "metadata_last_modified": "2026-08-24T19:54:13.223530+00:00",
+          "registry_entry_generated_at": "2026-08-24T19:54:13.223530+00:00"
         }
       },
       "githubIssueLabel": "destination-snowflake",
@@ -21787,453 +21803,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations",
-        "releaseCandidates": {
-          "4.1.2": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 300,
-              "requireVersionIncrementsInPullRequests": false,
-              "sl": 300
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/java-connector-base:2.0.4@sha256:5f343797cfcf021ca98ba9bdf5970ef66cbf6222d8cc17b0d61d13860a5bcc2b"
-            },
-            "connectorIPCOptions": {
-              "dataChannel": {
-                "supportedSerialization": [
-                  "JSONL",
-                  "PROTOBUF"
-                ],
-                "supportedTransport": [
-                  "SOCKET",
-                  "STDIO"
-                ],
-                "version": "0.0.2"
-              }
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "unitTests"
-              },
-              {
-                "suite": "integrationTests",
-                "testSecrets": [
-                  {
-                    "fileName": "1s1t_disabletd_internal_staging_config.json",
-                    "name": "SECRET_DESTINATION-SNOWFLAKE_INTERNAL_STAGING_CONFIG_DISABLETD",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "1s1t_disabletd_internal_staging_config_raw_schema_override.json",
-                    "name": "SECRET_DESTINATION-SNOWFLAKE_INTERNAL_STAGING_CONFIG_RAW_SCHEMA_OVERRIDE_DISABLETD",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "1s1t_internal_staging_config.json",
-                    "name": "SECRET_DESTINATION_SNOWFLAKE_1S1T_INTERNAL_STAGING_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "1s1t_internal_staging_config_raw_schema_override.json",
-                    "name": "SECRET_DESTINATION_SNOWFLAKE_1S1T_INTERNAL_STAGING_CREDS_RAW_SCHEMA_OVERRIDE",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_DESTINATION_SNOWFLAKE_INSUFFICIENT_PERMISSIONS_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "1s1t_case_insensitive.json",
-                    "name": "SECRET_DESTINATION_SNOWFLAKE_QUOTED_IDENTIFIERS_IGNORE_CASE_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "destinationDefinitionId": "424892c4-daac-4491-b35d-c6688ba547ba",
-            "dockerImageTag": "4.1.2",
-            "dockerRepository": "airbyte/destination-snowflake",
-            "documentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake",
-            "externalDocumentationUrls": [
-              {
-                "title": "Release notes",
-                "type": "api_release_history",
-                "url": "https://docs.snowflake.com/en/release-notes"
-              },
-              {
-                "title": "Snowflake server release notes and feature updates",
-                "type": "api_release_history",
-                "url": "https://docs.snowflake.com/en/release-notes/new-features"
-              },
-              {
-                "title": "Key pair authentication",
-                "type": "authentication_guide",
-                "url": "https://docs.snowflake.com/en/user-guide/key-pair-auth"
-              },
-              {
-                "title": "Access control",
-                "type": "permissions_scopes",
-                "url": "https://docs.snowflake.com/en/user-guide/security-access-control"
-              },
-              {
-                "title": "SQL reference",
-                "type": "sql_reference",
-                "url": "https://docs.snowflake.com/en/sql-reference"
-              },
-              {
-                "title": "Snowflake Status",
-                "type": "status_page",
-                "url": "https://status.snowflake.com/"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "Sunil Kuruba",
-                "commit_author_email": "sunil.kuruba@airbyte.io",
-                "commit_sha": "03bd033f62605c6686a27399cce5ad4c667f0c07",
-                "commit_timestamp": "2026-08-24T12:49:13-07:00"
-              },
-              "release": {
-                "attributed_to": "sunil-kuruba",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "03bd033f62605c6686a27399cce5ad4c667f0c07",
-                "merged_at": "2026-08-24T19:49:14Z",
-                "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 270477162,
-                "pr_author_login": "sunil-kuruba",
-                "pr_author_type": "User",
-                "pr_merged_by_login": "sunil-kuruba",
-                "pr_merged_by_type": "User",
-                "pr_number": 84979,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84979",
-                "released_at": "2026-08-24T19:49:14Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake/4.1.2.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/destination-snowflake/4.1.2/metadata.yaml",
-                "metadata_last_modified": "2026-08-24T19:54:13.223530+00:00",
-                "registry_entry_generated_at": "2026-08-24T19:54:13.223530+00:00"
-              }
-            },
-            "githubIssueLabel": "destination-snowflake",
-            "icon": "snowflake.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/destination-snowflake/latest/icon.svg",
-            "language": "java",
-            "license": "ELv2",
-            "name": "Snowflake",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "generally_available",
-            "releases": {
-              "breakingChanges": {
-                "2.0.0": {
-                  "message": "Remove GCS/S3 loading method support.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations#2.0.0",
-                  "upgradeDeadline": "2023-08-31"
-                },
-                "3.0.0": {
-                  "message": "**Do not upgrade until you have run a test upgrade as outlined [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#testing-destinations-v2-for-a-single-connection)**.\nThis version introduces [Destinations V2](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#what-is-destinations-v2), which provides better error handling, incremental delivery of data for large syncs, and improved final table structures. To review the breaking changes, and how to upgrade, see [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#quick-start-to-upgrading). These changes will likely require updates to downstream dbt / SQL models, which we walk through [here](https://docs.airbyte.com/release_notes/upgrading_to_destinations_v2/#updating-downstream-transformations).\nSelecting `Upgrade` will upgrade **all** connections using this destination at their next sync. You can manually sync existing connections prior to the next scheduled sync to start the upgrade early.\n",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations#3.0.0",
-                  "upgradeDeadline": "2023-11-07"
-                },
-                "4.0.0": {
-                  "message": "The connector now requires ALTER TABLE permissions, so you must grant this permission to the Snowflake user. Otherwise, if you never interact with the raw tables, you can upgrade without taking any action. If you _do_ use the raw tables, make sure to read the migration guide for more details.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations#4.0.0",
-                  "upgradeDeadline": "2026-01-06"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "slow"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "resourceRequirements": {
-              "jobSpecific": [
-                {
-                  "jobType": "sync",
-                  "resourceRequirements": {
-                    "memory_limit": "2Gi",
-                    "memory_request": "2Gi"
-                  }
-                }
-              ]
-            },
-            "sourceType": "database",
-            "spec": {
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "groups": [
-                  {
-                    "id": "connection",
-                    "title": "Connection"
-                  },
-                  {
-                    "id": "sync_behavior",
-                    "title": "Sync Behavior"
-                  },
-                  {
-                    "id": "advanced",
-                    "title": "Advanced"
-                  }
-                ],
-                "properties": {
-                  "cdc_deletion_mode": {
-                    "always_show": true,
-                    "default": "Hard delete",
-                    "description": "Whether to execute CDC deletions as hard deletes (i.e. propagate source deletions to the destination), or soft deletes (i.e. leave a tombstone record in the destination). Defaults to hard deletes.",
-                    "enum": [
-                      "Hard delete",
-                      "Soft delete"
-                    ],
-                    "group": "sync_behavior",
-                    "order": 5,
-                    "title": "CDC deletion mode",
-                    "type": "string"
-                  },
-                  "credentials": {
-                    "description": "Determines the type of authentication that should be used.",
-                    "group": "connection",
-                    "oneOf": [
-                      {
-                        "additionalProperties": true,
-                        "description": "Configuration details for the Key Pair Authentication.",
-                        "properties": {
-                          "auth_type": {
-                            "default": "Key Pair Authentication",
-                            "enum": [
-                              "Key Pair Authentication"
-                            ],
-                            "type": "string"
-                          },
-                          "private_key": {
-                            "airbyte_secret": true,
-                            "description": "RSA Private key to use for Snowflake connection. See the <a\n href=\"https://docs.airbyte.com/integrations/destinations/snowflake\">docs</a> for more\n information on how to obtain this key.",
-                            "multiline": true,
-                            "order": 0,
-                            "title": "Private Key",
-                            "type": "string"
-                          },
-                          "private_key_password": {
-                            "airbyte_secret": true,
-                            "description": "Passphrase for private key",
-                            "order": 0,
-                            "title": "Passphrase",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "private_key"
-                        ],
-                        "title": "Key Pair Authentication",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "description": "Configuration details for the Username and Password Authentication.",
-                        "properties": {
-                          "auth_type": {
-                            "default": "Username and Password",
-                            "enum": [
-                              "Username and Password"
-                            ],
-                            "type": "string"
-                          },
-                          "password": {
-                            "airbyte_secret": true,
-                            "description": "Enter the password associated with the username.",
-                            "order": 0,
-                            "title": "Password",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "password"
-                        ],
-                        "title": "Username and Password",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 6,
-                    "title": "Authorization Method",
-                    "type": "object"
-                  },
-                  "database": {
-                    "description": "Enter the name of the <a href=\"https://docs.snowflake.com/en/sql-reference/ddl-database.html#database-schema-share-ddl\">database</a> you want to sync data into",
-                    "examples": [
-                      "AIRBYTE_DATABASE"
-                    ],
-                    "group": "connection",
-                    "order": 3,
-                    "title": "Database",
-                    "type": "string"
-                  },
-                  "disable_type_dedupe": {
-                    "description": "Write the legacy \"raw tables\" format, to enable backwards compatibility with older versions of this connector.",
-                    "group": "advanced",
-                    "order": 7,
-                    "title": "Legacy raw tables",
-                    "type": "boolean"
-                  },
-                  "host": {
-                    "description": "Enter your Snowflake account's <a href=\"https://docs.snowflake.com/en/user-guide/admin-account-identifier.html#using-an-account-locator-as-an-identifier\">locator</a> (in the format <account_locator>.<region>.<cloud>.snowflakecomputing.com)",
-                    "examples": [
-                      "accountname.us-east-2.aws.snowflakecomputing.com",
-                      "accountname.snowflakecomputing.com"
-                    ],
-                    "group": "connection",
-                    "order": 0,
-                    "pattern": "^(http(s)?:\\/\\/)?([^./?#]+\\.)?([^./?#]+\\.)?([^./?#]+\\.)?([^./?#]+\\.(snowflakecomputing\\.com|localstack\\.cloud))$",
-                    "pattern_descriptor": "{account_name}.snowflakecomputing.com or {accountname}.{aws_location}.aws.snowflakecomputing.com",
-                    "title": "Host",
-                    "type": "string"
-                  },
-                  "jdbc_url_params": {
-                    "description": "Enter the additional properties to pass to the JDBC URL string when connecting to the database (formatted as key=value pairs separated by the symbol &). Example: key1=value1&key2=value2&key3=value3",
-                    "group": "advanced",
-                    "order": 10,
-                    "title": "JDBC URL Params",
-                    "type": "string"
-                  },
-                  "number_data_type": {
-                    "default": "FLOAT",
-                    "description": "Datatype choice for columns using the Airbyte number type. NUMBER(38,9) (RECOMMENDED): Fixed-point decimal with 9 decimal places. Stores values exactly. Best for financial data, monetary values, numeric IDs, and values that require exact decimal representation. FLOAT: Binary floating-point number. Stores decimal values approximately. Best for scientific calculations, statistical models, probabilities, model scores, very large magnitudes, and calculations where small rounding differences are acceptable.",
-                    "enum": [
-                      "NUMBER(38,9)",
-                      "FLOAT"
-                    ],
-                    "group": "advanced",
-                    "order": 12,
-                    "title": "Decimal Data Type",
-                    "type": "string"
-                  },
-                  "raw_data_schema": {
-                    "description": "Airbyte will use this dataset for various internal tables. In legacy raw tables mode, the raw tables will be stored in this dataset. Defaults to \"airbyte_internal\".",
-                    "group": "advanced",
-                    "order": 8,
-                    "title": "Airbyte Internal Table Dataset Name",
-                    "type": "string"
-                  },
-                  "retention_period_days": {
-                    "description": "The number of days of Snowflake Time Travel to enable on the tables. See <a href=\"https://docs.snowflake.com/en/user-guide/data-time-travel#data-retention-period\">Snowflake's documentation</a> for more information. Setting a nonzero value will incur increased storage costs in your Snowflake instance.",
-                    "group": "advanced",
-                    "order": 11,
-                    "title": "Data Retention Period (days)",
-                    "type": "integer"
-                  },
-                  "role": {
-                    "description": "Enter the <a href=\"https://docs.snowflake.com/en/user-guide/security-access-control-overview.html#roles\">role</a> that you want to use to access Snowflake",
-                    "examples": [
-                      "AIRBYTE_ROLE"
-                    ],
-                    "group": "connection",
-                    "order": 1,
-                    "title": "Role",
-                    "type": "string"
-                  },
-                  "schema": {
-                    "description": "Enter the name of the default <a href=\"https://docs.snowflake.com/en/sql-reference/ddl-database.html#database-schema-share-ddl\">schema</a>",
-                    "examples": [
-                      "AIRBYTE_SCHEMA"
-                    ],
-                    "group": "connection",
-                    "order": 4,
-                    "title": "Default Schema",
-                    "type": "string"
-                  },
-                  "trim_space": {
-                    "default": true,
-                    "description": "Whether Snowflake should trim leading and trailing whitespace from fields during data loading. Disable this option if your data contains meaningful leading or trailing whitespace in string fields that should be preserved.",
-                    "group": "advanced",
-                    "order": 9,
-                    "title": "Trim Whitespace from String Fields",
-                    "type": "boolean"
-                  },
-                  "username": {
-                    "description": "Enter the name of the user you want to use to access the database",
-                    "examples": [
-                      "AIRBYTE_USER"
-                    ],
-                    "group": "connection",
-                    "order": 5,
-                    "title": "Username",
-                    "type": "string"
-                  },
-                  "warehouse": {
-                    "description": "Enter the name of the <a href=\"https://docs.snowflake.com/en/user-guide/warehouses-overview.html#overview-of-warehouses\">warehouse</a> that you want to use as a compute cluster",
-                    "examples": [
-                      "AIRBYTE_WAREHOUSE"
-                    ],
-                    "group": "connection",
-                    "order": 2,
-                    "title": "Warehouse",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "host",
-                  "role",
-                  "warehouse",
-                  "database",
-                  "schema",
-                  "username"
-                ],
-                "title": "Snowflake Specification",
-                "type": "object"
-              },
-              "documentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake",
-              "supported_destination_sync_modes": [
-                "overwrite",
-                "append",
-                "append_dedup"
-              ],
-              "supportsDBT": false,
-              "supportsIncremental": true,
-              "supportsNormalization": false
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsDbt": true,
-            "supportsRefreshes": true,
-            "tags": [
-              "language:java"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -22395,6 +21964,18 @@
               "group": "advanced",
               "order": 10,
               "title": "JDBC URL Params",
+              "type": "string"
+            },
+            "number_data_type": {
+              "default": "FLOAT",
+              "description": "Datatype choice for columns using the Airbyte number type. NUMBER(38,9) (RECOMMENDED): Fixed-point decimal with 9 decimal places. Stores values exactly. Best for financial data, monetary values, numeric IDs, and values that require exact decimal representation. FLOAT: Binary floating-point number. Stores decimal values approximately. Best for scientific calculations, statistical models, probabilities, model scores, very large magnitudes, and calculations where small rounding differences are acceptable.",
+              "enum": [
+                "NUMBER(38,9)",
+                "FLOAT"
+              ],
+              "group": "advanced",
+              "order": 12,
+              "title": "Decimal Data Type",
               "type": "string"
             },
             "raw_data_schema": {
@@ -38659,15 +38240,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -65424,16 +65005,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "high",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "high",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "high",
+            "usage": "low"
           }
         },
         "release": {
@@ -80697,15 +80278,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "high",
             "usage": "medium"
           }
         },
@@ -80854,7 +80435,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.0.0",
+      "dockerImageTag": "1.0.2",
       "dockerRepository": "airbyte/source-greenhouse",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/greenhouse",
       "externalDocumentationUrls": [
@@ -80872,14 +80453,24 @@
           "title": "Greenhouse rate limits",
           "type": "rate_limits",
           "url": "https://harvestdocs.greenhouse.io/docs/api-rate-limiting"
+        },
+        {
+          "title": "Greenhouse Harvest v3 API",
+          "type": "api_reference",
+          "url": "https://harvestdocs.greenhouse.io/"
+        },
+        {
+          "title": "Greenhouse Harvest v3 authentication",
+          "type": "authentication_guide",
+          "url": "https://harvestdocs.greenhouse.io/docs/authentication"
         }
       ],
       "generated": {
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "d967099cade84039b4975d3412fd150287e9ac2c",
-          "commit_timestamp": "2026-08-28T08:59:18-07:00"
+          "commit_sha": "da8c3e31598c0ddfcbba16f8320885a688b9c3a7",
+          "commit_timestamp": "2026-09-02T14:43:59-07:00"
         },
         "metrics": {
           "all": {
@@ -80898,25 +80489,25 @@
         "release": {
           "attributed_to": "pnilan",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "d967099cade84039b4975d3412fd150287e9ac2c",
-          "merged_at": "2026-08-28T15:59:18Z",
+          "merge_commit_sha": "da8c3e31598c0ddfcbba16f8320885a688b9c3a7",
+          "merged_at": "2026-09-02T21:44:00Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 158243242,
           "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
           "pr_merged_by_login": "pnilan",
           "pr_merged_by_type": "User",
-          "pr_number": 84846,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84846",
-          "released_at": "2026-08-28T15:59:18Z",
+          "pr_number": 85306,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85306",
+          "released_at": "2026-09-02T21:44:00Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-greenhouse/1.0.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-greenhouse/1.0.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-greenhouse/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-28T16:03:55.164904+00:00",
-          "registry_entry_generated_at": "2026-08-28T16:03:55.164904+00:00"
+          "metadata_last_modified": "2026-09-02T21:48:27.217682+00:00",
+          "registry_entry_generated_at": "2026-09-02T21:48:27.217682+00:00"
         }
       },
       "githubIssueLabel": "source-greenhouse",
@@ -81106,7 +80697,7 @@
             "credentials": {
               "oneOf": [
                 {
-                  "description": "Authorize with Greenhouse and Airbyte manages the access and refresh tokens for you.",
+                  "description": "Click Authenticate and approve the Greenhouse consent flow as a Site Admin. Airbyte connects through its registered Greenhouse partner application and manages the access and refresh tokens for you; you don't need Greenhouse OAuth credentials of your own.",
                   "properties": {
                     "access_token": {
                       "airbyte_secret": true,
@@ -81121,14 +80712,14 @@
                     },
                     "client_id": {
                       "airbyte_secret": true,
-                      "description": "The client ID of your Greenhouse partner OAuth application.",
+                      "description": "Populated automatically by Airbyte from its registered Greenhouse partner application when you authorize above. Greenhouse issues Harvest v3 OAuth credentials only to partners, so you don't need to request or enter one.",
                       "order": 1,
                       "title": "OAuth client ID",
                       "type": "string"
                     },
                     "client_secret": {
                       "airbyte_secret": true,
-                      "description": "The client secret of your Greenhouse partner OAuth application.",
+                      "description": "Populated automatically by Airbyte from its registered Greenhouse partner application when you authorize above. Greenhouse issues Harvest v3 OAuth credentials only to partners, so you don't need to request or enter one.",
                       "order": 2,
                       "title": "OAuth client secret",
                       "type": "string"
@@ -82125,7 +81716,7 @@
         ]
       },
       "connectorBuildOptions": {
-        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.24.0@sha256:e34fb609bccdeb77474763c77e3621ea9d5adf9f65f2d9851102cc14a1caa281"
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
       },
       "connectorTestSuitesOptions": [
         {
@@ -82175,7 +81766,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.2.48",
+      "dockerImageTag": "1.2.49",
       "dockerRepository": "airbyte/source-harvest",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/harvest",
       "externalDocumentationUrls": [
@@ -82192,8 +81783,8 @@
         "git": {
           "commit_author": "octavia-bot-hoard[bot]",
           "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "6f09dd51aa373ce77f40e108889c78eb3c2c759e",
-          "commit_timestamp": "2026-08-11T05:52:53+00:00"
+          "commit_sha": "7187cf62d1773d4a09d96dc985585596dd29c8ec",
+          "commit_timestamp": "2026-08-18T05:29:40+00:00"
         },
         "metrics": {
           "all": {
@@ -82209,12 +81800,24 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-harvest/1.2.48.spdx.json",
+        "release": {
+          "attributed_to": null,
+          "merge_commit_sha": "7187cf62d1773d4a09d96dc985585596dd29c8ec",
+          "merged_at": "2026-08-18T05:29:41Z",
+          "pr_author_id": 230633153,
+          "pr_author_login": "octavia-bot-hoard",
+          "pr_author_type": "Bot",
+          "pr_number": 84608,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84608",
+          "released_at": "2026-08-18T05:29:41Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-harvest/1.2.49.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-harvest/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-11T05:57:26.287457+00:00",
-          "registry_entry_generated_at": "2026-08-11T05:57:26.287457+00:00"
+          "metadata_last_modified": "2026-08-18T05:33:51.795567+00:00",
+          "registry_entry_generated_at": "2026-08-18T05:33:51.795567+00:00"
         }
       },
       "githubIssueLabel": "source-harvest",
@@ -82256,389 +81859,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/harvest-migrations",
-        "releaseCandidates": {
-          "1.2.49": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 200,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 200
-            },
-            "allowedHosts": {
-              "hosts": [
-                "api.harvestapp.com"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "liveTests",
-                "testConnections": [
-                  {
-                    "id": "00bcab35-5c37-4b5d-b026-3cb23d71946a",
-                    "name": "harvest_old_config_dev_null"
-                  },
-                  {
-                    "id": "2a1834a4-b9b7-4613-9409-dc348b5fd735",
-                    "name": "harvest_config_with_date_range_dev_null"
-                  },
-                  {
-                    "id": "33b1f04d-ccc0-4b47-9b50-a889b136c0a8",
-                    "name": "harvest_config_oauth_dev_null"
-                  },
-                  {
-                    "id": "833888cc-1bc4-4126-970a-47edff5e0f00",
-                    "name": "harvest_config_dev_null"
-                  }
-                ]
-              },
-              {
-                "suite": "unitTests"
-              },
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config_oauth.json",
-                    "name": "SECRET_SOURCE_HARVEST_CREDS_OAUTH",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE_HARVEST_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "1.2.49",
-            "dockerRepository": "airbyte/source-harvest",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/harvest",
-            "externalDocumentationUrls": [
-              {
-                "title": "Systems status",
-                "url": "https://www.harveststatus.com/"
-              },
-              {
-                "title": "overview",
-                "url": "https://help.getharvest.com/api-v2/"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "7187cf62d1773d4a09d96dc985585596dd29c8ec",
-                "commit_timestamp": "2026-08-18T05:29:40+00:00"
-              },
-              "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "7187cf62d1773d4a09d96dc985585596dd29c8ec",
-                "merged_at": "2026-08-18T05:29:41Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
-                "pr_author_type": "Bot",
-                "pr_number": 84608,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84608",
-                "released_at": "2026-08-18T05:29:41Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-harvest/1.2.49.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-harvest/1.2.49/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T05:33:51.795567+00:00",
-                "registry_entry_generated_at": "2026-08-18T05:33:51.795567+00:00"
-              }
-            },
-            "githubIssueLabel": "source-harvest",
-            "icon": "harvest.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-harvest/latest/icon.svg",
-            "language": "manifest-only",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 15,
-            "name": "Harvest",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "generally_available",
-            "releases": {
-              "breakingChanges": {
-                "1.0.0": {
-                  "message": "Several changes have been made to the Harvest connector. This update requires a reset for the following streams to due an update in the format of state: `expenses_clients`, `expenses_categories`, `expenses_projects`, `expenses_team`, `time_clients`, `time_projects`, `time_tasks`, `time_team`, `uninvoiced`, `estimate_messages`, `invoice_payments`, `invoice_messages`, `project_assignments`.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/harvest-migrations#1.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "expenses_clients",
-                        "expenses_categories",
-                        "expenses_projects",
-                        "expenses_team",
-                        "time_clients",
-                        "time_projects",
-                        "time_tasks",
-                        "time_team",
-                        "uninvoiced",
-                        "estimate_messages",
-                        "invoice_payments",
-                        "invoice_messages",
-                        "project_assignments"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2024-04-29"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/harvest-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": false,
-                "packageName": "airbyte-source-harvest"
-              }
-            },
-            "sourceDefinitionId": "fe2b4084-3386-4d3b-9ad6-308f61a6f1e6",
-            "sourceType": "api",
-            "spec": {
-              "advanced_auth": {
-                "auth_flow_type": "oauth2.0",
-                "oauth_config_specification": {
-                  "complete_oauth_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "refresh_token": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "refresh_token"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_input_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_id"
-                        ],
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_secret"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "oauth_connector_input_specification": {
-                    "access_token_headers": {
-                      "Content-Type": "application/x-www-form-urlencoded"
-                    },
-                    "access_token_params": {
-                      "client_id": "{{ client_id_value }}",
-                      "client_secret": "{{ client_secret_value }}",
-                      "code": "{{ auth_code_value }}",
-                      "grant_type": "authorization_code",
-                      "redirect_uri": "{{ redirect_uri_value }}"
-                    },
-                    "access_token_url": "https://id.getharvest.com/api/v2/oauth2/token",
-                    "consent_url": "https://id.getharvest.com/oauth2/authorize?{{client_id_param}}&{{redirect_uri_param}}&{{state_param}}&response_type=code",
-                    "extract_output": [
-                      "access_token",
-                      "refresh_token"
-                    ],
-                    "scopes_join_strategy": "space"
-                  }
-                },
-                "predicate_key": [
-                  "credentials",
-                  "auth_type"
-                ],
-                "predicate_value": "Client"
-              },
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "account_id": {
-                    "airbyte_secret": true,
-                    "description": "Harvest account ID. Required for all Harvest requests in pair with Personal Access Token",
-                    "order": 1,
-                    "title": "Account ID",
-                    "type": "string"
-                  },
-                  "credentials": {
-                    "description": "Choose how to authenticate to Harvest.",
-                    "oneOf": [
-                      {
-                        "additionalProperties": true,
-                        "properties": {
-                          "auth_type": {
-                            "const": "Client",
-                            "order": 0,
-                            "type": "string"
-                          },
-                          "client_id": {
-                            "description": "The Client ID of your Harvest developer application.",
-                            "title": "Client ID",
-                            "type": "string"
-                          },
-                          "client_secret": {
-                            "airbyte_secret": true,
-                            "description": "The Client Secret of your Harvest developer application.",
-                            "title": "Client Secret",
-                            "type": "string"
-                          },
-                          "refresh_token": {
-                            "airbyte_secret": true,
-                            "description": "Refresh Token to renew the expired Access Token.",
-                            "title": "Refresh Token",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "client_id",
-                          "client_secret",
-                          "refresh_token"
-                        ],
-                        "title": "Authenticate via Harvest (OAuth)",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "properties": {
-                          "api_token": {
-                            "airbyte_secret": true,
-                            "description": "Log into Harvest and then create new <a href=\"https://id.getharvest.com/developers\"> personal access token</a>.",
-                            "title": "Personal Access Token",
-                            "type": "string"
-                          },
-                          "auth_type": {
-                            "const": "Token",
-                            "order": 0,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "api_token"
-                        ],
-                        "title": "Authenticate with Personal Access Token",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 0,
-                    "title": "Authentication mechanism",
-                    "type": "object"
-                  },
-                  "num_workers": {
-                    "default": 4,
-                    "description": "Number of concurrent threads for syncing. Higher values can speed up syncs but may increase API rate limit usage. Adjust based on your Harvest API plan.",
-                    "maximum": 10,
-                    "minimum": 2,
-                    "order": 4,
-                    "title": "Number of Concurrent Threads",
-                    "type": "integer"
-                  },
-                  "replication_end_date": {
-                    "airbyte_hidden": true,
-                    "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Any data after this date will not be replicated.",
-                    "examples": [
-                      "2017-01-25T00:00:00Z"
-                    ],
-                    "format": "date-time",
-                    "order": 3,
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-                    "title": "End Date",
-                    "type": "string"
-                  },
-                  "replication_start_date": {
-                    "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Any data before this date will not be replicated.",
-                    "examples": [
-                      "2017-01-25T00:00:00Z"
-                    ],
-                    "format": "date-time",
-                    "order": 2,
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-                    "title": "Start Date",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "account_id",
-                  "replication_start_date"
-                ],
-                "type": "object"
-              },
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "suggestedStreams": {
-              "streams": [
-                "time_entries",
-                "projects",
-                "clients",
-                "users",
-                "roles",
-                "tasks",
-                "contacts",
-                "task_assignments",
-                "time_projects",
-                "user_assignments",
-                "company",
-                "invoices",
-                "project_assignments",
-                "time_tasks"
-              ]
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "language:manifest-only",
-              "cdk:low-code"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -96785,7 +96005,229 @@
             "upgradeDeadline": "2026-05-22"
           }
         },
-        "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/marketo-migrations"
+        "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/marketo-migrations",
+        "releaseCandidates": {
+          "2.1.3": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 200,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 100
+            },
+            "allowedHosts": {
+              "hosts": [
+                "*.mktorest.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/python-connector-base:4.0.2@sha256:9fdb1888c4264cf6fee473649ecb593f56f58e5d0096a87ee0b231777e2e3e73"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "liveTests",
+                "testConnections": [
+                  {
+                    "id": "4df9fc18-4d29-44c5-aa52-c74d8066d0bd",
+                    "name": "marketo_config_dev_null"
+                  }
+                ]
+              },
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-MARKETO__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "2.1.3",
+            "dockerRepository": "airbyte/source-marketo",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/marketo",
+            "externalDocumentationUrls": [
+              {
+                "title": "Marketo REST API",
+                "type": "api_reference",
+                "url": "https://developers.marketo.com/rest-api/"
+              },
+              {
+                "title": "Marketo authentication",
+                "type": "authentication_guide",
+                "url": "https://developers.marketo.com/rest-api/authentication/"
+              },
+              {
+                "title": "Marketo rate limits",
+                "type": "rate_limits",
+                "url": "https://developers.marketo.com/rest-api/marketo-integration-best-practices/#api_limits"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "0ed26379cb4f01aaa4eb8a9842b24a2137114e6a",
+                "commit_timestamp": "2026-09-02T09:25:13-07:00"
+              },
+              "release": {
+                "attributed_to": "jimruppert",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "0ed26379cb4f01aaa4eb8a9842b24a2137114e6a",
+                "merged_at": "2026-09-02T16:25:14Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "jimruppert",
+                "pr_merged_by_type": "User",
+                "pr_number": 79644,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/79644",
+                "released_at": "2026-09-02T16:25:14Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-marketo/2.1.3.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-marketo/2.1.3/metadata.yaml",
+                "metadata_last_modified": "2026-09-02T16:31:12.200324+00:00",
+                "registry_entry_generated_at": "2026-09-02T16:31:12.200324+00:00"
+              }
+            },
+            "githubIssueLabel": "source-marketo",
+            "icon": "marketo.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-marketo/latest/icon.svg",
+            "language": "python",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 86400,
+            "name": "Marketo",
+            "packageInfo": {
+              "cdk_version": "python:2.3.0"
+            },
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "2.0.0": {
+                  "deadlineAction": "auto_upgrade",
+                  "message": "The `leads` stream now filters Marketo's Bulk Lead Extract on `updatedAt` instead of `createdAt`, so incremental syncs capture updates to pre-existing leads (previously silently dropped). Users syncing the `leads` stream in incremental mode should refresh the source schema and reset the stream after upgrading to backfill historical updates missed by earlier versions. Full refresh syncs of `leads` are not affected. See the migration guide for details.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/marketo-migrations#2.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "leads"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2026-05-22"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/marketo-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": true,
+                "packageName": "airbyte-source-marketo"
+              }
+            },
+            "sourceDefinitionId": "9e0556f4-69df-4522-a3fb-03264d36b348",
+            "sourceType": "api",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "client_id": {
+                    "airbyte_secret": true,
+                    "description": "The Client ID of your Marketo developer application. See <a href=\"https://docs.airbyte.com/integrations/sources/marketo\"> the docs </a> for info on how to obtain this.",
+                    "order": 0,
+                    "title": "Client ID",
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "airbyte_secret": true,
+                    "description": "The Client Secret of your Marketo developer application. See <a href=\"https://docs.airbyte.com/integrations/sources/marketo\"> the docs </a> for info on how to obtain this.",
+                    "order": 1,
+                    "title": "Client Secret",
+                    "type": "string"
+                  },
+                  "domain_url": {
+                    "airbyte_secret": true,
+                    "description": "Your Marketo Base URL. See <a href=\"https://docs.airbyte.com/integrations/sources/marketo\"> the docs </a> for info on how to obtain this.",
+                    "examples": [
+                      "https://000-AAA-000.mktorest.com"
+                    ],
+                    "order": 3,
+                    "title": "Domain URL",
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Any data before this date will not be replicated.",
+                    "examples": [
+                      "2020-09-25T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 2,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "title": "Start Date",
+                    "type": "string"
+                  },
+                  "window_in_days": {
+                    "default": 30,
+                    "description": "The number of days included in each Marketo Bulk Extract job for incremental streams. Smaller windows create more export jobs with less data per job, which can help large Leads syncs complete without exhausting memory or processing very large Marketo export files. The minimum is 1 day and the maximum is 31 days.",
+                    "examples": [
+                      1,
+                      7,
+                      31
+                    ],
+                    "maximum": 31,
+                    "minimum": 1,
+                    "order": 4,
+                    "title": "Bulk Export Window in Days",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "domain_url",
+                  "client_id",
+                  "client_secret",
+                  "start_date"
+                ],
+                "title": "Source Marketo Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/marketo"
+            },
+            "supportLevel": "community",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "language:python",
+              "cdk:low-code"
+            ],
+            "tombstone": false
+          }
+        }
       },
       "remoteRegistries": {
         "pypi": {
@@ -113144,15 +112586,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "release": {
@@ -118569,7 +118011,7 @@
         ]
       },
       "connectorBuildOptions": {
-        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.24.0@sha256:e34fb609bccdeb77474763c77e3621ea9d5adf9f65f2d9851102cc14a1caa281"
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
       },
       "connectorTestSuitesOptions": [
         {
@@ -118596,7 +118038,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.3.67",
+      "dockerImageTag": "0.3.69",
       "dockerRepository": "airbyte/source-pokeapi",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/pokeapi",
       "externalDocumentationUrls": [
@@ -118608,10 +118050,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "b38d7ec060c6322adfedeca19ed36c2d5f671257",
-          "commit_timestamp": "2026-08-13T18:35:55-07:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "b18b22373293fd826c81619b3a08da1c8d879ac8",
+          "commit_timestamp": "2026-08-24T14:50:36-07:00"
         },
         "metrics": {
           "all": {
@@ -118628,22 +118070,27 @@
           }
         },
         "release": {
-          "attributed_to": null,
-          "merge_commit_sha": "b38d7ec060c6322adfedeca19ed36c2d5f671257",
-          "merged_at": "2026-08-14T01:35:55Z",
-          "pr_author_id": null,
-          "pr_author_login": null,
-          "pr_author_type": null,
-          "pr_number": 84389,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84389",
+          "attributed_to": "pnilan",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "b18b22373293fd826c81619b3a08da1c8d879ac8",
+          "merged_at": "2026-08-24T21:50:37Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
+          "pr_author_type": "Bot",
+          "pr_merged_by_login": "pnilan",
+          "pr_merged_by_type": "User",
+          "pr_number": 84977,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84977",
+          "released_at": "2026-08-24T21:50:37Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pokeapi/0.3.67.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pokeapi/0.3.69.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-pokeapi/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-14T01:40:15.294994+00:00",
-          "registry_entry_generated_at": "2026-08-14T01:40:15.294994+00:00"
+          "metadata_last_modified": "2026-08-24T21:55:11.635034+00:00",
+          "registry_entry_generated_at": "2026-08-24T21:55:11.635034+00:00"
         }
       },
       "githubIssueLabel": "source-pokeapi",
@@ -118657,1056 +118104,6 @@
       "releaseDate": "2020-05-14",
       "releaseStage": "alpha",
       "releases": {
-        "releaseCandidates": {
-          "0.3.69": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 100,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 100
-            },
-            "allowedHosts": {
-              "hosts": [
-                "*"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "liveTests",
-                "testConnections": [
-                  {
-                    "id": "5a290dcf-b2cf-4768-ac2d-a1aaca90c186",
-                    "name": "pokeapi_config_dev_null"
-                  }
-                ]
-              },
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-POKEAPI__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "0.3.69",
-            "dockerRepository": "airbyte/source-pokeapi",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/pokeapi",
-            "externalDocumentationUrls": [
-              {
-                "title": "Pok\u00e9API documentation",
-                "type": "api_reference",
-                "url": "https://pokeapi.co/docs/v2"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "b18b22373293fd826c81619b3a08da1c8d879ac8",
-                "commit_timestamp": "2026-08-24T14:50:36-07:00"
-              },
-              "release": {
-                "attributed_to": "pnilan",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "b18b22373293fd826c81619b3a08da1c8d879ac8",
-                "merged_at": "2026-08-24T21:50:37Z",
-                "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 158243242,
-                "pr_author_login": "devin-ai-integration",
-                "pr_author_type": "Bot",
-                "pr_merged_by_login": "pnilan",
-                "pr_merged_by_type": "User",
-                "pr_number": 84977,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84977",
-                "released_at": "2026-08-24T21:50:37Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-pokeapi/0.3.69.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-pokeapi/0.3.69/metadata.yaml",
-                "metadata_last_modified": "2026-08-24T21:55:11.635034+00:00",
-                "registry_entry_generated_at": "2026-08-24T21:55:11.635034+00:00"
-              }
-            },
-            "githubIssueLabel": "source-pokeapi",
-            "icon": "pokeapi.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-pokeapi/latest/icon.svg",
-            "language": "manifest-only",
-            "license": "ELv2",
-            "name": "PokeAPI",
-            "packageInfo": {},
-            "public": true,
-            "releaseDate": "2020-05-14",
-            "releaseStage": "alpha",
-            "releases": {
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": false,
-                "packageName": "airbyte-source-pokeapi"
-              }
-            },
-            "sourceDefinitionId": "6371b14b-bc68-4236-bfbd-468e8df8e968",
-            "sourceType": "api",
-            "spec": {
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "pokemon_name": {
-                    "description": "Pokemon requested from the API.",
-                    "enum": [
-                      "bulbasaur",
-                      "ivysaur",
-                      "venusaur",
-                      "charmander",
-                      "charmeleon",
-                      "charizard",
-                      "squirtle",
-                      "wartortle",
-                      "blastoise",
-                      "caterpie",
-                      "metapod",
-                      "butterfree",
-                      "weedle",
-                      "kakuna",
-                      "beedrill",
-                      "pidgey",
-                      "pidgeotto",
-                      "pidgeot",
-                      "rattata",
-                      "raticate",
-                      "spearow",
-                      "fearow",
-                      "ekans",
-                      "arbok",
-                      "pikachu",
-                      "raichu",
-                      "sandshrew",
-                      "sandslash",
-                      "nidoran-f",
-                      "nidorina",
-                      "nidoqueen",
-                      "nidoran-m",
-                      "nidorino",
-                      "nidoking",
-                      "clefairy",
-                      "clefable",
-                      "vulpix",
-                      "ninetales",
-                      "jigglypuff",
-                      "wigglytuff",
-                      "zubat",
-                      "golbat",
-                      "oddish",
-                      "gloom",
-                      "vileplume",
-                      "paras",
-                      "parasect",
-                      "venonat",
-                      "venomoth",
-                      "diglett",
-                      "dugtrio",
-                      "meowth",
-                      "persian",
-                      "psyduck",
-                      "golduck",
-                      "mankey",
-                      "primeape",
-                      "growlithe",
-                      "arcanine",
-                      "poliwag",
-                      "poliwhirl",
-                      "poliwrath",
-                      "abra",
-                      "kadabra",
-                      "alakazam",
-                      "machop",
-                      "machoke",
-                      "machamp",
-                      "bellsprout",
-                      "weepinbell",
-                      "victreebel",
-                      "tentacool",
-                      "tentacruel",
-                      "geodude",
-                      "graveler",
-                      "golem",
-                      "ponyta",
-                      "rapidash",
-                      "slowpoke",
-                      "slowbro",
-                      "magnemite",
-                      "magneton",
-                      "farfetchd",
-                      "doduo",
-                      "dodrio",
-                      "seel",
-                      "dewgong",
-                      "grimer",
-                      "muk",
-                      "shellder",
-                      "cloyster",
-                      "gastly",
-                      "haunter",
-                      "gengar",
-                      "onix",
-                      "drowzee",
-                      "hypno",
-                      "krabby",
-                      "kingler",
-                      "voltorb",
-                      "electrode",
-                      "exeggcute",
-                      "exeggutor",
-                      "cubone",
-                      "marowak",
-                      "hitmonlee",
-                      "hitmonchan",
-                      "lickitung",
-                      "koffing",
-                      "weezing",
-                      "rhyhorn",
-                      "rhydon",
-                      "chansey",
-                      "tangela",
-                      "kangaskhan",
-                      "horsea",
-                      "seadra",
-                      "goldeen",
-                      "seaking",
-                      "staryu",
-                      "starmie",
-                      "mrmime",
-                      "scyther",
-                      "jynx",
-                      "electabuzz",
-                      "magmar",
-                      "pinsir",
-                      "tauros",
-                      "magikarp",
-                      "gyarados",
-                      "lapras",
-                      "ditto",
-                      "eevee",
-                      "vaporeon",
-                      "jolteon",
-                      "flareon",
-                      "porygon",
-                      "omanyte",
-                      "omastar",
-                      "kabuto",
-                      "kabutops",
-                      "aerodactyl",
-                      "snorlax",
-                      "articuno",
-                      "zapdos",
-                      "moltres",
-                      "dratini",
-                      "dragonair",
-                      "dragonite",
-                      "mewtwo",
-                      "mew",
-                      "chikorita",
-                      "bayleef",
-                      "meganium",
-                      "cyndaquil",
-                      "quilava",
-                      "typhlosion",
-                      "totodile",
-                      "croconaw",
-                      "feraligatr",
-                      "sentret",
-                      "furret",
-                      "hoothoot",
-                      "noctowl",
-                      "ledyba",
-                      "ledian",
-                      "spinarak",
-                      "ariados",
-                      "crobat",
-                      "chinchou",
-                      "lanturn",
-                      "pichu",
-                      "cleffa",
-                      "igglybuff",
-                      "togepi",
-                      "togetic",
-                      "natu",
-                      "xatu",
-                      "mareep",
-                      "flaaffy",
-                      "ampharos",
-                      "bellossom",
-                      "marill",
-                      "azumarill",
-                      "sudowoodo",
-                      "politoed",
-                      "hoppip",
-                      "skiploom",
-                      "jumpluff",
-                      "aipom",
-                      "sunkern",
-                      "sunflora",
-                      "yanma",
-                      "wooper",
-                      "quagsire",
-                      "espeon",
-                      "umbreon",
-                      "murkrow",
-                      "slowking",
-                      "misdreavus",
-                      "unown",
-                      "wobbuffet",
-                      "girafarig",
-                      "pineco",
-                      "forretress",
-                      "dunsparce",
-                      "gligar",
-                      "steelix",
-                      "snubbull",
-                      "granbull",
-                      "qwilfish",
-                      "scizor",
-                      "shuckle",
-                      "heracross",
-                      "sneasel",
-                      "teddiursa",
-                      "ursaring",
-                      "slugma",
-                      "magcargo",
-                      "swinub",
-                      "piloswine",
-                      "corsola",
-                      "remoraid",
-                      "octillery",
-                      "delibird",
-                      "mantine",
-                      "skarmory",
-                      "houndour",
-                      "houndoom",
-                      "kingdra",
-                      "phanpy",
-                      "donphan",
-                      "porygon2",
-                      "stantler",
-                      "smeargle",
-                      "tyrogue",
-                      "hitmontop",
-                      "smoochum",
-                      "elekid",
-                      "magby",
-                      "miltank",
-                      "blissey",
-                      "raikou",
-                      "entei",
-                      "suicune",
-                      "larvitar",
-                      "pupitar",
-                      "tyranitar",
-                      "lugia",
-                      "ho-oh",
-                      "celebi",
-                      "treecko",
-                      "grovyle",
-                      "sceptile",
-                      "torchic",
-                      "combusken",
-                      "blaziken",
-                      "mudkip",
-                      "marshtomp",
-                      "swampert",
-                      "poochyena",
-                      "mightyena",
-                      "zigzagoon",
-                      "linoone",
-                      "wurmple",
-                      "silcoon",
-                      "beautifly",
-                      "cascoon",
-                      "dustox",
-                      "lotad",
-                      "lombre",
-                      "ludicolo",
-                      "seedot",
-                      "nuzleaf",
-                      "shiftry",
-                      "taillow",
-                      "swellow",
-                      "wingull",
-                      "pelipper",
-                      "ralts",
-                      "kirlia",
-                      "gardevoir",
-                      "surskit",
-                      "masquerain",
-                      "shroomish",
-                      "breloom",
-                      "slakoth",
-                      "vigoroth",
-                      "slaking",
-                      "nincada",
-                      "ninjask",
-                      "shedinja",
-                      "whismur",
-                      "loudred",
-                      "exploud",
-                      "makuhita",
-                      "hariyama",
-                      "azurill",
-                      "nosepass",
-                      "skitty",
-                      "delcatty",
-                      "sableye",
-                      "mawile",
-                      "aron",
-                      "lairon",
-                      "aggron",
-                      "meditite",
-                      "medicham",
-                      "electrike",
-                      "manectric",
-                      "plusle",
-                      "minun",
-                      "volbeat",
-                      "illumise",
-                      "roselia",
-                      "gulpin",
-                      "swalot",
-                      "carvanha",
-                      "sharpedo",
-                      "wailmer",
-                      "wailord",
-                      "numel",
-                      "camerupt",
-                      "torkoal",
-                      "spoink",
-                      "grumpig",
-                      "spinda",
-                      "trapinch",
-                      "vibrava",
-                      "flygon",
-                      "cacnea",
-                      "cacturne",
-                      "swablu",
-                      "altaria",
-                      "zangoose",
-                      "seviper",
-                      "lunatone",
-                      "solrock",
-                      "barboach",
-                      "whiscash",
-                      "corphish",
-                      "crawdaunt",
-                      "baltoy",
-                      "claydol",
-                      "lileep",
-                      "cradily",
-                      "anorith",
-                      "armaldo",
-                      "feebas",
-                      "milotic",
-                      "castform",
-                      "kecleon",
-                      "shuppet",
-                      "banette",
-                      "duskull",
-                      "dusclops",
-                      "tropius",
-                      "chimecho",
-                      "absol",
-                      "wynaut",
-                      "snorunt",
-                      "glalie",
-                      "spheal",
-                      "sealeo",
-                      "walrein",
-                      "clamperl",
-                      "huntail",
-                      "gorebyss",
-                      "relicanth",
-                      "luvdisc",
-                      "bagon",
-                      "shelgon",
-                      "salamence",
-                      "beldum",
-                      "metang",
-                      "metagross",
-                      "regirock",
-                      "regice",
-                      "registeel",
-                      "latias",
-                      "latios",
-                      "kyogre",
-                      "groudon",
-                      "rayquaza",
-                      "jirachi",
-                      "deoxys",
-                      "turtwig",
-                      "grotle",
-                      "torterra",
-                      "chimchar",
-                      "monferno",
-                      "infernape",
-                      "piplup",
-                      "prinplup",
-                      "empoleon",
-                      "starly",
-                      "staravia",
-                      "staraptor",
-                      "bidoof",
-                      "bibarel",
-                      "kricketot",
-                      "kricketune",
-                      "shinx",
-                      "luxio",
-                      "luxray",
-                      "budew",
-                      "roserade",
-                      "cranidos",
-                      "rampardos",
-                      "shieldon",
-                      "bastiodon",
-                      "burmy",
-                      "wormadam",
-                      "mothim",
-                      "combee",
-                      "vespiquen",
-                      "pachirisu",
-                      "buizel",
-                      "floatzel",
-                      "cherubi",
-                      "cherrim",
-                      "shellos",
-                      "gastrodon",
-                      "ambipom",
-                      "drifloon",
-                      "drifblim",
-                      "buneary",
-                      "lopunny",
-                      "mismagius",
-                      "honchkrow",
-                      "glameow",
-                      "purugly",
-                      "chingling",
-                      "stunky",
-                      "skuntank",
-                      "bronzor",
-                      "bronzong",
-                      "bonsly",
-                      "mimejr",
-                      "happiny",
-                      "chatot",
-                      "spiritomb",
-                      "gible",
-                      "gabite",
-                      "garchomp",
-                      "munchlax",
-                      "riolu",
-                      "lucario",
-                      "hippopotas",
-                      "hippowdon",
-                      "skorupi",
-                      "drapion",
-                      "croagunk",
-                      "toxicroak",
-                      "carnivine",
-                      "finneon",
-                      "lumineon",
-                      "mantyke",
-                      "snover",
-                      "abomasnow",
-                      "weavile",
-                      "magnezone",
-                      "lickilicky",
-                      "rhyperior",
-                      "tangrowth",
-                      "electivire",
-                      "magmortar",
-                      "togekiss",
-                      "yanmega",
-                      "leafeon",
-                      "glaceon",
-                      "gliscor",
-                      "mamoswine",
-                      "porygon-z",
-                      "gallade",
-                      "probopass",
-                      "dusknoir",
-                      "froslass",
-                      "rotom",
-                      "uxie",
-                      "mesprit",
-                      "azelf",
-                      "dialga",
-                      "palkia",
-                      "heatran",
-                      "regigigas",
-                      "giratina",
-                      "cresselia",
-                      "phione",
-                      "manaphy",
-                      "darkrai",
-                      "shaymin",
-                      "arceus",
-                      "victini",
-                      "snivy",
-                      "servine",
-                      "serperior",
-                      "tepig",
-                      "pignite",
-                      "emboar",
-                      "oshawott",
-                      "dewott",
-                      "samurott",
-                      "patrat",
-                      "watchog",
-                      "lillipup",
-                      "herdier",
-                      "stoutland",
-                      "purrloin",
-                      "liepard",
-                      "pansage",
-                      "simisage",
-                      "pansear",
-                      "simisear",
-                      "panpour",
-                      "simipour",
-                      "munna",
-                      "musharna",
-                      "pidove",
-                      "tranquill",
-                      "unfezant",
-                      "blitzle",
-                      "zebstrika",
-                      "roggenrola",
-                      "boldore",
-                      "gigalith",
-                      "woobat",
-                      "swoobat",
-                      "drilbur",
-                      "excadrill",
-                      "audino",
-                      "timburr",
-                      "gurdurr",
-                      "conkeldurr",
-                      "tympole",
-                      "palpitoad",
-                      "seismitoad",
-                      "throh",
-                      "sawk",
-                      "sewaddle",
-                      "swadloon",
-                      "leavanny",
-                      "venipede",
-                      "whirlipede",
-                      "scolipede",
-                      "cottonee",
-                      "whimsicott",
-                      "petilil",
-                      "lilligant",
-                      "basculin",
-                      "sandile",
-                      "krokorok",
-                      "krookodile",
-                      "darumaka",
-                      "darmanitan",
-                      "maractus",
-                      "dwebble",
-                      "crustle",
-                      "scraggy",
-                      "scrafty",
-                      "sigilyph",
-                      "yamask",
-                      "cofagrigus",
-                      "tirtouga",
-                      "carracosta",
-                      "archen",
-                      "archeops",
-                      "trubbish",
-                      "garbodor",
-                      "zorua",
-                      "zoroark",
-                      "minccino",
-                      "cinccino",
-                      "gothita",
-                      "gothorita",
-                      "gothitelle",
-                      "solosis",
-                      "duosion",
-                      "reuniclus",
-                      "ducklett",
-                      "swanna",
-                      "vanillite",
-                      "vanillish",
-                      "vanilluxe",
-                      "deerling",
-                      "sawsbuck",
-                      "emolga",
-                      "karrablast",
-                      "escavalier",
-                      "foongus",
-                      "amoonguss",
-                      "frillish",
-                      "jellicent",
-                      "alomomola",
-                      "joltik",
-                      "galvantula",
-                      "ferroseed",
-                      "ferrothorn",
-                      "klink",
-                      "klang",
-                      "klinklang",
-                      "tynamo",
-                      "eelektrik",
-                      "eelektross",
-                      "elgyem",
-                      "beheeyem",
-                      "litwick",
-                      "lampent",
-                      "chandelure",
-                      "axew",
-                      "fraxure",
-                      "haxorus",
-                      "cubchoo",
-                      "beartic",
-                      "cryogonal",
-                      "shelmet",
-                      "accelgor",
-                      "stunfisk",
-                      "mienfoo",
-                      "mienshao",
-                      "druddigon",
-                      "golett",
-                      "golurk",
-                      "pawniard",
-                      "bisharp",
-                      "bouffalant",
-                      "rufflet",
-                      "braviary",
-                      "vullaby",
-                      "mandibuzz",
-                      "heatmor",
-                      "durant",
-                      "deino",
-                      "zweilous",
-                      "hydreigon",
-                      "larvesta",
-                      "volcarona",
-                      "cobalion",
-                      "terrakion",
-                      "virizion",
-                      "tornadus",
-                      "thundurus",
-                      "reshiram",
-                      "zekrom",
-                      "landorus",
-                      "kyurem",
-                      "keldeo",
-                      "meloetta",
-                      "genesect",
-                      "chespin",
-                      "quilladin",
-                      "chesnaught",
-                      "fennekin",
-                      "braixen",
-                      "delphox",
-                      "froakie",
-                      "frogadier",
-                      "greninja",
-                      "bunnelby",
-                      "diggersby",
-                      "fletchling",
-                      "fletchinder",
-                      "talonflame",
-                      "scatterbug",
-                      "spewpa",
-                      "vivillon",
-                      "litleo",
-                      "pyroar",
-                      "flabebe",
-                      "floette",
-                      "florges",
-                      "skiddo",
-                      "gogoat",
-                      "pancham",
-                      "pangoro",
-                      "furfrou",
-                      "espurr",
-                      "meowstic",
-                      "honedge",
-                      "doublade",
-                      "aegislash",
-                      "spritzee",
-                      "aromatisse",
-                      "swirlix",
-                      "slurpuff",
-                      "inkay",
-                      "malamar",
-                      "binacle",
-                      "barbaracle",
-                      "skrelp",
-                      "dragalge",
-                      "clauncher",
-                      "clawitzer",
-                      "helioptile",
-                      "heliolisk",
-                      "tyrunt",
-                      "tyrantrum",
-                      "amaura",
-                      "aurorus",
-                      "sylveon",
-                      "hawlucha",
-                      "dedenne",
-                      "carbink",
-                      "goomy",
-                      "sliggoo",
-                      "goodra",
-                      "klefki",
-                      "phantump",
-                      "trevenant",
-                      "pumpkaboo",
-                      "gourgeist",
-                      "bergmite",
-                      "avalugg",
-                      "noibat",
-                      "noivern",
-                      "xerneas",
-                      "yveltal",
-                      "zygarde",
-                      "diancie",
-                      "hoopa",
-                      "volcanion",
-                      "rowlet",
-                      "dartrix",
-                      "decidueye",
-                      "litten",
-                      "torracat",
-                      "incineroar",
-                      "popplio",
-                      "brionne",
-                      "primarina",
-                      "pikipek",
-                      "trumbeak",
-                      "toucannon",
-                      "yungoos",
-                      "gumshoos",
-                      "grubbin",
-                      "charjabug",
-                      "vikavolt",
-                      "crabrawler",
-                      "crabominable",
-                      "oricorio",
-                      "cutiefly",
-                      "ribombee",
-                      "rockruff",
-                      "lycanroc",
-                      "wishiwashi",
-                      "mareanie",
-                      "toxapex",
-                      "mudbray",
-                      "mudsdale",
-                      "dewpider",
-                      "araquanid",
-                      "fomantis",
-                      "lurantis",
-                      "morelull",
-                      "shiinotic",
-                      "salandit",
-                      "salazzle",
-                      "stufful",
-                      "bewear",
-                      "bounsweet",
-                      "steenee",
-                      "tsareena",
-                      "comfey",
-                      "oranguru",
-                      "passimian",
-                      "wimpod",
-                      "golisopod",
-                      "sandygast",
-                      "palossand",
-                      "pyukumuku",
-                      "typenull",
-                      "silvally",
-                      "minior",
-                      "komala",
-                      "turtonator",
-                      "togedemaru",
-                      "mimikyu",
-                      "bruxish",
-                      "drampa",
-                      "dhelmise",
-                      "jangmo-o",
-                      "hakamo-o",
-                      "kommo-o",
-                      "tapukoko",
-                      "tapulele",
-                      "tapubulu",
-                      "tapufini",
-                      "cosmog",
-                      "cosmoem",
-                      "solgaleo",
-                      "lunala",
-                      "nihilego",
-                      "buzzwole",
-                      "pheromosa",
-                      "xurkitree",
-                      "celesteela",
-                      "kartana",
-                      "guzzlord",
-                      "necrozma",
-                      "magearna",
-                      "marshadow",
-                      "poipole",
-                      "naganadel",
-                      "stakataka",
-                      "blacephalon",
-                      "zeraora",
-                      "meltan",
-                      "melmetal",
-                      "grookey",
-                      "thwackey",
-                      "rillaboom",
-                      "scorbunny",
-                      "raboot",
-                      "cinderace",
-                      "sobble",
-                      "drizzile",
-                      "inteleon",
-                      "skwovet",
-                      "greedent",
-                      "rookidee",
-                      "corvisquire",
-                      "corviknight",
-                      "blipbug",
-                      "dottler",
-                      "orbeetle",
-                      "nickit",
-                      "thievul",
-                      "gossifleur",
-                      "eldegoss",
-                      "wooloo",
-                      "dubwool",
-                      "chewtle",
-                      "drednaw",
-                      "yamper",
-                      "boltund",
-                      "rolycoly",
-                      "carkol",
-                      "coalossal",
-                      "applin",
-                      "flapple",
-                      "appletun",
-                      "silicobra",
-                      "sandaconda",
-                      "cramorant",
-                      "arrokuda",
-                      "barraskewda",
-                      "toxel",
-                      "toxtricity",
-                      "sizzlipede",
-                      "centiskorch",
-                      "clobbopus",
-                      "grapploct",
-                      "sinistea",
-                      "polteageist",
-                      "hatenna",
-                      "hattrem",
-                      "hatterene",
-                      "impidimp",
-                      "morgrem",
-                      "grimmsnarl",
-                      "obstagoon",
-                      "perrserker",
-                      "cursola",
-                      "sirfetchd",
-                      "mrrime",
-                      "runerigus",
-                      "milcery",
-                      "alcremie",
-                      "falinks",
-                      "pincurchin",
-                      "snom",
-                      "frosmoth",
-                      "stonjourner",
-                      "eiscue",
-                      "indeedee",
-                      "morpeko",
-                      "cufant",
-                      "copperajah",
-                      "dracozolt",
-                      "arctozolt",
-                      "dracovish",
-                      "arctovish",
-                      "duraludon",
-                      "dreepy",
-                      "drakloak",
-                      "dragapult",
-                      "zacian",
-                      "zamazenta",
-                      "eternatus",
-                      "kubfu",
-                      "urshifu",
-                      "zarude",
-                      "regieleki",
-                      "regidrago",
-                      "glastrier",
-                      "spectrier",
-                      "calyrex"
-                    ],
-                    "examples": [
-                      "ditto",
-                      "luxray",
-                      "snorlax"
-                    ],
-                    "order": 0,
-                    "pattern": "^[a-z0-9_\\-]+$",
-                    "title": "Pokemon Name",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "pokemon_name"
-                ],
-                "type": "object"
-              },
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "supportLevel": "community",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "cdk:low-code",
-              "language:manifest-only"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -119715,7 +118112,7 @@
             "strategy": "fast"
           },
           "defaultRolloutMode": "autopilot",
-          "enableProgressiveRollout": false,
+          "enableProgressiveRollout": true,
           "initialPercentage": 0,
           "maxPercentage": 50
         }
@@ -134823,7 +133220,7 @@
         ]
       },
       "connectorBuildOptions": {
-        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.24.0@sha256:e34fb609bccdeb77474763c77e3621ea9d5adf9f65f2d9851102cc14a1caa281"
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
       },
       "connectorTestSuitesOptions": [
         {
@@ -134865,7 +133262,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.0.6",
+      "dockerImageTag": "1.0.7",
       "dockerRepository": "airbyte/source-sentry",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/sentry",
       "externalDocumentationUrls": [
@@ -134894,8 +133291,8 @@
         "git": {
           "commit_author": "octavia-bot-hoard[bot]",
           "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "e71ede2def9dce0ae930573c2317348a79bf8726",
-          "commit_timestamp": "2026-08-11T07:57:18+00:00"
+          "commit_sha": "88e7252159f962cd5fc365c6c36833860ed30cfb",
+          "commit_timestamp": "2026-08-18T07:28:55+00:00"
         },
         "metrics": {
           "all": {
@@ -134911,12 +133308,24 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-sentry/1.0.6.spdx.json",
+        "release": {
+          "attributed_to": null,
+          "merge_commit_sha": "88e7252159f962cd5fc365c6c36833860ed30cfb",
+          "merged_at": "2026-08-18T07:28:56Z",
+          "pr_author_id": 230633153,
+          "pr_author_login": "octavia-bot-hoard",
+          "pr_author_type": "Bot",
+          "pr_number": 84735,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84735",
+          "released_at": "2026-08-18T07:28:56Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-sentry/1.0.7.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-sentry/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-11T08:01:47.208454+00:00",
-          "registry_entry_generated_at": "2026-08-11T08:01:47.208454+00:00"
+          "metadata_last_modified": "2026-08-18T07:32:59.061690+00:00",
+          "registry_entry_generated_at": "2026-08-18T07:32:59.061690+00:00"
         }
       },
       "githubIssueLabel": "source-sentry",
@@ -134947,239 +133356,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/sentry-migrations",
-        "releaseCandidates": {
-          "1.0.7": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 200,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 200
-            },
-            "allowedHosts": {
-              "hosts": [
-                "*"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "liveTests",
-                "testConnections": [
-                  {
-                    "id": "54bf1bc8-404c-4e4c-b253-7d8b4c4ffacb",
-                    "name": "sentry_config_dev_null"
-                  },
-                  {
-                    "id": "aa4573bd-4681-4906-9877-d6afe4060a28",
-                    "name": "sentry_config_limited_scopes_dev_null"
-                  }
-                ]
-              },
-              {
-                "suite": "unitTests"
-              },
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config_limited_scopes.json",
-                    "name": "SECRET_SOURCE-SENTRY_LIMITED_SCOPE__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-SENTRY__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "1.0.7",
-            "dockerRepository": "airbyte/source-sentry",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/sentry",
-            "externalDocumentationUrls": [
-              {
-                "title": "API Reference",
-                "type": "api_reference",
-                "url": "https://docs.sentry.io/api/"
-              },
-              {
-                "title": "Changelog",
-                "type": "api_release_history",
-                "url": "https://sentry.io/changelog/"
-              },
-              {
-                "title": "Sentry API OpenAPI specification",
-                "type": "openapi_spec",
-                "url": "https://github.com/getsentry/sentry-api-schema"
-              },
-              {
-                "title": "Sentry API Deprecation Policy",
-                "type": "api_deprecations",
-                "url": "https://develop.sentry.dev/backend/api/deprecation-policy/"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "88e7252159f962cd5fc365c6c36833860ed30cfb",
-                "commit_timestamp": "2026-08-18T07:28:55+00:00"
-              },
-              "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "88e7252159f962cd5fc365c6c36833860ed30cfb",
-                "merged_at": "2026-08-18T07:28:56Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
-                "pr_author_type": "Bot",
-                "pr_number": 84735,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84735",
-                "released_at": "2026-08-18T07:28:56Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-sentry/1.0.7.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-sentry/1.0.7/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T07:32:59.061690+00:00",
-                "registry_entry_generated_at": "2026-08-18T07:32:59.061690+00:00"
-              }
-            },
-            "githubIssueLabel": "source-sentry",
-            "icon": "sentry.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-sentry/latest/icon.svg",
-            "language": "manifest-only",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 60,
-            "name": "Sentry",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "generally_available",
-            "releases": {
-              "breakingChanges": {
-                "1.0.0": {
-                  "deadlineAction": "disable",
-                  "message": "The `projects` stream now uses Sentry's organization-scoped projects endpoint (`/api/0/organizations/{organization}/projects/`) because Sentry deprecated the legacy `/api/0/projects/` endpoint. As a result, the stream returns only the projects that belong to the organization configured in the connector setup, instead of every project the token could access across all organizations. The org-scoped endpoint does not return the `avatar`, `color`, `isInternal`, `isPublic`, `organization`, and `status` fields; these are now available in the new `all_projects_detail` stream, which returns full project details for every project in the organization.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/sentry-migrations#1.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "projects"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2026-07-15"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/sentry-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": false,
-                "packageName": "airbyte-source-sentry"
-              }
-            },
-            "sourceDefinitionId": "cdaf146a-9b75-49fd-9dd2-9d64a0bb4781",
-            "sourceType": "api",
-            "spec": {
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "auth_token": {
-                    "airbyte_secret": true,
-                    "description": "Log into Sentry and then <a href=\"https://sentry.io/settings/account/api/auth-tokens/\">create authentication tokens</a>.For self-hosted, you can find or create authentication tokens by visiting \"{instance_url_prefix}/settings/account/api/auth-tokens/\"",
-                    "order": 0,
-                    "title": "Authentication Tokens",
-                    "type": "string"
-                  },
-                  "discover_fields": {
-                    "description": "Fields to retrieve when fetching discover events",
-                    "item": "string",
-                    "order": 4,
-                    "title": "Discover Event Fields",
-                    "type": "array"
-                  },
-                  "hostname": {
-                    "default": "sentry.io",
-                    "description": "Host name of Sentry API server.For self-hosted, specify your host name here. Otherwise, leave it empty.",
-                    "order": 1,
-                    "title": "Host Name",
-                    "type": "string"
-                  },
-                  "num_workers": {
-                    "default": 5,
-                    "description": "The number of worker threads to use for the sync. The default of 5 is safe for all Sentry API plans. Testing showed concurrency of 7 is optimal; increase if your Sentry plan supports higher rate limits.",
-                    "maximum": 20,
-                    "minimum": 1,
-                    "order": 5,
-                    "title": "Number of concurrent workers",
-                    "type": "integer"
-                  },
-                  "organization": {
-                    "description": "The slug of the organization the groups belong to.",
-                    "order": 2,
-                    "title": "Organization",
-                    "type": "string"
-                  },
-                  "project": {
-                    "description": "The name (slug) of the Project you want to sync.",
-                    "order": 3,
-                    "title": "Project",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "auth_token",
-                  "organization",
-                  "project"
-                ],
-                "type": "object"
-              },
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "suggestedStreams": {
-              "streams": [
-                "issues",
-                "events",
-                "projects",
-                "releases"
-              ]
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "cdk:low-code",
-              "language:manifest-only"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -145881,16 +144057,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-survey-sparrow/0.3.23.spdx.json",
@@ -151996,16 +150172,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "release": {
@@ -159982,7 +158158,7 @@
         ]
       },
       "connectorBuildOptions": {
-        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.24.0@sha256:e34fb609bccdeb77474763c77e3621ea9d5adf9f65f2d9851102cc14a1caa281"
+        "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
       },
       "connectorTestSuitesOptions": [
         {
@@ -160036,7 +158212,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.3.22",
+      "dockerImageTag": "1.3.23",
       "dockerRepository": "airbyte/source-zendesk-chat",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-chat",
       "externalDocumentationUrls": [
@@ -160074,8 +158250,8 @@
         "git": {
           "commit_author": "octavia-bot-hoard[bot]",
           "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "622d0d9fd2349155bbfdf3ebd489a063d58e0ff6",
-          "commit_timestamp": "2026-08-11T08:42:59+00:00"
+          "commit_sha": "a240e5cdd07aa4122089ac351052b6a0a28c12db",
+          "commit_timestamp": "2026-08-18T08:51:47+00:00"
         },
         "metrics": {
           "all": {
@@ -160091,12 +158267,24 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zendesk-chat/1.3.22.spdx.json",
+        "release": {
+          "attributed_to": null,
+          "merge_commit_sha": "a240e5cdd07aa4122089ac351052b6a0a28c12db",
+          "merged_at": "2026-08-18T08:51:48Z",
+          "pr_author_id": 230633153,
+          "pr_author_login": "octavia-bot-hoard",
+          "pr_author_type": "Bot",
+          "pr_number": 84835,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84835",
+          "released_at": "2026-08-18T08:51:48Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zendesk-chat/1.3.23.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-zendesk-chat/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-11T08:47:20.540176+00:00",
-          "registry_entry_generated_at": "2026-08-11T08:47:20.540176+00:00"
+          "metadata_last_modified": "2026-08-18T08:55:49.743935+00:00",
+          "registry_entry_generated_at": "2026-08-18T08:55:49.743935+00:00"
         }
       },
       "githubIssueLabel": "source-zendesk-chat",
@@ -160118,383 +158306,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-chat-migrations",
-        "releaseCandidates": {
-          "1.3.23": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 200,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 200
-            },
-            "allowedHosts": {
-              "hosts": [
-                "*.zendesk.com"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.25.1@sha256:cdbd1578932d121f2852c065fbabebc49ccbf00078606dc503be5e4c66b373df"
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "unitTests"
-              },
-              {
-                "suite": "liveTests",
-                "testConnections": [
-                  {
-                    "id": "3801d70c-d197-4bc2-a989-c48888a47fb2",
-                    "name": "zendesk-chat_config_oauth_dev_null"
-                  },
-                  {
-                    "id": "39ac48ce-6b9d-4b1d-9b62-3fd899ae1981",
-                    "name": "zendesk-chat_config_old_dev_null"
-                  },
-                  {
-                    "id": "5f92e2b6-8d51-4517-8c9a-6a1a1b29cebe",
-                    "name": "zendesk-chat_config_dev_null"
-                  }
-                ]
-              },
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE_ZENDESK_CHAT_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_oauth.json",
-                    "name": "SECRET_SOURCE_ZENDESK_CHAT_OAUTH_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_old.json",
-                    "name": "SECRET_SOURCE_ZENDESK_CHAT_OLD_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "1.3.23",
-            "dockerRepository": "airbyte/source-zendesk-chat",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-chat",
-            "externalDocumentationUrls": [
-              {
-                "title": "Developer Updates",
-                "url": "https://support.zendesk.com/hc/en-us/sections/4405298889242-Developer-updates"
-              },
-              {
-                "title": "Changelog",
-                "type": "api_release_history",
-                "url": "https://developer.zendesk.com/api-reference/changelog/changelog/"
-              },
-              {
-                "title": "Zendesk Chat API reference",
-                "type": "api_reference",
-                "url": "https://developer.zendesk.com/api-reference/live-chat/introduction/"
-              },
-              {
-                "title": "Chat authentication",
-                "type": "authentication_guide",
-                "url": "https://developer.zendesk.com/documentation/live-chat/getting-started/auth/"
-              },
-              {
-                "title": "Zendesk feature removal announcements",
-                "type": "api_deprecations",
-                "url": "https://support.zendesk.com/hc/en-us/articles/4408843026714-What-is-being-removed-updated-April-2026"
-              },
-              {
-                "title": "Zendesk Status",
-                "type": "status_page",
-                "url": "https://status.zendesk.com/"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "a240e5cdd07aa4122089ac351052b6a0a28c12db",
-                "commit_timestamp": "2026-08-18T08:51:47+00:00"
-              },
-              "release": {
-                "attributed_to": null,
-                "merge_commit_sha": "a240e5cdd07aa4122089ac351052b6a0a28c12db",
-                "merged_at": "2026-08-18T08:51:48Z",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
-                "pr_author_type": "Bot",
-                "pr_number": 84835,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84835",
-                "released_at": "2026-08-18T08:51:48Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zendesk-chat/1.3.23.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-zendesk-chat/1.3.23/metadata.yaml",
-                "metadata_last_modified": "2026-08-18T08:55:49.743935+00:00",
-                "registry_entry_generated_at": "2026-08-18T08:55:49.743935+00:00"
-              }
-            },
-            "githubIssueLabel": "source-zendesk-chat",
-            "icon": "zendesk-chat.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-zendesk-chat/latest/icon.svg",
-            "language": "manifest-only",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 60,
-            "name": "Zendesk Chat",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "generally_available",
-            "releases": {
-              "breakingChanges": {
-                "1.0.0": {
-                  "message": "The subdomain configuration field is now required following a Live Chat API update.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-chat-migrations#1.0.0",
-                  "upgradeDeadline": "2024-11-12"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-chat-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": false,
-                "packageName": "airbyte-source-zendesk-chat"
-              }
-            },
-            "sourceDefinitionId": "40d24d0f-b8f9-4fe0-9e6c-b06c0f3f45e4",
-            "sourceType": "api",
-            "spec": {
-              "advanced_auth": {
-                "auth_flow_type": "oauth2.0",
-                "oauth_config_specification": {
-                  "complete_oauth_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "access_token": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "access_token"
-                        ],
-                        "type": "string"
-                      },
-                      "refresh_token": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "refresh_token"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_input_specification": {
-                    "additionalProperties": true,
-                    "properties": {
-                      "client_id": {
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_id"
-                        ],
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_secret"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "oauth_connector_input_specification": {
-                    "access_token_url": "https://{{subdomain}}.zendesk.com/oauth2/chat/token?grant_type=authorization_code&{{client_id_param}}&{{client_secret_param}}&{{auth_code_param}}&{{redirect_uri_param}}&{{scopes_param}}",
-                    "consent_url": "https://{{subdomain}}.zendesk.com/oauth2/chat/authorizations/new?response_type=code&{{client_id_param}}&{{redirect_uri_param}}&{{scopes_param}}&{{state_param}}",
-                    "extract_output": [
-                      "access_token",
-                      "refresh_token"
-                    ],
-                    "scopes": [
-                      {
-                        "scope": "read"
-                      },
-                      {
-                        "scope": "chat"
-                      }
-                    ],
-                    "scopes_join_strategy": "space"
-                  },
-                  "oauth_user_input_from_connector_config_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "subdomain": {
-                        "path_in_connector_config": [
-                          "subdomain"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  }
-                },
-                "predicate_key": [
-                  "credentials",
-                  "credentials"
-                ],
-                "predicate_value": "oauth2.0"
-              },
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "credentials": {
-                    "oneOf": [
-                      {
-                        "properties": {
-                          "access_token": {
-                            "airbyte_secret": true,
-                            "description": "Access Token for making authenticated requests.",
-                            "title": "Access Token",
-                            "type": "string"
-                          },
-                          "client_id": {
-                            "airbyte_secret": true,
-                            "description": "The Client ID of your OAuth application",
-                            "title": "Client ID",
-                            "type": "string"
-                          },
-                          "client_secret": {
-                            "airbyte_secret": true,
-                            "description": "The Client Secret of your OAuth application.",
-                            "title": "Client Secret",
-                            "type": "string"
-                          },
-                          "credentials": {
-                            "const": "oauth2.0",
-                            "order": 0,
-                            "type": "string"
-                          },
-                          "refresh_token": {
-                            "airbyte_secret": true,
-                            "description": "Refresh Token to obtain new Access Token, when it's expired.",
-                            "title": "Refresh Token",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "credentials"
-                        ],
-                        "title": "OAuth2.0",
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "access_token": {
-                            "airbyte_secret": true,
-                            "description": "The Access Token to make authenticated requests.",
-                            "title": "Access Token",
-                            "type": "string"
-                          },
-                          "credentials": {
-                            "const": "access_token",
-                            "order": 0,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "credentials",
-                          "access_token"
-                        ],
-                        "title": "Access Token",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 2,
-                    "title": "Authorization Method",
-                    "type": "object"
-                  },
-                  "start_date": {
-                    "description": "The date from which you'd like to replicate data for Zendesk Chat API, in the format YYYY-MM-DDT00:00:00Z.",
-                    "examples": [
-                      "2021-02-01T00:00:00Z"
-                    ],
-                    "format": "date-time",
-                    "order": 0,
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-                    "title": "Start Date",
-                    "type": "string"
-                  },
-                  "subdomain": {
-                    "description": "The unique subdomain of your Zendesk account (without https://). <a href=\\\"https://support.zendesk.com/hc/en-us/articles/4409381383578-Where-can-I-find-my-Zendesk-subdomain\\\">See the Zendesk docs to find your subdomain</a>.",
-                    "examples": [
-                      "myzendeskchat"
-                    ],
-                    "order": 1,
-                    "pattern": "^(?!https://)",
-                    "title": "Subdomain",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "start_date",
-                  "subdomain"
-                ],
-                "type": "object"
-              },
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "suggestedStreams": {
-              "streams": [
-                "chats"
-              ]
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "language:manifest-only",
-              "cdk:low-code"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -161174,7 +158985,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "5.5.0",
+      "dockerImageTag": "5.5.2",
       "dockerRepository": "airbyte/source-zendesk-support",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support",
       "externalDocumentationUrls": [
@@ -161216,10 +159027,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot[bot]",
-          "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
-          "commit_sha": "f58e9ba25d39c8912365b33aa84a35a1264e4862",
-          "commit_timestamp": "2026-08-10T23:30:59+00:00"
+          "commit_author": "Anatolii Yatsuk",
+          "commit_author_email": "tolikyatsuk@gmail.com",
+          "commit_sha": "016dc8994b891d15510d8999971063f5256de9e5",
+          "commit_timestamp": "2026-08-26T10:47:40+03:00"
         },
         "metrics": {
           "all": {
@@ -161235,12 +159046,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zendesk-support/5.5.0.spdx.json",
+        "release": {
+          "attributed_to": "tolik0",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "016dc8994b891d15510d8999971063f5256de9e5",
+          "merged_at": "2026-08-26T07:47:41Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 35109939,
+          "pr_author_login": "tolik0",
+          "pr_author_type": "User",
+          "pr_merged_by_login": "tolik0",
+          "pr_merged_by_type": "User",
+          "pr_number": 84353,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/84353",
+          "released_at": "2026-08-26T07:47:41Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zendesk-support/5.5.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-zendesk-support/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-10T23:57:21.855998+00:00",
-          "registry_entry_generated_at": "2026-08-10T23:57:21.855998+00:00"
+          "metadata_last_modified": "2026-08-26T07:52:05.176609+00:00",
+          "registry_entry_generated_at": "2026-08-26T07:52:05.176609+00:00"
         }
       },
       "githubIssueLabel": "source-zendesk-support",
@@ -161298,544 +159125,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support-migrations",
-        "releaseCandidates": {
-          "5.5.2": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 400,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 300
-            },
-            "allowedHosts": {
-              "hosts": [
-                "${subdomain}.zendesk.com",
-                "zendesk.com"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.23.8@sha256:58d3593d8e816d4a346570570d5a42bb78e41de344f8c74c2a5c225acdc4c4d1"
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "liveTests",
-                "testConnections": [
-                  {
-                    "id": "0c87dd87-c04e-4fed-a86a-fa4b6acdfef6",
-                    "name": "zendesk-support_config_dev_null"
-                  },
-                  {
-                    "id": "36dad615-075b-46ed-8191-6436ca0abc29",
-                    "name": "zendesk-support_config_ticket_metrics_dev_null"
-                  },
-                  {
-                    "id": "3fef7ac6-3265-457d-9d18-cb0906ba6dde",
-                    "name": "zendesk-support_config_oauth_dev_null"
-                  }
-                ]
-              },
-              {
-                "suite": "unitTests"
-              },
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config_oauth.json",
-                    "name": "SECRET_SOURCE-ZENDESK-SUPPORT_OAUTH_CRED",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-ZENDESK-SUPPORT_TOKEN_CRED",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_oauth.json",
-                    "name": "SECRET_ZENDESK_SUPPORT_OAUTH_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "5.5.2",
-            "dockerRepository": "airbyte/source-zendesk-support",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support",
-            "externalDocumentationUrls": [
-              {
-                "title": "Zendesk Support API",
-                "type": "api_reference",
-                "url": "https://developer.zendesk.com/api-reference/ticketing/introduction/"
-              },
-              {
-                "title": "API Changelog",
-                "type": "api_release_history",
-                "url": "https://developer.zendesk.com/api-reference/changelog/changelog/"
-              },
-              {
-                "title": "Zendesk API changelog",
-                "type": "api_release_history",
-                "url": "https://developer.zendesk.com/api-reference/ticketing/introduction/#changes"
-              },
-              {
-                "title": "Zendesk authentication",
-                "type": "authentication_guide",
-                "url": "https://developer.zendesk.com/api-reference/ticketing/introduction/#security-and-authentication"
-              },
-              {
-                "title": "Zendesk rate limits",
-                "type": "rate_limits",
-                "url": "https://developer.zendesk.com/api-reference/ticketing/account-configuration/usage_limits/"
-              },
-              {
-                "title": "Zendesk Status",
-                "type": "status_page",
-                "url": "https://status.zendesk.com/"
-              },
-              {
-                "title": "Zendesk feature removal announcements",
-                "type": "api_deprecations",
-                "url": "https://support.zendesk.com/hc/en-us/articles/4408843026714-What-is-being-removed-updated-April-2026"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "Anatolii Yatsuk",
-                "commit_author_email": "tolikyatsuk@gmail.com",
-                "commit_sha": "016dc8994b891d15510d8999971063f5256de9e5",
-                "commit_timestamp": "2026-08-26T10:47:40+03:00"
-              },
-              "release": {
-                "attributed_to": "tolik0",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "016dc8994b891d15510d8999971063f5256de9e5",
-                "merged_at": "2026-08-26T07:47:41Z",
-                "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 35109939,
-                "pr_author_login": "tolik0",
-                "pr_author_type": "User",
-                "pr_merged_by_login": "tolik0",
-                "pr_merged_by_type": "User",
-                "pr_number": 84353,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84353",
-                "released_at": "2026-08-26T07:47:41Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zendesk-support/5.5.2.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-zendesk-support/5.5.2/metadata.yaml",
-                "metadata_last_modified": "2026-08-26T07:52:05.176609+00:00",
-                "registry_entry_generated_at": "2026-08-26T07:52:05.176609+00:00"
-              }
-            },
-            "githubIssueLabel": "source-zendesk-support",
-            "icon": "zendesk-support.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-zendesk-support/latest/icon.svg",
-            "language": "manifest-only",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 60,
-            "name": "Zendesk Support",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "generally_available",
-            "releases": {
-              "breakingChanges": {
-                "1.0.0": {
-                  "message": "`cursor_field` for `Tickets` stream is changed to `generated_timestamp`",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support-migrations#1.0.0",
-                  "upgradeDeadline": "2023-07-19"
-                },
-                "2.0.0": {
-                  "message": "The `Deleted Tickets` stream was removed. Deleted tickets are still available from the Tickets stream.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support-migrations#2.0.0",
-                  "upgradeDeadline": "2023-10-04"
-                },
-                "3.0.0": {
-                  "message": "This version includes breaking changes to the `TicketsMetric` stream.  The cursor field has been updated to `generated_timestamp`. It is necessary to refresh the data and schema for the affected stream. Please see the migration guide for additional details.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support-migrations#3.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "ticket_metrics"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2024-09-09"
-                },
-                "4.0.0": {
-                  "message": "This version includes breaking changes to the `Tags` stream. The pagination strategy has been changed from `Offset` to `Cursor-Based`. It is necessary to reset the stream. Please see the migration guide for additional details.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support-migrations#4.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "tags"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2024-09-09"
-                },
-                "5.0.0": {
-                  "message": "This version adds OAuth2.0 with refresh token support. Users who authenticate via OAuth must re-authenticate to use the new flow with rotating refresh tokens.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support-migrations#5.0.0",
-                  "upgradeDeadline": "2026-01-30"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/zendesk-support-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": false,
-                "packageName": "airbyte-source-zendesk-support"
-              }
-            },
-            "sourceDefinitionId": "79c1aa37-dae3-42ae-b333-d1c105477715",
-            "sourceType": "api",
-            "spec": {
-              "advanced_auth": {
-                "auth_flow_type": "oauth2.0",
-                "oauth_config_specification": {
-                  "complete_oauth_output_specification": {
-                    "properties": {
-                      "access_token": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "access_token"
-                        ],
-                        "type": "string"
-                      },
-                      "refresh_token": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "refresh_token"
-                        ],
-                        "type": "string"
-                      },
-                      "token_expiry_date": {
-                        "format": "date-time",
-                        "path_in_connector_config": [
-                          "credentials",
-                          "token_expiry_date"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_input_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_id"
-                        ],
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_secret"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "oauth_connector_input_specification": {
-                    "access_token_url": "https://{{subdomain}}.zendesk.com/oauth/tokens?grant_type=authorization_code&{{auth_code_param}}&{{client_id_param}}&{{client_secret_param}}&{{redirect_uri_param}}&{{scopes_param}}&expires_in=172800",
-                    "consent_url": "https://{{subdomain}}.zendesk.com/oauth/authorizations/new?response_type=code&{{client_id_param}}&{{redirect_uri_param}}&{{scopes_param}}&{{state_param}}",
-                    "extract_output": [
-                      "access_token",
-                      "refresh_token",
-                      "expires_in"
-                    ],
-                    "scopes": [
-                      {
-                        "scope": "read"
-                      }
-                    ],
-                    "scopes_join_strategy": "space"
-                  },
-                  "oauth_user_input_from_connector_config_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "subdomain": {
-                        "path_in_connector_config": [
-                          "subdomain"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  }
-                },
-                "predicate_key": [
-                  "credentials",
-                  "credentials"
-                ],
-                "predicate_value": "oauth2_refresh"
-              },
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "credentials": {
-                    "description": "Zendesk allows three authentication methods. We recommend using `OAuth2.0 with Refresh Token` for Airbyte Cloud users (recommended), `OAuth2.0 (Legacy)` for existing OAuth connections, and `API token` for Airbyte Open Source users.",
-                    "oneOf": [
-                      {
-                        "additionalProperties": true,
-                        "properties": {
-                          "access_token": {
-                            "airbyte_secret": true,
-                            "description": "Access Token for making authenticated requests.",
-                            "title": "Access Token",
-                            "type": "string"
-                          },
-                          "client_id": {
-                            "airbyte_secret": true,
-                            "description": "The OAuth client's ID. See <a href=\"https://developer.zendesk.com/api-reference/ticketing/oauth/grant_type_tokens/\">Zendesk OAuth grant-type tokens documentation</a> for more information.",
-                            "title": "Client ID",
-                            "type": "string"
-                          },
-                          "client_secret": {
-                            "airbyte_secret": true,
-                            "description": "The OAuth client secret. See <a href=\"https://developer.zendesk.com/api-reference/ticketing/oauth/grant_type_tokens/\">Zendesk OAuth grant-type tokens documentation</a> for more information.",
-                            "title": "Client Secret",
-                            "type": "string"
-                          },
-                          "credentials": {
-                            "const": "oauth2_refresh",
-                            "order": 0,
-                            "type": "string"
-                          },
-                          "refresh_token": {
-                            "airbyte_secret": true,
-                            "description": "The refresh token used to obtain new access tokens. Note that Zendesk uses rotating refresh tokens - each refresh will return a new refresh token and invalidate the previous one.",
-                            "title": "Refresh Token",
-                            "type": "string"
-                          },
-                          "token_expiry_date": {
-                            "description": "The date-time when the access token should be refreshed.",
-                            "format": "date-time",
-                            "title": "Token Expiry Date",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "client_id",
-                          "client_secret",
-                          "refresh_token"
-                        ],
-                        "title": "OAuth2.0 with Refresh Token",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "properties": {
-                          "api_token": {
-                            "airbyte_secret": true,
-                            "description": "The value of the API token generated. See our <a href=\"https://docs.airbyte.com/integrations/sources/zendesk-support#setup-guide\">full documentation</a> for more information on generating this token.",
-                            "title": "API Token",
-                            "type": "string"
-                          },
-                          "credentials": {
-                            "const": "api_token",
-                            "order": 0,
-                            "type": "string"
-                          },
-                          "email": {
-                            "description": "The user email for your Zendesk account.",
-                            "title": "Email",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "email",
-                          "api_token"
-                        ],
-                        "title": "API Token",
-                        "type": "object"
-                      },
-                      {
-                        "additionalProperties": true,
-                        "properties": {
-                          "access_token": {
-                            "airbyte_secret": true,
-                            "description": "The OAuth access token. See the <a href=\"https://developer.zendesk.com/documentation/ticketing/working-with-oauth/creating-and-using-oauth-tokens-with-the-api/\">Zendesk docs</a> for more information on generating this token.",
-                            "title": "Access Token",
-                            "type": "string"
-                          },
-                          "client_id": {
-                            "airbyte_secret": true,
-                            "description": "The OAuth client's ID. See <a href=\"https://docs.searchunify.com/Content/Content-Sources/Zendesk-Authentication-OAuth-Client-ID-Secret.htm#:~:text=Get%20Client%20ID%20and%20Client%20Secret&text=Go%20to%20OAuth%20Clients%20and,will%20be%20displayed%20only%20once.\">this guide</a> for more information.",
-                            "title": "Client ID",
-                            "type": "string"
-                          },
-                          "client_secret": {
-                            "airbyte_secret": true,
-                            "description": "The OAuth client secret. See <a href=\"https://docs.searchunify.com/Content/Content-Sources/Zendesk-Authentication-OAuth-Client-ID-Secret.htm#:~:text=Get%20Client%20ID%20and%20Client%20Secret&text=Go%20to%20OAuth%20Clients%20and,will%20be%20displayed%20only%20once.\">this guide</a> for more information.",
-                            "title": "Client Secret",
-                            "type": "string"
-                          },
-                          "credentials": {
-                            "const": "oauth2.0",
-                            "order": 0,
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "access_token"
-                        ],
-                        "title": "OAuth2.0 (Legacy)",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 1,
-                    "title": "Authentication",
-                    "type": "object"
-                  },
-                  "ignore_pagination": {
-                    "airbyte_hidden": true,
-                    "default": false,
-                    "description": "[Deprecated] Makes each stream read a single page of data.",
-                    "title": "[Deprecated] Should the connector read the second and further pages of data.",
-                    "type": "boolean"
-                  },
-                  "num_workers": {
-                    "default": 4,
-                    "description": "The number of worker threads to use for the sync. Higher values can improve sync throughput on large workspaces; lower values reduce load on the source.",
-                    "examples": [
-                      1,
-                      2,
-                      4,
-                      10
-                    ],
-                    "maximum": 40,
-                    "minimum": 1,
-                    "order": 3,
-                    "title": "Number of concurrent threads",
-                    "type": "integer"
-                  },
-                  "page_size": {
-                    "default": 100,
-                    "description": "The number of records per page for the ticket_comments stream API requests. Lower values may help prevent timeouts on large datasets. The maximum value is 1000.",
-                    "examples": [
-                      100,
-                      250,
-                      500
-                    ],
-                    "maximum": 1000,
-                    "minimum": 1,
-                    "order": 4,
-                    "title": "Page Size (ticket_comments)",
-                    "type": "integer"
-                  },
-                  "start_date": {
-                    "description": "The UTC date and time from which you'd like to replicate data, in the format YYYY-MM-DDT00:00:00Z. All data generated after this date will be replicated.",
-                    "examples": [
-                      "2020-10-15T00:00:00Z"
-                    ],
-                    "format": "date-time",
-                    "order": 2,
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-                    "pattern_descriptor": "YYYY-MM-DDTHH:mm:ssZ",
-                    "title": "Start Date",
-                    "type": "string"
-                  },
-                  "subdomain": {
-                    "description": "This is your unique Zendesk subdomain that can be found in your account URL. For example, in https://MY_SUBDOMAIN.zendesk.com/, MY_SUBDOMAIN is the value of your subdomain.",
-                    "order": 0,
-                    "title": "Subdomain",
-                    "type": "string"
-                  },
-                  "ticket_search_lookback_days": {
-                    "default": 0,
-                    "description": "Only applies to the optional `tickets_search` stream. Number of days to re-scan before the last saved cursor on each incremental sync. This helps catch late or out-of-order `updated_at` changes. Note: it does NOT recover automation/macro/system updates (those never change `updated_at`) \u2014 use the default `tickets` stream if you need complete change tracking.",
-                    "examples": [
-                      0,
-                      7,
-                      30
-                    ],
-                    "minimum": 0,
-                    "order": 5,
-                    "title": "Tickets Search Lookback Window (days)",
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "subdomain"
-                ],
-                "title": "Source Zendesk Support Spec",
-                "type": "object"
-              },
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "suggestedStreams": {
-              "streams": [
-                "brands",
-                "deleted_tickets",
-                "groups",
-                "organizations",
-                "satisfaction_ratings",
-                "tags",
-                "ticket_audits",
-                "ticket_comments",
-                "ticket_fields",
-                "ticket_forms",
-                "ticket_events",
-                "ticket_metric_events",
-                "ticket_metrics",
-                "tickets",
-                "users"
-              ]
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": true,
-            "tags": [
-              "cdk:low-code",
-              "language:manifest-only"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -161921,11 +159210,12 @@
               "type": "object"
             },
             "oauth_connector_input_specification": {
-              "access_token_url": "https://{{subdomain}}.zendesk.com/oauth/tokens?grant_type=authorization_code&{{auth_code_param}}&{{client_id_param}}&{{client_secret_param}}&{{redirect_uri_param}}&{{scopes_param}}",
+              "access_token_url": "https://{{subdomain}}.zendesk.com/oauth/tokens?grant_type=authorization_code&{{auth_code_param}}&{{client_id_param}}&{{client_secret_param}}&{{redirect_uri_param}}&{{scopes_param}}&expires_in=172800",
               "consent_url": "https://{{subdomain}}.zendesk.com/oauth/authorizations/new?response_type=code&{{client_id_param}}&{{redirect_uri_param}}&{{scopes_param}}&{{state_param}}",
               "extract_output": [
                 "access_token",
-                "refresh_token"
+                "refresh_token",
+                "expires_in"
               ],
               "scopes": [
                 {
