@@ -29,6 +29,7 @@ import io.airbyte.commons.server.converters.ConfigurationUpdate
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper.validateNoSecretsInConfiguration
+import io.airbyte.commons.server.handlers.helpers.SecretCoordinateInputValidator.validateSecretCoordinateInput
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.Configs.AirbyteEdition
@@ -37,6 +38,7 @@ import io.airbyte.config.JobStatus
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.secrets.ConfigWithProcessedSecrets
+import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.configWithTextualSecretPlaceholders
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.processConfigSecrets
@@ -496,6 +498,13 @@ class DestinationHandler
       val maskedConfig = oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, workspaceId, configurationJson, spec)
       val secretStorageId = Optional.ofNullable(secretStorageService.getByWorkspaceId(WorkspaceId(workspaceId))).map { obj -> obj.id.value }
 
+      val validatedConfig =
+        validateSecretCoordinateInput(
+          maskedConfig,
+          spec.connectionSpecification,
+          secretStorageId.map { SecretStorageId(it) }.orElse(null),
+        ) { getPersistedConfigWithSecretReferences(destinationId, workspaceId) }
+
       val destinationConnection =
         DestinationConnection()
           .withName(name)
@@ -514,7 +523,7 @@ class DestinationHandler
           emptySet()
         }
 
-      var updatedConfig: JsonNode = persistConfigRawSecretValues(maskedConfig, secretStorageId, workspaceId, spec, destinationId)
+      var updatedConfig: JsonNode = persistConfigRawSecretValues(validatedConfig, secretStorageId, workspaceId, spec, destinationId)
       var reprocessedConfig: ConfigWithProcessedSecrets? = null
 
       if (secretStorageId.isPresent) {
@@ -546,6 +555,20 @@ class DestinationHandler
         secretReferenceService.deleteOrphanedAirbyteManagedSecrets(priorSecretConfigIds, SecretStorageId(secretStorageId.get()))
       }
     }
+
+    /**
+     * Returns the destination's currently stored config with its secret references resolved, or null
+     * when the destination does not exist yet.
+     */
+    private fun getPersistedConfigWithSecretReferences(
+      destinationId: UUID,
+      workspaceId: UUID,
+    ): ConfigWithSecretReferences? =
+      destinationService
+        .getDestinationConnectionIfExists(destinationId)
+        .map { destination ->
+          secretReferenceService.getConfigWithSecretReferences(ActorId(destinationId), destination.configuration, WorkspaceId(workspaceId))
+        }.orElse(null)
 
     /**
      * Persists raw secret values for the given config. Creates or updates depending on whether a prior

@@ -730,6 +730,69 @@ object SecretsHelpers {
     }
 
     /**
+     * The two ways a config value can name a secret coordinate: a [SECRET_REF_PREFIX]-prefixed
+     * string, or the object form a persisted config uses.
+     */
+    enum class CoordinateInputShape {
+      PREFIXED_STRING,
+      COORDINATE_NODE,
+    }
+
+    data class CoordinateInput(
+      val coordinate: SecretCoordinate,
+      val shape: CoordinateInputShape,
+    )
+
+    /**
+     * Given a config and spec, find every path whose value names a coordinate, mapped to that
+     * coordinate and the shape it arrived in.
+     *
+     * A prefixed string only names a coordinate at a path the spec declares secret, since that is
+     * where [processConfigSecrets] reads it. Coordinate objects are collected from anywhere in the
+     * config, matching [getReferenceMapFromConfig], which hydration uses and which is spec-agnostic:
+     * a spec permitting additional properties would otherwise carry a coordinate object at an
+     * undeclared path all the way to hydration.
+     *
+     * A coordinate is reported even alongside a [SECRET_REF_ID_FIELD], because hydration falls back
+     * to the coordinate when the reference id does not resolve.
+     */
+    fun getSecretCoordinateInputs(
+      config: JsonNode,
+      spec: JsonNode,
+    ): Map<String, CoordinateInput> =
+      buildMap {
+        putAll(
+          getReferenceMapFromConfig(InlinedConfigWithSecretRefs(config))
+            .mapValues { (_, refConfig) -> CoordinateInput(refConfig.secretCoordinate, CoordinateInputShape.COORDINATE_NODE) },
+        )
+        getSortedSecretPaths(spec).forEach { pathTemplate ->
+          getExpandedPaths(config, pathTemplate).forEach { path ->
+            JsonPaths.getSingleValue(config, path).ifPresent { node ->
+              when {
+                node.isTextual && node.asText().startsWith(SECRET_REF_PREFIX) ->
+                  put(
+                    path,
+                    CoordinateInput(
+                      SecretCoordinate.fromFullCoordinate(node.asText().removePrefix(SECRET_REF_PREFIX)),
+                      CoordinateInputShape.PREFIXED_STRING,
+                    ),
+                  )
+
+                node.get(COORDINATE_FIELD)?.isTextual == true ->
+                  put(
+                    path,
+                    CoordinateInput(
+                      SecretCoordinate.fromFullCoordinate(node.get(COORDINATE_FIELD).asText()),
+                      CoordinateInputShape.COORDINATE_NODE,
+                    ),
+                  )
+              }
+            }
+          }
+        }
+      }
+
+    /**
      * Given a config and spec, replace all secret nodes with a placeholder text value.
      * This is useful for preparing a config with secret nodes for validation against a spec
      * that expects string values instead of object nodes at each secret path.
