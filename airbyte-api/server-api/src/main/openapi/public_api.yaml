@@ -289,7 +289,7 @@ paths:
           schema:
             type: boolean
           required: false
-          description: Rather than return *** for secret properties include the secret coordinate information
+          description: "Rather than return *** for secret properties include the secret coordinate information. Coordinates are opaque pointers, not secret values, and resolving one requires access to the secret storage that holds it. They are not stable: a coordinate changes when the secret is rewritten."
   /public/v1/destinations:
     get:
       tags:
@@ -360,7 +360,7 @@ paths:
           schema:
             type: boolean
           required: false
-          description: Rather than return *** for secret properties include the secret coordinate information
+          description: "Rather than return *** for secret properties include the secret coordinate information. Coordinates are opaque pointers, not secret values, and resolving one requires access to the secret storage that holds it. They are not stable: a coordinate changes when the secret is rewritten."
   /public/v1/oauth/callback:
     get:
       tags:

@@ -25,6 +25,7 @@ import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.SupportState
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
+import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons.clone
@@ -54,6 +55,8 @@ import io.airbyte.config.secrets.ConfigWithProcessedSecrets
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.ExternalSecretCoordinate
+import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.ConfigWithSecretReferenceIdsInjected
 import io.airbyte.config.secrets.SecretsRepositoryReader
@@ -199,34 +202,39 @@ internal class SourceHandlerTest {
 
     sourceConnectionWithCount = SourceHelpers.generateSourceWithCount(sourceConnection)
 
-    sourceHandler =
-      SourceHandler(
-        catalogService = catalogService,
-        secretsRepositoryReader = secretsRepositoryReader,
-        validator = validator,
-        connectionsHandler = connectionsHandler,
-        uuidGenerator = uuidGenerator,
-        secretsProcessor = secretsProcessor,
-        configurationUpdate = configurationUpdate,
-        oAuthConfigSupplier = oAuthConfigSupplier,
-        actorDefinitionVersionHelper = actorDefinitionVersionHelper,
-        sourceService = sourceService,
-        workspaceService = workspaceService,
-        workspaceHelper = workspaceHelper,
-        secretPersistenceService = secretPersistenceService,
-        actorDefinitionHandlerHelper = actorDefinitionHandlerHelper,
-        actorDefinitionVersionUpdater = actorDefinitionVersionUpdater,
-        licenseEntitlementChecker = licenseEntitlementChecker,
-        connectorConfigEntitlementService = connectorConfigEntitlementService,
-        catalogConverter = catalogConverter,
-        apiPojoConverters = apiPojoConverters,
-        airbyteEdition = Configs.AirbyteEdition.COMMUNITY,
-        secretsRepositoryWriter = secretsRepositoryWriter,
-        secretStorageService = secretStorageService,
-        secretReferenceService = secretReferenceService,
-        currentUserService = currentUserService,
-      )
+    sourceHandler = createSourceHandler(Configs.AirbyteEdition.COMMUNITY)
   }
+
+  private fun createSourceHandler(
+    airbyteEdition: Configs.AirbyteEdition,
+    secretsProcessor: JsonSecretsProcessor = this.secretsProcessor,
+  ): SourceHandler =
+    SourceHandler(
+      catalogService = catalogService,
+      secretsRepositoryReader = secretsRepositoryReader,
+      validator = validator,
+      connectionsHandler = connectionsHandler,
+      uuidGenerator = uuidGenerator,
+      secretsProcessor = secretsProcessor,
+      configurationUpdate = configurationUpdate,
+      oAuthConfigSupplier = oAuthConfigSupplier,
+      actorDefinitionVersionHelper = actorDefinitionVersionHelper,
+      sourceService = sourceService,
+      workspaceService = workspaceService,
+      workspaceHelper = workspaceHelper,
+      secretPersistenceService = secretPersistenceService,
+      actorDefinitionHandlerHelper = actorDefinitionHandlerHelper,
+      actorDefinitionVersionUpdater = actorDefinitionVersionUpdater,
+      licenseEntitlementChecker = licenseEntitlementChecker,
+      connectorConfigEntitlementService = connectorConfigEntitlementService,
+      catalogConverter = catalogConverter,
+      apiPojoConverters = apiPojoConverters,
+      airbyteEdition = airbyteEdition,
+      secretsRepositoryWriter = secretsRepositoryWriter,
+      secretStorageService = secretStorageService,
+      secretReferenceService = secretReferenceService,
+      currentUserService = currentUserService,
+    )
 
   @Test
   fun testCreateSource() {
@@ -911,6 +919,61 @@ internal class SourceHandlerTest {
         sourceDefinitionSpecificationRead.connectionSpecification,
       )
     }
+  }
+
+  @Test
+  fun testGetSourceReturnsSecretCoordinatesOnCloud() {
+    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceConnection.sourceId)
+
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
+    every {
+      actorDefinitionVersionHelper.getSourceVersion(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
+      )
+    } returns sourceDefinitionVersion
+    every { sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId) } returns standardSourceDefinition
+    every {
+      actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
+      )
+    } returns sourceDefinitionVersionWithOverrideStatus
+    sourceDefinitionVersion.withSpec(
+      ConnectorSpecification().withConnectionSpecification(
+        connectorSpecification.connectionSpecification["specification"],
+      ),
+    )
+    val secretCoordinate = "external_secret_123abc"
+    every {
+      secretReferenceService.getConfigWithSecretReferences(
+        any(),
+        any(),
+        any(),
+      )
+    } returns
+      ConfigWithSecretReferences(
+        sourceConnection.configuration,
+        mapOf(
+          "$.$API_KEY_FIELD" to
+            SecretReferenceConfig(
+              ExternalSecretCoordinate(secretCoordinate),
+              SecretStorage.DEFAULT_SECRET_STORAGE_ID.value,
+            ),
+        ),
+      )
+
+    val actualSourceRead =
+      createSourceHandler(Configs.AirbyteEdition.CLOUD, JsonSecretsProcessor())
+        .getSource(sourceIdRequestBody, true)
+
+    Assertions.assertEquals(
+      "$AIRBYTE_SECRET_COORDINATE_PREFIX$secretCoordinate",
+      actualSourceRead.connectionConfiguration[API_KEY_FIELD].asText(),
+    )
   }
 
   @Test

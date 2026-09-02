@@ -9576,7 +9576,7 @@ paths:
           schema:
             type: boolean
           required: false
-          description: Rather than return *** for secret properties include the secret coordinate information
+          description: "Rather than return *** for secret properties include the secret coordinate information. Coordinates are opaque pointers, not secret values, and resolving one requires access to the secret storage that holds it. They are not stable: a coordinate changes when the secret is rewritten."
     patch:
       tags:
         - public_sources
@@ -9832,7 +9832,7 @@ paths:
           schema:
             type: boolean
           required: false
-          description: Rather than return *** for secret properties include the secret coordinate information
+          description: "Rather than return *** for secret properties include the secret coordinate information. Coordinates are opaque pointers, not secret values, and resolving one requires access to the secret storage that holds it. They are not stable: a coordinate changes when the secret is rewritten."
     delete:
       tags:
         - public_destinations
@@ -14371,7 +14371,7 @@ components:
         sourceId:
           $ref: "#/components/schemas/SourceId"
         includeSecretCoordinates:
-          description: If true, the response will include secret coordinates in the connection configuration.
+          description: "Rather than return *** for secret properties include the secret coordinate information. Coordinates are opaque pointers, not secret values, and resolving one requires access to the secret storage that holds it. They are not stable: a coordinate changes when the secret is rewritten."
           type: boolean
           default: false
     SourceCloneRequestBody:

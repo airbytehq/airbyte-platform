@@ -13,7 +13,6 @@ import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDI
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
-import io.airbyte.domain.models.SecretStorage
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.Optional
@@ -62,29 +61,20 @@ class JsonSecretsProcessor(
     }
 
     /**
-     * Given a JSONSchema object and an object that conforms to that schema, return the coordinates of the secrets only
+     * Returns a copy of the input ConfigWithSecretReferences's config object wherein any secret references are
+     * resolved to their coordinates.
      *
-     * @param configWithSecretReferences - config object with secret references
-     * @param showCoordinatesFromDefaultSecretStorage -
-     * @return json object with only the secret coordinates returned.
-     *
+     * @param configWithSecretReferences config object with secret references
+     * @return json object with all secret references resolved to their coordinates.
      */
-    fun simplifyAllSecrets(
-      configWithSecretReferences: ConfigWithSecretReferences,
-      showCoordinatesFromDefaultSecretStorage: Boolean,
-    ): JsonNode {
+    fun simplifyAllSecrets(configWithSecretReferences: ConfigWithSecretReferences): JsonNode {
       val pathsWithSecrets = configWithSecretReferences.referencedSecrets.keys
       var copy = Jsons.clone(configWithSecretReferences.originalConfig)
       for (path in pathsWithSecrets) {
         val secretCoordinate = configWithSecretReferences.referencedSecrets[path]
         if (secretCoordinate != null) {
           val fullCoordinate = secretCoordinate.secretCoordinate.fullCoordinate
-          copy =
-            if (showCoordinatesFromDefaultSecretStorage || secretCoordinate.secretStorageId != SecretStorage.DEFAULT_SECRET_STORAGE_ID.value) {
-              JsonPaths.replaceAtString(copy, path, "$AIRBYTE_SECRET_COORDINATE_PREFIX$fullCoordinate")
-            } else {
-              JsonPaths.replaceAtString(copy, path, AirbyteSecretConstants.SECRETS_MASK)
-            }
+          copy = JsonPaths.replaceAtString(copy, path, "$AIRBYTE_SECRET_COORDINATE_PREFIX$fullCoordinate")
         }
       }
       return copy
@@ -138,8 +128,8 @@ class JsonSecretsProcessor(
   }
 
   /**
-   * Returns a copy of the input ConfigWithSecretReferences's config object wherein any secret references are either
-   * resolved to their coordinates if they are stored in a non-default secret storage, or masked if they are stored in the default secret storage.
+   * Returns a copy of the input ConfigWithSecretReferences's config object wherein any secret references are
+   * resolved to their coordinates.
    *
    * @param schema Schema containing secret annotations
    * @param configWithSecretReferences Config containing potentially secret fields
@@ -147,13 +137,12 @@ class JsonSecretsProcessor(
   fun simplifySecretsForOutput(
     configWithSecretReferences: ConfigWithSecretReferences,
     schema: JsonNode,
-    showCoordinatesFromDefaultSecretStorage: Boolean,
   ): JsonNode {
     if (!isValidJsonSchema(schema)) {
-      logger.error { "The schema is not valid, the secret can't be hidden" }
+      logger.error { "The schema is not valid, secret coordinates can't be resolved" }
       return configWithSecretReferences.originalConfig
     }
-    return simplifyAllSecrets(configWithSecretReferences, showCoordinatesFromDefaultSecretStorage)
+    return simplifyAllSecrets(configWithSecretReferences)
   }
 
   /**

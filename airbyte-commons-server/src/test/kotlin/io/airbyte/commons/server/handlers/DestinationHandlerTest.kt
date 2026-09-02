@@ -20,6 +20,7 @@ import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.model.generated.SupportState
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
+import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons.clone
@@ -43,6 +44,8 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitio
 import io.airbyte.config.secrets.ConfigWithProcessedSecrets
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.JsonSecretsProcessor
+import io.airbyte.config.secrets.SecretCoordinate.ExternalSecretCoordinate
+import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.buildConfigWithSecretRefsJava
@@ -160,29 +163,7 @@ internal class DestinationHandlerTest {
 
     destinationConnectionWithCount = DestinationHelpers.generateDestinationWithCount(destinationConnection)
 
-    destinationHandler =
-      DestinationHandler(
-        validator,
-        connectionsHandler,
-        uuidGenerator,
-        secretsProcessor,
-        configurationUpdate,
-        oAuthConfigSupplier,
-        actorDefinitionVersionHelper,
-        destinationService,
-        actorDefinitionHandlerHelper,
-        actorDefinitionVersionUpdater,
-        apiPojoConverters,
-        workspaceHelper,
-        licenseEntitlementChecker,
-        Configs.AirbyteEdition.COMMUNITY,
-        secretsRepositoryWriter,
-        secretPersistenceService,
-        secretStorageService,
-        secretReferenceService,
-        currentUserService,
-        connectorConfigEntitlementService,
-      )
+    destinationHandler = createDestinationHandler(Configs.AirbyteEdition.COMMUNITY)
 
     every {
       actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
@@ -956,6 +937,60 @@ internal class DestinationHandlerTest {
   }
 
   @Test
+  fun testGetDestinationReturnsSecretCoordinatesOnCloud() {
+    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationConnection.destinationId)
+
+    every {
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
+    } returns destinationConnection
+    every {
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
+    } returns standardDestinationDefinition
+    every {
+      destinationService.getDestinationDefinitionFromDestination(destinationConnection.destinationId)
+    } returns standardDestinationDefinition
+    every {
+      actorDefinitionVersionHelper.getDestinationVersion(
+        standardDestinationDefinition,
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
+      )
+    } returns destinationDefinitionVersion
+    destinationDefinitionVersion.withSpec(
+      ConnectorSpecification().withConnectionSpecification(
+        connectorSpecification.connectionSpecification["specification"],
+      ),
+    )
+    val secretCoordinate = "external_secret_123abc"
+    every {
+      secretReferenceService.getConfigWithSecretReferences(
+        any(),
+        any(),
+        any(),
+      )
+    } returns
+      ConfigWithSecretReferences(
+        destinationConnection.configuration,
+        mapOf(
+          "$.$API_KEY_FIELD" to
+            SecretReferenceConfig(
+              ExternalSecretCoordinate(secretCoordinate),
+              SecretStorage.DEFAULT_SECRET_STORAGE_ID.value,
+            ),
+        ),
+      )
+
+    val actualDestinationRead =
+      createDestinationHandler(Configs.AirbyteEdition.CLOUD, JsonSecretsProcessor())
+        .getDestination(destinationIdRequestBody, true)
+
+    Assertions.assertEquals(
+      "$AIRBYTE_SECRET_COORDINATE_PREFIX$secretCoordinate",
+      actualDestinationRead.connectionConfiguration[API_KEY_FIELD].asText(),
+    )
+  }
+
+  @Test
   fun testListDestinationForWorkspace() {
     val expectedDestinationRead =
       DestinationRead()
@@ -1523,6 +1558,33 @@ internal class DestinationHandlerTest {
       secretReferenceService.cleanupDanglingSecretReferences(any(), any<SecretReferenceScopeType>(), any<ConfigWithProcessedSecrets>())
     }
   }
+
+  private fun createDestinationHandler(
+    airbyteEdition: Configs.AirbyteEdition,
+    secretsProcessor: JsonSecretsProcessor = this.secretsProcessor,
+  ): DestinationHandler =
+    DestinationHandler(
+      validator,
+      connectionsHandler,
+      uuidGenerator,
+      secretsProcessor,
+      configurationUpdate,
+      oAuthConfigSupplier,
+      actorDefinitionVersionHelper,
+      destinationService,
+      actorDefinitionHandlerHelper,
+      actorDefinitionVersionUpdater,
+      apiPojoConverters,
+      workspaceHelper,
+      licenseEntitlementChecker,
+      airbyteEdition,
+      secretsRepositoryWriter,
+      secretPersistenceService,
+      secretStorageService,
+      secretReferenceService,
+      currentUserService,
+      connectorConfigEntitlementService,
+    )
 
   companion object {
     private const val API_KEY_FIELD = "apiKey"

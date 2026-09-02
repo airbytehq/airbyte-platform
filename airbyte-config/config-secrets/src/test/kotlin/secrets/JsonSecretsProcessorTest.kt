@@ -701,7 +701,7 @@ internal class JsonSecretsProcessorTest {
   }
 
   @Test
-  fun `test simplify secrets with default secret storage is default and showing coordinates from the default manager is disabled`() {
+  fun `test simplify secrets for output with default secret storage returns the secret coordinate`() {
     val secretCoordinate = "external_secret_123abc"
     val secretPayload =
       Jsons.jsonNode(
@@ -729,20 +729,20 @@ internal class JsonSecretsProcessorTest {
         src,
         referencedSecrets,
       )
-    val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, false)
+    val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER)
     val expected =
       Jsons.jsonNode(
         mapOf(
           FIELD_1 to VALUE_1,
           FIELD_2 to 2,
-          SECRET_1 to "**********",
+          SECRET_1 to "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
         ),
       )
     assertEquals(expected, actual)
   }
 
   @Test
-  fun `test simplify secrets with non-default secret storage and showing coordinates from the default manager is disabled`() {
+  fun `test simplify secrets for output with non-default secret storage returns the secret coordinate`() {
     val secretCoordinate = "external_secret_123abc"
     val secretPayload =
       Jsons.jsonNode(
@@ -770,89 +770,7 @@ internal class JsonSecretsProcessorTest {
         src,
         referencedSecrets,
       )
-    val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, false)
-    val expected =
-      Jsons.jsonNode(
-        mapOf(
-          FIELD_1 to VALUE_1,
-          FIELD_2 to 2,
-          SECRET_1 to "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
-        ),
-      )
-    assertEquals(expected, actual)
-  }
-
-  @Test
-  fun `test simplify secrets for output with default secret storage and showing coordinates from the default manager is enabled`() {
-    val secretCoordinate = "external_secret_123abc"
-    val secretPayload =
-      Jsons.jsonNode(
-        mapOf(
-          "_secret" to secretCoordinate,
-        ),
-      )
-    val src =
-      Jsons.jsonNode(
-        mapOf(
-          FIELD_1 to VALUE_1,
-          FIELD_2 to 2,
-          SECRET_1 to secretPayload,
-        ),
-      )
-
-    val secretReferenceConfig =
-      SecretReferenceConfig(
-        SecretCoordinate.ExternalSecretCoordinate(secretCoordinate),
-        SecretStorage.DEFAULT_SECRET_STORAGE_ID.value,
-      )
-    val referencedSecrets = mapOf("$.$SECRET_1" to secretReferenceConfig)
-    val configWIthSecretReferences =
-      ConfigWithSecretReferences(
-        src,
-        referencedSecrets,
-      )
-    val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, true)
-    val expected =
-      Jsons.jsonNode(
-        mapOf(
-          FIELD_1 to VALUE_1,
-          FIELD_2 to 2,
-          SECRET_1 to "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
-        ),
-      )
-    assertEquals(expected, actual)
-  }
-
-  @Test
-  fun `test simplify secrets for output exposes with non default storage and showing coordinates from the default manager is enabled`() {
-    val secretCoordinate = "external_secret_123abc"
-    val secretPayload =
-      Jsons.jsonNode(
-        mapOf(
-          "_secret" to secretCoordinate,
-        ),
-      )
-    val src =
-      Jsons.jsonNode(
-        mapOf(
-          FIELD_1 to VALUE_1,
-          FIELD_2 to 2,
-          SECRET_1 to secretPayload,
-        ),
-      )
-
-    val secretReferenceConfig =
-      SecretReferenceConfig(
-        SecretCoordinate.ExternalSecretCoordinate(secretCoordinate),
-        UUID.randomUUID(),
-      )
-    val referencedSecrets = mapOf("$.$SECRET_1" to secretReferenceConfig)
-    val configWIthSecretReferences =
-      ConfigWithSecretReferences(
-        src,
-        referencedSecrets,
-      )
-    val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, true)
+    val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER)
     val expected =
       Jsons.jsonNode(
         mapOf(

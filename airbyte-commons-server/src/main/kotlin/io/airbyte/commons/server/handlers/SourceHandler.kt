@@ -590,7 +590,6 @@ class SourceHandler
           secretsProcessor.simplifySecretsForOutput(
             configWithRefs,
             spec.connectionSpecification,
-            airbyteEdition != AirbyteEdition.CLOUD,
           )
         } else {
           secretsProcessor.prepareSecretsForOutput(inlinedConfigWithRefs, spec.connectionSpecification)
