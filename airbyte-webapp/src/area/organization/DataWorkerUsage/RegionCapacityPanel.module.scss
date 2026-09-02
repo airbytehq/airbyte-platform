@@ -1,0 +1,82 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.regionCapacityPanel {
+  &__rows {
+    border-top: variables.$border-thin solid colors.$grey-100;
+    border-bottom: variables.$border-thin solid colors.$grey-100;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: variables.$spacing-lg;
+    width: 100%;
+    padding: variables.$spacing-md variables.$spacing-xs;
+    cursor: pointer;
+    transition: background-color variables.$transition;
+
+    & + & {
+      border-top: variables.$border-thin solid colors.$grey-50;
+    }
+
+    &:hover {
+      background-color: colors.$grey-30;
+    }
+
+    &--selected {
+      background-color: colors.$blue-30;
+    }
+  }
+
+  &__name {
+    width: 224px;
+    min-width: 0;
+  }
+
+  &__marker {
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: variables.$border-radius-pill;
+    background-color: colors.$grey-300;
+
+    &--selected {
+      background-color: colors.$blue-400;
+    }
+  }
+
+  // Button's xs size pads 6px 10px, which renders an icon-only control wider than it is tall.
+  // Dropping the horizontal padding squares it against the same height token the size already sets.
+  &__stepper {
+    width: variables.$button-height-xs;
+    padding: 0;
+  }
+
+  &__value {
+    width: 40px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__meter {
+    flex: 1 1 auto;
+    height: 6px;
+    overflow: hidden;
+    border-radius: variables.$border-radius-pill;
+    background-color: colors.$grey-100;
+  }
+
+  &__meterFill {
+    height: 100%;
+    border-radius: variables.$border-radius-pill;
+    background-color: colors.$blue-400;
+    transition: width variables.$transition;
+  }
+
+  &__peak {
+    width: 160px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}

@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 
 import { render } from "test-utils";
+import { mockExperiments } from "test-utils/mockExperiments";
 
 import { useOrganizationWorkerUsage } from "core/api";
 
@@ -16,7 +17,16 @@ interface MockUsageByWorkspaceGraphProps {
   comparisonEnabled: boolean;
 }
 
+interface MockRegionCapacityPanelProps {
+  regions: Array<{ dataplane_group_id: string }>;
+  selectedRegionId: string | null;
+  requestDateRange: [string, string];
+  displayRange: [string, string];
+  selectedTimeRange: "1d" | "1w" | "1m" | "1q" | "1y";
+}
+
 const mockUsageByWorkspaceGraph = jest.fn();
+const mockRegionCapacityPanel = jest.fn();
 const defaultRegions = [
   {
     name: "US West",
@@ -69,8 +79,22 @@ jest.mock("./UsageByWorkspaceGraph", () => {
   };
 });
 
+jest.mock("./RegionCapacityPanel", () => {
+  const React = jest.requireActual<typeof import("react")>("react");
+
+  return {
+    RegionCapacityPanel: (props: MockRegionCapacityPanelProps) => {
+      mockRegionCapacityPanel(props);
+      return React.createElement("div", { "data-testid": "region-capacity-panel" });
+    },
+  };
+});
+
 const lastGraphProps = (): MockUsageByWorkspaceGraphProps =>
   mockUsageByWorkspaceGraph.mock.calls[mockUsageByWorkspaceGraph.mock.calls.length - 1][0];
+
+const lastCapacityPanelProps = (): MockRegionCapacityPanelProps =>
+  mockRegionCapacityPanel.mock.calls[mockRegionCapacityPanel.mock.calls.length - 1][0];
 
 jest.useFakeTimers();
 
@@ -80,6 +104,8 @@ describe(`${DataWorkerUsage.name}`, () => {
     jest.setSystemTime(new Date("2026-08-24T12:34:00-07:00"));
     mockRegions = defaultRegions;
     mockPendingOrganizationUsageRequest = null;
+    // Matches the production default, so the surrounding suite exercises the pre-flag page.
+    mockExperiments({ "platform.enable-data-worker-allocation": false });
   });
 
   afterAll(() => {
@@ -334,5 +360,40 @@ describe(`${DataWorkerUsage.name}`, () => {
     expect(regionControl.querySelector('[data-icon="globe"]')).not.toBeInTheDocument();
     expect(regionControl).not.toHaveTextContent("US West");
     expect(screen.queryByTestId("usage-by-workspace-graph")).not.toBeInTheDocument();
+  });
+
+  it("hides the capacity panel while the allocation flag is off", async () => {
+    await render(<DataWorkerUsage />);
+
+    await waitFor(() => expect(screen.getByTestId("usage-by-workspace-graph")).toBeInTheDocument());
+
+    // Never rendering the panel is also what keeps the admin-only allocation request from firing.
+    expect(screen.queryByTestId("region-capacity-panel")).not.toBeInTheDocument();
+    expect(mockRegionCapacityPanel).not.toHaveBeenCalled();
+  });
+
+  it("adds the capacity panel below the chart when the allocation flag is on", async () => {
+    mockExperiments({ "platform.enable-data-worker-allocation": true });
+
+    await render(<DataWorkerUsage />);
+
+    await waitFor(() => expect(screen.getByTestId("usage-by-workspace-graph")).toBeInTheDocument());
+
+    const capacityPanel = screen.getByTestId("region-capacity-panel");
+    const graph = screen.getByTestId("usage-by-workspace-graph");
+
+    expect(screen.getByRole("button", { name: "US West" })).toBeInTheDocument();
+    expect(graph.compareDocumentPosition(capacityPanel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // The panel owns region selection, so it has to receive the window currently on screen.
+    expect(lastCapacityPanelProps()).toEqual(
+      expect.objectContaining({
+        regions: mockRegions,
+        selectedRegionId: "region-1",
+        selectedTimeRange: "1w",
+        requestDateRange: ["2026-08-17", "2026-08-24"],
+        displayRange: ["2026-08-17T20:00:00.000Z", "2026-08-24T20:00:00.000Z"],
+      })
+    );
   });
 });

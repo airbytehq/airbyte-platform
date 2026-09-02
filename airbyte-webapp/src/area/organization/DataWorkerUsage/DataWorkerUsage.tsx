@@ -13,9 +13,11 @@ import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { useListDataplaneGroups, useOrganizationWorkerUsage } from "core/api";
+import { useExperiment } from "core/services/Experiment";
 import { useCurrentTime } from "core/utils/time";
 
 import styles from "./DataWorkerUsage.module.scss";
+import { RegionCapacityPanel } from "./RegionCapacityPanel";
 import { UsageByWorkspaceGraph, UsageTimeRange } from "./UsageByWorkspaceGraph";
 import { findFirstRegionWithUsage, getRegionOptions, sortByNameAlphabetically } from "./utils";
 
@@ -56,6 +58,9 @@ const RegionControlButtonContent = ({
 export const DataWorkerUsage: React.FC = () => {
   const [selectedTimeRange, setSelectedTimeRange] = useState<UsageTimeRange>("1w");
   const [comparisonEnabled, setComparisonEnabled] = useState(false);
+  // Gating the render also gates the fetch: the allocation list is requested inside the panel, so an
+  // organization without the flag never calls the admin-only /data_worker_allocation/list endpoint.
+  const showRegionCapacity = useExperiment("platform.enable-data-worker-allocation");
   const regions = useListDataplaneGroups();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const { formatMessage } = useIntl();
@@ -151,88 +156,119 @@ export const DataWorkerUsage: React.FC = () => {
 
   return (
     <Box mt="xl">
-      <FlexContainer direction="column" alignItems="stretch" gap="lg">
-        <FlexContainer direction="column" alignItems="stretch" gap="sm">
-          <Heading as="h2" size="sm">
-            <FormattedMessage id="settings.organization.usageByWorkspace" />
-          </Heading>
-          <Text color="grey" size="lg">
-            <FormattedMessage id="settings.organization.usageByWorkspace.description" />
-          </Text>
-        </FlexContainer>
-        <FlexContainer alignItems="center" gap="md">
-          <fieldset className={styles.dataWorkerUsage__timeRangeControl}>
-            <legend className={styles.dataWorkerUsage__timeRangeLegend}>
-              <FormattedMessage id="settings.organization.usage.timeRange.legend" />
-            </legend>
-            {timeRangeOptions.map((option) => (
-              <label
-                key={option.value}
-                htmlFor={`organization-data-worker-usage-time-range-${option.value}`}
-                className={classNames(styles.dataWorkerUsage__timeRangeOption, {
-                  [styles["dataWorkerUsage__timeRangeOption--selected"]]: option.value === selectedTimeRange,
-                })}
-              >
-                <input
-                  id={`organization-data-worker-usage-time-range-${option.value}`}
-                  type="radio"
-                  name="organization-data-worker-usage-time-range"
-                  value={option.value}
-                  checked={selectedTimeRange === option.value}
-                  onChange={() => setSelectedTimeRange(option.value)}
-                  className={styles.dataWorkerUsage__timeRangeInput}
-                />
-                <Text
-                  color={option.value === selectedTimeRange ? "darkBlue" : "grey"}
-                  className={styles.dataWorkerUsage__timeRangeLabel}
-                  as="span"
-                  size="lg"
-                  bold
+      <FlexContainer direction="column" alignItems="stretch" gap="2xl">
+        <FlexContainer direction="column" alignItems="stretch" gap="lg">
+          <FlexContainer direction="column" alignItems="stretch" gap="sm">
+            <Heading as="h2" size="sm">
+              <FormattedMessage id="settings.organization.usageByWorkspace" />
+            </Heading>
+            <Text color="grey" size="lg">
+              <FormattedMessage id="settings.organization.usageByWorkspace.description" />
+            </Text>
+          </FlexContainer>
+          <FlexContainer alignItems="center" gap="md">
+            <fieldset className={styles.dataWorkerUsage__timeRangeControl}>
+              <legend className={styles.dataWorkerUsage__timeRangeLegend}>
+                <FormattedMessage id="settings.organization.usage.timeRange.legend" />
+              </legend>
+              {timeRangeOptions.map((option) => (
+                <label
+                  key={option.value}
+                  htmlFor={`organization-data-worker-usage-time-range-${option.value}`}
+                  className={classNames(styles.dataWorkerUsage__timeRangeOption, {
+                    [styles["dataWorkerUsage__timeRangeOption--selected"]]: option.value === selectedTimeRange,
+                  })}
                 >
-                  {option.label}
+                  <input
+                    id={`organization-data-worker-usage-time-range-${option.value}`}
+                    type="radio"
+                    name="organization-data-worker-usage-time-range"
+                    value={option.value}
+                    checked={selectedTimeRange === option.value}
+                    onChange={() => setSelectedTimeRange(option.value)}
+                    className={styles.dataWorkerUsage__timeRangeInput}
+                  />
+                  <Text
+                    color={option.value === selectedTimeRange ? "darkBlue" : "grey"}
+                    className={styles.dataWorkerUsage__timeRangeLabel}
+                    as="span"
+                    size="lg"
+                    bold
+                  >
+                    {option.label}
+                  </Text>
+                </label>
+              ))}
+            </fieldset>
+            <FlexItem>
+              <ListBox
+                options={regionOptions}
+                onSelect={setSelectedRegion}
+                selectedValue={selectedRegion}
+                placeholder={formatMessage({ id: "settings.organization.usage.selectRegion" })}
+                controlButtonContent={RegionControlButtonContent}
+              />
+            </FlexItem>
+            <FlexItem grow />
+            <FlexContainer alignItems="center" gap="sm">
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- the input is rendered by Switch */}
+              <label htmlFor="organization-data-worker-usage-comparison">
+                <Text as="span" size="lg">
+                  <FormattedMessage id="dataWorkerUsage.comparison.toggle" />
                 </Text>
               </label>
-            ))}
-          </fieldset>
-          <FlexItem>
-            <ListBox
-              options={regionOptions}
-              onSelect={setSelectedRegion}
-              selectedValue={selectedRegion}
-              placeholder={formatMessage({ id: "settings.organization.usage.selectRegion" })}
-              controlButtonContent={RegionControlButtonContent}
-            />
-          </FlexItem>
-          <FlexItem grow />
-          <FlexContainer alignItems="center" gap="sm">
-            {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- the input is rendered by Switch */}
-            <label htmlFor="organization-data-worker-usage-comparison">
-              <Text as="span" size="lg">
-                <FormattedMessage id="dataWorkerUsage.comparison.toggle" />
-              </Text>
-            </label>
-            <Switch
-              id="organization-data-worker-usage-comparison"
-              checked={comparisonEnabled}
-              onChange={(event) => setComparisonEnabled(event.target.checked)}
-              size="sm"
-            />
-          </FlexContainer>
-        </FlexContainer>
-        {selectedRegion && isLoadingTimeRange ? (
-          <FlexContainer
-            className={styles.dataWorkerUsage__loadingPlaceholder}
-            alignItems="center"
-            justifyContent="center"
-          >
-            <FlexContainer alignItems="center" gap="md">
-              <LoadingSpinner />
-              <Text>
-                <FormattedMessage id="settings.organization.usage.loadingUsageData" />
-              </Text>
+              <Switch
+                id="organization-data-worker-usage-comparison"
+                checked={comparisonEnabled}
+                onChange={(event) => setComparisonEnabled(event.target.checked)}
+                size="sm"
+              />
             </FlexContainer>
           </FlexContainer>
-        ) : selectedRegion ? (
+          {selectedRegion && isLoadingTimeRange ? (
+            <FlexContainer
+              className={styles.dataWorkerUsage__loadingPlaceholder}
+              alignItems="center"
+              justifyContent="center"
+            >
+              <FlexContainer alignItems="center" gap="md">
+                <LoadingSpinner />
+                <Text>
+                  <FormattedMessage id="settings.organization.usage.loadingUsageData" />
+                </Text>
+              </FlexContainer>
+            </FlexContainer>
+          ) : selectedRegion ? (
+            <Suspense
+              fallback={
+                <FlexContainer
+                  className={styles.dataWorkerUsage__loadingPlaceholder}
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <FlexContainer alignItems="center" gap="md">
+                    <LoadingSpinner />
+                    <Text>
+                      <FormattedMessage id="settings.organization.usage.loadingUsageData" />
+                    </Text>
+                  </FlexContainer>
+                </FlexContainer>
+              }
+            >
+              <UsageByWorkspaceGraph
+                selectedRegionId={selectedRegion}
+                requestDateRange={requestDateRange}
+                displayRange={displayRange}
+                historicalRequestDateRange={historicalRequestDateRange}
+                historicalDisplayRange={historicalDisplayRange}
+                selectedTimeRange={displayedTimeRange}
+                comparisonEnabled={comparisonEnabled}
+                committedDataWorkers={allUsage?.committedDataWorkers}
+              />
+            </Suspense>
+          ) : null}
+        </FlexContainer>
+        {showRegionCapacity && (
           <Suspense
             fallback={
               <FlexContainer
@@ -240,27 +276,20 @@ export const DataWorkerUsage: React.FC = () => {
                 alignItems="center"
                 justifyContent="center"
               >
-                <FlexContainer alignItems="center" gap="md">
-                  <LoadingSpinner />
-                  <Text>
-                    <FormattedMessage id="settings.organization.usage.loadingUsageData" />
-                  </Text>
-                </FlexContainer>
+                <LoadingSpinner />
               </FlexContainer>
             }
           >
-            <UsageByWorkspaceGraph
+            <RegionCapacityPanel
+              regions={sortedRegions}
               selectedRegionId={selectedRegion}
+              onSelectRegion={setSelectedRegion}
               requestDateRange={requestDateRange}
               displayRange={displayRange}
-              historicalRequestDateRange={historicalRequestDateRange}
-              historicalDisplayRange={historicalDisplayRange}
               selectedTimeRange={displayedTimeRange}
-              comparisonEnabled={comparisonEnabled}
-              committedDataWorkers={allUsage?.committedDataWorkers}
             />
           </Suspense>
-        ) : null}
+        )}
       </FlexContainer>
     </Box>
   );

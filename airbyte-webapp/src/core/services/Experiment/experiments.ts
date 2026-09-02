@@ -32,6 +32,7 @@ export interface Experiments {
   "connectorBuilder.generateConnectorFromParams": boolean;
   "onboarding.surveyEnabled": boolean;
   "organization.workerUsagePage": boolean;
+  "platform.enable-data-worker-allocation": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
   "platform.use-verified-domains-for-sso-activate": boolean;
@@ -86,6 +87,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.generateConnectorFromParams": false,
   "onboarding.surveyEnabled": false,
   "organization.workerUsagePage": false,
+  "platform.enable-data-worker-allocation": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,
   "platform.use-verified-domains-for-sso-activate": false,
