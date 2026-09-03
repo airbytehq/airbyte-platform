@@ -1747,7 +1747,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery-migrations",
         "releaseCandidates": {
-          "3.0.24": {
+          "3.1.0": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 300,
@@ -1830,7 +1830,7 @@
             ],
             "custom": false,
             "destinationDefinitionId": "22f6c74f-5699-40ff-833c-4a879ea40133",
-            "dockerImageTag": "3.0.24",
+            "dockerImageTag": "3.1.0",
             "dockerRepository": "airbyte/destination-bigquery",
             "documentationUrl": "https://docs.airbyte.com/integrations/destinations/bigquery",
             "externalDocumentationUrls": [
@@ -1867,33 +1867,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "octavia-bot[bot]",
-                "commit_author_email": "108746235+octavia-bot[bot]@users.noreply.github.com",
-                "commit_sha": "5506601e260b7e78f801477182e37548e71efd8d",
-                "commit_timestamp": "2026-08-24T15:05:38-07:00"
+                "commit_author": "Matt Bayley",
+                "commit_author_email": "matt.bayley@airbyte.io",
+                "commit_sha": "399fe97242998f9ff9b9b249daec03ca5dd825f7",
+                "commit_timestamp": "2026-09-03T15:49:36-07:00"
               },
               "release": {
                 "attributed_to": "sunil-kuruba",
                 "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "5506601e260b7e78f801477182e37548e71efd8d",
-                "merged_at": "2026-08-24T22:05:38Z",
+                "merge_commit_sha": "399fe97242998f9ff9b9b249daec03ca5dd825f7",
+                "merged_at": "2026-09-03T22:49:36Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 108746235,
-                "pr_author_login": "octavia-bot",
-                "pr_author_type": "Bot",
+                "pr_author_id": 31358253,
+                "pr_author_login": "mwbayley",
+                "pr_author_type": "User",
                 "pr_merged_by_login": "sunil-kuruba",
                 "pr_merged_by_type": "User",
-                "pr_number": 84985,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84985",
-                "released_at": "2026-08-24T22:05:38Z",
+                "pr_number": 85041,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85041",
+                "released_at": "2026-09-03T22:49:36Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-bigquery/3.0.24.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-bigquery/3.1.0.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/destination-bigquery/3.0.24/metadata.yaml",
-                "metadata_last_modified": "2026-08-24T22:12:18.379849+00:00",
-                "registry_entry_generated_at": "2026-08-24T22:12:18.379849+00:00"
+                "metadata_file_path": "metadata/airbyte/destination-bigquery/3.1.0/metadata.yaml",
+                "metadata_last_modified": "2026-09-03T22:55:57.386216+00:00",
+                "registry_entry_generated_at": "2026-09-03T22:55:57.386216+00:00"
               }
             },
             "githubIssueLabel": "destination-bigquery",
@@ -2051,6 +2051,13 @@
                     "order": 7,
                     "title": "Legacy raw tables",
                     "type": "boolean"
+                  },
+                  "job_project_id": {
+                    "description": "Optional. The GCP project ID where BigQuery jobs will be executed. When set, query jobs run against this project's quota instead of the dataset project's quota. This is useful for isolating BigQuery concurrent query quota between different workloads (e.g. data ingestion vs. analytics). The service account must have BigQuery Job User role on this project. If not set, jobs run in the dataset project (Project ID above).",
+                    "group": "advanced",
+                    "order": 4,
+                    "title": "Job Execution Project ID",
+                    "type": "string"
                   },
                   "loading_method": {
                     "description": "The way data will be uploaded to BigQuery.",
@@ -17136,7 +17143,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/redshift-migrations",
         "releaseCandidates": {
-          "4.0.9": {
+          "4.0.10": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 200,
@@ -17227,7 +17234,7 @@
             ],
             "custom": false,
             "destinationDefinitionId": "f7a7d195-377f-cf5b-70a5-be6b819019dc",
-            "dockerImageTag": "4.0.9",
+            "dockerImageTag": "4.0.10",
             "dockerRepository": "airbyte/destination-redshift",
             "documentationUrl": "https://docs.airbyte.com/integrations/destinations/redshift",
             "externalDocumentationUrls": [
@@ -17271,31 +17278,31 @@
               "git": {
                 "commit_author": "Sunil Kuruba",
                 "commit_author_email": "sunil.kuruba@airbyte.io",
-                "commit_sha": "6e15da9a42e69ab055fd3cceafbf11ad1972710f",
-                "commit_timestamp": "2026-09-01T15:28:37-07:00"
+                "commit_sha": "93d5a6ee41382bbd6b2099e155e8077e7da1eb3c",
+                "commit_timestamp": "2026-09-03T14:54:21-07:00"
               },
               "release": {
                 "attributed_to": "octavia-bot-admin",
                 "attributed_to_kind": "bot",
-                "merge_commit_sha": "6e15da9a42e69ab055fd3cceafbf11ad1972710f",
-                "merged_at": "2026-09-01T22:28:38Z",
+                "merge_commit_sha": "93d5a6ee41382bbd6b2099e155e8077e7da1eb3c",
+                "merged_at": "2026-09-03T21:54:22Z",
                 "pr_author_association": "CONTRIBUTOR",
                 "pr_author_id": 270477162,
                 "pr_author_login": "sunil-kuruba",
                 "pr_author_type": "User",
                 "pr_merged_by_login": "octavia-bot-admin",
                 "pr_merged_by_type": "Bot",
-                "pr_number": 85046,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/85046",
-                "released_at": "2026-09-01T22:28:38Z",
+                "pr_number": 85284,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85284",
+                "released_at": "2026-09-03T21:54:22Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-redshift/4.0.9.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-redshift/4.0.10.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/destination-redshift/4.0.9/metadata.yaml",
-                "metadata_last_modified": "2026-09-01T22:33:22.704732+00:00",
-                "registry_entry_generated_at": "2026-09-01T22:33:22.704732+00:00"
+                "metadata_file_path": "metadata/airbyte/destination-redshift/4.0.10/metadata.yaml",
+                "metadata_last_modified": "2026-09-03T22:02:56.125988+00:00",
+                "registry_entry_generated_at": "2026-09-03T22:02:56.125988+00:00"
               }
             },
             "githubIssueLabel": "destination-redshift",
@@ -21695,7 +21702,7 @@
       ],
       "custom": false,
       "destinationDefinitionId": "424892c4-daac-4491-b35d-c6688ba547ba",
-      "dockerImageTag": "4.1.2",
+      "dockerImageTag": "5.0.0",
       "dockerRepository": "airbyte/destination-snowflake",
       "documentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake",
       "externalDocumentationUrls": [
@@ -21734,8 +21741,8 @@
         "git": {
           "commit_author": "Sunil Kuruba",
           "commit_author_email": "sunil.kuruba@airbyte.io",
-          "commit_sha": "03bd033f62605c6686a27399cce5ad4c667f0c07",
-          "commit_timestamp": "2026-08-24T12:49:13-07:00"
+          "commit_sha": "f9f675f6590b768cd055571ccf7db2c7e88d478b",
+          "commit_timestamp": "2026-09-03T15:15:03-07:00"
         },
         "metrics": {
           "all": {
@@ -21754,25 +21761,25 @@
         "release": {
           "attributed_to": "sunil-kuruba",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "03bd033f62605c6686a27399cce5ad4c667f0c07",
-          "merged_at": "2026-08-24T19:49:14Z",
+          "merge_commit_sha": "f9f675f6590b768cd055571ccf7db2c7e88d478b",
+          "merged_at": "2026-09-03T22:15:04Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 270477162,
           "pr_author_login": "sunil-kuruba",
           "pr_author_type": "User",
           "pr_merged_by_login": "sunil-kuruba",
           "pr_merged_by_type": "User",
-          "pr_number": 84979,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84979",
-          "released_at": "2026-08-24T19:49:14Z",
+          "pr_number": 85314,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85314",
+          "released_at": "2026-09-03T22:15:04Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake/4.1.2.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake/5.0.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/destination-snowflake/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-24T19:54:13.223530+00:00",
-          "registry_entry_generated_at": "2026-08-24T19:54:13.223530+00:00"
+          "metadata_last_modified": "2026-09-03T22:19:23.415547+00:00",
+          "registry_entry_generated_at": "2026-09-03T22:19:23.415547+00:00"
         }
       },
       "githubIssueLabel": "destination-snowflake",
@@ -21800,6 +21807,12 @@
             "message": "The connector now requires ALTER TABLE permissions, so you must grant this permission to the Snowflake user. Otherwise, if you never interact with the raw tables, you can upgrade without taking any action. If you _do_ use the raw tables, make sure to read the migration guide for more details.",
             "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations#4.0.0",
             "upgradeDeadline": "2026-01-06"
+          },
+          "5.0.0": {
+            "deadlineAction": "auto_upgrade",
+            "message": "Username and password authentication is deprecated and will be removed in a future release. Key pair authentication is now the only recommended method. Snowflake is enforcing strong authentication on a rolling per-account basis between August and October 2026. If you are already using key pair authentication, no action is needed. Otherwise, see the migration guide for steps to generate a key pair and update your connection.",
+            "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations#5.0.0",
+            "upgradeDeadline": "2026-11-01"
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/destinations/snowflake-migrations",
@@ -21811,7 +21824,7 @@
             "strategy": "slow"
           },
           "defaultRolloutMode": "autopilot",
-          "enableProgressiveRollout": true,
+          "enableProgressiveRollout": false,
           "initialPercentage": 0,
           "maxPercentage": 50
         }
@@ -21900,7 +21913,7 @@
                 },
                 {
                   "additionalProperties": true,
-                  "description": "Configuration details for the Username and Password Authentication.",
+                  "description": "Deprecated: Username and password authentication is deprecated as of version 5.0.0 and will be removed in a future release. Snowflake is enforcing strong authentication on a rolling per-account basis between August and October 2026. Switch to key pair authentication instead. See the <a href=\"https://docs.airbyte.com/integrations/destinations/snowflake-migrations\">migration guide</a> for details.",
                   "properties": {
                     "auth_type": {
                       "default": "Username and Password",
@@ -21911,7 +21924,7 @@
                     },
                     "password": {
                       "airbyte_secret": true,
-                      "description": "Enter the password associated with the username.",
+                      "description": "Deprecated. Enter the password associated with the username.",
                       "order": 0,
                       "title": "Password",
                       "type": "string"
@@ -21921,7 +21934,7 @@
                     "auth_type",
                     "password"
                   ],
-                  "title": "Username and Password",
+                  "title": "Username and Password (Deprecated)",
                   "type": "object"
                 }
               ],
@@ -26387,15 +26400,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-aha/0.4.24.spdx.json",
@@ -27478,15 +27491,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-akeneo/0.0.49.spdx.json",
@@ -28255,7 +28268,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads-migrations",
         "releaseCandidates": {
-          "9.1.1": {
+          "9.2.0": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -28313,7 +28326,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "9.1.1",
+            "dockerImageTag": "9.2.0",
             "dockerRepository": "airbyte/source-amazon-ads",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-ads",
             "externalDocumentationUrls": [
@@ -28341,37 +28354,42 @@
                 "title": "Rate limits",
                 "type": "rate_limits",
                 "url": "https://advertising.amazon.com/API/docs/en-us/reference/concepts/rate-limiting"
+              },
+              {
+                "title": "Amazon Ads advanced tools docs repository",
+                "type": "spec_repository",
+                "url": "https://github.com/amzn/ads-advanced-tools-docs"
               }
             ],
             "generated": {
               "git": {
                 "commit_author": "devin-ai-integration[bot]",
                 "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "86f186f108168516f14312dbe5669b8270b789f9",
-                "commit_timestamp": "2026-08-26T12:15:36+00:00"
+                "commit_sha": "a60101992e6948eeb9047fe45ad230236f4a15b6",
+                "commit_timestamp": "2026-09-03T17:25:51-04:00"
               },
               "release": {
-                "attributed_to": "devin-ai-integration",
-                "attributed_to_kind": "bot",
-                "merge_commit_sha": "86f186f108168516f14312dbe5669b8270b789f9",
-                "merged_at": "2026-08-26T12:15:37Z",
+                "attributed_to": "maddiekashyapAB",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "a60101992e6948eeb9047fe45ad230236f4a15b6",
+                "merged_at": "2026-09-03T21:25:52Z",
                 "pr_author_association": "CONTRIBUTOR",
                 "pr_author_id": 158243242,
                 "pr_author_login": "devin-ai-integration",
                 "pr_author_type": "Bot",
-                "pr_merged_by_login": "octavia-bot-hoard",
-                "pr_merged_by_type": "Bot",
-                "pr_number": 84981,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/84981",
-                "released_at": "2026-08-26T12:15:37Z",
+                "pr_merged_by_login": "maddiekashyapAB",
+                "pr_merged_by_type": "User",
+                "pr_number": 74367,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/74367",
+                "released_at": "2026-09-03T21:25:52Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-ads/9.1.1.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-ads/9.2.0.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-amazon-ads/9.1.1/metadata.yaml",
-                "metadata_last_modified": "2026-08-26T12:20:26.086676+00:00",
-                "registry_entry_generated_at": "2026-08-26T12:20:26.086676+00:00"
+                "metadata_file_path": "metadata/airbyte/source-amazon-ads/9.2.0/metadata.yaml",
+                "metadata_last_modified": "2026-09-03T21:29:47.887718+00:00",
+                "registry_entry_generated_at": "2026-09-03T21:29:47.887718+00:00"
               }
             },
             "githubIssueLabel": "source-amazon-ads",
@@ -46972,15 +46990,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "high"
           }
         },
@@ -54356,15 +54374,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -60289,15 +60307,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "low"
           }
         },
         "release": {
@@ -64870,11 +64888,11 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-genesys/0.1.41.spdx.json",
@@ -77656,15 +77674,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -79736,16 +79754,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "release": {
@@ -80141,15 +80159,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "release": {
@@ -91618,7 +91636,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.4.41",
+      "dockerImageTag": "0.4.42",
       "dockerRepository": "airbyte/source-lever-hiring",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/lever-hiring",
       "externalDocumentationUrls": [
@@ -91640,10 +91658,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "09d269353a5eeacc3fa0c21281569a4d1d525112",
-          "commit_timestamp": "2026-08-18T06:22:22+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "062f1a94a0664f4c2f200e22618480b8336c60f2",
+          "commit_timestamp": "2026-09-03T23:06:49+00:00"
         },
         "metrics": {
           "all": {
@@ -91660,23 +91678,27 @@
           }
         },
         "release": {
-          "attributed_to": null,
-          "merge_commit_sha": "09d269353a5eeacc3fa0c21281569a4d1d525112",
-          "merged_at": "2026-08-18T06:22:23Z",
-          "pr_author_id": 230633153,
-          "pr_author_login": "octavia-bot-hoard",
+          "attributed_to": "jimruppert",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "062f1a94a0664f4c2f200e22618480b8336c60f2",
+          "merged_at": "2026-09-03T23:06:50Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
-          "pr_number": 84669,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84669",
-          "released_at": "2026-08-18T06:22:23Z",
+          "pr_merged_by_login": "jimruppert",
+          "pr_merged_by_type": "User",
+          "pr_number": 80293,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/80293",
+          "released_at": "2026-09-03T23:06:50Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-lever-hiring/0.4.41.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-lever-hiring/0.4.42.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-lever-hiring/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-18T06:26:48.244465+00:00",
-          "registry_entry_generated_at": "2026-08-18T06:26:48.244465+00:00"
+          "metadata_last_modified": "2026-09-03T23:11:00.496555+00:00",
+          "registry_entry_generated_at": "2026-09-03T23:11:00.496555+00:00"
         }
       },
       "githubIssueLabel": "source-lever-hiring",
@@ -99743,16 +99765,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "release": {
@@ -123035,15 +123057,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -141157,7 +141179,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.1.2",
+      "dockerImageTag": "2.0.0",
       "dockerRepository": "airbyte/source-snowflake",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake",
       "externalDocumentationUrls": [
@@ -141184,10 +141206,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "Matt Bayley",
-          "commit_author_email": "matt.bayley@airbyte.io",
-          "commit_sha": "acbd22b0a0abe7026bbf05ccb0f2cdf4ac3a06d2",
-          "commit_timestamp": "2026-08-21T11:13:04-07:00"
+          "commit_author": "Sunil Kuruba",
+          "commit_author_email": "sunil.kuruba@airbyte.io",
+          "commit_sha": "167585c357dabb109f95918e5bbf69b2767bd3ce",
+          "commit_timestamp": "2026-09-03T15:16:21-07:00"
         },
         "metrics": {
           "all": {
@@ -141204,27 +141226,27 @@
           }
         },
         "release": {
-          "attributed_to": "mwbayley",
+          "attributed_to": "sunil-kuruba",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "acbd22b0a0abe7026bbf05ccb0f2cdf4ac3a06d2",
-          "merged_at": "2026-08-21T18:13:05Z",
+          "merge_commit_sha": "167585c357dabb109f95918e5bbf69b2767bd3ce",
+          "merged_at": "2026-09-03T22:16:22Z",
           "pr_author_association": "CONTRIBUTOR",
-          "pr_author_id": 31358253,
-          "pr_author_login": "mwbayley",
+          "pr_author_id": 270477162,
+          "pr_author_login": "sunil-kuruba",
           "pr_author_type": "User",
-          "pr_merged_by_login": "mwbayley",
+          "pr_merged_by_login": "sunil-kuruba",
           "pr_merged_by_type": "User",
-          "pr_number": 84927,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/84927",
-          "released_at": "2026-08-21T18:13:05Z",
+          "pr_number": 85331,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/85331",
+          "released_at": "2026-09-03T22:16:22Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-snowflake/1.1.2.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-snowflake/2.0.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-snowflake/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-21T18:17:30.938527+00:00",
-          "registry_entry_generated_at": "2026-08-21T18:17:30.938527+00:00"
+          "metadata_last_modified": "2026-09-03T22:20:12.666573+00:00",
+          "registry_entry_generated_at": "2026-09-03T22:20:12.666573+00:00"
         }
       },
       "githubIssueLabel": "source-snowflake",
@@ -141243,6 +141265,12 @@
             "message": "**Important: This version introduces Airbyte certified source connector to replace community supported connector.**\n**What to expect when upgrading:**\n1. The certified connector configuration spec should be compatible with community version. 2. Full refresh sync mode should remain the same. 3. For incremental sync mode, a full refresh will be triggered for next sync because the connection state will not be compatible. New state will be populated after full refresh is completed.",
             "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake-migrations#1.0.0",
             "upgradeDeadline": "2025-09-30"
+          },
+          "2.0.0": {
+            "deadlineAction": "auto_upgrade",
+            "message": "Username and password authentication is deprecated and will be removed in a future release. Key pair authentication or a programmatic access token is now the recommended method. Snowflake is enforcing strong authentication on a rolling per-account basis between August and October 2026. If you are already using key pair or programmatic access token authentication, no action is needed. Otherwise, see the migration guide (https://docs.airbyte.com/integrations/sources/snowflake-migrations) for steps to migrate your connection.",
+            "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake-migrations#2.0.0",
+            "upgradeDeadline": "2026-11-01"
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/snowflake-migrations",
@@ -141254,7 +141282,7 @@
             "strategy": "slow"
           },
           "defaultRolloutMode": "autopilot",
-          "enableProgressiveRollout": true,
+          "enableProgressiveRollout": false,
           "initialPercentage": 0,
           "maxPercentage": 50
         }
@@ -141332,6 +141360,7 @@
                 },
                 {
                   "additionalProperties": true,
+                  "description": "Deprecated: Username and password authentication is deprecated as of version 2.0.0 and will be removed in a future release. Snowflake is enforcing strong authentication on a rolling per-account basis between August and October 2026. Switch to key pair authentication or a programmatic access token instead. See the <a href=\"https://docs.airbyte.com/integrations/sources/snowflake-migrations\">migration guide</a> for details.",
                   "order": 2,
                   "properties": {
                     "auth_type": {
@@ -141343,7 +141372,7 @@
                     },
                     "password": {
                       "airbyte_secret": true,
-                      "description": "The password associated with the username.",
+                      "description": "Deprecated. The password associated with the username.",
                       "order": 2,
                       "title": "Password",
                       "type": "string"
@@ -141360,7 +141389,7 @@
                     "username",
                     "password"
                   ],
-                  "title": "Username and Password",
+                  "title": "Username and Password (Deprecated)",
                   "type": "object"
                 },
                 {
@@ -156858,15 +156887,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-yotpo/0.2.16.spdx.json",
@@ -156997,16 +157026,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "high",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "high",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "high",
+            "usage": "low"
           }
         },
         "release": {
@@ -161932,15 +161961,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "low"
           }
         },
