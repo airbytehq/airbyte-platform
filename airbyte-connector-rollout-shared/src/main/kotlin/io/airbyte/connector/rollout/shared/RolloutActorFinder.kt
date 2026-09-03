@@ -219,6 +219,28 @@ class RolloutActorFinder(
     )
   }
 
+  fun getActorIdsWithFailingLatestJob(
+    connectorRollout: ConnectorRollout,
+    actorIds: List<UUID>,
+  ): Set<UUID> {
+    if (actorIds.isEmpty()) return emptySet()
+
+    val actorType = getActorType(connectorRollout.actorDefinitionId)
+    val connectionsWithLatestJob =
+      getSortedConnectionsWithLatestJob(
+        connectorRollout,
+        actorIds,
+        connectorRollout.actorDefinitionId,
+        actorType,
+        false,
+        null,
+        jobsCreatedAtStart = OffsetDateTime.now().minusDays(1),
+      )
+    val actorJobInfo = getActorJobInfo(connectorRollout, connectionsWithLatestJob, actorType, null)
+    // Match candidate selection: one failing latest job across any connection excludes the actor from migration.
+    return actorJobInfo.filterValues { it.nFailed > 0 }.keys
+  }
+
   @WithSpan
   internal fun getActorJobInfo(
     connectorRollout: ConnectorRollout,
@@ -438,6 +460,7 @@ class RolloutActorFinder(
     actorType: ActorType,
     includeManual: Boolean,
     versionId: UUID?,
+    jobsCreatedAtStart: OffsetDateTime? = null,
   ): List<ConnectionWithLatestJob> {
     logger.info {
       "Getting sorted actor definition connections for actor Ids. " +
@@ -471,7 +494,7 @@ class RolloutActorFinder(
             connectorRollout,
             batchConnectionsForJobLookup.associateBy { it.connectionId },
             actorType,
-            Instant.ofEpochMilli(connectorRollout.createdAt).atOffset(ZoneOffset.UTC),
+            jobsCreatedAtStart ?: Instant.ofEpochMilli(connectorRollout.createdAt).atOffset(ZoneOffset.UTC),
             versionId,
           )
 

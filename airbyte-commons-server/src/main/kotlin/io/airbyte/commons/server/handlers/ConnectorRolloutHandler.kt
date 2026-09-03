@@ -239,6 +239,17 @@ open class ConnectorRolloutHandler
           connectorRollout.releaseCandidateVersionId,
         )
       }
+      if (connectorRolloutFinalize.state == ConnectorRolloutStateTerminal.SUCCEEDED) {
+        val rolloutOrigins =
+          connectorRolloutService
+            .listConnectorRollouts(connectorRollout.actorDefinitionId)
+            .map { it.id.toString() }
+        actorDefinitionVersionUpdater.removeObsoleteReleaseCandidatePins(
+          connectorRollout.actorDefinitionId,
+          rolloutOrigins,
+          connectorRollout.releaseCandidateVersionId,
+        )
+      }
 
       val currentTime = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
 
@@ -284,9 +295,18 @@ open class ConnectorRolloutHandler
       // If actors are still pinned to a previous rollout's release candidate, we migrate them to the new release candidate
       if (connectorRolloutStart.migratePins) {
         logger.info { "Migrating pins for connector rollout ID: ${connectorRollout.id}" }
-        actorDefinitionVersionUpdater.migrateReleaseCandidatePins(
+        val rolloutOrigins = connectorRolloutService.listConnectorRollouts(connectorRollout.actorDefinitionId).map { it.id.toString() }
+        val pinnedActorIds = actorDefinitionVersionUpdater.getActorsPinnedByRollouts(connectorRollout.actorDefinitionId, rolloutOrigins)
+        val failingActorIds = rolloutActorFinder.getActorIdsWithFailingLatestJob(connectorRollout, pinnedActorIds.toList())
+        if (failingActorIds.isNotEmpty()) {
+          logger.info {
+            "Excluding ${failingActorIds.size} actors with failing latest syncs from pin migration for rollout ${connectorRollout.id}: $failingActorIds"
+          }
+        }
+        actorDefinitionVersionUpdater.migrateReleaseCandidatePinsForActors(
           connectorRollout.actorDefinitionId,
-          connectorRolloutService.listConnectorRollouts(connectorRollout.actorDefinitionId).map { it.id.toString() },
+          rolloutOrigins,
+          pinnedActorIds - failingActorIds,
           connectorRollout.id.toString(),
           connectorRollout.releaseCandidateVersionId,
         )

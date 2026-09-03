@@ -337,21 +337,110 @@ class ActorDefinitionVersionUpdater(
     scopedConfigurationService.insertScopedConfigurations(scopedConfigurationsToCreate)
   }
 
-  fun migrateReleaseCandidatePins(
+  fun getActorsPinnedByRollouts(
     actorDefinitionId: UUID,
     origins: List<String>,
+  ): Set<UUID> =
+    scopedConfigurationService
+      .listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        origins,
+      ).map { it.scopeId }
+      .toSet()
+
+  fun migrateReleaseCandidatePinsForActors(
+    actorDefinitionId: UUID,
+    origins: List<String>,
+    actorIds: Set<UUID>,
     newOrigin: String,
     newReleaseCandidateVersionId: UUID,
   ) {
-    scopedConfigurationService.updateScopedConfigurationsOriginAndValuesForOriginInList(
-      ConnectorVersionKey.key,
-      ConfigResourceType.ACTOR_DEFINITION,
-      actorDefinitionId,
-      ConfigOriginType.CONNECTOR_ROLLOUT,
-      origins,
-      newOrigin,
-      newReleaseCandidateVersionId.toString(),
-    )
+    if (actorIds.isEmpty()) return
+
+    val scopedConfigsToMigrate =
+      scopedConfigurationService
+        .listScopedConfigurationsWithOrigins(
+          ConnectorVersionKey.key,
+          ConfigResourceType.ACTOR_DEFINITION,
+          actorDefinitionId,
+          ConfigOriginType.CONNECTOR_ROLLOUT,
+          origins,
+        ).filter { it.scopeId in actorIds }
+        .map {
+          it
+            .withOrigin(newOrigin)
+            .withValue(newReleaseCandidateVersionId.toString())
+        }
+
+    if (scopedConfigsToMigrate.isNotEmpty()) {
+      scopedConfigurationService.upsertScopedConfigurations(scopedConfigsToMigrate)
+    }
+  }
+
+  fun removeObsoleteReleaseCandidatePins(
+    actorDefinitionId: UUID,
+    origins: List<String>,
+    promotedVersionId: UUID,
+  ) {
+    val promotedVersion = actorDefinitionService.getActorDefinitionVersion(promotedVersionId)
+    if (!STABLE_VERSION_TAG_PATTERN.matches(promotedVersion.dockerImageTag)) return
+    val promotedTag = Version(promotedVersion.dockerImageTag)
+
+    val rolloutPins =
+      scopedConfigurationService
+        .listScopedConfigurationsWithOrigins(
+          ConnectorVersionKey.key,
+          ConfigResourceType.ACTOR_DEFINITION,
+          actorDefinitionId,
+          ConfigOriginType.CONNECTOR_ROLLOUT,
+          origins,
+        ).filter { it.value != promotedVersionId.toString() }
+
+    val versionById =
+      rolloutPins
+        .map { it.value }
+        .distinct()
+        .mapNotNull { value ->
+          try {
+            value to actorDefinitionService.getActorDefinitionVersion(UUID.fromString(value))
+          } catch (e: Exception) {
+            logger.warn(e) { "Skipping rollout pin with unresolvable version $value" }
+            null
+          }
+        }.toMap()
+
+    val stalePins =
+      rolloutPins.filter { pin ->
+        val tag = versionById[pin.value]?.dockerImageTag ?: return@filter false
+        STABLE_VERSION_TAG_PATTERN.matches(tag) && promotedTag.greaterThan(Version(tag))
+      }
+
+    var convertedPinCount = 0
+    val pinsToDelete =
+      stalePins.filterNot { pin ->
+        val converted =
+          try {
+            createBreakingChangePinIfNeeded(actorDefinitionId, UUID.fromString(pin.value), pin.scopeId)
+          } catch (e: Exception) {
+            logger.warn(e) { "Skipping obsolete pin ${pin.id} for actor ${pin.scopeId}" }
+            true
+          }
+        if (converted) {
+          convertedPinCount++
+        }
+        converted
+      }
+    if (pinsToDelete.isNotEmpty()) {
+      scopedConfigurationService.deleteScopedConfigurations(pinsToDelete.map { it.id })
+    }
+    if (stalePins.isNotEmpty()) {
+      logger.info {
+        "Removed ${pinsToDelete.size} and converted $convertedPinCount obsolete rollout pins for actor definition $actorDefinitionId"
+      }
+    }
   }
 
   @InternalForTesting

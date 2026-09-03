@@ -1385,6 +1385,68 @@ class RolloutActorFinderTest {
     assertEquals(1, candidates.size, "Only the connection with the succeeded job should pass the filter")
   }
 
+  @Test
+  fun `getActorIdsWithFailingLatestJob returns only actors with failing jobs`() {
+    val actorDefinitionId = SOURCE_ACTOR_DEFINITION_ID
+    val failingActorId = UUID.randomUUID()
+    val succeededActorId = UUID.randomUUID()
+    val actorWithNoJobsId = UUID.randomUUID()
+    val connections =
+      listOf(
+        ConnectionSummary(UUID.randomUUID(), false, null, failingActorId, UUID.randomUUID()),
+        ConnectionSummary(UUID.randomUUID(), false, null, succeededActorId, UUID.randomUUID()),
+        ConnectionSummary(UUID.randomUUID(), false, null, actorWithNoJobsId, UUID.randomUUID()),
+      )
+    val connectorRollout = createMockConnectorRollout(actorDefinitionId)
+
+    every { sourceService.getStandardSourceDefinition(actorDefinitionId) } returns StandardSourceDefinition()
+    every {
+      connectionService.listConnectionSummaryByActorDefinitionIdAndActorIds(
+        actorDefinitionId,
+        ActorType.SOURCE.value(),
+        listOf(failingActorId, succeededActorId, actorWithNoJobsId),
+      )
+    } returns connections
+    every { jobService.findLatestJobPerScope(any(), any(), any()) } returns
+      listOf(
+        jobWithVersionAndDefaultFlag(
+          actorType = ActorType.SOURCE,
+          versionId = null,
+          isDefault = true,
+          scope = connections[0].connectionId.toString(),
+          status = JobStatus.FAILED,
+        ),
+        jobWithVersionAndDefaultFlag(
+          actorType = ActorType.SOURCE,
+          versionId = null,
+          isDefault = true,
+          scope = connections[1].connectionId.toString(),
+          status = JobStatus.SUCCEEDED,
+        ),
+      )
+
+    val failingActorIds =
+      rolloutActorFinder.getActorIdsWithFailingLatestJob(
+        connectorRollout,
+        listOf(failingActorId, succeededActorId, actorWithNoJobsId),
+      )
+
+    assertEquals(setOf(failingActorId), failingActorIds)
+  }
+
+  @Test
+  fun `getActorIdsWithFailingLatestJob returns empty without service calls for empty input`() {
+    val result = rolloutActorFinder.getActorIdsWithFailingLatestJob(createMockConnectorRollout(SOURCE_ACTOR_DEFINITION_ID), emptyList())
+
+    assertEquals(emptySet<UUID>(), result)
+    verify(exactly = 0) {
+      sourceService.getStandardSourceDefinition(any())
+      destinationService.getStandardDestinationDefinition(any())
+      connectionService.listConnectionSummaryByActorDefinitionIdAndActorIds(any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
+    }
+  }
+
   @ParameterizedTest
   @EnumSource(ActorType::class)
   fun `sortActorIdsBySyncFrequency returns actorIds in sync order and skips duplicates`(actorType: ActorType) {

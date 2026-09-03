@@ -34,6 +34,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.spyk
 import io.mockk.verify
 import io.mockk.verifyAll
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -763,42 +764,524 @@ internal class ActorDefinitionVersionUpdaterTest {
   }
 
   @Test
-  fun testMigrateReleaseCandidatePins() {
+  fun testGetActorsPinnedByRollouts() {
+    val actorDefinitionId = UUID.randomUUID()
+    val origins = listOf("origin1", "origin2")
+    val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+    val scopedConfigurations =
+      actorIds.mapIndexed { index, actorId ->
+        ScopedConfiguration()
+          .withId(UUID.randomUUID())
+          .withKey(ConnectorVersionKey.key)
+          .withValue(UUID.randomUUID().toString())
+          .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+          .withResourceId(actorDefinitionId)
+          .withScopeType(ConfigScopeType.ACTOR)
+          .withScopeId(actorId)
+          .withOriginType(ConfigOriginType.CONNECTOR_ROLLOUT)
+          .withOrigin(origins[index])
+      }
+
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        origins,
+      )
+    } returns scopedConfigurations
+
+    val result = actorDefinitionVersionUpdater.getActorsPinnedByRollouts(actorDefinitionId, origins)
+
+    assertEquals(actorIds.toSet(), result)
+    verify {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        origins,
+      )
+    }
+  }
+
+  @Test
+  fun testGetActorsPinnedByRolloutsWithNoPins() {
+    val actorDefinitionId = UUID.randomUUID()
+    val origins = listOf("origin1")
+
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        origins,
+      )
+    } returns emptyList()
+
+    assertEquals(emptySet<UUID>(), actorDefinitionVersionUpdater.getActorsPinnedByRollouts(actorDefinitionId, origins))
+  }
+
+  @Test
+  fun testMigrateReleaseCandidatePinsForActors() {
     val actorDefinitionId = UUID.randomUUID()
     val origins = listOf("origin1", "origin2")
     val newOrigin = "origin3"
     val newReleaseCandidateVersionId = UUID.randomUUID()
+    val actorToMigrate = UUID.randomUUID()
+    val actorToKeep = UUID.randomUUID()
+    val scopedConfigurationToMigrate =
+      ScopedConfiguration()
+        .withId(UUID.randomUUID())
+        .withKey(ConnectorVersionKey.key)
+        .withValue(UUID.randomUUID().toString())
+        .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+        .withResourceId(actorDefinitionId)
+        .withScopeType(ConfigScopeType.ACTOR)
+        .withScopeId(actorToMigrate)
+        .withOriginType(ConfigOriginType.CONNECTOR_ROLLOUT)
+        .withOrigin(origins.first())
+    val scopedConfigurationToExclude =
+      ScopedConfiguration()
+        .withId(UUID.randomUUID())
+        .withKey(ConnectorVersionKey.key)
+        .withValue(UUID.randomUUID().toString())
+        .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+        .withResourceId(actorDefinitionId)
+        .withScopeType(ConfigScopeType.ACTOR)
+        .withScopeId(actorToKeep)
+        .withOriginType(ConfigOriginType.CONNECTOR_ROLLOUT)
+        .withOrigin(origins.last())
+    val scopedConfigurations = listOf(scopedConfigurationToMigrate, scopedConfigurationToExclude)
 
     every {
-      scopedConfigurationService.updateScopedConfigurationsOriginAndValuesForOriginInList(
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
         ConnectorVersionKey.key,
         ConfigResourceType.ACTOR_DEFINITION,
         actorDefinitionId,
         ConfigOriginType.CONNECTOR_ROLLOUT,
         origins,
-        newOrigin,
-        newReleaseCandidateVersionId.toString(),
       )
-    } just Runs
+    } returns scopedConfigurations
+    every { scopedConfigurationService.upsertScopedConfigurations(any()) } just Runs
 
-    actorDefinitionVersionUpdater.migrateReleaseCandidatePins(
+    actorDefinitionVersionUpdater.migrateReleaseCandidatePinsForActors(
       actorDefinitionId,
       origins,
+      setOf(actorToMigrate),
       newOrigin,
       newReleaseCandidateVersionId,
     )
 
+    val configsSlot = slot<List<ScopedConfiguration>>()
     verify {
-      scopedConfigurationService.updateScopedConfigurationsOriginAndValuesForOriginInList(
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
         ConnectorVersionKey.key,
         ConfigResourceType.ACTOR_DEFINITION,
         actorDefinitionId,
         ConfigOriginType.CONNECTOR_ROLLOUT,
         origins,
-        newOrigin,
-        newReleaseCandidateVersionId.toString(),
       )
+      scopedConfigurationService.upsertScopedConfigurations(capture(configsSlot))
     }
+    assertEquals(1, configsSlot.captured.size)
+    assertEquals(scopedConfigurationToMigrate.id, configsSlot.captured.single().id)
+    assertEquals(actorToMigrate, configsSlot.captured.single().scopeId)
+    assertEquals(newOrigin, configsSlot.captured.single().origin)
+    assertEquals(newReleaseCandidateVersionId.toString(), configsSlot.captured.single().value)
+  }
+
+  @Test
+  fun testMigrateReleaseCandidatePinsForActorsWithNoMatchingPins() {
+    val actorDefinitionId = UUID.randomUUID()
+    val origins = listOf("origin1")
+    val pinnedActorId = UUID.randomUUID()
+
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        actorDefinitionId,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        origins,
+      )
+    } returns listOf(buildReleaseCandidateScopedConfig(pinnedActorId, DEFAULT_VERSION.versionId, UUID.randomUUID()))
+
+    actorDefinitionVersionUpdater.migrateReleaseCandidatePinsForActors(
+      actorDefinitionId,
+      origins,
+      setOf(UUID.randomUUID()),
+      "new-origin",
+      UUID.randomUUID(),
+    )
+
+    verify(exactly = 0) {
+      scopedConfigurationService.upsertScopedConfigurations(any())
+    }
+  }
+
+  @Test
+  fun testMigrateReleaseCandidatePinsForActorsWithNoActors() {
+    val actorDefinitionId = UUID.randomUUID()
+    val origins = listOf("origin1")
+
+    actorDefinitionVersionUpdater.migrateReleaseCandidatePinsForActors(
+      actorDefinitionId,
+      origins,
+      emptySet(),
+      "new-origin",
+      UUID.randomUUID(),
+    )
+
+    verify(exactly = 0) {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(any(), any(), any(), any(), any())
+    }
+    verify(exactly = 0) {
+      scopedConfigurationService.upsertScopedConfigurations(any())
+    }
+  }
+
+  @Test
+  fun `test removeObsoleteReleaseCandidatePins deletes older stable pins and resolves each version once`() {
+    val promotedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("2.0.0")
+    val pinnedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("1.0.0")
+    val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+    val rolloutPins = actorIds.map { buildRolloutPin(it, pinnedVersion.versionId) }
+
+    every { actorDefinitionService.getActorDefinitionVersion(promotedVersion.versionId) } returns promotedVersion
+    every { actorDefinitionService.getActorDefinitionVersion(pinnedVersion.versionId) } returns pinnedVersion
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns Optional.empty()
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        listOf("rollout"),
+      )
+    } returns rolloutPins
+
+    actorDefinitionVersionUpdater.removeObsoleteReleaseCandidatePins(
+      ACTOR_DEFINITION_ID,
+      listOf("rollout"),
+      promotedVersion.versionId,
+    )
+
+    verify(exactly = 1) { actorDefinitionService.getActorDefinitionVersion(pinnedVersion.versionId) }
+    verify { scopedConfigurationService.deleteScopedConfigurations(rolloutPins.map { it.id }) }
+  }
+
+  @Test
+  fun `test removeObsoleteReleaseCandidatePins keeps promoted version pin`() {
+    val promotedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("2.0.0")
+    val promotedPin = buildRolloutPin(UUID.randomUUID(), promotedVersion.versionId)
+
+    every { actorDefinitionService.getActorDefinitionVersion(promotedVersion.versionId) } returns promotedVersion
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        listOf("rollout"),
+      )
+    } returns listOf(promotedPin)
+
+    actorDefinitionVersionUpdater.removeObsoleteReleaseCandidatePins(
+      ACTOR_DEFINITION_ID,
+      listOf("rollout"),
+      promotedVersion.versionId,
+    )
+
+    verify(exactly = 0) { scopedConfigurationService.deleteScopedConfigurations(any()) }
+  }
+
+  @Test
+  fun `test removeObsoleteReleaseCandidatePins keeps newer stable pin`() {
+    val promotedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("2.0.0")
+    val newerVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("3.0.0")
+    val newerPin = buildRolloutPin(UUID.randomUUID(), newerVersion.versionId)
+
+    every { actorDefinitionService.getActorDefinitionVersion(promotedVersion.versionId) } returns promotedVersion
+    every { actorDefinitionService.getActorDefinitionVersion(newerVersion.versionId) } returns newerVersion
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns Optional.empty()
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        listOf("rollout"),
+      )
+    } returns listOf(newerPin)
+
+    actorDefinitionVersionUpdater.removeObsoleteReleaseCandidatePins(
+      ACTOR_DEFINITION_ID,
+      listOf("rollout"),
+      promotedVersion.versionId,
+    )
+
+    verify(exactly = 0) { scopedConfigurationService.deleteScopedConfigurations(any()) }
+  }
+
+  @Test
+  fun `test removeObsoleteReleaseCandidatePins keeps non stable pin`() {
+    val promotedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("2.0.0")
+    val prereleaseVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("2.6.46-rc.1")
+    val prereleasePin = buildRolloutPin(UUID.randomUUID(), prereleaseVersion.versionId)
+
+    every { actorDefinitionService.getActorDefinitionVersion(promotedVersion.versionId) } returns promotedVersion
+    every { actorDefinitionService.getActorDefinitionVersion(prereleaseVersion.versionId) } returns prereleaseVersion
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        listOf("rollout"),
+      )
+    } returns listOf(prereleasePin)
+
+    actorDefinitionVersionUpdater.removeObsoleteReleaseCandidatePins(
+      ACTOR_DEFINITION_ID,
+      listOf("rollout"),
+      promotedVersion.versionId,
+    )
+
+    verify(exactly = 0) { scopedConfigurationService.deleteScopedConfigurations(any()) }
+  }
+
+  @Test
+  fun `test removeObsoleteReleaseCandidatePins converts stale pin across breaking change`() {
+    val promotedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("2.0.0")
+    val pinnedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("1.0.0")
+    val safeVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("1.4.0")
+    val breakingChange = MockData.actorDefinitionBreakingChange("1.5.0")!!.withActorDefinitionId(ACTOR_DEFINITION_ID)
+    val pin = buildRolloutPin(UUID.randomUUID(), pinnedVersion.versionId)
+    val upsertedConfigs = slot<List<ScopedConfiguration>>()
+
+    every { actorDefinitionService.getActorDefinitionVersion(promotedVersion.versionId) } returns promotedVersion
+    every { actorDefinitionService.getActorDefinitionVersion(pinnedVersion.versionId) } returns pinnedVersion
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns Optional.of(promotedVersion)
+    every { actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID) } returns listOf(breakingChange)
+    every { actorDefinitionService.listActorDefinitionVersionsForDefinition(ACTOR_DEFINITION_ID) } returns listOf(pinnedVersion, safeVersion)
+    every { scopedConfigurationService.upsertScopedConfigurations(capture(upsertedConfigs)) } just Runs
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        listOf("rollout"),
+      )
+    } returns listOf(pin)
+
+    actorDefinitionVersionUpdater.removeObsoleteReleaseCandidatePins(
+      ACTOR_DEFINITION_ID,
+      listOf("rollout"),
+      promotedVersion.versionId,
+    )
+
+    verify { scopedConfigurationService.upsertScopedConfigurations(any()) }
+    verify(exactly = 0) { scopedConfigurationService.deleteScopedConfigurations(any()) }
+    assertEquals(ConfigOriginType.BREAKING_CHANGE, upsertedConfigs.captured.single().originType)
+    assertEquals(pin.scopeId, upsertedConfigs.captured.single().scopeId)
+    assertEquals(
+      safeVersion.versionId,
+      upsertedConfigs.captured
+        .single()
+        .value
+        .let(UUID::fromString),
+    )
+  }
+
+  @Test
+  fun `test removeObsoleteReleaseCandidatePins with no rollout pins does not delete`() {
+    val promotedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("2.0.0")
+
+    every { actorDefinitionService.getActorDefinitionVersion(promotedVersion.versionId) } returns promotedVersion
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        listOf("rollout"),
+      )
+    } returns emptyList()
+
+    actorDefinitionVersionUpdater.removeObsoleteReleaseCandidatePins(
+      ACTOR_DEFINITION_ID,
+      listOf("rollout"),
+      promotedVersion.versionId,
+    )
+
+    verify(exactly = 0) { scopedConfigurationService.deleteScopedConfigurations(any()) }
+  }
+
+  @Test
+  fun `test removeObsoleteReleaseCandidatePins skips unresolvable version and deletes other stale pins`() {
+    val promotedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("2.0.0")
+    val unresolvableVersionId = UUID.randomUUID()
+    val pinnedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("1.0.0")
+    val unresolvablePin = buildRolloutPin(UUID.randomUUID(), unresolvableVersionId)
+    val pinnedPin = buildRolloutPin(UUID.randomUUID(), pinnedVersion.versionId)
+
+    every { actorDefinitionService.getActorDefinitionVersion(promotedVersion.versionId) } returns promotedVersion
+    every {
+      actorDefinitionService.getActorDefinitionVersion(unresolvableVersionId)
+    } throws IllegalStateException("version not found")
+    every { actorDefinitionService.getActorDefinitionVersion(pinnedVersion.versionId) } returns pinnedVersion
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns Optional.empty()
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        listOf("rollout"),
+      )
+    } returns listOf(unresolvablePin, pinnedPin)
+
+    actorDefinitionVersionUpdater.removeObsoleteReleaseCandidatePins(
+      ACTOR_DEFINITION_ID,
+      listOf("rollout"),
+      promotedVersion.versionId,
+    )
+
+    verify { scopedConfigurationService.deleteScopedConfigurations(listOf(pinnedPin.id)) }
+  }
+
+  @Test
+  fun `test removeObsoleteReleaseCandidatePins skips non UUID version`() {
+    val promotedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("2.0.0")
+    val pin = buildRolloutPin(UUID.randomUUID(), UUID.randomUUID()).withValue("not-a-uuid")
+
+    every { actorDefinitionService.getActorDefinitionVersion(promotedVersion.versionId) } returns promotedVersion
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        listOf("rollout"),
+      )
+    } returns listOf(pin)
+
+    actorDefinitionVersionUpdater.removeObsoleteReleaseCandidatePins(
+      ACTOR_DEFINITION_ID,
+      listOf("rollout"),
+      promotedVersion.versionId,
+    )
+
+    verify(exactly = 0) { scopedConfigurationService.deleteScopedConfigurations(any()) }
+  }
+
+  @Test
+  fun `test removeObsoleteReleaseCandidatePins preserves pin when breaking change conversion fails`() {
+    val promotedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("2.0.0")
+    val firstPinnedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("1.0.0")
+    val secondPinnedVersion =
+      ActorDefinitionVersion()
+        .withVersionId(UUID.randomUUID())
+        .withActorDefinitionId(ACTOR_DEFINITION_ID)
+        .withDockerImageTag("1.1.0")
+    val firstPin = buildRolloutPin(UUID.randomUUID(), firstPinnedVersion.versionId)
+    val secondPin = buildRolloutPin(UUID.randomUUID(), secondPinnedVersion.versionId)
+    val updater = spyk(actorDefinitionVersionUpdater)
+
+    every { actorDefinitionService.getActorDefinitionVersion(promotedVersion.versionId) } returns promotedVersion
+    every { actorDefinitionService.getActorDefinitionVersion(firstPinnedVersion.versionId) } returns firstPinnedVersion
+    every { actorDefinitionService.getActorDefinitionVersion(secondPinnedVersion.versionId) } returns secondPinnedVersion
+    every {
+      scopedConfigurationService.listScopedConfigurationsWithOrigins(
+        ConnectorVersionKey.key,
+        ConfigResourceType.ACTOR_DEFINITION,
+        ACTOR_DEFINITION_ID,
+        ConfigOriginType.CONNECTOR_ROLLOUT,
+        listOf("rollout"),
+      )
+    } returns listOf(firstPin, secondPin)
+    every {
+      updater.createBreakingChangePinIfNeeded(ACTOR_DEFINITION_ID, firstPinnedVersion.versionId, firstPin.scopeId)
+    } throws IllegalStateException("conversion failed")
+    every {
+      updater.createBreakingChangePinIfNeeded(ACTOR_DEFINITION_ID, secondPinnedVersion.versionId, secondPin.scopeId)
+    } returns false
+
+    updater.removeObsoleteReleaseCandidatePins(
+      ACTOR_DEFINITION_ID,
+      listOf("rollout"),
+      promotedVersion.versionId,
+    )
+
+    verify { scopedConfigurationService.deleteScopedConfigurations(listOf(secondPin.id)) }
   }
 
   @ParameterizedTest
@@ -1166,6 +1649,21 @@ internal class ActorDefinitionVersionUpdaterTest {
       .withScopeId(actorId)
       .withOriginType(ConfigOriginType.CONNECTOR_ROLLOUT)
       .withOrigin(defaultVersionId.toString())
+
+  private fun buildRolloutPin(
+    actorId: UUID,
+    versionId: UUID,
+  ): ScopedConfiguration =
+    ScopedConfiguration()
+      .withId(UUID.randomUUID())
+      .withKey(ConnectorVersionKey.key)
+      .withValue(versionId.toString())
+      .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+      .withResourceId(ACTOR_DEFINITION_ID)
+      .withScopeType(ConfigScopeType.ACTOR)
+      .withScopeId(actorId)
+      .withOriginType(ConfigOriginType.CONNECTOR_ROLLOUT)
+      .withOrigin("rollout")
 
   private fun idsToConfigScopeMap(awoIds: ActorWorkspaceOrganizationIds): ConfigScopeMapWithId =
     ConfigScopeMapWithId(
