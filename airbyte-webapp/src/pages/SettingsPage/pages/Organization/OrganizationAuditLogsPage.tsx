@@ -13,6 +13,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Option } from "components/ui/forms";
 import { Heading } from "components/ui/Heading";
 import { ListBox } from "components/ui/ListBox";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Table } from "components/ui/Table";
 import { Text } from "components/ui/Text";
@@ -104,7 +105,7 @@ export const OrganizationAuditLogsPage: React.FC = () => {
   const optionSourceQuery = useListAuditLogs(scopeFilters);
   const optionSourceEntries = useMemo(() => optionSourceQuery.data?.auditLogs ?? [], [optionSourceQuery.data]);
 
-  const { data, isLoading, isError } = useListAuditLogs(filters, pageToken);
+  const { data, isLoading, isFetching, isError } = useListAuditLogs(filters, pageToken);
 
   const workspacesQuery = useListWorkspacesInOrganization({
     organizationId,
@@ -308,6 +309,15 @@ export const OrganizationAuditLogsPage: React.FC = () => {
           />
         </FlexItem>
       </FlexContainer>
+
+      {/* The list query keeps previous data, so refetches after a filter or page change leave the
+          previous rows on screen with no sign anything is happening. The spinner covers that gap;
+          the initial load is handled by the full-page LoadingPage above. */}
+      {isFetching && (
+        <FlexContainer justifyContent="center" data-testid="audit-logs-loading">
+          <LoadingSpinner />
+        </FlexContainer>
+      )}
 
       <Table
         testId="audit-logs-table"

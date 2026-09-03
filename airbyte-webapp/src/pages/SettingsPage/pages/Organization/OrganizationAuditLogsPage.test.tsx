@@ -41,10 +41,14 @@ const buildEntry = (overrides: Partial<AuditLogRead> = {}): AuditLogRead => ({
   ...overrides,
 });
 
-const mockAuditLogsQuery = (data: { auditLogs: AuditLogRead[]; nextPageToken?: string } | undefined) => {
+const mockAuditLogsQuery = (
+  data: { auditLogs: AuditLogRead[]; nextPageToken?: string } | undefined,
+  { isFetching = false }: { isFetching?: boolean } = {}
+) => {
   (useListAuditLogs as jest.Mock).mockReturnValue({
     data,
     isLoading: false,
+    isFetching,
     isError: false,
   });
 };
@@ -282,6 +286,25 @@ describe("OrganizationAuditLogsPage", () => {
     await render(<OrganizationAuditLogsPage />);
 
     expect(screen.getByText("No audit log entries match the selected filters.")).toBeInTheDocument();
+  });
+
+  it("shows a loading indicator over the previous page's entries while refetching", async () => {
+    mockAuditLogsQuery({ auditLogs: [buildEntry()] }, { isFetching: true });
+
+    await render(<OrganizationAuditLogsPage />);
+
+    // keepPreviousData leaves the stale rows visible; the spinner is the only signal the list
+    // is reloading after a filter or page change.
+    expect(screen.getByText("updateConnection")).toBeInTheDocument();
+    expect(screen.getByTestId("audit-logs-loading")).toBeInTheDocument();
+  });
+
+  it("hides the loading indicator once entries have loaded", async () => {
+    mockAuditLogsQuery({ auditLogs: [buildEntry()] });
+
+    await render(<OrganizationAuditLogsPage />);
+
+    expect(screen.queryByTestId("audit-logs-loading")).not.toBeInTheDocument();
   });
 
   it("renders an inline error when the query fails", async () => {
