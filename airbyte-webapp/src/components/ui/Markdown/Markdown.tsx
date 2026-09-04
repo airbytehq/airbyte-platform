@@ -26,7 +26,7 @@ function surroundTagWithNewlines(tag: string, markdown: string): string {
   return processed;
 }
 
-function preprocessMarkdown(markdown: string, additionalPlugins: PluggableList = []): string {
+export function preprocessMarkdown(markdown: string, additionalPlugins: PluggableList = []): string {
   // Note: there is also some preprocessing happening in DocumentationPanel.tsx's
   // prepareMarkdown function that is specific to the connector documentation pages.
 
@@ -40,7 +40,7 @@ function preprocessMarkdown(markdown: string, additionalPlugins: PluggableList =
   // Replace docusaurus-style admonitions with custom admonition component.
   preprocessed = preprocessed.replace(
     /:::(info|warning|note|tip|caution|danger)\s*\n([\s\S]*?)\n\s*:::\s*\n/g,
-    '<admonition type="$1">$2</admonition>\n'
+    '<admonition type="$1">\n\n$2\n\n</admonition>\n'
   );
 
   // Add a zero-width space character before every character that looks like the start of a
