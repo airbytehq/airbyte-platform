@@ -189,6 +189,51 @@ class AuditLoggingInterceptorTest {
   }
 
   @Test
+  fun `should proceed the request and skip the audit log when no actor could be resolved`() {
+    every { airbyteStorageConfig.bucket.auditLogging } returns "test-audit-log-bucket"
+    interceptor =
+      spyk(
+        AuditLoggingInterceptor(
+          applicationContext,
+          auditLoggingHelper,
+          auditScopeResolver,
+          entitlementService,
+          featureFlagClient,
+          airbyteStorageConfig,
+          storageClientFactory,
+        ),
+      )
+    val request = mockk<NettyHttpRequest<Any>>()
+    val headers = mockk<HttpHeaders>()
+
+    every { context.methodName } returns "createPermission"
+    every { request.headers } returns headers
+    every { auditLoggingHelper.buildActor(headers) } returns null
+
+    mockkStatic(ServerRequestContext::class)
+    every { ServerRequestContext.currentRequest<Any>() } returns Optional.of(request)
+
+    // Mock the audit logging annotation
+    val auditLoggingAnnotation = mockk<AnnotationValue<AuditLogging>>()
+    every { context.getAnnotation(AuditLogging::class.java) } returns auditLoggingAnnotation
+    every { auditLoggingAnnotation.stringValue("provider") } returns Optional.of("testProvider")
+
+    // Mock the application context to return a fake provider
+    val fakeProvider = mockk<AuditProvider>()
+    every { applicationContext.findBean(AuditProvider::class.java, Qualifiers.byName("testProvider")) } returns Optional.of(fakeProvider)
+
+    every { context.proceed() } returns PermissionRead()
+
+    interceptor.intercept(context)
+    // Verifying that request is proceeded
+    verify { context.proceed() }
+    // No audit entry should be logged when the actor cannot be resolved
+    verify(exactly = 0) {
+      interceptor.logAuditInfo(any(), any(), any(), any(), any(), any(), any(), any())
+    }
+  }
+
+  @Test
   fun `stores the entry when the organization is entitled`() {
     val organizationId = UUID.randomUUID()
     val storageClient = mockk<StorageClient>()

@@ -22,20 +22,20 @@ class AuditLoggingHelper(
   private val currentUserService: CurrentUserService,
   private val objectMapper: ObjectMapper,
 ) {
-  fun buildActor(headers: HttpHeaders): Actor {
+  fun buildActor(headers: HttpHeaders): Actor? {
     val currentUser =
       try {
         currentUserService.getCurrentUser()
       } catch (_: Exception) {
         null
-      }
+      } ?: return null
 
     val userAgent = headers.get("User-Agent")?.takeIf { it.isNotEmpty() } ?: "unknown"
     val ipAddress = headers.get("X-Forwarded-For")?.takeIf { it.isNotEmpty() } ?: "unknown"
 
     return Actor(
-      actorId = currentUser?.let { currentUser.userId.toString() } ?: "unknown",
-      email = currentUser?.let { currentUser.email },
+      actorId = currentUser.userId.toString(),
+      email = currentUser.email,
       ipAddress = ipAddress,
       userAgent = userAgent,
     )

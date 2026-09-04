@@ -95,6 +95,10 @@ class AuditLoggingInterceptor(
       ServerRequestContext.currentRequest<Any>().get() as NettyHttpRequest
     val headers = request.headers
     val user = auditLoggingHelper.buildActor(headers)
+    if (user == null) {
+      logger.debug { "Skipping audit log for $operationName: no actor could be resolved for the request." }
+      return context.proceed() ?: Unit
+    }
 
     // Get request body
     val parameters = context.parameters.values

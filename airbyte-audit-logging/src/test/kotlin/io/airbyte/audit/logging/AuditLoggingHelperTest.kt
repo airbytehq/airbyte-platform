@@ -17,6 +17,7 @@ import io.mockk.mockk
 import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -48,7 +49,7 @@ class AuditLoggingHelperTest {
   }
 
   @Test
-  fun `buildActor should use empty values if the user cannot be retrieved`() {
+  fun `buildActor returns null if the user cannot be retrieved`() {
     every { currentUserService.getCurrentUser() } throws AuthException("could not get user")
 
     val request =
@@ -57,15 +58,7 @@ class AuditLoggingHelperTest {
         "",
       )
 
-    val result = auditLoggingHelper.buildActor(request.headers)
-    val expected =
-      Actor(
-        TEST_VALUE_UNKNOWN,
-        null,
-        TEST_VALUE_FORWARDED_FOR,
-        TEST_VALUE_USER_AGENT,
-      )
-    assertEquals(expected, result)
+    assertNull(auditLoggingHelper.buildActor(request.headers))
   }
 
   @Test
