@@ -4,6 +4,7 @@ import React from "react";
 
 import { TestWrapper } from "test-utils/testutils";
 
+import { largeHtmlBlockWithTable } from "./largeHtmlBlockWithTable.mocks";
 import { Markdown } from "./Markdown";
 import admonitionStyles from "./overrides/Admonition.module.scss";
 import detailsStyles from "./overrides/Details.module.scss";
@@ -121,6 +122,15 @@ visible content after
     expect(screen.queryByText("visible content before")).toBeInTheDocument();
     expect(screen.queryByText("visible content after")).toBeInTheDocument();
     expect(screen.queryByText("this should not be rendered")).not.toBeInTheDocument();
+  });
+
+  it("renders a large HTML block containing a details block with a wide GFM table without hanging", () => {
+    const start = performance.now();
+    const { container } = render(<Markdown content={largeHtmlBlockWithTable} />);
+
+    expect(performance.now() - start).toBeLessThan(10000);
+    expect(container.querySelector("h1")).toHaveTextContent("Stripe");
+    expect(screen.queryByText("Expand to review")).not.toBeInTheDocument();
   });
 
   it("GFM tables", () => {
