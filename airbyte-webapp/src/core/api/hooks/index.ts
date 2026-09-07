@@ -48,3 +48,4 @@ export * from "./users";
 export * from "./tags";
 export * from "./workspaces";
 export * from "./agents";
+export * from "./agentsPlatform";

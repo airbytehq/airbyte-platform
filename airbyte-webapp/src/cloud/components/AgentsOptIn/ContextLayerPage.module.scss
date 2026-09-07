@@ -1,0 +1,135 @@
+@use "scss/colors";
+
+.page {
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subtitle {
+  margin: 0;
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.callout {
+  margin: 0;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.toggleText {
+  flex: 1;
+}
+
+.toggleControl {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.infoBox {
+  padding: 16px;
+  border: 1px solid colors.$grey-200;
+  border-radius: 4px;
+  background: colors.$grey-50;
+}
+
+.workspaceSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.workspaceDescription {
+  margin-top: -8px;
+}
+
+.workspaceCard {
+  overflow: hidden;
+  border: 1px solid colors.$grey-200;
+  border-radius: 4px;
+  background: colors.$foreground;
+}
+
+.workspaceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px;
+  border: 0;
+  background: transparent;
+  color: colors.$dark-blue;
+  cursor: pointer;
+  text-align: left;
+}
+
+.workspaceHeader:hover {
+  background: colors.$grey-50;
+}
+
+.workspaceHeaderInfo,
+.workspaceCounts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspaceBody {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 16px 16px;
+}
+
+.connectorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.connectorSectionHeader,
+.connectorRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.connectorSectionHeader {
+  padding-top: 4px;
+}
+
+.connectorRows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.connectorName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.countBadge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: colors.$grey-100;
+  color: colors.$grey-600;
+  font-size: 12px;
+}

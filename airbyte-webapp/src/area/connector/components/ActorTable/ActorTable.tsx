@@ -13,6 +13,7 @@ import { ConnectorName } from "area/connection/components/EntityTable/components
 import { EntityNameCell } from "area/connection/components/EntityTable/components/EntityNameCell";
 import { LastSyncCell } from "area/connection/components/EntityTable/components/LastSyncCell";
 import { NumberOfConnectionsCell } from "area/connection/components/EntityTable/components/NumberOfConnectionsCell";
+import { AgentsSourceCta } from "cloud/components/AgentsOptIn/AgentsSourceCta";
 import {
   ActorDefinitionVersionBreakingChanges,
   ActorListSortKey,
@@ -235,6 +236,17 @@ export const ActorTable: React.FC<ActorTableProps> = ({
           }
           return null;
         },
+        enableSorting: false,
+      }),
+      columnHelper.display({
+        header: () => null,
+        id: "agentsCta",
+        cell: (props) => (
+          <AgentsSourceCta
+            actorType={props.row.original.actorType}
+            actorDefinitionName={props.row.original.actorDefinitionName}
+          />
+        ),
         enableSorting: false,
       }),
     ],

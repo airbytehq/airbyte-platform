@@ -5,6 +5,7 @@ export const CloudSettingsRoutePaths = {
   Plan: "plan",
   Billing: "billing",
   OrganizationUsage: "organization-usage",
+  ContextLayer: "context-layer",
   Notifications: SettingsRoutePaths.Notifications,
   Account: SettingsRoutePaths.Account,
   Advanced: SettingsRoutePaths.Advanced,

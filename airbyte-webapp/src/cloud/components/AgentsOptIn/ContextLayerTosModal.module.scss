@@ -1,0 +1,49 @@
+@use "scss/colors";
+
+.subtitle {
+  margin: -16px 24px 16px;
+}
+
+.terms {
+  max-height: 330px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid colors.$grey-200;
+  border-radius: 4px;
+}
+
+.terms p {
+  margin: 0 0 16px;
+}
+
+.terms p:last-child {
+  margin-bottom: 0;
+}
+
+.checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid colors.$grey-200;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+}

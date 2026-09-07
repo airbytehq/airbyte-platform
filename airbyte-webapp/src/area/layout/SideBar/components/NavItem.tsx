@@ -16,6 +16,7 @@ interface NavItemBaseProps extends NavItemInnerProps {
   activeClassName?: string;
   testId?: string;
   disabled?: boolean;
+  external?: boolean;
 }
 
 interface LinkNavItemProps extends NavItemBaseProps {
@@ -76,6 +77,7 @@ export const NavItem = React.forwardRef<HTMLButtonElement | null, NavItemProps>(
       withNotification = false,
       isActive,
       withBadge,
+      external,
     },
     ref
   ) => {
@@ -117,6 +119,14 @@ export const NavItem = React.forwardRef<HTMLButtonElement | null, NavItemProps>(
         <div className={menuItemStyle(false, true)}>
           <NavItemInner label={label} icon={icon} />
         </div>
+      );
+    }
+
+    if (external) {
+      return (
+        <a className={menuItemStyle(false)} href={to} target="_blank" rel="noopener noreferrer" data-testid={testId}>
+          <NavItemInner label={label} icon={icon} withNotification={withNotification} withBadge={withBadge} />
+        </a>
       );
     }
 

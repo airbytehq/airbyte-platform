@@ -17,6 +17,7 @@ export async function loadConfig() {
   return {
     ...config,
     edition: config.edition.toLowerCase(),
+    sonarApiUrl: config.sonarApiUrl || process.env.REACT_APP_SONAR_API_URL,
     coralAgentsApiUrl: config.coralAgentsApiUrl || process.env.REACT_APP_CORAL_AGENTS_API_URL,
     datadogApplicationId: config.datadogApplicationId || process.env.REACT_APP_DATADOG_APPLICATION_ID,
     datadogClientToken: config.datadogClientToken || process.env.REACT_APP_DATADOG_CLIENT_TOKEN,

@@ -7,6 +7,7 @@
  */
 
 export interface Experiments {
+  "agents.externalOrgOptIn": boolean;
   allowAgentsDataReplicationAccess: boolean;
   asyncSchemaDiscovery: boolean;
   "audit-log-ui": boolean;
@@ -47,6 +48,7 @@ export interface Experiments {
 }
 
 export const defaultExperimentValues: Experiments = {
+  "agents.externalOrgOptIn": false,
   allowAgentsDataReplicationAccess: false,
   asyncSchemaDiscovery: true,
   "audit-log-ui": false,

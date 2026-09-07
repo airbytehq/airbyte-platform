@@ -8,8 +8,9 @@ import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
 import { isOrganizationSubscribed, useCurrentOrganizationId } from "area/organization/utils";
 import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/SettingsLayout";
 import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
+import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
-import { useDefaultWorkspaceInOrganization, useOrgInfo } from "core/api";
+import { useAgentsProvisioningStatus, useDefaultWorkspaceInOrganization, useOrgInfo } from "core/api";
 import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
@@ -19,6 +20,8 @@ import { SettingsRoutePaths } from "pages/routePaths";
 export const OrganizationSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const organizationId = useCurrentOrganizationId();
+  const isCloudApp = useIsCloudApp();
+  const showAgentsOptIn = useShowAgentsOptIn();
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canUpdateSSOConfig = useFeature(FeatureItem.AllowUpdateSSOConfig);
   const auditLogsEntitled = useFeature(FeatureItem.AllowAuditLogs);
@@ -36,95 +39,108 @@ export const OrganizationSettingsPage: React.FC = () => {
     organizationId,
   });
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
+  const agentsStatus = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
   const isSubscribed = isOrganizationSubscribed(billing);
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
 
   const defaultWorkspace = useDefaultWorkspaceInOrganization(organizationId);
-  const isCloudApp = useIsCloudApp();
   const isBillingNavVisible =
     isCloudApp && canManageOrganizationBilling && (!isSelfServePlusPlanEnabled || isSubscribed);
+  const showContextLayerLink =
+    isCloudApp && showAgentsOptIn && agentsStatus && (agentsStatus.is_enrolled || agentsStatus.external_cloud_eligible);
 
   return (
     <SettingsLayout>
       <SettingsNavigation>
-        {canViewOrganizationSettings && (
+        {(canViewOrganizationSettings || showContextLayerLink) && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organization" })}>
-            <SettingsLink
-              iconType="gear"
-              name={formatMessage({ id: "settings.general" })}
-              to={SettingsRoutePaths.Organization}
-            />
-            {displayOrganizationUsers && (
-              <SettingsLink
-                iconType="user"
-                name={formatMessage({ id: "settings.members" })}
-                to={SettingsRoutePaths.OrganizationMembers}
-              />
-            )}
-            {isScimProvisioningEnabled && canManageOrganizationPermissions && (
-              <SettingsLink
-                iconType="community"
-                name={formatMessage({ id: "settings.groups" })}
-                to={SettingsRoutePaths.OrganizationGroups}
-              />
-            )}
-            {auditLogsEntitled && isAuditLogsUiEnabled && canManageOrganizationPermissions && (
-              <SettingsLink
-                iconType="docs"
-                name={formatMessage({ id: "settings.auditLogs" })}
-                to={SettingsRoutePaths.OrganizationAuditLogs}
-              />
-            )}
-            {isBillingNavVisible && (
-              <SettingsLink
-                iconType="credits"
-                name={formatMessage({ id: "sidebar.billing" })}
-                to={CloudSettingsRoutePaths.Billing}
-              />
-            )}
-            {isCloudApp && canManageOrganizationBilling && isSelfServePlusPlanEnabled && (
-              <SettingsLink
-                iconType="creditCard"
-                name={formatMessage({ id: "sidebar.plan" })}
-                to={CloudSettingsRoutePaths.Plan}
-              />
-            )}
-            {isCloudApp && canViewOrganizationUsage && (
-              <SettingsLink
-                iconType="chart"
-                name={formatMessage({ id: "settings.usage" })}
-                to={CloudSettingsRoutePaths.OrganizationUsage}
-              />
-            )}
-            {canUpdateSSOConfig && (
-              <SettingsLink
-                iconType="lock"
-                name={formatMessage({ id: isScimProvisioningEnabled ? "settings.ssoAndScim" : "settings.sso" })}
-                to={SettingsRoutePaths.OrganizationSSO}
-              />
-            )}
-            {licenseUi && (
-              <SettingsLink
-                iconType="license"
-                name={formatMessage({ id: "settings.license" })}
-                to={SettingsRoutePaths.License}
-              />
-            )}
-            {defaultWorkspace && (
-              <IfFeatureEnabled feature={FeatureItem.OrganizationConnectorSettings}>
+            {canViewOrganizationSettings && (
+              <>
                 <SettingsLink
-                  iconType="source"
-                  count={countNewSourceVersion}
-                  name={formatMessage({ id: "tables.sources" })}
-                  to={SettingsRoutePaths.Source}
+                  iconType="gear"
+                  name={formatMessage({ id: "settings.general" })}
+                  to={SettingsRoutePaths.Organization}
                 />
-                <SettingsLink
-                  iconType="destination"
-                  count={countNewDestinationVersion}
-                  name={formatMessage({ id: "tables.destinations" })}
-                  to={SettingsRoutePaths.Destination}
-                />
-              </IfFeatureEnabled>
+                {displayOrganizationUsers && (
+                  <SettingsLink
+                    iconType="user"
+                    name={formatMessage({ id: "settings.members" })}
+                    to={SettingsRoutePaths.OrganizationMembers}
+                  />
+                )}
+                {isScimProvisioningEnabled && canManageOrganizationPermissions && (
+                  <SettingsLink
+                    iconType="community"
+                    name={formatMessage({ id: "settings.groups" })}
+                    to={SettingsRoutePaths.OrganizationGroups}
+                  />
+                )}
+                {auditLogsEntitled && isAuditLogsUiEnabled && canManageOrganizationPermissions && (
+                  <SettingsLink
+                    iconType="docs"
+                    name={formatMessage({ id: "settings.auditLogs" })}
+                    to={SettingsRoutePaths.OrganizationAuditLogs}
+                  />
+                )}
+                {isBillingNavVisible && (
+                  <SettingsLink
+                    iconType="credits"
+                    name={formatMessage({ id: "sidebar.billing" })}
+                    to={CloudSettingsRoutePaths.Billing}
+                  />
+                )}
+                {isCloudApp && canManageOrganizationBilling && isSelfServePlusPlanEnabled && (
+                  <SettingsLink
+                    iconType="creditCard"
+                    name={formatMessage({ id: "sidebar.plan" })}
+                    to={CloudSettingsRoutePaths.Plan}
+                  />
+                )}
+                {isCloudApp && canViewOrganizationUsage && (
+                  <SettingsLink
+                    iconType="chart"
+                    name={formatMessage({ id: "settings.usage" })}
+                    to={CloudSettingsRoutePaths.OrganizationUsage}
+                  />
+                )}
+                {canUpdateSSOConfig && (
+                  <SettingsLink
+                    iconType="lock"
+                    name={formatMessage({ id: isScimProvisioningEnabled ? "settings.ssoAndScim" : "settings.sso" })}
+                    to={SettingsRoutePaths.OrganizationSSO}
+                  />
+                )}
+                {licenseUi && (
+                  <SettingsLink
+                    iconType="license"
+                    name={formatMessage({ id: "settings.license" })}
+                    to={SettingsRoutePaths.License}
+                  />
+                )}
+                {defaultWorkspace && (
+                  <IfFeatureEnabled feature={FeatureItem.OrganizationConnectorSettings}>
+                    <SettingsLink
+                      iconType="source"
+                      count={countNewSourceVersion}
+                      name={formatMessage({ id: "tables.sources" })}
+                      to={SettingsRoutePaths.Source}
+                    />
+                    <SettingsLink
+                      iconType="destination"
+                      count={countNewDestinationVersion}
+                      name={formatMessage({ id: "tables.destinations" })}
+                      to={SettingsRoutePaths.Destination}
+                    />
+                  </IfFeatureEnabled>
+                )}
+              </>
+            )}
+            {showContextLayerLink && (
+              <SettingsLink
+                iconType="file"
+                name={formatMessage({ id: "cloud.contextLayer.sidebar" })}
+                to={CloudSettingsRoutePaths.ContextLayer}
+              />
             )}
           </SettingsNavigationBlock>
         )}

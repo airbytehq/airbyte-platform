@@ -10,6 +10,7 @@ import { SideBar } from "area/layout/SideBar";
 import { StatusBanner } from "cloud/area/billing/components/StatusBanner";
 import { AdpOrganizationAccessGuard } from "cloud/components/AdpOrganizationAccessGuard";
 import { AdpOrganizationBanner } from "cloud/components/AdpOrganizationBanner";
+import { AgentsOptInBanner } from "cloud/components/AgentsOptIn";
 import { usePrefetchOrganizationSummaries } from "core/api/";
 import { DefaultErrorBoundary, ForbiddenErrorBoundary } from "core/errors";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -29,6 +30,7 @@ const MainLayout: React.FC<React.PropsWithChildren> = () => {
         {checkEnterpriseLicense && <LicenseBanner />}
         {isCloudApp && <StatusBanner />}
         {isCloudApp && <AdpOrganizationBanner />}
+        {isCloudApp && <AgentsOptInBanner />}
         <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
           <SideBar />
           <div className={styles.content}>
