@@ -23,6 +23,7 @@ import io.airbyte.api.client.model.generated.ConnectionAndJobIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.api.client.model.generated.ConnectionState
+import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate
 import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.api.client.model.generated.DestinationRead
 import io.airbyte.api.client.model.generated.DestinationSyncMode
@@ -40,6 +41,8 @@ import io.airbyte.api.client.model.generated.StreamDescriptor
 import io.airbyte.api.client.model.generated.StreamTransform
 import io.airbyte.api.client.model.generated.StreamTransformUpdateStream
 import io.airbyte.commons.converters.CatalogClientConverters
+import io.airbyte.commons.converters.StateConverter.fromClientToApi
+import io.airbyte.commons.converters.StateConverter.toInternal
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.version.Version
@@ -53,6 +56,7 @@ import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.helpers.FieldGenerator
+import io.airbyte.config.helpers.StateMessageHelper.getState
 import io.airbyte.config.helpers.StateMessageHelper.getTypedState
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -72,6 +76,10 @@ import io.mockk.slot
 import io.mockk.verify
 import org.assertj.core.api.CollectionAssert
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -482,14 +490,365 @@ internal class ReplicationInputHydratorTest {
     input.schemaRefreshOutput = RefreshSchemaActivityOutput(toDomain(CATALOG_DIFF))
     val replicationInput = replicationInputHydrator.getHydratedReplicationInput(input)
     val typedState: Optional<StateWrapper> = getTypedState(replicationInput.state.state)
-    assertEquals(
-      JsonNodeFactory.instance.nullNode(),
+    assertNull(
       typedState
         .get()
         .stateMessages[0]
         .stream
         .streamState,
     )
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun testGenerateReplicationInputKeepsGlobalStateWhenBackfillCannotApply(withRefresh: Boolean) {
+    every { stateApi.getState(ConnectionIdRequestBody(CONNECTION_ID)) } returns GLOBAL_CONNECTION_STATE_RESPONSE
+    every { jobsApi.getJobInput(any()) } returns
+      mockk<JobInput> {
+        every { destinationLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { sourceLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { syncInput } returns
+          mockk<StandardSyncInput>(relaxed = true) {
+            every { namespaceDefinition } returns JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT
+            every { sourceConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+            every { destinationConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+          }
+        every { jobRunConfig } returns mockk<JobRunConfig>(relaxed = true)
+      }
+    if (withRefresh) {
+      mockRefresh()
+    } else {
+      mockNonRefresh()
+    }
+    mockEnableBackfillForConnection(withRefresh)
+    val input = getDefaultReplicationActivityInputForTest(withRefresh)
+    input.schemaRefreshOutput = RefreshSchemaActivityOutput(toDomain(CATALOG_DIFF))
+
+    val replicationInput = replicationInputHydrator.getHydratedReplicationInput(input)
+    assertNotNull(replicationInput.state)
+    assertEquals(
+      getState(toInternal(fromClientToApi(GLOBAL_CONNECTION_STATE_RESPONSE))),
+      replicationInput.state,
+    )
+    verify(exactly = 0) { stateApi.createOrUpdateState(any()) }
+
+    val metadataCaptor = slot<SaveStreamAttemptMetadataRequestBody>()
+    verify { attemptApi.saveStreamMetadata(capture(metadataCaptor)) }
+    assertEquals(
+      false,
+      metadataCaptor.captured.streamMetadata
+        .orEmpty()
+        .any { it.wasBackfilled == true },
+    )
+  }
+
+  @Test
+  fun testGenerateReplicationInputWithBackfillAndNullState() {
+    every {
+      stateApi.getState(ConnectionIdRequestBody(CONNECTION_ID))
+    } returns NOT_SET_CONNECTION_STATE_RESPONSE
+    every { jobsApi.getJobInput(any()) } returns
+      mockk<JobInput> {
+        every { destinationLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { sourceLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { syncInput } returns
+          mockk<StandardSyncInput>(relaxed = true) {
+            every { namespaceDefinition } returns JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT
+            every { sourceConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+            every { destinationConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+          }
+        every { jobRunConfig } returns mockk<JobRunConfig>(relaxed = true)
+      }
+    mockNonRefresh()
+    mockEnableBackfillForConnection(false)
+    val input = getDefaultReplicationActivityInputForTest(false)
+    input.schemaRefreshOutput = RefreshSchemaActivityOutput(toDomain(CATALOG_DIFF))
+
+    val replicationInput = replicationInputHydrator.getHydratedReplicationInput(input)
+    assertNull(replicationInput.state)
+    verify(exactly = 0) { stateApi.createOrUpdateState(any()) }
+  }
+
+  @Test
+  fun testGenerateReplicationInputBackfillMarksStreamWithoutStateRow() {
+    every {
+      stateApi.getState(ConnectionIdRequestBody(CONNECTION_ID))
+    } returns STREAM_STATE_WITH_OTHER_STREAM_RESPONSE
+    mockJobInputForSecretRefresh()
+    mockNonRefresh()
+    mockEnableBackfillForConnection(false)
+    every { resumableFullRefreshStatsHelper.getStreamsWithStates(any()) } returns
+      setOf(
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName("other_stream")
+          .withNamespace(TEST_STREAM_NAMESPACE),
+      )
+    val input = getDefaultReplicationActivityInputForTest(false)
+    input.schemaRefreshOutput = RefreshSchemaActivityOutput(toDomain(CATALOG_DIFF))
+
+    val replicationInput = replicationInputHydrator.getHydratedReplicationInput(input)
+    assertEquals(
+      getState(toInternal(fromClientToApi(STREAM_STATE_WITH_OTHER_STREAM_RESPONSE))),
+      replicationInput.state,
+    )
+    verify(exactly = 0) { stateApi.createOrUpdateState(any()) }
+
+    val metadataCaptor = slot<SaveStreamAttemptMetadataRequestBody>()
+    verify { attemptApi.saveStreamMetadata(capture(metadataCaptor)) }
+    val metadata = metadataCaptor.captured.streamMetadata.orEmpty()
+    assertEquals(2, metadata.size)
+    val targetMetadata = metadata.first { it.streamName == TEST_STREAM_NAME }
+    val otherMetadata = metadata.first { it.streamName == "other_stream" }
+    assertEquals(true, targetMetadata.wasBackfilled)
+    assertEquals(false, targetMetadata.wasResumed)
+    assertEquals(false, otherMetadata.wasBackfilled)
+    assertEquals(true, otherMetadata.wasResumed)
+  }
+
+  @Test
+  fun testGenerateReplicationInputBackfillMarksStreamWithoutStateRowUsingCatalogNamespace() {
+    every {
+      stateApi.getState(ConnectionIdRequestBody(CONNECTION_ID))
+    } returns STREAM_STATE_WITH_OTHER_STREAM_RESPONSE
+    mockJobInputForSecretRefresh()
+    mockNonRefresh()
+    mockEnableBackfillForConnection(false, NULL_NAMESPACE_SYNC_CATALOG)
+    every { resumableFullRefreshStatsHelper.getStreamsWithStates(any()) } returns
+      setOf(
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName("other_stream")
+          .withNamespace(TEST_STREAM_NAMESPACE),
+      )
+    val input = getDefaultReplicationActivityInputForTest(false)
+    input.schemaRefreshOutput = RefreshSchemaActivityOutput(toDomain(CATALOG_DIFF_WITH_EMPTY_NAMESPACE))
+
+    val replicationInput = replicationInputHydrator.getHydratedReplicationInput(input)
+    assertEquals(
+      getState(toInternal(fromClientToApi(STREAM_STATE_WITH_OTHER_STREAM_RESPONSE))),
+      replicationInput.state,
+    )
+    verify(exactly = 0) { stateApi.createOrUpdateState(any()) }
+
+    val metadataCaptor = slot<SaveStreamAttemptMetadataRequestBody>()
+    verify { attemptApi.saveStreamMetadata(capture(metadataCaptor)) }
+    val metadata = metadataCaptor.captured.streamMetadata.orEmpty()
+    assertEquals(2, metadata.size)
+    val targetMetadata = metadata.single { it.streamName == TEST_STREAM_NAME }
+    assertNull(targetMetadata.streamNamespace)
+    assertEquals(true, targetMetadata.wasBackfilled)
+    assertEquals(false, targetMetadata.wasResumed)
+  }
+
+  @Test
+  fun testGenerateReplicationInputBackfillClearsStateWhenNamespaceNullVsEmpty() {
+    every {
+      stateApi.getState(ConnectionIdRequestBody(CONNECTION_ID))
+    } returns NULL_NAMESPACE_STREAM_STATE_RESPONSE
+    mockJobInputForSecretRefresh()
+    mockEnableBackfillForConnection(false, NULL_NAMESPACE_SYNC_CATALOG)
+    every { resumableFullRefreshStatsHelper.getStreamsWithStates(any()) } returns
+      setOf(
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName(TEST_STREAM_NAME),
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName("other_stream")
+          .withNamespace(TEST_STREAM_NAMESPACE),
+      )
+    val input = getDefaultReplicationActivityInputForTest(false)
+    input.schemaRefreshOutput = RefreshSchemaActivityOutput(toDomain(CATALOG_DIFF_WITH_EMPTY_NAMESPACE))
+
+    val replicationInput = replicationInputHydrator.getHydratedReplicationInput(input)
+    val stateCaptor = slot<ConnectionStateCreateOrUpdate>()
+    verify(exactly = 1) { stateApi.createOrUpdateState(capture(stateCaptor)) }
+    assertEquals(CONNECTION_ID, stateCaptor.captured.connectionId)
+    val persistedState = toInternal(fromClientToApi(stateCaptor.captured.connectionState))
+    assertEquals(getState(persistedState), replicationInput.state)
+    val stateMessages = persistedState.stateMessages
+    assertNull(
+      stateMessages
+        .first { it.stream.streamDescriptor.name == TEST_STREAM_NAME }
+        .stream
+        .streamState,
+    )
+    assertEquals(
+      "other-cursor",
+      stateMessages
+        .first { it.stream.streamDescriptor.name == "other_stream" }
+        .stream
+        .streamState
+        .get("cursor")
+        .asText(),
+    )
+    val serializedState = Jsons.deserialize(Jsons.serialize(replicationInput.state.state))
+    val serializedTargetStream =
+      serializedState
+        .first { it["stream"]["stream_descriptor"]["name"].asText() == TEST_STREAM_NAME }
+        .get("stream")
+    assertFalse(serializedTargetStream.has("stream_state"))
+    val serializedOtherStream =
+      serializedState
+        .first { it["stream"]["stream_descriptor"]["name"].asText() == "other_stream" }
+        .get("stream")
+    assertTrue(serializedOtherStream.has("stream_state"))
+    assertEquals("other-cursor", serializedOtherStream["stream_state"]["cursor"].asText())
+
+    val metadataCaptor = slot<SaveStreamAttemptMetadataRequestBody>()
+    verify { attemptApi.saveStreamMetadata(capture(metadataCaptor)) }
+    val targetMetadata =
+      metadataCaptor.captured.streamMetadata
+        .orEmpty()
+        .single { it.streamName == TEST_STREAM_NAME && (it.streamNamespace ?: "") == "" }
+    assertEquals(
+      true,
+      targetMetadata.wasBackfilled,
+    )
+    assertEquals(true, targetMetadata.wasResumed)
+    assertNull(targetMetadata.streamNamespace)
+  }
+
+  @Test
+  fun testGenerateReplicationInputBackfillClearsStateWhenStateNamespaceEmptyAndCatalogNull() {
+    every {
+      stateApi.getState(ConnectionIdRequestBody(CONNECTION_ID))
+    } returns EMPTY_NAMESPACE_STREAM_STATE_RESPONSE
+    mockJobInputForSecretRefresh()
+    mockEnableBackfillForConnection(false, NULL_NAMESPACE_SYNC_CATALOG)
+    every { resumableFullRefreshStatsHelper.getStreamsWithStates(any()) } returns
+      setOf(
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName(TEST_STREAM_NAME)
+          .withNamespace(""),
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName("other_stream")
+          .withNamespace(TEST_STREAM_NAMESPACE),
+      )
+    val input = getDefaultReplicationActivityInputForTest(false)
+    input.schemaRefreshOutput = RefreshSchemaActivityOutput(toDomain(CATALOG_DIFF_WITH_EMPTY_NAMESPACE))
+
+    val replicationInput = replicationInputHydrator.getHydratedReplicationInput(input)
+    val stateCaptor = slot<ConnectionStateCreateOrUpdate>()
+    verify(exactly = 1) { stateApi.createOrUpdateState(capture(stateCaptor)) }
+    assertEquals(CONNECTION_ID, stateCaptor.captured.connectionId)
+    val persistedState = toInternal(fromClientToApi(stateCaptor.captured.connectionState))
+    assertEquals(getState(persistedState), replicationInput.state)
+    val stateMessages = persistedState.stateMessages
+    assertNull(
+      stateMessages
+        .first { it.stream.streamDescriptor.name == TEST_STREAM_NAME }
+        .stream
+        .streamState,
+    )
+    assertEquals(
+      "other-cursor",
+      stateMessages
+        .first { it.stream.streamDescriptor.name == "other_stream" }
+        .stream
+        .streamState
+        .get("cursor")
+        .asText(),
+    )
+    val serializedState = Jsons.deserialize(Jsons.serialize(replicationInput.state.state))
+    val serializedTargetStream =
+      serializedState
+        .first { it["stream"]["stream_descriptor"]["name"].asText() == TEST_STREAM_NAME }
+        .get("stream")
+    assertFalse(serializedTargetStream.has("stream_state"))
+    val serializedOtherStream =
+      serializedState
+        .first { it["stream"]["stream_descriptor"]["name"].asText() == "other_stream" }
+        .get("stream")
+    assertTrue(serializedOtherStream.has("stream_state"))
+    assertEquals("other-cursor", serializedOtherStream["stream_state"]["cursor"].asText())
+
+    val metadataCaptor = slot<SaveStreamAttemptMetadataRequestBody>()
+    verify { attemptApi.saveStreamMetadata(capture(metadataCaptor)) }
+    val targetMetadata =
+      metadataCaptor.captured.streamMetadata
+        .orEmpty()
+        .single { it.streamName == TEST_STREAM_NAME }
+    assertNull(targetMetadata.streamNamespace)
+    assertEquals(true, targetMetadata.wasBackfilled)
+    assertEquals(true, targetMetadata.wasResumed)
+  }
+
+  @Test
+  fun testTrackBackfillAndResumeNormalizesNamespaces() {
+    replicationInputHydrator.trackBackfillAndResume(
+      1L,
+      2L,
+      listOf(
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName("a"),
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName("b")
+          .withNamespace("ns"),
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName("d")
+          .withNamespace(""),
+      ),
+      listOf(
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName("a")
+          .withNamespace(""),
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName("c"),
+        io.airbyte.config
+          .StreamDescriptor()
+          .withName("d"),
+      ),
+    )
+
+    val metadataCaptor = slot<SaveStreamAttemptMetadataRequestBody>()
+    verify { attemptApi.saveStreamMetadata(capture(metadataCaptor)) }
+    val metadata = metadataCaptor.captured.streamMetadata.orEmpty()
+    assertEquals(4, metadata.size)
+
+    val aMetadata = metadata.single { it.streamName == "a" }
+    assertEquals(true, aMetadata.wasBackfilled)
+    assertEquals(true, aMetadata.wasResumed)
+    assertEquals("", aMetadata.streamNamespace)
+
+    val bMetadata = metadata.single { it.streamName == "b" }
+    assertEquals(false, bMetadata.wasBackfilled)
+    assertEquals(true, bMetadata.wasResumed)
+    assertEquals("ns", bMetadata.streamNamespace)
+
+    val cMetadata = metadata.single { it.streamName == "c" }
+    assertEquals(true, cMetadata.wasBackfilled)
+    assertEquals(false, cMetadata.wasResumed)
+    assertNull(cMetadata.streamNamespace)
+
+    val dMetadata = metadata.single { it.streamName == "d" }
+    assertEquals(true, dMetadata.wasBackfilled)
+    assertEquals(true, dMetadata.wasResumed)
+    assertNull(dMetadata.streamNamespace)
   }
 
   @Test
@@ -628,7 +987,33 @@ internal class ReplicationInputHydratorTest {
       .containsExactlyInAnyOrderElementsOf(expectedRequest.streamMetadata)
   }
 
-  private fun mockEnableBackfillForConnection(withRefresh: Boolean) {
+  private fun mockJobInputForSecretRefresh() {
+    every { jobsApi.getJobInput(any()) } returns
+      mockk<JobInput> {
+        every { destinationLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { sourceLauncherConfig } returns
+          mockk<IntegrationLauncherConfig>(relaxed = true) {
+            every { priority } returns WorkloadPriority.DEFAULT
+            every { protocolVersion } returns Version("0.1.0")
+          }
+        every { syncInput } returns
+          mockk<StandardSyncInput>(relaxed = true) {
+            every { namespaceDefinition } returns JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT
+            every { sourceConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+            every { destinationConfiguration } returns Jsons.jsonNode(emptyMap<String, Any>())
+          }
+        every { jobRunConfig } returns mockk<JobRunConfig>(relaxed = true)
+      }
+  }
+
+  private fun mockEnableBackfillForConnection(
+    withRefresh: Boolean,
+    catalog: AirbyteCatalog = SYNC_CATALOG,
+  ) {
     if (withRefresh) {
       every {
         connectionApi.getConnectionForJob(ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID))
@@ -638,7 +1023,7 @@ internal class ReplicationInputHydratorTest {
           CONNECTION_NAME,
           SOURCE_ID,
           DESTINATION_ID,
-          SYNC_CATALOG,
+          catalog,
           ConnectionStatus.ACTIVE,
           false,
           null,
@@ -670,7 +1055,7 @@ internal class ReplicationInputHydratorTest {
           CONNECTION_NAME,
           SOURCE_ID,
           DESTINATION_ID,
-          SYNC_CATALOG,
+          catalog,
           ConnectionStatus.ACTIVE,
           false,
           null,
@@ -809,6 +1194,25 @@ internal class ReplicationInputHydratorTest {
           ),
         ),
       )
+    private val NULL_NAMESPACE_SYNC_CATALOG =
+      AirbyteCatalog(
+        listOf(
+          AirbyteStreamAndConfiguration(
+            AirbyteStream(
+              TEST_STREAM_NAME,
+              emptyObject(),
+              listOf(io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL),
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+            ),
+            SYNC_CATALOG.streams[0].config!!,
+          ),
+        ),
+      )
     private val CONNECTION_STATE_RESPONSE: ConnectionState =
       Jsons.deserialize<ConnectionState>(
         String.format(
@@ -833,6 +1237,131 @@ internal class ReplicationInputHydratorTest {
           TEST_STREAM_NAMESPACE,
           TEST_STREAM_NAME,
           TEST_STREAM_NAMESPACE,
+        ),
+        ConnectionState::class.java,
+      )
+    private val STREAM_STATE_WITH_OTHER_STREAM_RESPONSE: ConnectionState =
+      Jsons.deserialize<ConnectionState>(
+        String.format(
+          """
+          {
+            "stateType": "stream",
+            "connectionId": "%s",
+            "state": null,
+            "streamState": [{
+              "streamDescriptor": {
+                "name": "other_stream",
+                "namespace": "%s"
+              },
+              "streamState": {"cursor":"other-cursor"}
+            }],
+            "globalState": null
+          }
+          """.trimIndent(),
+          CONNECTION_ID,
+          TEST_STREAM_NAMESPACE,
+        ),
+        ConnectionState::class.java,
+      )
+    private val NULL_NAMESPACE_STREAM_STATE_RESPONSE: ConnectionState =
+      Jsons.deserialize<ConnectionState>(
+        String.format(
+          """
+          {
+            "stateType": "stream",
+            "connectionId": "%s",
+            "state": null,
+            "streamState": [{
+              "streamDescriptor": {
+                "name": "%s"
+              },
+              "streamState": {"cursor":"6"}
+            }, {
+              "streamDescriptor": {
+                "name": "other_stream",
+                "namespace": "%s"
+              },
+              "streamState": {"cursor":"other-cursor"}
+            }],
+            "globalState": null
+          }
+          """.trimIndent(),
+          CONNECTION_ID,
+          TEST_STREAM_NAME,
+          TEST_STREAM_NAMESPACE,
+        ),
+        ConnectionState::class.java,
+      )
+    private val EMPTY_NAMESPACE_STREAM_STATE_RESPONSE: ConnectionState =
+      Jsons.deserialize<ConnectionState>(
+        String.format(
+          """
+          {
+            "stateType": "stream",
+            "connectionId": "%s",
+            "state": null,
+            "streamState": [{
+              "streamDescriptor": {
+                "name": "%s",
+                "namespace": ""
+              },
+              "streamState": {"cursor":"6"}
+            }, {
+              "streamDescriptor": {
+                "name": "other_stream",
+                "namespace": "%s"
+              },
+              "streamState": {"cursor":"other-cursor"}
+            }],
+            "globalState": null
+          }
+          """.trimIndent(),
+          CONNECTION_ID,
+          TEST_STREAM_NAME,
+          TEST_STREAM_NAMESPACE,
+        ),
+        ConnectionState::class.java,
+      )
+    private val GLOBAL_CONNECTION_STATE_RESPONSE: ConnectionState =
+      Jsons.deserialize<ConnectionState>(
+        String.format(
+          """
+          {
+            "stateType": "global",
+            "connectionId": "%s",
+            "state": null,
+            "streamState": null,
+            "globalState": {
+              "sharedState": {"cdc":"token"},
+              "streamStates": [{
+                "streamDescriptor": {
+                  "name": "%s",
+                  "namespace": "%s"
+                },
+                "streamState": {"cursor":"6"}
+              }]
+            }
+          }
+          """.trimIndent(),
+          CONNECTION_ID,
+          TEST_STREAM_NAME,
+          TEST_STREAM_NAMESPACE,
+        ),
+        ConnectionState::class.java,
+      )
+    private val NOT_SET_CONNECTION_STATE_RESPONSE: ConnectionState =
+      Jsons.deserialize<ConnectionState>(
+        String.format(
+          """
+          {
+            "stateType": "not_set",
+            "connectionId": "%s",
+            "state": null,
+            "streamState": null,
+            "globalState": null
+          }
+          """.trimIndent(),
+          CONNECTION_ID,
         ),
         ConnectionState::class.java,
       )
@@ -872,6 +1401,28 @@ internal class ReplicationInputHydratorTest {
               SYNC_CATALOG.streams[0].stream!!.name,
               SYNC_CATALOG.streams[0].stream!!.namespace,
             ),
+            StreamTransformUpdateStream(
+              listOf(
+                FieldTransform(
+                  FieldTransform.TransformType.ADD_FIELD,
+                  mutableListOf<String>(),
+                  false,
+                  null,
+                  null,
+                  null,
+                ),
+              ),
+              mutableListOf<StreamAttributeTransform>(),
+            ),
+          ),
+        ),
+      )
+    private val CATALOG_DIFF_WITH_EMPTY_NAMESPACE =
+      CatalogDiff(
+        listOf(
+          StreamTransform(
+            StreamTransform.TransformType.UPDATE_STREAM,
+            StreamDescriptor(TEST_STREAM_NAME, ""),
             StreamTransformUpdateStream(
               listOf(
                 FieldTransform(

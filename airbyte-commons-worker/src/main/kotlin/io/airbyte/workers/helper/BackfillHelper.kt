@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.helper
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference
 import io.airbyte.commons.converters.CatalogClientConverters
@@ -61,11 +60,15 @@ class BackfillHelper(
   }
 
   /**
-   * For the listed streams, set their state to null. Returns the modified state
+   * For the listed streams, set their state to null. Returns a copy of the state with the
+   * backfilled streams' state cleared, or null if nothing was cleared. Stream matching ignores the
+   * distinction between a null and empty namespace.
    *
    * @param inputState the state to be modified
    * @param streamsToBackfill the list of streams that need backfill
-   * @return the modified state if any streams were cleared, else null
+   * @return a copy of the state with the backfilled streams' state cleared, or null if nothing was
+   * cleared (null input, non-per-stream state, or no matching stream row); callers keep the original
+   * state in that case
    */
   fun clearStateForStreamsToBackfill(
     inputState: State?,
@@ -89,17 +92,31 @@ class BackfillHelper(
       if (AirbyteStateMessage.AirbyteStateType.STREAM != stateMessage.type) {
         continue
       }
-      if (!streamsToBackfill.contains(
-          stateMessage.stream.streamDescriptor.toInternal(),
-        )
-      ) {
+      val stateStreamDescriptor = stateMessage.stream.streamDescriptor.toInternal()
+      if (streamsToBackfill.none { it != null && sameStream(it, stateStreamDescriptor) }) {
         continue
       }
       // It's listed in the streams to backfill, so we write the state to null.
-      stateMessage.stream.streamState = JsonNodeFactory.instance.nullNode()
+      stateMessage.stream.streamState = null
       stateWasModified = true
     }
     return if (stateWasModified) getState(state) else null
+  }
+
+  /**
+   * Whether schema-change backfill can be applied to this state. Backfill clears individual stream
+   * checkpoints, which is only possible when there is no state yet or the state is per-stream;
+   * GLOBAL and LEGACY state must be left untouched.
+   */
+  fun stateSupportsBackfill(inputState: State?): Boolean {
+    if (inputState == null) {
+      return true
+    }
+    val stateOptional = getTypedState(inputState.state)
+    if (stateOptional.isEmpty) {
+      return true
+    }
+    return StateType.STREAM == stateOptional.get().stateType
   }
 
   /**
@@ -108,7 +125,8 @@ class BackfillHelper(
    *
    * @param appliedDiff the diff that was applied since the last sync
    * @param catalog the entire catalog
-   * @return any streams that need to be backfilled
+   * @return descriptors for streams that need to be backfilled, using the name and namespace from
+   * the configured catalog
    */
   fun getStreamsToBackfill(
     appliedDiff: CatalogDiff?,
@@ -121,8 +139,18 @@ class BackfillHelper(
     val streamsToBackfill: MutableList<StreamDescriptor> = ArrayList()
     appliedDiff.transforms.forEach(
       Consumer { transform: StreamTransform ->
-        if (StreamTransform.TransformType.UPDATE_STREAM == transform.transformType && shouldBackfillStream(transform, catalog)) {
-          streamsToBackfill.add(transform.streamDescriptor)
+        val stream =
+          if (StreamTransform.TransformType.UPDATE_STREAM == transform.transformType) {
+            findStreamToBackfill(transform, catalog)
+          } else {
+            null
+          }
+        if (stream != null) {
+          streamsToBackfill.add(
+            StreamDescriptor()
+              .withName(stream.stream.name)
+              .withNamespace(stream.stream.namespace),
+          )
         }
       },
     )
@@ -162,10 +190,10 @@ class BackfillHelper(
     return !getStreamsToBackfill(appliedDiff, configuredCatalog).isEmpty()
   }
 
-  private fun shouldBackfillStream(
+  private fun findStreamToBackfill(
     transform: StreamTransform,
     catalog: ConfiguredAirbyteCatalog,
-  ): Boolean {
+  ): ConfiguredAirbyteStream? {
     val streamOptional =
       catalog.streams
         .stream()
@@ -178,24 +206,29 @@ class BackfillHelper(
         }.findFirst()
 
     if (streamOptional.isEmpty) {
-      // This should never happen, and we should eventually throw an error, but for now just return false.
-      return false
+      // This should never happen, and we should eventually throw an error, but for now just return null.
+      return null
     }
     val stream = streamOptional.get()
     if (SyncMode.INCREMENTAL != stream.syncMode) {
       // Only backfill incremental streams, since Full Refresh streams are pulling the whole history
       // anyway.
-      return false
+      return null
     }
     for (fieldTransform in transform.updateStream.fieldTransforms) {
       // TODO: we'll add other cases here when we develop the config options further.
       if (FieldTransform.TransformType.ADD_FIELD == fieldTransform.transformType) {
-        return true
+        return stream
       }
       if (FieldTransform.TransformType.UPDATE_FIELD_SCHEMA == fieldTransform.transformType) {
-        return true
+        return stream
       }
     }
-    return false
+    return null
   }
+
+  private fun sameStream(
+    a: StreamDescriptor,
+    b: StreamDescriptor,
+  ): Boolean = a.name == b.name && (a.namespace ?: "") == (b.namespace ?: "")
 }

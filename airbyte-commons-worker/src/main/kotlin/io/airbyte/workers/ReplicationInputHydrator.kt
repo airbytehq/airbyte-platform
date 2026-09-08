@@ -156,9 +156,24 @@ class ReplicationInputHydrator(
     var state = retrieveState(replicationActivityInput)
     var streamsToBackfill: List<StreamDescriptor>? = null
     if (backfillHelper.syncShouldBackfill(replicationActivityInput, connectionInfo)) {
-      streamsToBackfill = backfillHelper.getStreamsToBackfill(replicationActivityInput.schemaRefreshOutput!!.appliedDiff, catalog)
-      state =
-        getUpdatedStateForBackfill(state, replicationActivityInput.schemaRefreshOutput, replicationActivityInput.connectionId!!, catalog)
+      if (backfillHelper.stateSupportsBackfill(state)) {
+        streamsToBackfill =
+          backfillHelper.getStreamsToBackfill(
+            replicationActivityInput.schemaRefreshOutput!!.appliedDiff,
+            catalog,
+          )
+        state =
+          getUpdatedStateForBackfill(
+            state,
+            replicationActivityInput.schemaRefreshOutput,
+            replicationActivityInput.connectionId!!,
+            catalog,
+          )
+      } else {
+        log.info {
+          "Skipping schema-change backfill for connection ${replicationActivityInput.connectionId}: state is not per-stream, keeping the existing state"
+        }
+      }
     }
 
     try {
@@ -247,20 +262,20 @@ class ReplicationInputHydrator(
     streamsWithStates: List<StreamDescriptor>?,
     streamsToBackfill: List<StreamDescriptor>?,
   ) {
-    val metadataPerStream: MutableMap<StreamDescriptor, StreamAttemptMetadata> =
-      streamsWithStates
-        ?.associateWith { stream ->
-          StreamAttemptMetadata(
-            streamName = stream.name,
-            wasBackfilled = false,
-            wasResumed = true,
-            streamNamespace = stream.namespace,
-          )
-        }?.toMutableMap() ?: mutableMapOf()
+    val metadataPerStream: MutableMap<Pair<String, String>, StreamAttemptMetadata> = mutableMapOf()
+    streamsWithStates?.forEach { stream ->
+      metadataPerStream[stream.name to (stream.namespace ?: "")] =
+        StreamAttemptMetadata(
+          streamName = stream.name,
+          wasBackfilled = false,
+          wasResumed = true,
+          streamNamespace = stream.namespace,
+        )
+    }
 
     streamsToBackfill?.forEach { stream ->
-      val existing = metadataPerStream[stream]
-      metadataPerStream[stream] =
+      val existing = metadataPerStream[stream.name to (stream.namespace ?: "")]
+      metadataPerStream[stream.name to (stream.namespace ?: "")] =
         if (existing == null) {
           StreamAttemptMetadata(streamName = stream.name, wasBackfilled = true, wasResumed = false, streamNamespace = stream.namespace)
         } else {
@@ -298,14 +313,14 @@ class ReplicationInputHydrator(
         )
       }
       val resetState = backfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill)
-      if (resetState != null) {
-        // We persist the state here in case the attempt fails, the subsequent attempt will continue the
-        // backfill process.
-        // TODO(mfsiega-airbyte): move all of the state handling into a separate activity.
-        log.debug { "Resetting state for connection: $connectionId" }
-        persistState(resetState, connectionId)
+      if (resetState == null) {
+        return state
       }
-
+      // We persist the state here in case the attempt fails, the subsequent attempt will continue the
+      // backfill process.
+      // TODO(mfsiega-airbyte): move all of the state handling into a separate activity.
+      log.debug { "Resetting state for connection: $connectionId" }
+      persistState(resetState, connectionId)
       return resetState
     }
     return state

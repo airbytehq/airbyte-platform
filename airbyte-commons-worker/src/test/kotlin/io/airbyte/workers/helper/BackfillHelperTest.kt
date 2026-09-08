@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.helper
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import io.airbyte.api.client.model.generated.CatalogDiff
 import io.airbyte.api.client.model.generated.FieldTransform
 import io.airbyte.api.client.model.generated.StreamTransform
@@ -41,6 +40,39 @@ internal class BackfillHelperTest {
   }
 
   @Test
+  fun testGetStreamsToBackfillUsesCatalogNamespace() {
+    val catalog =
+      ConfiguredAirbyteCatalog()
+        .withStreams(
+          listOf(
+            ConfiguredAirbyteStream(
+              AirbyteStream(STREAM_NAME, emptyObject(), listOf(SyncMode.INCREMENTAL)),
+              SyncMode.INCREMENTAL,
+              DestinationSyncMode.APPEND,
+            ),
+          ),
+        )
+    val streamsToBackfill =
+      backfillHelper.getStreamsToBackfill(
+        toDomain(
+          CatalogDiff(
+            listOf(
+              addFieldForStream(
+                io.airbyte.api.client.model.generated
+                  .StreamDescriptor(STREAM_NAME, ""),
+              ),
+            ),
+          ),
+        ),
+        catalog,
+      )
+
+    Assertions.assertEquals(1, streamsToBackfill.size)
+    Assertions.assertEquals(STREAM_NAME, streamsToBackfill.single().name)
+    Assertions.assertNull(streamsToBackfill.single().namespace)
+  }
+
+  @Test
   fun testGetStreamsToBackfillExcludesFullRefresh() {
     val testCatalog = ConfiguredAirbyteCatalog().withStreams(listOf(INCREMENTAL_STREAM, FULL_REFRESH_STREAM))
     // Verify that the second stream is ignored because it's Full Refresh.
@@ -61,8 +93,7 @@ internal class BackfillHelperTest {
     Assertions.assertNotNull(updatedState)
     val typedState: Optional<StateWrapper> = getTypedState(updatedState!!.state)
     Assertions.assertEquals(1, typedState.get().stateMessages.size)
-    Assertions.assertEquals(
-      JsonNodeFactory.instance.nullNode(),
+    Assertions.assertNull(
       typedState
         .get()
         .stateMessages[0]
@@ -71,11 +102,120 @@ internal class BackfillHelperTest {
     )
   }
 
+  @Test
+  fun testStateSupportsBackfillForNullState() {
+    Assertions.assertTrue(backfillHelper.stateSupportsBackfill(null))
+  }
+
+  @Test
+  fun testStateSupportsBackfillForStreamState() {
+    Assertions.assertTrue(backfillHelper.stateSupportsBackfill(STATE))
+  }
+
+  @Test
+  fun testStateSupportsBackfillForGlobalState() {
+    Assertions.assertFalse(backfillHelper.stateSupportsBackfill(GLOBAL_STATE))
+  }
+
+  @Test
+  fun testClearStateForStreamsToBackfillReturnsNullForGlobalState() {
+    Assertions.assertNull(
+      backfillHelper.clearStateForStreamsToBackfill(GLOBAL_STATE, listOf(DOMAIN_STREAM_DESCRIPTOR)),
+    )
+  }
+
+  @Test
+  fun testClearStateForStreamsToBackfillReturnsNullWhenNoStreamsMatch() {
+    Assertions.assertNull(
+      backfillHelper.clearStateForStreamsToBackfill(
+        STATE,
+        listOf(
+          StreamDescriptor()
+            .withName(ANOTHER_STREAM_NAME)
+            .withNamespace(ANOTHER_STREAM_NAMESPACE),
+        ),
+      ),
+    )
+    Assertions.assertNull(
+      backfillHelper.clearStateForStreamsToBackfill(null, listOf(DOMAIN_STREAM_DESCRIPTOR)),
+    )
+  }
+
+  @Test
+  fun testClearStateForStreamsToBackfillMatchesNullAndEmptyNamespace() {
+    val updatedStateWithNullNamespace =
+      backfillHelper.clearStateForStreamsToBackfill(
+        stateWithTargetNamespace(null),
+        listOf(StreamDescriptor().withName(STREAM_NAME).withNamespace("")),
+      )
+    Assertions.assertNotNull(updatedStateWithNullNamespace)
+    assertTargetStreamCleared(updatedStateWithNullNamespace!!)
+
+    val updatedStateWithEmptyNamespace =
+      backfillHelper.clearStateForStreamsToBackfill(
+        stateWithTargetNamespace(""),
+        listOf(StreamDescriptor().withName(STREAM_NAME)),
+      )
+    Assertions.assertNotNull(updatedStateWithEmptyNamespace)
+    assertTargetStreamCleared(updatedStateWithEmptyNamespace!!)
+  }
+
+  private fun assertTargetStreamCleared(state: State) {
+    val stateMessages = getTypedState(state.state).get().stateMessages
+    Assertions.assertNull(
+      stateMessages
+        .first { it.stream.streamDescriptor.name == STREAM_NAME }
+        .stream
+        .streamState,
+    )
+    Assertions.assertEquals(
+      "other-cursor",
+      stateMessages
+        .first { it.stream.streamDescriptor.name == OTHER_STREAM_NAME }
+        .stream
+        .streamState
+        .get("cursor")
+        .asText(),
+    )
+  }
+
+  private fun stateWithTargetNamespace(namespace: String?): State {
+    val namespaceField = namespace?.let { ",\n                \"namespace\":\"$it\"" } ?: ""
+    return State().withState(
+      deserialize(
+        """
+        [
+          {
+            "type":"STREAM",
+            "stream":{
+              "stream_descriptor":{
+                "name":"$STREAM_NAME"$namespaceField
+              },
+              "stream_state":{"cursor":"6"}
+            }
+          },
+          {
+            "type":"STREAM",
+            "stream":{
+              "stream_descriptor":{
+                "name":"$OTHER_STREAM_NAME",
+                "namespace":"$STREAM_NAMESPACE"
+              },
+              "stream_state":{"cursor":"other-cursor"}
+            }
+          }
+        ]
+        """.trimIndent(),
+      ),
+    )
+  }
+
   companion object {
     private const val STREAM_NAME = "stream-name"
     private const val STREAM_NAMESPACE = "stream-namespace"
     private const val ANOTHER_STREAM_NAME = "another-stream-name"
     private const val ANOTHER_STREAM_NAMESPACE = "another-stream-namespace"
+    private const val OTHER_STREAM_NAME = "other_stream"
     private val STREAM_DESCRIPTOR =
       io.airbyte.api.client.model.generated
         .StreamDescriptor(STREAM_NAME, STREAM_NAMESPACE)
@@ -113,6 +253,26 @@ internal class BackfillHelperTest {
         listOf(
           addFieldForStream(STREAM_DESCRIPTOR),
           addFieldForStream(ANOTHER_STREAM_DESCRIPTOR),
+        ),
+      )
+    private val GLOBAL_STATE =
+      State().withState(
+        deserialize(
+          """
+          [{
+            "type":"GLOBAL",
+            "global":{
+              "shared_state":{"cdc":"token"},
+              "stream_states":[{
+                "stream_descriptor":{
+                  "name":"$STREAM_NAME",
+                  "namespace":"$STREAM_NAMESPACE"
+                },
+                "stream_state":{"cursor":"6"}
+              }]
+            }
+          }]
+          """.trimIndent(),
         ),
       )
 
