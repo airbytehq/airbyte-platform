@@ -10,7 +10,7 @@ dependencies {
   implementation(libs.google.cloud.storage)
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.aws.java.sdk.sts)
-  implementation("com.hubspot.jinjava:jinjava:2.7.4")
+  implementation("com.hubspot.jinjava:jinjava:2.7.6") // Upgraded from 2.7.4 to fix CVE-2025-59340, CVE-2026-25526
 
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons"))
