@@ -4,21 +4,25 @@
 
 package io.airbyte.commons.entitlements
 
+import io.airbyte.commons.entitlements.models.CommittedDataWorkersEntitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.FeatureEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
+import io.airbyte.commons.entitlements.models.PlanNameEntitlement
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.commons.license.AirbyteLicense
 import io.airbyte.commons.license.AirbyteLicense.LicenseType
 import io.airbyte.config.Configs
 import io.airbyte.data.services.OrganizationService
+import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteStiggClientConfig
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertInstanceOf
@@ -229,6 +233,87 @@ class EntitlementClientFactoryTest {
     assertFalse(client.checkEntitlement(org, FeatureEntitlement("feature-does-not-exist")).isEntitled)
   }
 
+  @Test
+  fun `cloud edition with stigg disabled grants numeric entitlement values from the entitlements file`(
+    @TempDir tempDir: Path,
+  ) {
+    val file =
+      writeEntitlementsFile(
+        tempDir,
+        mapOf(
+          CommittedDataWorkersEntitlement.featureId to 3,
+          MappersEntitlement.featureId to true,
+        ),
+      )
+    val client =
+      cloudClientWithStiggDisabled(AirbyteStiggClientConfig(enabled = false, entitlementsFile = file.toString()))
+
+    val numeric = client.getNumericEntitlement(org, CommittedDataWorkersEntitlement)
+    assertTrue(numeric.hasAccess)
+    assertEquals(3L, numeric.value)
+    assertFalse(numeric.isUnlimited)
+    assertTrue(client.checkEntitlement(org, MappersEntitlement).isEntitled)
+  }
+
+  @Test
+  fun `cloud edition with stigg disabled resolves the plan from the feature-plan-name entitlement`(
+    @TempDir tempDir: Path,
+  ) {
+    val file =
+      writeEntitlementsFile(
+        tempDir,
+        mapOf(
+          PlanNameEntitlement.featureId to "plus",
+          MappersEntitlement.featureId to true,
+        ),
+      )
+    val client =
+      cloudClientWithStiggDisabled(AirbyteStiggClientConfig(enabled = false, entitlementsFile = file.toString()))
+
+    assertEquals(
+      listOf(EntitlementPlanResponse(planEnum = EntitlementPlan.PLUS, planId = EntitlementPlan.PLUS.id, planName = EntitlementPlan.PLUS.displayName)),
+      client.getPlans(org),
+    )
+    assertTrue(client.checkEntitlement(org, PlanNameEntitlement).isEntitled)
+  }
+
+  @Test
+  fun `cloud edition with stigg disabled resolves the plan by its Stigg plan id`(
+    @TempDir tempDir: Path,
+  ) {
+    val file =
+      writeEntitlementsFile(
+        tempDir,
+        mapOf(PlanNameEntitlement.featureId to "plan-airbyte-plus"),
+      )
+    val client =
+      cloudClientWithStiggDisabled(AirbyteStiggClientConfig(enabled = false, entitlementsFile = file.toString()))
+
+    assertEquals(EntitlementPlan.PLUS, client.getPlans(org).single().planEnum)
+  }
+
+  @Test
+  fun `cloud edition with stigg disabled skips negative values and unknown plans`(
+    @TempDir tempDir: Path,
+  ) {
+    val file =
+      writeEntitlementsFile(
+        tempDir,
+        mapOf(
+          CommittedDataWorkersEntitlement.featureId to -1,
+          PlanNameEntitlement.featureId to "does-not-exist",
+        ),
+      )
+    val client =
+      cloudClientWithStiggDisabled(AirbyteStiggClientConfig(enabled = false, entitlementsFile = file.toString()))
+
+    val numeric = client.getNumericEntitlement(org, CommittedDataWorkersEntitlement)
+    assertFalse(numeric.hasAccess)
+    assertNull(numeric.value)
+    assertFalse(client.checkEntitlement(org, PlanNameEntitlement).isEntitled)
+    assertEquals(emptyList<EntitlementPlanResponse>(), client.getPlans(org))
+  }
+
   private fun cloudClientWithStiggDisabled(config: AirbyteStiggClientConfig): EntitlementClient =
     EntitlementClientFactory(
       airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.CLOUD),
@@ -238,13 +323,13 @@ class EntitlementClientFactoryTest {
 
   private fun writeEntitlementsFile(
     dir: Path,
-    entries: Map<String, Boolean>,
+    entries: Map<String, Any>,
   ): Path {
     val file = dir.resolve("entitlements.yml")
     file.writeText(
       buildString {
         appendLine("entitlements:")
-        entries.forEach { (id, granted) -> appendLine("  $id: $granted") }
+        entries.forEach { (id, value) -> appendLine("  $id: $value") }
       },
     )
     return file

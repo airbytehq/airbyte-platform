@@ -1,7 +1,18 @@
 # Copy to oss/entitlements.yml and fill in the ids you want to control.
 # Valid ids are the featureId values in
 # oss/airbyte-commons-entitlements/src/main/kotlin/io/airbyte/commons/entitlements/models/EntitlementDefinitions.kt
-# This file (oss/entitlements.yml) is gitignored — it is your personal local config.
+# This file (oss/entitlements.yml) is gitignored — it's your personal local config.
+#
+# Entries:
+#   true   — grants the entitlement; numeric entitlements are granted as unlimited
+#   false  — explicitly denied (same as omitting it)
+#   <int>  — grants a numeric entitlement that exact finite value (e.g. 3), non-unlimited
+#
+# The plan is an entitlement too (as in Stigg): a string value for feature-plan-name sets the
+# plan, matched case-insensitively against the EntitlementPlan id, enum name, or display name
+# (plan-airbyte-plus, plus, or Plus). Reported via the plans API.
 entitlements:
-  <feature-id>: true        # granted locally
+  <feature-id>: true            # granted locally
   <another-feature-id>: false  # explicitly denied (same as omitting it)
+  <numeric-feature-id>: 3      # granted with a finite numeric value
+  feature-plan-name: plus       # the organization's plan

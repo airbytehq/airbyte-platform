@@ -288,6 +288,33 @@ class WorkspacePersistence(
       .orElseThrow { RuntimeException("No workspace found for organization: $organizationId") }
 
   /**
+   * Check whether a workspace with the given ID exists, tombstoned or not.
+   */
+  fun workspaceExists(workspaceId: UUID): Boolean =
+    database.query { ctx: DSLContext ->
+      ctx.fetchExists(
+        Tables.WORKSPACE,
+        Tables.WORKSPACE.ID.eq(workspaceId),
+      )
+    }
+
+  /**
+   * Count the non-deleted workspaces owned by the given organization.
+   */
+  fun countWorkspacesByOrganizationId(organizationId: UUID): Long =
+    database
+      .query { ctx: DSLContext ->
+        ctx
+          .selectCount()
+          .from(Tables.WORKSPACE)
+          .where(Tables.WORKSPACE.ORGANIZATION_ID.eq(organizationId))
+          .and(Tables.WORKSPACE.TOMBSTONE.notEqual(true))
+          .fetchOne()!!
+          .value1()
+          .toLong()
+      }
+
+  /**
    * Check if any workspace exists with initialSetupComplete: true, tombstoned or not.
    */
   fun getInitialSetupComplete(): Boolean =

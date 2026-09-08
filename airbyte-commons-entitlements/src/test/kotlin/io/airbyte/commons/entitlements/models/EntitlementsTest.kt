@@ -12,4 +12,14 @@ class EntitlementsTest {
   fun `resolves the SCIM entitlement by feature ID`() {
     assertSame(ScimEntitlement, Entitlements.fromId("feature-scim"))
   }
+
+  @Test
+  fun `resolves the maximum workspaces entitlement by feature ID`() {
+    assertSame(MaximumWorkspacesEntitlement, Entitlements.fromId("feature-maximum-workspaces"))
+  }
+
+  @Test
+  fun `resolves the plan name entitlement by feature ID`() {
+    assertSame(PlanNameEntitlement, Entitlements.fromId("feature-plan-name"))
+  }
 }

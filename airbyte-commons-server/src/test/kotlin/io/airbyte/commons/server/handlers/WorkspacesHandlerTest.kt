@@ -30,8 +30,13 @@ import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
+import io.airbyte.api.problems.model.generated.ProblemWorkspaceLimitData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.api.problems.throwable.generated.WorkspaceLimitForOrganizationReachedProblem
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.MaximumWorkspacesEntitlement
+import io.airbyte.commons.entitlements.models.NumericEntitlementResult
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.jsonNode
@@ -142,6 +147,19 @@ internal class WorkspacesHandlerTest {
       ScimConfigurationRead(status = ScimConfigurationStatus.NOT_CONFIGURED),
     )
     Mockito.`when`(scimAccessGate.isAllowedForOrganizationInfo(any())).thenReturn(true)
+
+    // By default, no maximum-workspaces entitlement is granted and the organization has no workspaces.
+    Mockito
+      .`when`(entitlementService.getNumericEntitlement(any(), any()))
+      .thenReturn(
+        NumericEntitlementResult(
+          featureId = MaximumWorkspacesEntitlement.featureId,
+          hasAccess = false,
+          value = null,
+        ),
+      )
+    Mockito.`when`(workspacePersistence.workspaceExists(any())).thenReturn(false)
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(any())).thenReturn(0L)
 
     workspace = generateWorkspace()
   }
@@ -636,6 +654,154 @@ internal class WorkspacesHandlerTest {
         .organizationId(ORGANIZATION_ID)
 
     assertEquals(expectedRead, actualRead)
+  }
+
+  private fun stubSuccessfulWorkspaceCreate() {
+    Mockito
+      .`when`(
+        workspaceService.getStandardWorkspaceNoSecrets(
+          anyOrNull(),
+          eq(false),
+        ),
+      ).thenReturn(workspace)
+    Mockito.`when`(dataplaneGroupService.getDefaultDataplaneGroup()).thenReturn(
+      DataplaneGroup().withId(DATAPLANE_GROUP_ID_1),
+    )
+    Mockito.`when`(uuidSupplier.get()).thenReturn(UUID.randomUUID())
+  }
+
+  private fun generateWorkspaceCreateWithId(): WorkspaceCreateWithId =
+    WorkspaceCreateWithId()
+      .id(UUID.randomUUID())
+      .name(NEW_WORKSPACE)
+      .organizationId(ORGANIZATION_ID)
+
+  @Test
+  fun testCreateWorkspaceWhenAtMaximumWorkspacesLimitIsRejected() {
+    Mockito
+      .`when`(entitlementService.getNumericEntitlement(any(), any()))
+      .thenReturn(
+        NumericEntitlementResult(
+          featureId = MaximumWorkspacesEntitlement.featureId,
+          hasAccess = true,
+          value = 2L,
+        ),
+      )
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+
+    val exception =
+      assertThrows<WorkspaceLimitForOrganizationReachedProblem> {
+        getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
+      }
+
+    assertEquals(2L, (exception.problem.getData() as ProblemWorkspaceLimitData).limit)
+    Mockito.verify(workspaceService, Mockito.never()).writeWorkspaceWithSecrets(any())
+  }
+
+  @Test
+  fun testCreateWorkspaceBelowMaximumWorkspacesLimitIsAllowed() {
+    Mockito
+      .`when`(entitlementService.getNumericEntitlement(any(), any()))
+      .thenReturn(
+        NumericEntitlementResult(
+          featureId = MaximumWorkspacesEntitlement.featureId,
+          hasAccess = true,
+          value = 3L,
+        ),
+      )
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
+    stubSuccessfulWorkspaceCreate()
+
+    val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
+
+    assertEquals(ORGANIZATION_ID, actualRead.organizationId)
+    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+  }
+
+  @Test
+  fun testCreateWorkspaceWithUnlimitedWorkspacesEntitlementIsAllowed() {
+    // Stigg models an unlimited numeric entitlement with isUnlimited=true and a meaningless value.
+    Mockito
+      .`when`(entitlementService.getNumericEntitlement(any(), any()))
+      .thenReturn(
+        NumericEntitlementResult(
+          featureId = MaximumWorkspacesEntitlement.featureId,
+          hasAccess = true,
+          value = 0L,
+          isUnlimited = true,
+        ),
+      )
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(100L)
+    stubSuccessfulWorkspaceCreate()
+
+    val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
+
+    assertEquals(ORGANIZATION_ID, actualRead.organizationId)
+    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+  }
+
+  @Test
+  fun testCreateWorkspaceWithoutMaximumWorkspacesEntitlementIsAllowed() {
+    Mockito
+      .`when`(entitlementService.getNumericEntitlement(any(), any()))
+      .thenReturn(
+        NumericEntitlementResult(
+          featureId = MaximumWorkspacesEntitlement.featureId,
+          hasAccess = false,
+          value = null,
+        ),
+      )
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(100L)
+    stubSuccessfulWorkspaceCreate()
+
+    val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
+
+    assertEquals(ORGANIZATION_ID, actualRead.organizationId)
+    Mockito.verify(workspacePersistence, Mockito.never()).countWorkspacesByOrganizationId(any())
+    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+  }
+
+  @Test
+  fun testCreateWorkspaceAtLimitIsAllowedForInstanceAdmin() {
+    Mockito
+      .`when`(entitlementService.getNumericEntitlement(any(), any()))
+      .thenReturn(
+        NumericEntitlementResult(
+          featureId = MaximumWorkspacesEntitlement.featureId,
+          hasAccess = true,
+          value = 1L,
+        ),
+      )
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(1L)
+    Mockito.`when`(roleRequest.roles()).thenReturn(setOf(AuthRoleConstants.ADMIN))
+    stubSuccessfulWorkspaceCreate()
+
+    val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
+
+    assertEquals(ORGANIZATION_ID, actualRead.organizationId)
+    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
+  }
+
+  @Test
+  fun testReCreatingExistingWorkspaceAtLimitIsAllowed() {
+    Mockito
+      .`when`(entitlementService.getNumericEntitlement(any(), any()))
+      .thenReturn(
+        NumericEntitlementResult(
+          featureId = MaximumWorkspacesEntitlement.featureId,
+          hasAccess = true,
+          value = 1L,
+        ),
+      )
+    Mockito.`when`(workspacePersistence.workspaceExists(any())).thenReturn(true)
+    Mockito.`when`(roleRequest.roles()).thenReturn(emptySet())
+    stubSuccessfulWorkspaceCreate()
+
+    val actualRead = getWorkspacesHandler(AirbyteEdition.CLOUD).createWorkspaceIfNotExist(generateWorkspaceCreateWithId())
+
+    assertEquals(ORGANIZATION_ID, actualRead.organizationId)
+    Mockito.verify(workspacePersistence, Mockito.never()).countWorkspacesByOrganizationId(any())
+    Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(any())
   }
 
   @ParameterizedTest

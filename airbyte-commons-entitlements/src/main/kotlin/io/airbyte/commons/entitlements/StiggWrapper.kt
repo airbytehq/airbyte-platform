@@ -11,6 +11,7 @@ import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.entitlements.models.NumericEntitlementResult
+import io.airbyte.commons.entitlements.models.PlanNameEntitlement
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.BypassStiggEntitlementChecks
@@ -146,7 +147,7 @@ internal class StiggWrapper(
             GetEnumEntitlementRequest
               .newBuilder()
               .setCustomerId(organizationId.value.toString())
-              .setFeatureId("feature-plan-name")
+              .setFeatureId(PlanNameEntitlement.featureId)
               .build(),
           )
         }

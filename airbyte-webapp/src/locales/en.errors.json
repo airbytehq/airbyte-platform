@@ -11,6 +11,7 @@
   "generate-contribution/insufficient-github-token-permissions": "We could not generate your contribution on GitHub. Please provide an access token with the \"public_repo\" scope enabled.",
   "generate-contribution/connector-image-name-in-use": "The Connector Identifier you provided is already in use. Please use a different identifier.",
   "tag-name-too-long": "The tag name can be at most 30 characters.",
+  "workspace-limit-for-organization-reached": "You can't create a new workspace because your organization has reached its plan's limit of {limit} workspaces. Upgrade your plan to create more workspaces.",
   "sso-config-retrieval": "{errorMessage}",
   "sso-setup": "{errorMessage}",
   "sso-deletion": "{errorMessage}",

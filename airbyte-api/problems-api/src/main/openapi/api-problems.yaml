@@ -1256,6 +1256,27 @@ components:
             detail:
               type: string
               default: The workspace has reached the maximum number of tags.
+    WorkspaceLimitForOrganizationReachedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 403
+            type:
+              type: string
+              default: error:workspace-limit-for-organization-reached
+            title:
+              type: string
+              default: Workspace limit for organization reached
+            detail:
+              type: string
+              default: The organization has reached the maximum number of workspaces allowed by its plan.
+            data:
+              $ref: "#/components/schemas/ProblemWorkspaceLimitData"
     RequestTimeoutExceededProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1423,6 +1444,14 @@ components:
           type: string
         resourceId:
           type: string
+    ProblemWorkspaceLimitData:
+      type: object
+      required:
+        - limit
+      properties:
+        limit:
+          type: integer
+          format: int64
     DbtCloudIntegrationData:
       type: object
       required:

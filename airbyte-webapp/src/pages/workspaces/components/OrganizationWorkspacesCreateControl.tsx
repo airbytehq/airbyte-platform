@@ -10,7 +10,7 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
-import { useCreateWorkspace, useListDataplaneGroups } from "core/api";
+import { HttpProblem, useCreateWorkspace, useListDataplaneGroups } from "core/api";
 import { DataplaneGroupRead } from "core/api/types/AirbyteClient";
 import { useModalService } from "core/services/Modal";
 import { useNotificationService } from "core/services/Notification";
@@ -104,7 +104,10 @@ export const CreateWorkspaceModal: React.FC<{
     trackError(e, { name });
     registerNotification({
       id: "workspaces.createError",
-      text: formatMessage({ id: "workspaces.createError" }),
+      text:
+        HttpProblem.isType(e, "error:workspace-limit-for-organization-reached") && e.i18nType === "exact"
+          ? e.translate(formatMessage)
+          : formatMessage({ id: "workspaces.createError" }),
       type: "error",
     });
   };

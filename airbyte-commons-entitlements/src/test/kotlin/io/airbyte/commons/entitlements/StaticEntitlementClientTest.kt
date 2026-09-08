@@ -162,4 +162,68 @@ class StaticEntitlementClientTest {
     grantingClient.addOrganization(organizationId, EntitlementPlan.STANDARD)
     grantingClient.updateOrganization(organizationId, EntitlementPlan.STANDARD)
   }
+
+  // Numeric grant mode: finite values for numeric entitlements, plus a configured plan.
+  private val numericClient =
+    StaticEntitlementClient(
+      grantedFeatureIds = setOf(MappersEntitlement.featureId),
+      numericEntitlementValues = mapOf(CommittedDataWorkersEntitlement.featureId to 3L),
+      plan = EntitlementPlan.PLUS,
+    )
+
+  @Test
+  fun `numeric mode - numeric entitlement returns the configured finite value`() {
+    val result = numericClient.getNumericEntitlement(organizationId, CommittedDataWorkersEntitlement)
+
+    assertEquals(
+      NumericEntitlementResult(
+        featureId = CommittedDataWorkersEntitlement.featureId,
+        hasAccess = true,
+        value = 3L,
+        isUnlimited = false,
+        reason = "StaticEntitlementClient: entitlement is statically granted",
+      ),
+      result,
+    )
+  }
+
+  @Test
+  fun `numeric mode - numeric value takes precedence over a boolean grant`() {
+    val client =
+      StaticEntitlementClient(
+        grantedFeatureIds = setOf(CommittedDataWorkersEntitlement.featureId),
+        numericEntitlementValues = mapOf(CommittedDataWorkersEntitlement.featureId to 2L),
+      )
+    val result = client.getNumericEntitlement(organizationId, CommittedDataWorkersEntitlement)
+
+    assertTrue(result.hasAccess)
+    assertEquals(2L, result.value)
+    assertFalse(result.isUnlimited)
+  }
+
+  @Test
+  fun `numeric mode - a numeric value also counts as granted for boolean checks`() {
+    assertTrue(numericClient.checkEntitlement(organizationId, CommittedDataWorkersEntitlement).isEntitled)
+  }
+
+  @Test
+  fun `numeric mode - zero is a valid finite value`() {
+    val client =
+      StaticEntitlementClient(
+        numericEntitlementValues = mapOf(CommittedDataWorkersEntitlement.featureId to 0L),
+      )
+    val result = client.getNumericEntitlement(organizationId, CommittedDataWorkersEntitlement)
+
+    assertTrue(result.hasAccess)
+    assertEquals(0L, result.value)
+    assertFalse(result.isUnlimited)
+  }
+
+  @Test
+  fun `numeric mode - getPlans returns the configured plan`() {
+    assertEquals(
+      listOf(EntitlementPlanResponse(planEnum = EntitlementPlan.PLUS, planId = EntitlementPlan.PLUS.id, planName = EntitlementPlan.PLUS.displayName)),
+      numericClient.getPlans(organizationId),
+    )
+  }
 }

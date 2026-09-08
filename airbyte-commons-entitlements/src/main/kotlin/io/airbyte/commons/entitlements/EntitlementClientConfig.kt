@@ -8,10 +8,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.airbyte.commons.entitlements.models.Entitlements
+import io.airbyte.commons.entitlements.models.PlanNameEntitlement
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.config.Configs
 import io.airbyte.data.services.OrganizationService
+import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteConfig
@@ -31,50 +33,102 @@ private val logger = KotlinLogging.logger {}
 private val yamlMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
 
 private data class StaticEntitlementsFile(
-  val entitlements: Map<String, Boolean> = emptyMap(),
+  val entitlements: Map<String, Any> = emptyMap(),
+)
+
+/** Statically granted entitlements parsed from the entitlements YAML file. */
+private data class StaticEntitlements(
+  val grantedFeatureIds: Set<String> = emptySet(),
+  val numericEntitlementValues: Map<String, Long> = emptyMap(),
+  val plan: EntitlementPlan? = null,
 )
 
 /**
- * Loads the set of statically granted entitlement feature ids from a YAML file of the form:
+ * Loads statically granted entitlements from a YAML file of the form:
  *
  * ```yaml
  * entitlements:
  *   <feature-id>: true
- *   <another-feature-id>: false
+ *   <numeric-feature-id>: 3
+ *   feature-plan-name: plus
  * ```
  *
- * A blank path returns an empty set silently (deny everything, the default behavior).
- * A missing, unreadable, empty, or unparseable file logs a warning and returns an empty set.
- * Unknown feature ids are skipped with a warning to catch typos and stale ids after renames.
+ * A `true` entry grants the entitlement; for numeric entitlements the grant is unlimited.
+ * An integer entry grants a numeric entitlement with that finite value. A string entry for
+ * [PlanNameEntitlement] sets the organization's plan (matched case-insensitively against an
+ * [EntitlementPlan]'s id, enum name, or display name, e.g. `plan-airbyte-plus`, `plus`, or `Plus`)
+ * and counts as a grant of that entitlement. `false` (and unknown feature ids, negative values,
+ * and string values for other entitlements) are skipped, so they behave like omitted entries.
+ *
+ * A blank path returns empty grants silently (deny everything, the default behavior).
+ * A missing, unreadable, empty, or unparseable file logs a warning and returns empty grants.
  */
-private fun loadGrantedFeatureIds(path: String): Set<String> {
+private fun loadStaticEntitlements(path: String): StaticEntitlements {
   if (path.isBlank()) {
-    return emptySet()
+    return StaticEntitlements()
   }
   val file = File(path)
   if (!file.isFile || file.length() == 0L) {
     logger.warn { "Static entitlements file '$path' is missing or empty. No entitlements will be granted." }
-    return emptySet()
+    return StaticEntitlements()
   }
   val parsed =
     try {
       yamlMapper.readValue(file, StaticEntitlementsFile::class.java)
     } catch (e: IOException) {
       logger.warn(e) { "Failed to parse static entitlements file '$path'. No entitlements will be granted." }
-      return emptySet()
+      return StaticEntitlements()
     }
+
   val knownFeatureIds = Entitlements.all.map { it.featureId }.toSet()
-  return parsed.entitlements
-    .filterValues { it }
-    .keys
-    .filter { featureId ->
-      val known = featureId in knownFeatureIds
-      if (!known) {
-        logger.warn { "Static entitlements file '$path' contains unknown entitlement id '$featureId'. Skipping." }
+  val grantedFeatureIds = mutableSetOf<String>()
+  val numericEntitlementValues = mutableMapOf<String, Long>()
+  var plan: EntitlementPlan? = null
+  for ((featureId, value) in parsed.entitlements) {
+    if (featureId !in knownFeatureIds) {
+      logger.warn { "Static entitlements file '$path' contains unknown entitlement id '$featureId'. Skipping." }
+      continue
+    }
+    when (value) {
+      is Boolean -> if (value) grantedFeatureIds.add(featureId)
+      is Number -> {
+        val longValue = value.toLong()
+        if (longValue >= 0) {
+          numericEntitlementValues[featureId] = longValue
+        } else {
+          logger.warn { "Static entitlements file '$path' contains negative value '$longValue' for entitlement '$featureId'. Skipping." }
+        }
       }
-      known
-    }.toSet()
+      is String -> {
+        if (featureId == PlanNameEntitlement.featureId) {
+          val resolved = resolvePlan(value)
+          if (resolved == null) {
+            logger.warn { "Static entitlements file '$path' contains unknown plan '$value'. Ignoring." }
+          } else {
+            grantedFeatureIds.add(featureId)
+            plan = resolved
+          }
+        } else {
+          logger.warn { "Static entitlements file '$path' contains unsupported string value '$value' for entitlement '$featureId'. Skipping." }
+        }
+      }
+      else -> logger.warn { "Static entitlements file '$path' contains unsupported value '$value' for entitlement '$featureId'. Skipping." }
+    }
+  }
+
+  return StaticEntitlements(
+    grantedFeatureIds = grantedFeatureIds,
+    numericEntitlementValues = numericEntitlementValues,
+    plan = plan,
+  )
 }
+
+private fun resolvePlan(planName: String): EntitlementPlan? =
+  EntitlementPlan.entries.firstOrNull {
+    it.id.equals(planName, ignoreCase = true) ||
+      it.name.equals(planName, ignoreCase = true) ||
+      it.displayName.equals(planName, ignoreCase = true)
+  }
 
 object MissingStiggApiKey : Exception("Can't create an entitlements client because the Stigg API key is null or blank")
 
@@ -106,13 +160,18 @@ internal class EntitlementClientFactory(
 
   private fun createStiggCloudClient(): EntitlementClient {
     if (!airbyteStiggClientConfig.enabled) {
-      val entitlementsFile = airbyteStiggClientConfig.entitlementsFile
-      val grantedFeatureIds = loadGrantedFeatureIds(entitlementsFile)
+      val staticEntitlements = loadStaticEntitlements(airbyteStiggClientConfig.entitlementsFile)
       logger.info {
-        "Stigg cloud client is not enabled. Falling back to StaticEntitlementClient with ${grantedFeatureIds.size} " +
-          "statically granted entitlement id(s) (entitlements file: ${entitlementsFile.ifBlank { "unset" }})"
+        "Stigg cloud client is not enabled. Falling back to StaticEntitlementClient with " +
+          "${staticEntitlements.grantedFeatureIds.size} statically granted entitlement id(s) and " +
+          "${staticEntitlements.numericEntitlementValues.size} numeric entitlement value(s) " +
+          "(entitlements file: ${airbyteStiggClientConfig.entitlementsFile.ifBlank { "unset" }})"
       }
-      return StaticEntitlementClient(grantedFeatureIds)
+      return StaticEntitlementClient(
+        grantedFeatureIds = staticEntitlements.grantedFeatureIds,
+        numericEntitlementValues = staticEntitlements.numericEntitlementValues,
+        plan = staticEntitlements.plan,
+      )
     }
     logger.info { "Creating Stigg Cloud client" }
 

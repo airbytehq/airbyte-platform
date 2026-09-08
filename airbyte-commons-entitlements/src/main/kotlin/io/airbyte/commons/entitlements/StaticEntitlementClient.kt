@@ -16,15 +16,25 @@ import io.airbyte.domain.models.OrganizationId
  * With an empty grant set (the default), it grants no entitlements.
  * This is the fallback client when no other client types are available.
  * This is the default client in Community edition.
+ *
+ * @param grantedFeatureIds feature ids statically granted. For numeric entitlements, a grant is
+ *   unlimited (there is no static number to compare against).
+ * @param numericEntitlementValues static values for numeric entitlements. A value here takes
+ *   precedence over [grantedFeatureIds] and grants finite, non-unlimited access.
+ * @param plan the plan the organization is on, surfaced via [getPlans]. Null reports no plan.
  */
 internal class StaticEntitlementClient(
   private val grantedFeatureIds: Set<String> = emptySet(),
+  private val numericEntitlementValues: Map<String, Long> = emptyMap(),
+  private val plan: EntitlementPlan? = null,
 ) : EntitlementClient {
+  private fun isGranted(featureId: String): Boolean = featureId in grantedFeatureIds || featureId in numericEntitlementValues
+
   override fun checkEntitlement(
     organizationId: OrganizationId,
     entitlement: Entitlement,
   ): EntitlementResult {
-    val granted = entitlement.featureId in grantedFeatureIds
+    val granted = isGranted(entitlement.featureId)
     return EntitlementResult(
       featureId = entitlement.featureId,
       isEntitled = granted,
@@ -36,6 +46,17 @@ internal class StaticEntitlementClient(
     organizationId: OrganizationId,
     entitlement: Entitlement,
   ): NumericEntitlementResult {
+    val numericValue = numericEntitlementValues[entitlement.featureId]
+    if (numericValue != null) {
+      return NumericEntitlementResult(
+        featureId = entitlement.featureId,
+        hasAccess = true,
+        value = numericValue,
+        isUnlimited = false,
+        reason = REASON_GRANTED,
+      )
+    }
+
     val granted = entitlement.featureId in grantedFeatureIds
     return NumericEntitlementResult(
       featureId = entitlement.featureId,
@@ -47,11 +68,11 @@ internal class StaticEntitlementClient(
   }
 
   override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> {
-    if (grantedFeatureIds.isEmpty()) {
+    if (grantedFeatureIds.isEmpty() && numericEntitlementValues.isEmpty()) {
       return emptyList()
     }
     return Entitlements.all.map { entitlement ->
-      val granted = entitlement.featureId in grantedFeatureIds
+      val granted = isGranted(entitlement.featureId)
       EntitlementResult(
         featureId = entitlement.featureId,
         isEntitled = granted,
@@ -61,9 +82,12 @@ internal class StaticEntitlementClient(
     }
   }
 
-  override fun getEntitlementsForPlan(plan: EntitlementPlan): List<Entitlement> = Entitlements.all.filter { it.featureId in grantedFeatureIds }
+  override fun getEntitlementsForPlan(plan: EntitlementPlan): List<Entitlement> = Entitlements.all.filter { isGranted(it.featureId) }
 
-  override fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse> = emptyList()
+  override fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse> =
+    plan?.let {
+      listOf(EntitlementPlanResponse(planEnum = it, planId = it.id, planName = it.displayName))
+    } ?: emptyList()
 
   override fun addOrganization(
     organizationId: OrganizationId,

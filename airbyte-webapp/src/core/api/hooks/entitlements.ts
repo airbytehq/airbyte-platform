@@ -29,7 +29,7 @@ const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
   "feature-fe-indicate-guest-users": FeatureItem.IndicateGuestUsers,
   "feature-mappers": FeatureItem.MappingsUI,
   "feature-sso": FeatureItem.AllowUpdateSSOConfig,
-  "feature-multiple-workspaces": FeatureItem.CreateMultipleWorkspaces,
+  "feature-maximum-workspaces": FeatureItem.CreateMultipleWorkspaces,
   "feature-ai-copilot": FeatureItem.AICopilot,
   "feature-faster-sync-frequency": FeatureItem.AllowSyncFrequencyUnderOneHour,
   "feature-15-minute-sync-frequency": FeatureItem.AllowSyncFrequencyUnderOneHour,

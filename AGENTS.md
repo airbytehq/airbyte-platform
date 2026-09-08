@@ -118,7 +118,12 @@ To grant or deny entitlements in a local Cloud deployment:
 2. Fill in the ids you want to control. Valid ids are the `featureId`
    values in
    `oss/airbyte-commons-entitlements/src/main/kotlin/io/airbyte/commons/entitlements/models/EntitlementDefinitions.kt`.
-   `true` grants, `false` explicitly denies (same as omitting it).
+   `true` grants, `false` explicitly denies (same as omitting it), and an
+   integer grants a numeric entitlement that finite value (a `true` on a
+   numeric entitlement grants it as unlimited). The plan is expressed as
+   the `feature-plan-name` entitlement: a string value (matched against
+   an `EntitlementPlan` id, enum name, or display name, e.g. `plus`)
+   sets the plan.
 3. Run `make deploy.cloud` — when the file exists, the deploy script
    mounts it into the server at `/etc/airbyte/entitlements.yml` and
    sets `STIGG_ENTITLEMENTS_FILE`. Without the file, nothing changes.
