@@ -25,7 +25,8 @@ EOF
 ADD --chown=airbyte:airbyte https://dtdg.co/latest-java-tracer dd-java-agent.jar
 
 # Add the OpenTelemetry Java APM agent
-ADD --chown=airbyte:airbyte https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar opentelemetry-javaagent.jar
+# Pinned to v2.27.0 to fix CVE-2026-33701, CVE-2026-54712 (was pulling "latest" unpinned)
+ADD --chown=airbyte:airbyte https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.27.0/opentelemetry-javaagent.jar opentelemetry-javaagent.jar
 
 ADD --chown=airbyte:airbyte entrypoint.sh /entrypoint.sh
 
