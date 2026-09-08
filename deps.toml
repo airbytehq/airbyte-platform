@@ -7,7 +7,7 @@ azure-storage = "12.27.1"
 bouncycastle = "1.79"
 datadog-version = "1.40.1"
 docker-java = "3.2.8"
-fasterxml_version = "2.19.1"
+fasterxml_version = "2.21.4" # Upgraded from 2.19.1 to fix CVE-2026-54512, CVE-2026-54513
 failsafe = "3.3.2"
 flyway = "10.22.0"
 grpc_version = "1.69.1"
@@ -24,7 +24,7 @@ kotlin-logging = "7.0.6"
 kotlinx-coroutine = "1.10.2"
 kubernetes-client = "7.3.1"
 logback = "1.5.18"
-micrometer = "1.15.1"
+micrometer = "1.15.12" # Upgraded from 1.15.1 to fix CVE-2026-40983, CVE-2026-40984
 micronaut = "4.9.3"
 micronaut-cache = "5.3.0"
 micronaut-core = "4.9.10"
@@ -263,8 +263,13 @@ micronaut-validation = { module = "io.micronaut.validation:micronaut-validation"
 
 # Transitive security patches direct dependency does not have a fix
 json-smart = { module = "net.minidev:json-smart", version = "2.5.2" } # Comes from com.jayway.jsonpath:json-path:2.9.0 (latest version). Force upgrade from 2.5.1 to 2.5.2 to deal with CVE-2024-57699
-netty-handler = { module = "io.netty:netty-handler", version = "4.2.2.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.2.2.Final to deal with CVE-2025-24970
-netty-common = { module = "io.netty:netty-common", version = "4.2.2.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.2.2.Final to deal with CVE-2025-24970
+netty-handler = { module = "io.netty:netty-handler", version = "4.2.16.Final" } # Upgraded from 4.2.2.Final to fix CVE-2026-50010, CVE-2026-44249
+netty-common = { module = "io.netty:netty-common", version = "4.2.16.Final" } # Upgraded from 4.2.2.Final to fix multiple Netty CVEs
+netty-codec-http = { module = "io.netty:netty-codec-http", version = "4.2.16.Final" } # Force upgrade to fix CVE-2026-55831, CVE-2026-55833, CVE-2026-56745, CVE-2026-59898, CVE-2026-59899
+netty-codec-http2 = { module = "io.netty:netty-codec-http2", version = "4.2.16.Final" } # Force upgrade to fix CVE-2026-56819
+netty-codec-compression = { module = "io.netty:netty-codec-compression", version = "4.2.16.Final" } # Force upgrade to fix CVE-2026-59901
+netty-resolver-dns = { module = "io.netty:netty-resolver-dns", version = "4.2.16.Final" } # Force upgrade to fix CVE-2026-45674, CVE-2026-47691
+netty-transport-native-epoll = { module = "io.netty:netty-transport-native-epoll", version = "4.2.16.Final" } # Force upgrade to fix CVE-2026-42577
 httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version = "5.5" } # Comes from micronout. Force upgrade from 5.4.1 to 5.5 to deal with CVE-2025-27820
 
 [bundles]
@@ -277,7 +282,7 @@ keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kotest = ["kotest-assertions"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client", "kubernetes-httpclient-okhttp"]
 logback = ["logback-classic", "logback-core"]
-micronaut = ["jakarta-annotation-api", "jakarta-transaction-api", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq", "micronaut-jackson-databind", "netty-handler", "netty-common", "httpclient5"]
+micronaut = ["jakarta-annotation-api", "jakarta-transaction-api", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq", "micronaut-jackson-databind", "netty-handler", "netty-common", "netty-codec-http", "netty-codec-http2", "netty-codec-compression", "netty-resolver-dns", "netty-transport-native-epoll", "httpclient5"]
 micronaut-light = ["jakarta-annotation-api", "micronaut-inject-java", "micronaut-runtime"]
 micronaut-annotation = ["jakarta-annotation-api", "micronaut-inject-java", "micronaut-inject-kotlin"]
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-inject-kotlin", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation"]
