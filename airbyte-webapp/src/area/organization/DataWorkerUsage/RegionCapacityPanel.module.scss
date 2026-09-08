@@ -54,9 +54,46 @@
   }
 
   &__value {
-    width: 40px;
+    width: 48px;
     text-align: center;
     font-variant-numeric: tabular-nums;
+  }
+
+  // Sits above the region list rather than in it, so a rule separates picking how much from
+  // picking with whom.
+  &__amountPicker {
+    border-bottom: variables.$border-thin solid colors.$grey-100;
+  }
+
+  // Wide enough for the longest label the control shows ("All"), so the presets beside it hold
+  // still while the amount changes.
+  &__amount {
+    width: 64px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__preset {
+    padding: variables.$spacing-xs variables.$spacing-sm;
+    border: variables.$border-thin solid transparent;
+    border-radius: variables.$border-radius-md;
+    background-color: transparent;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.25;
+    }
+
+    &:hover:not(:disabled) {
+      background-color: colors.$grey-50;
+    }
+
+    &--selected {
+      border-color: colors.$blue-100;
+      background-color: colors.$blue-50;
+    }
   }
 
   &__meter {

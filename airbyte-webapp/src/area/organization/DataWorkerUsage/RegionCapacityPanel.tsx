@@ -18,10 +18,21 @@ import { UsageTimeRange } from "./UsageByWorkspaceGraph";
 
 /**
  * Capacity is contracted as a fixed total, so the API only ever reallocates it between two regions
- * rather than creating or destroying it. Each press of a stepper therefore reallocates exactly one
- * Data Worker and has to name the region on the other side of the reallocation.
+ * rather than creating or destroying it. A reallocation therefore always names the region on the
+ * other side of it, and the smallest one anyone can make is half a Data Worker.
  */
-const REALLOCATE_AMOUNT = 1;
+const REALLOCATE_STEP = 0.5;
+
+/** Amounts a stepper offers as one click, next to the amount control that walks by REALLOCATE_STEP. */
+const AMOUNT_PRESETS = [0.5, 1, 2];
+
+const DEFAULT_AMOUNT = 1;
+
+/**
+ * Data Workers move in halves, so a region's allocation carries the decimal that shows it. The
+ * contracted total is not a per-region figure and stays whole, so it formats without this.
+ */
+const DW_FORMAT = { minimumFractionDigits: 1, maximumFractionDigits: 1 } as const;
 
 /**
  * Presses are staged locally and sent as one call per region pair once they stop, so reallocating
@@ -31,21 +42,43 @@ const REALLOCATE_DEBOUNCE_MS = 1000;
 
 type ReallocateDirection = "give" | "take";
 
+/**
+ * Either a fixed number of Data Workers or the source region's whole holding. "All" stays unresolved
+ * until a region is picked because on a "take" the source — and so the amount — is the region clicked.
+ */
+type ReallocateAmount = number | "all";
+
 const pairKey = (fromRegionId: string, toRegionId: string) => `${fromRegionId}|${toRegionId}`;
 
 interface StepperProps {
   icon: "minus" | "plus";
-  label: string;
-  testId: string;
+  direction: ReallocateDirection;
+  regionId: string;
+  regionName: string;
+  regions: DataplaneGroupRead[];
+  allocationFor: (regionId: string) => number;
   disabled: boolean;
-  options: DropdownMenuOptions;
-  onSelect: (option: DropdownMenuOptionType) => void;
+  testId: string;
+  onReallocate: (otherRegionId: string, amount: number) => void;
 }
 
 /**
- * One stepper control.
+ * One stepper control and the menu it opens: how much to move, then the region to move it with.
  */
-const Stepper: React.FC<StepperProps> = ({ icon, label, testId, disabled, options, onSelect }) => {
+const Stepper: React.FC<StepperProps> = ({
+  icon,
+  direction,
+  regionId,
+  regionName,
+  regions,
+  allocationFor,
+  disabled,
+  testId,
+  onReallocate,
+}) => {
+  const { formatMessage, formatNumber } = useIntl();
+  const [amount, setAmount] = useState<ReallocateAmount>(DEFAULT_AMOUNT);
+
   const button = (
     <Button
       variant="secondary"
@@ -54,7 +87,15 @@ const Stepper: React.FC<StepperProps> = ({ icon, label, testId, disabled, option
       className={styles.regionCapacityPanel__stepper}
       icon={icon}
       disabled={disabled}
-      aria-label={label}
+      aria-label={formatMessage(
+        {
+          id:
+            direction === "give"
+              ? "settings.organization.usage.capacity.reallocateOut"
+              : "settings.organization.usage.capacity.reallocateIn",
+        },
+        { name: regionName }
+      )}
       data-testid={testId}
     />
   );
@@ -63,8 +104,139 @@ const Stepper: React.FC<StepperProps> = ({ icon, label, testId, disabled, option
     return button;
   }
 
+  const otherRegions = regions.filter((region) => region.dataplane_group_id !== regionId);
+
+  // The endpoint moves capacity one pair at a time, so a single move can be no larger than what this
+  // region holds when it is giving, or than the largest single holding elsewhere when it is taking.
+  const maxAmount =
+    direction === "give"
+      ? allocationFor(regionId)
+      : otherRegions.reduce((largest, region) => Math.max(largest, allocationFor(region.dataplane_group_id)), 0);
+
+  // Another stepper can drain the source while this menu sits open, so the staged amount is clamped
+  // on read rather than trusted from state.
+  const selectedAmount: ReallocateAmount = amount === "all" ? "all" : Math.min(amount, maxAmount);
+  const steppedAmount = selectedAmount === "all" ? maxAmount : selectedAmount;
+
+  // The picker sits inside the menu panel, where Headless UI reserves Space and the arrow keys for
+  // the region list below, so each of its controls keeps its own keys to itself.
+  const keepKeysHere = (event: React.KeyboardEvent) => event.stopPropagation();
+
+  const presetButton = (preset: ReallocateAmount) => (
+    <button
+      key={String(preset)}
+      type="button"
+      disabled={preset !== "all" && preset > maxAmount}
+      onClick={() => setAmount(preset)}
+      onKeyDown={keepKeysHere}
+      data-testid={`${testId}-preset-${preset}`}
+      className={classNames(styles.regionCapacityPanel__preset, {
+        [styles["regionCapacityPanel__preset--selected"]]: selectedAmount === preset,
+      })}
+    >
+      <Text size="sm" color={selectedAmount === preset ? "darkBlue" : "grey"}>
+        {preset === "all" ? (
+          <FormattedMessage id="settings.organization.usage.capacity.amountAll" />
+        ) : (
+          formatNumber(preset, DW_FORMAT)
+        )}
+      </Text>
+    </button>
+  );
+
+  const options: DropdownMenuOptions = [
+    {
+      as: "div",
+      className: styles.regionCapacityPanel__amountPicker,
+      children: (
+        <>
+          <Box px="md" pt="sm">
+            <Text size="sm" color="grey">
+              <FormattedMessage
+                id={
+                  direction === "give"
+                    ? "settings.organization.usage.capacity.moveTo"
+                    : "settings.organization.usage.capacity.moveFrom"
+                }
+              />
+            </Text>
+          </Box>
+          <Box px="md" py="sm">
+            <FlexContainer alignItems="center" gap="lg">
+              <FlexContainer alignItems="center" gap="xs">
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  iconSize="sm"
+                  icon="minus"
+                  className={styles.regionCapacityPanel__stepper}
+                  disabled={steppedAmount - REALLOCATE_STEP < REALLOCATE_STEP}
+                  onClick={() => setAmount(Math.max(REALLOCATE_STEP, steppedAmount - REALLOCATE_STEP))}
+                  onKeyDown={keepKeysHere}
+                  aria-label={formatMessage({ id: "settings.organization.usage.capacity.decreaseAmount" })}
+                  data-testid={`${testId}-amount-decrement`}
+                />
+                <Text size="sm" className={styles.regionCapacityPanel__amount}>
+                  {selectedAmount === "all" ? (
+                    <FormattedMessage id="settings.organization.usage.capacity.amountAll" />
+                  ) : (
+                    <FormattedMessage
+                      id="settings.organization.usage.capacity.amountWithUnit"
+                      values={{ amount: formatNumber(selectedAmount, DW_FORMAT) }}
+                    />
+                  )}
+                </Text>
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  iconSize="sm"
+                  icon="plus"
+                  className={styles.regionCapacityPanel__stepper}
+                  disabled={selectedAmount === "all" || selectedAmount + REALLOCATE_STEP > maxAmount}
+                  onClick={() => setAmount(Math.min(maxAmount, steppedAmount + REALLOCATE_STEP))}
+                  onKeyDown={keepKeysHere}
+                  aria-label={formatMessage({ id: "settings.organization.usage.capacity.increaseAmount" })}
+                  data-testid={`${testId}-amount-increment`}
+                />
+              </FlexContainer>
+              <FlexContainer alignItems="center" gap="xs">
+                {AMOUNT_PRESETS.map(presetButton)}
+                {presetButton("all")}
+              </FlexContainer>
+            </FlexContainer>
+          </Box>
+        </>
+      ),
+    },
+    ...otherRegions.map((region) => {
+      const capacity = allocationFor(region.dataplane_group_id);
+      return {
+        displayName: region.name,
+        value: region.dataplane_group_id,
+        iconPosition: "right" as const,
+        icon: (
+          <Text size="sm" color="grey">
+            <FormattedMessage
+              id="settings.organization.usage.capacity.amountWithUnit"
+              values={{ amount: formatNumber(capacity, DW_FORMAT) }}
+            />
+          </Text>
+        ),
+        // Taking needs a source that holds the chosen amount; giving only needs somewhere to put it.
+        disabled: direction === "take" && (selectedAmount === "all" ? capacity <= 0 : capacity < selectedAmount),
+      };
+    }),
+  ];
+
+  const handleSelect = (option: DropdownMenuOptionType) => {
+    const otherRegionId = option.value as string;
+    // "All" empties whichever region is the source of this move, which on a "take" is the one clicked.
+    const sourceCapacity = direction === "give" ? allocationFor(regionId) : allocationFor(otherRegionId);
+    onReallocate(otherRegionId, selectedAmount === "all" ? sourceCapacity : selectedAmount);
+  };
+
   return (
-    <DropdownMenu placement="bottom" options={options} onChange={onSelect}>
+    <DropdownMenu placement="bottom" options={options} onChange={handleSelect}>
       {() => button}
     </DropdownMenu>
   );
@@ -87,7 +259,7 @@ export const RegionCapacityPanel: React.FC<RegionCapacityPanelProps> = ({
   displayRange,
   selectedTimeRange,
 }) => {
-  const { formatMessage, formatNumber } = useIntl();
+  const { formatNumber } = useIntl();
   const allocationList = useListDataWorkerAllocations();
   const { mutateAsync: reallocateCapacity } = useReallocateDataWorkerCapacity();
   const allUsage = useOrganizationWorkerUsage({
@@ -178,65 +350,37 @@ export const RegionCapacityPanel: React.FC<RegionCapacityPanelProps> = ({
     return () => clearTimeout(timer);
   }, [pendingReallocations, isFlushing, reallocateCapacity]);
 
-  const buildReallocateOptions = (regionId: string, direction: ReallocateDirection): DropdownMenuOptions => [
-    {
-      as: "div",
-      children: (
-        <Box px="md" pt="sm" pb="xs">
-          <Text size="sm" color="grey">
-            <FormattedMessage
-              id={
-                direction === "give"
-                  ? "settings.organization.usage.capacity.reallocateTo"
-                  : "settings.organization.usage.capacity.reallocateFrom"
-              }
-              values={{ amount: REALLOCATE_AMOUNT }}
-            />
-          </Text>
-        </Box>
-      ),
-    },
-    ...regions
-      .filter((region) => region.dataplane_group_id !== regionId)
-      .map((region) => {
-        const capacity = allocationFor(region.dataplane_group_id);
-        return {
-          displayName: formatMessage(
-            { id: "settings.organization.usage.capacity.regionOption" },
-            { name: region.name, capacity: formatNumber(capacity) }
-          ),
-          value: region.dataplane_group_id,
-          // Nothing to take from a region that holds less than a whole Data Worker.
-          disabled: direction === "take" && capacity < REALLOCATE_AMOUNT,
-        };
-      }),
-  ];
+  const handleReallocate =
+    (regionId: string, direction: ReallocateDirection) => (otherRegionId: string, amount: number) => {
+      const fromRegionId = direction === "give" ? regionId : otherRegionId;
+      const toRegionId = direction === "give" ? otherRegionId : regionId;
 
-  const handleReallocate = (regionId: string, direction: ReallocateDirection) => (option: DropdownMenuOptionType) => {
-    const otherRegionId = option.value as string;
-    const fromRegionId = direction === "give" ? regionId : otherRegionId;
-    const toRegionId = direction === "give" ? otherRegionId : regionId;
-
-    // The source has to hold what is being taken out of it. The stepper is already hidden behind a
-    // disabled button in that case, but this keeps a stale menu — one opened before another press
-    // drained the source — from staging a move that would render a negative row.
-    if (allocationFor(fromRegionId) < REALLOCATE_AMOUNT) {
-      return;
-    }
-
-    setPendingReallocations((pending) => {
-      const reverseKey = pairKey(toRegionId, fromRegionId);
-      // A press that undoes a staged one cancels it instead of queueing an opposing call.
-      if (pending[reverseKey]) {
-        const remaining = pending[reverseKey] - REALLOCATE_AMOUNT;
-        const { [reverseKey]: _cancelled, ...rest } = pending;
-        return remaining > 0 ? { ...rest, [reverseKey]: remaining } : rest;
+      // The source has to hold what is being taken out of it. The menu already clamps the amount to
+      // that, but this keeps a stale menu — one opened before another press drained the source — from
+      // staging a move that would render a negative row.
+      if (amount <= 0 || allocationFor(fromRegionId) < amount) {
+        return;
       }
 
-      const forwardKey = pairKey(fromRegionId, toRegionId);
-      return { ...pending, [forwardKey]: (pending[forwardKey] ?? 0) + REALLOCATE_AMOUNT };
-    });
-  };
+      setPendingReallocations((pending) => {
+        const forwardKey = pairKey(fromRegionId, toRegionId);
+        const reverseKey = pairKey(toRegionId, fromRegionId);
+        const staged = pending[reverseKey] ?? 0;
+
+        // A move back across a pair cancels what is staged the other way instead of queueing an
+        // opposing call, and only what it cannot cancel is staged forward.
+        if (staged > 0) {
+          const { [reverseKey]: _cancelled, ...rest } = pending;
+          if (staged > amount) {
+            return { ...rest, [reverseKey]: staged - amount };
+          }
+          const overflow = amount - staged;
+          return overflow > 0 ? { ...rest, [forwardKey]: (rest[forwardKey] ?? 0) + overflow } : rest;
+        }
+
+        return { ...pending, [forwardKey]: (pending[forwardKey] ?? 0) + amount };
+      });
+    };
 
   return (
     <FlexContainer direction="column" gap="sm">
@@ -274,7 +418,7 @@ export const RegionCapacityPanel: React.FC<RegionCapacityPanelProps> = ({
             // Capacity can only come from a region that has some, so a lone funded region cannot take.
             const canTake = regions.some(
               (other) =>
-                other.dataplane_group_id !== regionId && allocationFor(other.dataplane_group_id) >= REALLOCATE_AMOUNT
+                other.dataplane_group_id !== regionId && allocationFor(other.dataplane_group_id) >= REALLOCATE_STEP
             );
 
             return (
@@ -315,27 +459,27 @@ export const RegionCapacityPanel: React.FC<RegionCapacityPanelProps> = ({
                   <FlexContainer alignItems="center" gap="xs">
                     <Stepper
                       icon="minus"
-                      disabled={allocated < REALLOCATE_AMOUNT || isFlushing}
-                      options={buildReallocateOptions(regionId, "give")}
-                      onSelect={handleReallocate(regionId, "give")}
-                      label={formatMessage(
-                        { id: "settings.organization.usage.capacity.reallocateOut" },
-                        { name: region.name }
-                      )}
+                      direction="give"
+                      regionId={regionId}
+                      regionName={region.name}
+                      regions={regions}
+                      allocationFor={allocationFor}
+                      disabled={allocated < REALLOCATE_STEP || isFlushing}
+                      onReallocate={handleReallocate(regionId, "give")}
                       testId={`region-capacity-decrement-${regionId}`}
                     />
                     <Text size="sm" className={styles.regionCapacityPanel__value}>
-                      {formatNumber(allocated)}
+                      {formatNumber(allocated, DW_FORMAT)}
                     </Text>
                     <Stepper
                       icon="plus"
+                      direction="take"
+                      regionId={regionId}
+                      regionName={region.name}
+                      regions={regions}
+                      allocationFor={allocationFor}
                       disabled={!canTake || isFlushing}
-                      options={buildReallocateOptions(regionId, "take")}
-                      onSelect={handleReallocate(regionId, "take")}
-                      label={formatMessage(
-                        { id: "settings.organization.usage.capacity.reallocateIn" },
-                        { name: region.name }
-                      )}
+                      onReallocate={handleReallocate(regionId, "take")}
                       testId={`region-capacity-increment-${regionId}`}
                     />
                   </FlexContainer>
@@ -357,7 +501,7 @@ export const RegionCapacityPanel: React.FC<RegionCapacityPanelProps> = ({
                     id="settings.organization.usage.capacity.peak"
                     values={{
                       peak: formatNumber(peak, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-                      allocated: formatNumber(allocated),
+                      allocated: formatNumber(allocated, DW_FORMAT),
                       strong: (node: React.ReactNode) => (
                         <Text as="span" size="sm">
                           {node}
