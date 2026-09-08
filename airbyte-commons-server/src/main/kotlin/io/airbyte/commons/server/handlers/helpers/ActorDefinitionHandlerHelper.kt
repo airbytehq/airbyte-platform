@@ -112,6 +112,7 @@ class ActorDefinitionHandlerHelper(
     documentationUrl: String,
   ): ActorDefinitionVersion {
     val protocolVersion = getAndValidateProtocolVersionFromSpec(spec)
+    val supportsFileTransfer = spec.additionalProperties?.get("supportsFileTransfer") as? Boolean ?: false
 
     return ActorDefinitionVersion()
       .withDockerImageTag(dockerImageTag)
@@ -122,6 +123,7 @@ class ActorDefinitionHandlerHelper(
       .withSupportLevel(SupportLevel.NONE)
       .withInternalSupportLevel(100L)
       .withReleaseStage(ReleaseStage.CUSTOM)
+      .withSupportsFileTransfer(supportsFileTransfer)
   }
 
   /**
@@ -170,6 +172,7 @@ class ActorDefinitionHandlerHelper(
     // We've never seen this version
     val spec = getSpecForImage(currentVersion.dockerRepository, newDockerImageTag, isCustomConnector, workspaceId)
     val protocolVersion = getAndValidateProtocolVersionFromSpec(spec)
+    val supportsFileTransfer = spec.additionalProperties?.get("supportsFileTransfer") as? Boolean ?: currentVersion.supportsFileTransfer
 
     return ActorDefinitionVersion()
       .withActorDefinitionId(currentVersion.actorDefinitionId)
@@ -185,7 +188,7 @@ class ActorDefinitionHandlerHelper(
       .withCdkVersion(currentVersion.cdkVersion)
       .withLastPublished(currentVersion.lastPublished)
       .withAllowedHosts(currentVersion.allowedHosts)
-      .withSupportsFileTransfer(currentVersion.supportsFileTransfer)
+      .withSupportsFileTransfer(supportsFileTransfer)
       .withSupportsRefreshes(currentVersion.supportsRefreshes)
   }
 
@@ -220,6 +223,7 @@ class ActorDefinitionHandlerHelper(
     }
 
     // We've never seen this version
+    val supportsFileTransfer = spec.additionalProperties?.get("supportsFileTransfer") as? Boolean ?: currentVersion.supportsFileTransfer
     return ActorDefinitionVersion()
       .withActorDefinitionId(currentVersion.actorDefinitionId)
       .withDockerRepository(currentVersion.dockerRepository)
@@ -234,7 +238,7 @@ class ActorDefinitionHandlerHelper(
       .withCdkVersion(currentVersion.cdkVersion)
       .withLastPublished(currentVersion.lastPublished)
       .withAllowedHosts(currentVersion.allowedHosts)
-      .withSupportsFileTransfer(currentVersion.supportsFileTransfer)
+      .withSupportsFileTransfer(supportsFileTransfer)
       .withSupportsRefreshes(currentVersion.supportsRefreshes)
   }
 
