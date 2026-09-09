@@ -7,6 +7,7 @@ import { Heading } from "components/ui/Heading";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import {
+  FlexPlanCard,
   PlusPlanCard,
   PricingComparisonLink,
   ProPlanCard,
@@ -35,6 +36,7 @@ export const SubscribeCards: React.FC = () => {
           <StandardPlanCard disabled={isLockedSubscription} />
           {isSelfServePlusPlanEnabled && <PlusPlanCard disabled={isLockedSubscription} />}
           <ProPlanCard />
+          <FlexPlanCard />
         </FlexContainer>
         <PricingComparisonLink />
       </FlexContainer>

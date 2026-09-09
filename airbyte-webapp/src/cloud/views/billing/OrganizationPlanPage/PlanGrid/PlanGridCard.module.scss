@@ -1,0 +1,51 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.planGridCard {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-lg;
+  min-width: 0;
+  padding: variables.$spacing-xl;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-lg;
+  background-color: colors.$foreground;
+
+  &__price {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: colors.$dark-blue;
+  }
+
+  &__cta {
+    margin-top: auto;
+  }
+
+  &__ctaLink {
+    display: block;
+  }
+
+  // Nested so it outranks .button:disabled regardless of stylesheet injection order.
+  .planGridCard__currentPlan:disabled {
+    opacity: 1;
+    background-color: colors.$grey-100;
+    border-color: colors.$grey-100;
+    color: colors.$grey-500;
+  }
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-md;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature {
+  display: flex;
+  align-items: flex-start;
+  gap: variables.$spacing-sm;
+}

@@ -33,6 +33,7 @@ export interface Experiments {
   "connectorBuilder.generateConnectorFromParams": boolean;
   "onboarding.surveyEnabled": boolean;
   "organization.workerUsagePage": boolean;
+  "plan-page-redesign-ui": boolean;
   "platform.enable-data-worker-allocation": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
@@ -89,6 +90,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.generateConnectorFromParams": false,
   "onboarding.surveyEnabled": false,
   "organization.workerUsagePage": false,
+  "plan-page-redesign-ui": false,
   "platform.enable-data-worker-allocation": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,

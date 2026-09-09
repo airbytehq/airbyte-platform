@@ -21,6 +21,7 @@ import { useExperiment } from "core/services/Experiment";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { ActivePlanCard, ActivePlanTier } from "./ActivePlanCard";
+import { PlanGrid } from "./PlanGrid";
 
 const OrganizationPlanPageContent: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -95,13 +96,27 @@ const OrganizationPlanPageContent: React.FC = () => {
   );
 };
 
+const PlanGridPageContent: React.FC = () => {
+  return (
+    <PageContainer>
+      <FlexContainer direction="column" gap="xl">
+        <Heading as="h1" size="md">
+          <FormattedMessage id="settings.organization.billing.plan.title" />
+        </Heading>
+        <PlanGrid />
+      </FlexContainer>
+    </PageContainer>
+  );
+};
+
 export const OrganizationPlanPage: React.FC = () => {
   const billingPagePath = useLinkToBillingPage();
   const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
+  const isPlanPageRedesignEnabled = useExperiment("plan-page-redesign-ui");
 
   if (!isSelfServePlusPlanEnabled) {
     return <Navigate to={billingPagePath} replace />;
   }
 
-  return <OrganizationPlanPageContent />;
+  return isPlanPageRedesignEnabled ? <PlanGridPageContent /> : <OrganizationPlanPageContent />;
 };

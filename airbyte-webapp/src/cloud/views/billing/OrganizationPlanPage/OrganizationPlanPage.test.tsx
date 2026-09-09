@@ -66,6 +66,10 @@ jest.mock("./ActivePlanCard", () => ({
   ),
 }));
 
+jest.mock("./PlanGrid", () => ({
+  PlanGrid: () => <div data-testid="plan-grid" />,
+}));
+
 const planFlags = (overrides: Partial<ReturnType<typeof useOrganizationPlan>> = {}) =>
   ({
     isStiggPlanEnabled: false,
@@ -95,7 +99,7 @@ const subscriptionInfo = (
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockExperiments({ "billing.selfServePlusPlan": true });
+  mockExperiments({ "billing.selfServePlusPlan": true, "plan-page-redesign-ui": false });
   mocked(useGeneratedIntent).mockReturnValue(true);
   mocked(useOrganizationPlan).mockReturnValue(planFlags());
   mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(subscriptionInfo(undefined));
@@ -233,5 +237,40 @@ describe("OrganizationPlanPage", () => {
     const wrapper = await render(<OrganizationPlanPage />);
 
     expect(wrapper.getByTestId("active-plan-card")).toHaveAttribute("data-error", "true");
+  });
+
+  it("renders the legacy plan cards rather than the redesigned grid when the redesign flag is off", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState({ subscriptionStatus: "unsubscribed" }));
+
+    const wrapper = await render(<OrganizationPlanPage />);
+
+    expect(wrapper.queryByTestId("plan-grid")).not.toBeInTheDocument();
+    expect(wrapper.getByTestId("standard-plan-card")).toBeInTheDocument();
+  });
+
+  it("renders the redesigned plan grid instead of the legacy cards when the redesign flag is on", async () => {
+    mockExperiments({ "billing.selfServePlusPlan": true, "plan-page-redesign-ui": true });
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
+
+    const wrapper = await render(<OrganizationPlanPage />);
+
+    expect(wrapper.getByRole("heading", { level: 1 })).toHaveTextContent("Plan");
+    expect(wrapper.getByTestId("plan-grid")).toBeInTheDocument();
+    expect(wrapper.queryByTestId("active-plan-card")).not.toBeInTheDocument();
+    expect(wrapper.queryByTestId("standard-plan-card")).not.toBeInTheDocument();
+    expect(wrapper.queryByTestId("plus-plan-card")).not.toBeInTheDocument();
+    expect(wrapper.queryByTestId("pro-plan-card")).not.toBeInTheDocument();
+    expect(wrapper.queryByTestId("pricing-comparison-link")).not.toBeInTheDocument();
+  });
+
+  it("still redirects to billing when the redesign flag is on but self-serve Plus is off", async () => {
+    mockExperiments({ "billing.selfServePlusPlan": false, "plan-page-redesign-ui": true });
+    mocked(useOrgInfo).mockReturnValue(billingState());
+
+    const wrapper = await render(<OrganizationPlanPage />);
+
+    expect(wrapper.queryByTestId("plan-grid")).not.toBeInTheDocument();
+    expect(wrapper.queryByTestId("active-plan-card")).not.toBeInTheDocument();
   });
 });

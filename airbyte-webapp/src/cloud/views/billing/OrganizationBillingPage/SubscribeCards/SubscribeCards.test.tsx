@@ -40,12 +40,13 @@ describe("SubscribeCards", () => {
     } as ReturnType<typeof useOrgInfo>);
   });
 
-  it("keeps the existing Standard and Pro cards when self-serve Plus is disabled", async () => {
+  it("keeps the Standard, Pro, and Flex cards when self-serve Plus is disabled", async () => {
     const wrapper = await render(<SubscribeCards />);
 
     expect(wrapper.getByText("Standard")).toBeInTheDocument();
     expect(wrapper.queryByText("Plus")).not.toBeInTheDocument();
     expect(wrapper.getByText("Pro")).toBeInTheDocument();
+    expect(wrapper.getByText("Flex")).toBeInTheDocument();
   });
 
   it("shows Plus in Billing subscribe state when self-serve Plus is enabled", async () => {
@@ -56,5 +57,6 @@ describe("SubscribeCards", () => {
     expect(wrapper.getByText("Standard")).toBeInTheDocument();
     expect(wrapper.getByText("Plus")).toBeInTheDocument();
     expect(wrapper.getByText("Pro")).toBeInTheDocument();
+    expect(wrapper.getByText("Flex")).toBeInTheDocument();
   });
 });
