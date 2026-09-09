@@ -38,10 +38,6 @@ object AiCopilotEntitlement : FeatureEntitlement(
   featureId = "feature-ai-copilot",
 )
 
-object MultipleWorkspacesEntitlement : FeatureEntitlement(
-  featureId = "feature-multiple-workspaces",
-)
-
 object MaximumWorkspacesEntitlement : FeatureEntitlement(
   featureId = "feature-maximum-workspaces",
 )
@@ -151,7 +147,6 @@ object Entitlements {
       PrivateLinkEntitlement,
       PrivateLinkLimitEntitlement,
       AiCopilotEntitlement,
-      MultipleWorkspacesEntitlement,
       MaximumWorkspacesEntitlement,
       PlanNameEntitlement,
       MappersEntitlement,
