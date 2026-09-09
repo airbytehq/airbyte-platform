@@ -54,6 +54,9 @@ spec:
       {{- if .Values.server.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.server.affinity "context" $) | nindent 8 }}
       {{- end }}
+      {{- with .Values.server.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- if .Values.server.topologySpreadConstraints }}
       topologySpreadConstraints: {{- include "airbyte.tplvalues.render" (dict "value" .Values.server.topologySpreadConstraints "context" $) | nindent 8 }}
       {{- end }}
