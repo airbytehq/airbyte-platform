@@ -23,6 +23,8 @@ export interface AgentsProvisioningStatus {
 export const agentsPlatformKeys = {
   provisioningStatus: (organizationId: string) =>
     [SCOPE_ORGANIZATION, "agentsPlatform", "provisioningStatus", organizationId] as const,
+  externalWorkspaceConnectors: (organizationId: string, workspaceId: string) =>
+    [SCOPE_ORGANIZATION, "agentsPlatform", "externalWorkspaceConnectors", organizationId, workspaceId] as const,
 };
 
 export const useAgentsProvisioningStatus = ({ enabled = true }: { enabled?: boolean } = {}) => {
@@ -110,4 +112,132 @@ export const useEnrollOrganizationInAgents = () => {
 
 export const useAgentsSupportedSourceDefinitions = (): Set<string> => {
   return AGENTS_SUPPORTED_SOURCE_DEFINITIONS;
+};
+
+interface ExternalWorkspaceConnector {
+  id: string;
+  name: string;
+  supported: boolean;
+  enabled: boolean;
+}
+
+interface ExternalWorkspaceConnectorResponse {
+  actor_id?: string;
+  destination_id?: string;
+  name: string;
+  source_type?: string;
+  destination_type?: string;
+  definition_id: string;
+  workspace_id: string;
+  created_at: string;
+  supported: boolean;
+  enabled: boolean;
+}
+
+interface ExternalActorEnabledResponse {
+  organization_id: string;
+  actor_id: string;
+  actor_kind: "source" | "destination";
+  enabled: boolean;
+}
+
+export const useExternalWorkspaceConnectors = (workspaceId: string) => {
+  const { sonarApiUrl: baseUrl } = useWebappConfig();
+  const organizationId = useCurrentOrganizationId();
+  const requestOptions = useRequestOptions();
+  const queryKey = agentsPlatformKeys.externalWorkspaceConnectors(organizationId, workspaceId);
+
+  const fetchConnectors = async (actorKind: "source" | "destination"): Promise<ExternalWorkspaceConnector[]> => {
+    const accessToken = await requestOptions.getAccessToken();
+    const response = await fetch(
+      `${baseUrl}/api/v1/organizations/external/${organizationId}/workspaces/${workspaceId}/${actorKind}s`,
+      {
+        headers: {
+          "X-Organization-Id": organizationId,
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`External ${actorKind} connector request failed: ${response.status}`);
+    }
+
+    const { data } = (await response.json()) as { data: ExternalWorkspaceConnectorResponse[] };
+    return data.flatMap((connector) => {
+      const id = actorKind === "source" ? connector.actor_id : connector.destination_id;
+      return id ? [{ id, name: connector.name, supported: connector.supported, enabled: connector.enabled }] : [];
+    });
+  };
+
+  const sourcesQuery = useQuery([...queryKey, "sources"], () => fetchConnectors("source"), {
+    enabled: Boolean(workspaceId && baseUrl),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const destinationsQuery = useQuery([...queryKey, "destinations"], () => fetchConnectors("destination"), {
+    enabled: Boolean(workspaceId && baseUrl),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    sources: sourcesQuery.data ?? [],
+    destinations: destinationsQuery.data ?? [],
+    isLoading: sourcesQuery.isLoading || destinationsQuery.isLoading,
+    sourcesError: sourcesQuery.isError,
+    destinationsError: destinationsQuery.isError,
+  };
+};
+
+export const useSetExternalActorEnabled = () => {
+  const { sonarApiUrl: baseUrl } = useWebappConfig();
+  const organizationId = useCurrentOrganizationId();
+  const { getAccessToken } = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    async ({
+      actorId,
+      actorKind,
+      enabled,
+    }: {
+      actorId: string;
+      actorKind: "source" | "destination";
+      enabled: boolean;
+    }) => {
+      if (!baseUrl) {
+        throw new Error("Sonar API URL is not configured");
+      }
+
+      const accessToken = await getAccessToken();
+      const response = await fetch(
+        `${baseUrl}/api/v1/organizations/external/${organizationId}/actors/${actorId}?actor_kind=${actorKind}`,
+        {
+          method: enabled ? "POST" : "DELETE",
+          headers: {
+            "X-Organization-Id": organizationId,
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`External actor request failed: ${response.status}`);
+      }
+
+      return (await response.json()) as ExternalActorEnabledResponse;
+    },
+    {
+      onSuccess: async () => {
+        await queryClient.invalidateQueries([
+          SCOPE_ORGANIZATION,
+          "agentsPlatform",
+          "externalWorkspaceConnectors",
+          organizationId,
+        ]);
+      },
+    }
+  );
 };

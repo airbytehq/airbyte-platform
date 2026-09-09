@@ -2,7 +2,7 @@ import { useIsAdpOrganization } from "area/organization/utils/useIsAdpOrganizati
 import { useExperiment } from "core/services/Experiment";
 
 export const useShowAgentsOptIn = (): boolean => {
-  const optInEnabled = useExperiment("agents.externalOrgOptIn");
+  const optInEnabled = useExperiment("adp.external-cloud-orgs.enabled");
   const isAdpOrganization = useIsAdpOrganization();
   return optInEnabled || isAdpOrganization;
 };

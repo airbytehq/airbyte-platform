@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ComponentProps } from "react";
 import { IntlProvider } from "react-intl";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitions } from "core/api";
@@ -41,11 +41,17 @@ const messages = {
   "cloud.agentsOptIn.tryWithAgents": "Try with Agents",
 };
 
+const LocationDisplay = () => {
+  const { pathname } = useLocation();
+  return <span data-testid="location">{pathname}</span>;
+};
+
 const renderCta = (props: ComponentProps<typeof AgentsSourceCta>) =>
   render(
     <IntlProvider locale="en" messages={messages}>
       <MemoryRouter>
         <AgentsSourceCta {...props} />
+        <LocationDisplay />
       </MemoryRouter>
     </IntlProvider>
   );
@@ -73,6 +79,23 @@ describe("AgentsSourceCta", () => {
     renderCta({ actorType: "source", actorDefinitionName: "GitHub" });
 
     expect(screen.getByRole("button", { name: "Try with Agents" })).toBeInTheDocument();
+  });
+
+  it("navigates to the Context Layer settings when enrolled", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    renderCta({ actorType: "source", actorDefinitionName: "GitHub" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Try with Agents" }));
+
+    expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org-123/settings/context-layer");
   });
 
   it("does not render when provisioning status is unavailable", () => {

@@ -3,7 +3,9 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 
 import { useCurrentOrganizationId, useIsAdpOrganization, useIsInstanceAdmin } from "area/organization/utils";
+import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useExperiment, useExperimentContext } from "core/services/Experiment";
+import { RoutePaths } from "pages/routePaths";
 
 import { AdpOrganizationAccessGuard } from "./AdpOrganizationAccessGuard";
 
@@ -29,9 +31,9 @@ const messages = {
   "errors.forbidden.goBack": "Back to workspaces",
 };
 
-const renderGuard = (children: React.ReactNode) =>
+const renderGuard = (children: React.ReactNode, initialEntry = "/") =>
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <IntlProvider locale="en" messages={messages}>
         <AdpOrganizationAccessGuard>{children}</AdpOrganizationAccessGuard>
       </IntlProvider>
@@ -81,6 +83,45 @@ describe("AdpOrganizationAccessGuard", () => {
     mockUseIsInstanceAdmin.mockReturnValue(false);
 
     renderGuard(<div data-testid="protected-content">protected</div>);
+
+    expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+    expect(screen.getByText(/Sorry, you don't have permission/)).toBeInTheDocument();
+  });
+
+  it("renders the Context Layer for a locked-down ADP organization member", () => {
+    mockUseIsAdpOrganization.mockReturnValue(true);
+    mockUseIsInstanceAdmin.mockReturnValue(false);
+
+    renderGuard(
+      <div data-testid="protected-content">protected</div>,
+      `/${RoutePaths.Organization}/organization-id/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`
+    );
+
+    expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+    expect(screen.queryByText(/Sorry, you don't have permission/)).not.toBeInTheDocument();
+  });
+
+  it("renders the Context Layer for a locked-down ADP workspace member", () => {
+    mockUseIsAdpOrganization.mockReturnValue(true);
+    mockUseIsInstanceAdmin.mockReturnValue(false);
+
+    renderGuard(
+      <div data-testid="protected-content">protected</div>,
+      `/${RoutePaths.Workspaces}/workspace-id/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`
+    );
+
+    expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+    expect(screen.queryByText(/Sorry, you don't have permission/)).not.toBeInTheDocument();
+  });
+
+  it("renders forbidden state for a locked-down ADP organization member outside Context Layer", () => {
+    mockUseIsAdpOrganization.mockReturnValue(true);
+    mockUseIsInstanceAdmin.mockReturnValue(false);
+
+    renderGuard(
+      <div data-testid="protected-content">protected</div>,
+      `/${RoutePaths.Organization}/organization-id/${RoutePaths.Settings}/organization`
+    );
 
     expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
     expect(screen.getByText(/Sorry, you don't have permission/)).toBeInTheDocument();

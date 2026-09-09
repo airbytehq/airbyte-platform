@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
+import { MemoryRouter } from "react-router-dom";
 
 import { useCurrentOrganizationId, useIsAdpOrganization } from "area/organization/utils";
 
@@ -10,25 +11,20 @@ jest.mock("area/organization/utils", () => ({
   useIsAdpOrganization: jest.fn(),
 }));
 
-jest.mock("core/utils/links", () => ({
-  links: {
-    agentEngineApp: "https://app.airbyte.ai",
-  },
-}));
-
 const mockUseIsAdpOrganization = useIsAdpOrganization as jest.MockedFunction<typeof useIsAdpOrganization>;
 const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunction<typeof useCurrentOrganizationId>;
 
 const mockOrganizationId = "test-org-123";
 
 const messages = {
-  "cloud.adpOrganization.banner": "This is an Airbyte Agents organization. <lnk>Manage it on app.airbyte.ai</lnk>.",
+  "cloud.adpOrganization.banner":
+    "This is an Airbyte Agents organization. <lnk>Manage the Context Layer in organization settings</lnk>.",
 };
 
 const renderWithIntl = (component: React.ReactElement) => {
   return render(
     <IntlProvider locale="en" messages={messages}>
-      {component}
+      <MemoryRouter>{component}</MemoryRouter>
     </IntlProvider>
   );
 };
@@ -56,13 +52,13 @@ describe("AdpOrganizationBanner", () => {
     expect(screen.queryByTestId("adp-organization-banner")).not.toBeInTheDocument();
   });
 
-  it("should contain external link with correct organization ID in URL", () => {
+  it("should contain an internal Context Layer settings link with the correct organization ID", () => {
     mockUseIsAdpOrganization.mockReturnValue(true);
 
     renderWithIntl(<AdpOrganizationBanner />);
 
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", `https://app.airbyte.ai/organizations/${mockOrganizationId}/get-started`);
+    expect(link).toHaveAttribute("href", `/organization/${mockOrganizationId}/settings/context-layer`);
   });
 
   it("should have correct data-testid attribute", () => {

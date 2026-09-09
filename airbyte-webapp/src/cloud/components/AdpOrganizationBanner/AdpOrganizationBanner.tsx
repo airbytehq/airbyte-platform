@@ -2,10 +2,11 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { AlertBanner } from "components/ui/Banner/AlertBanner";
-import { ExternalLink } from "components/ui/Link";
+import { Link } from "components/ui/Link";
 
 import { useCurrentOrganizationId, useIsAdpOrganization } from "area/organization/utils";
-import { links } from "core/utils/links";
+import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
+import { RoutePaths } from "pages/routePaths";
 
 const AdpOrganizationBannerContent: React.FC = () => {
   const isAdpOrganization = useIsAdpOrganization();
@@ -15,7 +16,7 @@ const AdpOrganizationBannerContent: React.FC = () => {
     return null;
   }
 
-  const adpUrl = `${links.agentEngineApp}/organizations/${organizationId}/get-started`;
+  const contextLayerUrl = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`;
 
   return (
     <AlertBanner
@@ -25,7 +26,7 @@ const AdpOrganizationBannerContent: React.FC = () => {
         <FormattedMessage
           id="cloud.adpOrganization.banner"
           values={{
-            lnk: (node: React.ReactNode) => <ExternalLink href={adpUrl}>{node}</ExternalLink>,
+            lnk: (node: React.ReactNode) => <Link to={contextLayerUrl}>{node}</Link>,
           }}
         />
       }

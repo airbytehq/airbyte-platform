@@ -8,7 +8,6 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitions } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
-import { links } from "core/utils/links";
 import { RoutePaths } from "pages/routePaths";
 
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
@@ -40,15 +39,6 @@ const AgentsSourceCtaContent: React.FC<AgentsSourceCtaProps> = ({ actorType, act
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-
-    if (status?.is_enrolled) {
-      window.open(
-        `${links.agentEngineApp}/organizations/${organizationId}/get-started`,
-        "_blank",
-        "noopener,noreferrer"
-      );
-      return;
-    }
 
     navigate(
       `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`

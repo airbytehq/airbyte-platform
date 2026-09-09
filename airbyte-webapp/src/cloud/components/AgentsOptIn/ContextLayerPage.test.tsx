@@ -2,7 +2,13 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
-import { useAgentsProvisioningStatus, useEnrollOrganizationInAgents, useListWorkspacesInOrganization } from "core/api";
+import {
+  useAgentsProvisioningStatus,
+  useEnrollOrganizationInAgents,
+  useExternalWorkspaceConnectors,
+  useListWorkspacesInOrganization,
+  useSetExternalActorEnabled,
+} from "core/api";
 import { useModalService } from "core/services/Modal";
 import { useNotificationService } from "core/services/Notification";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -17,7 +23,9 @@ jest.mock("area/organization/utils", () => ({
 jest.mock("core/api", () => ({
   useAgentsProvisioningStatus: jest.fn(),
   useEnrollOrganizationInAgents: jest.fn(),
+  useExternalWorkspaceConnectors: jest.fn(),
   useListWorkspacesInOrganization: jest.fn(),
+  useSetExternalActorEnabled: jest.fn(),
 }));
 
 jest.mock("core/services/Modal", () => ({
@@ -38,7 +46,7 @@ jest.mock("./useShowAgentsOptIn", () => ({
 
 jest.mock("core/utils/links", () => ({
   links: {
-    agentEngineApp: "https://app.airbyte.ai",
+    agentsDocs: "https://docs.airbyte.com/ai-agents/get-started",
   },
 }));
 
@@ -56,6 +64,12 @@ const mockUseEnrollOrganizationInAgents = useEnrollOrganizationInAgents as jest.
 >;
 const mockUseListWorkspacesInOrganization = useListWorkspacesInOrganization as jest.MockedFunction<
   typeof useListWorkspacesInOrganization
+>;
+const mockUseExternalWorkspaceConnectors = useExternalWorkspaceConnectors as jest.MockedFunction<
+  typeof useExternalWorkspaceConnectors
+>;
+const mockUseSetExternalActorEnabled = useSetExternalActorEnabled as jest.MockedFunction<
+  typeof useSetExternalActorEnabled
 >;
 const mockUseModalService = useModalService as jest.MockedFunction<typeof useModalService>;
 const mockUseNotificationService = useNotificationService as jest.MockedFunction<typeof useNotificationService>;
@@ -104,12 +118,17 @@ const messages = {
   "cloud.contextLayer.workspace.description":
     "Control which connectors AI agents can access within each workspace. Sources are enabled by default. Destinations must be explicitly enabled.",
   "cloud.contextLayer.workspace.loading": "Loading workspaces...",
+  "cloud.contextLayer.workspace.loadingMore": "Loading more workspaces...",
   "cloud.contextLayer.workspace.empty": "No workspaces found in this organization.",
+  "cloud.contextLayer.workspace.connectorsLoading": "Loading connectors...",
+  "cloud.contextLayer.workspace.noConnectors": "No connectors found in this workspace.",
   "cloud.contextLayer.workspace.counts": "{sources} sources, {destinations} destinations",
   "cloud.contextLayer.workspace.sources": "Sources",
   "cloud.contextLayer.workspace.destinations": "Destinations",
-  "cloud.contextLayer.workspace.enabledCount": "{enabled} of {total} enabled",
-  "cloud.contextLayer.openAgents": "Open Airbyte Agents",
+  "cloud.contextLayer.workspace.enabledCount":
+    "{enabled} of {supported} enabled{unsupported, plural, =0 {} other { (excludes {unsupported} not supported)}}",
+  "cloud.contextLayer.connectors.error": "Unable to load connectors. Please try again.",
+  "cloud.contextLayer.docs": "Learn how to connect agents (SDK, API, MCP)",
 };
 
 const renderWithIntl = () =>
@@ -125,6 +144,14 @@ describe("ContextLayerPage", () => {
     mockUseCurrentOrganizationId.mockReturnValue("test-org-123");
     mockUseShowAgentsOptIn.mockReturnValue(true);
     mockUseListWorkspacesInOrganization.mockReturnValue({ data: { pages: [] } } as never);
+    mockUseExternalWorkspaceConnectors.mockReturnValue({
+      sources: [],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    });
+    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync: jest.fn() } as never);
     mockUseGeneratedIntent.mockReturnValue(true);
     mockUseModalService.mockReturnValue({ openModal: jest.fn() } as never);
     mockUseNotificationService.mockReturnValue({ registerNotification: jest.fn() } as never);
@@ -220,7 +247,274 @@ describe("ContextLayerPage", () => {
 
     expect(screen.getByText("Workspace connector access")).toBeInTheDocument();
     expect(screen.getByText("No workspaces found in this organization.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Airbyte Agents" })).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("link", { name: "Learn how to connect agents (SDK, API, MCP)" })).toHaveAttribute(
+      "href",
+      "https://docs.airbyte.com/ai-agents/get-started"
+    );
+    expect(screen.getByRole("link", { name: "Learn how to connect agents (SDK, API, MCP)" })).toHaveAttribute(
+      "target",
+      "_blank"
+    );
+  });
+
+  it("renders real workspace connectors and the empty state", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: {
+        pages: [
+          {
+            workspaces: [
+              { workspaceId: "workspace-1", name: "Workspace 1" },
+              { workspaceId: "workspace-2", name: "Workspace 2" },
+            ],
+          },
+        ],
+      },
+    } as never);
+    const mutateAsync = jest.fn().mockResolvedValue({ enabled: false });
+    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
+    mockUseExternalWorkspaceConnectors.mockImplementation((workspaceId) =>
+      workspaceId === "workspace-1"
+        ? {
+            sources: [
+              { id: "source-1", name: "GitHub account", supported: true, enabled: true },
+              {
+                id: "source-2",
+                name: "Stripe account",
+                supported: true,
+                enabled: false,
+              },
+            ],
+            destinations: [
+              {
+                id: "destination-1",
+                name: "BigQuery warehouse",
+                supported: false,
+                enabled: false,
+              },
+              {
+                id: "destination-2",
+                name: "Snowflake warehouse",
+                supported: true,
+                enabled: true,
+              },
+            ],
+            isLoading: false,
+            sourcesError: false,
+            destinationsError: false,
+          }
+        : { sources: [], destinations: [], isLoading: false, sourcesError: false, destinationsError: false }
+    );
+
+    renderWithIntl();
+
+    expect(screen.getByText("GitHub account")).toBeInTheDocument();
+    expect(screen.getByText("Stripe account")).toBeInTheDocument();
+    expect(screen.getByText("BigQuery warehouse")).toBeInTheDocument();
+    expect(screen.getByText("Snowflake warehouse")).toBeInTheDocument();
+    expect(screen.getByText("No connectors found in this workspace.")).toBeInTheDocument();
+    expect(screen.getByText("1 of 2 enabled")).toBeInTheDocument();
+    expect(screen.getByText("1 of 1 enabled (excludes 1 not supported)")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Stripe account" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "BigQuery warehouse" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        actorId: "source-1",
+        actorKind: "source",
+        enabled: false,
+      })
+    );
+  });
+
+  it("loads all workspace pages before rendering connector access", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    let workspacePages = [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }];
+    let hasNextPage = true;
+    const fetchNextPage = jest.fn().mockImplementation(async () => {
+      workspacePages = [...workspacePages, { workspaces: [{ workspaceId: "workspace-2", name: "Workspace 2" }] }];
+      hasNextPage = false;
+      return { data: { pages: workspacePages }, hasNextPage: false };
+    });
+    mockUseListWorkspacesInOrganization.mockImplementation(
+      () =>
+        ({
+          get data() {
+            return { pages: workspacePages };
+          },
+          get hasNextPage() {
+            return hasNextPage;
+          },
+          fetchNextPage,
+          isFetchingNextPage: false,
+          isLoading: false,
+        }) as never
+    );
+    mockUseExternalWorkspaceConnectors.mockReturnValue({
+      sources: [],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    } as never);
+
+    const view = renderWithIntl();
+
+    await waitFor(() => expect(fetchNextPage).toHaveBeenCalledTimes(1));
+    view.rerender(
+      <IntlProvider locale="en" messages={messages}>
+        <ContextLayerPage />
+      </IntlProvider>
+    );
+    expect(screen.getByText("Workspace 1")).toBeInTheDocument();
+    expect(screen.getByText("Workspace 2")).toBeInTheDocument();
+  });
+
+  it("disables all connector switches and does not mutate for read-only viewers", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      isLoading: false,
+    } as never);
+    const mutateAsync = jest.fn();
+    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
+    mockUseGeneratedIntent.mockReturnValue(false);
+    mockUseExternalWorkspaceConnectors.mockReturnValue({
+      sources: [{ id: "source-1", name: "GitHub account", supported: true, enabled: true }],
+      destinations: [{ id: "destination-1", name: "BigQuery warehouse", supported: false, enabled: false }],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    } as never);
+
+    renderWithIntl();
+
+    expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "BigQuery warehouse" })).toBeDisabled();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("renders a connector error for one category without hiding the other category", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      isLoading: false,
+    } as never);
+    mockUseExternalWorkspaceConnectors.mockReturnValue({
+      sources: [],
+      destinations: [{ id: "destination-1", name: "BigQuery warehouse", supported: true, enabled: true }],
+      isLoading: false,
+      sourcesError: true,
+      destinationsError: false,
+    } as never);
+
+    renderWithIntl();
+
+    expect(screen.getByTestId("context-layer-source-error")).toHaveTextContent(
+      "Unable to load connectors. Please try again."
+    );
+    expect(screen.getByText("BigQuery warehouse")).toBeInTheDocument();
+    expect(screen.queryByText("No connectors found in this workspace.")).not.toBeInTheDocument();
+  });
+
+  it("clears the optimistic connector state after a successful mutation", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      isLoading: false,
+    } as never);
+    const mutateAsync = jest.fn().mockResolvedValue({ enabled: false });
+    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
+    mockUseExternalWorkspaceConnectors.mockReturnValue({
+      sources: [{ id: "source-1", name: "GitHub account", supported: true, enabled: true }],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    } as never);
+
+    const view = renderWithIntl();
+    const checkbox = screen.getByRole("checkbox", { name: "GitHub account" });
+    fireEvent.click(checkbox);
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    view.rerender(
+      <IntlProvider locale="en" messages={messages}>
+        <ContextLayerPage />
+      </IntlProvider>
+    );
+
+    expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeChecked();
+  });
+
+  it("reverts the connector switch when the mutation fails", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      isLoading: false,
+    } as never);
+    const mutateAsync = jest.fn().mockRejectedValue(new Error("failed"));
+    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
+    mockUseExternalWorkspaceConnectors.mockReturnValue({
+      sources: [{ id: "source-1", name: "GitHub account", supported: true, enabled: true }],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    } as never);
+
+    renderWithIntl();
+    fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeChecked());
   });
 
   it("shows a loading state while workspace access is loading", () => {
