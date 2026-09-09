@@ -51,7 +51,7 @@
   "proFeatures.modal.features.multipleDataRegions": "Multiple data regions",
   "proFeatures.modal.features.userGroupsAndScim": "User groups and SCIM",
   "proFeatures.modal.features.sso": "Single sign-on (SSO)",
-  "proFeatures.modal.features.upTo3Workspaces": "Up to 3 workspaces",
+  "proFeatures.modal.features.upTo2Workspaces": "Up to 2 workspaces",
   "proFeatures.modal.upgradeMessage": "Talk to our sales team about upgrading to Pro or Enterprise to unlock these features.",
   "proFeatures.modal.upgradeMessagePlusOrPro": "Upgrade to Plus or Pro to unlock 15-minute syncs.",
   "proFeatures.modal.button.talkToSales": "Talk to sales",

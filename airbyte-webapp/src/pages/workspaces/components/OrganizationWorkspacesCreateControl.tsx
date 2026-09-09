@@ -37,7 +37,7 @@ type CreateWorkspaceFormValues = z.infer<typeof OrganizationCreateWorkspaceFormV
 // without any feature being repeated.
 const plusUpgradeMessageIds = [
   "proFeatures.modal.features.sso",
-  "proFeatures.modal.features.upTo3Workspaces",
+  "proFeatures.modal.features.upTo2Workspaces",
   "proFeatures.modal.features.mappers",
 ];
 
