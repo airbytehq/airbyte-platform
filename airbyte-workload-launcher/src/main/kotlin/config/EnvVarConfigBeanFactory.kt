@@ -454,6 +454,14 @@ class EnvVarConfigBeanFactory {
           airbyteSecretsManagerConfig.store.gcp.region!!,
         )
       }
+      if (!airbyteSecretsManagerConfig.store.gcp.kmsKeyName
+          .isNullOrBlank()
+      ) {
+        put(
+          EnvVarConstants.SECRET_STORE_GCP_KMS_KEY_NAME,
+          airbyteSecretsManagerConfig.store.gcp.kmsKeyName!!,
+        )
+      }
       put(EnvVarConstants.AWS_SECRET_MANAGER_REGION, airbyteSecretsManagerConfig.store.aws.region)
       put(EnvVarConstants.AWS_KMS_KEY_ARN, airbyteSecretsManagerConfig.store.aws.kmsKeyArn)
       put(EnvVarConstants.AWS_SECRET_MANAGER_SECRET_TAGS, airbyteSecretsManagerConfig.store.aws.tags)

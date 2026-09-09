@@ -114,6 +114,7 @@ airbyte:
         credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
         project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
         region: ${SECRET_STORE_GCP_REGION:}
+        kms-key-name: ${SECRET_STORE_GCP_KMS_KEY_NAME:}
       vault:
         address: ${VAULT_ADDRESS:}
         prefix: ${VAULT_PREFIX:}

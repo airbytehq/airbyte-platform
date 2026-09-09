@@ -881,12 +881,14 @@ data class AirbyteSecretsManagerConfig(
       val projectId: String = "",
       val credentials: String = "",
       val region: String? = "",
+      val kmsKeyName: String? = "",
       val credentialsRefName: String = "",
       val credentialsRefKey: String = "",
     ) : SecretsManagerConfig {
       override fun toEnvVarMap(): Map<String, String> = emptyMap()
 
-      override fun toString(): String = "GoogleSecretsManagerConfig(projectId=$projectId, credentials=${credentials.mask()}, region=$region)"
+      override fun toString(): String =
+        "GoogleSecretsManagerConfig(projectId=$projectId, credentials=${credentials.mask()}, region=$region, kmsKeyName=$kmsKeyName)"
     }
 
     /**

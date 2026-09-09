@@ -7,6 +7,7 @@ package io.airbyte.config.secrets.persistence
 import com.google.api.gax.core.FixedCredentialsProvider
 import com.google.api.gax.rpc.NotFoundException
 import com.google.auth.oauth2.ServiceAccountCredentials
+import com.google.cloud.secretmanager.v1.CustomerManagedEncryption
 import com.google.cloud.secretmanager.v1.ListSecretVersionsRequest
 import com.google.cloud.secretmanager.v1.ProjectName
 import com.google.cloud.secretmanager.v1.Replication
@@ -92,6 +93,7 @@ data class GoogleSecretsManagerRuntimeConfig(
   val projectId: String,
   val gcpCredentials: String,
   val region: String?,
+  val kmsKeyName: String? = null,
 ) {
   companion object : RuntimeConfigValidator {
     // Checked when a user saves their secret-storage credentials, so an incomplete config is
@@ -106,6 +108,7 @@ data class GoogleSecretsManagerRuntimeConfig(
         projectId = config.configuration["gcpProjectId"]!!,
         gcpCredentials = config.configuration["gcpCredentialsJson"]!!,
         region = config.configuration["region"],
+        kmsKeyName = config.configuration["kmsKeyName"],
       )
     }
   }
@@ -125,20 +128,41 @@ interface GoogleSecretManagerClient {
 
   fun getProjectId(): String
 
-  fun getReplicationPolicy(): Replication =
-    Replication
+  fun getKmsKeyName(): String? = null
+
+  fun getReplicationPolicy(): Replication? {
+    // regional secrets reject a replication policy, their CMEK key goes on the secret itself
+    if (!getRegion().isNullOrBlank()) {
+      return null
+    }
+
+    val automatic = Replication.Automatic.newBuilder()
+
+    // global secrets carry CMEK in the replication policy and require a key in the global location
+    getKmsKeyName()?.takeIf { it.isNotBlank() }?.let { kmsKeyName ->
+      automatic.setCustomerManagedEncryption(
+        CustomerManagedEncryption
+          .newBuilder()
+          .setKmsKeyName(kmsKeyName)
+          .build(),
+      )
+      logger.info { "Using CMEK for global secret: kmsKeyName=$kmsKeyName" }
+    }
+
+    return Replication
       .newBuilder()
-      .setAutomatic(Replication.Automatic.newBuilder().build())
+      .setAutomatic(automatic.build())
       .build()
+  }
 
   fun getSecret(coordinate: SecretCoordinate): String {
     try {
       val region = getRegion()
       val projectId = getProjectId()
       val secretVersionName =
-        if (!getRegion().isNullOrBlank()) {
-          // For regional secrets, construct the resource name with location
-          val resourceName = "projects/$projectId/locations/$region/secrets/${coordinate.fullCoordinate}"
+        if (!region.isNullOrBlank()) {
+          // for regional secrets, construct the resource name with location
+          val resourceName = "projects/$projectId/locations/$region/secrets/${coordinate.fullCoordinate}/versions/$LATEST_VERSION"
           SecretVersionName.parse(resourceName)
         } else {
           SecretVersionName.of(projectId, coordinate.fullCoordinate, LATEST_VERSION)
@@ -185,7 +209,20 @@ interface GoogleSecretManagerClient {
     payload: String,
     expiry: Instant?,
   ) {
-    val secretBuilder = Secret.newBuilder().setReplication(getReplicationPolicy())
+    val secretBuilder = Secret.newBuilder()
+    getReplicationPolicy()?.let { secretBuilder.setReplication(it) }
+
+    // for regional secrets, set CMEK on the secret itself since they have no replication policy
+    val kmsKeyName = getKmsKeyName()
+    if (!getRegion().isNullOrBlank() && !kmsKeyName.isNullOrBlank()) {
+      secretBuilder.setCustomerManagedEncryption(
+        CustomerManagedEncryption
+          .newBuilder()
+          .setKmsKeyName(kmsKeyName)
+          .build(),
+      )
+      logger.info { "Using CMEK for regional secret: kmsKeyName=$kmsKeyName" }
+    }
 
     // set the expiry if specified
     expiry?.let {
@@ -283,6 +320,8 @@ class RuntimeGoogleSecretManagerClient(
   override fun getProjectId(): String = config.projectId
 
   override fun getRegion(): String? = config.region
+
+  override fun getKmsKeyName(): String? = config.kmsKeyName
 }
 
 @Singleton
@@ -299,4 +338,6 @@ class SystemGoogleSecretManagerClient(
   override fun getProjectId(): String = config.projectId
 
   override fun getRegion(): String? = config.region
+
+  override fun getKmsKeyName(): String? = config.kmsKeyName
 }
