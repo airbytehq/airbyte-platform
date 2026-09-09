@@ -1,0 +1,63 @@
+@use "scss/colors";
+@use "scss/variables";
+
+// `.upsell` and the base `.tooltip` are both single-class selectors on the same element, so ties
+// are broken by CSS source order, which isn't guaranteed across modules. Each `!important` below
+// marks a property the base tooltip also sets; the rest are plain declarations.
+.upsell {
+  width: 320px;
+  border: 1px solid colors.$grey-100;
+
+  // The base tooltip caps height at 50vh and scrolls, which clipped the feature list and the CTA.
+  max-height: none !important;
+  padding: variables.$spacing-lg !important;
+  border-radius: variables.$border-radius-md !important;
+
+  // The base tooltip sets `line-height: initial`, which crowds the multi-line copy below.
+  line-height: 1.4 !important;
+}
+
+.upsell__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: variables.$spacing-md;
+}
+
+.upsell__count {
+  width: 100%;
+  padding-bottom: variables.$spacing-md;
+  border-bottom: 1px solid colors.$grey-100;
+}
+
+.upsell__section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: variables.$spacing-md;
+  width: 100%;
+
+  & + & {
+    padding-top: variables.$spacing-md;
+    border-top: 1px solid colors.$grey-100;
+  }
+}
+
+.upsell__features {
+  margin: 0;
+  padding-left: variables.$spacing-lg;
+  font-size: variables.$font-size-sm;
+  color: colors.$grey-500;
+
+  li + li {
+    margin-top: variables.$spacing-xs;
+  }
+}
+
+.upsell__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: variables.$spacing-xs;
+  font-size: variables.$font-size-sm;
+  font-weight: 600;
+}

@@ -6,16 +6,24 @@ import { z } from "zod";
 import { Button } from "components/ui/Button";
 import { Form, FormControl } from "components/ui/forms";
 import { FormSubmissionButtons } from "components/ui/forms/FormSubmissionButtons";
+import { Icon } from "components/ui/Icon";
+import { ExternalLink, Link } from "components/ui/Link";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
+import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentOrganizationId, useOrganizationPlan } from "area/organization/utils";
+import { PlanAvailability, PlanAvailabilityBadges } from "cloud/area/billing/components/PlanAvailabilityBadges";
+import { useLinkToPlanPage } from "cloud/area/billing/utils/useLinkToPlanPage";
 import { HttpProblem, useCreateWorkspace, useListDataplaneGroups } from "core/api";
 import { DataplaneGroupRead } from "core/api/types/AirbyteClient";
 import { useModalService } from "core/services/Modal";
 import { useNotificationService } from "core/services/Notification";
 import { trackError } from "core/utils/datadog";
+import { links } from "core/utils/links";
 import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
+
+import styles from "./OrganizationWorkspacesCreateControl.module.scss";
 
 const OrganizationCreateWorkspaceFormValidationSchema = z.object({
   name: z.string().trim().nonempty("form.empty.error"),
@@ -25,11 +33,91 @@ const OrganizationCreateWorkspaceFormValidationSchema = z.object({
 
 type CreateWorkspaceFormValues = z.infer<typeof OrganizationCreateWorkspaceFormValidationSchema>;
 
+// Each list is what that plan adds over the one below it, so a Standard user can see both sections
+// without any feature being repeated.
+const plusUpgradeMessageIds = [
+  "proFeatures.modal.features.sso",
+  "proFeatures.modal.features.upTo3Workspaces",
+  "proFeatures.modal.features.mappers",
+];
+
+const proUpgradeMessageIds = [
+  "proFeatures.modal.features.unlimitedWorkspaces",
+  "proFeatures.modal.features.rbac",
+  "proFeatures.modal.features.multipleDataRegions",
+  "proFeatures.modal.features.userGroupsAndScim",
+];
+
+const UpsellSection: React.FC<{
+  plan: PlanAvailability;
+  titleId: string;
+  featureMessageIds: string[];
+  cta: React.ReactNode;
+}> = ({ plan, titleId, featureMessageIds, cta }) => (
+  <div className={styles.upsell__section}>
+    <PlanAvailabilityBadges plans={[plan]} />
+    <Text as="div" size="md" bold>
+      <FormattedMessage id={titleId} />
+    </Text>
+    <ul className={styles.upsell__features}>
+      {featureMessageIds.map((messageId) => (
+        <li key={messageId}>
+          <FormattedMessage id={messageId} />
+        </li>
+      ))}
+    </ul>
+    {cta}
+  </div>
+);
+
+const WorkspaceLimitUpsell: React.FC<{ limitInfo?: { currentCount: number; limit: number } }> = ({ limitInfo }) => {
+  const { isPlusPlan } = useOrganizationPlan();
+  const linkToPlanPage = useLinkToPlanPage();
+
+  return (
+    <div className={styles.upsell__body}>
+      {limitInfo && (
+        <Text as="div" size="sm" color="grey400" className={styles.upsell__count}>
+          <FormattedMessage
+            id="workspaces.limitReached"
+            values={{ count: limitInfo.currentCount, limit: limitInfo.limit }}
+          />
+        </Text>
+      )}
+      {!isPlusPlan && (
+        <UpsellSection
+          plan="plus"
+          titleId="workspaces.upsell.upgradeToPlus"
+          featureMessageIds={plusUpgradeMessageIds}
+          cta={
+            <Link to={linkToPlanPage} className={styles.upsell__cta}>
+              <FormattedMessage id="workspaces.upsell.viewPlans" />
+              <Icon type="arrowRight" size="sm" />
+            </Link>
+          }
+        />
+      )}
+      <UpsellSection
+        plan="pro"
+        titleId="workspaces.upsell.upgradeToPro"
+        featureMessageIds={proUpgradeMessageIds}
+        cta={
+          <ExternalLink href={links.contactSales} opensInNewTab className={styles.upsell__cta}>
+            <FormattedMessage id="proFeatures.modal.button.talkToSales" />
+            <Icon type="arrowRight" size="sm" />
+          </ExternalLink>
+        }
+      />
+    </div>
+  );
+};
+
 export const OrganizationWorkspacesCreateControl: React.FC<{
   disabled?: boolean;
   secondary?: boolean;
   onCreated?: () => void;
-}> = ({ disabled = false, secondary = false, onCreated }) => {
+  limitInfo?: { currentCount: number; limit: number };
+}> = ({ disabled = false, secondary = false, onCreated, limitInfo }) => {
   const dataplaneGroups = useListDataplaneGroups();
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
@@ -51,13 +139,16 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
   if (disabled) {
     return (
       <Tooltip
+        theme="light"
+        placement="bottom"
+        className={styles.upsell}
         control={
           <Button variant={secondary ? "secondary" : "primary"} size="sm" icon="lock" disabled>
             <FormattedMessage id="workspaces.createNew" />
           </Button>
         }
       >
-        <FormattedMessage id="organization.upgradePlanToAddMoreWorkspaces" />
+        <WorkspaceLimitUpsell limitInfo={limitInfo} />
       </Tooltip>
     );
   }

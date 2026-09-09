@@ -12542,6 +12542,13 @@ components:
           type: string
         feature_name:
           type: string
+        value:
+          type: integer
+          format: int64
+          description: The numeric value of a numeric entitlement with a finite value. Null for boolean entitlements, unlimited numeric entitlements, and entitlements that are not granted.
+        is_unlimited:
+          type: boolean
+          description: True when the entitlement is a granted numeric entitlement that is unlimited.
 
     GetEntitlementsByOrganizationIdRequestBody:
       type: object
@@ -12948,6 +12955,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WorkspaceRead"
+        total_workspace_count:
+          type: integer
+          format: int64
+          description: The total number of non-deleted workspaces in the organization, ignoring pagination and keyword filtering. Only populated by organization-scoped list operations.
     TimeWindowRequestBody:
       description: Input to filter workspaces with most recently running jobs within the given time window
       type: object

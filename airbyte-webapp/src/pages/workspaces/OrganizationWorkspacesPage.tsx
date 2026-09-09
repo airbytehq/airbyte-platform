@@ -13,12 +13,13 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentOrganizationId, useIsInstanceAdmin } from "area/organization/utils";
 import {
   useListUsersInOrganization,
   useListWorkspacesInOrganization,
   useGetWorkspacesStatusesCounts,
   useOrgInfo,
+  useMaximumWorkspaces,
 } from "core/api";
 import { WorkspaceRead, WebBackendConnectionStatusCounts } from "core/api/types/AirbyteClient";
 import { useWebappConfig } from "core/config";
@@ -71,10 +72,21 @@ const OrganizationWorkspacesPage: React.FC = () => {
   const firstPageOfWorkspaces = moreThanOneWorkspaceData?.pages?.[0]?.workspaces ?? [];
   const hasCreateWorkspacePermission = useIntent("CreateOrganizationWorkspaces", { organizationId });
   const hasCreateMultipleWorkspacesFeature = useFeature(FeatureItem.CreateMultipleWorkspaces);
+  const maximumWorkspaces = useMaximumWorkspaces();
+  const totalWorkspaceCount = data?.pages?.[0]?.total_workspace_count;
+  const isInstanceAdmin = useIsInstanceAdmin();
+  // Mirrors the server-side enforcement in WorkspacesHandler: the limit applies when the org has a
+  // finite maximum-workspaces entitlement and the current count has reached it, and instance
+  // admins are exempt.
+  const isAtWorkspaceLimit =
+    maximumWorkspaces != null &&
+    totalWorkspaceCount != null &&
+    totalWorkspaceCount >= maximumWorkspaces &&
+    !isInstanceAdmin;
 
   const hasNoWorkspaces = !isLoading && firstPageOfWorkspaces.length === 0;
   const isCreateWorkspaceEnabled =
-    hasCreateWorkspacePermission && (hasNoWorkspaces || hasCreateMultipleWorkspacesFeature);
+    hasCreateWorkspacePermission && !isAtWorkspaceLimit && (hasNoWorkspaces || hasCreateMultipleWorkspacesFeature);
 
   // Get status counts for all workspaces
   const statusCountsResults = useGetWorkspacesStatusesCounts(workspaceIds);
@@ -154,7 +166,13 @@ const OrganizationWorkspacesPage: React.FC = () => {
               )}
             </Box>
             <FlexContainer alignItems="center" gap="sm">
-              <OrganizationWorkspacesCreateControl disabled={!isCreateWorkspaceEnabled} onCreated={refetch} />
+              <OrganizationWorkspacesCreateControl
+                disabled={!isCreateWorkspaceEnabled}
+                onCreated={refetch}
+                limitInfo={
+                  isAtWorkspaceLimit ? { currentCount: totalWorkspaceCount, limit: maximumWorkspaces } : undefined
+                }
+              />
             </FlexContainer>
           </FlexContainer>
           <Box>
@@ -195,6 +213,9 @@ const OrganizationWorkspacesPage: React.FC = () => {
                   disabled={!isCreateWorkspaceEnabled}
                   secondary
                   onCreated={refetch}
+                  limitInfo={
+                    isAtWorkspaceLimit ? { currentCount: totalWorkspaceCount, limit: maximumWorkspaces } : undefined
+                  }
                 />
               </FlexContainer>
             ) : showNoWorkspacesFound ? (

@@ -16,4 +16,12 @@ data class EntitlementResult(
    * rather than acting on it. [isEntitled] = true together with this being false is possible.
    */
   val isEntitlementCheckSuccessful: Boolean = true,
+  /**
+   * The numeric value of a numeric entitlement, if this result is for a granted numeric entitlement
+   * with a finite value. Null for boolean entitlements, unlimited numeric entitlements, and
+   * entitlements that are not granted.
+   */
+  val value: Long? = null,
+  /** True when this result is for a granted numeric entitlement that is unlimited. */
+  val isUnlimited: Boolean = false,
 )

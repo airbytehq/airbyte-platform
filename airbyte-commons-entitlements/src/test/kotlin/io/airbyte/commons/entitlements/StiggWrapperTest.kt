@@ -19,9 +19,12 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import io.stigg.api.operations.GetPaywallQuery
+import io.stigg.sidecar.proto.v1.EntitlementFeature
 import io.stigg.sidecar.proto.v1.EnumEntitlement
 import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetBooleanEntitlementResponse
+import io.stigg.sidecar.proto.v1.GetEntitlementsRequest
+import io.stigg.sidecar.proto.v1.GetEntitlementsResponse
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementResponse
 import io.stigg.sidecar.proto.v1.GetNumericEntitlementRequest
@@ -383,6 +386,59 @@ internal class StiggWrapperTest {
     // Should call Stigg and return the real result
     assertEquals(2, result.size)
     assertEquals(listOf("feature-a", "feature-b"), result.map { it.featureId }.sorted())
+  }
+
+  @Test
+  fun `getEntitlements surfaces numeric entitlement values`() {
+    val stigg = mockk<Stigg>()
+    val response =
+      GetEntitlementsResponse
+        .newBuilder()
+        .addEntitlements(
+          io.stigg.sidecar.proto.v1.Entitlement
+            .newBuilder()
+            .setNumeric(
+              NumericEntitlement
+                .newBuilder()
+                .setFeature(EntitlementFeature.newBuilder().setId("feature-maximum-workspaces"))
+                .setValue(3),
+            ),
+        ).addEntitlements(
+          io.stigg.sidecar.proto.v1.Entitlement
+            .newBuilder()
+            .setNumeric(
+              NumericEntitlement
+                .newBuilder()
+                .setFeature(EntitlementFeature.newBuilder().setId("feature-privatelink-limit"))
+                .setIsUnlimited(true),
+            ),
+        ).addEntitlements(
+          io.stigg.sidecar.proto.v1.Entitlement
+            .newBuilder()
+            .setBoolean(
+              io.stigg.sidecar.proto.v1.BooleanEntitlement
+                .newBuilder()
+                .setFeature(EntitlementFeature.newBuilder().setId("feature-sso")),
+            ),
+        ).build()
+
+    every { stigg.getEntitlements(any<GetEntitlementsRequest>()) } returns response
+
+    val result = StiggWrapper(stigg, metricClient).getEntitlements(organizationId)
+
+    val maximumWorkspaces = result.first { it.featureId == "feature-maximum-workspaces" }
+    assertEquals(true, maximumWorkspaces.isEntitled)
+    assertEquals(3L, maximumWorkspaces.value)
+    assertEquals(false, maximumWorkspaces.isUnlimited)
+
+    val privateLinkLimit = result.first { it.featureId == "feature-privatelink-limit" }
+    assertEquals(true, privateLinkLimit.isUnlimited)
+    assertEquals(null, privateLinkLimit.value)
+
+    val sso = result.first { it.featureId == "feature-sso" }
+    assertEquals(true, sso.isEntitled)
+    assertEquals(null, sso.value)
+    assertEquals(false, sso.isUnlimited)
   }
 
   @Test

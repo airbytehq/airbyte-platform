@@ -1626,8 +1626,10 @@ internal class WorkspacesHandlerTest {
           Optional.empty<String>(),
         ),
       ).thenReturn(expectedWorkspaces)
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(2L)
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganization(request)
     assertEquals(2, result.getWorkspaces().size)
+    assertEquals(2L, result.getTotalWorkspaceCount())
   }
 
   @Test
@@ -1646,8 +1648,11 @@ internal class WorkspacesHandlerTest {
           Optional.of<String>("nameContains"),
         ),
       ).thenReturn(expectedWorkspaces)
+    // The total count ignores the keyword filter and counts all workspaces in the organization.
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(5L)
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganization(request)
     assertEquals(2, result.getWorkspaces().size)
+    assertEquals(5L, result.getTotalWorkspaceCount())
   }
 
   @Test
@@ -1664,8 +1669,11 @@ internal class WorkspacesHandlerTest {
           Optional.empty<String>(),
         ),
       ).thenReturn(expectedWorkspaces)
+    // The user can only see 2 of the organization's 3 workspaces, but the total counts all of them.
+    Mockito.`when`(workspacePersistence.countWorkspacesByOrganizationId(ORGANIZATION_ID)).thenReturn(3L)
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
     assertEquals(2, result.getWorkspaces().size)
+    assertEquals(3L, result.getTotalWorkspaceCount())
   }
 
   @Test

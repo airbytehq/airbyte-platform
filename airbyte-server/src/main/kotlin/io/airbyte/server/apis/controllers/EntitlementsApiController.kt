@@ -80,6 +80,8 @@ class EntitlementsApiController(
                 .featureName(it.featureName)
                 .isEntitled(it.isEntitled)
                 .accessDeniedReason(it.reason)
+                .value(it.value)
+                .isUnlimited(it.isUnlimited)
             },
           )
       } catch (e: ForbiddenProblem) {

@@ -78,6 +78,7 @@ internal class StaticEntitlementClient(
         isEntitled = granted,
         reason = if (granted) REASON_GRANTED else REASON_DENIED,
         featureName = entitlement.name,
+        value = numericEntitlementValues[entitlement.featureId],
       )
     }
   }

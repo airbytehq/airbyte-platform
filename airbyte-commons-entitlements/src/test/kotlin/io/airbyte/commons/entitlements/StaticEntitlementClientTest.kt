@@ -226,4 +226,19 @@ class StaticEntitlementClientTest {
       numericClient.getPlans(organizationId),
     )
   }
+
+  @Test
+  fun `numeric mode - getEntitlements surfaces the numeric value`() {
+    val result = numericClient.getEntitlements(organizationId)
+
+    val committedDataWorkers = result.first { it.featureId == CommittedDataWorkersEntitlement.featureId }
+    assertEquals(true, committedDataWorkers.isEntitled)
+    assertEquals(3L, committedDataWorkers.value)
+    assertEquals(false, committedDataWorkers.isUnlimited)
+
+    val mappers = result.first { it.featureId == MappersEntitlement.featureId }
+    assertEquals(true, mappers.isEntitled)
+    assertEquals(null, mappers.value)
+    assertEquals(false, mappers.isUnlimited)
+  }
 }

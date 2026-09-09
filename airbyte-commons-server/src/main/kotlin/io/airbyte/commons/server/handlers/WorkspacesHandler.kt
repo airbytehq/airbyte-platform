@@ -393,7 +393,9 @@ class WorkspacesHandler
             .map<WorkspaceRead> { obj: StandardWorkspace -> domainToApiModel(obj) }
             .collect(Collectors.toList<WorkspaceRead>())
         }
-      return WorkspaceReadList().workspaces(standardWorkspaces)
+      return WorkspaceReadList()
+        .workspaces(standardWorkspaces)
+        .totalWorkspaceCount(workspacePersistence.countWorkspacesByOrganizationId(request.organizationId))
     }
 
     fun listWorkspacesInOrganizationForUser(
@@ -427,7 +429,11 @@ class WorkspacesHandler
             .map { obj: StandardWorkspace -> domainToApiModel(obj) }
             .collect(Collectors.toList())
         }
-      return WorkspaceReadList().workspaces(standardWorkspaces)
+      // The list contains only the workspaces the calling user can access, but the total reflects
+      // the whole organization so clients can enforce org-wide workspace limits.
+      return WorkspaceReadList()
+        .workspaces(standardWorkspaces)
+        .totalWorkspaceCount(workspacePersistence.countWorkspacesByOrganizationId(request.organizationId))
     }
 
     private fun listWorkspacesByInstanceAdminUser(request: ListWorkspacesByUserRequestBody): WorkspaceReadList {

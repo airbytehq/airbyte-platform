@@ -73,6 +73,7 @@ class EntitlementsApiControllerTest {
       listOf(
         EntitlementResult("feature1", true, null),
         EntitlementResult("feature2", false, "Insufficient plan"),
+        EntitlementResult(featureId = "feature-maximum-workspaces", isEntitled = true, value = 3L, isUnlimited = false),
       )
 
     // Mock validation to succeed
@@ -82,7 +83,7 @@ class EntitlementsApiControllerTest {
     val result = entitlementsApiController.getEntitlements(requestBody)
 
     assertNotNull(result)
-    assertEquals(2, result!!.entitlements.size)
+    assertEquals(3, result!!.entitlements.size)
 
     val firstEntitlement = result.entitlements[0]
     assertEquals("feature1", firstEntitlement.featureId)
@@ -93,6 +94,12 @@ class EntitlementsApiControllerTest {
     assertEquals("feature2", secondEntitlement.featureId)
     assertEquals(false, secondEntitlement.isEntitled)
     assertEquals("Insufficient plan", secondEntitlement.accessDeniedReason)
+
+    val numericEntitlement = result.entitlements[2]
+    assertEquals("feature-maximum-workspaces", numericEntitlement.featureId)
+    assertEquals(true, numericEntitlement.isEntitled)
+    assertEquals(3L, numericEntitlement.value)
+    assertEquals(false, numericEntitlement.isUnlimited)
 
     verify(exactly = 1) { organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId) }
     verify(exactly = 1) { entitlementService.getEntitlements(OrganizationId(organizationId)) }
