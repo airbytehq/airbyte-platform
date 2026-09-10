@@ -38,13 +38,14 @@ describe("StandardPlanGridCard", () => {
   it("renders the price, description, and feature list", async () => {
     await render(<StandardPlanGridCard disabled={false} />);
 
-    expect(screen.getByText("$20")).toBeInTheDocument();
+    expect(screen.getByText("$10")).toBeInTheDocument();
     expect(screen.getByText("/ month")).toBeInTheDocument();
     expect(screen.getByText(/For practitioners looking for fully managed software/)).toBeInTheDocument();
 
     const features = screen.getAllByRole("listitem");
     expect(features).toHaveLength(6);
-    expect(features[0]).toHaveTextContent("5 credits per month");
+    expect(features[0]).toHaveTextContent("4 credits per month");
+    expect(features[1]).toHaveTextContent("Buy credits from $2.50");
     expect(features[features.length - 1]).toHaveTextContent("Cancel any time");
     expect(screen.getByRole("link", { name: "credits" })).toHaveAttribute("href", links.creditDescription);
   });
