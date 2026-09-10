@@ -28,6 +28,7 @@ const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
   "feature-fe-display-organization-users": FeatureItem.DisplayOrganizationUsers,
   "feature-fe-indicate-guest-users": FeatureItem.IndicateGuestUsers,
   "feature-mappers": FeatureItem.MappingsUI,
+  "feature-advanced-mappers": FeatureItem.AdvancedMappingsUI,
   "feature-sso": FeatureItem.AllowUpdateSSOConfig,
   "feature-maximum-workspaces": FeatureItem.CreateMultipleWorkspaces,
   "feature-ai-copilot": FeatureItem.AICopilot,

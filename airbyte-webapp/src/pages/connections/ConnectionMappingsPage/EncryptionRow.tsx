@@ -33,9 +33,10 @@ interface EncryptionFormProps {
 }
 
 export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptorKey, mapping }) => {
-  const { updateLocalMapping, validatingStreams, isMappingsFeatureEnabled } = useMappingContext();
+  const { updateLocalMapping, validatingStreams, isMappingsFeatureEnabled, isAdvancedMappingsFeatureEnabled } =
+    useMappingContext();
   const isStreamValidating = validatingStreams.has(streamDescriptorKey);
-  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled;
+  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled || !isAdvancedMappingsFeatureEnabled;
   const { formatMessage } = useIntl();
   const [algorithm] = useState<EncryptionMapperAlgorithm>(
     mapping.mapperConfiguration.algorithm || EncryptionMapperAlgorithm.RSA

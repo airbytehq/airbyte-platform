@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.commons.entitlements.EntitlementHelper
 import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.AdvancedMappersEntitlement
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationSalesforceEnterpriseConnector
 import io.airbyte.commons.entitlements.models.Entitlement
@@ -19,6 +20,7 @@ import io.airbyte.commons.server.helpers.ConnectionHelpers
 import io.airbyte.config.BasicSchedule
 import io.airbyte.config.Cron
 import io.airbyte.config.MapperConfig
+import io.airbyte.config.MapperOperationName
 import io.airbyte.config.Schedule
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
@@ -82,6 +84,7 @@ class ConnectionEntitlementHelperTest {
     connectionId: UUID = this.connectionId,
     cronExpression: String = "0 0 * * * ?", // Default: hourly
     withMappers: Boolean = false,
+    mapperName: String = "hashing",
   ): StandardSync {
     val connection =
       StandardSync()
@@ -105,7 +108,7 @@ class ConnectionEntitlementHelperTest {
           stream.mappers =
             listOf(
               object : MapperConfig {
-                override fun name(): String = "hashing"
+                override fun name(): String = mapperName
 
                 override fun id(): UUID = UUID.randomUUID()
 
@@ -328,6 +331,123 @@ class ConnectionEntitlementHelperTest {
       )
 
     assertFalse(result)
+  }
+
+  @Test
+  fun `isEntitledToConnection returns true when field renaming mapper and entitled to mappers but not advanced mappers`() {
+    val connection = createMockConnection(withMappers = true, mapperName = MapperOperationName.FIELD_RENAMING)
+
+    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = MappersEntitlement.featureId,
+        isEntitled = true,
+        reason = null,
+      ),
+    )
+
+    val result =
+      connectionEntitlementHelper.isEntitledToConnection(
+        connection = connection,
+        subHourSyncIds = emptyList(),
+        sourceDefinitionId = UUID.randomUUID(),
+        destinationDefinitionId = UUID.randomUUID(),
+        organizationId = organizationId,
+      )
+
+    assertTrue(result)
+  }
+
+  @Test
+  fun `isEntitledToConnection returns false when field renaming mapper but not entitled to mappers`() {
+    val connection = createMockConnection(withMappers = true, mapperName = MapperOperationName.FIELD_RENAMING)
+
+    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = MappersEntitlement.featureId,
+        isEntitled = false,
+        reason = "Not entitled to mappers",
+      ),
+    )
+    whenever(entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = AdvancedMappersEntitlement.featureId,
+        isEntitled = true,
+        reason = null,
+      ),
+    )
+
+    val result =
+      connectionEntitlementHelper.isEntitledToConnection(
+        connection = connection,
+        subHourSyncIds = emptyList(),
+        sourceDefinitionId = UUID.randomUUID(),
+        destinationDefinitionId = UUID.randomUUID(),
+        organizationId = organizationId,
+      )
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isEntitledToConnection returns false when advanced mapper and not entitled to advanced mappers`() {
+    val connection = createMockConnection(withMappers = true, mapperName = MapperOperationName.HASHING)
+
+    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = MappersEntitlement.featureId,
+        isEntitled = true,
+        reason = null,
+      ),
+    )
+    whenever(entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = AdvancedMappersEntitlement.featureId,
+        isEntitled = false,
+        reason = "Not entitled to advanced mappers",
+      ),
+    )
+
+    val result =
+      connectionEntitlementHelper.isEntitledToConnection(
+        connection = connection,
+        subHourSyncIds = emptyList(),
+        sourceDefinitionId = UUID.randomUUID(),
+        destinationDefinitionId = UUID.randomUUID(),
+        organizationId = organizationId,
+      )
+
+    assertFalse(result)
+  }
+
+  @Test
+  fun `isEntitledToConnection returns true when advanced mapper and entitled to both mappers entitlements`() {
+    val connection = createMockConnection(withMappers = true, mapperName = MapperOperationName.HASHING)
+
+    whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = MappersEntitlement.featureId,
+        isEntitled = true,
+        reason = null,
+      ),
+    )
+    whenever(entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = AdvancedMappersEntitlement.featureId,
+        isEntitled = true,
+        reason = null,
+      ),
+    )
+
+    val result =
+      connectionEntitlementHelper.isEntitledToConnection(
+        connection = connection,
+        subHourSyncIds = emptyList(),
+        sourceDefinitionId = UUID.randomUUID(),
+        destinationDefinitionId = UUID.randomUUID(),
+        organizationId = organizationId,
+      )
+
+    assertTrue(result)
   }
 
   @Test
@@ -843,6 +963,13 @@ class ConnectionEntitlementHelperTest {
     whenever(entitlementService.checkEntitlement(organizationId, MappersEntitlement)).thenReturn(
       EntitlementResult(
         featureId = MappersEntitlement.featureId,
+        isEntitled = true,
+        reason = null,
+      ),
+    )
+    whenever(entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement)).thenReturn(
+      EntitlementResult(
+        featureId = AdvancedMappersEntitlement.featureId,
         isEntitled = true,
         reason = null,
       ),

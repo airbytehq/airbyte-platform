@@ -80,7 +80,8 @@ test.describe("Connection Mappings", () => {
     test("Allows configuring a first mapping", async ({ page, context }) => {
       // Set feature flags
       setFeatureFlags({});
-      setFeatureServiceFlags({ [FeatureItem.MappingsUI]: true }); // Enabled to show mapping config
+      // Both enabled so the default mapping is hashing (only a target field is required)
+      setFeatureServiceFlags({ [FeatureItem.MappingsUI]: true, [FeatureItem.AdvancedMappingsUI]: true });
 
       // Create a fresh page and inject feature flags into it
       const newPage = await context.newPage();

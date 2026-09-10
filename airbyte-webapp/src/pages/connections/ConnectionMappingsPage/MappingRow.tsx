@@ -9,6 +9,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
 
+import { StreamMapperType } from "core/api/types/AirbyteClient";
+
 import { EncryptionRow } from "./EncryptionRow";
 import { FieldRenamingRow } from "./FieldRenamingRow";
 import { HashFieldRow } from "./HashFieldRow";
@@ -21,10 +23,18 @@ export const MappingRow: React.FC<{
   streamDescriptorKey: string;
   id: string;
 }> = ({ streamDescriptorKey, id }) => {
-  const { removeMapping, streamsWithMappings, validatingStreams, isMappingsFeatureEnabled } = useMappingContext();
+  const {
+    removeMapping,
+    streamsWithMappings,
+    validatingStreams,
+    isMappingsFeatureEnabled,
+    isAdvancedMappingsFeatureEnabled,
+  } = useMappingContext();
   const mapping = streamsWithMappings[streamDescriptorKey].find((m) => m.id === id);
   const isStreamValidating = validatingStreams.has(streamDescriptorKey);
-  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled;
+  const isAdvancedMapping = mapping?.type !== StreamMapperType["field-renaming"];
+  const isDisabled =
+    isStreamValidating || !isMappingsFeatureEnabled || (isAdvancedMapping && !isAdvancedMappingsFeatureEnabled);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 

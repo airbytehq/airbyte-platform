@@ -48,9 +48,10 @@ const createEmptyDefaultValues = (): RowFilteringMapperFormValues => ({
 
 export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ mapping, streamDescriptorKey }) => {
   const { formatMessage } = useIntl();
-  const { updateLocalMapping, validatingStreams, isMappingsFeatureEnabled } = useMappingContext();
+  const { updateLocalMapping, validatingStreams, isMappingsFeatureEnabled, isAdvancedMappingsFeatureEnabled } =
+    useMappingContext();
   const isStreamValidating = validatingStreams.has(streamDescriptorKey);
-  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled;
+  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled || !isAdvancedMappingsFeatureEnabled;
 
   const methods = useForm<RowFilteringMapperFormValues>({
     defaultValues: mapping ? mapperConfigurationToFormValues(mapping.mapperConfiguration) : createEmptyDefaultValues(),

@@ -27,10 +27,11 @@ export const HashFieldRow: React.FC<{
   mapping: StreamMapperWithId<HashingMapperConfiguration>;
   streamDescriptorKey: string;
 }> = ({ mapping, streamDescriptorKey }) => {
-  const { updateLocalMapping, validatingStreams, isMappingsFeatureEnabled } = useMappingContext();
+  const { updateLocalMapping, validatingStreams, isMappingsFeatureEnabled, isAdvancedMappingsFeatureEnabled } =
+    useMappingContext();
 
   const isStreamValidating = validatingStreams.has(streamDescriptorKey);
-  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled;
+  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled || !isAdvancedMappingsFeatureEnabled;
 
   const defaultValues = useMemo(() => {
     return {

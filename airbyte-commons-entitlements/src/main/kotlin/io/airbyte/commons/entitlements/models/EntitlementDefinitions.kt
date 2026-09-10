@@ -54,6 +54,10 @@ object MappersEntitlement : FeatureEntitlement(
   featureId = "feature-mappers",
 )
 
+object AdvancedMappersEntitlement : FeatureEntitlement(
+  featureId = "feature-advanced-mappers",
+)
+
 object RbacRolesEntitlement : FeatureEntitlement(
   featureId = "feature-rbac-roles",
 )
@@ -150,6 +154,7 @@ object Entitlements {
       MaximumWorkspacesEntitlement,
       PlanNameEntitlement,
       MappersEntitlement,
+      AdvancedMappersEntitlement,
       RbacRolesEntitlement,
       RejectedRecordsStorage,
       ConfigTemplateEntitlement,

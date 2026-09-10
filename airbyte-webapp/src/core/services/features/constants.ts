@@ -20,6 +20,7 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.EnterpriseLicenseChecking,
   FeatureItem.IndicateGuestUsers,
   FeatureItem.MappingsUI,
+  FeatureItem.AdvancedMappingsUI,
   FeatureItem.CreateMultipleWorkspaces,
   FeatureItem.OrganizationUI,
   FeatureItem.OrganizationConnectorSettings,

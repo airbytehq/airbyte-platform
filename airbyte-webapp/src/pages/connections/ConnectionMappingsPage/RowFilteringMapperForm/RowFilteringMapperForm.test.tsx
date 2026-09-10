@@ -51,6 +51,10 @@ jest.mock("core/api", () => ({
   useCurrentWorkspace: () => ({}),
 }));
 
+jest.mock("cloud/area/billing/utils/useLinkToPlanPage", () => ({
+  useLinkToPlanPage: () => "/organization/test-organization-id/settings/plan",
+}));
+
 jest.mock("core/services/ui/FormModeContext", () => ({
   useFormMode: () => ({
     mode: "edit",
@@ -67,6 +71,7 @@ jest.mock("../MappingContext", () => {
       validateMappings: jest.fn(),
       validatingStreams: new Set(),
       isMappingsFeatureEnabled: true,
+      isAdvancedMappingsFeatureEnabled: true,
     }),
   };
 });

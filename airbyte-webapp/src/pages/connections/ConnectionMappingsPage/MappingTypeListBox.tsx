@@ -1,13 +1,16 @@
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
+import { Link } from "components/ui/Link";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { useLinkToPlanPage } from "cloud/area/billing/utils/useLinkToPlanPage";
 import { MapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
 
 import { useMappingContext } from "./MappingContext";
 import styles from "./MappingRow.module.scss";
+import typeStyles from "./MappingTypeListBox.module.scss";
 import { StreamMapperWithId } from "./types";
 
 enum OperationType {
@@ -31,7 +34,8 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
   mappingId,
   disabled,
 }) => {
-  const { updateLocalMapping } = useMappingContext();
+  const { updateLocalMapping, isAdvancedMappingsFeatureEnabled } = useMappingContext();
+  const linkToPlanPage = useLinkToPlanPage();
 
   const mappingTypeLabels = {
     hashing: { title: "connections.mappings.type.hash", description: "connections.mappings.type.hash.description" },
@@ -48,19 +52,30 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
       description: "connections.mappings.type.encryption.description",
     },
   } as const;
-  const supportedMappingsOptions = supportedMappings.map((type) => ({
-    label: (
-      <FlexContainer direction="column" gap="xs" as="span">
-        <Text as="span">
-          <FormattedMessage id={mappingTypeLabels[type].title} />
-        </Text>
-        <Text color="grey500" as="span">
-          <FormattedMessage id={mappingTypeLabels[type].description} />
-        </Text>
-      </FlexContainer>
-    ),
-    value: type,
-  }));
+  const supportedMappingsOptions = supportedMappings.map((type) => {
+    const requiresAdvancedEntitlement = type !== "field-renaming" && !isAdvancedMappingsFeatureEnabled;
+    return {
+      label: (
+        <FlexContainer direction="column" gap="xs" as="span">
+          <Text as="span">
+            <FormattedMessage id={mappingTypeLabels[type].title} />
+          </Text>
+          <Text color="grey500" as="span">
+            <FormattedMessage id={mappingTypeLabels[type].description} />
+          </Text>
+          {requiresAdvancedEntitlement && (
+            <Text as="span" size="xs">
+              <Link to={linkToPlanPage} className={typeStyles.upsellLink}>
+                <FormattedMessage id="connections.mappings.type.advancedUpsellHint" />
+              </Link>
+            </Text>
+          )}
+        </FlexContainer>
+      ),
+      value: type,
+      disabled: requiresAdvancedEntitlement,
+    };
+  });
 
   const ControlButton: React.FC<ListBoxControlButtonProps<SupportedMapping>> = ({ selectedOption, isDisabled }) => {
     if (!selectedOption) {

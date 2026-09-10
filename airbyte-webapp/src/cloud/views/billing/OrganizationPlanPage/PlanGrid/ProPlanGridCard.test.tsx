@@ -14,10 +14,10 @@ describe("ProPlanGridCard", () => {
     expect(screen.queryByText("/ month")).not.toBeInTheDocument();
 
     const features = screen.getAllByRole("listitem");
-    expect(features).toHaveLength(6);
+    expect(features).toHaveLength(7);
     expect(features[0]).toHaveTextContent("Capacity-based pricing");
     expect(features[features.length - 1]).toHaveTextContent("Fixed contract length");
-    expect(features.some((feature) => /mappings/i.test(feature.textContent ?? ""))).toBe(false);
+    expect(features.some((feature) => feature.textContent === "Advanced mappers")).toBe(true);
 
     const link = screen.getByRole("link", { name: /Talk to Sales/i });
     expect(link).toHaveAttribute("href", links.contactSales);

@@ -34,6 +34,7 @@ interface MappingContextType {
   key: number;
   hasMappingsChanged: boolean;
   isMappingsFeatureEnabled: boolean;
+  isAdvancedMappingsFeatureEnabled: boolean;
 }
 
 export const MAPPING_VALIDATION_ERROR_KEY = "mapping-validation-error";
@@ -60,6 +61,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
   const [validatingStreams, setValidatingStreams] = useState<Set<string>>(new Set());
   const [hasMappingsChanged, setHasMappingsChanged] = useState(false);
   const isMappingsFeatureEnabled = useFeature(FeatureItem.MappingsUI);
+  const isAdvancedMappingsFeatureEnabled = useFeature(FeatureItem.AdvancedMappingsUI);
 
   // Key is used to force mapping forms to re-render if a user chooses to reset the form state
   const [key, setKey] = useState(1);
@@ -127,25 +129,38 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
     []
   );
 
-  const addMappingForStream = useCallback((streamDescriptorKey: string) => {
-    setStreamsWithMappings((prevMappings) => ({
-      ...prevMappings,
-      [streamDescriptorKey]: [
-        ...prevMappings[streamDescriptorKey],
-        {
-          type: StreamMapperType.hashing,
-          id: uuidv4(),
-          validationCallback: () => Promise.reject(false),
-          mapperConfiguration: {
-            fieldNameSuffix: "_hashed",
-            method: HashingMapperConfigurationMethod["SHA-256"],
-            targetField: "",
-          },
-        },
-      ],
-    }));
-    setHasMappingsChanged(true);
-  }, []);
+  const addMappingForStream = useCallback(
+    (streamDescriptorKey: string) => {
+      setStreamsWithMappings((prevMappings) => ({
+        ...prevMappings,
+        [streamDescriptorKey]: [
+          ...prevMappings[streamDescriptorKey],
+          isAdvancedMappingsFeatureEnabled
+            ? {
+                type: StreamMapperType.hashing,
+                id: uuidv4(),
+                validationCallback: () => Promise.reject(false),
+                mapperConfiguration: {
+                  fieldNameSuffix: "_hashed",
+                  method: HashingMapperConfigurationMethod["SHA-256"],
+                  targetField: "",
+                },
+              }
+            : {
+                type: StreamMapperType["field-renaming"],
+                id: uuidv4(),
+                validationCallback: () => Promise.reject(false),
+                mapperConfiguration: {
+                  originalFieldName: "",
+                  newFieldName: "",
+                },
+              },
+        ],
+      }));
+      setHasMappingsChanged(true);
+    },
+    [isAdvancedMappingsFeatureEnabled]
+  );
 
   // Reorders the mappings for a specific stream
   const reorderMappings = useCallback((streamDescriptorKey: string, newOrder: StreamMapperWithId[]) => {
@@ -190,16 +205,26 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
   const addStreamToMappingsList = (streamDescriptorKey: string) => {
     const newMapping: Record<string, StreamMapperWithId[]> = {
       [streamDescriptorKey]: [
-        {
-          type: StreamMapperType.hashing,
-          id: uuidv4(),
-          validationCallback: () => Promise.reject(false),
-          mapperConfiguration: {
-            fieldNameSuffix: "_hashed",
-            method: HashingMapperConfigurationMethod["SHA-256"],
-            targetField: "",
-          },
-        },
+        isAdvancedMappingsFeatureEnabled
+          ? {
+              type: StreamMapperType.hashing,
+              id: uuidv4(),
+              validationCallback: () => Promise.reject(false),
+              mapperConfiguration: {
+                fieldNameSuffix: "_hashed",
+                method: HashingMapperConfigurationMethod["SHA-256"],
+                targetField: "",
+              },
+            }
+          : {
+              type: StreamMapperType["field-renaming"],
+              id: uuidv4(),
+              validationCallback: () => Promise.reject(false),
+              mapperConfiguration: {
+                originalFieldName: "",
+                newFieldName: "",
+              },
+            },
       ],
     };
 
@@ -226,6 +251,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
         key,
         hasMappingsChanged,
         isMappingsFeatureEnabled,
+        isAdvancedMappingsFeatureEnabled,
       }}
     >
       {children}

@@ -51,10 +51,11 @@ describe("PlusPlanGridCard", () => {
     expect(screen.getByRole("button", { name: "100 credits" })).toBeInTheDocument();
 
     const features = featureTexts();
-    expect(features).toHaveLength(7);
+    expect(features).toHaveLength(8);
     expect(features[0]).toBe("100 credits per month");
     expect(features[1]).toBe("Overage at $5/credit");
-    expect(features).toContain("Basic mappings");
+    expect(features).toContain("Basic mappers");
+    expect(features).toContain("Up to 2 workspaces");
     expect(features[features.length - 1]).toBe("Cancel any time");
     expect(screen.getByRole("link", { name: "credits" })).toHaveAttribute("href", links.creditDescription);
   });

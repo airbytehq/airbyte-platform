@@ -1,0 +1,7 @@
+@use "scss/colors";
+
+.upsellLink {
+  color: colors.$blue !important;
+  cursor: pointer !important;
+  text-decoration: underline;
+}

@@ -6,11 +6,13 @@ package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.commons.entitlements.EntitlementHelper
 import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.AdvancedMappersEntitlement
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.FifteenMinuteSyncFrequencyEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
+import io.airbyte.config.MapperOperationName
 import io.airbyte.config.StandardSync
 import io.airbyte.config.helpers.CronExpressionHelper
 import io.airbyte.config.helpers.ScheduleHelpers.setBasicHourlySchedule
@@ -61,10 +63,23 @@ class ConnectionEntitlementHelper(
       return false
     }
 
-    if (connection.catalog.streams.any { it.mappers.isNotEmpty() }) {
-      if (!entitlementService.checkEntitlement(organizationId, MappersEntitlement).isEntitled) {
-        return false
-      }
+    // Mappers are gated by two entitlements:
+    // - feature-mappers grants access to field renaming only (the baseline mapper type).
+    // - feature-advanced-mappers grants access to all other mapper types (hashing, encryption, row filtering).
+    // A connection is only entitled if every mapper it uses is covered by the organization's entitlements:
+    // any mapper at all requires feature-mappers, and any mapper other than field renaming additionally
+    // requires feature-advanced-mappers. Since advanced plans also grant feature-mappers, organizations with
+    // feature-advanced-mappers always satisfy both checks.
+    val mappers = connection.catalog.streams.flatMap { it.mappers }
+    if (mappers.isNotEmpty() && !entitlementService.checkEntitlement(organizationId, MappersEntitlement).isEntitled) {
+      return false
+    }
+
+    if (
+      mappers.any { it.name() != MapperOperationName.FIELD_RENAMING } &&
+      !entitlementService.checkEntitlement(organizationId, AdvancedMappersEntitlement).isEntitled
+    ) {
+      return false
     }
 
     return sourceIsEntitled && destinationIsEntitled
