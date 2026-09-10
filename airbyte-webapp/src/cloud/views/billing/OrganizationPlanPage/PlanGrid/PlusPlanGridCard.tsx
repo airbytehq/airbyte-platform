@@ -8,6 +8,10 @@ import { ListBox, ListBoxControlButtonProps, Option } from "components/ui/ListBo
 import { Text } from "components/ui/Text";
 
 import { useRedirectToCustomerPortal } from "cloud/area/billing/utils/useRedirectToCustomerPortal";
+import {
+  CustomerPortalRequestBodyPlan,
+  OrganizationSubscriptionInfoReadSelfServePlan,
+} from "core/api/types/AirbyteClient";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { links } from "core/utils/links";
 
@@ -18,20 +22,32 @@ interface PlusPlanTier {
   credits: number;
   monthlyPrice: number;
   overageRate: number;
+  plan: CustomerPortalRequestBodyPlan;
 }
 
 export const PLUS_PLAN_TIERS: PlusPlanTier[] = [
-  { credits: 100, monthlyPrice: 500, overageRate: 5 },
-  { credits: 250, monthlyPrice: 1000, overageRate: 4 },
-  { credits: 500, monthlyPrice: 1800, overageRate: 3.6 },
-  { credits: 1000, monthlyPrice: 3000, overageRate: 3 },
+  { credits: 40, monthlyPrice: 189, overageRate: 5, plan: "plus_40" },
+  { credits: 100, monthlyPrice: 449, overageRate: 5, plan: "plus_100" },
+  { credits: 250, monthlyPrice: 999, overageRate: 4.5, plan: "plus_250" },
+  { credits: 500, monthlyPrice: 1799, overageRate: 4.15, plan: "plus_500" },
+  { credits: 1000, monthlyPrice: 3199, overageRate: 3.75, plan: "plus_1000" },
+  { credits: 2000, monthlyPrice: 4999, overageRate: 2.5, plan: "plus_2000" },
 ];
 
-const creditOptions: Array<Option<number>> = PLUS_PLAN_TIERS.map((tier) => ({
-  value: tier.credits,
-  icon: "checkCircle",
-  label: <FormattedMessage id="planGrid.plus.creditsOption" values={{ credits: tier.credits }} />,
-}));
+/** Tier shown to orgs that are not on Plus before they pick one. */
+const DEFAULT_TIER_CREDITS = 100;
+
+/**
+ * Orgs already on Plus cannot pick their own tier again, so they start on the next tier up,
+ * or the next tier down when they are already on the top tier.
+ */
+const defaultTierFor = (currentTier: PlusPlanTier | undefined): PlusPlanTier => {
+  if (!currentTier) {
+    return PLUS_PLAN_TIERS.find((tier) => tier.credits === DEFAULT_TIER_CREDITS) ?? PLUS_PLAN_TIERS[0];
+  }
+  const index = PLUS_PLAN_TIERS.indexOf(currentTier);
+  return PLUS_PLAN_TIERS[index + 1] ?? PLUS_PLAN_TIERS[index - 1];
+};
 
 const CreditsControlButtonContent: React.FC<ListBoxControlButtonProps<number>> = ({ selectedOption }) => (
   <Text as="span" size="lg">
@@ -39,10 +55,47 @@ const CreditsControlButtonContent: React.FC<ListBoxControlButtonProps<number>> =
   </Text>
 );
 
+type PlusCtaAction = "subscribe" | "upgrade" | "tierUpgrade" | "tierDowngrade";
+
+const CTA_MESSAGE_IDS: Record<PlusCtaAction, string> = {
+  subscribe: "plans.plus.get",
+  upgrade: "plans.plus.upgrade",
+  tierUpgrade: "plans.plus.tierUpgrade",
+  tierDowngrade: "plans.plus.tierDowngrade",
+};
+
+const CONFIRMATION_MESSAGE_IDS: Record<
+  Exclude<PlusCtaAction, "subscribe">,
+  { title: string; text: string; submit: string; cancel: string }
+> = {
+  upgrade: {
+    title: "plans.plus.upgrade.confirmTitle",
+    text: "plans.plus.upgrade.confirmText",
+    submit: "plans.plus.upgrade.confirmSubmit",
+    cancel: "plans.plus.upgrade.confirmCancel",
+  },
+  tierUpgrade: {
+    title: "plans.plus.tierUpgrade.confirmTitle",
+    text: "plans.plus.tierUpgrade.confirmText",
+    submit: "plans.plus.tierUpgrade.confirmSubmit",
+    cancel: "plans.plus.tierUpgrade.confirmCancel",
+  },
+  tierDowngrade: {
+    title: "plans.plus.tierDowngrade.confirmTitle",
+    text: "plans.plus.tierDowngrade.confirmText",
+    submit: "plans.plus.tierDowngrade.confirmSubmit",
+    cancel: "plans.plus.tierDowngrade.confirmCancel",
+  },
+};
+
 interface PlusPlanGridCardProps {
   disabled?: boolean;
+  /** The org is on a paid self-serve plan other than Plus, so getting Plus is an upgrade. */
   isPaidPlan?: boolean;
+  /** The org is currently on Plus. */
   isCurrentPlan?: boolean;
+  /** The self-serve plan the org's subscription is on. Identifies the current Plus tier when known. */
+  currentPlan?: OrganizationSubscriptionInfoReadSelfServePlan;
   cancellationDate?: string;
 }
 
@@ -50,31 +103,54 @@ export const PlusPlanGridCard: React.FC<PlusPlanGridCardProps> = ({
   disabled = false,
   isPaidPlan = false,
   isCurrentPlan = false,
+  currentPlan,
   cancellationDate,
 }) => {
-  const [selectedCredits, setSelectedCredits] = useState(PLUS_PLAN_TIERS[0].credits);
-  const selectedTier = PLUS_PLAN_TIERS.find((tier) => tier.credits === selectedCredits) ?? PLUS_PLAN_TIERS[0];
+  const currentTier = isCurrentPlan ? PLUS_PLAN_TIERS.find((tier) => tier.plan === currentPlan) : undefined;
+  const [selectedCredits, setSelectedCredits] = useState<number>();
+  const chosenTier = PLUS_PLAN_TIERS.find((tier) => tier.credits === selectedCredits && tier !== currentTier);
+  const selectedTier = chosenTier ?? defaultTierFor(currentTier);
 
-  const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal("setup", "plus");
+  const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal("setup", selectedTier.plan);
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
-  const ctaMessageId = isPaidPlan ? "plans.plus.upgrade" : "plans.plus.get";
+  const creditOptions: Array<Option<number>> = PLUS_PLAN_TIERS.map((tier) => ({
+    value: tier.credits,
+    icon: "checkCircle",
+    disabled: tier === currentTier,
+    label: (
+      <FormattedMessage
+        id={tier === currentTier ? "planGrid.plus.creditsOption.current" : "planGrid.plus.creditsOption"}
+        values={{ credits: tier.credits }}
+      />
+    ),
+  }));
+
+  const action: PlusCtaAction = currentTier
+    ? selectedTier.credits > currentTier.credits
+      ? "tierUpgrade"
+      : "tierDowngrade"
+    : isPaidPlan
+    ? "upgrade"
+    : "subscribe";
 
   const onClick = () => {
-    if (!isPaidPlan) {
+    if (action === "subscribe") {
       goToCustomerPortal();
       return;
     }
 
+    const messageIds = CONFIRMATION_MESSAGE_IDS[action];
+    const messageValues = { credits: <FormattedNumber value={selectedTier.credits} /> };
     openConfirmationModal({
-      title: <FormattedMessage id="plans.plus.upgrade.confirmTitle" />,
+      title: <FormattedMessage id={messageIds.title} values={messageValues} />,
       text: (
         <Text>
-          <FormattedMessage id="plans.plus.upgrade.confirmText" />
+          <FormattedMessage id={messageIds.text} values={messageValues} />
         </Text>
       ),
-      submitButtonText: "plans.plus.upgrade.confirmSubmit",
-      cancelButtonText: "plans.plus.upgrade.confirmCancel",
+      submitButtonText: messageIds.submit,
+      cancelButtonText: messageIds.cancel,
       onSubmit: () => {
         closeConfirmationModal();
         goToCustomerPortal();
@@ -116,7 +192,7 @@ export const PlusPlanGridCard: React.FC<PlusPlanGridCardProps> = ({
       isCurrentPlan={isCurrentPlan}
       cancellationDate={cancellationDate}
       cta={
-        isCurrentPlan ? (
+        isCurrentPlan && !currentTier ? (
           <Button full variant="secondary" disabled className={styles.planGridCard__currentPlan}>
             <FormattedMessage id="planGrid.currentPlan" />
           </Button>
@@ -131,8 +207,14 @@ export const PlusPlanGridCard: React.FC<PlusPlanGridCardProps> = ({
               isDisabled={disabled}
               data-testid="plus-plan-credits"
             />
-            <Button full isLoading={redirecting} disabled={disabled} variant="primary" onClick={onClick}>
-              <FormattedMessage id={ctaMessageId} />
+            <Button
+              full
+              isLoading={redirecting}
+              disabled={disabled}
+              variant={action === "tierDowngrade" ? "secondary" : "primary"}
+              onClick={onClick}
+            >
+              <FormattedMessage id={CTA_MESSAGE_IDS[action]} />
             </Button>
           </FlexContainer>
         )

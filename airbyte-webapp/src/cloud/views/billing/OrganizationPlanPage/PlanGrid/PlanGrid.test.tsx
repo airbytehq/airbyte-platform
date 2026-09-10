@@ -180,6 +180,59 @@ describe("PlanGrid", () => {
     expect(card("flex-plan-card").getByRole("link", { name: /Talk to Sales/i })).toBeInTheDocument();
   });
 
+  it("marks the Plus tier from the subscription current and offers the next tier up", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isPlusPlan: true }));
+    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(
+      subscriptionInfo({ name: "Plus", selfServePlan: "plus_500" })
+    );
+
+    await render(<PlanGrid />);
+
+    expect(card("plus-plan-card").getByTestId("current-plan-badge")).toHaveTextContent("Current plan");
+    expect(card("plus-plan-card").getByRole("button", { name: "1,000 credits" })).toBeEnabled();
+    expect(card("plus-plan-card").getByText("$3,199")).toBeInTheDocument();
+    expect(card("plus-plan-card").getByRole("button", { name: "Upgrade" })).toBeEnabled();
+    expect(card("standard-plan-card").getByRole("button", { name: /Downgrade/i })).toBeEnabled();
+  });
+
+  it("prefers the subscription's self-serve plan over the entitlement plan when they disagree", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
+    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(
+      subscriptionInfo({ name: "Plus", selfServePlan: "plus_100" })
+    );
+
+    await render(<PlanGrid />);
+
+    expect(screen.getAllByTestId("current-plan-badge")).toHaveLength(1);
+    expect(card("plus-plan-card").getByTestId("current-plan-badge")).toBeInTheDocument();
+    expect(card("plus-plan-card").getByRole("button", { name: "250 credits" })).toBeEnabled();
+    expect(card("standard-plan-card").getByRole("button", { name: /Downgrade/i })).toBeEnabled();
+  });
+
+  it("marks Standard current from the subscription even when the entitlement plan says Plus", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isPlusPlan: true }));
+    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(
+      subscriptionInfo({ name: "Standard", selfServePlan: "standard" })
+    );
+
+    await render(<PlanGrid />);
+
+    expectCurrentPlan("standard-plan-card", /Current plan/i);
+    expect(card("plus-plan-card").getByRole("button", { name: /Upgrade to Plus/i })).toBeEnabled();
+    expect(card("plus-plan-card").queryByTestId("current-plan-badge")).not.toBeInTheDocument();
+  });
+
+  it("fetches the subscription for any subscribed org, even without a recognized entitlement plan", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+
+    await render(<PlanGrid />);
+
+    expect(useGetOrganizationSubscriptionInfo).toHaveBeenCalledWith("test-organization-id", true);
+  });
+
   it.each([
     ["Pro", { isProPlan: true }],
     ["SME", { isSmePlan: true }],

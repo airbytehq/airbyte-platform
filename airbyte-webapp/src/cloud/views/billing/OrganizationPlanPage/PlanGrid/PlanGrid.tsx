@@ -24,9 +24,15 @@ export const PlanGrid: React.FC = () => {
 
   const { isStandardPlan, isPlusPlan, isProPlan, isSmePlan, isFlexPlan } = useOrganizationPlan();
 
-  const activeTier: PlanTier | null = !isSubscribed
-    ? null
-    : isStandardPlan
+  const { data: subscription } = useGetOrganizationSubscriptionInfo(organizationId, isSubscribed);
+  const cancellationDate = subscription?.cancellationDate;
+  const selfServePlan = subscription?.selfServePlan;
+
+  // The billing subscription decides which self-serve plan is current. The entitlement plan is the
+  // fallback for plans that are not self-serve (Pro, SME, Flex) and while the subscription is loading.
+  const selfServeTier: PlanTier | null =
+    selfServePlan === undefined ? null : selfServePlan === "standard" ? "standard" : "plus";
+  const entitlementTier: PlanTier | null = isStandardPlan
     ? "standard"
     : isPlusPlan
     ? "plus"
@@ -35,10 +41,8 @@ export const PlanGrid: React.FC = () => {
     : isFlexPlan
     ? "flex"
     : null;
+  const activeTier: PlanTier | null = isSubscribed ? selfServeTier ?? entitlementTier : null;
   const isTopTier = activeTier === "pro" || activeTier === "flex";
-
-  const { data: subscription } = useGetOrganizationSubscriptionInfo(organizationId, activeTier !== null);
-  const cancellationDate = subscription?.cancellationDate;
 
   return (
     <>
@@ -54,6 +58,7 @@ export const PlanGrid: React.FC = () => {
             disabled={isLockedSubscription || isTopTier}
             isPaidPlan={activeTier === "standard"}
             isCurrentPlan={activeTier === "plus"}
+            currentPlan={selfServePlan}
             cancellationDate={cancellationDate}
           />
           <ProPlanGridCard

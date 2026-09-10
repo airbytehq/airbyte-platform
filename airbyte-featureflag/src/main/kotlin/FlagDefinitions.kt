@@ -100,6 +100,8 @@ object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migration
 
 object UseSubscriptionPriceIntervals : Temporary<Boolean>(key = "billing.use-subscription-price-intervals", default = false)
 
+object PlusTiersEnabled : Temporary<Boolean>(key = "billing.plus-tiers-enabled", default = false)
+
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {

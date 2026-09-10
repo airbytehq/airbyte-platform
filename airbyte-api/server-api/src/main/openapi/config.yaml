@@ -16623,10 +16623,19 @@ components:
           default: portal
         plan:
           type: string
-          description: Requested self-serve plan when initiating setup checkout. Defaults to standard for backwards compatibility.
+          description: |
+            Requested self-serve plan when initiating setup checkout or switching plans. Plus tiers differ only in
+            included credits and price. `plus` is a legacy alias for `plus_100`. Defaults to standard for backwards
+            compatibility.
           enum:
             - standard
             - plus
+            - plus_40
+            - plus_100
+            - plus_250
+            - plus_500
+            - plus_1000
+            - plus_2000
           default: standard
     CustomerPortalRead:
       type: object
@@ -16780,6 +16789,17 @@ components:
                 $ref: "#/components/schemas/CreditBlockRead"
         entitlementPlan:
           $ref: "#/components/schemas/EntitlementPlanResponse"
+        selfServePlan:
+          type: string
+          description: The self-serve plan the organization's active self-serve subscription is on. Absent when the organization has no subscription on a configured self-serve plan.
+          enum:
+            - standard
+            - plus_40
+            - plus_100
+            - plus_250
+            - plus_500
+            - plus_1000
+            - plus_2000
     EntitlementPlanResponse:
       type: object
       required:
