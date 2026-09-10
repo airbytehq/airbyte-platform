@@ -1,0 +1,8 @@
+.control {
+  flex-shrink: 0;
+
+  input:disabled + span {
+    // Higher specificity than the shared Switch's disabled rule
+    cursor: default !important;
+  }
+}

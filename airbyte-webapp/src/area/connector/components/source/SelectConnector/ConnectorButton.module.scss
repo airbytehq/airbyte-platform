@@ -47,6 +47,10 @@ $iconWidth: 38px;
   }
 }
 
+.nameAndBadge {
+  min-width: 0;
+}
+
 .metrics {
   padding-right: variables.$spacing-xl;
   gap: calc(2 * variables.$spacing-lg);

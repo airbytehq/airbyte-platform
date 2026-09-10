@@ -1,0 +1,50 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-lg;
+  padding: variables.$spacing-lg;
+  border: 1px solid colors.$grey-100;
+  border-radius: variables.$border-radius-xs;
+  background: colors.$foreground;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: variables.$spacing-lg;
+}
+
+.tierTwo {
+  padding-left: variables.$spacing-xl;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-sm;
+}
+
+.control {
+  flex-shrink: 0;
+
+  input:disabled + span {
+    // Higher specificity than the shared Switch's disabled rule
+    cursor: default !important;
+  }
+}
+
+.title {
+  margin: 0;
+}
+
+.description {
+  margin: 0;
+}
+
+.unsupported {
+  margin: 0;
+}

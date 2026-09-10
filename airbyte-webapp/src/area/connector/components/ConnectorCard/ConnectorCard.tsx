@@ -63,6 +63,7 @@ interface ConnectorCardBaseProps {
   fetchingConnectorError?: Error | null;
   isLoading?: boolean;
   leftFooterSlot?: React.ReactNode;
+  preFooterSlot?: React.ReactNode;
   hideCopyConfig?: boolean;
   skipCheckConnection?: boolean;
 }
@@ -106,6 +107,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   headerBlock,
   supportLevel,
   leftFooterSlot = null,
+  preFooterSlot = null,
   hideCopyConfig = false,
   skipCheckConnection = false,
   ...props
@@ -296,6 +298,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               selectedConnectorDefinition &&
               "sourceDefinitionId" in selectedConnectorDefinition &&
               selectedConnectorDefinition.sourceType === "database" && <AllowlistIpBanner connectorId={connectorId} />}
+            {preFooterSlot}
             <Controls
               isEditMode={Boolean(isEditMode)}
               isTestConnectionInProgress={isTestConnectionInProgress}

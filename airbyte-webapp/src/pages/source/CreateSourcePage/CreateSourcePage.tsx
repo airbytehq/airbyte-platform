@@ -1,3 +1,5 @@
+import type { SourceSetupFlow } from "./SourceFormWithAgent";
+
 import React, { useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -13,11 +15,24 @@ import { FormPageContent } from "area/connector/components/ConnectorBlocks";
 import { ConnectorDocumentationWrapper } from "area/connector/components/ConnectorDocumentationLayout/ConnectorDocumentationWrapper";
 import { ConnectionConfiguration } from "area/connector/types";
 import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
-import { useCreateSource, useSourceDefinitionList, useGetSourceDefinitionSpecificationAsync } from "core/api";
+import { SourceContextLayerOptIn } from "cloud/components/AgentsOptIn";
+import type { SourceContextLayerOptInValue } from "cloud/components/AgentsOptIn/SourceContextLayerOptIn";
+import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
+import {
+  useAgentsProvisioningStatus,
+  useAgentsSupportedSourceDefinitions,
+  useCreateSource,
+  useGetSourceDefinitionSpecificationAsync,
+  useSetExternalActorEnabled,
+  useSourceDefinitionList,
+} from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
+import { useNotificationService } from "core/services/Notification";
+import { useIsCloudApp } from "core/utils/app";
 import { clearConnectorChatBuilderStorage, CONNECTOR_CHAT_ACTIONS } from "core/utils/connectorChatBuilderStorage";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { RoutePaths, SourcePaths } from "pages/routePaths";
 
 import styles from "./CreateSourcePage.module.scss";
@@ -35,6 +50,22 @@ export const CreateSourcePage: React.FC = () => {
   const { isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId || null);
   const { sourceDefinitions } = useSourceDefinitionList();
   const { mutateAsync: createSource } = useCreateSource();
+  const { mutateAsync: setExternalActorEnabled } = useSetExternalActorEnabled();
+  const { registerNotification } = useNotificationService();
+  const isCloudApp = useIsCloudApp();
+  const showAgentsOptIn = useShowAgentsOptIn();
+  const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
+  const supportedSourceDefinitions = useAgentsSupportedSourceDefinitions();
+  const canManage = useGeneratedIntent(Intent.CreateOrEditSource);
+  // Semantic search is UI-only until Sonar exposes an endpoint.
+  // Users who cannot change the toggles must not be opted in by default.
+  const [contextLayerOptIn, setContextLayerOptIn] = useState<SourceContextLayerOptInValue>({
+    agentAccess: canManage,
+    semanticSearch: canManage,
+  });
+  useEffect(() => {
+    setContextLayerOptIn({ agentAccess: canManage, semanticSearch: canManage });
+  }, [sourceDefinitionId, canManage]);
 
   // Disable agent for custom connectors since they don't exist in our registry
   // and we don't have access to their specs when the agent is initialized
@@ -64,6 +95,7 @@ export const CreateSourcePage: React.FC = () => {
     name: string;
     serviceType: string;
     connectionConfiguration: ConnectionConfiguration;
+    setupFlow?: SourceSetupFlow;
   }) => {
     const connector = sourceDefinitions.find((item) => item.sourceDefinitionId === values.serviceType);
     if (!connector) {
@@ -71,6 +103,26 @@ export const CreateSourcePage: React.FC = () => {
       throw new Error("No Connector Found");
     }
     const result = await createSource({ values, sourceConnector: connector });
+    const shouldSyncContextLayer =
+      isCloudApp &&
+      showAgentsOptIn &&
+      status?.is_enrolled === true &&
+      canManage &&
+      values.setupFlow !== "agent" &&
+      supportedSourceDefinitions.has(connector.name);
+    if (shouldSyncContextLayer) {
+      void setExternalActorEnabled({
+        actorId: result.sourceId,
+        actorKind: "source",
+        enabled: contextLayerOptIn.agentAccess,
+      }).catch(() => {
+        registerNotification({
+          id: "cloud.contextLayer.sourceOptIn.syncFailed",
+          text: formatMessage({ id: "cloud.contextLayer.sourceOptIn.syncFailed" }),
+          type: "error",
+        });
+      });
+    }
     await new Promise((resolve) => setTimeout(resolve, 2000));
     clearAllFormChanges();
     navigate(`../${result.sourceId}/${SourcePaths.Connections}`);
@@ -114,6 +166,13 @@ export const CreateSourcePage: React.FC = () => {
               onSubmit={onSubmitSourceStep}
               sourceDefinitions={sourceDefinitions}
               selectedSourceDefinitionId={sourceDefinitionId}
+              preFooterSlot={
+                <SourceContextLayerOptIn
+                  sourceDefinitionName={selectedSourceDefinition?.name}
+                  value={contextLayerOptIn}
+                  onChange={setContextLayerOptIn}
+                />
+              }
             />
           </div>
         </div>
@@ -132,6 +191,13 @@ export const CreateSourcePage: React.FC = () => {
               onSubmit={onSubmitSourceStep}
               sourceDefinitions={sourceDefinitions}
               selectedSourceDefinitionId={sourceDefinitionId}
+              preFooterSlot={
+                <SourceContextLayerOptIn
+                  sourceDefinitionName={selectedSourceDefinition?.name}
+                  value={contextLayerOptIn}
+                  onChange={setContextLayerOptIn}
+                />
+              }
             />
             <CloudInviteUsersHint connectorType="source" />
           </FormPageContent>

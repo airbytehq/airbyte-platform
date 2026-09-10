@@ -25,6 +25,7 @@ interface SourceFormProps {
   onSubmit: (values: SourceFormValues) => Promise<void>;
   sourceDefinitions: SourceDefinitionRead[];
   selectedSourceDefinitionId?: string;
+  preFooterSlot?: React.ReactNode;
 }
 
 const hasSourceDefinitionId = (state: unknown): state is { sourceDefinitionId: string } => {
@@ -35,7 +36,12 @@ const hasSourceDefinitionId = (state: unknown): state is { sourceDefinitionId: s
   );
 };
 
-export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefinitions, selectedSourceDefinitionId }) => {
+export const SourceForm: React.FC<SourceFormProps> = ({
+  onSubmit,
+  sourceDefinitions,
+  selectedSourceDefinitionId,
+  preFooterSlot,
+}) => {
   const location = useLocation();
 
   const sourceDefinitionId =
@@ -81,6 +87,7 @@ export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefiniti
       selectedConnectorDefinitionId={sourceDefinitionId}
       onSubmit={onSubmitForm}
       supportLevel={selectedSourceDefinition?.supportLevel}
+      preFooterSlot={preFooterSlot}
       leftFooterSlot={selectedSourceDefinition && <ForkConnectorButton sourceDefinition={selectedSourceDefinition} />}
     />
   );

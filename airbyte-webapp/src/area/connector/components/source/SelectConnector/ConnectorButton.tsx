@@ -10,6 +10,7 @@ import { Text } from "components/ui/Text";
 import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { convertToConnectorDefinitionWithMetrics, MetricIcon } from "area/connector/components/ConnectorQualityMetrics";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
+import { ContextLayerDefinitionBadge } from "cloud/components/AgentsOptIn/ContextLayerDefinitionBadge";
 import { ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { RoutePaths } from "pages/routePaths";
 
@@ -42,15 +43,18 @@ export const ConnectorButton = <T extends ConnectorDefinitionOrEnterpriseStub>({
     <button className={classNames(styles.button, className)} onClick={() => onClick(definition)}>
       <FlexContainer alignItems="center" className={styles.iconAndName}>
         <ConnectorIcon icon={definition.icon} className={styles.icon} />
-        <Text
-          size="sm"
-          className={classNames(styles.text, {
-            [styles.twoMaxLines]: maxLines === 2,
-            [styles.threeMaxLines]: maxLines === 3,
-          })}
-        >
-          {definition.name}
-        </Text>
+        <FlexContainer direction="column" gap="xs" alignItems="flex-start" className={styles.nameAndBadge}>
+          <Text
+            size="sm"
+            className={classNames(styles.text, {
+              [styles.twoMaxLines]: maxLines === 2,
+              [styles.threeMaxLines]: maxLines === 3,
+            })}
+          >
+            {definition.name}
+          </Text>
+          <ContextLayerDefinitionBadge definition={definition} />
+        </FlexContainer>
       </FlexContainer>
       {
         // Conditionally render the metrics only if it is not an EnterpriseSourceStub

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { ConnectorIds } from "area/connector/utils/constants";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useWebappConfig } from "core/config/webappConfig";
 
@@ -9,6 +10,12 @@ import { useRequestOptions } from "../useRequestOptions";
 // Temporary hardcoded list pending a Sonar endpoint for supported source definitions.
 const DEFAULT_SUPPORTED_SOURCE_DEFINITIONS = ["GitHub", "Stripe", "Salesforce", "Google Sheets", "Postgres", "Shopify"];
 const AGENTS_SUPPORTED_SOURCE_DEFINITIONS = new Set(DEFAULT_SUPPORTED_SOURCE_DEFINITIONS);
+
+// Destination definitions supported by Sonar SQL passthrough (airbytehq/sonar#6449).
+const AGENTS_SUPPORTED_DESTINATION_DEFINITION_IDS = new Set([
+  ConnectorIds.Destinations.Snowflake, // Snowflake
+  ConnectorIds.Destinations.BigQuery, // BigQuery
+]);
 
 export interface AgentsProvisioningStatus {
   is_enrolled: boolean;
@@ -114,6 +121,10 @@ export const useAgentsSupportedSourceDefinitions = (): Set<string> => {
   return AGENTS_SUPPORTED_SOURCE_DEFINITIONS;
 };
 
+export const useAgentsSupportedDestinationDefinitionIds = (): Set<string> => {
+  return AGENTS_SUPPORTED_DESTINATION_DEFINITION_IDS;
+};
+
 interface ExternalWorkspaceConnector {
   id: string;
   name: string;
@@ -141,7 +152,7 @@ interface ExternalActorEnabledResponse {
   enabled: boolean;
 }
 
-export const useExternalWorkspaceConnectors = (workspaceId: string) => {
+export const useExternalWorkspaceConnectors = (workspaceId: string, { enabled = true }: { enabled?: boolean } = {}) => {
   const { sonarApiUrl: baseUrl } = useWebappConfig();
   const organizationId = useCurrentOrganizationId();
   const requestOptions = useRequestOptions();
@@ -171,13 +182,13 @@ export const useExternalWorkspaceConnectors = (workspaceId: string) => {
   };
 
   const sourcesQuery = useQuery([...queryKey, "sources"], () => fetchConnectors("source"), {
-    enabled: Boolean(workspaceId && baseUrl),
+    enabled: Boolean(workspaceId && baseUrl) && enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
 
   const destinationsQuery = useQuery([...queryKey, "destinations"], () => fetchConnectors("destination"), {
-    enabled: Boolean(workspaceId && baseUrl),
+    enabled: Boolean(workspaceId && baseUrl) && enabled,
     retry: false,
     staleTime: 5 * 60 * 1000,
   });
