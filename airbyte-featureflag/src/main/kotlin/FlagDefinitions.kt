@@ -102,32 +102,9 @@ object UseSubscriptionPriceIntervals : Temporary<Boolean>(key = "billing.use-sub
 
 object PlusTiersEnabled : Temporary<Boolean>(key = "billing.plus-tiers-enabled", default = false)
 
-// NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
-object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
-  override fun enabled(ctx: Context): Boolean {
-    val enabledWorkspaceIds: List<String> =
-      fetcher(key)
-        ?.takeIf { it.isNotEmpty() }
-        ?.split(",")
-        ?: listOf()
+object ConnectorOAuthConsentDisabled : Permanent<Boolean>(key = "connectors.oauth.disableOAuthConsent", default = false)
 
-    val contextWorkspaceIds: List<String> =
-      when (ctx) {
-        is Multi -> ctx.fetchContexts<Workspace>().map { it.key }
-        is Workspace -> listOf(ctx.key)
-        else -> listOf()
-      }
-
-    return when (contextWorkspaceIds.any { it in enabledWorkspaceIds }) {
-      true -> true
-      else -> default
-    }
-  }
-
-  object ConnectorOAuthConsentDisabled : Permanent<Boolean>(key = "connectors.oauth.disableOAuthConsent", default = false)
-
-  object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
-}
+object AddSchedulingJitter : Temporary<Boolean>(key = "platform.add-scheduling-jitter", default = false)
 
 object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-default-org-for-new-workspace", default = false)
 

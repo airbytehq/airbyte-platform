@@ -56,9 +56,9 @@ import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.domain.services.secrets.SecretStorageService
+import io.airbyte.featureflag.ConnectorOAuthConsentDisabled
 import io.airbyte.featureflag.DestinationDefinition
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.FieldSelectionWorkspaces.ConnectorOAuthConsentDisabled
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.Workspace

@@ -17,9 +17,9 @@ import io.airbyte.commons.converters.toInternal
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.config.JobWebhookConfig
+import io.airbyte.featureflag.AddSchedulingJitter
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.FieldSelectionWorkspaces.AddSchedulingJitter
 import io.airbyte.featureflag.LoadShedSchedulerBackoffMinutes
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.UseNewCronScheduleCalculation
