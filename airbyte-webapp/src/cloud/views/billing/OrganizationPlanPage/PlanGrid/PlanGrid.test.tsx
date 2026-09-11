@@ -4,7 +4,7 @@ import { mocked, render } from "test-utils";
 
 import { useOrganizationPlan } from "area/organization/utils/useOrganizationPlan";
 import { useRedirectToCustomerPortal } from "cloud/area/billing/utils/useRedirectToCustomerPortal";
-import { useGetOrganizationSubscriptionInfo, useOrgInfo } from "core/api";
+import { useGetOrganizationSubscriptionInfo, useOrgInfo, useUnschedulePlanChange } from "core/api";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { useGeneratedIntent } from "core/utils/rbac";
 
@@ -30,6 +30,7 @@ jest.mock("core/utils/rbac", () => ({
 jest.mock("core/api", () => ({
   useOrgInfo: jest.fn(),
   useGetOrganizationSubscriptionInfo: jest.fn(),
+  useUnschedulePlanChange: jest.fn(),
 }));
 
 jest.mock("cloud/area/billing/utils/useRedirectToCustomerPortal", () => ({
@@ -86,6 +87,10 @@ beforeEach(() => {
   mocked(useGeneratedIntent).mockReturnValue(true);
   mocked(useOrganizationPlan).mockReturnValue(planFlags());
   mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(subscriptionInfo(undefined));
+  mocked(useUnschedulePlanChange).mockReturnValue({
+    mutateAsync: jest.fn(),
+    isLoading: false,
+  } as unknown as ReturnType<typeof useUnschedulePlanChange>);
   mocked(useRedirectToCustomerPortal).mockReturnValue({ goToCustomerPortal: jest.fn(), redirecting: false });
   mocked(useConfirmationModalService).mockReturnValue({
     openConfirmationModal: jest.fn(),
@@ -285,5 +290,32 @@ describe("PlanGrid", () => {
     expect(card("standard-plan-card").queryByText(/Cancels/)).not.toBeInTheDocument();
     expect(card("pro-plan-card").queryByText(/Cancels/)).not.toBeInTheDocument();
     expect(card("flex-plan-card").queryByText(/Cancels/)).not.toBeInTheDocument();
+  });
+
+  it("shows the pending plan change banner when a plan change is scheduled", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
+    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(
+      subscriptionInfo({
+        name: "Standard",
+        pendingPlanChange: { effectiveDate: "2030-10-01T00:00:00Z", planName: "Plus" },
+      })
+    );
+
+    await render(<PlanGrid />);
+
+    const banner = screen.getByTestId("pending-plan-change-banner");
+    expect(banner).toHaveTextContent("Your plan will change to");
+    expect(banner).toHaveTextContent("Plus");
+  });
+
+  it("hides the pending plan change banner when there is no pending plan change", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
+    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(subscriptionInfo({ name: "Standard" }));
+
+    await render(<PlanGrid />);
+
+    expect(screen.queryByTestId("pending-plan-change-banner")).not.toBeInTheDocument();
   });
 });

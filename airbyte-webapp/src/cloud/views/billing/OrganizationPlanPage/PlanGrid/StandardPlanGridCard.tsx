@@ -102,7 +102,7 @@ export const StandardPlanGridCard: React.FC<StandardPlanGridCardProps> = ({
           <Button
             full
             isLoading={redirecting}
-            disabled={disabled}
+            disabled={disabled || (isDowngrade && !!cancellationDate)}
             variant={isDowngrade ? "secondary" : "primary"}
             onClick={onClick}
           >

@@ -90,4 +90,11 @@ open class BillingController : BillingApi {
   override fun unscheduleCancelSubscription(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): Unit = throw ApiNotImplementedInOssProblem()
+
+  @RequiresIntent(Intent.ManageOrganizationBilling)
+  @Post("/unschedule_plan_change")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun unschedulePlanChange(
+    @Body organizationIdRequestBody: OrganizationIdRequestBody,
+  ): Unit = throw ApiNotImplementedInOssProblem()
 }

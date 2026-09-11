@@ -5652,6 +5652,21 @@ paths:
       responses:
         "204":
           description: Successfully unscheduled cancelation of the subscription
+  /v1/billing/unschedule_plan_change:
+    post:
+      summary: Unschedule a scheduled plan change of the subscription of an organization
+      tags:
+        - billing
+        - cloud-only
+      operationId: unschedulePlanChange
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "204":
+          description: Successfully unscheduled the plan change of the subscription
   /v1/billing/disable_delinquent_workspaces:
     post:
       summary: Disable connections in workspaces that are delinquent in payment
@@ -16800,6 +16815,28 @@ components:
             - plus_500
             - plus_1000
             - plus_2000
+        pendingPlanChange:
+          type: object
+          description: A plan change scheduled on the organization's active self-serve subscription. Absent when no plan change is scheduled.
+          required:
+            - effectiveDate
+            - planName
+          properties:
+            effectiveDate:
+              $ref: "#/components/schemas/ISO8601DateTime"
+            planName:
+              type: string
+            selfServePlan:
+              type: string
+              description: The self-serve plan the subscription will move to. Absent when the target plan is not a configured self-serve plan.
+              enum:
+                - standard
+                - plus_40
+                - plus_100
+                - plus_250
+                - plus_500
+                - plus_1000
+                - plus_2000
     EntitlementPlanResponse:
       type: object
       required:

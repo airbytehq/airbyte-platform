@@ -7,6 +7,7 @@ import {
   listPastInvoices,
   cancelSubscription,
   unscheduleCancelSubscription,
+  unschedulePlanChange,
   getOrganizationPaymentConfig,
 } from "../generated/AirbyteClient";
 import { CustomerPortalRequestBody } from "../generated/AirbyteClient.schemas";
@@ -91,6 +92,17 @@ export const useUnscheduleCancelSubscription = (organizationId: string) => {
 
   return useMutation(async () => {
     const response = await unscheduleCancelSubscription({ organizationId }, requestOptions);
+    await queryClient.invalidateQueries(billingKeys.subscriptionInfo(organizationId));
+    return response;
+  });
+};
+
+export const useUnschedulePlanChange = (organizationId: string) => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(async () => {
+    const response = await unschedulePlanChange({ organizationId }, requestOptions);
     await queryClient.invalidateQueries(billingKeys.subscriptionInfo(organizationId));
     return response;
   });

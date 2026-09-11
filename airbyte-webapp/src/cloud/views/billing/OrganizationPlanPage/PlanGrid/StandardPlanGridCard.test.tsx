@@ -134,4 +134,16 @@ describe("StandardPlanGridCard", () => {
     await render(<StandardPlanGridCard disabled={false} cancellationDate="2030-01-15T00:00:00Z" />);
     expect(screen.queryByText(/Cancels/)).not.toBeInTheDocument();
   });
+
+  it("disables the Downgrade CTA when a cancellation is pending", async () => {
+    await render(<StandardPlanGridCard disabled={false} mode="downgrade" cancellationDate="2030-01-15T00:00:00Z" />);
+
+    expect(screen.getByRole("button", { name: /Downgrade/i })).toBeDisabled();
+  });
+
+  it("keeps the Subscribe CTA enabled when a cancellation is pending", async () => {
+    await render(<StandardPlanGridCard disabled={false} cancellationDate="2030-01-15T00:00:00Z" />);
+
+    expect(screen.getByRole("button", { name: /Subscribe/i })).toBeEnabled();
+  });
 });

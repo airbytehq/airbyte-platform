@@ -7,6 +7,7 @@ import { useGetOrganizationSubscriptionInfo, useOrgInfo } from "core/api";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { FlexPlanGridCard } from "./FlexPlanGridCard";
+import { PendingPlanChangeBanner } from "./PendingPlanChangeBanner";
 import styles from "./PlanGrid.module.scss";
 import { PlusPlanGridCard } from "./PlusPlanGridCard";
 import { ProPlanGridCard } from "./ProPlanGridCard";
@@ -46,6 +47,7 @@ export const PlanGrid: React.FC = () => {
 
   return (
     <>
+      <PendingPlanChangeBanner organizationId={organizationId} pendingPlanChange={subscription?.pendingPlanChange} />
       <div className={styles.page}>
         <div className={styles.grid}>
           <StandardPlanGridCard

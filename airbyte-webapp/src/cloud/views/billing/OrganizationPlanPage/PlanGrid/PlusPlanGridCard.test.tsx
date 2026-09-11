@@ -162,6 +162,19 @@ describe("PlusPlanGridCard", () => {
     expect(screen.queryByText(/Cancels/)).not.toBeInTheDocument();
   });
 
+  it("disables the Downgrade CTA when a cancellation is pending", async () => {
+    await render(<PlusPlanGridCard isCurrentPlan currentPlan="plus_2000" cancellationDate="2030-01-15T00:00:00Z" />);
+
+    expect(screen.getByRole("button", { name: "Downgrade" })).toBeDisabled();
+  });
+
+  it("keeps the Subscribe CTA and the credits dropdown enabled when a cancellation is pending", async () => {
+    await render(<PlusPlanGridCard cancellationDate="2030-01-15T00:00:00Z" />);
+
+    expect(screen.getByRole("button", { name: /Subscribe/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "40 credits · $189/month" })).toBeEnabled();
+  });
+
   it("preselects the next tier up and disables the current tier for a Plus org", async () => {
     await render(<PlusPlanGridCard isCurrentPlan currentPlan="plus_250" />);
 

@@ -215,7 +215,7 @@ export const PlusPlanGridCard: React.FC<PlusPlanGridCardProps> = ({
             <Button
               full
               isLoading={redirecting}
-              disabled={disabled}
+              disabled={disabled || (action === "tierDowngrade" && !!cancellationDate)}
               variant={action === "tierDowngrade" ? "secondary" : "primary"}
               onClick={onClick}
             >

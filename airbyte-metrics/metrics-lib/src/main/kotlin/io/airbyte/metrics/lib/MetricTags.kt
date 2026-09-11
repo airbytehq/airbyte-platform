@@ -68,6 +68,7 @@ object MetricTags {
   const val ORB_ENDPOINT_LIST_SUBSCRIPTIONS: String = "list_subscriptions"
   const val ORB_ENDPOINT_CANCEL_SUBSCRIPTION: String = "cancel_subscription"
   const val ORB_ENDPOINT_UNSCHEDULE_CANCELLATION: String = "unschedule_cancellation"
+  const val ORB_ENDPOINT_UNSCHEDULE_PLAN_CHANGE: String = "unschedule_plan_change"
 
   // the release stage of the highest release connector in the sync (GA > Beta > Alpha)
   const val MAX_CONNECTOR_RELEASE_STATE: String = "max_connector_release_stage"
