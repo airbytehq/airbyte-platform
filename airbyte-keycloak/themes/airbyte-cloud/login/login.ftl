@@ -1,5 +1,5 @@
 <#import "template.ftl" as layout>
-<@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=realm.password && realm.registrationAllowed && !registrationDisabled??; section>
+<@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=realm.password && realm.registrationAllowed && !registrationDisabled?? && (client.clientId)! != "sonar-webapp"; section>
     <#if section = "header">
         ${msg("loginAccountTitle")}
     <#elseif section = "form">
@@ -78,7 +78,7 @@
         </div>
         <script type="module" src="${url.resourcesPath}/js/passwordVisibility.js"></script>
     <#elseif section = "info" >
-        <#if realm.password && realm.registrationAllowed && !registrationDisabled??>
+        <#if realm.password && realm.registrationAllowed && !registrationDisabled?? && (client.clientId)! != "sonar-webapp">
             <div id="kc-registration-container">
                 <div id="kc-registration">
                     <span>${msg("noAccount")} <a tabindex="6"
