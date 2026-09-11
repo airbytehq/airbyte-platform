@@ -190,7 +190,7 @@ describe("PlanGrid", () => {
     await render(<PlanGrid />);
 
     expect(card("plus-plan-card").getByTestId("current-plan-badge")).toHaveTextContent("Current plan");
-    expect(card("plus-plan-card").getByRole("button", { name: "1,000 credits" })).toBeEnabled();
+    expect(card("plus-plan-card").getByRole("button", { name: "1,000 credits · $3,199/month" })).toBeEnabled();
     expect(card("plus-plan-card").getByText("$3,199")).toBeInTheDocument();
     expect(card("plus-plan-card").getByRole("button", { name: "Upgrade" })).toBeEnabled();
     expect(card("standard-plan-card").getByRole("button", { name: /Downgrade/i })).toBeEnabled();
@@ -207,7 +207,7 @@ describe("PlanGrid", () => {
 
     expect(screen.getAllByTestId("current-plan-badge")).toHaveLength(1);
     expect(card("plus-plan-card").getByTestId("current-plan-badge")).toBeInTheDocument();
-    expect(card("plus-plan-card").getByRole("button", { name: "250 credits" })).toBeEnabled();
+    expect(card("plus-plan-card").getByRole("button", { name: "250 credits · $999/month" })).toBeEnabled();
     expect(card("standard-plan-card").getByRole("button", { name: /Downgrade/i })).toBeEnabled();
   });
 
@@ -245,7 +245,7 @@ describe("PlanGrid", () => {
     expectCurrentPlan("pro-plan-card", /Talk to Sales/i);
     expectDisabledCta("standard-plan-card", /Subscribe/i);
     expectDisabledCta("plus-plan-card", /Subscribe/i);
-    expect(card("plus-plan-card").getByRole("button", { name: /credits$/i })).toBeDisabled();
+    expect(card("plus-plan-card").getByRole("button", { name: /credits/i })).toBeDisabled();
     expect(card("flex-plan-card").getByRole("link", { name: /Talk to Sales/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /See full pricing & feature comparison/i })).toBeInTheDocument();
   });

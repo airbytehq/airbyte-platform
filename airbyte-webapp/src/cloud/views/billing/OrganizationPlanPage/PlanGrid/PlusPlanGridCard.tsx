@@ -35,7 +35,7 @@ export const PLUS_PLAN_TIERS: PlusPlanTier[] = [
 ];
 
 /** Tier shown to orgs that are not on Plus before they pick one. */
-const DEFAULT_TIER_CREDITS = 100;
+const DEFAULT_TIER_CREDITS = 40;
 
 /**
  * Orgs already on Plus cannot pick their own tier again, so they start on the next tier up,
@@ -121,7 +121,12 @@ export const PlusPlanGridCard: React.FC<PlusPlanGridCardProps> = ({
     label: (
       <FormattedMessage
         id={tier === currentTier ? "planGrid.plus.creditsOption.current" : "planGrid.plus.creditsOption"}
-        values={{ credits: tier.credits }}
+        values={{
+          credits: tier.credits,
+          monthlyPrice: (
+            <FormattedNumber value={tier.monthlyPrice} style="currency" currency="USD" maximumFractionDigits={0} />
+          ),
+        }}
       />
     ),
   }));
