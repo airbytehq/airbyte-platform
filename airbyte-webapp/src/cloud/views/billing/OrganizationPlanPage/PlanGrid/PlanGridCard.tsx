@@ -11,6 +11,8 @@ import { Text } from "components/ui/Text";
 import styles from "./PlanGridCard.module.scss";
 
 interface PlanGridCardProps {
+  /** Callout rendered below the separator, above the features. */
+  banner?: React.ReactNode;
   title: React.ReactNode;
   price: React.ReactNode;
   pricePeriod?: React.ReactNode;
@@ -24,6 +26,7 @@ interface PlanGridCardProps {
 }
 
 export const PlanGridCard: React.FC<PlanGridCardProps> = ({
+  banner,
   title,
   price,
   pricePeriod,
@@ -68,6 +71,7 @@ export const PlanGridCard: React.FC<PlanGridCardProps> = ({
         {description}
       </Text>
       <Separator />
+      {banner}
       {features}
       <div className={styles.planGridCard__cta}>{cta}</div>
     </div>
@@ -81,7 +85,7 @@ interface PlanGridFeatureListProps {
 
 export const PlanGridFeatureList: React.FC<PlanGridFeatureListProps> = ({ messageId, values }) => {
   return (
-    <ul className={styles.features}>
+    <ul className={styles.features} data-testid="plan-grid-feature-list">
       <FormattedMessage
         id={messageId}
         values={{

@@ -49,3 +49,12 @@
   align-items: flex-start;
   gap: variables.$spacing-sm;
 }
+
+.pricingChangesList {
+  display: flex;
+  flex-direction: column;
+  margin: variables.$spacing-xs 0 0;
+  padding: 0;
+  list-style: none;
+  font-weight: 700;
+}

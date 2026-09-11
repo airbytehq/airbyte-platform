@@ -1,4 +1,4 @@
-import { act, screen } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { mocked, render } from "test-utils";
@@ -42,12 +42,28 @@ describe("StandardPlanGridCard", () => {
     expect(screen.getByText("/ month")).toBeInTheDocument();
     expect(screen.getByText(/For practitioners looking for fully managed software/)).toBeInTheDocument();
 
-    const features = screen.getAllByRole("listitem");
+    const features = within(screen.getByTestId("plan-grid-feature-list")).getAllByRole("listitem");
     expect(features).toHaveLength(6);
     expect(features[0]).toHaveTextContent("4 credits per month");
     expect(features[1]).toHaveTextContent("Buy credits from $2.50");
     expect(features[features.length - 1]).toHaveTextContent("Cancel any time");
     expect(screen.getByRole("link", { name: "credits" })).toHaveAttribute("href", links.creditDescription);
+  });
+
+  it("renders the pricing changes callout between the separator and the feature list", async () => {
+    await render(<StandardPlanGridCard disabled={false} />);
+
+    const banner = screen.getByTestId("pricing-changes-banner");
+    expect(banner).toHaveTextContent("Pricing change effective September 22, 2026:");
+    const bannerItems = within(banner).getAllByRole("listitem");
+    expect(bannerItems).toHaveLength(2);
+    expect(bannerItems[0]).toHaveTextContent("$20/month for 5 credits");
+    expect(bannerItems[1]).toHaveTextContent("$5 / credit");
+
+    const title = screen.getByRole("heading", { name: "Standard" });
+    const featureList = screen.getByTestId("plan-grid-feature-list");
+    expect(title.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(banner.compareDocumentPosition(featureList) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("renders the Subscribe label and uses the setup flow by default", async () => {
