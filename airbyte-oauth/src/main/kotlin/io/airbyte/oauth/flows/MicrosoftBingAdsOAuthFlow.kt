@@ -9,6 +9,7 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
 import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.GRANT_TYPE_KEY
 import io.airbyte.oauth.REDIRECT_URI_KEY
 import io.airbyte.oauth.RESPONSE_TYPE_KEY
@@ -67,12 +68,18 @@ class MicrosoftBingAdsOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    mapOf(
-      GRANT_TYPE_KEY to "authorization_code",
-      AUTH_CODE_KEY to authCode,
-      CLIENT_ID_KEY to clientId,
-      REDIRECT_URI_KEY to redirectUrl,
-    )
+    buildMap {
+      put(GRANT_TYPE_KEY, "authorization_code")
+      put(AUTH_CODE_KEY, authCode)
+      put(CLIENT_ID_KEY, clientId)
+      put(REDIRECT_URI_KEY, redirectUrl)
+      // Entra rejects a client_secret on a public-client app (AADSTS700025) and requires one on a
+      // web app (AADSTS7000218). The registered app type is not knowable here, so mirror the
+      // configured credential: send the secret only when one is actually configured.
+      if (clientSecret.isNotBlank()) {
+        put(CLIENT_SECRET_KEY, clientSecret)
+      }
+    }
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String {
     val tenantId = getConfigValueUnsafe(inputOAuthConfiguration, FIELD_NAME)
