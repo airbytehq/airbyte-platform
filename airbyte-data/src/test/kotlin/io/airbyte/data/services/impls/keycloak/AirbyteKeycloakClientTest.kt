@@ -14,11 +14,14 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
+import io.mockk.Runs
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import jakarta.ws.rs.NotFoundException
 import jakarta.ws.rs.core.Response
 import okhttp3.Call
 import okhttp3.OkHttpClient
@@ -40,6 +43,7 @@ import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.admin.client.resource.RealmsResource
 import org.keycloak.representations.idm.ClientRepresentation
 import org.keycloak.representations.idm.IdentityProviderRepresentation
+import org.keycloak.representations.idm.RealmRepresentation
 import java.util.UUID
 
 class AirbyteKeycloakClientTest {
@@ -666,5 +670,43 @@ class AirbyteKeycloakClientTest {
       ZW5pZCBwcm9maWxlIGVtYWlsIiwic2lkIjoiN2FhOTdmYTEtYTI1Mi00NmQ0LWE0NTMtOTE2Y2E3M2E4NmQ4IiwiZW1haWxfdmVyaWZp
       ZWQiOmZhbHNlLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhZW_DqyJ9
       """.trimIndent().replace("\n", "").replace("\r", "")
+  }
+
+  @Test
+  fun `realmExists returns true when the realm can be read`() {
+    val realmResource = mockk<RealmResource>()
+    every { realmResource.toRepresentation() } returns RealmRepresentation()
+    every { keycloakClientMock.realms().realm("acme") } returns realmResource
+
+    assertTrue(airbyteKeycloakClient.realmExists("acme"))
+  }
+
+  @Test
+  fun `realmExists returns false when the realm cannot be read`() {
+    val realmResource = mockk<RealmResource>()
+    every { realmResource.toRepresentation() } throws NotFoundException()
+    every { keycloakClientMock.realms().realm("acme") } returns realmResource
+
+    assertFalse(airbyteKeycloakClient.realmExists("acme"))
+  }
+
+  @Test
+  fun `deleteRealm removes the realm`() {
+    val realmResource = mockk<RealmResource>()
+    every { realmResource.remove() } just Runs
+    every { keycloakClientMock.realms().realm("acme") } returns realmResource
+
+    airbyteKeycloakClient.deleteRealm("acme")
+
+    verify(exactly = 1) { realmResource.remove() }
+  }
+
+  @Test
+  fun `deleteRealm wraps Keycloak failures`() {
+    val realmResource = mockk<RealmResource>()
+    every { realmResource.remove() } throws RuntimeException("Internal Server Error")
+    every { keycloakClientMock.realms().realm("acme") } returns realmResource
+
+    assertThrows<RealmDeletionException> { airbyteKeycloakClient.deleteRealm("acme") }
   }
 }

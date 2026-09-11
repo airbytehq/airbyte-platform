@@ -105,7 +105,11 @@ export const useMaximumWorkspaces = (): number | null => {
   );
 
   const entitlement = entitlementsResponse?.entitlements.find((e) => e.feature_id === "feature-maximum-workspaces");
-  if (!entitlement?.is_entitled || entitlement.is_unlimited || entitlement.value == null) {
+  // Plans without a workspace entitlement (Standard) allow exactly one workspace.
+  if (!entitlement?.is_entitled) {
+    return 1;
+  }
+  if (entitlement.is_unlimited || entitlement.value == null) {
     return null;
   }
   return entitlement.value;

@@ -122,6 +122,7 @@ internal class EntitlementServiceImpl(
   private val metricClient: MetricClient,
   private val featureDegradationService: FeatureDegradationService,
   private val billingTrackingHelper: io.airbyte.analytics.BillingTrackingHelper,
+  private val planLimitEnforcementService: PlanLimitEnforcementService,
 ) : EntitlementService {
   /**
    * Checks if an organization is entitled to a specific feature or capability.
@@ -219,6 +220,8 @@ internal class EntitlementServiceImpl(
       val currentPlan = EntitlementPlan.fromId(currentPlanId)
       if (plan == currentPlan) {
         logger.info { "Organization already on plan. organizationId=$organizationId, plan=$plan, currentPlans=$currentPlans" }
+        // Re-asserting the current plan is the recovery path for a plan limit enforcement step that failed earlier.
+        enforcePlanLimitsSafely(organizationId, plan)
         return
       } else {
         sendCountMetric(OssMetricsRegistry.ENTITLEMENT_PLAN_ORGANIZATION_UPDATE, organizationId, true)
@@ -232,6 +235,9 @@ internal class EntitlementServiceImpl(
 
         // Update with preserved add-ons
         entitlementClient.updateOrganization(organizationId, plan)
+
+        // Bring resources back within the new plan's limits now that the entitlement platform reflects it
+        enforcePlanLimitsSafely(organizationId, plan)
 
         // Track the entitlement plan change
         billingTrackingHelper.trackEntitlementPlanChanged(
@@ -356,6 +362,18 @@ internal class EntitlementServiceImpl(
       reason = entitlementResult.reason,
       isEntitlementCheckSuccessful = entitlementResult.isEntitlementCheckSuccessful,
     )
+  }
+
+  private fun enforcePlanLimitsSafely(
+    organizationId: OrganizationId,
+    plan: EntitlementPlan,
+  ) {
+    try {
+      planLimitEnforcementService.enforce(organizationId, plan)
+    } catch (e: Exception) {
+      // The plan update itself has completed. Enforcement is idempotent and runs again on the next plan update call.
+      logger.error(e) { "Failed to enforce plan limits. organizationId=$organizationId" }
+    }
   }
 
   private fun sendCountMetric(

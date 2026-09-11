@@ -39,6 +39,16 @@ interface ConnectorBuilderService {
 
   fun deleteBuilderProject(builderProjectId: UUID): Boolean
 
+  /**
+   * Moves every builder project of one workspace to another.
+   *
+   * @return the number of projects moved
+   */
+  fun reassignWorkspaceBuilderProjects(
+    fromWorkspaceId: UUID,
+    toWorkspaceId: UUID,
+  ): Int
+
   fun updateBuilderProjectTestingValues(
     projectId: UUID,
     testingValues: JsonNode,

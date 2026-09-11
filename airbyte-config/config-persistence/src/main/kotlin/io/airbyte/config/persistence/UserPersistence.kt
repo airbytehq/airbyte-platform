@@ -599,6 +599,24 @@ open class UserPersistence(
   }
 
   /**
+   * Points every user whose default workspace is [fromWorkspaceId] at [toWorkspaceId].
+   *
+   * @return the number of users updated
+   */
+  fun reassignDefaultWorkspace(
+    fromWorkspaceId: UUID,
+    toWorkspaceId: UUID,
+  ): Int =
+    database.transaction { ctx ->
+      ctx
+        .update(Tables.USER)
+        .set(Tables.USER.DEFAULT_WORKSPACE_ID, toWorkspaceId)
+        .set(Tables.USER.UPDATED_AT, OffsetDateTime.now())
+        .where(Tables.USER.DEFAULT_WORKSPACE_ID.eq(fromWorkspaceId))
+        .execute()
+    }
+
+  /**
    * Fetch user information from their authentication id.
    *
    * @param userAuthId the authentication Identifier of the user

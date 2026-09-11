@@ -575,6 +575,51 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
   }
 
+  @Nested
+  internal inner class ReassignWorkspaceOAuthParamsTests {
+    // Fresh workspaces per test: other test classes leave overrides on the shared WORKSPACE_ID behind.
+    private val fromWorkspaceId = UUID.randomUUID()
+    private val toWorkspaceId = UUID.randomUUID()
+
+    @BeforeEach
+    fun stubWorkspaces() {
+      every { workspaceService.getOrganizationIdFromWorkspaceId(fromWorkspaceId) } returns Optional.of(ORGANIZATION_ID)
+      every { workspaceService.getOrganizationIdFromWorkspaceId(toWorkspaceId) } returns Optional.of(ORGANIZATION_ID)
+    }
+
+    @Test
+    fun movesOverridesToTheTargetWorkspace() {
+      createActorOAuthParameter(ID, Optional.of(fromWorkspaceId), Optional.empty(), ActorType.SOURCE)
+
+      val moved = oAuthService.reassignWorkspaceOAuthParams(fromWorkspaceId, toWorkspaceId)
+
+      Assertions.assertEquals(1, moved)
+      Assertions.assertTrue(oAuthService.getSourceOAuthParameterOptional(fromWorkspaceId, ACTOR_DEFINITION_ID).isEmpty)
+      val fetched = oAuthService.getSourceOAuthParameterOptional(toWorkspaceId, ACTOR_DEFINITION_ID)
+      Assertions.assertTrue(fetched.isPresent)
+      Assertions.assertEquals(toWorkspaceId, fetched.get().workspaceId)
+    }
+
+    @Test
+    fun dropsOverridesTheTargetWorkspaceAlreadyHas() {
+      createActorOAuthParameter(ID, Optional.of(fromWorkspaceId), Optional.empty(), ActorType.SOURCE)
+      val existingId = UUID.randomUUID()
+      createActorOAuthParameter(existingId, Optional.of(toWorkspaceId), Optional.empty(), ActorType.SOURCE)
+
+      val moved = oAuthService.reassignWorkspaceOAuthParams(fromWorkspaceId, toWorkspaceId)
+
+      Assertions.assertEquals(0, moved)
+      Assertions.assertTrue(oAuthService.getSourceOAuthParameterOptional(fromWorkspaceId, ACTOR_DEFINITION_ID).isEmpty)
+      val fetched = oAuthService.getSourceOAuthParameterOptional(toWorkspaceId, ACTOR_DEFINITION_ID)
+      Assertions.assertEquals(existingId, fetched.get().oauthParameterId)
+    }
+
+    @Test
+    fun isANoOpWhenTheWorkspaceHasNoOverrides() {
+      Assertions.assertEquals(0, oAuthService.reassignWorkspaceOAuthParams(fromWorkspaceId, toWorkspaceId))
+    }
+  }
+
   companion object {
     private val ACTOR_OAUTH_PARAMETER_TABLE = DSL.table("actor_oauth_parameter")
     private val ACTOR_DEFINITION_ID_COLUMN = DSL.field<UUID?>("actor_definition_id", SQLDataType.UUID)

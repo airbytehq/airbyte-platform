@@ -3,8 +3,8 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { ExternalLink } from "components/ui/Link";
-import { Text } from "components/ui/Text";
 
+import { StandardDowngradeConsequences } from "cloud/area/billing/components/PlanCards";
 import { useRedirectToCustomerPortal } from "cloud/area/billing/utils/useRedirectToCustomerPortal";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { links } from "core/utils/links";
@@ -42,11 +42,7 @@ export const StandardPlanGridCard: React.FC<StandardPlanGridCardProps> = ({
 
     openConfirmationModal({
       title: <FormattedMessage id="plans.standard.downgrade.confirmTitle" />,
-      text: (
-        <Text>
-          <FormattedMessage id="plans.standard.downgrade.confirmText" />
-        </Text>
-      ),
+      text: <StandardDowngradeConsequences />,
       submitButtonText: "plans.standard.downgrade.confirmSubmit",
       cancelButtonText: "plans.standard.downgrade.confirmCancel",
       onSubmit: () => {

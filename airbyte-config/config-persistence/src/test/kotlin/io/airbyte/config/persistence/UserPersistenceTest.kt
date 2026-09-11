@@ -125,6 +125,25 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     }
 
     @Test
+    fun reassignDefaultWorkspaceMovesUsersOfTheOldWorkspace() {
+      val usersOnWorkspace1 = MockData.users().filter { it!!.defaultWorkspaceId == MockData.WORKSPACE_ID_1 }
+      Assertions.assertFalse(usersOnWorkspace1.isEmpty())
+
+      val updated = userPersistence.reassignDefaultWorkspace(MockData.WORKSPACE_ID_1, MockData.WORKSPACE_ID_2)
+
+      Assertions.assertEquals(usersOnWorkspace1.size, updated)
+      for (user in MockData.users()) {
+        val expected = if (user!!.defaultWorkspaceId == MockData.WORKSPACE_ID_1) MockData.WORKSPACE_ID_2 else user.defaultWorkspaceId
+        Assertions.assertEquals(expected, userPersistence.getAuthenticatedUser(user.userId).get().defaultWorkspaceId)
+      }
+    }
+
+    @Test
+    fun reassignDefaultWorkspaceIsANoOpWhenNoUserPointsAtTheWorkspace() {
+      Assertions.assertEquals(0, userPersistence.reassignDefaultWorkspace(UUID.randomUUID(), MockData.WORKSPACE_ID_2))
+    }
+
+    @Test
     fun agenticEnabledAtPersistenceTest() {
       val userId = UUID.randomUUID()
       val agenticEnabledAt = OffsetDateTime.of(2026, 2, 5, 12, 0, 0, 0, ZoneOffset.UTC)

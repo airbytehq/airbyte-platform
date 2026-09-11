@@ -81,6 +81,9 @@ import java.util.UUID
 import java.util.function.Supplier
 import java.util.stream.Collectors
 
+/** Workspaces allowed to an organization whose plan grants no workspace entitlement. */
+private const val DEFAULT_WORKSPACE_LIMIT = 1L
+
 /**
  * WorkspacesHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
@@ -247,9 +250,17 @@ class WorkspacesHandler
           OrganizationId(organizationId),
           MaximumWorkspacesEntitlement,
         )
-      if (limitResult.isUnlimited || !limitResult.hasAccess) return
+      if (limitResult.isUnlimited) return
 
-      val limit = limitResult.value ?: return
+      val limit =
+        when {
+          limitResult.hasAccess -> limitResult.value ?: return
+          // Cloud plans without a workspace entitlement (Standard) allow exactly one workspace. Deployments without a
+          // plan (Community, unlicensed Enterprise, Cloud without an entitlement platform) keep unlimited workspaces.
+          airbyteEdition == AirbyteEdition.CLOUD && entitlementService.getCurrentPlanId(OrganizationId(organizationId)) != null ->
+            DEFAULT_WORKSPACE_LIMIT
+          else -> return
+        }
       val existingWorkspaceCount = workspacePersistence.countWorkspacesByOrganizationId(organizationId)
       if (existingWorkspaceCount < limit) return
 

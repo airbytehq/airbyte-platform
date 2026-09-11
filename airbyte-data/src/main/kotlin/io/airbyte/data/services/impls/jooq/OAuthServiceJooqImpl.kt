@@ -327,6 +327,33 @@ class OAuthServiceJooqImpl(
         ).execute()
     }
 
+  override fun reassignWorkspaceOAuthParams(
+    fromWorkspaceId: UUID,
+    toWorkspaceId: UUID,
+  ): Int =
+    database.transaction { ctx: DSLContext ->
+      val existing = Tables.ACTOR_OAUTH_PARAMETER.`as`("existing_override")
+      ctx
+        .deleteFrom(Tables.ACTOR_OAUTH_PARAMETER)
+        .where(Tables.ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.eq(fromWorkspaceId))
+        .and(
+          DSL.exists(
+            ctx
+              .selectOne()
+              .from(existing)
+              .where(existing.WORKSPACE_ID.eq(toWorkspaceId))
+              .and(existing.ACTOR_TYPE.eq(Tables.ACTOR_OAUTH_PARAMETER.ACTOR_TYPE))
+              .and(existing.ACTOR_DEFINITION_ID.eq(Tables.ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID)),
+          ),
+        ).execute()
+      ctx
+        .update(Tables.ACTOR_OAUTH_PARAMETER)
+        .set(Tables.ACTOR_OAUTH_PARAMETER.WORKSPACE_ID, toWorkspaceId)
+        .set(Tables.ACTOR_OAUTH_PARAMETER.UPDATED_AT, OffsetDateTime.now())
+        .where(Tables.ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.eq(fromWorkspaceId))
+        .execute()
+    }
+
   override fun deleteSourceOAuthParamByWorkspaceId(
     workspaceId: UUID,
     sourceDefinitionId: UUID,

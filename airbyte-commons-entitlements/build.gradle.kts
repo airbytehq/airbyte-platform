@@ -20,6 +20,7 @@ dependencies {
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons-license"))
   implementation(project(":oss:airbyte-data"))
+  implementation(libs.micronaut.data.model)
   implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-config:config-persistence"))

@@ -100,4 +100,15 @@ interface OAuthService {
     workspaceId: UUID,
     destinationDefinitionId: UUID,
   ): Int
+
+  /**
+   * Moves the workspace-scoped OAuth overrides of one workspace to another. An override for an actor definition
+   * that the target workspace already overrides is deleted instead of moved.
+   *
+   * @return the number of overrides moved
+   */
+  fun reassignWorkspaceOAuthParams(
+    fromWorkspaceId: UUID,
+    toWorkspaceId: UUID,
+  ): Int
 }

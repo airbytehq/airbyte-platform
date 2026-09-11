@@ -259,6 +259,19 @@ class ConnectorBuilderServiceJooqImpl
       }
     }
 
+    override fun reassignWorkspaceBuilderProjects(
+      fromWorkspaceId: UUID,
+      toWorkspaceId: UUID,
+    ): Int =
+      database.transaction { ctx: DSLContext ->
+        ctx
+          .update(Tables.CONNECTOR_BUILDER_PROJECT)
+          .set(Tables.CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID, toWorkspaceId)
+          .set(Tables.CONNECTOR_BUILDER_PROJECT.UPDATED_AT, OffsetDateTime.now())
+          .where(Tables.CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(fromWorkspaceId))
+          .execute()
+      }
+
     /**
      * Nullify the manifest draft of a builder project.
      *

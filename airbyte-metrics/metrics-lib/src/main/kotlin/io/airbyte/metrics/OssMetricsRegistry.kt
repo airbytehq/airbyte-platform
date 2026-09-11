@@ -752,6 +752,10 @@ enum class OssMetricsRegistry(
     metricName = "entitlements_organization_update",
     metricDescription = "an airbyte organization's entitlements were updated",
   ),
+  ENTITLEMENT_PLAN_DOWNGRADE_STEP(
+    metricName = "entitlements_plan_downgrade_step",
+    metricDescription = "a plan limit enforcement step (sso teardown, workspace consolidation) ran for an organization",
+  ),
   ENTITLEMENT_RETRIEVAL(
     metricName = "entitlement_retrieval",
     metricDescription = "a request was made to retrieve all entitlements for a customer",

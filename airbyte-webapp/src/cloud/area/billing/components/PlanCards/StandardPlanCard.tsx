@@ -13,6 +13,7 @@ import { links } from "core/utils/links";
 
 import { PlanCard } from "./PlanCard";
 import styles from "./PlanCard.module.scss";
+import { StandardDowngradeConsequences } from "./StandardDowngradeConsequences";
 
 export type StandardPlanCardMode = "subscribe" | "downgrade";
 
@@ -37,11 +38,7 @@ export const StandardPlanCard: React.FC<StandardPlanCardProps> = ({ disabled, mo
 
     openConfirmationModal({
       title: <FormattedMessage id="plans.standard.downgrade.confirmTitle" />,
-      text: (
-        <Text>
-          <FormattedMessage id="plans.standard.downgrade.confirmText" />
-        </Text>
-      ),
+      text: <StandardDowngradeConsequences />,
       submitButtonText: "plans.standard.downgrade.confirmSubmit",
       cancelButtonText: "plans.standard.downgrade.confirmCancel",
       onSubmit: () => {

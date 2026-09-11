@@ -96,6 +96,7 @@ object MetricTags {
   const val SSO_DEFAULT_ROLE: String = "sso_default_role"
   const val STATUS: String = "status"
   const val SUCCESS: String = "success"
+  const val DOWNGRADE_STEP: String = "downgrade_step"
   const val WEBHOOK_DOMAIN: String = "webhook_domain"
   const val WILL_RETRY: String = "will_retry"
   const val WORKSPACE_ID: String = "workspace_id"

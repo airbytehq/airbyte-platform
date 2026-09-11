@@ -25,6 +25,8 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
+import io.mockk.verifyOrder
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -37,8 +39,16 @@ class EntitlementServiceTest {
   private val metricClient = mockk<MetricClient>(relaxed = true)
   private val featureDegradationService = mockk<FeatureDegradationService>()
   private val billingTrackingHelper = mockk<io.airbyte.analytics.BillingTrackingHelper>(relaxed = true)
+  private val planLimitEnforcementService = mockk<PlanLimitEnforcementService>(relaxed = true)
   private val entitlementService =
-    EntitlementServiceImpl(entitlementClient, entitlementProvider, metricClient, featureDegradationService, billingTrackingHelper)
+    EntitlementServiceImpl(
+      entitlementClient,
+      entitlementProvider,
+      metricClient,
+      featureDegradationService,
+      billingTrackingHelper,
+      planLimitEnforcementService,
+    )
 
   @Test
   fun `checkEntitlement delegates to entitlementClient`() {
@@ -465,5 +475,80 @@ class EntitlementServiceTest {
         any<EntitlementPlan>(),
       )
     }
+  }
+
+  @Test
+  fun `plan limits are enforced after the plan is updated`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.PLUS, EntitlementPlan.PLUS.id, EntitlementPlan.PLUS.name))
+    every { entitlementClient.getEntitlements(orgId) } returns emptyList()
+    every { entitlementClient.updateOrganization(orgId, EntitlementPlan.STANDARD) } just runs
+    every { featureDegradationService.downgradeFeaturesIfRequired(orgId, EntitlementPlan.PLUS, EntitlementPlan.STANDARD) } just runs
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    verifyOrder {
+      entitlementClient.updateOrganization(orgId, EntitlementPlan.STANDARD)
+      planLimitEnforcementService.enforce(orgId, EntitlementPlan.STANDARD)
+    }
+  }
+
+  @Test
+  fun `plan limits are enforced when the organization is already on the plan`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, EntitlementPlan.STANDARD.id, EntitlementPlan.STANDARD.name))
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    verify(exactly = 1) { planLimitEnforcementService.enforce(orgId, EntitlementPlan.STANDARD) }
+    verify(exactly = 0) { entitlementClient.updateOrganization(any(), any()) }
+  }
+
+  @Test
+  fun `re-asserting Plus, as a tier change does, never runs feature degradation and passes the Plus plan to enforcement`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.PLUS, EntitlementPlan.PLUS.id, EntitlementPlan.PLUS.name))
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.PLUS)
+
+    verify(exactly = 0) {
+      featureDegradationService["downgradeFeaturesIfRequired"](
+        any<OrganizationId>(),
+        any<EntitlementPlan>(),
+        any<EntitlementPlan>(),
+      )
+    }
+    verify(exactly = 0) { entitlementClient.updateOrganization(any(), any()) }
+    verify(exactly = 1) { planLimitEnforcementService.enforce(orgId, EntitlementPlan.PLUS) }
+  }
+
+  @Test
+  fun `plan limits are not enforced when adding a new organization`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    every { entitlementClient.getPlans(orgId) } returns emptyList()
+    every { entitlementClient.addOrganization(orgId, EntitlementPlan.STANDARD) } just runs
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    verify(exactly = 0) { planLimitEnforcementService.enforce(any(), any()) }
+  }
+
+  @Test
+  fun `a plan limit enforcement failure does not fail the plan update`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.PLUS, EntitlementPlan.PLUS.id, EntitlementPlan.PLUS.name))
+    every { entitlementClient.getEntitlements(orgId) } returns emptyList()
+    every { entitlementClient.updateOrganization(orgId, EntitlementPlan.STANDARD) } just runs
+    every { featureDegradationService.downgradeFeaturesIfRequired(orgId, EntitlementPlan.PLUS, EntitlementPlan.STANDARD) } just runs
+    every { planLimitEnforcementService.enforce(orgId, EntitlementPlan.STANDARD) } throws RuntimeException("Stigg is down")
+
+    assertDoesNotThrow { entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD) }
+
+    verify { entitlementClient.updateOrganization(orgId, EntitlementPlan.STANDARD) }
+    verify { billingTrackingHelper.trackEntitlementPlanChanged(orgId.value, EntitlementPlan.PLUS.id, EntitlementPlan.STANDARD.id) }
   }
 }
