@@ -10,10 +10,13 @@ interfaces and Kotlin client classes from them. Read the root
 Canonical list is in repo-root `settings.gradle.kts`. As of writing:
 
 - `:oss:airbyte-api:commons` — shared OpenAPI types
-- `:oss:airbyte-api:server-api` — internal server API (the big one)
+- `:oss:airbyte-api:server-api` — internal server API, a.k.a. the
+  Config API (the big one). Routes here are subject to change.
 - `:oss:airbyte-api:server-api-client` — generated Kotlin client for the
   internal server API (generated from `server-api`'s spec)
-- `:oss:airbyte-api:public-api` — externally documented Airbyte API
+- `:oss:airbyte-api:public-api` — externally documented Airbyte API.
+  Routes here are final/static and relied upon by external
+  (non-Airbyte) users.
 - `:oss:airbyte-api:problems-api` — RFC 7807 problem details
 - `:oss:airbyte-api:workload-api` — workload service API
 - `:oss:airbyte-api:manifest-server-api` — connector manifest server API
@@ -103,6 +106,17 @@ it's currently `config.yaml`.
 
 ## Versioning
 
+- **Config API vs Public API.** The two specs carry different
+  stability expectations, and new routes must be placed accordingly:
+  - **Config API (`server-api`, `config.yaml`)** routes are internal
+    and *subject to change*. They serve the webapp and other Airbyte
+    components; external callers must not depend on them.
+  - **Public API (`public-api`)** routes are *final/static*. They are
+    the contract that external (non-Airbyte) users — SDKs, the
+    Terraform provider, Airflow/Dagster operators, direct callers —
+    can rely on.
+  A route that external users need to depend on belongs in the Public
+  API; a route that is still evolving belongs in the Config API.
 - `public-api` is externally documented and treated as a stable
   contract. Breaking changes require deprecation + announcement —
   ask before changing.
@@ -118,7 +132,7 @@ it's currently `config.yaml`.
   returns values the SDK doesn't recognize. Treat the full
   `server-api` → `public-api` → SDK propagation as a mandatory
   follow-up, not an optional nice-to-have.
-- `server-api`, `workload-api`, `problems-api`,
+- `server-api` (Config API), `workload-api`, `problems-api`,
   `manifest-server-api` are internal; iterate freely, but still
   regenerate frontend and backend output locally, validate it through
   type-checking/compilation and relevant tests, and commit the YAML plus

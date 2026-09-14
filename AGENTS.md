@@ -85,6 +85,11 @@ delegate to a handler or service.
   `oss/airbyte-api/<submodule>/src/main/openapi/*.yaml`, let Gradle
   regenerate the JAX-RS interfaces, then implement them. Don't add
   endpoint classes that don't correspond to a YAML operation.
+- **Config API routes are subject to change; Public API routes are
+  final.** `server-api` (the Config API) is internal and may evolve
+  freely. `public-api` routes are static and relied upon by external
+  (non-Airbyte) users — see
+  [airbyte-api/AGENTS.md](airbyte-api/AGENTS.md#versioning).
 
 ## Build & test commands
 
