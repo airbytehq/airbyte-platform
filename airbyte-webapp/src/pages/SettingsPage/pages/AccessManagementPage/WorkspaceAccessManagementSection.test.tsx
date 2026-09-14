@@ -41,7 +41,7 @@ const mockUseListWorkspaceAccessUsers = useListWorkspaceAccessUsers as jest.Mock
 const mockUseGeneratedIntent = useGeneratedIntent as jest.Mock;
 
 const SCIM_BANNER =
-  "Workspace membership is controlled by your identity provider. Edit membership in your identity provider.";
+  "Members can't be added or removed here while SCIM is enabled. To grant workspace access, assign permissions to a user group in Organization settings > User Groups. Manage group membership in your identity provider.";
 
 const setScim = (scim: boolean) => {
   mockUseCurrentOrganizationInfo.mockReturnValue({
@@ -64,7 +64,7 @@ describe(`${WorkspaceAccessManagementSection.name}`, () => {
   describe("when SCIM is enabled", () => {
     beforeEach(() => setScim(true));
 
-    it("renders the provider-managed banner", async () => {
+    it("renders the SCIM banner", async () => {
       await render(<WorkspaceAccessManagementSection />);
 
       expect(screen.getByText(SCIM_BANNER)).toBeInTheDocument();
@@ -86,7 +86,7 @@ describe(`${WorkspaceAccessManagementSection.name}`, () => {
   describe("when SCIM is disabled", () => {
     beforeEach(() => setScim(false));
 
-    it("does not render the provider-managed banner", async () => {
+    it("does not render the SCIM banner", async () => {
       await render(<WorkspaceAccessManagementSection />);
 
       expect(screen.queryByText(SCIM_BANNER)).not.toBeInTheDocument();
