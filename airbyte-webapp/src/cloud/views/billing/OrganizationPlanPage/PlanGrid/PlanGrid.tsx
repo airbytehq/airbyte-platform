@@ -10,8 +10,10 @@ import { FlexPlanGridCard } from "./FlexPlanGridCard";
 import { PendingPlanChangeBanner } from "./PendingPlanChangeBanner";
 import styles from "./PlanGrid.module.scss";
 import { PlusPlanGridCard } from "./PlusPlanGridCard";
+import { PlusPromoCreditsCallout } from "./PlusPromoCreditsCallout";
 import { ProPlanGridCard } from "./ProPlanGridCard";
 import { StandardPlanGridCard } from "./StandardPlanGridCard";
+import { PricingCalculator } from "../PricingCalculator";
 
 type PlanTier = "standard" | "plus" | "pro" | "flex";
 
@@ -44,10 +46,12 @@ export const PlanGrid: React.FC = () => {
     : null;
   const activeTier: PlanTier | null = isSubscribed ? selfServeTier ?? entitlementTier : null;
   const isTopTier = activeTier === "pro" || activeTier === "flex";
+  const isSelfServeTier = activeTier === "standard" || activeTier === "plus";
 
   return (
     <>
       <PendingPlanChangeBanner organizationId={organizationId} pendingPlanChange={subscription?.pendingPlanChange} />
+      {isSelfServeTier && <PlusPromoCreditsCallout />}
       <div className={styles.page}>
         <div className={styles.grid}>
           <StandardPlanGridCard
@@ -73,6 +77,7 @@ export const PlanGrid: React.FC = () => {
         </div>
       </div>
       <PricingComparisonLink />
+      {!isTopTier && <PricingCalculator />}
     </>
   );
 };

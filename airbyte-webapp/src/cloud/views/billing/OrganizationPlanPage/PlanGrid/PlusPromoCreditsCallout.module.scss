@@ -1,0 +1,9 @@
+@use "scss/variables";
+
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: variables.$spacing-xs variables.$spacing-xl;
+  margin: variables.$spacing-md 0 0;
+  padding-left: variables.$spacing-lg;
+}

@@ -335,4 +335,85 @@ describe("PlanGrid", () => {
 
     expect(screen.queryByTestId("pending-plan-change-banner")).not.toBeInTheDocument();
   });
+
+  it("shows the Plus promo credits callout for a Standard org", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
+
+    await render(<PlanGrid />);
+
+    expect(screen.getByTestId("plus-promo-credits-callout")).toHaveTextContent("Upgrade to Plus by September 29");
+  });
+
+  it("shows the Plus promo credits callout for a Plus org", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isPlusPlan: true }));
+    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(
+      subscriptionInfo({ name: "Plus", selfServePlan: "plus_500" })
+    );
+
+    await render(<PlanGrid />);
+
+    expect(screen.getByTestId("plus-promo-credits-callout")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["Pro", { isProPlan: true }],
+    ["SME", { isSmePlan: true }],
+    ["Flex", { isFlexPlan: true }],
+  ])("hides the Plus promo credits callout for a %s org", async (_label, flags) => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags(flags));
+
+    await render(<PlanGrid />);
+
+    expect(screen.queryByTestId("plus-promo-credits-callout")).not.toBeInTheDocument();
+  });
+
+  it("hides the Plus promo credits callout when the org is not subscribed", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState({ subscriptionStatus: "unsubscribed" }));
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
+
+    await render(<PlanGrid />);
+
+    expect(screen.queryByTestId("plus-promo-credits-callout")).not.toBeInTheDocument();
+  });
+
+  it("hides the Plus promo credits callout for trial users", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState({ subscriptionStatus: "unsubscribed" }));
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardTrialPlan: true, isStiggPlanEnabled: true }));
+
+    await render(<PlanGrid />);
+
+    expect(screen.queryByTestId("plus-promo-credits-callout")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["Pro", { isProPlan: true }],
+    ["SME", { isSmePlan: true }],
+    ["Flex", { isFlexPlan: true }],
+  ])("hides the pricing calculator for a %s org", async (_label, flags) => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags(flags));
+
+    await render(<PlanGrid />);
+
+    expect(screen.queryByTestId("pricing-calculator")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Pricing calculator" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["Standard", planFlags({ isStandardPlan: true }), billingState()],
+    ["Plus", planFlags({ isPlusPlan: true }), billingState()],
+    ["unsubscribed", planFlags(), billingState({ subscriptionStatus: "unsubscribed" })],
+  ])("shows the pricing calculator for a %s org", async (_label, flags, billing) => {
+    mocked(useOrgInfo).mockReturnValue(billing);
+    mocked(useOrganizationPlan).mockReturnValue(flags);
+
+    await render(<PlanGrid />);
+
+    expect(screen.getByTestId("pricing-calculator")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pricing calculator" })).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "Monthly credits" })).toBeEnabled();
+  });
 });

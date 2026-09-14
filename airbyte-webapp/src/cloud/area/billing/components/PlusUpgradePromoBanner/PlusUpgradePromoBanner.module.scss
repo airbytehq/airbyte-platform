@@ -1,0 +1,7 @@
+@use "scss/colors";
+
+// Qualified with the element so it outranks the shared Link hover rule, which would otherwise turn the
+// link purple on top of the purple banner.
+a.link:hover {
+  color: colors.$green;
+}
