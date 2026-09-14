@@ -1137,7 +1137,7 @@ minio:
   ## image.repository Minio image used by Minio helm chart
   ## image.tag Minio tag image
   image:
-    repository: minio/minio
+    repository: airbyte/minio
     tag: RELEASE.2023-11-20T22-40-07Z
 
   auth:
