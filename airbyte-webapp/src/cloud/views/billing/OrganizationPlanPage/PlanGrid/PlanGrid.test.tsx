@@ -185,6 +185,23 @@ describe("PlanGrid", () => {
     expect(card("flex-plan-card").getByRole("link", { name: /Talk to Sales/i })).toBeInTheDocument();
   });
 
+  it("shows a disabled Downgrade pending CTA on the Standard card when a downgrade is scheduled", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isPlusPlan: true }));
+    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(
+      subscriptionInfo({
+        name: "Plus",
+        selfServePlan: "plus_500",
+        pendingPlanChange: { effectiveDate: "2030-10-01T00:00:00Z", planName: "Standard", selfServePlan: "standard" },
+      })
+    );
+
+    await render(<PlanGrid />);
+
+    expect(card("standard-plan-card").getByRole("button", { name: /Downgrade pending/i })).toBeDisabled();
+    expect(card("standard-plan-card").queryByRole("button", { name: /^Downgrade$/i })).not.toBeInTheDocument();
+  });
+
   it("marks the Plus tier from the subscription current and offers the next tier up", async () => {
     mocked(useOrgInfo).mockReturnValue(billingState());
     mocked(useOrganizationPlan).mockReturnValue(planFlags({ isPlusPlan: true }));

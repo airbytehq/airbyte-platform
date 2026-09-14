@@ -1831,6 +1831,7 @@
   "plans.standard.downgrade.consequence.workspaces": "Multiple workspaces (they merge into one, and your connections are migrated)",
   "plans.standard.downgrade.consequence.support": "Premium support",
   "plans.standard.downgrade.timing": "Your plan will change to Standard at the end of your billing period. You can continue using Plus until then.",
+  "plans.standard.downgradePending": "Downgrade pending",
   "plans.standard.downgrade.confirmSubmit": "Downgrade",
   "plans.standard.downgrade.confirmCancel": "Keep Plus",
   "plans.standard.description": "For companies looking to sync easily.",

@@ -55,6 +55,7 @@ export const PlanGrid: React.FC = () => {
             mode={activeTier === "plus" ? "downgrade" : "subscribe"}
             isCurrentPlan={activeTier === "standard"}
             cancellationDate={cancellationDate}
+            downgradePending={subscription?.pendingPlanChange?.selfServePlan === "standard"}
           />
           <PlusPlanGridCard
             disabled={isLockedSubscription || isTopTier}

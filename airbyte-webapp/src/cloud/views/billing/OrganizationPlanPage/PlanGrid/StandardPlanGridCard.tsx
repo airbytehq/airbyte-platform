@@ -20,6 +20,8 @@ interface StandardPlanGridCardProps {
   mode?: StandardPlanGridCardMode;
   isCurrentPlan?: boolean;
   cancellationDate?: string;
+  /** A downgrade to Standard is already scheduled on the subscription. */
+  downgradePending?: boolean;
 }
 
 export const StandardPlanGridCard: React.FC<StandardPlanGridCardProps> = ({
@@ -27,6 +29,7 @@ export const StandardPlanGridCard: React.FC<StandardPlanGridCardProps> = ({
   mode = "subscribe",
   isCurrentPlan = false,
   cancellationDate,
+  downgradePending = false,
 }) => {
   const isDowngrade = mode === "downgrade";
   const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal(
@@ -102,11 +105,19 @@ export const StandardPlanGridCard: React.FC<StandardPlanGridCardProps> = ({
           <Button
             full
             isLoading={redirecting}
-            disabled={disabled || (isDowngrade && !!cancellationDate)}
+            disabled={disabled || (isDowngrade && (!!cancellationDate || downgradePending))}
             variant={isDowngrade ? "secondary" : "primary"}
             onClick={onClick}
           >
-            <FormattedMessage id={isDowngrade ? "plans.standard.downgrade" : "plans.standard.subscribe"} />
+            <FormattedMessage
+              id={
+                isDowngrade && downgradePending
+                  ? "plans.standard.downgradePending"
+                  : isDowngrade
+                  ? "plans.standard.downgrade"
+                  : "plans.standard.subscribe"
+              }
+            />
           </Button>
         )
       }

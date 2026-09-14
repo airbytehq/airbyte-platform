@@ -141,6 +141,19 @@ describe("StandardPlanGridCard", () => {
     expect(screen.getByRole("button", { name: /Downgrade/i })).toBeDisabled();
   });
 
+  it("shows a disabled Downgrade pending CTA when a downgrade to Standard is pending", async () => {
+    await render(<StandardPlanGridCard disabled={false} mode="downgrade" downgradePending />);
+
+    expect(screen.getByRole("button", { name: /Downgrade pending/i })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^Downgrade$/i })).not.toBeInTheDocument();
+  });
+
+  it("ignores downgradePending in subscribe mode", async () => {
+    await render(<StandardPlanGridCard disabled={false} downgradePending />);
+
+    expect(screen.getByRole("button", { name: /Subscribe/i })).toBeEnabled();
+  });
+
   it("keeps the Subscribe CTA enabled when a cancellation is pending", async () => {
     await render(<StandardPlanGridCard disabled={false} cancellationDate="2030-01-15T00:00:00Z" />);
 
