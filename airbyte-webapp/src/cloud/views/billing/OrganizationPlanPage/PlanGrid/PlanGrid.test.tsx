@@ -345,16 +345,17 @@ describe("PlanGrid", () => {
     expect(screen.getByTestId("plus-promo-credits-callout")).toHaveTextContent("Upgrade to Plus by September 29");
   });
 
-  it("shows the Plus promo credits callout for a Plus org", async () => {
+  it.each([
+    ["from the subscription", subscriptionInfo({ name: "Plus", selfServePlan: "plus_500" })],
+    ["from the entitlement plan only", subscriptionInfo(undefined)],
+  ])("hides the Plus promo credits callout for a Plus org resolved %s", async (_label, subscription) => {
     mocked(useOrgInfo).mockReturnValue(billingState());
     mocked(useOrganizationPlan).mockReturnValue(planFlags({ isPlusPlan: true }));
-    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(
-      subscriptionInfo({ name: "Plus", selfServePlan: "plus_500" })
-    );
+    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(subscription);
 
     await render(<PlanGrid />);
 
-    expect(screen.getByTestId("plus-promo-credits-callout")).toBeInTheDocument();
+    expect(screen.queryByTestId("plus-promo-credits-callout")).not.toBeInTheDocument();
   });
 
   it.each([
@@ -379,13 +380,13 @@ describe("PlanGrid", () => {
     expect(screen.queryByTestId("plus-promo-credits-callout")).not.toBeInTheDocument();
   });
 
-  it("hides the Plus promo credits callout for trial users", async () => {
+  it("shows the Plus promo credits callout for a Standard Trial org", async () => {
     mocked(useOrgInfo).mockReturnValue(billingState({ subscriptionStatus: "unsubscribed" }));
     mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardTrialPlan: true, isStiggPlanEnabled: true }));
 
     await render(<PlanGrid />);
 
-    expect(screen.queryByTestId("plus-promo-credits-callout")).not.toBeInTheDocument();
+    expect(screen.getByTestId("plus-promo-credits-callout")).toHaveTextContent("Upgrade to Plus by September 29");
   });
 
   it.each([

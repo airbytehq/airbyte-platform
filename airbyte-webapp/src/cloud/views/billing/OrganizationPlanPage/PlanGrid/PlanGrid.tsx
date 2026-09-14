@@ -25,7 +25,7 @@ export const PlanGrid: React.FC = () => {
   const isSubscribed = isOrganizationSubscribed(billing);
   const isLockedSubscription = billing?.paymentStatus === "locked";
 
-  const { isStandardPlan, isPlusPlan, isProPlan, isSmePlan, isFlexPlan } = useOrganizationPlan();
+  const { isStandardPlan, isStandardTrialPlan, isPlusPlan, isProPlan, isSmePlan, isFlexPlan } = useOrganizationPlan();
 
   const { data: subscription } = useGetOrganizationSubscriptionInfo(organizationId, isSubscribed);
   const cancellationDate = subscription?.cancellationDate;
@@ -46,12 +46,13 @@ export const PlanGrid: React.FC = () => {
     : null;
   const activeTier: PlanTier | null = isSubscribed ? selfServeTier ?? entitlementTier : null;
   const isTopTier = activeTier === "pro" || activeTier === "flex";
-  const isSelfServeTier = activeTier === "standard" || activeTier === "plus";
+  // Trial orgs are never subscribed, so they have no active tier and are matched on the entitlement plan instead.
+  const showPlusPromo = activeTier === "standard" || (activeTier === null && isStandardTrialPlan);
 
   return (
     <>
       <PendingPlanChangeBanner organizationId={organizationId} pendingPlanChange={subscription?.pendingPlanChange} />
-      {isSelfServeTier && <PlusPromoCreditsCallout />}
+      {showPlusPromo && <PlusPromoCreditsCallout />}
       <div className={styles.page}>
         <div className={styles.grid}>
           <StandardPlanGridCard
