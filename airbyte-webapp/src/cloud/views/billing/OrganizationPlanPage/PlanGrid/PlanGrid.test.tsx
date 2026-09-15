@@ -6,6 +6,7 @@ import { useOrganizationPlan } from "area/organization/utils/useOrganizationPlan
 import { useRedirectToCustomerPortal } from "cloud/area/billing/utils/useRedirectToCustomerPortal";
 import { useGetOrganizationSubscriptionInfo, useOrgInfo, useUnschedulePlanChange } from "core/api";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
+import { useExperiment } from "core/services/Experiment";
 import { useGeneratedIntent } from "core/utils/rbac";
 
 import { PlanGrid } from "./PlanGrid";
@@ -40,6 +41,10 @@ jest.mock("cloud/area/billing/utils/useRedirectToCustomerPortal", () => ({
 jest.mock("core/services/ConfirmationModal", () => ({
   ...jest.requireActual("core/services/ConfirmationModal"),
   useConfirmationModalService: jest.fn(),
+}));
+
+jest.mock("core/services/Experiment", () => ({
+  useExperiment: jest.fn(),
 }));
 
 const CARD_TEST_IDS = ["standard-plan-card", "plus-plan-card", "pro-plan-card", "flex-plan-card"] as const;
@@ -85,6 +90,7 @@ const expectDisabledCta = (testId: (typeof CARD_TEST_IDS)[number], buttonName: R
 beforeEach(() => {
   jest.clearAllMocks();
   mocked(useGeneratedIntent).mockReturnValue(true);
+  mocked(useExperiment).mockReturnValue(false);
   mocked(useOrganizationPlan).mockReturnValue(planFlags());
   mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(subscriptionInfo(undefined));
   mocked(useUnschedulePlanChange).mockReturnValue({
@@ -309,7 +315,8 @@ describe("PlanGrid", () => {
     expect(card("flex-plan-card").queryByText(/Cancels/)).not.toBeInTheDocument();
   });
 
-  it("shows the pending plan change banner when a plan change is scheduled", async () => {
+  it("shows the pending plan change banner when a plan change is scheduled and the flag is on", async () => {
+    mocked(useExperiment).mockReturnValue(true);
     mocked(useOrgInfo).mockReturnValue(billingState());
     mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
     mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(
@@ -326,7 +333,24 @@ describe("PlanGrid", () => {
     expect(banner).toHaveTextContent("Plus");
   });
 
+  it("hides the pending plan change banner when the flag is off even if a plan change is scheduled", async () => {
+    mocked(useOrgInfo).mockReturnValue(billingState());
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
+    mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(
+      subscriptionInfo({
+        name: "Standard",
+        pendingPlanChange: { effectiveDate: "2030-10-01T00:00:00Z", planName: "Plus" },
+      })
+    );
+
+    await render(<PlanGrid />);
+
+    expect(useExperiment).toHaveBeenCalledWith("billing.plan-downgrade-banner");
+    expect(screen.queryByTestId("pending-plan-change-banner")).not.toBeInTheDocument();
+  });
+
   it("hides the pending plan change banner when there is no pending plan change", async () => {
+    mocked(useExperiment).mockReturnValue(true);
     mocked(useOrgInfo).mockReturnValue(billingState());
     mocked(useOrganizationPlan).mockReturnValue(planFlags({ isStandardPlan: true }));
     mocked(useGetOrganizationSubscriptionInfo).mockReturnValue(subscriptionInfo({ name: "Standard" }));

@@ -12,6 +12,7 @@ export interface Experiments {
   asyncSchemaDiscovery: boolean;
   "audit-log-ui": boolean;
   "billing.early-sync-enabled": boolean;
+  "billing.plan-downgrade-banner": boolean;
   "billing.selfServePlusPlan": boolean;
   "connection.allowToSupportAllSyncModes": boolean;
   "connection.columnSelection": boolean;
@@ -54,6 +55,7 @@ export const defaultExperimentValues: Experiments = {
   asyncSchemaDiscovery: true,
   "audit-log-ui": false,
   "billing.early-sync-enabled": false,
+  "billing.plan-downgrade-banner": false,
   "billing.selfServePlusPlan": false,
   "connection.allowToSupportAllSyncModes": false,
   "connection.columnSelection": true,

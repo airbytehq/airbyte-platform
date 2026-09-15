@@ -4,6 +4,7 @@ import { isOrganizationSubscribed, useCurrentOrganizationId } from "area/organiz
 import { useOrganizationPlan } from "area/organization/utils/useOrganizationPlan";
 import { PricingComparisonLink } from "cloud/area/billing/components/PlanCards";
 import { useGetOrganizationSubscriptionInfo, useOrgInfo } from "core/api";
+import { useExperiment } from "core/services/Experiment";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { FlexPlanGridCard } from "./FlexPlanGridCard";
@@ -24,6 +25,7 @@ export const PlanGrid: React.FC = () => {
 
   const isSubscribed = isOrganizationSubscribed(billing);
   const isLockedSubscription = billing?.paymentStatus === "locked";
+  const isPlanDowngradeBannerEnabled = useExperiment("billing.plan-downgrade-banner");
 
   const { isStandardPlan, isStandardTrialPlan, isPlusPlan, isProPlan, isSmePlan, isFlexPlan } = useOrganizationPlan();
 
@@ -51,7 +53,9 @@ export const PlanGrid: React.FC = () => {
 
   return (
     <>
-      <PendingPlanChangeBanner organizationId={organizationId} pendingPlanChange={subscription?.pendingPlanChange} />
+      {isPlanDowngradeBannerEnabled && (
+        <PendingPlanChangeBanner organizationId={organizationId} pendingPlanChange={subscription?.pendingPlanChange} />
+      )}
       {showPlusPromo && <PlusPromoCreditsCallout />}
       <div className={styles.page}>
         <div className={styles.grid}>
