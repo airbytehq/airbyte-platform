@@ -30,6 +30,23 @@ interface DataWorkerUsageReservationRepository : CrudRepository<DataWorkerUsageR
 
   @Query(
     """
+      SELECT COALESCE(SUM(
+        r.source_cpu_request + r.destination_cpu_request + r.orchestrator_cpu_request
+      ), 0.0)
+      FROM data_worker_usage_reservation r
+      JOIN jobs j ON j.id = r.job_id
+      WHERE r.organization_id = :organizationId
+        AND r.dataplane_group_id = :dataplaneGroupId
+        AND j.status IN ('pending', 'queued', 'running', 'incomplete')
+    """,
+  )
+  fun sumReservedCpuForActiveJobsByOrganizationIdAndDataplaneGroupId(
+    organizationId: UUID,
+    dataplaneGroupId: UUID,
+  ): Double
+
+  @Query(
+    """
       SELECT
         r.job_id AS job_id,
         r.organization_id AS organization_id,
@@ -110,8 +127,8 @@ interface DataWorkerUsageReservationRepository : CrudRepository<DataWorkerUsageR
    * therefore already ran and found no reservation to free), the WHERE EXISTS yields no row and
    * nothing is inserted. `ON CONFLICT DO NOTHING` makes the insert idempotent for retried reserves.
    *
-   * The active-status list MUST stay in lockstep with [sumReservedCpuForActiveJobsByOrganizationId]
-   * above — both define what "active" means for Data Worker accounting.
+   * The active-status list MUST stay in lockstep with the two sum queries above — together they
+   * define what "active" means for Data Worker accounting.
    *
    * @return the number of rows inserted: 1 when a reservation was newly created for an active job,
    *         0 when the job is already terminal or a reservation already existed.

@@ -11,7 +11,13 @@ import io.airbyte.data.repositories.DataWorkerUsageReservationRepository
 import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.data.repositories.entities.DataWorkerUsage
 import io.airbyte.data.repositories.entities.DataWorkerUsageReservation
+import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.domain.models.dataworker.OrganizationDataWorkerAllocations
+import io.airbyte.featureflag.EnableDataWorkerAllocation
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.transaction.TransactionOperations
 import jakarta.inject.Named
@@ -34,9 +40,9 @@ data class CapacityCheckResult(
    */
   val currentDataWorkers: Double,
   /**
-   * Number of committed data workers for the organization.
+   * Number of committed data workers available to the job, in the region it runs in.
    */
-  val committedDataWorkers: Int,
+  val committedDataWorkers: Double,
   /**
    * Number of data workers required by the job being evaluated.
    */
@@ -56,7 +62,7 @@ data class CapacityCheckResult(
  */
 data class DataWorkerCapacityStatus(
   val currentDataWorkers: Double,
-  val committedDataWorkers: Int,
+  val committedDataWorkers: Double,
 ) {
   val hasAvailableDataWorkers: Boolean
     get() = currentDataWorkers < committedDataWorkers
@@ -75,16 +81,33 @@ open class DataWorkerCapacityService(
   private val organizationRepository: OrganizationRepository,
   private val dataWorkerUsageReservationRepository: DataWorkerUsageReservationRepository,
   private val dataWorkerUsageService: DataWorkerUsageService,
+  private val dataWorkerAllocatedCapacityService: DataWorkerAllocatedCapacityService,
+  private val featureFlagClient: FeatureFlagClient,
   @param:Named("config") private val configTransactionOperations: TransactionOperations<Connection>,
 ) {
   /**
-   * Get the current Data Worker capacity status for an organization.
+   * Get the Data Worker capacity status for the region a workspace runs in.
+   *
+   * Reports organization-wide numbers only when the flag is off or the region cannot be resolved.
+   * A known region reports zero when it has no allocation.
    */
-  open fun getCapacityStatus(organizationId: OrganizationId): DataWorkerCapacityStatus =
-    DataWorkerCapacityStatus(
-      currentDataWorkers = getCurrentDataWorkersInUse(organizationId),
-      committedDataWorkers = getCommittedDataWorkers(organizationId),
+  open fun getCapacityStatus(
+    organizationId: OrganizationId,
+    workspaceId: WorkspaceId,
+  ): DataWorkerCapacityStatus {
+    val allocations = allocationsOrNull(organizationId)
+    val regionId =
+      if (allocations == null) {
+        null
+      } else {
+        dataWorkerUsageService.resolveDataplaneGroupIdForWorkspaceOrNull(workspaceId.value)?.let { DataplaneGroupId(it) }
+      }
+
+    return DataWorkerCapacityStatus(
+      currentDataWorkers = getCurrentDataWorkersInUse(organizationId, regionId),
+      committedDataWorkers = committedDataWorkers(organizationId, regionId, allocations),
     )
+  }
 
   /**
    * Check if an organization has capacity for a job and reserve that capacity atomically.
@@ -105,7 +128,16 @@ open class DataWorkerCapacityService(
     requiredDataWorkers: Double,
     allowOnDemandCapacity: Boolean,
   ): CapacityCheckResult {
-    val committedDataWorkers = getCommittedDataWorkers(organizationId)
+    // Decide the scope once, so usage and the cap it is compared against always cover the same thing.
+    val allocations = allocationsOrNull(organizationId)
+    val regionId =
+      if (allocations == null) {
+        null
+      } else {
+        dataWorkerUsageService.resolveDataplaneGroupIdForJobOrNull(job)?.let { DataplaneGroupId(it) }
+      }
+
+    val committedDataWorkers = committedDataWorkers(organizationId, regionId, allocations)
     var reservedUsage: DataWorkerUsage? = null
 
     val result =
@@ -123,10 +155,11 @@ open class DataWorkerCapacityService(
               reservationAfterLock,
               committedDataWorkers,
               requiredDataWorkers,
+              regionId,
             )
           }
 
-          val currentDataWorkers = getCurrentDataWorkersInUse(organizationId)
+          val currentDataWorkers = getCurrentDataWorkersInUse(organizationId, regionId)
 
           val hasCommittedCapacity = currentDataWorkers + requiredDataWorkers <= committedDataWorkers
           val usedOnDemandCapacity = !hasCommittedCapacity && allowOnDemandCapacity
@@ -185,10 +218,11 @@ open class DataWorkerCapacityService(
     organizationId: OrganizationId,
     jobId: Long,
     reservation: DataWorkerUsageReservation,
-    committedDataWorkers: Int,
+    committedDataWorkers: Double,
     requiredDataWorkers: Double,
+    regionId: DataplaneGroupId?,
   ): CapacityCheckResult {
-    val currentDataWorkers = getCurrentDataWorkersInUse(organizationId)
+    val currentDataWorkers = getCurrentDataWorkersInUse(organizationId, regionId)
 
     logger.debug {
       "Found existing capacity reservation for job $jobId in org ${organizationId.value}: " +
@@ -212,15 +246,39 @@ open class DataWorkerCapacityService(
   }
 
   /**
-   * Get the current number of data workers in use by an organization.
+   * Whether this organization reads its capacity from the allocation table.
+   *
+   * Returns false on any error, so capacity falls back to the Stigg entitlement.
+   */
+  private fun usesAllocatedCapacity(organizationId: OrganizationId): Boolean =
+    try {
+      featureFlagClient.boolVariation(EnableDataWorkerAllocation, Organization(organizationId.value))
+    } catch (e: Exception) {
+      logger.error(e) { "Error reading the Data Worker allocation flag for organization ${organizationId.value}, using entitlements" }
+      false
+    }
+
+  /**
+   * Get the number of data workers currently in use, in one region or across the organization.
    *
    * Live concurrency enforcement is based on active job reservations rather than hourly usage
    * buckets. Reservations remain present for the lifetime of a running job, so long-running jobs
    * continue to count against committed capacity even after an hour has elapsed.
    */
-  private fun getCurrentDataWorkersInUse(organizationId: OrganizationId): Double {
+  private fun getCurrentDataWorkersInUse(
+    organizationId: OrganizationId,
+    regionId: DataplaneGroupId?,
+  ): Double {
     try {
-      val totalCpuUsage = dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId.value)
+      val totalCpuUsage =
+        if (regionId == null) {
+          dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId.value)
+        } else {
+          dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationIdAndDataplaneGroupId(
+            organizationId.value,
+            regionId.value,
+          )
+        }
       return totalCpuUsage / DATA_WORKER_CPU_DIVISOR
     } catch (e: Exception) {
       logger.error(e) { "Error getting current data workers for organization ${organizationId.value}" }
@@ -230,19 +288,75 @@ open class DataWorkerCapacityService(
   }
 
   /**
-   * Get the number of committed data workers for an organization from entitlements,
-   * or null if the org has no finite committed capacity.
+   * Get the organization's committed data workers across all regions, or null if it has no committed capacity.
    *
-   * Returns the numeric value from the CommittedDataWorkersEntitlement.
-   * Returns null if the entitlement is not found, the value is unlimited, or on error.
+   * This is the organization-wide total.
    */
-  fun getCommittedDataWorkersOrNull(organizationId: OrganizationId): Int? {
+  fun getCommittedDataWorkersOrNull(organizationId: OrganizationId): Double? =
+    allocationsOrNull(organizationId)?.totalAllocatedCapacity ?: entitledCapacityOrNull(organizationId)
+
+  /**
+   * The organization's allocated capacity per region.
+   *
+   * Null means capacity comes from the Stigg entitlement: the flag is off, the read failed, or the
+   * organization has no rows because the Stigg backfill has not reached it.
+   */
+  private fun allocationsOrNull(organizationId: OrganizationId): OrganizationDataWorkerAllocations? {
+    if (!usesAllocatedCapacity(organizationId)) {
+      return null
+    }
+
+    return try {
+      val allocations = dataWorkerAllocatedCapacityService.getAllocations(organizationId)
+      if (allocations.allocations.isEmpty()) {
+        logger.warn { "Organization ${organizationId.value} has no allocated Data Worker capacity, using entitlements" }
+        null
+      } else {
+        allocations
+      }
+    } catch (e: Exception) {
+      logger.error(e) { "Error reading allocated capacity for organization ${organizationId.value}, using entitlements" }
+      null
+    }
+  }
+
+  /**
+   * The capacity to admit a job against.
+   *
+   * A known region is capped at what it holds, which is zero when the organization has no
+   * allocation there. Only a region we cannot identify falls back to the organization-wide total.
+   */
+  private fun committedDataWorkers(
+    organizationId: OrganizationId,
+    regionId: DataplaneGroupId?,
+    allocations: OrganizationDataWorkerAllocations?,
+  ): Double {
+    if (allocations == null) {
+      return entitledCapacityOrNull(organizationId) ?: DEFAULT_COMMITTED_DATA_WORKERS
+    }
+    if (regionId == null) {
+      return allocations.totalAllocatedCapacity
+    }
+
+    val allocatedCapacity = allocations.allocations.firstOrNull { it.dataplaneGroupId == regionId }?.allocatedCapacity ?: 0.0
+    if (allocatedCapacity <= 0.0) {
+      logger.warn {
+        "Organization ${organizationId.value} has no Data Worker capacity allocated in region ${regionId.value}. "
+      }
+    }
+    return allocatedCapacity
+  }
+
+  /**
+   * The organization's committed data workers from Stigg, or null if unlimited, missing, or on error.
+   */
+  private fun entitledCapacityOrNull(organizationId: OrganizationId): Double? {
     try {
       val result = entitlementService.getNumericEntitlement(organizationId, CommittedDataWorkersEntitlement)
       val value = result.value
 
       return if (result.hasAccess && value != null && !result.isUnlimited) {
-        value.toInt().coerceAtLeast(MIN_COMMITTED_DATA_WORKERS)
+        value.toDouble().coerceAtLeast(MIN_COMMITTED_DATA_WORKERS)
       } else {
         null
       }
@@ -252,22 +366,13 @@ open class DataWorkerCapacityService(
     }
   }
 
-  /**
-   * Get the number of committed data workers for an organization from entitlements.
-   *
-   * Delegates to [getCommittedDataWorkersOrNull] and falls back to [DEFAULT_COMMITTED_DATA_WORKERS]
-   * when no finite capacity is configured, so that capacity checks never block jobs.
-   */
-  private fun getCommittedDataWorkers(organizationId: OrganizationId): Int =
-    getCommittedDataWorkersOrNull(organizationId) ?: DEFAULT_COMMITTED_DATA_WORKERS
-
   companion object {
     private const val DATA_WORKER_CPU_DIVISOR = 8.0
 
     // Default committed data workers when entitlement is present but value not specified
-    private const val DEFAULT_COMMITTED_DATA_WORKERS = 1
+    private const val DEFAULT_COMMITTED_DATA_WORKERS = 1.0
 
     // Minimum data workers for orgs without the entitlement
-    private const val MIN_COMMITTED_DATA_WORKERS = 1
+    private const val MIN_COMMITTED_DATA_WORKERS = 1.0
   }
 }

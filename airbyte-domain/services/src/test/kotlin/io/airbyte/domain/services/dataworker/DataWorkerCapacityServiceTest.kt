@@ -16,7 +16,13 @@ import io.airbyte.data.repositories.OrganizationRepository
 import io.airbyte.data.repositories.entities.DataWorkerUsage
 import io.airbyte.data.repositories.entities.DataWorkerUsageReservation
 import io.airbyte.data.repositories.entities.Organization
+import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.domain.models.dataworker.DataWorkerAllocation
+import io.airbyte.domain.models.dataworker.OrganizationDataWorkerAllocations
+import io.airbyte.featureflag.EnableDataWorkerAllocation
+import io.airbyte.featureflag.FeatureFlagClient
 import io.micronaut.transaction.TransactionCallback
 import io.micronaut.transaction.TransactionDefinition
 import io.micronaut.transaction.TransactionOperations
@@ -34,12 +40,15 @@ import java.sql.Connection
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.featureflag.Organization as FeatureFlagOrganization
 
 internal class DataWorkerCapacityServiceTest {
   private lateinit var entitlementService: EntitlementService
   private lateinit var organizationRepository: OrganizationRepository
   private lateinit var dataWorkerUsageReservationRepository: DataWorkerUsageReservationRepository
   private lateinit var dataWorkerUsageService: DataWorkerUsageService
+  private lateinit var dataWorkerAllocatedCapacityService: DataWorkerAllocatedCapacityService
+  private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var service: DataWorkerCapacityService
 
   @BeforeEach
@@ -48,12 +57,18 @@ internal class DataWorkerCapacityServiceTest {
     organizationRepository = mockk()
     dataWorkerUsageReservationRepository = mockk()
     dataWorkerUsageService = mockk(relaxed = true)
+    dataWorkerAllocatedCapacityService = mockk()
+    featureFlagClient = mockk()
+    // Off by default, so cases that do not stub it cover the Stigg path.
+    every { featureFlagClient.boolVariation(EnableDataWorkerAllocation, any<FeatureFlagOrganization>()) } returns false
     service =
       DataWorkerCapacityService(
         entitlementService,
         organizationRepository,
         dataWorkerUsageReservationRepository,
         dataWorkerUsageService,
+        dataWorkerAllocatedCapacityService,
+        featureFlagClient,
         ImmediateConfigCapacityTransactionOperations(),
       )
   }
@@ -65,10 +80,10 @@ internal class DataWorkerCapacityServiceTest {
     stubCommittedCapacity(organizationId, 5)
     every { dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId) } returns 20.0
 
-    val result = service.getCapacityStatus(OrganizationId(organizationId))
+    val result = service.getCapacityStatus(OrganizationId(organizationId), WorkspaceId(UUID.randomUUID()))
 
     assertEquals(2.5, result.currentDataWorkers)
-    assertEquals(5, result.committedDataWorkers)
+    assertEquals(5.0, result.committedDataWorkers)
     assertTrue(result.hasAvailableDataWorkers)
   }
 
@@ -184,7 +199,7 @@ internal class DataWorkerCapacityServiceTest {
 
     val result = service.getCommittedDataWorkersOrNull(OrganizationId(organizationId))
 
-    assertEquals(10, result)
+    assertEquals(10.0, result)
   }
 
   @Test
@@ -240,6 +255,175 @@ internal class DataWorkerCapacityServiceTest {
     verify(exactly = 1) { organizationRepository.findByIdForUpdate(organizationId) }
     verify(exactly = 1) { dataWorkerUsageService.prepareUsageForJob(job, organizationId, any()) }
     verify(exactly = 0) { dataWorkerUsageService.persistReservedUsageForJob(any<Long>(), any(), any()) }
+  }
+
+  @Test
+  fun `getCommittedDataWorkersOrNull sums the allocation table when the flag is on`() {
+    val organizationId = UUID.randomUUID()
+
+    stubAllocationFlagOn(organizationId)
+    stubAllocations(organizationId, UUID.randomUUID() to 2.5, UUID.randomUUID() to 4.0)
+
+    assertEquals(6.5, service.getCommittedDataWorkersOrNull(OrganizationId(organizationId)))
+  }
+
+  @Test
+  fun `getCapacityStatus reads the region the workspace runs in when the flag is on`() {
+    val organizationId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val regionId = UUID.randomUUID()
+
+    stubAllocationFlagOn(organizationId)
+    stubAllocations(organizationId, regionId to 3.0, UUID.randomUUID() to 7.0)
+    every { dataWorkerUsageService.resolveDataplaneGroupIdForWorkspaceOrNull(workspaceId) } returns regionId
+    every {
+      dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationIdAndDataplaneGroupId(organizationId, regionId)
+    } returns 16.0
+
+    val result = service.getCapacityStatus(OrganizationId(organizationId), WorkspaceId(workspaceId))
+
+    assertEquals(2.0, result.currentDataWorkers)
+    assertEquals(3.0, result.committedDataWorkers)
+    verify(exactly = 0) { dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(any()) }
+  }
+
+  @Test
+  fun `checkCapacityAndReserve admits against the job's own region`() {
+    val organizationId = UUID.randomUUID()
+    val regionId = UUID.randomUUID()
+    val job = buildJob(300L)
+    val preparedUsage = buildPreparedUsage(organizationId)
+
+    stubOrgLock(organizationId)
+    stubAllocationFlagOn(organizationId)
+    // The other region holds enough; it must not count toward this region's cap.
+    stubAllocations(organizationId, regionId to 2.0, UUID.randomUUID() to 50.0)
+    every { dataWorkerUsageService.resolveDataplaneGroupIdForJobOrNull(job) } returns regionId
+    every { dataWorkerUsageReservationRepository.findById(job.id) } returns Optional.empty()
+    every {
+      dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationIdAndDataplaneGroupId(organizationId, regionId)
+    } returns 8.0
+    every { dataWorkerUsageService.prepareUsageForJob(job, organizationId, any()) } returns preparedUsage
+    every { dataWorkerUsageService.persistReservedUsageForJob(job.id, preparedUsage, false) } returns true
+
+    val result = service.checkCapacityAndReserve(OrganizationId(organizationId), job, 0.5, false)
+
+    assertTrue(result.hasAvailableCapacity)
+    assertEquals(1.0, result.currentDataWorkers)
+    // The region's own 2.0, not the organization's 52.0.
+    assertEquals(2.0, result.committedDataWorkers)
+    verify(exactly = 0) { dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(any()) }
+  }
+
+  @Test
+  fun `checkCapacityAndReserve queues when the job's region holds no allocation`() {
+    val organizationId = UUID.randomUUID()
+    val regionId = UUID.randomUUID()
+    val job = buildJob(301L)
+
+    stubOrgLock(organizationId)
+    stubAllocationFlagOn(organizationId)
+    // Capacity sits in another region; the job's region has no row at all.
+    stubAllocations(organizationId, UUID.randomUUID() to 50.0)
+    every { dataWorkerUsageService.resolveDataplaneGroupIdForJobOrNull(job) } returns regionId
+    every { dataWorkerUsageReservationRepository.findById(job.id) } returns Optional.empty()
+    every {
+      dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationIdAndDataplaneGroupId(organizationId, regionId)
+    } returns 0.0
+
+    val result = service.checkCapacityAndReserve(OrganizationId(organizationId), job, 0.3125, false)
+
+    assertFalse(result.hasAvailableCapacity)
+    assertEquals(0.0, result.committedDataWorkers)
+    // The other region's 50 is not available to this one.
+    verify(exactly = 0) { dataWorkerUsageService.persistReservedUsageForJob(any<Long>(), any(), any()) }
+  }
+
+  @Test
+  fun `checkCapacityAndReserve queues when the job's region was drained to zero`() {
+    val organizationId = UUID.randomUUID()
+    val regionId = UUID.randomUUID()
+    val job = buildJob(304L)
+
+    stubOrgLock(organizationId)
+    stubAllocationFlagOn(organizationId)
+    // A drained region keeps a zero row and is enforced at zero.
+    stubAllocations(organizationId, regionId to 0.0, UUID.randomUUID() to 50.0)
+    every { dataWorkerUsageService.resolveDataplaneGroupIdForJobOrNull(job) } returns regionId
+    every { dataWorkerUsageReservationRepository.findById(job.id) } returns Optional.empty()
+    every {
+      dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationIdAndDataplaneGroupId(organizationId, regionId)
+    } returns 0.0
+
+    val result = service.checkCapacityAndReserve(OrganizationId(organizationId), job, 0.3125, false)
+
+    assertFalse(result.hasAvailableCapacity)
+    assertEquals(0.0, result.committedDataWorkers)
+    verify(exactly = 0) { dataWorkerUsageService.persistReservedUsageForJob(any<Long>(), any(), any()) }
+  }
+
+  @Test
+  fun `checkCapacityAndReserve falls back to entitlements and org wide usage when the org has no allocations`() {
+    val organizationId = UUID.randomUUID()
+    val job = buildJob(302L)
+    val preparedUsage = buildPreparedUsage(organizationId)
+
+    stubOrgLock(organizationId)
+    stubAllocationFlagOn(organizationId)
+    stubAllocations(organizationId)
+    stubCommittedCapacity(organizationId, 5)
+    every { dataWorkerUsageReservationRepository.findById(job.id) } returns Optional.empty()
+    every { dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId) } returns 8.0
+    every { dataWorkerUsageService.prepareUsageForJob(job, organizationId, any()) } returns preparedUsage
+    every { dataWorkerUsageService.persistReservedUsageForJob(job.id, preparedUsage, false) } returns true
+
+    val result = service.checkCapacityAndReserve(OrganizationId(organizationId), job, 0.5, false)
+
+    assertTrue(result.hasAvailableCapacity)
+    assertEquals(5.0, result.committedDataWorkers)
+    assertEquals(1.0, result.currentDataWorkers)
+    // The cap is org-wide, so the usage sum is too.
+    verify(exactly = 0) {
+      dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationIdAndDataplaneGroupId(any(), any())
+    }
+  }
+
+  @Test
+  fun `checkCapacityAndReserve uses the org wide total only when the region cannot be resolved`() {
+    val organizationId = UUID.randomUUID()
+    val job = buildJob(303L)
+    val preparedUsage = buildPreparedUsage(organizationId)
+
+    stubOrgLock(organizationId)
+    stubAllocationFlagOn(organizationId)
+    stubAllocations(organizationId, UUID.randomUUID() to 3.0, UUID.randomUUID() to 4.0)
+    every { dataWorkerUsageService.resolveDataplaneGroupIdForJobOrNull(job) } returns null
+    every { dataWorkerUsageReservationRepository.findById(job.id) } returns Optional.empty()
+    every { dataWorkerUsageReservationRepository.sumReservedCpuForActiveJobsByOrganizationId(organizationId) } returns 8.0
+    every { dataWorkerUsageService.prepareUsageForJob(job, organizationId, any()) } returns preparedUsage
+    every { dataWorkerUsageService.persistReservedUsageForJob(job.id, preparedUsage, false) } returns true
+
+    val result = service.checkCapacityAndReserve(OrganizationId(organizationId), job, 0.5, false)
+
+    assertTrue(result.hasAvailableCapacity)
+    assertEquals(7.0, result.committedDataWorkers)
+    assertEquals(1.0, result.currentDataWorkers)
+  }
+
+  private fun stubAllocationFlagOn(organizationId: UUID) {
+    every { featureFlagClient.boolVariation(EnableDataWorkerAllocation, FeatureFlagOrganization(organizationId)) } returns true
+  }
+
+  private fun stubAllocations(
+    organizationId: UUID,
+    vararg allocations: Pair<UUID, Double>,
+  ) {
+    every { dataWorkerAllocatedCapacityService.getAllocations(OrganizationId(organizationId)) } returns
+      OrganizationDataWorkerAllocations(
+        organizationId = OrganizationId(organizationId),
+        totalAllocatedCapacity = allocations.sumOf { it.second },
+        allocations = allocations.map { (regionId, capacity) -> DataWorkerAllocation(DataplaneGroupId(regionId), capacity) },
+      )
   }
 
   private fun stubOrgLock(organizationId: UUID) {

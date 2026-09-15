@@ -285,7 +285,7 @@ class JobsHandlerTest {
       CapacityCheckResult(
         hasAvailableCapacity = true,
         currentDataWorkers = 5.0,
-        committedDataWorkers = 5,
+        committedDataWorkers = 5.0,
         requiredDataWorkers = 0.8125,
         usedOnDemandCapacity = true,
         wasPersisted = true,

@@ -414,6 +414,26 @@ open class DataWorkerUsageService(
     )
   }
 
+  /**
+   * The region a job runs in, read from its workspace, or null if it cannot be determined.
+   */
+  open fun resolveDataplaneGroupIdForJobOrNull(job: Job): UUID? {
+    val workspaceId = job.config.sync?.workspaceId
+    if (workspaceId == null) {
+      logger.warn { "Workspace ID is null for job ${job.id}, cannot resolve its region." }
+      return null
+    }
+    return resolveDataplaneGroupIdForWorkspaceOrNull(workspaceId)
+  }
+
+  open fun resolveDataplaneGroupIdForWorkspaceOrNull(workspaceId: UUID): UUID? {
+    val dataplaneGroupId = retrieveWorkspaceOrNull(workspaceId)?.dataplaneGroupId
+    if (dataplaneGroupId == null) {
+      logger.warn { "Could not resolve a region for workspace $workspaceId." }
+    }
+    return dataplaneGroupId
+  }
+
   private fun isJobValidForInsertion(
     job: Job,
     organizationId: UUID,

@@ -244,6 +244,10 @@ object EnableDataWorkerUsage : Temporary<Boolean>(key = "platform.enable-data-wo
 
 object EnforceDataWorkerCapacity : Temporary<Boolean>(key = "platform.enforce-data-worker-capacity", default = false)
 
+// When on, committed Data Worker capacity is read per region from the data_worker_allocated_capacity
+// table. When off, it comes from the Stigg entitlement.
+object EnableDataWorkerAllocation : Temporary<Boolean>(key = "platform.enable-data-worker-allocation", default = false)
+
 // IMPORTANT: These defaults intentionally point in opposite directions. The code default is true so
 // a missing flag or failed LaunchDarkly evaluation fails open and preserves SSO access. The production
 // LaunchDarkly fallthrough must be false so organizations are enforced unless explicitly bypassed.

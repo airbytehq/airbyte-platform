@@ -13307,18 +13307,18 @@ components:
           $ref: "#/components/schemas/OrganizationId"
         outOfDataWorkers:
           type: boolean
-          description: Whether the workspace's organization has exhausted committed Data Worker capacity.
+          description: Whether the Data Worker capacity available to this workspace is exhausted.
         enforcementEnabled:
           type: boolean
           description: Whether Data Worker capacity enforcement is enabled for the workspace's organization.
         currentDataWorkers:
           type: number
           format: double
-          description: The current Data Worker usage reserved by the workspace's organization.
+          description: Data Worker usage counted against the committed capacity below.
         committedDataWorkers:
-          type: integer
-          format: int32
-          description: The committed Data Worker capacity for the workspace's organization.
+          type: number
+          format: double
+          description: Committed Data Worker capacity available to this workspace.
     ConnectionUsageRead:
       type: object
       required:
@@ -17377,8 +17377,9 @@ components:
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
         committedDataWorkers:
-          type: integer
-          description: The number of contracted/committed data workers for the organization. Null if not set or unlimited.
+          type: number
+          format: double
+          description: The number of contracted/committed data workers for the organization, summed across regions. Null if not set or unlimited.
         regions:
           type: array
           items:
