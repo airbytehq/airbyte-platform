@@ -90,6 +90,18 @@ delegate to a handler or service.
   freely. `public-api` routes are static and relied upon by external
   (non-Airbyte) users — see
   [airbyte-api/AGENTS.md](airbyte-api/AGENTS.md#versioning).
+- **Decide the edition before you implement an endpoint.** Every
+  controller in `oss/airbyte-server` ships in the community edition.
+  If the feature is Cloud-only (billing, entitlement plan admin, Data
+  Worker allocation, and similar), the OSS controller method must
+  throw `ApiNotImplementedInOssProblem`, and the real implementation
+  goes in a `cloud/airbyte-server-wrapped` controller that extends the
+  OSS controller and carries `@Replaces`. The route stays in the
+  shared OpenAPI YAML; only the controller body is edition-specific.
+  See [`cloud/AGENTS.md`](../cloud/AGENTS.md) for the wrapping
+  pattern, and PR #19515 for a reference migration of routes that were
+  wrongly available in OSS. When the edition is unclear, ask before
+  implementing.
 
 ## Build & test commands
 
