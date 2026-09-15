@@ -79,11 +79,13 @@ class PayloadKubeInputMapper(
       )
 
     val labels =
-      labeler.getReplicationLabels(
-        orchImage,
-        sourceImage,
-        destinationImage,
-      ) + sharedLabels
+      replicationWorkerConfigs.workerKubeLabels +
+        labeler.getReplicationLabels(
+          orchImage,
+          sourceImage,
+          destinationImage,
+        ) +
+        sharedLabels
 
     val initReqs = resourceRequirementsFactory.replInit(input)
 
@@ -153,7 +155,7 @@ class PayloadKubeInputMapper(
     val initReqs = resourceRequirementsFactory.checkInit(input)
 
     return ConnectorKubeInput(
-      labeler.getCheckLabels() + sharedLabels,
+      checkWorkerConfigs.workerKubeLabels + labeler.getCheckLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
       checkWorkerConfigs.workerKubeAnnotations,
@@ -200,7 +202,7 @@ class PayloadKubeInputMapper(
     val initReqs = resourceRequirementsFactory.discoverInit(input)
 
     return ConnectorKubeInput(
-      labeler.getDiscoverLabels() + sharedLabels,
+      discoverWorkerConfigs.workerKubeLabels + labeler.getDiscoverLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
       discoverWorkerConfigs.workerKubeAnnotations,
@@ -237,7 +239,7 @@ class PayloadKubeInputMapper(
     val initReqs = resourceRequirementsFactory.specInit()
 
     return ConnectorKubeInput(
-      labeler.getSpecLabels() + sharedLabels,
+      specWorkerConfigs.workerKubeLabels + labeler.getSpecLabels() + sharedLabels,
       nodeSelectors,
       connectorPodInfo,
       specWorkerConfigs.workerKubeAnnotations,
