@@ -61,6 +61,7 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.bundles.jackson)
   testImplementation(libs.assertj.core)
+  testImplementation(libs.network.json.validator)
 }
 
 val specFile = "$projectDir/src/main/openapi/config.yaml"
@@ -90,6 +91,10 @@ val genApiServer =
         "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteData" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteParams" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteMeta" to "com.fasterxml.jackson.databind.JsonNode",
         "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
         "DestinationConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
         "StreamJsonSchema" to "com.fasterxml.jackson.databind.JsonNode",
@@ -171,6 +176,10 @@ val genApiServer2 =
         "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteData" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteParams" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteMeta" to "com.fasterxml.jackson.databind.JsonNode",
         "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
         "DestinationConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
         "StreamJsonSchema" to "com.fasterxml.jackson.databind.JsonNode",
@@ -250,6 +259,10 @@ val genApiDocs =
         "OAuthConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteData" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteParams" to "com.fasterxml.jackson.databind.JsonNode",
+        "SourceExecuteMeta" to "com.fasterxml.jackson.databind.JsonNode",
         "DestinationDefinitionSpecification" to "com.fasterxml.jackson.databind.JsonNode",
         "DestinationConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
         "StreamJsonSchema" to "com.fasterxml.jackson.databind.JsonNode",

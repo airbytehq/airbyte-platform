@@ -1783,6 +1783,91 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sources/{sourceId}/execute:
+    post:
+      tags:
+        - source_execution
+      operationId: executeSource
+      summary: Execute a read-only source action
+      description: >-
+        Executes a supported JSON-only direct read for an explicitly enabled Cloud source.
+        Available entities, actions and parameters depend on the source connector.
+        Describe, writes, downloads, streaming and Context Store operations are not supported.
+        Controlled Cloud-only availability; this operation is unavailable (503) until
+        the execution backend is configured. This route is not exposed in non-Cloud deployments.
+        Requires reader access to the source workspace. An organization administrator must
+        enable the Context layer for the organization and workspace, and the source must
+        be enabled for agent access. Semantic-search indexing is not required.
+        Requests are limited to 64 KiB and responses to 1 MiB.
+        Production activation is coordinated separately.
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceExecuteRequest"
+      responses:
+        "200":
+          description: The source action returned JSON data and optional connector metadata.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceExecuteResponse"
+        "401":
+          description: Authentication required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceExecuteProblem"
+        "403":
+          description: Source execution is not permitted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceExecuteProblem"
+        "404":
+          description: Source not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceExecuteProblem"
+        "413":
+          description: Request exceeds the size limit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceExecuteProblem"
+        "422":
+          description: Invalid or unsupported input.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceExecuteProblem"
+        "502":
+          description: Execution backend returned an invalid response or failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceExecuteProblem"
+        "503":
+          description: Execution is disabled, unavailable, or at capacity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceExecuteProblem"
+        "504":
+          description: Execution timed out.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceExecuteProblem"
   /v1/sources/check_connection:
     post:
       tags:
@@ -21428,6 +21513,76 @@ components:
         - clear
       type: string
       x-sdk-component: true
+    SourceExecuteRequest:
+      type: object
+      additionalProperties: false
+      required: [entity, action]
+      properties:
+        entity:
+          type: string
+          minLength: 1
+        action:
+          type: string
+          minLength: 1
+          description: Direct read action, such as get, list or api_search, when supported by the connector.
+        params:
+          $ref: "#/components/schemas/SourceExecuteParams"
+        select_fields:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Dot-path field allowlist. Takes precedence over exclude_fields.
+        exclude_fields:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Dot-path fields to omit when select_fields is not provided.
+        skip_truncation:
+          type: boolean
+          default: true
+          description: Disable truncation of long text fields in list and api_search responses.
+        intent:
+          type: string
+          nullable: true
+          maxLength: 512
+          description: Caller-provided purpose recorded with execution auditing.
+    SourceExecuteParams:
+      type: object
+      # The OpenAPI default permits arbitrary properties without a generated map initializer.
+      description: Connector-specific JSON parameters, preserving nested nulls. Defaults to an empty object when omitted.
+    SourceExecuteResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/SourceExecuteData"
+        meta:
+          $ref: "#/components/schemas/SourceExecuteMeta"
+    SourceExecuteData:
+      nullable: true
+      description: Opaque JSON result, including objects, arrays, scalars or null. Nested values and null-valued properties are preserved.
+    SourceExecuteMeta:
+      type: object
+      description: Opaque connector metadata, including pagination cursors when supplied by the connector. Nested values and null-valued properties are preserved.
+    SourceExecuteProblem:
+      type: object
+      required: [status, type, title, detail]
+      properties:
+        status:
+          type: integer
+        type:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        documentationUrl:
+          type: string
+          nullable: true
+        data:
+          nullable: true
     SourceCreateRequest:
       required:
         - name
