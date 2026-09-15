@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
 
 import { ConnectorIds } from "area/connector/utils/constants";
-import { useAgentsSupportedDestinationDefinitionIds, useAgentsSupportedSourceDefinitions } from "core/api";
+import { useAgentsSupportedDestinationDefinitionIds, useAgentsSupportedSourceDefinitionIds } from "core/api";
 import { ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { useIsCloudApp } from "core/utils/app";
 
@@ -11,7 +11,7 @@ import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 jest.mock("core/api", () => ({
   useAgentsSupportedDestinationDefinitionIds: jest.fn(),
-  useAgentsSupportedSourceDefinitions: jest.fn(),
+  useAgentsSupportedSourceDefinitionIds: jest.fn(),
 }));
 
 jest.mock("core/utils/app", () => ({
@@ -24,8 +24,8 @@ jest.mock("./useShowAgentsOptIn", () => ({
 
 const mockUseAgentsSupportedDestinationDefinitionIds =
   useAgentsSupportedDestinationDefinitionIds as jest.MockedFunction<typeof useAgentsSupportedDestinationDefinitionIds>;
-const mockUseAgentsSupportedSourceDefinitions = useAgentsSupportedSourceDefinitions as jest.MockedFunction<
-  typeof useAgentsSupportedSourceDefinitions
+const mockUseAgentsSupportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds as jest.MockedFunction<
+  typeof useAgentsSupportedSourceDefinitionIds
 >;
 const mockUseIsCloudApp = useIsCloudApp as jest.MockedFunction<typeof useIsCloudApp>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
@@ -35,7 +35,11 @@ const messages = {
 };
 
 const sourceDefinition = {
-  sourceDefinitionId: "source-id",
+  sourceDefinitionId: ConnectorIds.Sources.GitHub,
+  name: "GitHub",
+} as ConnectorDefinitionOrEnterpriseStub;
+const postgresNamedGithubDefinition = {
+  sourceDefinitionId: ConnectorIds.Sources.Postgres,
   name: "GitHub",
 } as ConnectorDefinitionOrEnterpriseStub;
 const unsupportedSourceDefinition = {
@@ -66,7 +70,7 @@ const renderBadge = (definition: ConnectorDefinitionOrEnterpriseStub) =>
 describe("ContextLayerDefinitionBadge", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseAgentsSupportedSourceDefinitions.mockReturnValue(new Set(["GitHub"]));
+    mockUseAgentsSupportedSourceDefinitionIds.mockReturnValue(new Set([ConnectorIds.Sources.GitHub]));
     mockUseAgentsSupportedDestinationDefinitionIds.mockReturnValue(new Set([ConnectorIds.Destinations.Snowflake]));
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseShowAgentsOptIn.mockReturnValue(true);
@@ -79,6 +83,11 @@ describe("ContextLayerDefinitionBadge", () => {
 
   it("does not render for an unsupported source definition", () => {
     renderBadge(unsupportedSourceDefinition);
+    expect(screen.queryByText("Context layer")).not.toBeInTheDocument();
+  });
+
+  it("does not render for a source with a supported name but unsupported definition ID", () => {
+    renderBadge(postgresNamedGithubDefinition);
     expect(screen.queryByText("Context layer")).not.toBeInTheDocument();
   });
 

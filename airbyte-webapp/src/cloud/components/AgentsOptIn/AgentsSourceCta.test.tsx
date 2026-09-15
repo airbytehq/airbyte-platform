@@ -3,8 +3,9 @@ import { ComponentProps } from "react";
 import { IntlProvider } from "react-intl";
 import { MemoryRouter, useLocation } from "react-router-dom";
 
+import { ConnectorIds } from "area/connector/utils/constants";
 import { useCurrentOrganizationId } from "area/organization/utils";
-import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitions } from "core/api";
+import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitionIds } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 
 import { AgentsSourceCta } from "./AgentsSourceCta";
@@ -16,7 +17,7 @@ jest.mock("area/organization/utils", () => ({
 
 jest.mock("core/api", () => ({
   useAgentsProvisioningStatus: jest.fn(),
-  useAgentsSupportedSourceDefinitions: jest.fn(),
+  useAgentsSupportedSourceDefinitionIds: jest.fn(),
 }));
 
 jest.mock("core/utils/app", () => ({
@@ -31,8 +32,8 @@ const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunc
 const mockUseAgentsProvisioningStatus = useAgentsProvisioningStatus as jest.MockedFunction<
   typeof useAgentsProvisioningStatus
 >;
-const mockUseAgentsSupportedSourceDefinitions = useAgentsSupportedSourceDefinitions as jest.MockedFunction<
-  typeof useAgentsSupportedSourceDefinitions
+const mockUseAgentsSupportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds as jest.MockedFunction<
+  typeof useAgentsSupportedSourceDefinitionIds
 >;
 const mockUseIsCloudApp = useIsCloudApp as jest.MockedFunction<typeof useIsCloudApp>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
@@ -61,7 +62,7 @@ describe("AgentsSourceCta", () => {
     jest.clearAllMocks();
     mockUseCurrentOrganizationId.mockReturnValue("test-org-123");
     mockUseAgentsProvisioningStatus.mockReturnValue(null);
-    mockUseAgentsSupportedSourceDefinitions.mockReturnValue(new Set(["GitHub"]));
+    mockUseAgentsSupportedSourceDefinitionIds.mockReturnValue(new Set([ConnectorIds.Sources.GitHub]));
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseShowAgentsOptIn.mockReturnValue(true);
   });
@@ -76,7 +77,7 @@ describe("AgentsSourceCta", () => {
       external_cloud_eligible: true,
       eligible_external_organization_id: "test-org-123",
     });
-    renderCta({ actorType: "source", actorDefinitionName: "GitHub" });
+    renderCta({ actorType: "source", actorDefinitionId: ConnectorIds.Sources.GitHub });
 
     expect(screen.getByRole("button", { name: "Try with Agents" })).toBeInTheDocument();
   });
@@ -91,7 +92,7 @@ describe("AgentsSourceCta", () => {
       external_cloud_eligible: true,
       eligible_external_organization_id: null,
     });
-    renderCta({ actorType: "source", actorDefinitionName: "GitHub" });
+    renderCta({ actorType: "source", actorDefinitionId: ConnectorIds.Sources.GitHub });
 
     fireEvent.click(screen.getByRole("button", { name: "Try with Agents" }));
 
@@ -99,7 +100,7 @@ describe("AgentsSourceCta", () => {
   });
 
   it("does not render when provisioning status is unavailable", () => {
-    renderCta({ actorType: "source", actorDefinitionName: "GitHub" });
+    renderCta({ actorType: "source", actorDefinitionId: ConnectorIds.Sources.GitHub });
 
     expect(screen.queryByRole("button", { name: "Try with Agents" })).not.toBeInTheDocument();
   });
@@ -114,19 +115,19 @@ describe("AgentsSourceCta", () => {
       external_cloud_eligible: false,
       eligible_external_organization_id: null,
     });
-    renderCta({ actorType: "source", actorDefinitionName: "GitHub" });
+    renderCta({ actorType: "source", actorDefinitionId: ConnectorIds.Sources.GitHub });
 
     expect(screen.queryByRole("button", { name: "Try with Agents" })).not.toBeInTheDocument();
   });
 
   it("does not render for an unsupported source", () => {
-    renderCta({ actorType: "source", actorDefinitionName: "Not Supported" });
+    renderCta({ actorType: "source", actorDefinitionId: "not-supported" });
 
     expect(screen.queryByRole("button", { name: "Try with Agents" })).not.toBeInTheDocument();
   });
 
   it("does not render for a destination", () => {
-    renderCta({ actorType: "destination", actorDefinitionName: "GitHub" });
+    renderCta({ actorType: "destination", actorDefinitionId: ConnectorIds.Sources.GitHub });
 
     expect(screen.queryByRole("button", { name: "Try with Agents" })).not.toBeInTheDocument();
   });
@@ -134,7 +135,7 @@ describe("AgentsSourceCta", () => {
   it("does not render when the Agents opt-in gate is disabled", () => {
     mockUseShowAgentsOptIn.mockReturnValue(false);
 
-    renderCta({ actorType: "source", actorDefinitionName: "GitHub" });
+    renderCta({ actorType: "source", actorDefinitionId: ConnectorIds.Sources.GitHub });
 
     expect(screen.queryByRole("button", { name: "Try with Agents" })).not.toBeInTheDocument();
   });

@@ -6,7 +6,7 @@ import { Button } from "components/ui/Button";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
-import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitions } from "core/api";
+import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitionIds } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 import { RoutePaths } from "pages/routePaths";
 
@@ -14,13 +14,13 @@ import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 interface AgentsSourceCtaProps {
   actorType: "source" | "destination";
-  actorDefinitionName: string;
+  actorDefinitionId: string;
 }
 
-const AgentsSourceCtaContent: React.FC<AgentsSourceCtaProps> = ({ actorType, actorDefinitionName }) => {
+const AgentsSourceCtaContent: React.FC<AgentsSourceCtaProps> = ({ actorType, actorDefinitionId }) => {
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
-  const supportedSourceDefinitions = useAgentsSupportedSourceDefinitions();
+  const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
   const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
   const organizationId = useCurrentOrganizationId();
   const navigate = useNavigate();
@@ -31,7 +31,7 @@ const AgentsSourceCtaContent: React.FC<AgentsSourceCtaProps> = ({ actorType, act
     !status ||
     (!status.is_enrolled && !status.external_cloud_eligible) ||
     actorType !== "source" ||
-    !supportedSourceDefinitions.has(actorDefinitionName)
+    !supportedSourceDefinitionIds.has(actorDefinitionId)
   ) {
     return null;
   }

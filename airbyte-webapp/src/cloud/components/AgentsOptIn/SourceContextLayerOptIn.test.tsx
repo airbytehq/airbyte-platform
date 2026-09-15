@@ -2,7 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { IntlProvider } from "react-intl";
 
-import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitions } from "core/api";
+import { ConnectorIds } from "area/connector/utils/constants";
+import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitionIds } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
@@ -11,7 +12,7 @@ import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 jest.mock("core/api", () => ({
   useAgentsProvisioningStatus: jest.fn(),
-  useAgentsSupportedSourceDefinitions: jest.fn(),
+  useAgentsSupportedSourceDefinitionIds: jest.fn(),
 }));
 
 jest.mock("core/utils/app", () => ({
@@ -30,8 +31,8 @@ jest.mock("./useShowAgentsOptIn", () => ({
 const mockUseAgentsProvisioningStatus = useAgentsProvisioningStatus as jest.MockedFunction<
   typeof useAgentsProvisioningStatus
 >;
-const mockUseAgentsSupportedSourceDefinitions = useAgentsSupportedSourceDefinitions as jest.MockedFunction<
-  typeof useAgentsSupportedSourceDefinitions
+const mockUseAgentsSupportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds as jest.MockedFunction<
+  typeof useAgentsSupportedSourceDefinitionIds
 >;
 const mockUseIsCloudApp = useIsCloudApp as jest.MockedFunction<typeof useIsCloudApp>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
@@ -59,7 +60,7 @@ const renderOptIn = (
 ) =>
   render(
     <IntlProvider locale="en" messages={messages}>
-      <SourceContextLayerOptIn sourceDefinitionName="GitHub" value={value} onChange={onChange} />
+      <SourceContextLayerOptIn sourceDefinitionId={ConnectorIds.Sources.GitHub} value={value} onChange={onChange} />
     </IntlProvider>
   );
 
@@ -75,7 +76,7 @@ describe("SourceContextLayerOptIn", () => {
       external_cloud_eligible: true,
       eligible_external_organization_id: null,
     });
-    mockUseAgentsSupportedSourceDefinitions.mockReturnValue(new Set(["GitHub"]));
+    mockUseAgentsSupportedSourceDefinitionIds.mockReturnValue(new Set([ConnectorIds.Sources.GitHub]));
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseShowAgentsOptIn.mockReturnValue(true);
     mockUseGeneratedIntent.mockReturnValue(true);
@@ -110,7 +111,7 @@ describe("SourceContextLayerOptIn", () => {
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
-  it("renders nothing when the source definition name is unavailable", () => {
+  it("renders nothing when the source definition ID is unavailable", () => {
     render(
       <IntlProvider locale="en" messages={messages}>
         <SourceContextLayerOptIn value={initialValue} onChange={jest.fn()} />
@@ -129,7 +130,7 @@ describe("SourceContextLayerOptIn", () => {
   it("renders both toggles disabled and shows an unsupported tooltip for an unsupported source", async () => {
     render(
       <IntlProvider locale="en" messages={messages}>
-        <SourceContextLayerOptIn sourceDefinitionName="Not Supported" value={initialValue} onChange={jest.fn()} />
+        <SourceContextLayerOptIn sourceDefinitionId="not-supported" value={initialValue} onChange={jest.fn()} />
       </IntlProvider>
     );
 
@@ -149,7 +150,7 @@ describe("SourceContextLayerOptIn", () => {
       const [value, setValue] = useState(initialValue);
       return (
         <SourceContextLayerOptIn
-          sourceDefinitionName="GitHub"
+          sourceDefinitionId={ConnectorIds.Sources.GitHub}
           value={value}
           onChange={(nextValue) => {
             onChange(nextValue);

@@ -50,6 +50,7 @@ interface ActorTableDataItem {
   id: string;
   actorName: string;
   actorDefinitionName: string;
+  actorDefinitionId: string;
   enabled: boolean;
   connectorIcon?: string;
   isActive: boolean;
@@ -87,6 +88,7 @@ export function createActorTableData(actorReadList: SourceReadList | Destination
       id: source.sourceId,
       actorName: source.name,
       actorDefinitionName: source.sourceName,
+      actorDefinitionId: source.sourceDefinitionId,
       enabled: true,
       connectorIcon: source.icon,
       isActive: source.status === ActorStatus.active,
@@ -103,6 +105,7 @@ export function createActorTableData(actorReadList: SourceReadList | Destination
     id: destination.destinationId,
     actorName: destination.name,
     actorDefinitionName: destination.destinationName,
+    actorDefinitionId: destination.destinationDefinitionId,
     enabled: true,
     connectorIcon: destination.icon,
     isActive: destination.status === ActorStatus.active,
@@ -276,7 +279,7 @@ export const ActorTable: React.FC<ActorTableProps> = ({
         cell: (props) => (
           <AgentsSourceCta
             actorType={props.row.original.actorType}
-            actorDefinitionName={props.row.original.actorDefinitionName}
+            actorDefinitionId={props.row.original.actorDefinitionId}
           />
         ),
         enableSorting: false,

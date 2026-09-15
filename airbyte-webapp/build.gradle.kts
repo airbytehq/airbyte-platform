@@ -84,10 +84,23 @@ val cloudEnv = System.getenv("WEBAPP_BUILD_CLOUD_ENV") ?: ""
 //  (even though it's pulled from the oss project).
 var webappVersion = (ext["ossRootProject"] as Project).ext["webapp_version"] as String
 
+val agentsSupportedDefinitionsFile = file("src/core/api/hooks/agentsSupportedSourceDefinitionIds.generated.ts")
+
+tasks.register<PnpmTask>("generateAgentsSupportedDefinitions") {
+    dependsOn("pnpmInstall")
+    args = listOf("exec", "bash", "scripts/load-agents-supported-definitions.sh")
+    // "true" fails the build when the Sonar connector registry is unreachable (set by the Cloud CI build scripts).
+    environment.put("AGENTS_SUPPORTED_DEFINITIONS_STRICT", System.getenv("AGENTS_SUPPORTED_DEFINITIONS_STRICT") ?: "false")
+    outputs.file(agentsSupportedDefinitionsFile)
+    outputs.upToDateWhen { false }
+}
+
 tasks.register<PnpmTask>("pnpmBuild") {
     dependsOn("pnpmInstall")
+    dependsOn("generateAgentsSupportedDefinitions")
 
     environment.put("AIRBYTE_VERSION", webappVersion)
+    environment.put("AGENTS_SUPPORTED_DEFINITIONS_SKIP_FETCH", "true")
 
     args = listOf("build")
 
@@ -95,6 +108,7 @@ tasks.register<PnpmTask>("pnpmBuild") {
     // since it changes for which env we're building the webapp
     inputs.property("cloudEnv", cloudEnv)
     inputs.files(allFiles, outsideWebappDependencies)
+    inputs.file(agentsSupportedDefinitionsFile)
 
     outputs.dir(project.ext.get("appBuildDir") as String)
     outputs.cacheIf { true }

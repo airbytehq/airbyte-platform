@@ -30,7 +30,7 @@
     "stylelint-check": "stylelint-config-prettier-scss-check",
     "unused-code": "knip --production --reporter markdown || { echo '[^] The above files and dependencies are not used within the code base. Please delete them or explicitly ignore them in knip.jsonc.'; exit 1; }",
     "license-check": "node ./scripts/license-check.js",
-    "generate-client": "./scripts/load-declarative-schema.sh && orval",
+    "generate-client": "./scripts/load-declarative-schema.sh && ./scripts/load-agents-supported-definitions.sh && orval",
     "validate-links": "ts-node --skip-project ./scripts/validate-links.ts",
     "validate-lock": "node ./scripts/validate-lock-files.js",
     "createdbsource": "docker run --rm -d -p 5433:5432 -e POSTGRES_PASSWORD=secret_password -e POSTGRES_DB=airbyte_ci_source --name airbyte_ci_pg_source postgres",

@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Badge } from "components/ui/Badge";
 
-import { useAgentsSupportedDestinationDefinitionIds, useAgentsSupportedSourceDefinitions } from "core/api";
+import { useAgentsSupportedDestinationDefinitionIds, useAgentsSupportedSourceDefinitionIds } from "core/api";
 import { ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { useIsCloudApp } from "core/utils/app";
 
@@ -16,7 +16,7 @@ interface ContextLayerDefinitionBadgeProps {
 const ContextLayerDefinitionBadgeContent: React.FC<ContextLayerDefinitionBadgeProps> = ({ definition }) => {
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
-  const supportedSourceDefinitions = useAgentsSupportedSourceDefinitions();
+  const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
   const supportedDestinationDefinitionIds = useAgentsSupportedDestinationDefinitionIds();
 
   if (!isCloudApp || !showAgentsOptIn || "isEnterprise" in definition) {
@@ -25,7 +25,7 @@ const ContextLayerDefinitionBadgeContent: React.FC<ContextLayerDefinitionBadgePr
 
   const supported =
     "sourceDefinitionId" in definition
-      ? supportedSourceDefinitions.has(definition.name)
+      ? supportedSourceDefinitionIds.has(definition.sourceDefinitionId)
       : supportedDestinationDefinitionIds.has(definition.destinationDefinitionId);
 
   if (!supported) {

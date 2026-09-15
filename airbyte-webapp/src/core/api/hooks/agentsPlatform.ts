@@ -4,12 +4,11 @@ import { ConnectorIds } from "area/connector/utils/constants";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useWebappConfig } from "core/config/webappConfig";
 
+import { AGENTS_SUPPORTED_SOURCE_DEFINITION_IDS } from "./agentsSupportedSourceDefinitionIds.generated";
 import { SCOPE_ORGANIZATION } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
 
-// Temporary hardcoded list pending a Sonar endpoint for supported source definitions.
-const DEFAULT_SUPPORTED_SOURCE_DEFINITIONS = ["GitHub", "Stripe", "Salesforce", "Google Sheets", "Postgres", "Shopify"];
-const AGENTS_SUPPORTED_SOURCE_DEFINITIONS = new Set(DEFAULT_SUPPORTED_SOURCE_DEFINITIONS);
+const AGENTS_SUPPORTED_SOURCE_DEFINITION_IDS_SET = new Set(AGENTS_SUPPORTED_SOURCE_DEFINITION_IDS);
 
 // Destination definitions supported by Sonar SQL passthrough (airbytehq/sonar#6449).
 const AGENTS_SUPPORTED_DESTINATION_DEFINITION_IDS = new Set([
@@ -117,8 +116,8 @@ export const useEnrollOrganizationInAgents = () => {
   );
 };
 
-export const useAgentsSupportedSourceDefinitions = (): Set<string> => {
-  return AGENTS_SUPPORTED_SOURCE_DEFINITIONS;
+export const useAgentsSupportedSourceDefinitionIds = (): Set<string> => {
+  return AGENTS_SUPPORTED_SOURCE_DEFINITION_IDS_SET;
 };
 
 export const useAgentsSupportedDestinationDefinitionIds = (): Set<string> => {
