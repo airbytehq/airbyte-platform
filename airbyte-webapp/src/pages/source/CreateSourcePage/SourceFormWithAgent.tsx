@@ -37,7 +37,7 @@ interface SourceFormWithAgentProps {
   onSubmit: (values: SourceFormValues) => Promise<void>;
   sourceDefinitions: SourceDefinitionRead[];
   selectedSourceDefinitionId?: string;
-  preFooterSlot?: React.ReactNode;
+  contextLayerOptIn?: React.ReactNode;
 }
 
 export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
@@ -45,7 +45,7 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
   onSubmit,
   sourceDefinitions,
   selectedSourceDefinitionId,
-  preFooterSlot,
+  contextLayerOptIn,
 }) => {
   const { data: sourceDefinitionSpecification } = useGetSourceDefinitionSpecificationAsync(
     selectedSourceDefinitionId || null
@@ -190,7 +190,7 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
               selectedConnectorDefinitionId={selectedSourceDefinitionId || null}
               onSubmit={onSubmitConnectorCard}
               supportLevel={selectedSourceDefinition?.supportLevel}
-              preFooterSlot={preFooterSlot}
+              preFooterSlot={contextLayerOptIn}
               leftFooterSlot={
                 <>
                   {/* Setup tools inside FormProvider so tools can use useFormContext */}

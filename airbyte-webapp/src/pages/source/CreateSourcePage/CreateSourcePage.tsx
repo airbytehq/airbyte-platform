@@ -166,7 +166,7 @@ export const CreateSourcePage: React.FC = () => {
               onSubmit={onSubmitSourceStep}
               sourceDefinitions={sourceDefinitions}
               selectedSourceDefinitionId={sourceDefinitionId}
-              preFooterSlot={
+              contextLayerOptIn={
                 <SourceContextLayerOptIn
                   sourceDefinitionName={selectedSourceDefinition?.name}
                   value={contextLayerOptIn}
@@ -191,7 +191,7 @@ export const CreateSourcePage: React.FC = () => {
               onSubmit={onSubmitSourceStep}
               sourceDefinitions={sourceDefinitions}
               selectedSourceDefinitionId={sourceDefinitionId}
-              preFooterSlot={
+              contextLayerOptIn={
                 <SourceContextLayerOptIn
                   sourceDefinitionName={selectedSourceDefinition?.name}
                   value={contextLayerOptIn}
