@@ -7,12 +7,10 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.model.generated.GetEntitlementsByOrganizationIdRequestBody
 import io.airbyte.api.model.generated.OrganizationIsEntitledRequestBody
 import io.airbyte.api.model.generated.UpdateOrganizationEntitlementPlanRequestBody
-import io.airbyte.api.problems.model.generated.ProblemEntitlementServiceData
-import io.airbyte.api.problems.throwable.generated.EntitlementServiceInvalidOrganizationStateProblem
+import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.EntitlementResult
-import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.mockk.every
@@ -20,7 +18,6 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -139,57 +136,19 @@ class EntitlementsApiControllerTest {
   }
 
   @Test
-  fun testListAllEntitlementPlans() {
-    val result = entitlementsApiController.listAllEntitlementPlans()
-
-    assertNotNull(result)
-    assertEquals(11, result!!.plans.size)
-    assertTrue(result.plans.any { it.planName == "STANDARD" })
+  fun testListAllEntitlementPlansIsNotImplementedInOss() {
+    assertThrows<ApiNotImplementedInOssProblem> {
+      entitlementsApiController.listAllEntitlementPlans()
+    }
   }
 
   @Test
-  fun testUpdateOrganizationEntitlementPlanSuccess() {
-    val requestBody =
-      UpdateOrganizationEntitlementPlanRequestBody()
-        .organizationId(organizationId)
-        .planName(UpdateOrganizationEntitlementPlanRequestBody.PlanNameEnum.PRO)
-
-    every { entitlementService.addOrUpdateOrganization(any(), any()) } returns Unit
-    val result = entitlementsApiController.updateOrganizationEntitlementPlan(requestBody)
-
-    assertNotNull(result)
-    assertEquals(organizationId, result!!.organizationId)
-    assertEquals("PRO", result.planName)
-    verify(exactly = 1) { entitlementService.addOrUpdateOrganization(OrganizationId(organizationId), EntitlementPlan.PRO) }
-  }
-
-  @Test
-  fun testUpdateOrganizationEntitlementPlan_MultiplePlansError() {
-    val requestBody =
-      UpdateOrganizationEntitlementPlanRequestBody()
-        .organizationId(organizationId)
-        .planName(UpdateOrganizationEntitlementPlanRequestBody.PlanNameEnum.STANDARD)
-
-    val problemData =
-      ProblemEntitlementServiceData()
-        .organizationId(organizationId)
-        .errorMessage("More than one entitlement plan found")
-    val exception = EntitlementServiceInvalidOrganizationStateProblem(problemData)
-
-    every { entitlementService.addOrUpdateOrganization(any(), any()) } throws exception
-
-    val thrownException =
-      assertThrows<EntitlementServiceInvalidOrganizationStateProblem> {
-        entitlementsApiController.updateOrganizationEntitlementPlan(requestBody)
-      }
-    val errorData = thrownException.problem.getData() as ProblemEntitlementServiceData
-    assertEquals("More than one entitlement plan found", errorData.errorMessage)
-    assertEquals(organizationId, errorData.organizationId)
-
-    verify(exactly = 1) {
-      entitlementService.addOrUpdateOrganization(
-        OrganizationId(organizationId),
-        EntitlementPlan.STANDARD,
+  fun testUpdateOrganizationEntitlementPlanIsNotImplementedInOss() {
+    assertThrows<ApiNotImplementedInOssProblem> {
+      entitlementsApiController.updateOrganizationEntitlementPlan(
+        UpdateOrganizationEntitlementPlanRequestBody()
+          .organizationId(organizationId)
+          .planName(UpdateOrganizationEntitlementPlanRequestBody.PlanNameEnum.PRO),
       )
     }
   }

@@ -5,7 +5,6 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.OrganizationApi
-import io.airbyte.api.model.generated.DataWorkerUsage
 import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
 import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
@@ -20,8 +19,6 @@ import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationUsageRead
 import io.airbyte.api.model.generated.OrganizationUsageRequestBody
-import io.airbyte.api.model.generated.RegionDataWorkerUsage
-import io.airbyte.api.model.generated.WorkspaceDataWorkerUsage
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
@@ -30,9 +27,6 @@ import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.domain.models.OrganizationId
-import io.airbyte.domain.services.dataworker.DataWorkerCapacityService
-import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.server.apis.execute
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.micronaut.http.annotation.Body
@@ -47,8 +41,6 @@ import io.micronaut.security.rules.SecurityRule
 open class OrganizationApiController(
   val organizationsHandler: OrganizationsHandler,
   val organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper,
-  val dataWorkerUsageService: DataWorkerUsageService,
-  val dataWorkerCapacityService: DataWorkerCapacityService,
 ) : OrganizationApi {
   @Post("/get")
   @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -132,43 +124,5 @@ open class OrganizationApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganizationDataWorkerUsage(
     @Body organizationDataWorkerUsageRequestBody: OrganizationDataWorkerUsageRequestBody,
-  ): OrganizationDataWorkerUsageRead? =
-    execute {
-      val dataWorkerUsage =
-        dataWorkerUsageService.getDataWorkerUsage(
-          organizationDataWorkerUsageRequestBody.organizationId,
-          organizationDataWorkerUsageRequestBody.startDate,
-          organizationDataWorkerUsageRequestBody.endDate,
-        )
-
-      val committedDataWorkers =
-        dataWorkerCapacityService.getCommittedDataWorkersOrNull(
-          OrganizationId(organizationDataWorkerUsageRequestBody.organizationId),
-        )
-
-      OrganizationDataWorkerUsageRead()
-        .organizationId(organizationDataWorkerUsageRequestBody.organizationId)
-        .committedDataWorkers(committedDataWorkers)
-        .regions(
-          dataWorkerUsage.dataplaneGroups.map { usageByDataplaneGroup ->
-            RegionDataWorkerUsage()
-              .id(usageByDataplaneGroup.dataplaneGroupId.value)
-              .name(usageByDataplaneGroup.dataplaneGroupName)
-              .workspaces(
-                usageByDataplaneGroup.workspaces.map { usageByWorkspace ->
-                  WorkspaceDataWorkerUsage()
-                    .id(usageByWorkspace.workspaceId.value)
-                    .name(usageByWorkspace.workspaceName)
-                    .dataWorkers(
-                      usageByWorkspace.dataWorkers.map { usageByTime ->
-                        DataWorkerUsage()
-                          .date(usageByTime.usageStartTime)
-                          .used(usageByTime.dataWorkers)
-                      },
-                    )
-                },
-              )
-          },
-        )
-    }
+  ): OrganizationDataWorkerUsageRead? = throw ApiNotImplementedInOssProblem()
 }

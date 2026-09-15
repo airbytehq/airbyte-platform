@@ -7,8 +7,6 @@ package io.airbyte.server.wrapped.apis.controllers
 import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.commons.server.handlers.OrganizationsHandler
-import io.airbyte.domain.services.dataworker.DataWorkerCapacityService
-import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.server.apis.controllers.OrganizationApiController
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.micronaut.context.annotation.Replaces
@@ -24,14 +22,10 @@ import java.util.concurrent.atomic.AtomicInteger
 open class ReplacementOrganizationApiController(
   organizationsHandler: OrganizationsHandler,
   organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper,
-  dataWorkerUsageService: DataWorkerUsageService,
-  dataWorkerCapacityService: DataWorkerCapacityService,
   private val updateTracker: WrappedOrganizationUpdateTracker,
 ) : OrganizationApiController(
     organizationsHandler,
     organizationAccessAuthorizationHelper,
-    dataWorkerUsageService,
-    dataWorkerCapacityService,
   ) {
   override fun updateOrganization(
     @Body organizationUpdateRequestBody: OrganizationUpdateRequestBody,
