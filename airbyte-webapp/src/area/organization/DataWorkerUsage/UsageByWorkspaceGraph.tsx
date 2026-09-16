@@ -24,7 +24,8 @@ interface UsageByWorkspaceGraphProps {
   historicalDisplayRange: [string, string];
   selectedTimeRange: UsageTimeRange;
   comparisonEnabled: boolean;
-  committedDataWorkers?: number | null;
+  /** Capacity the line is drawn at: the selected region's, or the organization total as a fallback. */
+  capacityDataWorkers?: number | null;
 }
 
 const TICK_STEP_BY_RANGE: Record<UsageTimeRange, number> = {
@@ -67,7 +68,7 @@ export const UsageByWorkspaceGraph = ({
   historicalDisplayRange,
   selectedTimeRange,
   comparisonEnabled,
-  committedDataWorkers,
+  capacityDataWorkers,
 }: UsageByWorkspaceGraphProps) => {
   const { formatDate, formatMessage } = useIntl();
   const granularity: UsageGraphGranularity =
@@ -292,9 +293,9 @@ export const UsageByWorkspaceGraph = ({
           comparisonReady ? COMPARISON_BAR_SIZE_BY_RANGE[selectedTimeRange] : BAR_SIZE_BY_RANGE[selectedTimeRange]
         }
         referenceLine={
-          committedDataWorkers != null && committedDataWorkers > 0
+          capacityDataWorkers != null && capacityDataWorkers > 0
             ? {
-                value: committedDataWorkers,
+                value: capacityDataWorkers,
                 label: formatMessage({ id: "settings.organization.usage.graph.committedCapacity" }),
               }
             : undefined

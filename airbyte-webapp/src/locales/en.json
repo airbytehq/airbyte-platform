@@ -1474,6 +1474,7 @@
   "dataWorkerUsage.comparison.unavailable": "N/A",
   "settings.organization.usageByWorkspace": "Peak data worker usage",
   "settings.organization.usageByWorkspace.description": "How much of your contracted capacity each region is using.",
+  "settings.organization.usageByWorkspace.regionCapacity": "{region} · capacity <strong>{amount} DW</strong>",
   "settings.organization.usage.loadingUsageData": "Loading usage data...",
   "settings.organization.usage.noData": "No usage data found for the selected date range.",
   "settings.organization.usage.graph.yAxisTick": "{value} DW",

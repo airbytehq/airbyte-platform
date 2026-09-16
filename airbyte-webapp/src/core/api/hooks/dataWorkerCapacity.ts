@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
 
@@ -48,6 +48,32 @@ export const useListDataWorkerAllocations = () => {
 
   return useSuspenseQuery(dataWorkerCapacityKeys.allocationList(organizationId), () =>
     listDataWorkerAllocations({ organization_id: organizationId }, requestOptions)
+  );
+};
+
+/**
+ * The capacity the organization holds in one region, or `undefined` until it is known.
+ *
+ * Reads the same list as {@link useListDataWorkerAllocations} but does not suspend, so the usage
+ * graph renders before the number arrives. `enabled: false` makes no request at all.
+ */
+export const useRegionDataWorkerCapacity = (dataplaneGroupId: string | null, enabled: boolean) => {
+  const requestOptions = useRequestOptions();
+  const organizationId = useCurrentOrganizationId();
+
+  const { data } = useQuery(
+    dataWorkerCapacityKeys.allocationList(organizationId),
+    () => listDataWorkerAllocations({ organization_id: organizationId }, requestOptions),
+    { enabled }
+  );
+
+  if (!dataplaneGroupId || !data) {
+    return undefined;
+  }
+
+  // A region with no capacity is absent from the response rather than listed with a zero.
+  return (
+    data.allocations.find((allocation) => allocation.dataplane_group_id === dataplaneGroupId)?.allocated_capacity ?? 0
   );
 };
 

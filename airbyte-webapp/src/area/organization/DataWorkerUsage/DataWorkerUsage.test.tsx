@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { render } from "test-utils";
 import { mockExperiments } from "test-utils/mockExperiments";
 
-import { useOrganizationWorkerUsage } from "core/api";
+import { useOrganizationWorkerUsage, useRegionDataWorkerCapacity } from "core/api";
 
 import { DataWorkerUsage } from "./DataWorkerUsage";
 
@@ -15,6 +15,7 @@ interface MockUsageByWorkspaceGraphProps {
   historicalDisplayRange: [string, string];
   selectedTimeRange: "1d" | "1w" | "1m" | "1q" | "1y";
   comparisonEnabled: boolean;
+  capacityDataWorkers?: number | null;
 }
 
 interface MockRegionCapacityPanelProps {
@@ -40,6 +41,7 @@ const defaultRegions = [
 ];
 let mockRegions = defaultRegions;
 let mockPendingOrganizationUsageRequest: Promise<void> | null = null;
+let mockRegionCapacity: number | undefined;
 const mockOrganizationUsage = {
   committedDataWorkers: 4,
   regions: [
@@ -66,6 +68,9 @@ jest.mock("core/api", () => ({
 
     return mockOrganizationUsage;
   }),
+  useRegionDataWorkerCapacity: jest.fn((_dataplaneGroupId: string | null, enabled: boolean) =>
+    enabled ? mockRegionCapacity : undefined
+  ),
 }));
 
 jest.mock("./UsageByWorkspaceGraph", () => {
@@ -104,6 +109,7 @@ describe(`${DataWorkerUsage.name}`, () => {
     jest.setSystemTime(new Date("2026-08-24T12:34:00-07:00"));
     mockRegions = defaultRegions;
     mockPendingOrganizationUsageRequest = null;
+    mockRegionCapacity = undefined;
     // Matches the production default, so the surrounding suite exercises the pre-flag page.
     mockExperiments({ "platform.enable-data-worker-allocation": false });
   });
@@ -370,6 +376,42 @@ describe(`${DataWorkerUsage.name}`, () => {
     // Never rendering the panel is also what keeps the admin-only allocation request from firing.
     expect(screen.queryByTestId("region-capacity-panel")).not.toBeInTheDocument();
     expect(mockRegionCapacityPanel).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the organization total and omits the capacity heading without a region figure", async () => {
+    await render(<DataWorkerUsage />);
+
+    await waitFor(() => expect(screen.getByTestId("usage-by-workspace-graph")).toBeInTheDocument());
+
+    expect(lastGraphProps().capacityDataWorkers).toBe(4);
+    expect(screen.queryByText(/· capacity/)).not.toBeInTheDocument();
+    // The flag off is also what keeps the admin-only allocation request from firing.
+    expect(useRegionDataWorkerCapacity).toHaveBeenLastCalledWith("region-1", false);
+  });
+
+  it("heads the section with the selected region and draws its capacity", async () => {
+    mockExperiments({ "platform.enable-data-worker-allocation": true });
+    mockRegionCapacity = 2.5;
+
+    await render(<DataWorkerUsage />);
+
+    await waitFor(() => expect(screen.getByTestId("usage-by-workspace-graph")).toBeInTheDocument());
+
+    expect(screen.getByText(/· capacity/)).toHaveTextContent("US West · capacity 2.5 DW");
+    expect(lastGraphProps().capacityDataWorkers).toBe(2.5);
+    expect(useRegionDataWorkerCapacity).toHaveBeenLastCalledWith("region-1", true);
+  });
+
+  it("reports a region that holds no capacity as zero rather than as the organization total", async () => {
+    mockExperiments({ "platform.enable-data-worker-allocation": true });
+    mockRegionCapacity = 0;
+
+    await render(<DataWorkerUsage />);
+
+    await waitFor(() => expect(screen.getByTestId("usage-by-workspace-graph")).toBeInTheDocument());
+
+    expect(screen.getByText(/· capacity/)).toHaveTextContent("US West · capacity 0.0 DW");
+    expect(lastGraphProps().capacityDataWorkers).toBe(0);
   });
 
   it("adds the capacity panel below the chart when the allocation flag is on", async () => {

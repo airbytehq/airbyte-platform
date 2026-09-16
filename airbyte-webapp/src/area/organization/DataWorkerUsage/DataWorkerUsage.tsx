@@ -12,7 +12,7 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
-import { useListDataplaneGroups, useOrganizationWorkerUsage } from "core/api";
+import { useListDataplaneGroups, useOrganizationWorkerUsage, useRegionDataWorkerCapacity } from "core/api";
 import { useExperiment } from "core/services/Experiment";
 import { useCurrentTime } from "core/utils/time";
 
@@ -28,6 +28,9 @@ const TIME_RANGE_OPTIONS: Array<{ labelId: string; value: UsageTimeRange }> = [
   { labelId: "settings.organization.usage.timeRange.1q", value: "1q" },
   { labelId: "settings.organization.usage.timeRange.1y", value: "1y" },
 ];
+
+/** Capacity moves in halves, so a region's figure keeps the decimal that shows it. */
+const DW_FORMAT = { minimumFractionDigits: 1, maximumFractionDigits: 1 } as const;
 
 const USAGE_UPDATE_INTERVAL_BY_RANGE: Record<UsageTimeRange, number> = {
   "1d": 60_000,
@@ -58,12 +61,15 @@ const RegionControlButtonContent = ({
 export const DataWorkerUsage: React.FC = () => {
   const [selectedTimeRange, setSelectedTimeRange] = useState<UsageTimeRange>("1w");
   const [comparisonEnabled, setComparisonEnabled] = useState(false);
-  // Gating the render also gates the fetch: the allocation list is requested inside the panel, so an
-  // organization without the flag never calls the admin-only /data_worker_allocation/list endpoint.
+  // The flag gates the fetch as well as the render: the allocation list is requested by the panel and
+  // by the capacity hook below, so an organization without the flag never calls the admin-only
+  // /data_worker_allocation/list endpoint.
   const showRegionCapacity = useExperiment("platform.enable-data-worker-allocation");
   const regions = useListDataplaneGroups();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
-  const { formatMessage } = useIntl();
+  // The capacity contracted for the region on screen, which is what its usage is measured against.
+  const selectedRegionCapacity = useRegionDataWorkerCapacity(selectedRegion, showRegionCapacity);
+  const { formatMessage, formatNumber } = useIntl();
   const timeRangeOptions = useMemo(
     () => TIME_RANGE_OPTIONS.map((option) => ({ ...option, label: formatMessage({ id: option.labelId }) })),
     [formatMessage]
@@ -140,6 +146,7 @@ export const DataWorkerUsage: React.FC = () => {
 
   const sortedRegions = useMemo(() => [...regions].sort(sortByNameAlphabetically), [regions]);
   const regionOptions = useMemo(() => getRegionOptions(sortedRegions), [sortedRegions]);
+  const selectedRegionName = sortedRegions.find((region) => region.dataplane_group_id === selectedRegion)?.name;
 
   useEffect(() => {
     if (selectedRegion !== null || !sortedRegions.length) {
@@ -159,9 +166,27 @@ export const DataWorkerUsage: React.FC = () => {
       <FlexContainer direction="column" alignItems="stretch" gap="2xl">
         <FlexContainer direction="column" alignItems="stretch" gap="lg">
           <FlexContainer direction="column" alignItems="stretch" gap="sm">
-            <Heading as="h2" size="sm">
-              <FormattedMessage id="settings.organization.usageByWorkspace" />
-            </Heading>
+            <FlexContainer alignItems="baseline" justifyContent="space-between" gap="md">
+              <Heading as="h2" size="sm">
+                <FormattedMessage id="settings.organization.usageByWorkspace" />
+              </Heading>
+              {selectedRegionName && selectedRegionCapacity != null && (
+                <Text size="lg" color="grey">
+                  <FormattedMessage
+                    id="settings.organization.usageByWorkspace.regionCapacity"
+                    values={{
+                      region: selectedRegionName,
+                      amount: formatNumber(selectedRegionCapacity, DW_FORMAT),
+                      strong: (node: React.ReactNode) => (
+                        <Text as="span" size="lg">
+                          {node}
+                        </Text>
+                      ),
+                    }}
+                  />
+                </Text>
+              )}
+            </FlexContainer>
             <Text color="grey" size="lg">
               <FormattedMessage id="settings.organization.usageByWorkspace.description" />
             </Text>
@@ -263,7 +288,7 @@ export const DataWorkerUsage: React.FC = () => {
                 historicalDisplayRange={historicalDisplayRange}
                 selectedTimeRange={displayedTimeRange}
                 comparisonEnabled={comparisonEnabled}
-                committedDataWorkers={allUsage?.committedDataWorkers}
+                capacityDataWorkers={selectedRegionCapacity ?? allUsage?.committedDataWorkers}
               />
             </Suspense>
           ) : null}
