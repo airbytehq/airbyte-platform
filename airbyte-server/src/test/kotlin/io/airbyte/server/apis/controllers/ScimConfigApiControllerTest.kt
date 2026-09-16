@@ -193,17 +193,23 @@ class ScimConfigApiControllerTest {
   }
 
   @Test
-  fun `all SCIM endpoints require organization admin and use the SCIM audit provider`() {
-    val endpointNames = setOf("getScimConfig", "enableScim", "rotateScimToken", "disableScim")
+  fun `all SCIM endpoints require organization admin and only mutations use the SCIM audit provider`() {
+    val mutatingEndpointNames = setOf("enableScim", "rotateScimToken", "disableScim")
+    val endpointNames = mutatingEndpointNames + "getScimConfig"
     val endpoints = ScimConfigApiController::class.java.declaredMethods.filter { it.name in endpointNames }
 
     assertEquals(endpointNames, endpoints.map { it.name }.toSet())
     endpoints.forEach { endpoint ->
-      assertEquals(AuditLoggingProvider.SCIM, endpoint.getAnnotation(AuditLogging::class.java).provider)
       assertEquals(
         listOf(AuthRoleConstants.ORGANIZATION_ADMIN),
         endpoint.getAnnotation(Secured::class.java).value.toList(),
       )
+      val audit = endpoint.getAnnotation(AuditLogging::class.java)
+      if (endpoint.name in mutatingEndpointNames) {
+        assertEquals(AuditLoggingProvider.SCIM, audit.provider)
+      } else {
+        assertNull(audit)
+      }
     }
 
     val disableEndpoint = endpoints.single { it.name == "disableScim" }

@@ -46,7 +46,6 @@ open class ScimConfigApiController(
 ) : ScimConfigApi {
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.SCIM)
   override fun getScimConfig(organizationIdRequestBody: OrganizationIdRequestBody): ScimConfigResponse =
     executeScim {
       val organizationId = OrganizationId(organizationIdRequestBody.organizationId)
