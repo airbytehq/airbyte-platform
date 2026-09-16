@@ -20,7 +20,6 @@ export const ContextLayerTosModal: React.FC<ContextLayerTosModalProps> = ({ onCa
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [chargesAccepted, setChargesAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAccept = async () => {
@@ -80,17 +79,6 @@ export const ContextLayerTosModal: React.FC<ContextLayerTosModalProps> = ({ onCa
               <FormattedMessage id="cloud.contextLayer.terms.acceptTerms" />
             </Text>
           </div>
-          <div className={styles.checkboxRow}>
-            <CheckBox
-              checkboxSize="sm"
-              checked={chargesAccepted}
-              onChange={(event) => setChargesAccepted(event.target.checked)}
-              aria-label={formatMessage({ id: "cloud.contextLayer.terms.acceptCharges" })}
-            />
-            <Text as="span" size="sm">
-              <FormattedMessage id="cloud.contextLayer.terms.acceptCharges" />
-            </Text>
-          </div>
         </div>
       </ModalBody>
       <ModalFooter>
@@ -105,7 +93,7 @@ export const ContextLayerTosModal: React.FC<ContextLayerTosModalProps> = ({ onCa
             <Button
               type="button"
               variant="primaryDark"
-              disabled={!termsAccepted || !chargesAccepted}
+              disabled={!termsAccepted}
               isLoading={isSubmitting}
               onClick={handleAccept}
             >

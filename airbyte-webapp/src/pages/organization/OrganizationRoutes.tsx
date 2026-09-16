@@ -4,7 +4,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import OrganizationSettingsLayout from "area/organization/OrganizationSettingsLayout";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
-import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -38,7 +37,6 @@ export const OrganizationRoutes: React.FC = () => {
   const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
   const isScimProvisioningEnabled = useExperiment("settings.scimProvisioning");
   const isCloudApp = useIsCloudApp();
-  const showAgentsOptIn = useShowAgentsOptIn();
   const isAuditLogsUiEnabled = useExperiment("audit-log-ui");
   // UpdateOrganizationPermissions is the generated intent whose allow-list
   // (organization_admin, instance_admin) exactly matches the ORGANIZATION_ADMIN
@@ -79,7 +77,7 @@ export const OrganizationRoutes: React.FC = () => {
           {canViewOrganizationUsage && (
             <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
           )}
-          {isCloudApp && showAgentsOptIn && (
+          {isCloudApp && (
             <Route path={CloudSettingsRoutePaths.ContextLayer} element={<OrganizationContextLayerPage />} />
           )}
           <Route path={SettingsRoutePaths.Source} element={<SourcesPage />} />
@@ -87,7 +85,7 @@ export const OrganizationRoutes: React.FC = () => {
           <Route path="*" element={<Navigate to={SettingsRoutePaths.Organization} replace />} />
         </Route>
       )}
-      {!canViewOrgSettings && isCloudApp && showAgentsOptIn && (
+      {!canViewOrgSettings && isCloudApp && (
         <Route path={`${RoutePaths.Settings}/*`} element={<OrganizationSettingsPage />}>
           <Route path={CloudSettingsRoutePaths.ContextLayer} element={<OrganizationContextLayerPage />} />
           <Route path="*" element={<Navigate to={`../../${RoutePaths.Workspaces}`} replace />} />

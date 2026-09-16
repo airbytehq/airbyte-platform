@@ -91,9 +91,6 @@ const messages = {
   "cloud.contextLayer.status.title": "Context layer status",
   "cloud.contextLayer.status.description":
     "AI agents can access and reason about your organization's data. Only organization admins can enable or disable this feature.",
-  "cloud.contextLayer.billing":
-    "Context layer is billed separately from your current plan. Usage is metered based on AI agent activity.",
-  "cloud.contextLayer.pricing": "View pricing details →",
   "cloud.contextLayer.toggle.label": "Context layer",
   "cloud.contextLayer.toggle.description": "Enable reasoning capabilities",
   "cloud.contextLayer.toggle.enabled": "Enabled",
@@ -108,8 +105,6 @@ const messages = {
   "cloud.contextLayer.terms.serviceLevel": "Service level and availability terms",
   "cloud.contextLayer.terms.intellectualProperty": "Intellectual property terms",
   "cloud.contextLayer.terms.acceptTerms": "I have read and agree to the Context layer Terms of Service",
-  "cloud.contextLayer.terms.acceptCharges":
-    "I understand that using the context layer may incur additional charges, and I am authorized to approve those charges",
   "cloud.contextLayer.terms.cancel": "Cancel",
   "cloud.contextLayer.terms.accept": "Accept and Enable",
   "cloud.contextLayer.terms.footnote": "* These terms are required for compliance and data processing purposes.",
@@ -128,6 +123,7 @@ const messages = {
   "cloud.contextLayer.workspace.enabledCount":
     "{enabled} of {supported} enabled{unsupported, plural, =0 {} other { (excludes {unsupported} not supported)}}",
   "cloud.contextLayer.connectors.error": "Unable to load connectors. Please try again.",
+  "cloud.contextLayer.connectors.toggleError": "Could not update access for {name}. Please try again.",
   "cloud.contextLayer.docs": "Learn how to connect agents (SDK, API, MCP)",
 };
 
@@ -221,7 +217,6 @@ describe("ContextLayerPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Accept and Enable" })).toBeDisabled());
     fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptTerms"] }));
-    fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptCharges"] }));
     expect(screen.getByRole("button", { name: "Accept and Enable" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
     await waitFor(() =>
@@ -487,7 +482,7 @@ describe("ContextLayerPage", () => {
     expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeChecked();
   });
 
-  it("reverts the connector switch when the mutation fails", async () => {
+  it("reverts the connector switch and shows an error notification when the mutation fails", async () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: true,
       is_instance_admin: false,
@@ -503,6 +498,8 @@ describe("ContextLayerPage", () => {
     } as never);
     const mutateAsync = jest.fn().mockRejectedValue(new Error("failed"));
     mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
+    const registerNotification = jest.fn();
+    mockUseNotificationService.mockReturnValue({ registerNotification } as never);
     mockUseExternalWorkspaceConnectors.mockReturnValue({
       sources: [{ id: "source-1", name: "GitHub account", supported: true, enabled: true }],
       destinations: [],
@@ -515,6 +512,11 @@ describe("ContextLayerPage", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeChecked());
+    expect(registerNotification).toHaveBeenCalledWith({
+      id: "context-layer-connector-toggle-error-workspace-1:source-1",
+      text: "Could not update access for GitHub account. Please try again.",
+      type: "error",
+    });
   });
 
   it("shows a loading state while workspace access is loading", () => {
@@ -590,7 +592,6 @@ describe("ContextLayerPage", () => {
     renderWithIntl();
     fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
     fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptTerms"] }));
-    fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptCharges"] }));
     fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
 
     await waitFor(() => {

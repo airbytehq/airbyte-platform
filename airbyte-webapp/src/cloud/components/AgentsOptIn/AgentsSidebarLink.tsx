@@ -25,7 +25,7 @@ const AgentsSidebarLinkContent: React.FC = () => {
   return (
     <NavItem
       label={<FormattedMessage id="cloud.contextLayer.sidebar" />}
-      icon={status.is_enrolled ? "file" : "aiStars"}
+      icon="aiStars"
       to={href}
       testId="agentsSidebarLink"
     />

@@ -8,7 +8,6 @@ import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { LoadingPage } from "components/ui/LoadingPage";
-import { Message } from "components/ui/Message";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
@@ -21,6 +20,7 @@ import {
   useSetExternalActorEnabled,
 } from "core/api";
 import { useModalService } from "core/services/Modal";
+import { useNotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -50,6 +50,8 @@ const WorkspaceConnectorCard: React.FC<{
 }> = ({ workspace, enabledConnectors, onToggle, onClearOptimistic, canManageOrganizationPermissions }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [pendingConnectors, setPendingConnectors] = useState<Record<string, boolean>>({});
+  const { formatMessage } = useIntl();
+  const { registerNotification } = useNotificationService();
   const { sources, destinations, isLoading, sourcesError, destinationsError } = useExternalWorkspaceConnectors(
     workspace.workspaceId
   );
@@ -94,6 +96,14 @@ const WorkspaceConnectorCard: React.FC<{
                       onClearOptimistic(key);
                     } catch {
                       onClearOptimistic(key);
+                      registerNotification({
+                        id: `context-layer-connector-toggle-error-${key}`,
+                        text: formatMessage(
+                          { id: "cloud.contextLayer.connectors.toggleError" },
+                          { name: connector.name }
+                        ),
+                        type: "error",
+                      });
                     } finally {
                       setPendingConnectors((current) => ({ ...current, [key]: false }));
                     }
@@ -273,21 +283,6 @@ const WorkspaceConnectorAccess: React.FC<{
   );
 };
 
-const BillingCallout: React.FC = () => (
-  <Message
-    className={styles.callout}
-    type="info"
-    text={
-      <>
-        <FormattedMessage id="cloud.contextLayer.billing" />{" "}
-        <ExternalLink href="https://airbyte.com/pricing" opensInNewTab>
-          <FormattedMessage id="cloud.contextLayer.pricing" />
-        </ExternalLink>
-      </>
-    }
-  />
-);
-
 const ContextLayerToggle: React.FC<{ enabled: boolean; onClick?: () => void }> = ({ enabled, onClick }) => {
   const { formatMessage } = useIntl();
 
@@ -401,7 +396,6 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
                 }
               />
             </Text>
-            <BillingCallout />
             <ContextLayerToggle
               enabled={status.is_enrolled}
               onClick={status.is_enrolled || !canManageOrganizationPermissions ? undefined : openTermsModal}

@@ -137,7 +137,7 @@ export const OrganizationSettingsPage: React.FC = () => {
             )}
             {showContextLayerLink && (
               <SettingsLink
-                iconType="file"
+                iconType="aiStars"
                 name={formatMessage({ id: "cloud.contextLayer.sidebar" })}
                 to={CloudSettingsRoutePaths.ContextLayer}
               />
