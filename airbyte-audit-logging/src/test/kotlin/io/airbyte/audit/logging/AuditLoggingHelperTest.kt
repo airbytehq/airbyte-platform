@@ -6,12 +6,14 @@ package io.airbyte.audit.logging
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.audit.logging.model.Actor
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.errors.AuthException
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.server.netty.NettyHttpRequest
+import io.micronaut.security.utils.SecurityService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -33,6 +35,7 @@ class AuditLoggingHelperTest {
   private lateinit var permissionHandler: PermissionHandler
   private lateinit var currentUserService: CurrentUserService
   private lateinit var objectMapper: ObjectMapper
+  private lateinit var securityService: SecurityService
   private lateinit var auditLoggingHelper: AuditLoggingHelper
 
   @BeforeEach
@@ -40,12 +43,45 @@ class AuditLoggingHelperTest {
     permissionHandler = mockk()
     currentUserService = mockk()
     objectMapper = ObjectMapper()
-    auditLoggingHelper = AuditLoggingHelper(permissionHandler, currentUserService, objectMapper)
+    securityService = mockk()
+    every { securityService.hasRole(any()) } returns false
+    auditLoggingHelper = AuditLoggingHelper(permissionHandler, currentUserService, objectMapper, securityService)
   }
 
   @AfterEach
   fun tearDown() {
     unmockkAll()
+  }
+
+  @Test
+  fun `buildActor returns Airbyte Support if the current user is an instance admin`() {
+    every { securityService.hasRole(AuthRoleConstants.ADMIN) } returns true
+
+    val request =
+      mockRequest(
+        mapOf("User-Agent" to TEST_VALUE_USER_AGENT, "X-Forwarded-For" to TEST_VALUE_FORWARDED_FOR),
+        "",
+      )
+
+    val result = auditLoggingHelper.buildActor(request.headers)
+    val expected = Actor(AuditLoggingHelper.AIRBYTE_SUPPORT_ACTOR_ID)
+    assertEquals(expected, result)
+  }
+
+  @Test
+  fun `buildActor returns Airbyte Support if the current user is an instance admin and the user cannot be retrieved`() {
+    every { securityService.hasRole(AuthRoleConstants.ADMIN) } returns true
+    every { currentUserService.getCurrentUser() } throws AuthException("could not get user")
+
+    val request =
+      mockRequest(
+        mapOf("User-Agent" to TEST_VALUE_USER_AGENT, "X-Forwarded-For" to TEST_VALUE_FORWARDED_FOR),
+        "",
+      )
+
+    val result = auditLoggingHelper.buildActor(request.headers)
+    val expected = Actor(AuditLoggingHelper.AIRBYTE_SUPPORT_ACTOR_ID)
+    assertEquals(expected, result)
   }
 
   @Test

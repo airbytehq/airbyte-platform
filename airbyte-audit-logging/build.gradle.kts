@@ -20,6 +20,7 @@ dependencies {
   implementation(libs.jackson.kotlin)
 
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-api:server-api"))
@@ -30,6 +31,7 @@ dependencies {
   implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-featureflag"))  // Explicitly needed for FeatureFlagClient
   implementation(libs.bundles.micronaut)
+  implementation(libs.micronaut.security)
   implementation(libs.micronaut.inject)
   implementation(libs.bundles.logback)
   implementation(libs.jackson.annotations)

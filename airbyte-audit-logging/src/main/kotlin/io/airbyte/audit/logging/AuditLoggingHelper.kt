@@ -9,10 +9,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PermissionRead
 import io.airbyte.audit.logging.model.Actor
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
 import io.micronaut.http.HttpHeaders
+import io.micronaut.security.utils.SecurityService
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -21,8 +23,15 @@ class AuditLoggingHelper(
   private val permissionHandler: PermissionHandler,
   private val currentUserService: CurrentUserService,
   private val objectMapper: ObjectMapper,
+  // In community auth, where micronaut security is disabled, the security service isn't available.
+  private val securityService: SecurityService?,
 ) {
   fun buildActor(headers: HttpHeaders): Actor? {
+    // Instance admins act on behalf of Airbyte itself; the user-based actor is not valid for them.
+    if (securityService?.hasRole(AuthRoleConstants.ADMIN) == true) {
+      return Actor(actorId = AIRBYTE_SUPPORT_ACTOR_ID)
+    }
+
     val currentUser =
       try {
         currentUserService.getCurrentUser()
@@ -39,6 +48,10 @@ class AuditLoggingHelper(
       ipAddress = ipAddress,
       userAgent = userAgent,
     )
+  }
+
+  companion object {
+    const val AIRBYTE_SUPPORT_ACTOR_ID = "Airbyte Support"
   }
 
   fun getPermission(permissionId: UUID): Permission = permissionHandler.getPermissionById(permissionId)
