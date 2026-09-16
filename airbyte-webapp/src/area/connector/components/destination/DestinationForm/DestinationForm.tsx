@@ -25,6 +25,7 @@ interface DestinationFormProps {
   destinationDefinitions: DestinationDefinitionRead[];
   selectedDestinationDefinitionId?: string;
   leftFooterSlot?: React.ReactNode;
+  contextLayerOptIn?: React.ReactNode;
 }
 
 const hasDestinationDefinitionId = (state: unknown): state is { destinationDefinitionId: string } => {
@@ -40,6 +41,7 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
   destinationDefinitions,
   selectedDestinationDefinitionId,
   leftFooterSlot = null,
+  contextLayerOptIn,
 }) => {
   const location = useLocation();
 
@@ -89,6 +91,7 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
       selectedConnectorDefinitionId={destinationDefinitionId}
       onSubmit={onSubmitForm}
       supportLevel={selectedDestinationDefinition?.supportLevel}
+      preFooterSlot={contextLayerOptIn}
       leftFooterSlot={leftFooterSlot}
     />
   );

@@ -1,3 +1,5 @@
+import type { DestinationSetupFlow } from "./DestinationFormWithAgent";
+
 import React, { useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -14,15 +16,23 @@ import { ConnectorDocumentationWrapper } from "area/connector/components/Connect
 import { DestinationForm } from "area/connector/components/destination/DestinationForm";
 import { ConnectionConfiguration } from "area/connector/types";
 import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
+import { DestinationContextLayerOptIn } from "cloud/components/AgentsOptIn";
+import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
 import {
+  useAgentsProvisioningStatus,
+  useAgentsSupportedDestinationDefinitionIds,
   useCreateDestination,
   useDestinationDefinitionList,
   useGetDestinationDefinitionSpecificationAsync,
+  useSetExternalActorEnabled,
 } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
+import { useNotificationService } from "core/services/Notification";
+import { useIsCloudApp } from "core/utils/app";
 import { clearConnectorChatBuilderStorage, CONNECTOR_CHAT_ACTIONS } from "core/utils/connectorChatBuilderStorage";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { DestinationPaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./CreateDestinationPage.module.scss";
@@ -39,6 +49,17 @@ export const CreateDestinationPage: React.FC = () => {
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { destinationDefinitions } = useDestinationDefinitionList();
   const { mutateAsync: createDestination } = useCreateDestination();
+  const { mutateAsync: setExternalActorEnabled } = useSetExternalActorEnabled();
+  const { registerNotification } = useNotificationService();
+  const isCloudApp = useIsCloudApp();
+  const showAgentsOptIn = useShowAgentsOptIn();
+  const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
+  const supportedDestinationDefinitionIds = useAgentsSupportedDestinationDefinitionIds();
+  const canManage = useGeneratedIntent(Intent.CreateOrEditDestination);
+  const [contextLayerAgentAccess, setContextLayerAgentAccess] = useState(canManage);
+  useEffect(() => {
+    setContextLayerAgentAccess(canManage);
+  }, [destinationDefinitionId, canManage]);
   const isAgentAssistedSetupEnabled = useExperiment("connector.agentAssistedSetup");
 
   const [isAgentView, setIsAgentView] = useState(false);
@@ -59,12 +80,36 @@ export const CreateDestinationPage: React.FC = () => {
     name: string;
     serviceType: string;
     connectionConfiguration: ConnectionConfiguration;
+    setupFlow?: DestinationSetupFlow;
   }) => {
     const connector = destinationDefinitions.find((item) => item.destinationDefinitionId === values.serviceType);
+    if (!connector) {
+      throw new Error("No Connector Found");
+    }
     const result = await createDestination({
       values,
       destinationConnector: connector,
     });
+    const shouldSyncContextLayer =
+      isCloudApp &&
+      showAgentsOptIn &&
+      status?.is_enrolled === true &&
+      canManage &&
+      values.setupFlow !== "agent" &&
+      supportedDestinationDefinitionIds.has(connector.destinationDefinitionId);
+    if (shouldSyncContextLayer) {
+      void setExternalActorEnabled({
+        actorId: result.destinationId,
+        actorKind: "destination",
+        enabled: contextLayerAgentAccess,
+      }).catch(() => {
+        registerNotification({
+          id: "cloud.contextLayer.destinationOptIn.syncFailed",
+          text: formatMessage({ id: "cloud.contextLayer.destinationOptIn.syncFailed" }),
+          type: "error",
+        });
+      });
+    }
     await new Promise((resolve) => setTimeout(resolve, 2000));
     clearAllFormChanges();
     navigate(`../${result.destinationId}/${DestinationPaths.Connections}`);
@@ -119,6 +164,13 @@ export const CreateDestinationPage: React.FC = () => {
               onSubmit={onSubmitDestinationForm}
               destinationDefinitions={destinationDefinitions}
               selectedDestinationDefinitionId={destinationDefinitionId}
+              contextLayerOptIn={
+                <DestinationContextLayerOptIn
+                  destinationDefinitionId={destinationDefinitionId}
+                  value={contextLayerAgentAccess}
+                  onChange={setContextLayerAgentAccess}
+                />
+              }
             />
           </div>
         </div>
@@ -137,6 +189,13 @@ export const CreateDestinationPage: React.FC = () => {
               onSubmit={onSubmitDestinationForm}
               destinationDefinitions={destinationDefinitions}
               selectedDestinationDefinitionId={destinationDefinitionId}
+              contextLayerOptIn={
+                <DestinationContextLayerOptIn
+                  destinationDefinitionId={destinationDefinitionId}
+                  value={contextLayerAgentAccess}
+                  onChange={setContextLayerAgentAccess}
+                />
+              }
             />
             <CloudInviteUsersHint connectorType="destination" />
           </FormPageContent>

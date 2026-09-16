@@ -2,6 +2,8 @@ export { AgentsOptInBanner } from "./AgentsOptInBanner";
 export { AgentsSourceCta } from "./AgentsSourceCta";
 export { AgentsSidebarLink } from "./AgentsSidebarLink";
 export { ContextLayerDefinitionBadge } from "./ContextLayerDefinitionBadge";
+export { ActorContextLayerCard } from "./ActorContextLayerCard";
+export { DestinationContextLayerOptIn } from "./DestinationContextLayerOptIn";
 export {
   ActorAgentAccessToggle,
   ActorSemanticSearchToggle,

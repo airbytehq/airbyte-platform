@@ -3,11 +3,13 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
 import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { ConnectorCard } from "area/connector/components/ConnectorCard";
 import { ConnectorCardValues } from "area/connector/components/ConnectorForm";
 import { useGetSourceFromParams } from "area/connector/utils";
+import { ActorContextLayerCard } from "cloud/components/AgentsOptIn";
 import {
   useSourceDefinitionVersion,
   useGetSourceDefinitionSpecification,
@@ -67,20 +69,23 @@ export const SourceSettingsPage: React.FC = () => {
 
   return (
     <div className={styles.content}>
-      <ConnectorCard
-        formType="source"
-        title={formatMessage({ id: "sources.sourceSettings" })}
-        isEditMode
-        formId={formId}
-        availableConnectorDefinitions={[sourceDefinition]}
-        selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
-        selectedConnectorDefinitionId={sourceDefinitionSpecification.sourceDefinitionId}
-        connector={source}
-        reloadConfig={reloadSource}
-        onSubmit={onSubmit}
-        onDeleteClick={onDeleteClick}
-        supportLevel={sourceDefinitionVersion.supportLevel}
-      />
+      <FlexContainer direction="column" gap="xl">
+        <ConnectorCard
+          formType="source"
+          title={formatMessage({ id: "sources.sourceSettings" })}
+          isEditMode
+          formId={formId}
+          availableConnectorDefinitions={[sourceDefinition]}
+          selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
+          selectedConnectorDefinitionId={sourceDefinitionSpecification.sourceDefinitionId}
+          connector={source}
+          reloadConfig={reloadSource}
+          onSubmit={onSubmit}
+          onDeleteClick={onDeleteClick}
+          supportLevel={sourceDefinitionVersion.supportLevel}
+        />
+        <ActorContextLayerCard actorId={source.sourceId} actorType="source" />
+      </FlexContainer>
     </div>
   );
 };

@@ -3,11 +3,13 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
 import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { ConnectorCard } from "area/connector/components/ConnectorCard";
 import { ConnectorCardValues } from "area/connector/components/ConnectorForm/types";
 import { useGetDestinationFromParams } from "area/connector/utils";
+import { ActorContextLayerCard } from "cloud/components/AgentsOptIn";
 import {
   useDestinationDefinitionVersion,
   useGetDestinationDefinitionSpecification,
@@ -68,20 +70,23 @@ export const DestinationSettingsPage: React.FC = () => {
 
   return (
     <div className={styles.content}>
-      <ConnectorCard
-        formType="destination"
-        title={formatMessage({ id: "destination.destinationSettings" })}
-        isEditMode
-        formId={formId}
-        availableConnectorDefinitions={[destinationDefinition]}
-        selectedConnectorDefinitionSpecification={destinationSpecification}
-        selectedConnectorDefinitionId={destinationSpecification.destinationDefinitionId}
-        connector={destination}
-        reloadConfig={reloadDestination}
-        onSubmit={onSubmitForm}
-        onDeleteClick={onDeleteClick}
-        supportLevel={destinationDefinitionVersion.supportLevel}
-      />
+      <FlexContainer direction="column" gap="xl">
+        <ConnectorCard
+          formType="destination"
+          title={formatMessage({ id: "destination.destinationSettings" })}
+          isEditMode
+          formId={formId}
+          availableConnectorDefinitions={[destinationDefinition]}
+          selectedConnectorDefinitionSpecification={destinationSpecification}
+          selectedConnectorDefinitionId={destinationSpecification.destinationDefinitionId}
+          connector={destination}
+          reloadConfig={reloadDestination}
+          onSubmit={onSubmitForm}
+          onDeleteClick={onDeleteClick}
+          supportLevel={destinationDefinitionVersion.supportLevel}
+        />
+        <ActorContextLayerCard actorId={destination.destinationId} actorType="destination" />
+      </FlexContainer>
     </div>
   );
 };

@@ -22,11 +22,14 @@ import { ActorType, DestinationDefinitionRead } from "core/api/types/AirbyteClie
 import { Connector } from "core/domain/connector";
 import { DestinationPaths } from "pages/routePaths";
 
+export type DestinationSetupFlow = "agent" | "form";
+
 export interface DestinationFormValues {
   name: string;
   serviceType: string;
   destinationDefinitionId?: string;
   connectionConfiguration: ConnectionConfiguration;
+  setupFlow?: DestinationSetupFlow;
 }
 
 interface DestinationFormWithAgentProps {
@@ -34,6 +37,7 @@ interface DestinationFormWithAgentProps {
   onSubmit: (values: DestinationFormValues) => Promise<void>;
   destinationDefinitions: DestinationDefinitionRead[];
   selectedDestinationDefinitionId?: string;
+  contextLayerOptIn?: React.ReactNode;
 }
 
 export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> = ({
@@ -41,6 +45,7 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
   onSubmit,
   destinationDefinitions,
   selectedDestinationDefinitionId,
+  contextLayerOptIn,
 }) => {
   const { data: destinationDefinitionSpecification } = useGetDestinationDefinitionSpecificationAsync(
     selectedDestinationDefinitionId || null
@@ -71,6 +76,7 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
       try {
         await onSubmit({
           ...destinationValues,
+          setupFlow: "agent",
           destinationDefinitionId: destinationDefinitionSpecification?.destinationDefinitionId,
         });
         // Track successful submission
@@ -188,6 +194,7 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
               selectedConnectorDefinitionId={selectedDestinationDefinitionId || null}
               onSubmit={onSubmitConnectorCard}
               supportLevel={selectedDestinationDefinition?.supportLevel}
+              preFooterSlot={contextLayerOptIn}
               leftFooterSlot={
                 <>
                   {/* Setup tools inside FormProvider so saveDraftTool can use useFormContext */}
