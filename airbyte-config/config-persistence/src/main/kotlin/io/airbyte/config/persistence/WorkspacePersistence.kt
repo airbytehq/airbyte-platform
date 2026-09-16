@@ -43,14 +43,17 @@ class WorkspacePersistence(
         ctx
           .select(Tables.WORKSPACE.asterisk())
           .from(Tables.WORKSPACE)
+          .join(Tables.ORGANIZATION)
+          .on(Tables.ORGANIZATION.ID.eq(Tables.WORKSPACE.ORGANIZATION_ID))
           .where(if (keyword.isPresent) Tables.WORKSPACE.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
           .and(
             if (includeDeleted) {
               DSL.noCondition()
             } else {
-              Tables.WORKSPACE.TOMBSTONE.notEqual(
-                true,
-              )
+              Tables.WORKSPACE.TOMBSTONE
+                .notEqual(
+                  true,
+                ).and(Tables.ORGANIZATION.TOMBSTONE.notEqual(true))
             },
           ).orderBy(Tables.WORKSPACE.NAME.asc())
           .limit(pageSize)
@@ -73,14 +76,17 @@ class WorkspacePersistence(
         ctx
           .select(Tables.WORKSPACE.asterisk())
           .from(Tables.WORKSPACE)
+          .join(Tables.ORGANIZATION)
+          .on(Tables.ORGANIZATION.ID.eq(Tables.WORKSPACE.ORGANIZATION_ID))
           .where(if (keyword.isPresent) Tables.WORKSPACE.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
           .and(
             if (includeDeleted) {
               DSL.noCondition()
             } else {
-              Tables.WORKSPACE.TOMBSTONE.notEqual(
-                true,
-              )
+              Tables.WORKSPACE.TOMBSTONE
+                .notEqual(
+                  true,
+                ).and(Tables.ORGANIZATION.TOMBSTONE.notEqual(true))
             },
           ).orderBy(Tables.WORKSPACE.NAME.asc())
           .fetch()

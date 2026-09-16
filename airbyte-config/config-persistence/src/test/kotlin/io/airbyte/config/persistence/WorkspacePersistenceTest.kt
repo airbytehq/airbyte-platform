@@ -41,6 +41,7 @@ import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
 import io.airbyte.data.services.shared.ActorServicePaginationHelper
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated
+import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
@@ -696,6 +697,115 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     val actualWorkspaces = workspacePersistence.listActiveWorkspacesByUserId(userId, Optional.empty<String>()).toSet()
 
     assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
+  }
+
+  @Test
+  fun testUserWorkspaceListsExcludeWorkspacesInTombstonedOrganizations() {
+    val userId = UUID.randomUUID()
+    userPersistence.writeAuthenticatedUser(
+      AuthenticatedUser()
+        .withUserId(userId)
+        .withName("user")
+        .withAuthUserId("auth_id")
+        .withEmail("email")
+        .withAuthProvider(AuthProvider.AIRBYTE),
+    )
+
+    val activeWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("active workspace")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    val tombstonedOrganizationWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withName("a tombstoned organization workspace")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_2)
+
+    workspaceService.writeStandardWorkspaceNoSecrets(activeWorkspace)
+    workspaceService.writeStandardWorkspaceNoSecrets(tombstonedOrganizationWorkspace)
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(activeWorkspace.workspaceId)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+    )
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(tombstonedOrganizationWorkspace.workspaceId)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+    )
+    database!!.query { ctx ->
+      ctx
+        .update(Tables.ORGANIZATION)
+        .set(Tables.ORGANIZATION.TOMBSTONE, true)
+        .where(Tables.ORGANIZATION.ID.eq(MockData.ORGANIZATION_ID_2))
+        .execute()
+    }
+
+    assertWorkspacesEqual(
+      setOf(activeWorkspace),
+      workspacePersistence.listActiveWorkspacesByUserId(userId, Optional.empty<String>()).toSet(),
+    )
+    assertWorkspacesEqual(
+      setOf(activeWorkspace),
+      workspacePersistence
+        .listWorkspacesByUserIdPaginated(
+          ResourcesByUserQueryPaginated(userId, false, 10, 0),
+          Optional.empty<String>(),
+        ).toSet(),
+    )
+    assertWorkspacesEqual(
+      setOf(activeWorkspace),
+      workspacePersistence
+        .listWorkspacesByUserIdPaginated(
+          ResourcesByUserQueryPaginated(userId, false, 1, 0),
+          Optional.empty<String>(),
+        ).toSet(),
+    )
+    assertWorkspacesEqual(
+      setOf(activeWorkspace),
+      workspacePersistence.listWorkspacesByInstanceAdminUser(false, Optional.empty<String>()).toSet(),
+    )
+    assertWorkspacesEqual(
+      setOf(activeWorkspace),
+      workspacePersistence
+        .listWorkspacesByInstanceAdminUserPaginated(
+          false,
+          10,
+          0,
+          Optional.empty<String>(),
+        ).toSet(),
+    )
+    assertWorkspacesEqual(
+      setOf(activeWorkspace),
+      workspacePersistence
+        .listWorkspacesByInstanceAdminUserPaginated(
+          false,
+          1,
+          0,
+          Optional.empty<String>(),
+        ).toSet(),
+    )
+    assertWorkspacesEqual(
+      setOf(tombstonedOrganizationWorkspace, activeWorkspace),
+      workspacePersistence.listWorkspacesByInstanceAdminUser(true, Optional.empty<String>()).toSet(),
+    )
+    assertWorkspacesEqual(
+      setOf(tombstonedOrganizationWorkspace, activeWorkspace),
+      workspacePersistence
+        .listWorkspacesByInstanceAdminUserPaginated(
+          true,
+          10,
+          0,
+          Optional.empty<String>(),
+        ).toSet(),
+    )
   }
 
   @Test

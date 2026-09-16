@@ -59,9 +59,11 @@ object PermissionPersistenceHelper {
       " )" +
       " SELECT workspace.* " +
       " FROM workspace" +
+      " JOIN organization ON organization.id = workspace.organization_id" +
       " WHERE workspace.id IN (SELECT workspace_id from userWorkspaces)" +
       " AND workspace.name ILIKE {2}" +
       " AND workspace.tombstone = false" +
+      " AND organization.tombstone = false" +
       " ORDER BY workspace.name ASC"
   )
 
