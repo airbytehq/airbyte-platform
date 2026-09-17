@@ -13,6 +13,7 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import styles from "./ActorContextLayerToggles.module.scss";
 import { useContextLayerSettingTitle } from "./ContextLayerSettingLabel";
+import { useConfirmContextLayerDisable } from "./useConfirmContextLayerDisable";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 type ActorType = "source" | "destination";
@@ -45,6 +46,7 @@ const ActorAgentAccessToggleContent: React.FC<ActorContextLayerToggleProps> = ({
     }
   );
   const { mutateAsync: setExternalActorEnabled } = useSetExternalActorEnabled();
+  const confirmDisable = useConfirmContextLayerDisable();
   const agentAccessTitle = useContextLayerSettingTitle("agentAccess");
   const [optimisticEnabled, setOptimisticEnabled] = useState<boolean>();
   const [status, setStatus] = useState<"loading" | "success" | "warning">();
@@ -72,6 +74,9 @@ const ActorAgentAccessToggleContent: React.FC<ActorContextLayerToggleProps> = ({
 
   const handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const enabled = event.target.checked;
+    if (!enabled && !(await confirmDisable(connector?.name ?? ""))) {
+      return;
+    }
     setStatus("loading");
     setErrorMessage(undefined);
     setOptimisticEnabled(enabled);

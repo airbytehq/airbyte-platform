@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
+import { MemoryRouter } from "react-router-dom";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import {
@@ -10,6 +11,7 @@ import {
   useListWorkspacesInOrganization,
   useSetExternalActorEnabled,
 } from "core/api";
+import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { useModalService } from "core/services/Modal";
 import { useNotificationService } from "core/services/Notification";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -136,20 +138,31 @@ const messages = {
   "cloud.contextLayer.connectors.error": "Unable to load connectors. Please try again.",
   "cloud.contextLayer.connectors.toggleError": "Could not update access for {name}. Please try again.",
   "cloud.contextLayer.docs": "Learn how to connect agents (SDK, API, MCP)",
+  "cloud.contextLayer.disableConfirm.title": "Disable Agents access?",
+  "cloud.contextLayer.disableConfirm.text":
+    "Agents will no longer be able to access {name}. You can re-enable it at any time.",
+  "cloud.contextLayer.disableConfirm.submit": "Disable",
+  "cloud.contextLayer.disableConfirm.dontAskAgain": "Don't ask again",
+  "form.cancel": "Cancel",
   "form.tryAgain": "Try again",
   "ui.loading": "Loading …",
 };
 
 const renderWithIntl = () =>
   render(
-    <IntlProvider locale="en" messages={messages}>
-      <ContextLayerPage />
-    </IntlProvider>
+    <MemoryRouter>
+      <IntlProvider locale="en" messages={messages}>
+        <ConfirmationModalService>
+          <ContextLayerPage />
+        </ConfirmationModalService>
+      </IntlProvider>
+    </MemoryRouter>
   );
 
 describe("ContextLayerPage", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.localStorage.clear();
     mockUseCurrentOrganizationId.mockReturnValue("test-org-123");
     mockUseShowAgentsOptIn.mockReturnValue(true);
     mockUseAgentsProvisioningStatusQuery.mockImplementation(
@@ -343,6 +356,7 @@ describe("ContextLayerPage", () => {
     expect(screen.getByRole("checkbox", { name: "Stripe account" })).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: "BigQuery warehouse" })).toBeDisabled();
     fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
     await waitFor(() =>
       expect(mutateAsync).toHaveBeenCalledWith({
         actorId: "source-1",
@@ -350,6 +364,50 @@ describe("ContextLayerPage", () => {
         enabled: false,
       })
     );
+  });
+
+  it("shows a confirmation modal on disable but not on enable", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+      isLoading: false,
+    } as never);
+    const mutateAsync = jest.fn().mockResolvedValue({ enabled: true });
+    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
+    mockUseExternalWorkspaceConnectors.mockReturnValue({
+      sources: [
+        { id: "source-1", name: "GitHub account", supported: true, enabled: true },
+        { id: "source-2", name: "Stripe account", supported: true, enabled: false },
+      ],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    } as never);
+
+    renderWithIntl();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
+    expect(await screen.findByText("Disable Agents access?")).toBeInTheDocument();
+    expect(mutateAsync).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Disable" }));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({ actorId: "source-1", actorKind: "source", enabled: false })
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Stripe account" }));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({ actorId: "source-2", actorKind: "source", enabled: true })
+    );
+    expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
   });
 
   it("loads all workspace pages before rendering connector access", async () => {
@@ -395,9 +453,13 @@ describe("ContextLayerPage", () => {
 
     await waitFor(() => expect(fetchNextPage).toHaveBeenCalledTimes(1));
     view.rerender(
-      <IntlProvider locale="en" messages={messages}>
-        <ContextLayerPage />
-      </IntlProvider>
+      <MemoryRouter>
+        <IntlProvider locale="en" messages={messages}>
+          <ConfirmationModalService>
+            <ContextLayerPage />
+          </ConfirmationModalService>
+        </IntlProvider>
+      </MemoryRouter>
     );
     expect(screen.getByText("Workspace 1")).toBeInTheDocument();
     expect(screen.getByText("Workspace 2")).toBeInTheDocument();
@@ -493,11 +555,16 @@ describe("ContextLayerPage", () => {
     const view = renderWithIntl();
     const checkbox = screen.getByRole("checkbox", { name: "GitHub account" });
     fireEvent.click(checkbox);
+    fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     view.rerender(
-      <IntlProvider locale="en" messages={messages}>
-        <ContextLayerPage />
-      </IntlProvider>
+      <MemoryRouter>
+        <IntlProvider locale="en" messages={messages}>
+          <ConfirmationModalService>
+            <ContextLayerPage />
+          </ConfirmationModalService>
+        </IntlProvider>
+      </MemoryRouter>
     );
 
     expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeChecked();
@@ -531,6 +598,7 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
     fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeChecked());
     expect(registerNotification).toHaveBeenCalledWith({

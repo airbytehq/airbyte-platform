@@ -27,6 +27,7 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import styles from "./ContextLayerPage.module.scss";
 import { ContextLayerTosModal } from "./ContextLayerTosModal";
+import { useConfirmContextLayerDisable } from "./useConfirmContextLayerDisable";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 interface Connector {
@@ -56,6 +57,7 @@ const WorkspaceConnectorCard: React.FC<{
     workspace.workspaceId
   );
   const { mutateAsync: setExternalActorEnabled } = useSetExternalActorEnabled();
+  const confirmDisable = useConfirmContextLayerDisable();
   const sourceCount = sources.filter(
     (connector) =>
       connector.supported && (enabledConnectors[`${workspace.workspaceId}:${connector.id}`] ?? connector.enabled)
@@ -84,6 +86,9 @@ const WorkspaceConnectorCard: React.FC<{
               canManageOrganizationPermissions
                 ? async (event) => {
                     const enabled = event.target.checked;
+                    if (!enabled && !(await confirmDisable(connector.name))) {
+                      return;
+                    }
                     setPendingConnectors((current) => ({ ...current, [key]: true }));
                     onToggle(key, enabled);
                     try {

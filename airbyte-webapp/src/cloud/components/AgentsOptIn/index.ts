@@ -9,6 +9,7 @@ export {
   ActorSemanticSearchToggle,
   useShowActorContextLayerToggles,
 } from "./ActorContextLayerToggles";
+export { useConfirmContextLayerDisable } from "./useConfirmContextLayerDisable";
 export { ContextLayerPage } from "./ContextLayerPage";
 export { InstallMcpPage } from "./InstallMcpPage";
 export { ContextLayerSettingLabel, useContextLayerSettingTitle } from "./ContextLayerSettingLabel";

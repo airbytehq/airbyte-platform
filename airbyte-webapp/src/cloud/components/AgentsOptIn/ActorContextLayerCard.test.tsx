@@ -1,8 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { IntlProvider } from "react-intl";
+import { MemoryRouter } from "react-router-dom";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useAgentsProvisioningStatus, useExternalWorkspaceConnectors, useSetExternalActorEnabled } from "core/api";
+import { ConfirmationModalService } from "core/services/ConfirmationModal";
+import { NotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
 import { useGeneratedIntent } from "core/utils/rbac";
 
@@ -63,9 +66,15 @@ const messages = {
 
 const renderCard = (actorType: "source" | "destination") =>
   render(
-    <IntlProvider locale="en" messages={messages}>
-      <ActorContextLayerCard actorId="actor-id" actorType={actorType} />
-    </IntlProvider>
+    <MemoryRouter>
+      <IntlProvider locale="en" messages={messages}>
+        <NotificationService>
+          <ConfirmationModalService>
+            <ActorContextLayerCard actorId="actor-id" actorType={actorType} />
+          </ConfirmationModalService>
+        </NotificationService>
+      </IntlProvider>
+    </MemoryRouter>
   );
 
 describe("ActorContextLayerCard", () => {
