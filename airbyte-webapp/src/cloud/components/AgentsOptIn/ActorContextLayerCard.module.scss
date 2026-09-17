@@ -4,13 +4,6 @@
   gap: variables.$spacing-lg;
 }
 
-.text {
-  display: flex;
-  flex-direction: column;
-  gap: variables.$spacing-sm;
-}
-
-.title,
-.description {
-  margin: 0;
+.tierTwo {
+  padding-left: variables.$spacing-xl;
 }

@@ -48,12 +48,12 @@ const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof 
 
 const messages = {
   "cloud.contextLayer.actorCard.title": "Context layer",
-  "cloud.contextLayer.actorCard.agentAccess.description":
+  "cloud.contextLayer.agentAccess.title": "Agent Access",
+  "cloud.contextLayer.agentAccess.description":
     "Allow AI agents with context layer access to query this {actorType, select, source {source} other {destination}} directly. This does not affect data replication.",
-  "cloud.contextLayer.actorCard.semanticSearch.description":
-    "Grants Airbyte permission to store and index a copy of this {actorType, select, source {source} other {destination}}'s data in Airbyte data centers so agents can search it. This is in addition to your data replication jobs.",
-  "cloud.contextLayer.actor.agentAccess": "Agent Access",
-  "cloud.contextLayer.actor.semanticSearch": "Semantic Search",
+  "cloud.contextLayer.semanticSearch.title": "Semantic Search",
+  "cloud.contextLayer.semanticSearch.description":
+    "Data will be indexed when this source is synced to an enabled Context Layer destination.",
   "cloud.contextLayer.actor.notEnrolled":
     "An organization admin needs to enable the Context layer for this organization and workspace before agent access can be turned on.",
   "cloud.contextLayer.actor.status.saving": "Saving…",
@@ -102,13 +102,37 @@ describe("ActorContextLayerCard", () => {
     expect(screen.queryByText("Context layer")).not.toBeInTheDocument();
   });
 
-  it("renders the card labels and both switches", () => {
+  it("renders the card labels and both switches for sources", () => {
     renderCard("source");
 
     expect(screen.getByText("Context layer")).toBeInTheDocument();
     expect(screen.getByText("Agent Access")).toBeInTheDocument();
     expect(screen.getByText("Semantic Search")).toBeInTheDocument();
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+    expect(
+      screen.getByText("Data will be indexed when this source is synced to an enabled Context Layer destination.")
+    ).toBeInTheDocument();
+  });
+
+  it("nests the semantic search row under agent access", () => {
+    renderCard("source");
+
+    const semanticSearchRow = screen.getByText("Semantic Search").closest("div")?.parentElement;
+
+    expect(semanticSearchRow).toHaveClass("tierTwo");
+  });
+
+  it("renders only the Agent Access switch for destinations", () => {
+    renderCard("destination");
+
+    expect(screen.getByText("Agent Access")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Allow AI agents with context layer access to query this destination directly. This does not affect data replication."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Semantic Search")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
   });
 
   it.each([
@@ -120,11 +144,6 @@ describe("ActorContextLayerCard", () => {
     expect(
       screen.getByText(
         `Allow AI agents with context layer access to query this ${actorTypeText} directly. This does not affect data replication.`
-      )
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        `Grants Airbyte permission to store and index a copy of this ${actorTypeText}'s data in Airbyte data centers so agents can search it. This is in addition to your data replication jobs.`
       )
     ).toBeInTheDocument();
   });

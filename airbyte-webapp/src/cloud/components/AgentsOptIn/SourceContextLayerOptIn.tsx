@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
@@ -10,6 +10,7 @@ import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitionIds } fr
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
+import { ContextLayerSettingLabel, useContextLayerSettingTitle } from "./ContextLayerSettingLabel";
 import styles from "./SourceContextLayerOptIn.module.scss";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
@@ -35,7 +36,8 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
   const isEnrolled = status?.is_enrolled === true;
   const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
   const canManage = useGeneratedIntent(Intent.CreateOrEditSource);
-  const { formatMessage } = useIntl();
+  const agentAccessTitle = useContextLayerSettingTitle("agentAccess");
+  const semanticSearchTitle = useContextLayerSettingTitle("semanticSearch");
 
   if (!isCloudApp || !showAgentsOptIn) {
     return null;
@@ -70,14 +72,7 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
   return (
     <div className={styles.card}>
       <div className={styles.row}>
-        <div className={styles.text}>
-          <Text className={styles.title} size="sm" bold>
-            <FormattedMessage id="cloud.contextLayer.sourceOptIn.title" />
-          </Text>
-          <Text className={styles.description} size="sm" color="grey">
-            <FormattedMessage id="cloud.contextLayer.sourceOptIn.description" />
-          </Text>
-        </div>
+        <ContextLayerSettingLabel setting="agentAccess" actorType="source" />
         {withPermissionTooltip(
           <Switch
             size="sm"
@@ -88,19 +83,12 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
                 ? (event) => onChange({ ...value, agentAccess: event.target.checked })
                 : undefined
             }
-            aria-label={formatMessage({ id: "cloud.contextLayer.sourceOptIn.title" })}
+            aria-label={agentAccessTitle}
           />
         )}
       </div>
       <div className={classNames(styles.row, styles.tierTwo)}>
-        <div className={styles.text}>
-          <Text className={styles.title} size="sm" bold>
-            <FormattedMessage id="cloud.contextLayer.sourceOptIn.semanticSearch.title" />
-          </Text>
-          <Text className={styles.description} size="sm" color="grey">
-            <FormattedMessage id="cloud.contextLayer.sourceOptIn.semanticSearch.description" />
-          </Text>
-        </div>
+        <ContextLayerSettingLabel setting="semanticSearch" actorType="source" />
         {withPermissionTooltip(
           <Switch
             size="sm"
@@ -111,7 +99,7 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
                 ? (event) => onChange({ ...value, semanticSearch: event.target.checked })
                 : undefined
             }
-            aria-label={formatMessage({ id: "cloud.contextLayer.sourceOptIn.semanticSearch.title" })}
+            aria-label={semanticSearchTitle}
           />
         )}
       </div>

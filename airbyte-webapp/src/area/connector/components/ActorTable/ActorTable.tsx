@@ -129,6 +129,7 @@ export const ActorTable: React.FC<ActorTableProps> = ({
 }) => {
   const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
   const showActorContextLayerToggles = useShowActorContextLayerToggles();
+  const isSourceList = isSourceReadList(actorReadList);
 
   const tableData = useMemo(() => createActorTableData(actorReadList), [actorReadList]);
 
@@ -219,6 +220,10 @@ export const ActorTable: React.FC<ActorTableProps> = ({
               ),
               enableSorting: false,
             }),
+          ]
+        : []),
+      ...(showActorContextLayerToggles && isSourceList
+        ? [
             columnHelper.display({
               header: () => <FormattedMessage id="tables.semanticSearch" />,
               id: "semanticSearch",
@@ -285,7 +290,7 @@ export const ActorTable: React.FC<ActorTableProps> = ({
         enableSorting: false,
       }),
     ],
-    [connectorBreakingChangeDeadlinesEnabled, showActorContextLayerToggles]
+    [connectorBreakingChangeDeadlinesEnabled, isSourceList, showActorContextLayerToggles]
   );
 
   const customScrollParent = useContext(ScrollParentContext);

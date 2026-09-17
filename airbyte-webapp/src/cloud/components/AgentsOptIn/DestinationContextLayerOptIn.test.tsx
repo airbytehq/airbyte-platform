@@ -39,9 +39,9 @@ const messages = {
   "cloud.contextLayer.actor.notSupported": "This connector is not yet supported by the context layer.",
   "cloud.contextLayer.actor.notEnrolled":
     "An organization admin needs to enable the Context layer for this organization and workspace before agent access can be turned on.",
-  "cloud.contextLayer.destinationOptIn.title": "Make this destination available to the context layer",
-  "cloud.contextLayer.destinationOptIn.description":
-    "When enabled, AI agents with context layer access can query this destination directly. This does not affect data replication.",
+  "cloud.contextLayer.agentAccess.title": "Agent Access",
+  "cloud.contextLayer.agentAccess.description":
+    "Allow AI agents with context layer access to query this {actorType, select, source {source} other {destination}} directly. This does not affect data replication.",
   "cloud.contextLayer.destinationOptIn.noPermission":
     "You need edit permission for this workspace's destinations to change this.",
 };

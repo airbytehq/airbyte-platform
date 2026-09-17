@@ -22,22 +22,8 @@
   padding-left: variables.$spacing-xl;
 }
 
-.text {
-  display: flex;
-  flex-direction: column;
-  gap: variables.$spacing-sm;
-}
-
 .control {
   flex-shrink: 0;
-}
-
-.title {
-  margin: 0;
-}
-
-.description {
-  margin: 0;
 }
 
 .unsupported {

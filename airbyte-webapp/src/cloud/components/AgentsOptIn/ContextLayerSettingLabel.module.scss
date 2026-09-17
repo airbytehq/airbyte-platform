@@ -1,0 +1,12 @@
+@use "scss/variables";
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-sm;
+}
+
+.title,
+.description {
+  margin: 0;
+}

@@ -40,12 +40,12 @@ const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof 
 
 const messages = {
   "cloud.contextLayer.actor.notSupported": "This connector is not yet supported by the context layer.",
-  "cloud.contextLayer.sourceOptIn.title": "Make this source available to the context layer",
-  "cloud.contextLayer.sourceOptIn.description":
-    "When enabled, AI agents with context layer access can query this source directly. This does not affect data replication.",
-  "cloud.contextLayer.sourceOptIn.semanticSearch.title": "Also index this source for semantic search",
-  "cloud.contextLayer.sourceOptIn.semanticSearch.description":
-    "Grants Airbyte permission to store and index a copy of this source's data in Airbyte data centers so agents can search it. This is in addition to your data replication jobs.",
+  "cloud.contextLayer.agentAccess.title": "Agent Access",
+  "cloud.contextLayer.agentAccess.description":
+    "Allow AI agents with context layer access to query this {actorType, select, source {source} other {destination}} directly. This does not affect data replication.",
+  "cloud.contextLayer.semanticSearch.title": "Semantic Search",
+  "cloud.contextLayer.semanticSearch.description":
+    "Data will be indexed when this source is synced to an enabled Context Layer destination.",
   "cloud.contextLayer.sourceOptIn.noPermission":
     "You need edit permission for this workspace's sources to change this.",
   "cloud.contextLayer.sourceOptIn.notEnrolled":

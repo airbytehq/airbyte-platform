@@ -10,5 +10,6 @@ export {
   useShowActorContextLayerToggles,
 } from "./ActorContextLayerToggles";
 export { ContextLayerPage } from "./ContextLayerPage";
+export { ContextLayerSettingLabel, useContextLayerSettingTitle } from "./ContextLayerSettingLabel";
 export { SourceContextLayerOptIn } from "./SourceContextLayerOptIn";
 export type { SourceContextLayerOptInValue } from "./SourceContextLayerOptIn";

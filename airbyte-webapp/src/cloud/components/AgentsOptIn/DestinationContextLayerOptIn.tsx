@@ -1,5 +1,5 @@
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
@@ -9,6 +9,7 @@ import { useAgentsProvisioningStatus, useAgentsSupportedDestinationDefinitionIds
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
+import { ContextLayerSettingLabel, useContextLayerSettingTitle } from "./ContextLayerSettingLabel";
 import styles from "./SourceContextLayerOptIn.module.scss";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
@@ -29,7 +30,7 @@ const DestinationContextLayerOptInContent: React.FC<DestinationContextLayerOptIn
   const isEnrolled = status?.is_enrolled === true;
   const supportedDestinationDefinitionIds = useAgentsSupportedDestinationDefinitionIds();
   const canManage = useGeneratedIntent(Intent.CreateOrEditDestination);
-  const { formatMessage } = useIntl();
+  const agentAccessTitle = useContextLayerSettingTitle("agentAccess");
 
   if (!isCloudApp || !showAgentsOptIn || !destinationDefinitionId) {
     return null;
@@ -60,21 +61,14 @@ const DestinationContextLayerOptInContent: React.FC<DestinationContextLayerOptIn
   return (
     <div className={styles.card}>
       <div className={styles.row}>
-        <div className={styles.text}>
-          <Text className={styles.title} size="sm" bold>
-            <FormattedMessage id="cloud.contextLayer.destinationOptIn.title" />
-          </Text>
-          <Text className={styles.description} size="sm" color="grey">
-            <FormattedMessage id="cloud.contextLayer.destinationOptIn.description" />
-          </Text>
-        </div>
+        <ContextLayerSettingLabel setting="agentAccess" actorType="destination" />
         {withPermissionTooltip(
           <Switch
             size="sm"
             checked={agentAccess}
             disabled={!isEnrolled || !supported || !canManage}
             onChange={isEnrolled && supported && canManage ? (event) => onChange(event.target.checked) : undefined}
-            aria-label={formatMessage({ id: "cloud.contextLayer.destinationOptIn.title" })}
+            aria-label={agentAccessTitle}
           />
         )}
       </div>

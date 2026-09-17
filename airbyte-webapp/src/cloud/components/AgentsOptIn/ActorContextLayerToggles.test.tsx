@@ -53,8 +53,8 @@ const messages = {
   "cloud.contextLayer.actor.notEnrolled":
     "An organization admin needs to enable the Context layer for this organization and workspace before agent access can be turned on.",
   "cloud.contextLayer.actor.loadFailed": "Context layer status could not be loaded for this workspace.",
-  "cloud.contextLayer.actor.agentAccess": "Agent Access",
-  "cloud.contextLayer.actor.semanticSearch": "Semantic Search",
+  "cloud.contextLayer.agentAccess.title": "Agent Access",
+  "cloud.contextLayer.semanticSearch.title": "Semantic Search",
   "cloud.contextLayer.actor.semanticSearch.comingSoon": "Semantic search is coming soon.",
   "cloud.contextLayer.actor.status.saving": "Saving…",
   "cloud.contextLayer.actor.status.saved": "Agent access updated.",
