@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.support
 
-import io.airbyte.api.model.generated.PermissionIdRequestBody
-import io.airbyte.api.model.generated.PermissionRead
 import io.airbyte.commons.json.Jsons.serialize
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.AIRBYTE_USER_ID_HEADER
@@ -26,6 +24,7 @@ import io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEA
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER
 import io.airbyte.config.Dataplane
+import io.airbyte.config.Permission
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
@@ -209,8 +208,8 @@ internal class AuthenticationHeaderResolverTest {
     val permissionId = UUID.randomUUID()
     val properties = mapOf(PERMISSION_ID_HEADER to permissionId.toString())
     Mockito
-      .`when`(permissionHandler.getPermissionRead(PermissionIdRequestBody().permissionId(permissionId)))
-      .thenReturn(PermissionRead().workspaceId(workspaceId))
+      .`when`(permissionHandler.getPermissionById(permissionId))
+      .thenReturn(Permission().withWorkspaceId(workspaceId))
 
     val result: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertEquals(listOf(workspaceId), result)
@@ -222,8 +221,42 @@ internal class AuthenticationHeaderResolverTest {
     val permissionId = UUID.randomUUID()
     val properties = mapOf(PERMISSION_ID_HEADER to permissionId.toString())
     Mockito
-      .`when`(permissionHandler.getPermissionRead(PermissionIdRequestBody().permissionId(permissionId)))
-      .thenReturn(PermissionRead().organizationId(organizationId))
+      .`when`(permissionHandler.getPermissionById(permissionId))
+      .thenReturn(Permission().withOrganizationId(organizationId))
+
+    val result: List<UUID>? = resolver.resolveOrganization(properties)
+    Assertions.assertEquals(listOf(organizationId), result)
+  }
+
+  @Test
+  fun testResolvingWorkspaceFromGroupOwnedPermissionHeader() {
+    val workspaceId = UUID.randomUUID()
+    val permissionId = UUID.randomUUID()
+    val properties = mapOf(PERMISSION_ID_HEADER to permissionId.toString())
+    Mockito
+      .`when`(permissionHandler.getPermissionById(permissionId))
+      .thenReturn(
+        Permission()
+          .withWorkspaceId(workspaceId)
+          .withGroupId(UUID.randomUUID()),
+      )
+
+    val result: List<UUID>? = resolver.resolveWorkspace(properties)
+    Assertions.assertEquals(listOf(workspaceId), result)
+  }
+
+  @Test
+  fun testResolvingOrganizationFromGroupOwnedPermissionHeader() {
+    val organizationId = UUID.randomUUID()
+    val permissionId = UUID.randomUUID()
+    val properties = mapOf(PERMISSION_ID_HEADER to permissionId.toString())
+    Mockito
+      .`when`(permissionHandler.getPermissionById(permissionId))
+      .thenReturn(
+        Permission()
+          .withOrganizationId(organizationId)
+          .withGroupId(UUID.randomUUID()),
+      )
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertEquals(listOf(organizationId), result)

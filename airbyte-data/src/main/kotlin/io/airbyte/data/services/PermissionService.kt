@@ -28,6 +28,14 @@ interface PermissionService {
   fun getPermissionsForUser(userId: UUID): List<Permission>
 
   /**
+   * Get the effective permissions for a given user: direct user permissions plus permissions derived
+   * through the user's group memberships. This is a read-only projection used for access checks and
+   * workspace/org discovery — never use it for permission CRUD (create/update/delete must operate on
+   * direct permissions via [getPermissionsForUser]).
+   */
+  fun getEffectivePermissionsForUser(userId: UUID): List<Permission>
+
+  /**
    * Get all permissions for a given authUserId.
    */
   fun getPermissionsByAuthUserId(authUserId: String): List<Permission>

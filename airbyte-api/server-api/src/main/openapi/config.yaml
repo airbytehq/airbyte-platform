@@ -4900,6 +4900,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PermissionRead"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -17550,6 +17552,13 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         organizationId:
           $ref: "#/components/schemas/OrganizationId"
+        groupId:
+          type: string
+          format: uuid
+          description: >-
+            Set when the permission is inherited through a group membership. Such rows are
+            read-only projections: their permissionId cannot be passed to the get, update
+            or delete user-permission endpoints.
     PermissionReadList:
       type: object
       required:

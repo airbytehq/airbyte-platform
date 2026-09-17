@@ -33,6 +33,76 @@ object PermissionPersistenceHelper {
   }
 
   /**
+   * CTE projecting the effective permission rows for a user ({0} = user id): the user's direct
+   * permission rows plus permissions derived through the user's group memberships. Group-derived
+   * rows only apply when the user holds a direct organization-level membership row in the group's
+   * organization, and their permission type must match their scope (organization_* types require
+   * organization_id set and workspace_id null; workspace_* types require a workspace_id pointing at
+   * a workspace inside the group's organization). Mirrors the group-derivation rules used by
+   * PermissionRepository.queryByAuthUser / findEffectiveByUserId.
+   */
+  private const val USER_PERMISSIONS_CTE: String = (
+    " userPermissions AS (" +
+      "   SELECT permission.* FROM permission" +
+      "   WHERE permission.user_id = {0} AND permission.group_id IS NULL AND permission.service_account_id IS NULL" +
+      "   UNION ALL" +
+      "   SELECT gp.*" +
+      "   FROM group_member gm" +
+      "   JOIN \"group\" g ON g.id = gm.group_id" +
+      "   JOIN organization o ON o.id = g.organization_id" +
+      "   JOIN LATERAL (" +
+      "     SELECT 1" +
+      "     FROM permission organization_membership" +
+      "     WHERE organization_membership.user_id = {0}" +
+      "     AND organization_membership.organization_id = o.id" +
+      "     AND organization_membership.workspace_id IS NULL" +
+      "     AND organization_membership.group_id IS NULL" +
+      "     AND organization_membership.service_account_id IS NULL" +
+      "     AND organization_membership.permission_type IN (" +
+      "       'organization_admin'," +
+      "       'organization_editor'," +
+      "       'organization_runner'," +
+      "       'organization_reader'," +
+      "       'organization_member'" +
+      "     )" +
+      "     LIMIT 1" +
+      "   ) valid_organization_membership ON true" +
+      "   JOIN permission gp ON gp.group_id = g.id" +
+      "   LEFT JOIN workspace gw" +
+      "     ON gw.id = gp.workspace_id" +
+      "     AND gw.organization_id = o.id" +
+      "   WHERE gm.user_id = {0}" +
+      "   AND gp.user_id IS NULL" +
+      "   AND gp.service_account_id IS NULL" +
+      "   AND (" +
+      "     (" +
+      "       gp.organization_id = o.id" +
+      "       AND gp.workspace_id IS NULL" +
+      "       AND gp.permission_type IN (" +
+      "         'organization_admin'," +
+      "         'organization_editor'," +
+      "         'organization_runner'," +
+      "         'organization_reader'," +
+      "         'organization_member'" +
+      "       )" +
+      "     )" +
+      "     OR (" +
+      "       gp.organization_id IS NULL" +
+      "       AND gp.workspace_id = gw.id" +
+      "       AND gp.permission_type IN (" +
+      "         'workspace_admin'," +
+      "         'workspace_editor'," +
+      "         'workspace_source_editor'," +
+      "         'workspace_destination_editor'," +
+      "         'workspace_runner'," +
+      "         'workspace_reader'" +
+      "       )" +
+      "     )" +
+      "   )" +
+      " )"
+  )
+
+  /**
    * This query lists all active workspaces that a particular user has the indicated permissions for.
    * The query is parameterized by a user id, a permission type array, and a keyword search string.
    *
@@ -48,14 +118,15 @@ object PermissionPersistenceHelper {
    */
   const val LIST_ACTIVE_WORKSPACES_BY_USER_ID_AND_PERMISSION_TYPES_QUERY: String = (
     "WITH " +
+      USER_PERMISSIONS_CTE + "," +
       " userOrg AS (" +
-      "   SELECT organization_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])" +
+      "   SELECT organization_id FROM userPermissions WHERE permission_type = ANY({1}::permission_type[])" +
       " )," +
       " userWorkspaces AS (" +
       "   SELECT workspace.id AS workspace_id FROM userOrg JOIN workspace" +
       "   ON workspace.organization_id = userOrg.organization_id" +
       "   UNION" +
-      "   SELECT workspace_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])" +
+      "   SELECT workspace_id FROM userPermissions WHERE permission_type = ANY({1}::permission_type[])" +
       " )" +
       " SELECT workspace.* " +
       " FROM workspace" +
@@ -143,18 +214,19 @@ object PermissionPersistenceHelper {
    */
   const val LIST_WORKSPACES_IN_ORGANIZATION_BY_USER_ID_AND_PERMISSION_TYPES_QUERY: String = (
     "WITH " +
+      USER_PERMISSIONS_CTE + "," +
       " userHasInstanceAdmin AS (" +
-      "   SELECT COUNT(*) > 0 AS has_instance_admin FROM permission WHERE user_id = {0} AND permission_type = 'instance_admin'" +
+      "   SELECT COUNT(*) > 0 AS has_instance_admin FROM userPermissions WHERE permission_type = 'instance_admin'" +
       " )," +
       " userOrg AS (" +
-      "   SELECT organization_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])" +
+      "   SELECT organization_id FROM userPermissions WHERE permission_type = ANY({1}::permission_type[])" +
       " )," +
       " userWorkspaces AS (" +
       "   SELECT workspace.id AS workspace_id FROM userOrg JOIN workspace" +
       "   ON workspace.organization_id = userOrg.organization_id" +
       "   WHERE workspace.organization_id = {2}" +
       "   UNION" +
-      "   SELECT workspace_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])" +
+      "   SELECT workspace_id FROM userPermissions WHERE permission_type = ANY({1}::permission_type[])" +
       "   AND workspace_id IN (SELECT id FROM workspace WHERE organization_id = {2})" +
       " )" +
       " SELECT workspace.* " +

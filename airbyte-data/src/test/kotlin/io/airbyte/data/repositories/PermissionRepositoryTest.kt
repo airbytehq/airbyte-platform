@@ -475,6 +475,216 @@ internal class PermissionRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(emptyList<Permission>(), result)
   }
 
+  @Test
+  fun `findEffectiveByUserId returns direct user permissions`() {
+    val userId = createUserWithAuthUser("effective-direct-user-auth-id")
+    val directPermission =
+      permissionRepository.save(
+        Permission(
+          id = UUID.randomUUID(),
+          organizationId = UUID.randomUUID(),
+          userId = userId,
+          permissionType = PermissionType.organization_admin,
+        ),
+      )
+    permissionRepository.save(
+      Permission(
+        id = UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        userId = UUID.randomUUID(),
+        permissionType = PermissionType.organization_admin,
+      ),
+    )
+
+    val result = permissionRepository.findEffectiveByUserId(userId)
+
+    assertEquals(setOf(directPermission.id), result.map { it.id }.toSet())
+  }
+
+  @Test
+  fun `findEffectiveByUserId returns group organization permissions`() {
+    val userId = createUserWithAuthUser("effective-group-org-user-auth-id")
+    val org = createOrganization()
+    val group = createGroup(org.id!!)
+    createGroupMember(group.id!!, userId)
+    val organizationMembership = createOrganizationMembershipPermission(userId, org.id!!)
+    val groupPermission =
+      permissionRepository.save(
+        Permission(
+          id = UUID.randomUUID(),
+          organizationId = org.id,
+          groupId = group.id,
+          permissionType = PermissionType.organization_admin,
+        ),
+      )
+
+    val result = permissionRepository.findEffectiveByUserId(userId)
+
+    assertEquals(setOf(organizationMembership.id, groupPermission.id), result.map { it.id }.toSet())
+  }
+
+  @Test
+  fun `findEffectiveByUserId returns group workspace permissions`() {
+    val userId = createUserWithAuthUser("effective-group-workspace-user-auth-id")
+    val org = createOrganization()
+    val group = createGroup(org.id!!)
+    val workspace = createWorkspace(org.id!!)
+    createGroupMember(group.id!!, userId)
+    val organizationMembership = createOrganizationMembershipPermission(userId, org.id!!)
+    val groupPermission =
+      permissionRepository.save(
+        Permission(
+          id = UUID.randomUUID(),
+          workspaceId = workspace.id,
+          groupId = group.id,
+          permissionType = PermissionType.workspace_admin,
+        ),
+      )
+
+    val result = permissionRepository.findEffectiveByUserId(userId)
+
+    assertEquals(setOf(organizationMembership.id, groupPermission.id), result.map { it.id }.toSet())
+  }
+
+  @Test
+  fun `findEffectiveByUserId returns both direct and stronger group permission for same org`() {
+    val userId = createUserWithAuthUser("effective-direct-and-group-user-auth-id")
+    val org = createOrganization()
+    val group = createGroup(org.id!!)
+    createGroupMember(group.id!!, userId)
+    val directPermission =
+      permissionRepository.save(
+        Permission(
+          id = UUID.randomUUID(),
+          organizationId = org.id,
+          userId = userId,
+          permissionType = PermissionType.organization_reader,
+        ),
+      )
+    val groupPermission =
+      permissionRepository.save(
+        Permission(
+          id = UUID.randomUUID(),
+          organizationId = org.id,
+          groupId = group.id,
+          permissionType = PermissionType.organization_admin,
+        ),
+      )
+
+    val result = permissionRepository.findEffectiveByUserId(userId)
+
+    assertEquals(setOf(directPermission.id, groupPermission.id), result.map { it.id }.toSet())
+  }
+
+  @Test
+  fun `findEffectiveByUserId returns permissions from multiple groups`() {
+    val userId = createUserWithAuthUser("effective-multi-group-user-auth-id")
+    val org = createOrganization()
+    val group1 = createGroup(org.id!!)
+    val group2 = createGroup(org.id!!)
+    createGroupMember(group1.id!!, userId)
+    createGroupMember(group2.id!!, userId)
+    val organizationMembership = createOrganizationMembershipPermission(userId, org.id!!)
+    val groupPermission1 =
+      permissionRepository.save(
+        Permission(
+          id = UUID.randomUUID(),
+          organizationId = org.id,
+          groupId = group1.id,
+          permissionType = PermissionType.organization_admin,
+        ),
+      )
+    val groupPermission2 =
+      permissionRepository.save(
+        Permission(
+          id = UUID.randomUUID(),
+          organizationId = org.id,
+          groupId = group2.id,
+          permissionType = PermissionType.organization_editor,
+        ),
+      )
+
+    val result = permissionRepository.findEffectiveByUserId(userId)
+
+    assertEquals(setOf(organizationMembership.id, groupPermission1.id, groupPermission2.id), result.map { it.id }.toSet())
+  }
+
+  @Test
+  fun `findEffectiveByUserId ignores group permissions outside the group organization`() {
+    val userId = createUserWithAuthUser("effective-cross-org-user-auth-id")
+    val groupOrg = createOrganization(name = "group org")
+    val otherOrg = createOrganization(name = "other org")
+    val group = createGroup(groupOrg.id!!)
+    createGroupMember(group.id!!, userId)
+    val organizationMembership = createOrganizationMembershipPermission(userId, groupOrg.id!!)
+    permissionRepository.save(
+      Permission(
+        id = UUID.randomUUID(),
+        organizationId = otherOrg.id,
+        groupId = group.id,
+        permissionType = PermissionType.organization_admin,
+      ),
+    )
+
+    val result = permissionRepository.findEffectiveByUserId(userId)
+
+    assertEquals(setOf(organizationMembership.id), result.map { it.id }.toSet())
+  }
+
+  @Test
+  fun `findEffectiveByUserId ignores group permissions when user has no direct org membership`() {
+    val userId = createUserWithAuthUser("effective-non-member-user-auth-id")
+    val org = createOrganization()
+    val otherOrg = createOrganization()
+    val group = createGroup(org.id!!)
+    createGroupMember(group.id!!, userId)
+    val otherOrganizationMembership = createOrganizationMembershipPermission(userId, otherOrg.id!!)
+    permissionRepository.save(
+      Permission(
+        id = UUID.randomUUID(),
+        organizationId = org.id,
+        groupId = group.id,
+        permissionType = PermissionType.organization_admin,
+      ),
+    )
+
+    val result = permissionRepository.findEffectiveByUserId(userId)
+
+    assertEquals(setOf(otherOrganizationMembership.id), result.map { it.id }.toSet())
+  }
+
+  @Test
+  fun `findEffectiveByUserId ignores service account permissions`() {
+    val userId = createUserWithAuthUser("effective-service-account-user-auth-id")
+    val organization = createOrganization()
+    val serviceAccountOrganization = createOrganization()
+    val group = createGroup(organization.id!!)
+    createGroupMember(group.id!!, userId)
+    val organizationMembership = createOrganizationMembershipPermission(userId, organization.id!!)
+    permissionRepository.save(
+      Permission(
+        id = UUID.randomUUID(),
+        organizationId = serviceAccountOrganization.id,
+        userId = userId,
+        serviceAccountId = UUID.randomUUID(),
+        permissionType = PermissionType.organization_admin,
+      ),
+    )
+    permissionRepository.save(
+      Permission(
+        id = UUID.randomUUID(),
+        organizationId = organization.id,
+        groupId = group.id,
+        serviceAccountId = UUID.randomUUID(),
+        permissionType = PermissionType.organization_admin,
+      ),
+    )
+
+    val result = permissionRepository.findEffectiveByUserId(userId)
+
+    assertEquals(setOf(organizationMembership.id), result.map { it.id }.toSet())
+  }
+
   private fun createUserWithAuthUser(authUserId: String): UUID {
     val userId = UUID.randomUUID()
     jooqDslContext

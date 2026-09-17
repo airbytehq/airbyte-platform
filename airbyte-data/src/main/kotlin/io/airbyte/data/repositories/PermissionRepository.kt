@@ -68,71 +68,26 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
       FROM auth_user
       WHERE auth_user_id = :authUserId
     )
-    select direct_permission.*
-    from permission direct_permission
-    join auth_user_owners owner on direct_permission.user_id = owner.user_id
-    WHERE (SELECT COUNT(*) FROM auth_user_owners) = 1
-    and direct_permission.group_id is null
-    and direct_permission.service_account_id is null
-    union all
-    select group_permission.*
-    from auth_user_owners owner
-    join group_member gm on gm.user_id = owner.user_id
-    join "group" g on g.id = gm.group_id
-    join organization o on o.id = g.organization_id
-    -- Keep this lookup correlated so PostgreSQL uses the user/organization index for high-membership users.
-    join lateral (
-      select 1
-      from permission organization_membership
-      where organization_membership.user_id = owner.user_id
-      and organization_membership.organization_id = o.id
-      and organization_membership.workspace_id is null
-      and organization_membership.group_id is null
-      and organization_membership.service_account_id is null
-      and organization_membership.permission_type in (
-        'organization_admin',
-        'organization_editor',
-        'organization_runner',
-        'organization_reader',
-        'organization_member'
-      )
-      limit 1
-    ) valid_organization_membership on true
-    join permission group_permission on group_permission.group_id = g.id
-    left join workspace w
-      on w.id = group_permission.workspace_id
-      and w.organization_id = o.id
-    where (SELECT COUNT(*) FROM auth_user_owners) = 1
-    and group_permission.user_id is null
-    and group_permission.service_account_id is null
-    and (
-      (
-        group_permission.organization_id = o.id
-        and group_permission.workspace_id is null
-        and group_permission.permission_type in (
-          'organization_admin',
-          'organization_editor',
-          'organization_runner',
-          'organization_reader',
-          'organization_member'
-        )
-      )
-      or (
-        group_permission.organization_id is null
-        and group_permission.workspace_id = w.id
-        and group_permission.permission_type in (
-          'workspace_admin',
-          'workspace_editor',
-          'workspace_source_editor',
-          'workspace_destination_editor',
-          'workspace_runner',
-          'workspace_reader'
-        )
-      )
-    )
-  """,
+  """ +
+      EFFECTIVE_PERMISSIONS_QUERY_BODY,
   )
   fun queryByAuthUser(authUserId: String): List<Permission>
+
+  /**
+   * Returns the user's direct permissions plus permissions derived through group memberships. The
+   * SQL body is shared with [queryByAuthUser] so the group-derivation rules cannot drift. The
+   * single-owner guard is retained (trivially true here since the owner CTE always has exactly one
+   * row) to keep the body identical.
+   */
+  @Query(
+    """
+    WITH auth_user_owners AS (
+      SELECT CAST(:userId AS uuid) AS user_id
+    )
+  """ +
+      EFFECTIVE_PERMISSIONS_QUERY_BODY,
+  )
+  fun findEffectiveByUserId(userId: UUID): List<Permission>
 
   @Query(
     """
@@ -220,3 +175,74 @@ data class OrgMemberCount(
   val organizationId: UUID,
   val count: Int? = 0,
 )
+
+/**
+ * Shared SQL body appended after the `auth_user_owners` CTE in both [PermissionRepository.queryByAuthUser]
+ * and [PermissionRepository.findEffectiveByUserId] so the group-derivation rules cannot drift between the
+ * two projections.
+ */
+private const val EFFECTIVE_PERMISSIONS_QUERY_BODY: String =
+  """
+    select direct_permission.*
+    from permission direct_permission
+    join auth_user_owners owner on direct_permission.user_id = owner.user_id
+    WHERE (SELECT COUNT(*) FROM auth_user_owners) = 1
+    and direct_permission.group_id is null
+    and direct_permission.service_account_id is null
+    union all
+    select group_permission.*
+    from auth_user_owners owner
+    join group_member gm on gm.user_id = owner.user_id
+    join "group" g on g.id = gm.group_id
+    join organization o on o.id = g.organization_id
+    -- Keep this lookup correlated so PostgreSQL uses the user/organization index for high-membership users.
+    join lateral (
+      select 1
+      from permission organization_membership
+      where organization_membership.user_id = owner.user_id
+      and organization_membership.organization_id = o.id
+      and organization_membership.workspace_id is null
+      and organization_membership.group_id is null
+      and organization_membership.service_account_id is null
+      and organization_membership.permission_type in (
+        'organization_admin',
+        'organization_editor',
+        'organization_runner',
+        'organization_reader',
+        'organization_member'
+      )
+      limit 1
+    ) valid_organization_membership on true
+    join permission group_permission on group_permission.group_id = g.id
+    left join workspace w
+      on w.id = group_permission.workspace_id
+      and w.organization_id = o.id
+    where (SELECT COUNT(*) FROM auth_user_owners) = 1
+    and group_permission.user_id is null
+    and group_permission.service_account_id is null
+    and (
+      (
+        group_permission.organization_id = o.id
+        and group_permission.workspace_id is null
+        and group_permission.permission_type in (
+          'organization_admin',
+          'organization_editor',
+          'organization_runner',
+          'organization_reader',
+          'organization_member'
+        )
+      )
+      or (
+        group_permission.organization_id is null
+        and group_permission.workspace_id = w.id
+        and group_permission.permission_type in (
+          'workspace_admin',
+          'workspace_editor',
+          'workspace_source_editor',
+          'workspace_destination_editor',
+          'workspace_runner',
+          'workspace_reader'
+        )
+      )
+    )
+  """

@@ -14,6 +14,7 @@ import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.helpers.PermissionHelper
 import io.airbyte.data.auth.TokenType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
@@ -65,7 +66,7 @@ class EmbeddedController(
           ListOrganizationsByUserRequestBody().userId(currentUserId),
         )
 
-    val permissions = permissionHandler.listPermissionsForUser(currentUserId)
+    val permissions = permissionHandler.listEffectivePermissionsForUser(currentUserId)
 
     // Early return optimization for Instance Admins: they have access to all organizations,
     // so skip expensive per-organization entitlement checks to avoid N+1 performance issues.
@@ -98,16 +99,20 @@ class EmbeddedController(
         entitled.isEntitled
       }
 
+    // Precompute the highest permission the user has per organization (a user can hold both a
+    // direct permission and group-derived permissions on the same org).
+    val highestPermissionByOrg =
+      permissions
+        .filter { it.organizationId != null }
+        .groupBy { OrganizationId(it.organizationId) }
+        .mapValues { (_, perms) -> perms.maxBy { PermissionHelper.getGrantedPermissions(it.permissionType).size } }
+
     // Map to organizations where the user has any permission
     val organizationItems =
       entitledOrganizations
         .mapNotNull { organization ->
           val organizationId = OrganizationId(organization.organizationId)
-          val permissionForOrg =
-            permissions.find {
-              it.organizationId != null &&
-                OrganizationId(it.organizationId) == organizationId
-            }
+          val permissionForOrg = highestPermissionByOrg[organizationId]
 
           // Only create an item if a permission exists for this organization
           if (permissionForOrg != null) {

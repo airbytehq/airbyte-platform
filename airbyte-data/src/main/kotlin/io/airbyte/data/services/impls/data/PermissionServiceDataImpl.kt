@@ -44,6 +44,9 @@ open class PermissionServiceDataImpl(
 
   override fun getPermissionsForUser(userId: UUID): List<Permission> = permissionRepository.findByUserId(userId).map { it.toConfigModel() }
 
+  override fun getEffectivePermissionsForUser(userId: UUID): List<Permission> =
+    permissionRepository.findEffectiveByUserId(userId).map { it.toConfigModel() }
+
   override fun getPermissionsByAuthUserId(authUserId: String): List<Permission> =
     permissionRepository.queryByAuthUser(authUserId).map {
       it.toConfigModel()

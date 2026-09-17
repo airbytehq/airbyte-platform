@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.support
 
 import com.fasterxml.jackson.core.type.TypeReference
-import io.airbyte.api.model.generated.PermissionIdRequestBody
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.AIRBYTE_USER_ID_HEADER
@@ -237,10 +236,7 @@ class AuthenticationHeaderResolver(
     if (!properties.containsKey(PERMISSION_ID_HEADER)) {
       return null
     }
-    val permission =
-      permissionHandler.getPermissionRead(
-        PermissionIdRequestBody().permissionId(UUID.fromString(properties[PERMISSION_ID_HEADER])),
-      )
+    val permission = permissionHandler.getPermissionById(UUID.fromString(properties[PERMISSION_ID_HEADER]))
     return permission.workspaceId
   }
 
@@ -248,10 +244,7 @@ class AuthenticationHeaderResolver(
     if (!properties.containsKey(PERMISSION_ID_HEADER)) {
       return null
     }
-    val permission =
-      permissionHandler.getPermissionRead(
-        PermissionIdRequestBody().permissionId(UUID.fromString(properties[PERMISSION_ID_HEADER])),
-      )
+    val permission = permissionHandler.getPermissionById(UUID.fromString(properties[PERMISSION_ID_HEADER]))
     return permission.organizationId
   }
 

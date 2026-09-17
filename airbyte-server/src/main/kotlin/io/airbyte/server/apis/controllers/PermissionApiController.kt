@@ -111,7 +111,7 @@ open class PermissionApiController(
   @Post("/list_by_user")
   override fun listPermissionsByUser(
     @Body userIdRequestBody: UserIdRequestBody,
-  ): PermissionReadList? = execute { permissionHandler.permissionReadListForUser(userIdRequestBody.userId) }
+  ): PermissionReadList? = execute { permissionHandler.effectivePermissionReadListForUser(userIdRequestBody.userId) }
 
   @Secured(AuthRoleConstants.ADMIN) // instance admins only
   @Post("/check")

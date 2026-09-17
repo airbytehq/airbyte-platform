@@ -80,7 +80,7 @@ class EmbeddedControllerTest {
         permissionHandler =
           mockk {
             every {
-              listPermissionsForUser(any())
+              listEffectivePermissionsForUser(any())
             } returns
               listOf(
                 Permission()
@@ -189,7 +189,7 @@ class EmbeddedControllerTest {
         permissionHandler =
           mockk {
             every {
-              listPermissionsForUser(any())
+              listEffectivePermissionsForUser(any())
             } returns
               listOf(
                 Permission()
@@ -277,7 +277,7 @@ class EmbeddedControllerTest {
           OrganizationRead().organizationId(orgId3).organizationName("Org 3"),
         ),
         mockk {
-          every { listPermissionsForUser(userIdString) } returns
+          every { listEffectivePermissionsForUser(userIdString) } returns
             listOf(
               Permission()
                 .withOrganizationId(orgId1)
@@ -342,7 +342,7 @@ class EmbeddedControllerTest {
           OrganizationRead().organizationId(orgId2).organizationName("Org 2"),
         ),
         mockk {
-          every { listPermissionsForUser(userId) } returns
+          every { listEffectivePermissionsForUser(userId) } returns
             listOf(
               Permission()
                 .withOrganizationId(orgId1)
@@ -391,7 +391,7 @@ class EmbeddedControllerTest {
           OrganizationRead().organizationId(nonEntitledOrgId).organizationName("Non-Entitled Org"),
         ),
         mockk {
-          every { listPermissionsForUser(userId) } returns
+          every { listEffectivePermissionsForUser(userId) } returns
             listOf(
               Permission()
                 .withOrganizationId(entitledOrgId)
@@ -439,7 +439,7 @@ class EmbeddedControllerTest {
           OrganizationRead().organizationId(orgId).organizationName("Org 1"),
         ),
         mockk {
-          every { listPermissionsForUser(userId) } returns
+          every { listEffectivePermissionsForUser(userId) } returns
             listOf(
               // Workspace permission with null organizationId appears first
               Permission()
@@ -482,7 +482,7 @@ class EmbeddedControllerTest {
           OrganizationRead().organizationId(orgId).organizationName("Org 1"),
         ),
         mockk {
-          every { listPermissionsForUser(userId) } returns
+          every { listEffectivePermissionsForUser(userId) } returns
             listOf(
               Permission()
                 .withOrganizationId(otherOrgId) // Permission for a different org
@@ -508,6 +508,48 @@ class EmbeddedControllerTest {
   }
 
   @Test
+  fun listEmbeddedOrganizations_picksHighestRoleWhenUserHasMultiplePermissionsForOrg() {
+    val userId = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
+
+    val controller =
+      buildController(
+        userId,
+        listOf(
+          OrganizationRead().organizationId(orgId).organizationName("Org 1"),
+        ),
+        mockk {
+          every { listEffectivePermissionsForUser(userId) } returns
+            listOf(
+              // direct permission
+              Permission()
+                .withOrganizationId(orgId)
+                .withPermissionType(PermissionType.ORGANIZATION_READER),
+              // stronger group-derived permission for the same org
+              Permission()
+                .withOrganizationId(orgId)
+                .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
+                .withGroupId(UUID.randomUUID()),
+            )
+        },
+        mockk {
+          every { checkEntitlement(OrganizationId(orgId), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              true,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+        },
+      )
+    val response = controller.listEmbeddedOrganizationsByUser()
+    val orgs = response.entity as EmbeddedOrganizationsList
+
+    assertEquals(1, orgs.organizations.size)
+    assertEquals(io.airbyte.publicApi.server.generated.models.PermissionType.ORGANIZATION_ADMIN, orgs.organizations[0].permission)
+  }
+
+  @Test
   fun listEmbeddedOrganizations_instanceAdminReturnsAllOrgsWithoutEntitlementChecks() {
     val userId = UUID.randomUUID()
     val orgId1 = UUID.randomUUID()
@@ -523,7 +565,7 @@ class EmbeddedControllerTest {
           OrganizationRead().organizationId(orgId3).organizationName("Org 3"),
         ),
         mockk {
-          every { listPermissionsForUser(userId) } returns
+          every { listEffectivePermissionsForUser(userId) } returns
             listOf(
               Permission()
                 .withPermissionType(PermissionType.INSTANCE_ADMIN),

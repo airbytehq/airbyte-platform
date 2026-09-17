@@ -27,6 +27,7 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -99,10 +100,35 @@ internal class PermissionApiControllerTest {
 
   @Test
   fun testListPermissionByUser() {
-    every { permissionHandler.permissionReadListForUser(any()) } returns PermissionReadList()
+    val userId = UUID.randomUUID()
+    val groupId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val permissionId = UUID.randomUUID()
+    every { permissionHandler.effectivePermissionReadListForUser(userId) } returns
+      PermissionReadList().permissions(
+        listOf(
+          PermissionRead()
+            .permissionId(permissionId)
+            .userId(userId)
+            .groupId(groupId)
+            .workspaceId(workspaceId)
+            .permissionType(PermissionType.WORKSPACE_RUNNER),
+        ),
+      )
 
-    val path = "/api/v1/permissions/list_by_user"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, UserIdRequestBody().userId(UUID.randomUUID()))))
+    val response =
+      client.toBlocking().retrieve(
+        HttpRequest.POST("/api/v1/permissions/list_by_user", UserIdRequestBody().userId(userId)),
+        PermissionReadList::class.java,
+      )
+
+    assertEquals(1, response.permissions.size)
+    val permission = response.permissions.first()
+    assertEquals(permissionId, permission.permissionId)
+    assertEquals(userId, permission.userId)
+    assertEquals(groupId, permission.groupId)
+    assertEquals(workspaceId, permission.workspaceId)
+    assertEquals(PermissionType.WORKSPACE_RUNNER, permission.permissionType)
   }
 
   @Test

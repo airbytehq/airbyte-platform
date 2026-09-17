@@ -85,11 +85,12 @@ class DataplaneServiceImpl(
   }
 
   private fun getOrgIdsWithDataplaneAccessForUser(userId: UUID): List<UUID> {
-    val userPermissions = permissionHandler.listPermissionsForUser(userId)
+    val userPermissions = permissionHandler.listEffectivePermissionsForUser(userId)
     // Require that a user is an org admin to get dataplane access for that org
     return userPermissions
       .filter { it.permissionType == Permission.PermissionType.ORGANIZATION_ADMIN }
       .map { it.organizationId }
+      .distinct()
   }
 
   override fun controllerCreateDataplane(dataplaneCreateRequest: DataplaneCreateRequest): Response {
