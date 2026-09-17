@@ -13,11 +13,11 @@ export const AdpOrganizationAccessGuard: React.FC<React.PropsWithChildren> = ({ 
   const isInstanceAdmin = useIsInstanceAdmin();
   const allowAdpDataReplicationAccess = useExperiment("allowAgentsDataReplicationAccess");
   const { pathname } = useLocation();
-  const isContextLayerRoute =
-    matchPath(
-      `/${RoutePaths.Organization}/:organizationId/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`,
-      pathname
-    ) !== null ||
+  const isAgentsRoute =
+    [CloudSettingsRoutePaths.ContextLayer, CloudSettingsRoutePaths.InstallMcp].some(
+      (path) =>
+        matchPath(`/${RoutePaths.Organization}/:organizationId/${RoutePaths.Settings}/${path}`, pathname) !== null
+    ) ||
     matchPath(
       `/${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`,
       pathname
@@ -27,7 +27,7 @@ export const AdpOrganizationAccessGuard: React.FC<React.PropsWithChildren> = ({ 
   // A single owner also prevents child route cleanup from removing it during navigation.
   useExperimentContext("organization", organizationId);
 
-  if (isAdpOrganization && !isInstanceAdmin && !allowAdpDataReplicationAccess && !isContextLayerRoute) {
+  if (isAdpOrganization && !isInstanceAdmin && !allowAdpDataReplicationAccess && !isAgentsRoute) {
     return <ForbiddenErrorBoundaryView />;
   }
 

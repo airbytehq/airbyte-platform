@@ -6,6 +6,7 @@ export const CloudSettingsRoutePaths = {
   Billing: "billing",
   OrganizationUsage: "organization-usage",
   ContextLayer: "context-layer",
+  InstallMcp: "install-mcp",
   Notifications: SettingsRoutePaths.Notifications,
   Account: SettingsRoutePaths.Account,
   Advanced: SettingsRoutePaths.Advanced,

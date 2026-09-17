@@ -10,7 +10,14 @@ import { RoutePaths } from "pages/routePaths";
 
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
-const AgentsSidebarLinkContent: React.FC = () => {
+interface AgentsSidebarLinkContentProps {
+  labelId: string;
+  icon: "aiStars" | "download";
+  routePath: string;
+  testId: string;
+}
+
+const AgentsSidebarLinkContent: React.FC<AgentsSidebarLinkContentProps> = ({ labelId, icon, routePath, testId }) => {
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
   const organizationId = useCurrentOrganizationId();
@@ -20,22 +27,33 @@ const AgentsSidebarLinkContent: React.FC = () => {
     return null;
   }
 
-  const href = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`;
+  const href = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${routePath}`;
 
-  return (
-    <NavItem
-      label={<FormattedMessage id="cloud.contextLayer.sidebar" />}
-      icon="aiStars"
-      to={href}
-      testId="agentsSidebarLink"
-    />
-  );
+  return <NavItem label={<FormattedMessage id={labelId} />} icon={icon} to={href} testId={testId} />;
 };
 
 export const AgentsSidebarLink: React.FC = () => {
   return (
     <React.Suspense>
-      <AgentsSidebarLinkContent />
+      <AgentsSidebarLinkContent
+        labelId="cloud.contextLayer.sidebar"
+        icon="aiStars"
+        routePath={CloudSettingsRoutePaths.ContextLayer}
+        testId="agentsSidebarLink"
+      />
+    </React.Suspense>
+  );
+};
+
+export const InstallMcpSidebarLink: React.FC = () => {
+  return (
+    <React.Suspense>
+      <AgentsSidebarLinkContent
+        labelId="cloud.installMcp.sidebar"
+        icon="download"
+        routePath={CloudSettingsRoutePaths.InstallMcp}
+        testId="installMcpSidebarLink"
+      />
     </React.Suspense>
   );
 };

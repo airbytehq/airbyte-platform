@@ -104,6 +104,11 @@ jest.mock("pages/SettingsPage/pages/OrganizationContextLayerPage", () => ({
   default: () => <div data-testid="organization-context-layer-page" />,
 }));
 
+jest.mock("pages/SettingsPage/pages/OrganizationInstallMcpPage", () => ({
+  __esModule: true,
+  default: () => <div data-testid="organization-install-mcp-page" />,
+}));
+
 const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunction<typeof useCurrentOrganizationId>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
 const mockUseExperiment = useExperiment as jest.MockedFunction<typeof useExperiment>;
@@ -177,5 +182,42 @@ describe("OrganizationRoutes", () => {
 
     await waitFor(() => expect(screen.getByTestId("organization-context-layer-page")).toBeInTheDocument());
     expect(screen.getByTestId("location")).toHaveTextContent("/organizations/test-org/settings/context-layer");
+  });
+
+  it("registers the install MCP route for non-admin cloud viewers even when the agents opt-in flag is off", async () => {
+    mockUseShowAgentsOptIn.mockReturnValue(false);
+
+    render(
+      <MemoryRouter initialEntries={["/organizations/test-org/settings/install-mcp"]}>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Routes>
+            <Route path="/organizations/:organizationId/*" element={<OrganizationRoutes />} />
+          </Routes>
+          <LocationDisplay />
+        </Suspense>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByTestId("organization-install-mcp-page")).toBeInTheDocument());
+    expect(screen.getByTestId("location")).toHaveTextContent("/organizations/test-org/settings/install-mcp");
+  });
+
+  it("registers the install MCP route for org settings viewers even when the agents opt-in flag is off", async () => {
+    mockUseShowAgentsOptIn.mockReturnValue(false);
+    mockUseGeneratedIntent.mockImplementation((intent) => intent === "ViewOrganizationSettings");
+
+    render(
+      <MemoryRouter initialEntries={["/organizations/test-org/settings/install-mcp"]}>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Routes>
+            <Route path="/organizations/:organizationId/*" element={<OrganizationRoutes />} />
+          </Routes>
+          <LocationDisplay />
+        </Suspense>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByTestId("organization-install-mcp-page")).toBeInTheDocument());
+    expect(screen.getByTestId("location")).toHaveTextContent("/organizations/test-org/settings/install-mcp");
   });
 });

@@ -11,7 +11,7 @@ import { Text } from "components/ui/Text";
 import styles from "./NavItem.module.scss";
 import { NotificationIndicator } from "../NotificationIndicator";
 
-interface NavItemBaseProps extends NavItemInnerProps {
+interface NavItemBaseProps extends Omit<NavItemInnerProps, "isActive"> {
   className?: string;
   activeClassName?: string;
   testId?: string;
@@ -23,12 +23,14 @@ interface LinkNavItemProps extends NavItemBaseProps {
   as?: "a";
   to: string;
   onClick?: undefined;
+  isActive?: false;
 }
 
 interface ButtonNavItemProps extends NavItemBaseProps {
   as: "button";
   onClick?: () => void;
   to?: undefined;
+  isActive?: boolean;
 }
 
 type NavItemProps = LinkNavItemProps | ButtonNavItemProps;
@@ -131,13 +133,18 @@ export const NavItem = React.forwardRef<HTMLButtonElement | null, NavItemProps>(
     }
 
     return (
-      <NavLink className={({ isActive }) => menuItemStyle(isActive)} to={to} data-testid={testId}>
-        {({ isActive }) => (
+      <NavLink
+        className={({ isActive: linkActive }) => menuItemStyle(isActive ?? linkActive)}
+        to={to}
+        data-testid={testId}
+        aria-current={isActive === false ? false : undefined}
+      >
+        {({ isActive: linkActive }) => (
           <NavItemInner
             label={label}
             icon={icon}
             withNotification={withNotification}
-            isActive={isActive}
+            isActive={isActive ?? linkActive}
             withBadge={withBadge}
           />
         )}

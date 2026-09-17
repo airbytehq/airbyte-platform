@@ -1,0 +1,66 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.page {
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-sm;
+}
+
+.card {
+  border: variables.$border-thin solid colors.$border-color;
+}
+
+.urlField {
+  display: flex;
+  align-items: stretch;
+}
+
+.urlField > div:first-child {
+  flex: 1;
+}
+
+.urlField > button {
+  align-self: stretch;
+}
+
+.divider {
+  width: 100%;
+}
+
+.dividerLine {
+  flex: 1;
+  height: variables.$border-thin;
+  background: colors.$border-color;
+}
+
+.codeBlock {
+  position: relative;
+  overflow: hidden;
+  padding: variables.$spacing-xl;
+  border-radius: variables.$border-radius-xs;
+  background: colors.$dark-blue;
+  color: colors.$foreground;
+}
+
+.codeBlock pre {
+  padding-right: variables.$spacing-2xl;
+  overflow-x: auto;
+  color: colors.$foreground;
+}
+
+.codeBlock .codeCopyButton {
+  position: absolute;
+  top: variables.$spacing-sm;
+  right: variables.$spacing-sm;
+  color: colors.$foreground;
+
+  &:hover,
+  &:active {
+    color: colors.$grey-300;
+  }
+}

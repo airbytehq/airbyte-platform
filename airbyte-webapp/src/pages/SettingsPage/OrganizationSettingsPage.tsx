@@ -48,11 +48,12 @@ export const OrganizationSettingsPage: React.FC = () => {
     isCloudApp && canManageOrganizationBilling && (!isSelfServePlusPlanEnabled || isSubscribed);
   const showContextLayerLink =
     isCloudApp && showAgentsOptIn && agentsStatus && (agentsStatus.is_enrolled || agentsStatus.external_cloud_eligible);
+  const showInstallMcpLink = showContextLayerLink;
 
   return (
     <SettingsLayout>
       <SettingsNavigation>
-        {(canViewOrganizationSettings || showContextLayerLink) && (
+        {(canViewOrganizationSettings || showContextLayerLink || showInstallMcpLink) && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organization" })}>
             {canViewOrganizationSettings && (
               <>
@@ -140,6 +141,13 @@ export const OrganizationSettingsPage: React.FC = () => {
                 iconType="aiStars"
                 name={formatMessage({ id: "cloud.contextLayer.sidebar" })}
                 to={CloudSettingsRoutePaths.ContextLayer}
+              />
+            )}
+            {showInstallMcpLink && (
+              <SettingsLink
+                iconType="download"
+                name={formatMessage({ id: "cloud.installMcp.sidebar" })}
+                to={CloudSettingsRoutePaths.InstallMcp}
               />
             )}
           </SettingsNavigationBlock>

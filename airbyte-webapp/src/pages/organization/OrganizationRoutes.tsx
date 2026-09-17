@@ -25,6 +25,7 @@ const OrganizationBillingPage = React.lazy(() => import("cloud/views/billing/Org
 const OrganizationPlanPage = React.lazy(() => import("cloud/views/billing/OrganizationPlanPage"));
 const OrganizationUsagePage = React.lazy(() => import("cloud/views/billing/OrganizationUsagePage"));
 const OrganizationContextLayerPage = React.lazy(() => import("pages/SettingsPage/pages/OrganizationContextLayerPage"));
+const OrganizationInstallMcpPage = React.lazy(() => import("pages/SettingsPage/pages/OrganizationInstallMcpPage"));
 
 export const OrganizationRoutes: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
@@ -80,6 +81,7 @@ export const OrganizationRoutes: React.FC = () => {
           {isCloudApp && (
             <Route path={CloudSettingsRoutePaths.ContextLayer} element={<OrganizationContextLayerPage />} />
           )}
+          {isCloudApp && <Route path={CloudSettingsRoutePaths.InstallMcp} element={<OrganizationInstallMcpPage />} />}
           <Route path={SettingsRoutePaths.Source} element={<SourcesPage />} />
           <Route path={SettingsRoutePaths.Destination} element={<DestinationsPage />} />
           <Route path="*" element={<Navigate to={SettingsRoutePaths.Organization} replace />} />
@@ -88,6 +90,7 @@ export const OrganizationRoutes: React.FC = () => {
       {!canViewOrgSettings && isCloudApp && (
         <Route path={`${RoutePaths.Settings}/*`} element={<OrganizationSettingsPage />}>
           <Route path={CloudSettingsRoutePaths.ContextLayer} element={<OrganizationContextLayerPage />} />
+          <Route path={CloudSettingsRoutePaths.InstallMcp} element={<OrganizationInstallMcpPage />} />
           <Route path="*" element={<Navigate to={`../../${RoutePaths.Workspaces}`} replace />} />
         </Route>
       )}

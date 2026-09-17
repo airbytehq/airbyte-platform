@@ -15,8 +15,9 @@ import { AirbyteHomeLink } from "area/layout/SideBar/AirbyteHomeLink";
 import { OrganizationPicker } from "area/organization/OrganizationPicker/OrganizationPicker";
 import { useCurrentOrganizationId, useTrackLastOrganization } from "area/organization/utils";
 import { WorkspacesPickerNext } from "area/workspace/components/WorkspacesPickerNext";
-import { AgentsSidebarLink } from "cloud/components/AgentsOptIn";
+import { AgentsSidebarLink, InstallMcpSidebarLink } from "cloud/components/AgentsOptIn";
 import { CloudHelpDropdown } from "cloud/components/CloudHelpDropdown";
+import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import {
   useCurrentWorkspaceOrUndefined,
   useDefaultWorkspaceInOrganization,
@@ -93,6 +94,10 @@ const OrganizationNavItems = () => {
   const organizationId = useCurrentOrganizationId();
   const canViewOrganizationSettings = useGeneratedIntent(Intent.ViewOrganizationSettings);
   const basePath = `${RoutePaths.Organization}/${organizationId}/`;
+  const { pathname } = useLocation();
+  const isAgentsRoute = [CloudSettingsRoutePaths.ContextLayer, CloudSettingsRoutePaths.InstallMcp].some(
+    (path) => matchPath(`/${basePath}${RoutePaths.Settings}/${path}/*`, pathname) !== null
+  );
   return (
     <MenuContent data-testid="navMainItems">
       <NavItem
@@ -101,15 +106,17 @@ const OrganizationNavItems = () => {
         to={basePath + RoutePaths.Workspaces}
         testId="workspacesLink"
       />
+      <AgentsSidebarLink />
+      <InstallMcpSidebarLink />
       {canViewOrganizationSettings && (
         <NavItem
           label={<FormattedMessage id="settings.organizationSettings" />}
           icon="gear"
           to={basePath + RoutePaths.Settings}
           testId="orgSettingsLink"
+          isActive={isAgentsRoute ? false : undefined}
         />
       )}
-      <AgentsSidebarLink />
     </MenuContent>
   );
 };

@@ -114,6 +114,32 @@ describe("AdpOrganizationAccessGuard", () => {
     expect(screen.queryByText(/Sorry, you don't have permission/)).not.toBeInTheDocument();
   });
 
+  it("renders Install MCP for a locked-down ADP organization member", () => {
+    mockUseIsAdpOrganization.mockReturnValue(true);
+    mockUseIsInstanceAdmin.mockReturnValue(false);
+
+    renderGuard(
+      <div data-testid="protected-content">protected</div>,
+      `/${RoutePaths.Organization}/organization-id/${RoutePaths.Settings}/${CloudSettingsRoutePaths.InstallMcp}`
+    );
+
+    expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+    expect(screen.queryByText(/Sorry, you don't have permission/)).not.toBeInTheDocument();
+  });
+
+  it("renders forbidden state for a locked-down ADP workspace member on Install MCP", () => {
+    mockUseIsAdpOrganization.mockReturnValue(true);
+    mockUseIsInstanceAdmin.mockReturnValue(false);
+
+    renderGuard(
+      <div data-testid="protected-content">protected</div>,
+      `/${RoutePaths.Workspaces}/workspace-id/${RoutePaths.Settings}/${CloudSettingsRoutePaths.InstallMcp}`
+    );
+
+    expect(screen.queryByTestId("protected-content")).not.toBeInTheDocument();
+    expect(screen.getByText(/Sorry, you don't have permission/)).toBeInTheDocument();
+  });
+
   it("renders forbidden state for a locked-down ADP organization member outside Context Layer", () => {
     mockUseIsAdpOrganization.mockReturnValue(true);
     mockUseIsInstanceAdmin.mockReturnValue(false);
