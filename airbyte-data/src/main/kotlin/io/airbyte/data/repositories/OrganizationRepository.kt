@@ -15,6 +15,8 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface OrganizationRepository : PageableRepository<Organization, UUID> {
+  fun findByIdAndTombstoneFalse(id: UUID): Optional<Organization>
+
   /**
    * Locks the organization row for the duration of the surrounding transaction.
    *

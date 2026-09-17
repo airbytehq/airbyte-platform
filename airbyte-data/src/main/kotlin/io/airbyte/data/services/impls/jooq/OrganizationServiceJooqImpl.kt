@@ -55,6 +55,22 @@ class OrganizationServiceJooqImpl(
     return result.stream().findFirst().map { record: Record -> DbConverter.buildOrganization(record) }
   }
 
+  @Throws(IOException::class)
+  override fun getActiveOrganization(organizationId: UUID): Optional<Organization> {
+    val result: Result<Record> =
+      database
+        .query<org.jooq.SelectConditionStep<Record>>({ ctx: DSLContext ->
+          ctx
+            .select(Tables.ORGANIZATION.asterisk())
+            .from(Tables.ORGANIZATION)
+            .where(Tables.ORGANIZATION.ID.eq(organizationId))
+            .and(Tables.ORGANIZATION.TOMBSTONE.isFalse)
+        })
+        .fetch()
+
+    return result.stream().findFirst().map { record: Record -> DbConverter.buildOrganization(record) }
+  }
+
   override fun getOrganizationForWorkspaceId(workspaceId: UUID): Optional<Organization> {
     val result =
       database

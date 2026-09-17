@@ -31,6 +31,12 @@ class OrganizationServiceDataImpl(
       organization.toConfigModel().withSsoRealm(ssoConfig?.keycloakRealm)
     }
 
+  override fun getActiveOrganization(organizationId: UUID): Optional<Organization> =
+    organizationRepository.findByIdAndTombstoneFalse(organizationId).map { organization ->
+      val ssoConfig = ssoConfigRepository.findByOrganizationId(organizationId)
+      organization.toConfigModel().withSsoRealm(ssoConfig?.keycloakRealm)
+    }
+
   override fun getOrganizationForWorkspaceId(workspaceId: UUID): Optional<Organization> =
     organizationRepository.findByWorkspaceId(workspaceId).map { organization ->
       val ssoConfig = ssoConfigRepository.findByOrganizationId(organization.id!!)

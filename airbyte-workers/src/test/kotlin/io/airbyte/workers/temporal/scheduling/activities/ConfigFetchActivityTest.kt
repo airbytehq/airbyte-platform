@@ -7,6 +7,7 @@ package io.airbyte.workers.temporal.scheduling.activities
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.generated.JobsApi
+import io.airbyte.api.client.generated.OrganizationApi
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.AirbyteCatalog
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration
@@ -21,6 +22,8 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleType
 import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.api.client.model.generated.JobOptionalRead
 import io.airbyte.api.client.model.generated.JobRead
+import io.airbyte.api.client.model.generated.OrganizationIdRequestBody
+import io.airbyte.api.client.model.generated.OrganizationRead
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.commons.converters.toInternal
 import io.airbyte.commons.temporal.exception.RetryableException
@@ -39,13 +42,16 @@ import io.airbyte.workers.temporal.activities.GetConnectionContextInput
 import io.airbyte.workers.temporal.activities.GetConnectionContextOutput
 import io.airbyte.workers.temporal.activities.GetLoadShedBackoffInput
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverInput
+import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
 import java.time.Duration
 import java.time.Instant
@@ -57,6 +63,7 @@ import java.util.function.Supplier
 internal class ConfigFetchActivityTest {
   private lateinit var mAirbyteApiClient: AirbyteApiClient
   private lateinit var mJobsApi: JobsApi
+  private lateinit var mOrganizationApi: OrganizationApi
   private lateinit var mWorkspaceApi: WorkspaceApi
   private lateinit var mJobRead: JobRead
   private lateinit var mConnectionApi: ConnectionApi
@@ -70,12 +77,97 @@ internal class ConfigFetchActivityTest {
   fun setup() {
     mAirbyteApiClient = mockk()
     mJobsApi = mockk()
+    mOrganizationApi = mockk()
     mWorkspaceApi = mockk()
     mJobRead = mockk()
     mConnectionApi = mockk()
     mScheduleJitterHelper = mockk()
     mFfContextMapper = mockk()
     mFeatureFlagClient = mockk<TestClient>(relaxed = true)
+  }
+
+  @Nested
+  internal inner class WorkspaceTombstoneTest {
+    private val organizationId = UUID.randomUUID()
+
+    @BeforeEach
+    fun setup() {
+      every { mAirbyteApiClient.workspaceApi } returns mWorkspaceApi
+      every { mAirbyteApiClient.organizationApi } returns mOrganizationApi
+      configFetchActivity =
+        ConfigFetchActivityImpl(
+          mAirbyteApiClient,
+          SYNC_JOB_MAX_ATTEMPTS,
+          currentSecondsSupplier,
+          mFeatureFlagClient,
+          mScheduleJitterHelper,
+          mFfContextMapper,
+        )
+    }
+
+    @Test
+    fun `active workspace and organization are not tombstoned`() {
+      every { mWorkspaceApi.getWorkspaceByConnectionIdWithTombstone(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+        workspaceRead(tombstone = false)
+      every { mOrganizationApi.getOrganization(OrganizationIdRequestBody(organizationId)) } returns
+        OrganizationRead(organizationId, "organization", "organization@example.com")
+
+      Assertions.assertThat(configFetchActivity.isWorkspaceTombstone(CONNECTION_ID)).isFalse()
+      verify(exactly = 1) { mOrganizationApi.getOrganization(OrganizationIdRequestBody(organizationId)) }
+    }
+
+    @Test
+    fun `missing or tombstoned organization is tombstoned`() {
+      every { mWorkspaceApi.getWorkspaceByConnectionIdWithTombstone(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+        workspaceRead(tombstone = false)
+      every { mOrganizationApi.getOrganization(OrganizationIdRequestBody(organizationId)) } throws
+        ClientException("Not Found", HttpStatus.NOT_FOUND.code, null)
+
+      Assertions.assertThat(configFetchActivity.isWorkspaceTombstone(CONNECTION_ID)).isTrue()
+    }
+
+    @Test
+    fun `tombstoned workspace is tombstoned without organization lookup`() {
+      every { mWorkspaceApi.getWorkspaceByConnectionIdWithTombstone(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+        workspaceRead(tombstone = true)
+
+      Assertions.assertThat(configFetchActivity.isWorkspaceTombstone(CONNECTION_ID)).isTrue()
+      verify(exactly = 0) { mAirbyteApiClient.organizationApi }
+    }
+
+    @Test
+    fun `non-404 organization lookup failure is retryable`() {
+      every { mWorkspaceApi.getWorkspaceByConnectionIdWithTombstone(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+        workspaceRead(tombstone = false)
+      every { mOrganizationApi.getOrganization(OrganizationIdRequestBody(organizationId)) } throws
+        ClientException("Internal Server Error", HttpStatus.INTERNAL_SERVER_ERROR.code, null)
+
+      Assertions
+        .assertThatThrownBy { configFetchActivity.isWorkspaceTombstone(CONNECTION_ID) }
+        .isInstanceOf(RetryableException::class.java)
+    }
+
+    @Test
+    fun `organization I-O failure is retryable`() {
+      every { mWorkspaceApi.getWorkspaceByConnectionIdWithTombstone(ConnectionIdRequestBody(CONNECTION_ID)) } returns
+        workspaceRead(tombstone = false)
+      every { mOrganizationApi.getOrganization(OrganizationIdRequestBody(organizationId)) } throws IOException("network failure")
+
+      Assertions
+        .assertThatThrownBy { configFetchActivity.isWorkspaceTombstone(CONNECTION_ID) }
+        .isInstanceOf(RetryableException::class.java)
+    }
+
+    private fun workspaceRead(tombstone: Boolean): WorkspaceRead =
+      WorkspaceRead(
+        workspaceId = UUID.randomUUID(),
+        customerId = UUID.randomUUID(),
+        name = "workspace",
+        slug = "workspace",
+        initialSetupComplete = true,
+        organizationId = organizationId,
+        tombstone = tombstone,
+      )
   }
 
   @Nested

@@ -18,6 +18,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -114,6 +115,65 @@ class OrganizationServiceDataImplTest {
     val result = organizationServiceDataImpl.getOrganization(ORGANIZATION_ID)
 
     assertTrue(result.isEmpty)
+  }
+
+  @Test
+  fun `getOrganization returns tombstoned organization when id exists`() {
+    every { organizationRepository.findById(ORGANIZATION_ID) } returns Optional.of(entityOrganization(tombstone = true))
+    every { ssoConfigRepository.findByOrganizationId(ORGANIZATION_ID) } returns null
+
+    val result = organizationServiceDataImpl.getOrganization(ORGANIZATION_ID)
+
+    assertTrue(result.isPresent)
+    assertEquals(ORGANIZATION_ID, result.get().organizationId)
+  }
+
+  @Test
+  fun `getActiveOrganization returns active organization with SSO realm`() {
+    every { organizationRepository.findByIdAndTombstoneFalse(ORGANIZATION_ID) } returns Optional.of(ENTITY_ORGANIZATION)
+    every { ssoConfigRepository.findByOrganizationId(ORGANIZATION_ID) } returns SSO_CONFIG
+
+    val result = organizationServiceDataImpl.getActiveOrganization(ORGANIZATION_ID)
+
+    assertTrue(result.isPresent)
+    assertEquals(ORGANIZATION_WITH_ID.name, result.get().name)
+    assertEquals(SSO_REALM, result.get().ssoRealm)
+    verify { organizationRepository.findByIdAndTombstoneFalse(ORGANIZATION_ID) }
+  }
+
+  @Test
+  fun `getActiveOrganization returns active organization without SSO realm when no SSO config exists`() {
+    every { organizationRepository.findByIdAndTombstoneFalse(ORGANIZATION_ID) } returns Optional.of(ENTITY_ORGANIZATION)
+    every { ssoConfigRepository.findByOrganizationId(ORGANIZATION_ID) } returns null
+
+    val result = organizationServiceDataImpl.getActiveOrganization(ORGANIZATION_ID)
+
+    assertTrue(result.isPresent)
+    assertEquals(null, result.get().ssoRealm)
+  }
+
+  @Test
+  fun `getActiveOrganization returns empty when no active organization exists`() {
+    every { organizationRepository.findByIdAndTombstoneFalse(ORGANIZATION_ID) } returns Optional.empty()
+
+    val result = organizationServiceDataImpl.getActiveOrganization(ORGANIZATION_ID)
+
+    assertTrue(result.isEmpty)
+    verify(exactly = 0) { ssoConfigRepository.findByOrganizationId(any()) }
+  }
+
+  @Test
+  fun `getActiveOrganization propagates SSO lookup failure`() {
+    val failure = IllegalStateException("SSO lookup failed")
+    every { organizationRepository.findByIdAndTombstoneFalse(ORGANIZATION_ID) } returns Optional.of(ENTITY_ORGANIZATION)
+    every { ssoConfigRepository.findByOrganizationId(ORGANIZATION_ID) } throws failure
+
+    val thrown =
+      assertThrows(IllegalStateException::class.java) {
+        organizationServiceDataImpl.getActiveOrganization(ORGANIZATION_ID)
+      }
+
+    assertEquals(failure, thrown)
   }
 
   @Test

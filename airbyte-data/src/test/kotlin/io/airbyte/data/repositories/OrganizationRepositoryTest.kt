@@ -243,6 +243,22 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `findByIdAndTombstoneFalse returns active organization and excludes tombstoned organization`() {
+    val activeOrganization = createOrganization("active-organization")
+    val tombstonedOrganization = createOrganization("tombstoned-organization", tombstone = true)
+    val missingOrganizationId = UUID.randomUUID()
+
+    val activeResult = organizationRepository.findByIdAndTombstoneFalse(activeOrganization.id!!)
+    val tombstonedResult = organizationRepository.findByIdAndTombstoneFalse(tombstonedOrganization.id!!)
+    val missingResult = organizationRepository.findByIdAndTombstoneFalse(missingOrganizationId)
+
+    assertTrue(activeResult.isPresent)
+    assertEquals(activeOrganization.id, activeResult.get().id)
+    assertTrue(tombstonedResult.isEmpty)
+    assertTrue(missingResult.isEmpty)
+  }
+
+  @Test
   fun `findByWorkspaceId returns organization when workspaceId exists`() {
     val organization =
       Organization(

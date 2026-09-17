@@ -42,6 +42,7 @@ import org.junit.jupiter.api.Test
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
+import io.airbyte.config.persistence.ConfigNotFoundException as PersistenceConfigNotFoundException
 
 class OrganizationsHandlerTest {
   private val organizationId1 = UUID.randomUUID()
@@ -127,7 +128,7 @@ class OrganizationsHandlerTest {
   @Test
   fun testGetOrganization() {
     every {
-      organizationService.getOrganization(organizationId1)
+      organizationService.getActiveOrganization(organizationId1)
     } returns
       Optional.of(
         Organization()
@@ -385,7 +386,7 @@ class OrganizationsHandlerTest {
           WorkspaceRead().workspaceId(agenticWorkspaceId).organizationId(agenticOrgId).name("agentic-ws"),
         ),
       )
-    every { organizationService.getOrganization(agenticOrgId) } returns
+    every { organizationService.getActiveOrganization(agenticOrgId) } returns
       Optional.of(
         Organization()
           .withOrganizationId(agenticOrgId)
@@ -544,7 +545,7 @@ class OrganizationsHandlerTest {
   @Test
   fun testGetOrganizationInfoScimEnabled() {
     every {
-      organizationService.getOrganization(organizationId1)
+      organizationService.getActiveOrganization(organizationId1)
     } returns
       Optional.of(
         Organization()
@@ -568,7 +569,7 @@ class OrganizationsHandlerTest {
   @Test
   fun testGetOrganizationInfoScimDisabled() {
     every {
-      organizationService.getOrganization(organizationId1)
+      organizationService.getActiveOrganization(organizationId1)
     } returns Optional.of(organization)
     every {
       scimConfigurationService.getConfiguration(OrganizationId(organizationId1))
@@ -583,7 +584,7 @@ class OrganizationsHandlerTest {
   @Test
   fun testGetOrganizationInfoScimNotConfigured() {
     every {
-      organizationService.getOrganization(organizationId1)
+      organizationService.getActiveOrganization(organizationId1)
     } returns Optional.of(organization)
     every {
       scimConfigurationService.getConfiguration(OrganizationId(organizationId1))
@@ -596,7 +597,7 @@ class OrganizationsHandlerTest {
 
   @Test
   fun testGetOrganizationInfoNotFound() {
-    every { organizationService.getOrganization(organizationId1) } returns Optional.empty()
+    every { organizationService.getActiveOrganization(organizationId1) } returns Optional.empty()
 
     assertThrows(ConfigNotFoundException::class.java) {
       organizationsHandler.getOrganizationInfo(organizationId1)
@@ -605,7 +606,7 @@ class OrganizationsHandlerTest {
 
   @Test
   fun testGetOrganizationInfoScimEnabledButAccessRevoked() {
-    every { organizationService.getOrganization(organizationId1) } returns Optional.of(organization)
+    every { organizationService.getActiveOrganization(organizationId1) } returns Optional.of(organization)
     every {
       scimConfigurationService.getConfiguration(OrganizationId(organizationId1))
     } returns ScimConfigurationRead(status = ScimConfigurationStatus.ENABLED)
@@ -618,7 +619,7 @@ class OrganizationsHandlerTest {
 
   @Test
   fun testGetOrganizationInfoSkipsAccessGateWhenScimNotConfigured() {
-    every { organizationService.getOrganization(organizationId1) } returns Optional.of(organization)
+    every { organizationService.getActiveOrganization(organizationId1) } returns Optional.of(organization)
 
     val result = organizationsHandler.getOrganizationInfo(organizationId1)
 
@@ -628,7 +629,7 @@ class OrganizationsHandlerTest {
 
   @Test
   fun testGetOrganizationInfoReportsScimDisabledWhenLookupFails() {
-    every { organizationService.getOrganization(organizationId1) } returns Optional.of(organization)
+    every { organizationService.getActiveOrganization(organizationId1) } returns Optional.of(organization)
     every {
       scimConfigurationService.getConfiguration(OrganizationId(organizationId1))
     } throws IllegalStateException("Unsupported SCIM IdP provider: jumpcloud")
@@ -637,5 +638,27 @@ class OrganizationsHandlerTest {
 
     assertEquals(organizationId1, result.organizationId)
     assertEquals(false, result.scim)
+  }
+
+  @Test
+  fun `getOrganization throws ConfigNotFoundException for tombstoned organization`() {
+    every { organizationService.getActiveOrganization(organizationId1) } returns Optional.empty()
+
+    assertThrows(PersistenceConfigNotFoundException::class.java) {
+      organizationsHandler.getOrganization(OrganizationIdRequestBody().organizationId(organizationId1))
+    }
+
+    verify(exactly = 0) { organizationService.getOrganization(organizationId1) }
+  }
+
+  @Test
+  fun `getOrganizationInfo throws ConfigNotFoundException for tombstoned organization`() {
+    every { organizationService.getActiveOrganization(organizationId1) } returns Optional.empty()
+
+    assertThrows(ConfigNotFoundException::class.java) {
+      organizationsHandler.getOrganizationInfo(organizationId1)
+    }
+
+    verify(exactly = 0) { organizationService.getOrganization(organizationId1) }
   }
 }

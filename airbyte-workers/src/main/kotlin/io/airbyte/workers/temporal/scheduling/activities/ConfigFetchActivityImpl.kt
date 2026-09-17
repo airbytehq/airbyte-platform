@@ -12,6 +12,7 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.client.model.generated.ConnectionScheduleType
 import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.api.client.model.generated.GetWebhookConfigRequest
+import io.airbyte.api.client.model.generated.OrganizationIdRequestBody
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.toInternal
 import io.airbyte.commons.json.Jsons
@@ -261,18 +262,33 @@ class ConfigFetchActivityImpl
     override fun getMaxAttempt(): GetMaxAttemptOutput = GetMaxAttemptOutput(syncJobMaxAttempts)
 
     override fun isWorkspaceTombstone(connectionId: UUID): Boolean {
-      try {
-        val workspaceRead =
+      val workspaceRead =
+        try {
           airbyteApiClient.workspaceApi.getWorkspaceByConnectionIdWithTombstone(ConnectionIdRequestBody(connectionId))
-        return workspaceRead.tombstone == true
+        } catch (e: ClientException) {
+          if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
+            throw e
+          }
+          throw RetryableException(e)
+        } catch (e: IOException) {
+          log.warn("Fail to get the workspace.", e)
+          return false
+        }
+
+      if (workspaceRead.tombstone == true) {
+        return true
+      }
+
+      try {
+        airbyteApiClient.organizationApi.getOrganization(OrganizationIdRequestBody(workspaceRead.organizationId))
+        return false
       } catch (e: ClientException) {
         if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
-          throw e
+          return true
         }
         throw RetryableException(e)
       } catch (e: IOException) {
-        log.warn("Fail to get the workspace.", e)
-        return false
+        throw RetryableException(e)
       }
     }
 

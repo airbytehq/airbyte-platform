@@ -160,7 +160,7 @@ open class OrganizationsHandler(
     val organizationId = request.organizationId
     val organization =
       organizationService
-        .getOrganization(organizationId)
+        .getActiveOrganization(organizationId)
         .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId) }
 
     return buildOrganizationRead(organization)
@@ -345,7 +345,7 @@ open class OrganizationsHandler(
 
   @WithSpan
   fun getOrganizationInfo(organizationId: UUID): OrganizationInfoRead {
-    val organization = organizationService.getOrganization(organizationId)
+    val organization = organizationService.getActiveOrganization(organizationId)
     if (organization.isEmpty) {
       throw io.airbyte.data.ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId.toString())
     }

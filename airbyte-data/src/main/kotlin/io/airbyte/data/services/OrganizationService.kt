@@ -17,6 +17,11 @@ interface OrganizationService {
   @WithSpan
   fun getOrganization(organizationId: UUID): Optional<Organization>
 
+  /**
+   * Like getOrganization but returns empty for tombstoned organizations.
+   */
+  fun getActiveOrganization(organizationId: UUID): Optional<Organization>
+
   fun getOrganizationForWorkspaceId(workspaceId: UUID): Optional<Organization>
 
   fun getOrganizationForConnectionId(connectionId: UUID): Optional<Organization>
