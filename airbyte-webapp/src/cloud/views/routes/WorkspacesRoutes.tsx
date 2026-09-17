@@ -3,7 +3,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { EnterpriseStubConnectorPage } from "area/connector/components/EnterpriseStubConnectorPage/EnterpriseStubConnectorPage";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
-import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
 import OrganizationBillingPage from "cloud/views/billing/OrganizationBillingPage";
 import OrganizationUsagePage from "cloud/views/billing/OrganizationUsagePage";
 import { CloudSettingsPage } from "cloud/views/settings/CloudSettingsPage";
@@ -58,7 +57,6 @@ export const WorkspacesRoutes: React.FC = () => {
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
   const showOnboarding = useExperiment("onboarding.surveyEnabled");
   const isCloudApp = useIsCloudApp();
-  const showAgentsOptIn = useShowAgentsOptIn();
 
   useExperimentContext("workspace", workspace.workspaceId);
 
@@ -130,9 +128,7 @@ export const WorkspacesRoutes: React.FC = () => {
         {canViewOrganizationUsage && (
           <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
         )}
-        {isCloudApp && showAgentsOptIn && (
-          <Route path={CloudSettingsRoutePaths.ContextLayer} element={<OrganizationContextLayerPage />} />
-        )}
+        {isCloudApp && <Route path={CloudSettingsRoutePaths.ContextLayer} element={<OrganizationContextLayerPage />} />}
         <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
         <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Workspace} replace />} />
       </Route>

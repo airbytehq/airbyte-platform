@@ -3,6 +3,7 @@ import { IntlProvider } from "react-intl";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import {
+  useAgentsProvisioningStatusQuery,
   useAgentsProvisioningStatus,
   useEnrollOrganizationInAgents,
   useExternalWorkspaceConnectors,
@@ -21,6 +22,7 @@ jest.mock("area/organization/utils", () => ({
 }));
 
 jest.mock("core/api", () => ({
+  useAgentsProvisioningStatusQuery: jest.fn(),
   useAgentsProvisioningStatus: jest.fn(),
   useEnrollOrganizationInAgents: jest.fn(),
   useExternalWorkspaceConnectors: jest.fn(),
@@ -59,6 +61,9 @@ const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunc
 const mockUseAgentsProvisioningStatus = useAgentsProvisioningStatus as jest.MockedFunction<
   typeof useAgentsProvisioningStatus
 >;
+const mockUseAgentsProvisioningStatusQuery = useAgentsProvisioningStatusQuery as jest.MockedFunction<
+  typeof useAgentsProvisioningStatusQuery
+>;
 const mockUseEnrollOrganizationInAgents = useEnrollOrganizationInAgents as jest.MockedFunction<
   typeof useEnrollOrganizationInAgents
 >;
@@ -79,6 +84,12 @@ const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof 
 const messages = {
   "cloud.contextLayer.title": "Context layer",
   "cloud.contextLayer.subtitle": "Configure metadata access and intelligence options for your organization.",
+  "cloud.contextLayer.unavailable.title": "Context layer not available",
+  "cloud.contextLayer.unavailable.description":
+    "The context layer is not available for this organization yet. Contact Airbyte support if you'd like to learn more.",
+  "cloud.contextLayer.loadError.title": "Couldn't load context layer status",
+  "cloud.contextLayer.loadError.description":
+    "We couldn't check whether the context layer is available for this organization. Please try again.",
   "cloud.contextLayer.enable.title": "Enable context layer",
   "cloud.contextLayer.enable.description":
     "The context layer allows AI agents to access and reason about your organization's data. Only organization admins can enable or disable this feature.",
@@ -125,6 +136,8 @@ const messages = {
   "cloud.contextLayer.connectors.error": "Unable to load connectors. Please try again.",
   "cloud.contextLayer.connectors.toggleError": "Could not update access for {name}. Please try again.",
   "cloud.contextLayer.docs": "Learn how to connect agents (SDK, API, MCP)",
+  "form.tryAgain": "Try again",
+  "ui.loading": "Loading …",
 };
 
 const renderWithIntl = () =>
@@ -139,6 +152,14 @@ describe("ContextLayerPage", () => {
     jest.clearAllMocks();
     mockUseCurrentOrganizationId.mockReturnValue("test-org-123");
     mockUseShowAgentsOptIn.mockReturnValue(true);
+    mockUseAgentsProvisioningStatusQuery.mockImplementation(
+      () =>
+        ({
+          data: mockUseAgentsProvisioningStatus(),
+          isLoading: false,
+          isError: false,
+        }) as never
+    );
     mockUseListWorkspacesInOrganization.mockReturnValue({ data: { pages: [] } } as never);
     mockUseExternalWorkspaceConnectors.mockReturnValue({
       sources: [],
@@ -537,7 +558,7 @@ describe("ContextLayerPage", () => {
     expect(screen.queryByText("No workspaces found in this organization.")).not.toBeInTheDocument();
   });
 
-  it("renders nothing when the organization is not eligible", () => {
+  it("shows the not-available state when the organization is not eligible", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: false,
       is_instance_admin: false,
@@ -550,15 +571,82 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
-    expect(screen.queryByText("Context layer")).not.toBeInTheDocument();
+    expect(screen.getByTestId("context-layer-unavailable")).toHaveTextContent(
+      "The context layer is not available for this organization yet. Contact Airbyte support if you'd like to learn more."
+    );
+    expect(screen.queryByRole("button", { name: "Enable Context Layer" })).not.toBeInTheDocument();
   });
 
-  it("renders nothing when the provisioning status belongs to another organization", () => {
+  it("shows the not-available state when the provisioning status belongs to another organization", () => {
     mockUseAgentsProvisioningStatus.mockReturnValue(null);
 
     renderWithIntl();
 
+    expect(screen.getByTestId("context-layer-unavailable")).toHaveTextContent(
+      "The context layer is not available for this organization yet. Contact Airbyte support if you'd like to learn more."
+    );
+  });
+
+  it("shows a loading state while eligibility is resolving", () => {
+    mockUseAgentsProvisioningStatusQuery.mockReturnValue({ data: undefined, isInitialLoading: true } as never);
+
+    renderWithIntl();
+
+    expect(screen.getByTitle("Loading …")).toBeInTheDocument();
     expect(screen.queryByText("Context layer")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("context-layer-unavailable")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("context-layer-card")).not.toBeInTheDocument();
+  });
+
+  it("renders an error state with retry instead of the not-available card when the provisioning request fails", () => {
+    const mockRefetch = jest.fn();
+    mockUseAgentsProvisioningStatusQuery.mockReturnValue({
+      data: undefined,
+      isInitialLoading: false,
+      isError: true,
+      refetch: mockRefetch,
+    } as never);
+
+    renderWithIntl();
+
+    expect(screen.getByTestId("context-layer-load-error")).toBeInTheDocument();
+    expect(screen.queryByTestId("context-layer-unavailable")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the not-available state when the opt-in flag is off and the org is not enrolled", () => {
+    mockUseShowAgentsOptIn.mockReturnValue(false);
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: false,
+      is_instance_admin: false,
+      provisioning_state: "not_provisioned",
+      organization_id: "test-org-123",
+      organization_kind: null,
+      external_cloud_eligible: true,
+      eligible_external_organization_id: "test-org-123",
+    });
+
+    renderWithIntl();
+
+    expect(screen.getByTestId("context-layer-unavailable")).toBeInTheDocument();
+  });
+
+  it("renders the enrolled page when the opt-in flag is off but the org is enrolled", () => {
+    mockUseShowAgentsOptIn.mockReturnValue(false);
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: false,
+      eligible_external_organization_id: null,
+    });
+
+    renderWithIntl();
+
+    expect(screen.getByTestId("context-layer-card")).toBeInTheDocument();
   });
 
   it("keeps the terms modal open and shows an error when enrollment fails", async () => {

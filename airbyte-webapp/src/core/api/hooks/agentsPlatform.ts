@@ -33,7 +33,7 @@ export const agentsPlatformKeys = {
     [SCOPE_ORGANIZATION, "agentsPlatform", "externalWorkspaceConnectors", organizationId, workspaceId] as const,
 };
 
-export const useAgentsProvisioningStatus = ({ enabled = true }: { enabled?: boolean } = {}) => {
+export const useAgentsProvisioningStatusQuery = ({ enabled = true }: { enabled?: boolean } = {}) => {
   const { sonarApiUrl: baseUrl } = useWebappConfig();
   const organizationId = useCurrentOrganizationId();
   const { getAccessToken } = useRequestOptions();
@@ -42,38 +42,38 @@ export const useAgentsProvisioningStatus = ({ enabled = true }: { enabled?: bool
   return useQuery<AgentsProvisioningStatus | null>(
     queryKey,
     async () => {
-      try {
-        const accessToken = await getAccessToken();
-        const response = await fetch(`${baseUrl}/api/v1/internal/account/provisioning-check`, {
-          headers: {
-            "X-Organization-Id": organizationId,
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-          },
-        });
+      const accessToken = await getAccessToken();
+      const response = await fetch(`${baseUrl}/api/v1/internal/account/provisioning-check`, {
+        headers: {
+          "X-Organization-Id": organizationId,
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error(`Agents provisioning status request failed: ${response.status}`);
-        }
-
-        const status = (await response.json()) as AgentsProvisioningStatus;
-        if (
-          (status.is_enrolled && status.organization_id === organizationId) ||
-          (status.external_cloud_eligible && status.eligible_external_organization_id === organizationId)
-        ) {
-          return status;
-        }
-
-        return null;
-      } catch {
-        return null;
+      if (!response.ok) {
+        throw new Error(`Agents provisioning status request failed: ${response.status}`);
       }
+
+      const status = (await response.json()) as AgentsProvisioningStatus;
+      if (
+        (status.is_enrolled && status.organization_id === organizationId) ||
+        (status.external_cloud_eligible && status.eligible_external_organization_id === organizationId)
+      ) {
+        return status;
+      }
+
+      return null;
     },
     {
       enabled: !!baseUrl && enabled,
       retry: false,
       staleTime: 5 * 60 * 1000,
     }
-  ).data;
+  );
+};
+
+export const useAgentsProvisioningStatus = ({ enabled = true }: { enabled?: boolean } = {}) => {
+  return useAgentsProvisioningStatusQuery({ enabled }).data;
 };
 
 export const useEnrollOrganizationInAgents = () => {

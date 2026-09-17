@@ -13,7 +13,7 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import {
-  useAgentsProvisioningStatus,
+  useAgentsProvisioningStatusQuery,
   useEnrollOrganizationInAgents,
   useExternalWorkspaceConnectors,
   useListWorkspacesInOrganization,
@@ -312,10 +312,75 @@ const ContextLayerToggle: React.FC<{ enabled: boolean; onClick?: () => void }> =
   );
 };
 
+const ContextLayerUnavailable: React.FC = () => {
+  const { formatMessage } = useIntl();
+
+  return (
+    <div className={styles.page}>
+      <FlexContainer direction="column" gap="xl">
+        <div className={styles.header}>
+          <Heading as="h1" size="md">
+            <FormattedMessage id="cloud.contextLayer.title" />
+          </Heading>
+          <Text className={styles.subtitle}>
+            <FormattedMessage id="cloud.contextLayer.subtitle" />
+          </Text>
+        </div>
+        <Card
+          title={formatMessage({ id: "cloud.contextLayer.unavailable.title" })}
+          dataTestId="context-layer-unavailable"
+        >
+          <div className={styles.cardContent}>
+            <Text>
+              <FormattedMessage id="cloud.contextLayer.unavailable.description" />
+            </Text>
+            <ExternalLink href={links.agentsDocs} opensInNewTab>
+              <FormattedMessage id="cloud.contextLayer.docs" />
+            </ExternalLink>
+          </div>
+        </Card>
+      </FlexContainer>
+    </div>
+  );
+};
+
+const ContextLayerLoadError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => {
+  const { formatMessage } = useIntl();
+
+  return (
+    <div className={styles.page}>
+      <FlexContainer direction="column" gap="xl">
+        <div className={styles.header}>
+          <Heading as="h1" size="md">
+            <FormattedMessage id="cloud.contextLayer.title" />
+          </Heading>
+          <Text className={styles.subtitle}>
+            <FormattedMessage id="cloud.contextLayer.subtitle" />
+          </Text>
+        </div>
+        <Card title={formatMessage({ id: "cloud.contextLayer.loadError.title" })} dataTestId="context-layer-load-error">
+          <div className={styles.cardContent}>
+            <Text>
+              <FormattedMessage id="cloud.contextLayer.loadError.description" />
+            </Text>
+            <FlexContainer>
+              <Button variant="secondary" onClick={onRetry}>
+                <FormattedMessage id="form.tryAgain" />
+              </Button>
+            </FlexContainer>
+          </div>
+        </Card>
+      </FlexContainer>
+    </div>
+  );
+};
+
 const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showAgentsOptIn }) => {
   const organizationId = useCurrentOrganizationId();
   const isCloudApp = useIsCloudApp();
-  const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
+  const statusQuery = useAgentsProvisioningStatusQuery({ enabled: isCloudApp });
+  const status = statusQuery.data;
+  const isEligible = Boolean(status && (status.is_enrolled || (status.external_cloud_eligible && showAgentsOptIn)));
   const enrollOrganization = useEnrollOrganizationInAgents();
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
@@ -323,12 +388,18 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
   const workspacesQuery = useListWorkspacesInOrganization({
     organizationId,
     pagination: { pageSize: 25, rowOffset: 0 },
-    enabled: Boolean(status && (status.is_enrolled || status.external_cloud_eligible)),
+    enabled: isEligible,
   });
   const [isOpeningModal, setIsOpeningModal] = useState(false);
 
-  if (!isCloudApp || !status || (!status.is_enrolled && !status.external_cloud_eligible)) {
-    return null;
+  if (isCloudApp && statusQuery.isInitialLoading) {
+    return <LoadingPage />;
+  }
+  if (isCloudApp && statusQuery.isError) {
+    return <ContextLayerLoadError onRetry={() => statusQuery.refetch()} />;
+  }
+  if (!isCloudApp || !isEligible || !status) {
+    return <ContextLayerUnavailable />;
   }
 
   const openTermsModal = () => {
@@ -449,10 +520,6 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
 
 export const ContextLayerPage: React.FC = () => {
   const showAgentsOptIn = useShowAgentsOptIn();
-
-  if (!showAgentsOptIn) {
-    return null;
-  }
 
   return (
     <React.Suspense fallback={<LoadingPage />}>
