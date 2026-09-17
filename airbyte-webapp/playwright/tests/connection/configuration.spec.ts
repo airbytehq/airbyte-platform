@@ -24,7 +24,9 @@ test.describe("Connection Configuration", () => {
 
     test.beforeAll(async ({ browser, request }) => {
       // Serial tests share a connection and page to avoid redundant setup overhead
-      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "poke-e2e");
+      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "poke-e2e", {
+        useMockSchemaDiscovery: true,
+      });
       context = await browser.newContext();
       page = await context.newPage();
 
@@ -115,7 +117,9 @@ test.describe("Connection Configuration", () => {
     let context: BrowserContext;
 
     test.beforeAll(async ({ browser, request }) => {
-      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "poke-postgres");
+      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "poke-postgres", {
+        useMockSchemaDiscovery: true,
+      });
       context = await browser.newContext();
       page = await context.newPage();
     });
@@ -155,7 +159,9 @@ test.describe("Connection Configuration", () => {
     let context: BrowserContext;
 
     test.beforeAll(async ({ browser, request }) => {
-      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "poke-postgres");
+      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "poke-postgres", {
+        useMockSchemaDiscovery: true,
+      });
       context = await browser.newContext();
       page = await context.newPage();
     });
@@ -209,6 +215,8 @@ test.describe("Connection Configuration", () => {
       const testResources = await connectionTestHelpers.setupConnectionTest(request, workspaceId);
       const connection = await connectionAPI.create(request, testResources.source, testResources.destination, {
         enableAllStreams: true,
+        useMockSchemaDiscovery: true,
+        mockSourceType: "pokeapi",
       });
 
       await connectionDeletion.deleteConnection(page, workspaceId, connection);
@@ -241,6 +249,8 @@ test.describe("Connection Configuration", () => {
 
       connection = await connectionAPI.create(request, testResources.source, testResources.destination, {
         enableAllStreams: true,
+        useMockSchemaDiscovery: true,
+        mockSourceType: "pokeapi",
       });
 
       await connectionAPI.delete(request, connection.connectionId);

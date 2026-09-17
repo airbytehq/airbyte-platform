@@ -399,6 +399,7 @@ test.describe("Connection - Auto-detect schema changes", () => {
       testData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
         enableAllStreams: true,
         schema, // Pass schema for connector configuration
+        useMockSchemaDiscovery: true,
       });
     });
 
