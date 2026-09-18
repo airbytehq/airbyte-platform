@@ -437,6 +437,11 @@ abstract class BaseOAuth2Flow
 
       try {
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() >= 400) {
+          throw IOException(
+            "Token endpoint $accessTokenUrl returned HTTP ${response.statusCode()}: ${response.body()}",
+          )
+        }
         return extractOAuthOutput(Jsons.deserialize(response.body()), accessTokenUrl, inputOAuthConfiguration)
       } catch (e: InterruptedException) {
         throw IOException("Failed to complete OAuth flow", e)
