@@ -58890,7 +58890,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/github-migrations",
         "releaseCandidates": {
-          "2.6.0": {
+          "2.6.1": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -58945,7 +58945,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "2.6.0",
+            "dockerImageTag": "2.6.1",
             "dockerRepository": "airbyte/source-github",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/github",
             "erdUrl": "https://dbdocs.io/airbyteio/source-github?view=relationships",
@@ -58993,33 +58993,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "Serhii Lazebnyi",
-                "commit_author_email": "GL_serhii.lazebnyi@airbyte.io",
-                "commit_sha": "4478e0913869dfc6306d77878e667510a791c41e",
-                "commit_timestamp": "2026-09-17T01:46:20+01:00"
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "6d9c1efcc35f4152200d1a46c68acb00f9382ec4",
+                "commit_timestamp": "2026-09-18T15:07:11+01:00"
               },
               "release": {
                 "attributed_to": "lazebnyi",
                 "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "4478e0913869dfc6306d77878e667510a791c41e",
-                "merged_at": "2026-09-17T00:46:21Z",
+                "merge_commit_sha": "6d9c1efcc35f4152200d1a46c68acb00f9382ec4",
+                "merged_at": "2026-09-18T14:07:12Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 53845333,
-                "pr_author_login": "lazebnyi",
-                "pr_author_type": "User",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
+                "pr_author_type": "Bot",
                 "pr_merged_by_login": "lazebnyi",
                 "pr_merged_by_type": "User",
-                "pr_number": 85807,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/85807",
-                "released_at": "2026-09-17T00:46:21Z",
+                "pr_number": 86435,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/86435",
+                "released_at": "2026-09-18T14:07:12Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.6.0.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.6.1.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-github/2.6.0/metadata.yaml",
-                "metadata_last_modified": "2026-09-17T00:53:11.934398+00:00",
-                "registry_entry_generated_at": "2026-09-17T00:53:11.934398+00:00"
+                "metadata_file_path": "metadata/airbyte/source-github/2.6.1/metadata.yaml",
+                "metadata_last_modified": "2026-09-18T14:14:31.569283+00:00",
+                "registry_entry_generated_at": "2026-09-18T14:14:31.569283+00:00"
               }
             },
             "githubIssueLabel": "source-github",
@@ -76991,7 +76991,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.13.24",
+      "dockerImageTag": "0.13.25",
       "dockerRepository": "airbyte/source-intercom",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/intercom",
       "externalDocumentationUrls": [
@@ -77014,14 +77014,19 @@
           "title": "Intercom API OpenAPI specification",
           "type": "openapi_spec",
           "url": "https://developers.intercom.com/docs/references/rest-api/api.intercom.io/openapi.json"
+        },
+        {
+          "title": "Intercom OpenAPI specification repository",
+          "type": "spec_repository",
+          "url": "https://github.com/intercom/Intercom-OpenAPI"
         }
       ],
       "generated": {
         "git": {
-          "commit_author": "Aaron (\"AJ\") Steers",
-          "commit_author_email": "aj@airbyte.io",
-          "commit_sha": "ebac5070521e9b7e32ccb8b0945b44ff507e3cae",
-          "commit_timestamp": "2026-08-10T12:51:34-07:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "f2a58db2bcfa78b4eeccc973063ddbec9030ca5a",
+          "commit_timestamp": "2026-09-16T22:44:15+00:00"
         },
         "metrics": {
           "all": {
@@ -77037,12 +77042,28 @@
             "usage": "high"
           }
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-intercom/0.13.24.spdx.json",
+        "release": {
+          "attributed_to": "pnilan",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "f2a58db2bcfa78b4eeccc973063ddbec9030ca5a",
+          "merged_at": "2026-09-16T22:44:16Z",
+          "pr_author_association": "CONTRIBUTOR",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
+          "pr_author_type": "Bot",
+          "pr_merged_by_login": "pnilan",
+          "pr_merged_by_type": "User",
+          "pr_number": 78017,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/78017",
+          "released_at": "2026-09-16T22:44:16Z",
+          "source": "publish"
+        },
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-intercom/0.13.25.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-intercom/latest/metadata.yaml",
-          "metadata_last_modified": "2026-08-10T20:10:21.783844+00:00",
-          "registry_entry_generated_at": "2026-08-10T20:10:21.783844+00:00"
+          "metadata_last_modified": "2026-09-16T22:48:27.196916+00:00",
+          "registry_entry_generated_at": "2026-09-16T22:48:27.196916+00:00"
         }
       },
       "githubIssueLabel": "source-intercom",
@@ -77056,328 +77077,6 @@
       "public": true,
       "releaseStage": "generally_available",
       "releases": {
-        "releaseCandidates": {
-          "0.13.25": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 400,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 300
-            },
-            "allowedHosts": {
-              "hosts": [
-                "api.intercom.io"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.18.1.post8.dev25490693965@sha256:ed6172ecc9436eba6aa774de466ab22f4648573a5f69f621f57c22e9bb01b608"
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "unitTests"
-              },
-              {
-                "suite": "liveTests",
-                "testConnections": [
-                  {
-                    "id": "09ebd6bb-2756-4cd3-8ad5-7120088cc553",
-                    "name": "intercom_config_dev_null"
-                  }
-                ]
-              },
-              {
-                "suite": "integrationTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config_apikey.json",
-                    "name": "SECRET_SOURCE-INTERCOM_APIKEY__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-INTERCOM__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              },
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config_apikey.json",
-                    "name": "SECRET_SOURCE-INTERCOM_APIKEY__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-INTERCOM__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_sandbox.json",
-                    "name": "SECRET_SOURCE-INTERCOM_SANDBOX__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "0.13.25",
-            "dockerRepository": "airbyte/source-intercom",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/intercom",
-            "externalDocumentationUrls": [
-              {
-                "title": "Unversioned Changes",
-                "type": "api_reference",
-                "url": "https://developers.intercom.com/docs/build-an-integration/learn-more/rest-apis/unversioned-changes#unversioned-changes"
-              },
-              {
-                "title": "API Changelog",
-                "type": "api_release_history",
-                "url": "https://developers.intercom.com/docs/references/changelog"
-              },
-              {
-                "title": "Changelog",
-                "type": "api_release_history",
-                "url": "https://developers.intercom.com/docs/build-an-integration/learn-more/rest-apis/api-changelog"
-              },
-              {
-                "title": "Intercom API OpenAPI specification",
-                "type": "openapi_spec",
-                "url": "https://developers.intercom.com/docs/references/rest-api/api.intercom.io/openapi.json"
-              },
-              {
-                "title": "Intercom OpenAPI specification repository",
-                "type": "spec_repository",
-                "url": "https://github.com/intercom/Intercom-OpenAPI"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "f2a58db2bcfa78b4eeccc973063ddbec9030ca5a",
-                "commit_timestamp": "2026-09-16T22:44:15+00:00"
-              },
-              "release": {
-                "attributed_to": "pnilan",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "f2a58db2bcfa78b4eeccc973063ddbec9030ca5a",
-                "merged_at": "2026-09-16T22:44:16Z",
-                "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 158243242,
-                "pr_author_login": "devin-ai-integration",
-                "pr_author_type": "Bot",
-                "pr_merged_by_login": "pnilan",
-                "pr_merged_by_type": "User",
-                "pr_number": 78017,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/78017",
-                "released_at": "2026-09-16T22:44:16Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-intercom/0.13.25.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-intercom/0.13.25/metadata.yaml",
-                "metadata_last_modified": "2026-09-16T22:48:27.196916+00:00",
-                "registry_entry_generated_at": "2026-09-16T22:48:27.196916+00:00"
-              }
-            },
-            "githubIssueLabel": "source-intercom",
-            "icon": "intercom.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-intercom/latest/icon.svg",
-            "language": "manifest-only",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 32400,
-            "name": "Intercom",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "generally_available",
-            "releases": {
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": false,
-                "packageName": "airbyte-source-intercom"
-              }
-            },
-            "sourceDefinitionId": "d8313939-3782-41b0-be29-b3ca20d8dd3a",
-            "sourceType": "api",
-            "spec": {
-              "advanced_auth": {
-                "auth_flow_type": "oauth2.0",
-                "oauth_config_specification": {
-                  "complete_oauth_output_specification": {
-                    "properties": {
-                      "access_token": {
-                        "path_in_connector_config": [
-                          "access_token"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "oauth_connector_input_specification": {
-                    "access_token_headers": {
-                      "Content-Type": "application/x-www-form-urlencoded"
-                    },
-                    "access_token_params": {
-                      "client_id": "{{ client_id_value }}",
-                      "client_secret": "{{ client_secret_value }}",
-                      "code": "{{ auth_code_value }}"
-                    },
-                    "access_token_url": "https://api.intercom.io/auth/eagle/token",
-                    "consent_url": "https://app.intercom.com/a/oauth/connect?{{client_id_param}}&{{redirect_uri_param}}&response_type=code&{{state_param}}",
-                    "extract_output": [
-                      "access_token"
-                    ],
-                    "scopes_join_strategy": "space"
-                  }
-                }
-              },
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "access_token": {
-                    "airbyte_secret": true,
-                    "description": "Access token for making authenticated requests. See the <a href=\"https://developers.intercom.com/building-apps/docs/authentication-types#how-to-get-your-access-token\">Intercom docs</a> for more information.",
-                    "order": 0,
-                    "title": "Access token",
-                    "type": "string"
-                  },
-                  "activity_logs_time_step": {
-                    "default": 30,
-                    "description": "Set lower value in case of failing long running sync of Activity Logs stream.",
-                    "examples": [
-                      30,
-                      10,
-                      5
-                    ],
-                    "maximum": 91,
-                    "minimum": 1,
-                    "order": 3,
-                    "title": "Activity logs stream slice step size (in days)",
-                    "type": "integer"
-                  },
-                  "api_rate_limit": {
-                    "default": 9500,
-                    "description": "The effective API request budget per minute. The default of 9500 is 95% of the standard Intercom rate limit (10,000/min), leaving headroom for occasional bursts. If your workspace has a higher rate limit (e.g. 150,000/min), set this to ~95% of that value (e.g. 142500) to leverage your full API throughput. A per-10-second window is derived automatically as api_rate_limit / 6.",
-                    "examples": [
-                      9500,
-                      142500
-                    ],
-                    "minimum": 100,
-                    "order": 7,
-                    "title": "API Rate Limit (requests per minute)",
-                    "type": "integer"
-                  },
-                  "client_id": {
-                    "airbyte_secret": true,
-                    "description": "Client Id for your Intercom application.",
-                    "order": 1,
-                    "title": "Client Id",
-                    "type": "string"
-                  },
-                  "client_secret": {
-                    "airbyte_secret": true,
-                    "description": "Client Secret for your Intercom application.",
-                    "order": 2,
-                    "title": "Client Secret",
-                    "type": "string"
-                  },
-                  "lookback_window": {
-                    "default": 0,
-                    "description": "The number of days to shift the state value backward for record sync",
-                    "examples": [
-                      60
-                    ],
-                    "minimum": 0,
-                    "order": 4,
-                    "title": "Lookback window",
-                    "type": "integer"
-                  },
-                  "num_workers": {
-                    "default": 10,
-                    "description": "The number of worker threads to use for concurrent stream processing. Increase this to speed up syncs for workspaces with large volumes of conversations. The default should work for most use cases.",
-                    "examples": [
-                      10,
-                      20
-                    ],
-                    "maximum": 40,
-                    "minimum": 1,
-                    "order": 6,
-                    "title": "Num Workers",
-                    "type": "integer"
-                  },
-                  "start_date": {
-                    "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Any data before this date will not be replicated.",
-                    "examples": [
-                      "2020-11-16T00:00:00Z"
-                    ],
-                    "format": "date-time",
-                    "order": 5,
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-                    "title": "Start date",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "access_token",
-                  "start_date"
-                ],
-                "type": "object"
-              },
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "suggestedStreams": {
-              "streams": [
-                "conversations",
-                "contacts",
-                "conversation_parts",
-                "teams",
-                "companies"
-              ]
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "cdk:low-code",
-              "language:manifest-only"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -78803,7 +78502,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "6.0.2",
+      "dockerImageTag": "6.0.3",
       "dockerRepository": "airbyte/source-jira",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/jira",
       "erdUrl": "https://dbdocs.io/airbyteio/source-jira?view=relationships",
@@ -78833,8 +78532,8 @@
         "git": {
           "commit_author": "devin-ai-integration[bot]",
           "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-          "commit_sha": "4e88aa497ac436abf4ef53dc1b6991682352ee4f",
-          "commit_timestamp": "2026-09-10T15:45:16-07:00"
+          "commit_sha": "d2bce6bbb3e2a7811eab840849c6a2e0c3612ba3",
+          "commit_timestamp": "2026-09-17T10:19:30-07:00"
         },
         "metrics": {
           "all": {
@@ -78851,27 +78550,27 @@
           }
         },
         "release": {
-          "attributed_to": "suisuixia42",
+          "attributed_to": "sophiecuiy",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "4e88aa497ac436abf4ef53dc1b6991682352ee4f",
-          "merged_at": "2026-09-10T22:45:17Z",
+          "merge_commit_sha": "d2bce6bbb3e2a7811eab840849c6a2e0c3612ba3",
+          "merged_at": "2026-09-17T17:19:31Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 158243242,
           "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
-          "pr_merged_by_login": "suisuixia42",
+          "pr_merged_by_login": "sophiecuiy",
           "pr_merged_by_type": "User",
-          "pr_number": 85802,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/85802",
-          "released_at": "2026-09-10T22:45:17Z",
+          "pr_number": 86357,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/86357",
+          "released_at": "2026-09-17T17:19:31Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-jira/6.0.2.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-jira/6.0.3.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-jira/latest/metadata.yaml",
-          "metadata_last_modified": "2026-09-10T22:49:22.664977+00:00",
-          "registry_entry_generated_at": "2026-09-10T22:49:22.664977+00:00"
+          "metadata_last_modified": "2026-09-17T17:23:46.764477+00:00",
+          "registry_entry_generated_at": "2026-09-17T17:23:46.764477+00:00"
         }
       },
       "githubIssueLabel": "source-jira",
@@ -78970,676 +78669,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/jira-migrations",
-        "releaseCandidates": {
-          "6.0.3": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 400,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 300
-            },
-            "allowedHosts": {
-              "hosts": [
-                "${domain}",
-                "auth.atlassian.com",
-                "api.atlassian.com"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.16.0.post1.dev23950401533@sha256:af745370627f4ba7982233d3c00a64af053f0ae65a6974013ec99ce2d57d0dbf"
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "liveTests",
-                "testConnections": [
-                  {
-                    "id": "28344f6b-d2c9-4671-a5e2-81374985156e",
-                    "name": "jira_config_dev_null"
-                  },
-                  {
-                    "id": "8f0c8c2b-8bc4-4d13-a2ef-ce234370dbd8",
-                    "name": "jira_config_empty_projects_dev_null"
-                  }
-                ]
-              },
-              {
-                "suite": "unitTests"
-              },
-              {
-                "suite": "integrationTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config_empty_projects.json",
-                    "name": "SECRET_SOURCE-JIRA_EMPTY_PROJECTS_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-JIRA__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "service_account_config.json",
-                    "name": "SECRET_SOURCE-JIRA_SERVICE_ACCOUNT",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              },
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config_empty_projects.json",
-                    "name": "SECRET_SOURCE-JIRA_EMPTY_PROJECTS_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-JIRA__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "service_account_config.json",
-                    "name": "SECRET_SOURCE-JIRA_SERVICE_ACCOUNT",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "6.0.3",
-            "dockerRepository": "airbyte/source-jira",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/jira",
-            "erdUrl": "https://dbdocs.io/airbyteio/source-jira?view=relationships",
-            "externalDocumentationUrls": [
-              {
-                "title": "Changelog",
-                "type": "api_release_history",
-                "url": "https://developer.atlassian.com/changelog/#"
-              },
-              {
-                "title": "Jira Platform API Changelog",
-                "type": "api_release_history",
-                "url": "https://developer.atlassian.com/cloud/jira/platform/changelog/"
-              },
-              {
-                "title": "Jira Software API Changelog",
-                "type": "api_release_history",
-                "url": "https://developer.atlassian.com/cloud/jira/software/changelog/"
-              },
-              {
-                "title": "Jira Cloud Platform API OpenAPI specification",
-                "type": "openapi_spec",
-                "url": "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "d2bce6bbb3e2a7811eab840849c6a2e0c3612ba3",
-                "commit_timestamp": "2026-09-17T10:19:30-07:00"
-              },
-              "release": {
-                "attributed_to": "sophiecuiy",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "d2bce6bbb3e2a7811eab840849c6a2e0c3612ba3",
-                "merged_at": "2026-09-17T17:19:31Z",
-                "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 158243242,
-                "pr_author_login": "devin-ai-integration",
-                "pr_author_type": "Bot",
-                "pr_merged_by_login": "sophiecuiy",
-                "pr_merged_by_type": "User",
-                "pr_number": 86357,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/86357",
-                "released_at": "2026-09-17T17:19:31Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-jira/6.0.3.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-jira/6.0.3/metadata.yaml",
-                "metadata_last_modified": "2026-09-17T17:23:46.764477+00:00",
-                "registry_entry_generated_at": "2026-09-17T17:23:46.764477+00:00"
-              }
-            },
-            "githubIssueLabel": "source-jira",
-            "icon": "jira.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-jira/latest/icon.svg",
-            "language": "manifest-only",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 86400,
-            "name": "Jira",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "generally_available",
-            "releases": {
-              "breakingChanges": {
-                "1.0.0": {
-                  "message": "Stream state will be saved for every board in stream `Boards Issues`. Customers who use stream `Board Issues` in Incremental Sync mode must take action with their connections.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/jira-migrations#1.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "board_issues"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2024-01-25"
-                },
-                "2.0.0": {
-                  "message": "The source Jira connector is being migrated from the Python CDK to our declarative low-code CDK. Due to changes to the incremental stream state, this migration constitutes a breaking change. Additionally, an issue in the `ProjectAvatars` stream has been fixed. After updating, please reset your source before resuming syncs. For more information, see our migration documentation for source Jira.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/jira-migrations#2.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "board_issues",
-                        "issues",
-                        "sprint_issues"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2024-05-31"
-                },
-                "3.0.0": {
-                  "message": "Primary key for Workflows stream has been changed from `Id` to [`entityId`, `name`]. This change of pk makes the stream compatible with more types of destinations.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/jira-migrations#3.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "workflows"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2024-07-02"
-                },
-                "4.0.0": {
-                  "deadlineAction": "auto_upgrade",
-                  "message": "The `pull_requests` stream has been fully deprecated. This change constitutes a breaking change. For more information, see our migration documentation for source Jira.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/jira-migrations#4.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "pull_requests"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2025-05-04"
-                },
-                "5.0.0": {
-                  "message": "The `workflows` stream is migrating from the soon to be deprecated `GET /rest/api/3/workflow/search` endpoint to its replacement `GET /rest/api/3/workflows/search`. The replacement endpoint returns a different record shape (`id` is now a top-level UUID string, `name` is top-level, and the `transitions`/`statuses` sub-shapes have changed), and the primary key of the `workflows` stream has changed from `[entityId, name]` to `[id]`. Users syncing the `workflows` stream must refresh their source schema and reset the stream. For more information, see our migration documentation for source Jira.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/jira-migrations#5.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "workflows"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2026-05-31"
-                },
-                "6.0.0": {
-                  "deadlineAction": "auto_upgrade",
-                  "message": "The `issue_field_configurations` stream has been removed because Atlassian is removing the underlying `GET /rest/api/3/fieldconfiguration` endpoint in July 2026. This stream will no longer be available after upgrading. Users syncing this stream must disable it before upgrading. For more information, see our migration documentation for source Jira.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/jira-migrations#6.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "issue_field_configurations"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2026-07-01"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/jira-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": false,
-                "packageName": "airbyte-source-jira"
-              }
-            },
-            "sourceDefinitionId": "68e63de2-bb83-4c7e-93fa-a8a9051e3993",
-            "sourceType": "api",
-            "spec": {
-              "advanced_auth": {
-                "auth_flow_type": "oauth2.0",
-                "oauth_config_specification": {
-                  "complete_oauth_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "refresh_token": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "refresh_token"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_input_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_id"
-                        ],
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_secret"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "oauth_connector_input_specification": {
-                    "access_token_headers": {
-                      "Content-Type": "application/json"
-                    },
-                    "access_token_params": {
-                      "client_id": "{{ client_id_value }}",
-                      "client_secret": "{{ client_secret_value }}",
-                      "code": "{{ auth_code_value }}",
-                      "grant_type": "authorization_code",
-                      "redirect_uri": "{{ redirect_uri_value }}"
-                    },
-                    "access_token_url": "https://auth.atlassian.com/oauth/token",
-                    "consent_url": "https://auth.atlassian.com/authorize?audience=api.atlassian.com&{{client_id_param}}&{{scopes_param}}&{{redirect_uri_param}}&{{state_param}}&response_type=code&prompt=consent",
-                    "extract_output": [
-                      "refresh_token"
-                    ],
-                    "scopes": [
-                      {
-                        "scope": "read:jira-work"
-                      },
-                      {
-                        "scope": "read:jql:jira"
-                      },
-                      {
-                        "scope": "read:group:jira"
-                      },
-                      {
-                        "scope": "read:project-role:jira"
-                      },
-                      {
-                        "scope": "read:issue-details:jira"
-                      },
-                      {
-                        "scope": "read:status:jira"
-                      },
-                      {
-                        "scope": "read:jira-user"
-                      },
-                      {
-                        "scope": "read:user:jira"
-                      },
-                      {
-                        "scope": "read:avatar:jira"
-                      },
-                      {
-                        "scope": "read:webhook:jira"
-                      },
-                      {
-                        "scope": "read:project-category:jira"
-                      },
-                      {
-                        "scope": "read:screenable-field:jira"
-                      },
-                      {
-                        "scope": "read:screen-field:jira"
-                      },
-                      {
-                        "scope": "offline_access"
-                      },
-                      {
-                        "scope": "read:board-scope:jira-software"
-                      },
-                      {
-                        "scope": "read:project:jira"
-                      },
-                      {
-                        "scope": "read:sprint:jira-software"
-                      },
-                      {
-                        "scope": "read:application-role:jira"
-                      },
-                      {
-                        "scope": "read:notification-scheme:jira"
-                      },
-                      {
-                        "scope": "read:issue-security-scheme:jira"
-                      },
-                      {
-                        "scope": "read:issue-security-level:jira"
-                      },
-                      {
-                        "scope": "read:issue-type-scheme:jira"
-                      },
-                      {
-                        "scope": "read:issue-type-screen-scheme:jira"
-                      },
-                      {
-                        "scope": "read:permission-scheme:jira"
-                      },
-                      {
-                        "scope": "read:screen:jira"
-                      },
-                      {
-                        "scope": "read:screen-scheme:jira"
-                      },
-                      {
-                        "scope": "read:screen-tab:jira"
-                      },
-                      {
-                        "scope": "read:workflow:jira"
-                      },
-                      {
-                        "scope": "read:workflow-scheme:jira"
-                      },
-                      {
-                        "scope": "read:project.email:jira"
-                      },
-                      {
-                        "scope": "read:custom-field-contextual-configuration:jira"
-                      },
-                      {
-                        "scope": "manage:jira-configuration"
-                      }
-                    ],
-                    "scopes_join_strategy": "space"
-                  }
-                },
-                "predicate_key": [
-                  "credentials",
-                  "auth_type"
-                ],
-                "predicate_value": "OAuth2.0"
-              },
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "credentials": {
-                    "description": "Choose how to authenticate to Jira.",
-                    "oneOf": [
-                      {
-                        "properties": {
-                          "api_token": {
-                            "airbyte_secret": true,
-                            "description": "Jira API Token. See the <a href=\"https://docs.airbyte.com/integrations/sources/jira\">docs</a> for more information on how to generate this key. API Token is used for Authorization to your account by BasicAuth.",
-                            "order": 2,
-                            "title": "API Token",
-                            "type": "string"
-                          },
-                          "auth_type": {
-                            "const": "API Token",
-                            "order": 0,
-                            "type": "string"
-                          },
-                          "email": {
-                            "description": "The user email for your Jira account which you used to generate the API token. This field is used for Authorization to your account by BasicAuth.",
-                            "order": 1,
-                            "title": "Email",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "api_token",
-                          "email"
-                        ],
-                        "title": "API Token",
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "auth_type": {
-                            "const": "Service Account",
-                            "order": 0,
-                            "type": "string"
-                          },
-                          "service_account_token": {
-                            "airbyte_secret": true,
-                            "description": "Atlassian Service Account API token. Service account API tokens authenticate with Bearer authentication and use Atlassian's Platform API Gateway.",
-                            "order": 1,
-                            "title": "Service Account Token",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "service_account_token"
-                        ],
-                        "title": "Service Account",
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "auth_type": {
-                            "const": "OAuth2.0",
-                            "order": 0,
-                            "type": "string"
-                          },
-                          "client_id": {
-                            "airbyte_secret": true,
-                            "description": "The Client ID of your Atlassian OAuth application.",
-                            "order": 1,
-                            "title": "Client ID",
-                            "type": "string"
-                          },
-                          "client_secret": {
-                            "airbyte_secret": true,
-                            "description": "The Client Secret of your Atlassian OAuth application.",
-                            "order": 2,
-                            "title": "Client Secret",
-                            "type": "string"
-                          },
-                          "refresh_token": {
-                            "airbyte_secret": true,
-                            "description": "The Refresh Token obtained after completing the OAuth flow.",
-                            "order": 3,
-                            "title": "Refresh Token",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "auth_type",
-                          "client_id",
-                          "client_secret",
-                          "refresh_token"
-                        ],
-                        "title": "OAuth2.0",
-                        "type": "object"
-                      }
-                    ],
-                    "order": 0,
-                    "title": "Authentication",
-                    "type": "object"
-                  },
-                  "domain": {
-                    "description": "Your Jira host (full domain \u2014 do not include 'https://' or paths). Examples: airbyteio.atlassian.net, airbyteio.jira.com, jira.your-domain.com.",
-                    "examples": [
-                      "<your-domain>.atlassian.net",
-                      "<your-domain>.jira.com",
-                      "jira.<your-domain>.com"
-                    ],
-                    "order": 1,
-                    "pattern_descriptor": "<your-domain>.atlassian.net",
-                    "title": "Domain",
-                    "type": "string"
-                  },
-                  "expand_issue_changelog": {
-                    "airbyte_hidden": true,
-                    "default": false,
-                    "description": "(DEPRECATED) Expand the changelog when replicating issues.",
-                    "title": "Expand Issue Changelog",
-                    "type": "boolean"
-                  },
-                  "expand_issue_transition": {
-                    "airbyte_hidden": true,
-                    "default": false,
-                    "description": "(DEPRECATED) Expand the transitions when replicating issues.",
-                    "title": "Expand Issue Transitions",
-                    "type": "boolean"
-                  },
-                  "issues_stream_expand_with": {
-                    "airbyte_hidden": true,
-                    "default": [],
-                    "description": "Select fields to Expand the `Issues` stream when replicating with: ",
-                    "items": {
-                      "enum": [
-                        "renderedFields",
-                        "transitions",
-                        "changelog"
-                      ],
-                      "type": "string"
-                    },
-                    "title": "Expand Issues stream",
-                    "type": "array"
-                  },
-                  "lookback_window_minutes": {
-                    "default": 0,
-                    "description": "When set to N, the connector will always refresh resources created within the past N minutes. By default, updated objects that are not newly created are not incrementally synced.",
-                    "examples": [
-                      60
-                    ],
-                    "maximum": 576000,
-                    "minimum": 0,
-                    "order": 5,
-                    "title": "Lookback window",
-                    "type": "integer"
-                  },
-                  "num_workers": {
-                    "default": 5,
-                    "description": "The number of worker threads to use for the sync.",
-                    "examples": [
-                      1,
-                      2,
-                      5
-                    ],
-                    "maximum": 40,
-                    "minimum": 1,
-                    "order": 6,
-                    "title": "Number of concurrent threads",
-                    "type": "integer"
-                  },
-                  "projects": {
-                    "description": "List of Jira project keys to replicate data for, or leave it empty if you want to replicate data for all projects.",
-                    "examples": [
-                      "PROJ1",
-                      "PROJ2"
-                    ],
-                    "items": {
-                      "type": "string"
-                    },
-                    "order": 3,
-                    "title": "Projects",
-                    "type": "array"
-                  },
-                  "render_fields": {
-                    "airbyte_hidden": true,
-                    "default": false,
-                    "description": "(DEPRECATED) Render issue fields in HTML format in addition to Jira JSON-like format.",
-                    "title": "Render Issue Fields",
-                    "type": "boolean"
-                  },
-                  "start_date": {
-                    "description": "The date from which you want to replicate data from Jira, use the format YYYY-MM-DDT00:00:00Z. Note that this field only applies to certain streams, and only data generated on or after the start date will be replicated. Or leave it empty if you want to replicate all data. For more information, refer to the <a href=\"https://docs.airbyte.com/integrations/sources/jira/\">documentation</a>.",
-                    "examples": [
-                      "2021-03-01T00:00:00Z"
-                    ],
-                    "format": "date-time",
-                    "order": 4,
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-                    "title": "Start Date",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "credentials",
-                  "domain"
-                ],
-                "title": "Jira Spec",
-                "type": "object"
-              },
-              "documentationUrl": "https://docs.airbyte.com/integrations/sources/jira",
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "suggestedStreams": {
-              "streams": [
-                "issues",
-                "projects",
-                "users",
-                "issue_fields"
-              ]
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "language:manifest-only",
-              "cdk:low-code"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
