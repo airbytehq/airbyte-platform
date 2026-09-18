@@ -39,8 +39,8 @@ class WorkerConfigProviderMicronautTest {
   @Test
   fun `test kube config is reading all the fields`() {
     assertEquals("check", checkKubeResourceConfig.name)
-    assertEquals("check annotations", checkKubeResourceConfig.annotations)
-    assertEquals("check labels", checkKubeResourceConfig.labels)
+    assertEquals("check-annotation=checkvalue", checkKubeResourceConfig.annotations)
+    assertEquals("check-label=checkvalue", checkKubeResourceConfig.labels)
     assertEquals("check node-selectors", checkKubeResourceConfig.nodeSelectors)
     assertEquals("check cpu limit", checkKubeResourceConfig.cpuLimit)
     assertEquals("check cpu request", checkKubeResourceConfig.cpuRequest)
@@ -68,6 +68,22 @@ class WorkerConfigProviderMicronautTest {
     assertEquals("", specKubeConfig.resourceRequirements.cpuRequest)
     assertEquals("spec memory limit", specKubeConfig.resourceRequirements.memoryLimit)
     assertEquals("", specKubeConfig.resourceRequirements.memoryRequest)
+  }
+
+  @Test
+  fun `check labels and annotations fallback to default when unset`() {
+    val orchestratorConfig = workerConfigsProvider.getConfig(ResourceType.ORCHESTRATOR)
+
+    assertEquals(mapOf("default-annotation" to "defaultvalue"), orchestratorConfig.workerKubeAnnotations)
+    assertEquals(mapOf("default-label" to "defaultvalue"), orchestratorConfig.workerKubeLabels)
+  }
+
+  @Test
+  fun `check labels and annotations use their own value when set`() {
+    val checkConfig = workerConfigsProvider.getConfig(ResourceType.CHECK)
+
+    assertEquals(mapOf("check-annotation" to "checkvalue"), checkConfig.workerKubeAnnotations)
+    assertEquals(mapOf("check-label" to "checkvalue"), checkConfig.workerKubeLabels)
   }
 
   @Test

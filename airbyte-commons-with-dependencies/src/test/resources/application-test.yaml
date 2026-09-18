@@ -5,12 +5,14 @@ airbyte:
   worker:
     kube-job-configs:
       default:
+        annotations: default-annotation=defaultvalue
+        labels: default-label=defaultvalue
         cpu-limit: default cpu limit
         cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:}
       check:
-        annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:check annotations}
-        labels: ${CHECK_JOB_KUBE_LABELS:check labels}
+        annotations: ${CHECK_JOB_KUBE_ANNOTATIONS:check-annotation=checkvalue}
+        labels: ${CHECK_JOB_KUBE_LABELS:check-label=checkvalue}
         node-selectors: ${CHECK_JOB_KUBE_NODE_SELECTORS:check node-selectors}
         cpu-limit: ${CHECK_JOB_MAIN_CONTAINER_CPU_LIMIT:check cpu limit}
         cpu-request: ${CHECK_JOB_MAIN_CONTAINER_CPU_REQUEST:check cpu request}
