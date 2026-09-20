@@ -128,6 +128,109 @@ internal class ActorDefinitionHandlerHelperTest {
     }
 
     @Test
+    @DisplayName("The ActorDefinitionVersion created fromCreate should read supportsFileTransfer from spec additionalProperties")
+    fun testDefaultDefinitionVersionFromCreateWithSupportsFileTransfer() {
+      val specWithFileTransfer = ConnectorSpecification()
+        .withProtocolVersion(VALID_PROTOCOL_VERSION)
+        .withAdditionalProperty("supportsFileTransfer", true)
+
+      Mockito
+        .`when`(
+          synchronousSchedulerClient.createGetSpecJob(
+            getDockerImageForTag(
+              DOCKER_IMAGE_TAG,
+            ),
+            true,
+            WORKSPACE_ID,
+          ),
+        ).thenReturn(
+          SynchronousResponse(
+            specWithFileTransfer,
+            mock(ConfigType.GET_SPEC),
+          ),
+        )
+
+      val expectedNewVersion =
+        ActorDefinitionVersion()
+          .withActorDefinitionId(null)
+          .withDockerImageTag(DOCKER_IMAGE_TAG)
+          .withDockerRepository(DOCKER_REPOSITORY)
+          .withSpec(specWithFileTransfer)
+          .withDocumentationUrl(DOCUMENTATION_URL.toString())
+          .withSupportLevel(SupportLevel.NONE)
+          .withInternalSupportLevel(100L)
+          .withProtocolVersion(VALID_PROTOCOL_VERSION)
+          .withReleaseStage(ReleaseStage.CUSTOM)
+          .withSupportsFileTransfer(true)
+
+      val newVersion =
+        actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+          DOCKER_REPOSITORY,
+          DOCKER_IMAGE_TAG,
+          DOCUMENTATION_URL,
+          WORKSPACE_ID,
+        )
+      Mockito
+        .verify(synchronousSchedulerClient)
+        .createGetSpecJob(getDockerImageForTag(DOCKER_IMAGE_TAG), true, WORKSPACE_ID)
+      Assertions.assertEquals(expectedNewVersion, newVersion)
+
+      Mockito.verifyNoMoreInteractions(synchronousSchedulerClient)
+      Mockito.verifyNoInteractions(actorDefinitionVersionResolver, remoteDefinitionsProvider)
+    }
+
+    @Test
+    @DisplayName("The ActorDefinitionVersion created fromCreate should default supportsFileTransfer to false when not present in spec")
+    fun testDefaultDefinitionVersionFromCreateWithoutSupportsFileTransfer() {
+      val specWithoutFileTransfer = ConnectorSpecification()
+        .withProtocolVersion(VALID_PROTOCOL_VERSION)
+
+      Mockito
+        .`when`(
+          synchronousSchedulerClient.createGetSpecJob(
+            getDockerImageForTag(
+              DOCKER_IMAGE_TAG,
+            ),
+            true,
+            WORKSPACE_ID,
+          ),
+        ).thenReturn(
+          SynchronousResponse(
+            specWithoutFileTransfer,
+            mock(ConfigType.GET_SPEC),
+          ),
+        )
+
+      val expectedNewVersion =
+        ActorDefinitionVersion()
+          .withActorDefinitionId(null)
+          .withDockerImageTag(DOCKER_IMAGE_TAG)
+          .withDockerRepository(DOCKER_REPOSITORY)
+          .withSpec(specWithoutFileTransfer)
+          .withDocumentationUrl(DOCUMENTATION_URL.toString())
+          .withSupportLevel(SupportLevel.NONE)
+          .withInternalSupportLevel(100L)
+          .withProtocolVersion(VALID_PROTOCOL_VERSION)
+          .withReleaseStage(ReleaseStage.CUSTOM)
+          .withSupportsFileTransfer(false)
+
+      val newVersion =
+        actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(
+          DOCKER_REPOSITORY,
+          DOCKER_IMAGE_TAG,
+          DOCUMENTATION_URL,
+          WORKSPACE_ID,
+        )
+      Mockito
+        .verify(synchronousSchedulerClient)
+        .createGetSpecJob(getDockerImageForTag(DOCKER_IMAGE_TAG), true, WORKSPACE_ID)
+      Assertions.assertEquals(expectedNewVersion, newVersion)
+
+      Mockito.verifyNoMoreInteractions(synchronousSchedulerClient)
+      Mockito.verifyNoInteractions(actorDefinitionVersionResolver, remoteDefinitionsProvider)
+    }
+
+    @Test
     @DisplayName("Creating an ActorDefinitionVersion from create with an invalid protocol version should throw an exception")
     fun testDefaultDefinitionVersionFromCreateInvalidProtocolVersionThrows() {
       Mockito
@@ -226,6 +329,60 @@ internal class ActorDefinitionHandlerHelperTest {
       Assertions.assertNotEquals(previousDefaultVersion, newVersion)
       Assertions.assertEquals(newSpec, newVersion.getSpec())
       Assertions.assertEquals(newValidProtocolVersion, newVersion.getProtocolVersion())
+
+      Mockito.verifyNoMoreInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver)
+      Mockito.verifyNoInteractions(remoteDefinitionsProvider)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    @DisplayName("Creating an ActorDefinitionVersion from update should read supportsFileTransfer from new spec")
+    fun testDefaultDefinitionVersionFromUpdateReadsSupportsFileTransfer(isCustomConnector: Boolean) {
+      val previousDefaultVersion: ActorDefinitionVersion = actorDefinitionVersion.withSupportsFileTransfer(false)
+      val newDockerImageTag = "newTag"
+      val newValidProtocolVersion = "0.2.0"
+      val newDockerImage = getDockerImageForTag(newDockerImageTag)
+      val newSpec =
+        ConnectorSpecification()
+          .withProtocolVersion(newValidProtocolVersion)
+          .withAdditionalProperty(SPEC_KEY, "new")
+          .withAdditionalProperty("supportsFileTransfer", true)
+
+      Mockito
+        .`when`(
+          synchronousSchedulerClient.createGetSpecJob(
+            newDockerImage,
+            isCustomConnector,
+            WORKSPACE_ID,
+          ),
+        ).thenReturn(
+          SynchronousResponse(
+            newSpec,
+            mock(ConfigType.GET_SPEC),
+          ),
+        )
+
+      val newVersion =
+        actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
+          previousDefaultVersion,
+          ActorType.SOURCE,
+          newDockerImageTag,
+          isCustomConnector,
+          WORKSPACE_ID,
+        )
+
+      Mockito.verify(actorDefinitionVersionResolver).resolveVersionForTag(
+        previousDefaultVersion.getActorDefinitionId(),
+        ActorType.SOURCE,
+        previousDefaultVersion.getDockerRepository(),
+        newDockerImageTag,
+      )
+      Mockito.verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID)
+
+      Assertions.assertNotEquals(previousDefaultVersion, newVersion)
+      Assertions.assertEquals(newSpec, newVersion.getSpec())
+      Assertions.assertEquals(newValidProtocolVersion, newVersion.getProtocolVersion())
+      Assertions.assertTrue(newVersion.getSupportsFileTransfer()) // Should be true from the new spec
 
       Mockito.verifyNoMoreInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver)
       Mockito.verifyNoInteractions(remoteDefinitionsProvider)
