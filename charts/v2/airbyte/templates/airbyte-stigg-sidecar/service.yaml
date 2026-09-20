@@ -5,14 +5,30 @@ kind: Service
 metadata:
   namespace: {{ include "airbyte.namespace" . }}
   name: {{ .Release.Name }}-stigg-sidecar-svc
+  {{- with .Values.stiggSidecar.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.stiggSidecar.service.type }}
+  {{- with .Values.stiggSidecar.service.internalTrafficPolicy }}
+  internalTrafficPolicy: {{ . }}
+  {{- end }}
+  {{- if and .Values.stiggSidecar.service.externalTrafficPolicy (or (eq .Values.stiggSidecar.service.type "NodePort") (eq .Values.stiggSidecar.service.type "LoadBalancer")) }}
+  externalTrafficPolicy: {{ .Values.stiggSidecar.service.externalTrafficPolicy }}
+  {{- end }}
+  {{- with .Values.stiggSidecar.service.trafficDistribution }}
+  trafficDistribution: {{ . }}
+  {{- end }}
   ports:
   - port: {{ .Values.stiggSidecar.service.port }}
     protocol: TCP
     targetPort: 8800
+    {{- with .Values.stiggSidecar.service.appProtocol }}
+    appProtocol: {{ . }}
+    {{- end }}
   selector:
     {{- include "airbyte.selectorLabels" . | nindent 4 }}
     {{- if .Values.stiggSidecar.extraSelectorLabels }}
