@@ -45,6 +45,9 @@ spec:
       {{- if .Values.webapp.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.affinity "context" $) | nindent 8 }}
       {{- end }}
+      {{- with .Values.webapp.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- range .Values.global.imagePullSecrets }}

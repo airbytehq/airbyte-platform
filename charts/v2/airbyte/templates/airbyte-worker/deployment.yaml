@@ -51,6 +51,12 @@ spec:
       {{- if .Values.worker.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.worker.affinity "context" $) | nindent 8 }}
       {{- end }}
+      {{- with .Values.worker.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- if .Values.worker.topologySpreadConstraints }}
+      topologySpreadConstraints: {{- include "airbyte.tplvalues.render" (dict "value" .Values.worker.topologySpreadConstraints "context" $) | nindent 8 }}
+      {{- end }}
       {{- if .Values.worker.extraInitContainers }}
       initContainers:
       {{- toYaml .Values.worker.extraInitContainers | nindent 6 }}

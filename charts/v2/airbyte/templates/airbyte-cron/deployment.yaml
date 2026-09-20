@@ -51,6 +51,9 @@ spec:
       {{- if .Values.cron.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.cron.affinity "context" $) | nindent 8 }}
       {{- end }}
+      {{- with .Values.cron.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- if .Values.cron.extraInitContainers }}
       initContainers:
       {{- toYaml .Values.cron.extraInitContainers | nindent 6 }}

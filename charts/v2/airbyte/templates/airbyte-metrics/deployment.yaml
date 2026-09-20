@@ -20,7 +20,7 @@ spec:
     matchLabels:
       airbyte: metrics
   strategy:
-    type: Recreate # Needed due to volume claims
+    type: {{ .Values.metrics.deploymentStrategyType }} # Needed due to volume claims
   template:
     metadata:
       labels:
@@ -48,6 +48,9 @@ spec:
       {{- end }}
       {{- if .Values.metrics.affinity }}
       affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.metrics.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- with .Values.metrics.priorityClassName }}
+      priorityClassName: {{ . }}
       {{- end }}
       containers:
       - name: airbyte-metrics-container
