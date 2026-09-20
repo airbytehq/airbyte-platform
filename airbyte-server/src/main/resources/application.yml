@@ -18,6 +18,8 @@ micronaut:
       expire-after-write: 10m
     dataplane-group:
       expire-after-write: 10m
+    remote-definitions-provider:
+      expire-after-write: 15s
     platform-compatibility-provider:
       expire-after-write: 15s
     organization-customer-attributes:
