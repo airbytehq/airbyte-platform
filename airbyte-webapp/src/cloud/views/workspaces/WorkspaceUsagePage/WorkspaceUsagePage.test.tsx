@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 
 import { mocked, render } from "test-utils";
 
-import { useCurrentWorkspace, useGetDataplaneGroup } from "core/api";
+import { useCurrentWorkspace, useGetDataplaneGroup, useWorkspaceDataWorkerCapacity } from "core/api";
 import { useExperiment } from "core/services/Experiment";
 import { FeatureItem } from "core/services/features";
 
@@ -19,6 +19,7 @@ jest.mock("cloud/area/billing/components/UsagePerDayGraph", () => ({
 jest.mock("core/api", () => ({
   useCurrentWorkspace: jest.fn(),
   useGetDataplaneGroup: jest.fn(),
+  useWorkspaceDataWorkerCapacity: jest.fn(),
 }));
 
 jest.mock("core/services/analytics", () => ({
@@ -61,22 +62,35 @@ describe(`${WorkspaceUsagePage.name}`, () => {
       dataplaneGroupId: "dataplane-group-1",
     } as ReturnType<typeof useCurrentWorkspace>);
     mocked(useGetDataplaneGroup).mockReturnValue({ getDataplaneGroup });
+    mocked(useWorkspaceDataWorkerCapacity).mockReturnValue(2.5);
     mocked(useExperiment).mockReturnValue(true);
   });
 
-  it("renders the current workspace region below the page heading", async () => {
+  it("renders the current workspace region and fractional capacity below the page heading", async () => {
     getDataplaneGroup.mockReturnValue({ name: "US East (N. Virginia)" });
 
     await render(<WorkspaceUsagePage />, undefined, [FeatureItem.AllowDataWorkerCapacity]);
 
     const heading = screen.getByRole("heading", { name: "Workspace usage" });
-    const region = screen.getByText("Region: US East (N. Virginia)");
+    const capacity = screen.getByText("2.5 DW");
+    const region = capacity.parentElement as HTMLElement;
     const description = screen.getByText("Data worker usage for this workspace.");
 
     expect(getDataplaneGroup).toHaveBeenCalledWith("dataplane-group-1");
+    expect(capacity).toHaveAttribute("data-type", "text");
+    expect(region).toHaveTextContent("Region: US East (N. Virginia) · capacity 2.5 DW");
     expect(region.parentElement?.querySelector('[data-icon="globe"]')).toBeInTheDocument();
     expect(heading.compareDocumentPosition(region)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(region.compareDocumentPosition(description)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("renders zero capacity with one fractional digit", async () => {
+    getDataplaneGroup.mockReturnValue({ name: "US East (N. Virginia)" });
+    mocked(useWorkspaceDataWorkerCapacity).mockReturnValue(0);
+
+    await render(<WorkspaceUsagePage />, undefined, [FeatureItem.AllowDataWorkerCapacity]);
+
+    expect(screen.getByText("0.0 DW")).toBeInTheDocument();
   });
 
   it("omits the region row when the workspace assignment cannot be resolved", async () => {
@@ -85,6 +99,7 @@ describe(`${WorkspaceUsagePage.name}`, () => {
     await render(<WorkspaceUsagePage />, undefined, [FeatureItem.AllowDataWorkerCapacity]);
 
     expect(getDataplaneGroup).toHaveBeenCalledWith("dataplane-group-1");
+    expect(useWorkspaceDataWorkerCapacity).not.toHaveBeenCalled();
     expect(screen.queryByText(/^Region:/)).not.toBeInTheDocument();
     expect(document.querySelector('[data-icon="globe"]')).not.toBeInTheDocument();
   });
@@ -97,6 +112,7 @@ describe(`${WorkspaceUsagePage.name}`, () => {
     await render(<WorkspaceUsagePage />, undefined, [FeatureItem.AllowDataWorkerCapacity]);
 
     expect(useGetDataplaneGroup).not.toHaveBeenCalled();
+    expect(useWorkspaceDataWorkerCapacity).not.toHaveBeenCalled();
     expect(screen.queryByText(/^Region:/)).not.toBeInTheDocument();
   });
 
@@ -106,6 +122,7 @@ describe(`${WorkspaceUsagePage.name}`, () => {
     await render(<WorkspaceUsagePage />, undefined, [FeatureItem.AllowDataWorkerCapacity]);
 
     expect(useGetDataplaneGroup).not.toHaveBeenCalled();
+    expect(useWorkspaceDataWorkerCapacity).not.toHaveBeenCalled();
     expect(screen.queryByText(/^Region:/)).not.toBeInTheDocument();
   });
 
@@ -115,6 +132,7 @@ describe(`${WorkspaceUsagePage.name}`, () => {
     await render(<WorkspaceUsagePage />, undefined, []);
 
     expect(useGetDataplaneGroup).not.toHaveBeenCalled();
+    expect(useWorkspaceDataWorkerCapacity).not.toHaveBeenCalled();
     expect(screen.queryByText(/^Region:/)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "credits" })).toBeInTheDocument();
   });

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -10,7 +10,7 @@ import { Text } from "components/ui/Text";
 
 import { SetupBillingAlertsLink } from "area/organization/components/SetupBillingAlertsLink";
 import { UsagePerDayGraph } from "cloud/area/billing/components/UsagePerDayGraph";
-import { useCurrentWorkspace, useGetDataplaneGroup } from "core/api";
+import { useCurrentWorkspace, useGetDataplaneGroup, useWorkspaceDataWorkerCapacity } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -20,6 +20,8 @@ import { useCreditsContext, WorkspaceCreditUsageContextProvider } from "./compon
 import { CreditsUsageFilters } from "./components/CreditsUsageFilters";
 import { UsagePerConnectionTable } from "./components/UsagePerConnectionTable";
 import { WorkspaceDataWorkerUsageGraph } from "./components/WorkspaceDataWorkerUsageGraph";
+
+const DW_FORMAT = { minimumFractionDigits: 1, maximumFractionDigits: 1 } as const;
 
 export const WorkspaceUsagePage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE_USAGE);
@@ -84,11 +86,29 @@ const WorkspaceRegion: React.FC<{ dataplaneGroupId: string }> = ({ dataplaneGrou
     return null;
   }
 
+  return <WorkspaceRegionCapacity regionName={regionName} />;
+};
+
+const WorkspaceRegionCapacity: React.FC<{ regionName: string }> = ({ regionName }) => {
+  const dataWorkerCapacity = useWorkspaceDataWorkerCapacity();
+  const { formatNumber } = useIntl();
+
   return (
     <FlexContainer alignItems="center" gap="sm">
       <Icon type="globe" size="sm" color="disabled" />
       <Text color="grey" size="lg">
-        <FormattedMessage id="settings.workspace.usage.region" values={{ regionName }} />
+        <FormattedMessage
+          id="settings.workspace.usage.region"
+          values={{
+            regionName,
+            capacity: formatNumber(dataWorkerCapacity, DW_FORMAT),
+            capacityText: (chunks) => (
+              <Text as="span" color="darkBlue" size="lg">
+                {chunks}
+              </Text>
+            ),
+          }}
+        />
       </Text>
     </FlexContainer>
   );

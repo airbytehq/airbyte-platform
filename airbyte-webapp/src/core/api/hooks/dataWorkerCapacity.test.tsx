@@ -6,11 +6,17 @@ import {
   dataWorkerCapacityKeys,
   useReallocateDataWorkerCapacity,
   useRegionDataWorkerCapacity,
+  useWorkspaceDataWorkerCapacity,
 } from "./dataWorkerCapacity";
-import { listDataWorkerAllocations, reallocateDataWorkerCapacity } from "../generated/AirbyteClient";
-import { DataWorkerAllocationListResponse } from "../types/AirbyteClient";
+import {
+  getWorkspaceDataWorkerAvailability,
+  listDataWorkerAllocations,
+  reallocateDataWorkerCapacity,
+} from "../generated/AirbyteClient";
+import { DataWorkerAllocationListResponse, WorkspaceDataWorkerAvailabilityRead } from "../types/AirbyteClient";
 
 jest.mock("../generated/AirbyteClient", () => ({
+  getWorkspaceDataWorkerAvailability: jest.fn(),
   listDataWorkerAllocations: jest.fn(),
   reallocateDataWorkerCapacity: jest.fn(),
 }));
@@ -21,6 +27,10 @@ jest.mock("../useRequestOptions", () => ({
 
 jest.mock("area/organization/utils", () => ({
   useCurrentOrganizationId: jest.fn(() => "organization-1"),
+}));
+
+jest.mock("area/workspace/utils", () => ({
+  useCurrentWorkspaceId: jest.fn(() => "workspace-1"),
 }));
 
 const mockRegisterNotification = jest.fn();
@@ -39,6 +49,47 @@ const mockReallocateDataWorkerCapacity = reallocateDataWorkerCapacity as jest.Mo
 const mockListDataWorkerAllocations = listDataWorkerAllocations as jest.MockedFunction<
   typeof listDataWorkerAllocations
 >;
+
+const mockGetWorkspaceDataWorkerAvailability = getWorkspaceDataWorkerAvailability as jest.MockedFunction<
+  typeof getWorkspaceDataWorkerAvailability
+>;
+
+describe(`${useWorkspaceDataWorkerCapacity.name}`, () => {
+  let queryClient: QueryClient;
+
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+
+  const availability: WorkspaceDataWorkerAvailabilityRead = {
+    workspaceId: "workspace-1",
+    organizationId: "organization-1",
+    outOfDataWorkers: false,
+    enforcementEnabled: true,
+    currentDataWorkers: 1.5,
+    committedDataWorkers: 2.5,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    mockGetWorkspaceDataWorkerAvailability.mockResolvedValue(availability);
+  });
+
+  afterEach(() => {
+    queryClient.clear();
+  });
+
+  it("returns the workspace's committed capacity and requests its availability", async () => {
+    const { result } = renderHook(() => useWorkspaceDataWorkerCapacity(), { wrapper });
+
+    await waitFor(() => expect(result.current).toBe(2.5));
+    expect(mockGetWorkspaceDataWorkerAvailability).toHaveBeenCalledWith(
+      { workspaceId: "workspace-1", organizationId: "organization-1" },
+      {}
+    );
+  });
+});
 
 describe(`${useReallocateDataWorkerCapacity.name}`, () => {
   let queryClient: QueryClient;

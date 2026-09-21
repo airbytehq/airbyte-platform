@@ -13,13 +13,15 @@ import { useRequestOptions } from "core/api/useRequestOptions";
 import { useSuspenseQuery } from "core/api/useSuspenseQuery";
 import { useNotificationService } from "core/services/Notification";
 
-import { SCOPE_ORGANIZATION } from "../scopes";
+import { SCOPE_ORGANIZATION, SCOPE_WORKSPACE } from "../scopes";
 import { DataWorkerAllocationListResponse } from "../types/AirbyteClient";
 
 export const dataWorkerCapacityKeys = {
   all: [SCOPE_ORGANIZATION, "dataWorkerCapacity"] as const,
   allocations: () => [...dataWorkerCapacityKeys.all, "allocations"] as const,
   allocationList: (organizationId: string) => [...dataWorkerCapacityKeys.allocations(), organizationId] as const,
+  workspaceAvailability: (workspaceId: string) =>
+    [SCOPE_WORKSPACE, "dataWorkerCapacity", "availability", workspaceId] as const,
 };
 
 export const useGetDataWorkerAvailability = () => {
@@ -31,6 +33,18 @@ export const useGetDataWorkerAvailability = () => {
     () => getWorkspaceDataWorkerAvailability({ workspaceId, organizationId }, requestOptions),
     [workspaceId, organizationId, requestOptions]
   );
+};
+
+export const useWorkspaceDataWorkerCapacity = () => {
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+  const organizationId = useCurrentOrganizationId();
+
+  const { committedDataWorkers } = useSuspenseQuery(dataWorkerCapacityKeys.workspaceAvailability(workspaceId), () =>
+    getWorkspaceDataWorkerAvailability({ workspaceId, organizationId }, requestOptions)
+  );
+
+  return committedDataWorkers;
 };
 
 /**
