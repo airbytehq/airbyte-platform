@@ -19469,16 +19469,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "cloud": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           },
           "oss": {
-            "sync_success_rate": "medium",
-            "usage": "low"
+            "sync_success_rate": null,
+            "usage": null
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/destination-snowflake-cortex/0.2.30.spdx.json",
@@ -25742,7 +25742,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner-migrations",
         "releaseCandidates": {
-          "5.10.3": {
+          "5.10.4": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -25790,7 +25790,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "5.10.3",
+            "dockerImageTag": "5.10.4",
             "dockerRepository": "airbyte/source-amazon-seller-partner",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/amazon-seller-partner",
             "erdUrl": "https://dbdocs.io/airbyteio/source-amazon-seller-partner?view=relationships",
@@ -25823,33 +25823,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "octavia-bot-hoard[bot]",
-                "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-                "commit_sha": "8ad89753964a8c4b0b87e3e08e5f14c9d88b0cff",
-                "commit_timestamp": "2026-09-15T07:57:50+00:00"
+                "commit_author": "Maddie Kashyap",
+                "commit_author_email": "maddie.kashyap@airbyte.io",
+                "commit_sha": "15af8479b8c3b0bb1b7282cf3880ba56353cb85c",
+                "commit_timestamp": "2026-09-21T11:50:09-04:00"
               },
               "release": {
-                "attributed_to": "octavia-bot-hoard",
-                "attributed_to_kind": "bot",
-                "merge_commit_sha": "8ad89753964a8c4b0b87e3e08e5f14c9d88b0cff",
-                "merged_at": "2026-09-15T07:57:51Z",
+                "attributed_to": "pnilan",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "15af8479b8c3b0bb1b7282cf3880ba56353cb85c",
+                "merged_at": "2026-09-21T15:50:10Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 230633153,
-                "pr_author_login": "octavia-bot-hoard",
-                "pr_author_type": "Bot",
-                "pr_merged_by_login": "octavia-bot-hoard",
-                "pr_merged_by_type": "Bot",
-                "pr_number": 85942,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/85942",
-                "released_at": "2026-09-15T07:57:51Z",
+                "pr_author_id": 300578413,
+                "pr_author_login": "maddiekashyapAB",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "pnilan",
+                "pr_merged_by_type": "User",
+                "pr_number": 86322,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/86322",
+                "released_at": "2026-09-21T15:50:10Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-seller-partner/5.10.3.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-amazon-seller-partner/5.10.4.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-amazon-seller-partner/5.10.3/metadata.yaml",
-                "metadata_last_modified": "2026-09-15T08:01:55.320987+00:00",
-                "registry_entry_generated_at": "2026-09-15T08:01:55.320987+00:00"
+                "metadata_file_path": "metadata/airbyte/source-amazon-seller-partner/5.10.4/metadata.yaml",
+                "metadata_last_modified": "2026-09-21T15:54:00.568391+00:00",
+                "registry_entry_generated_at": "2026-09-21T15:54:00.568391+00:00"
               }
             },
             "githubIssueLabel": "source-amazon-seller-partner",
@@ -27481,15 +27481,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "release": {
@@ -29122,10 +29122,23 @@
       "connectorTestSuitesOptions": [
         {
           "suite": "unitTests"
+        },
+        {
+          "suite": "acceptanceTests",
+          "testSecrets": [
+            {
+              "fileName": "config.json",
+              "name": "SECRET_SOURCE-ASHBY__CREDS",
+              "secretStore": {
+                "alias": "airbyte-connector-testing-secret-store",
+                "type": "GSM"
+              }
+            }
+          ]
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.3.1",
+      "dockerImageTag": "1.3.2",
       "dockerRepository": "airbyte/source-ashby",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/ashby",
       "externalDocumentationUrls": [
@@ -29142,10 +29155,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "20cbe978a1e7abf06cacb7da5a1025125c5076c4",
-          "commit_timestamp": "2026-09-15T03:54:24+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "c5dc5bd3eda2217e6d6d417d5686bfc7651e29f8",
+          "commit_timestamp": "2026-09-21T15:10:58-07:00"
         },
         "metrics": {
           "all": {
@@ -29162,27 +29175,27 @@
           }
         },
         "release": {
-          "attributed_to": "octavia-bot-hoard",
-          "attributed_to_kind": "bot",
-          "merge_commit_sha": "20cbe978a1e7abf06cacb7da5a1025125c5076c4",
-          "merged_at": "2026-09-15T03:54:25Z",
+          "attributed_to": "pnilan",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "c5dc5bd3eda2217e6d6d417d5686bfc7651e29f8",
+          "merged_at": "2026-09-21T22:10:58Z",
           "pr_author_association": "CONTRIBUTOR",
-          "pr_author_id": 230633153,
-          "pr_author_login": "octavia-bot-hoard",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
-          "pr_merged_by_login": "octavia-bot-hoard",
-          "pr_merged_by_type": "Bot",
-          "pr_number": 85974,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/85974",
-          "released_at": "2026-09-15T03:54:25Z",
+          "pr_merged_by_login": "pnilan",
+          "pr_merged_by_type": "User",
+          "pr_number": 86501,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/86501",
+          "released_at": "2026-09-21T22:10:58Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ashby/1.3.1.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-ashby/1.3.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-ashby/latest/metadata.yaml",
-          "metadata_last_modified": "2026-09-15T03:58:40.436400+00:00",
-          "registry_entry_generated_at": "2026-09-15T03:58:40.436400+00:00"
+          "metadata_last_modified": "2026-09-21T22:15:58.446055+00:00",
+          "registry_entry_generated_at": "2026-09-21T22:15:58.446055+00:00"
         }
       },
       "githubIssueLabel": "source-ashby",
@@ -44708,15 +44721,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -45654,15 +45667,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-dixa/0.4.21.spdx.json",
@@ -51848,15 +51861,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -54672,15 +54685,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "low"
+            "usage": "medium"
           }
         },
         "release": {
@@ -56243,15 +56256,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "medium",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-freshsales/1.1.55.spdx.json",
@@ -56821,15 +56834,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "high",
             "usage": "low"
           }
         },
@@ -58764,7 +58777,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "2.4.1",
+      "dockerImageTag": "2.6.1",
       "dockerRepository": "airbyte/source-github",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/github",
       "erdUrl": "https://dbdocs.io/airbyteio/source-github?view=relationships",
@@ -58812,10 +58825,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "41783bee05d6d0a8b5df7851efa7380bbfeab64b",
-          "commit_timestamp": "2026-09-15T04:44:16+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "6d9c1efcc35f4152200d1a46c68acb00f9382ec4",
+          "commit_timestamp": "2026-09-18T15:07:11+01:00"
         },
         "metrics": {
           "all": {
@@ -58832,27 +58845,27 @@
           }
         },
         "release": {
-          "attributed_to": "octavia-bot-hoard",
-          "attributed_to_kind": "bot",
-          "merge_commit_sha": "41783bee05d6d0a8b5df7851efa7380bbfeab64b",
-          "merged_at": "2026-09-15T04:44:17Z",
+          "attributed_to": "lazebnyi",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "6d9c1efcc35f4152200d1a46c68acb00f9382ec4",
+          "merged_at": "2026-09-18T14:07:12Z",
           "pr_author_association": "CONTRIBUTOR",
-          "pr_author_id": 230633153,
-          "pr_author_login": "octavia-bot-hoard",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
-          "pr_merged_by_login": "octavia-bot-hoard",
-          "pr_merged_by_type": "Bot",
-          "pr_number": 86032,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/86032",
-          "released_at": "2026-09-15T04:44:17Z",
+          "pr_merged_by_login": "lazebnyi",
+          "pr_merged_by_type": "User",
+          "pr_number": 86435,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/86435",
+          "released_at": "2026-09-18T14:07:12Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.4.1.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.6.1.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-github/latest/metadata.yaml",
-          "metadata_last_modified": "2026-09-15T04:51:18.698281+00:00",
-          "registry_entry_generated_at": "2026-09-15T04:51:18.698281+00:00"
+          "metadata_last_modified": "2026-09-18T14:14:31.569283+00:00",
+          "registry_entry_generated_at": "2026-09-18T14:14:31.569283+00:00"
         }
       },
       "githubIssueLabel": "source-github",
@@ -58890,7 +58903,7 @@
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/github-migrations",
         "releaseCandidates": {
-          "2.6.1": {
+          "2.7.0": {
             "ab_internal": {
               "isEnterprise": false,
               "ql": 400,
@@ -58945,7 +58958,7 @@
               }
             ],
             "custom": false,
-            "dockerImageTag": "2.6.1",
+            "dockerImageTag": "2.7.0",
             "dockerRepository": "airbyte/source-github",
             "documentationUrl": "https://docs.airbyte.com/integrations/sources/github",
             "erdUrl": "https://dbdocs.io/airbyteio/source-github?view=relationships",
@@ -58993,33 +59006,33 @@
             ],
             "generated": {
               "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "6d9c1efcc35f4152200d1a46c68acb00f9382ec4",
-                "commit_timestamp": "2026-09-18T15:07:11+01:00"
+                "commit_author": "Anatolii Yatsuk",
+                "commit_author_email": "tolikyatsuk@gmail.com",
+                "commit_sha": "8a07ab041fea0fc5fd5357edfb478aa8b3293c64",
+                "commit_timestamp": "2026-09-21T20:00:45+03:00"
               },
               "release": {
-                "attributed_to": "lazebnyi",
+                "attributed_to": "tolik0",
                 "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "6d9c1efcc35f4152200d1a46c68acb00f9382ec4",
-                "merged_at": "2026-09-18T14:07:12Z",
+                "merge_commit_sha": "8a07ab041fea0fc5fd5357edfb478aa8b3293c64",
+                "merged_at": "2026-09-21T17:00:46Z",
                 "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 158243242,
-                "pr_author_login": "devin-ai-integration",
-                "pr_author_type": "Bot",
-                "pr_merged_by_login": "lazebnyi",
+                "pr_author_id": 35109939,
+                "pr_author_login": "tolik0",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "tolik0",
                 "pr_merged_by_type": "User",
-                "pr_number": 86435,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/86435",
-                "released_at": "2026-09-18T14:07:12Z",
+                "pr_number": 85822,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85822",
+                "released_at": "2026-09-21T17:00:46Z",
                 "source": "publish"
               },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.6.1.spdx.json",
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-github/2.7.0.spdx.json",
               "source_file_info": {
                 "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-github/2.6.1/metadata.yaml",
-                "metadata_last_modified": "2026-09-18T14:14:31.569283+00:00",
-                "registry_entry_generated_at": "2026-09-18T14:14:31.569283+00:00"
+                "metadata_file_path": "metadata/airbyte/source-github/2.7.0/metadata.yaml",
+                "metadata_last_modified": "2026-09-21T17:07:43.917264+00:00",
+                "registry_entry_generated_at": "2026-09-21T17:07:43.917264+00:00"
               }
             },
             "githubIssueLabel": "source-github",
@@ -59030,7 +59043,7 @@
             "maxSecondsBetweenMessages": 3600,
             "name": "GitHub",
             "packageInfo": {
-              "cdk_version": "python:7.28.4"
+              "cdk_version": "python:7.30.0"
             },
             "public": true,
             "releaseStage": "generally_available",
@@ -60345,15 +60358,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "high"
           }
         },
@@ -71188,7 +71201,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.1.0",
+      "dockerImageTag": "1.2.0",
       "dockerRepository": "airbyte/source-greenhouse",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/greenhouse",
       "externalDocumentationUrls": [
@@ -71222,8 +71235,8 @@
         "git": {
           "commit_author": "Anatolii Yatsuk",
           "commit_author_email": "tolikyatsuk@gmail.com",
-          "commit_sha": "e6e697777d8f2295d2dcc561d52ef27af23dc6ae",
-          "commit_timestamp": "2026-09-17T20:17:45+03:00"
+          "commit_sha": "709cce1ddb82894a2aba27887c1cc28b3a0fbb68",
+          "commit_timestamp": "2026-09-21T13:14:30+03:00"
         },
         "metrics": {
           "all": {
@@ -71242,25 +71255,25 @@
         "release": {
           "attributed_to": "tolik0",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "e6e697777d8f2295d2dcc561d52ef27af23dc6ae",
-          "merged_at": "2026-09-17T17:17:46Z",
+          "merge_commit_sha": "709cce1ddb82894a2aba27887c1cc28b3a0fbb68",
+          "merged_at": "2026-09-21T10:14:30Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 35109939,
           "pr_author_login": "tolik0",
           "pr_author_type": "User",
           "pr_merged_by_login": "tolik0",
           "pr_merged_by_type": "User",
-          "pr_number": 85841,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/85841",
-          "released_at": "2026-09-17T17:17:46Z",
+          "pr_number": 86477,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/86477",
+          "released_at": "2026-09-21T10:14:30Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-greenhouse/1.1.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-greenhouse/1.2.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-greenhouse/latest/metadata.yaml",
-          "metadata_last_modified": "2026-09-17T17:21:51.761092+00:00",
-          "registry_entry_generated_at": "2026-09-17T17:21:51.761092+00:00"
+          "metadata_last_modified": "2026-09-21T10:18:57.498079+00:00",
+          "registry_entry_generated_at": "2026-09-21T10:18:57.498079+00:00"
         }
       },
       "githubIssueLabel": "source-greenhouse",
@@ -71433,7 +71446,7 @@
                 "refresh_token",
                 "expires_at"
               ],
-              "scope": "harvest:applications:list harvest:approval_flows:list harvest:candidate_tags:list harvest:candidates:list harvest:close_reasons:list harvest:custom_field_options:list harvest:custom_fields:list harvest:demographic_answer_options:list harvest:demographic_answers:list harvest:demographic_question_sets:list harvest:demographic_questions:list harvest:departments:list harvest:eeoc:list harvest:email_templates:list harvest:interviews:list harvest:job_interview_stages:list harvest:job_posts:list harvest:jobs:list harvest:notes:list harvest:offers:list harvest:offices:list harvest:openings:list harvest:prospect_pools:list harvest:rejection_reasons:list harvest:scorecards:list harvest:sources:list harvest:user_job_permissions:list harvest:user_roles:list harvest:users:list",
+              "scope": "harvest:application_stages:list harvest:applications:list harvest:applied_candidate_tags:list harvest:approval_flows:list harvest:approver_groups:list harvest:approvers:list harvest:attachments:list harvest:candidate_educations:list harvest:candidate_employments:list harvest:candidate_tags:list harvest:candidates:list harvest:close_reasons:list harvest:custom_field_options:list harvest:custom_fields:list harvest:demographic_answer_options:list harvest:demographic_answers:list harvest:demographic_question_sets:list harvest:demographic_questions:list harvest:departments:list harvest:eeoc:list harvest:email_templates:list harvest:interview_kits:list harvest:interviewer_tags:list harvest:interviewers:list harvest:interviews:list harvest:job_hiring_managers:list harvest:job_interview_stages:list harvest:job_interviews:list harvest:job_owners:list harvest:job_posts:list harvest:jobs:list harvest:notes:list harvest:offers:list harvest:offices:list harvest:openings:list harvest:prospect_details:list harvest:prospect_pool_stages:list harvest:prospect_pools:list harvest:referrers:list harvest:rejection_details:list harvest:rejection_reasons:list harvest:scorecard_candidate_attributes:list harvest:scorecard_questions:list harvest:scorecards:list harvest:sources:list harvest:user_emails:list harvest:user_job_permissions:list harvest:user_roles:list harvest:users:list",
               "scopes_join_strategy": "space"
             }
           },
@@ -73909,7 +73922,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "6.9.1",
+      "dockerImageTag": "6.9.2",
       "dockerRepository": "airbyte/source-hubspot",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/hubspot",
       "erdUrl": "https://dbdocs.io/airbyteio/source-hubspot?view=relationships",
@@ -73918,6 +73931,11 @@
           "title": "HubSpot API reference",
           "type": "api_reference",
           "url": "https://developers.hubspot.com/docs/api/overview"
+        },
+        {
+          "title": "HubSpot sunsetted and deprecated APIs",
+          "type": "api_deprecations",
+          "url": "https://developers.hubspot.com/docs/api-reference/deprecated-apis"
         },
         {
           "title": "HubSpot API changelog",
@@ -73942,10 +73960,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "94990e16a3e82cfa78d8475e39ff5f4e10b3203d",
-          "commit_timestamp": "2026-09-15T05:36:10+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "edb6c0ec1de27db52a16334561b8ca7ee9ee166c",
+          "commit_timestamp": "2026-09-17T18:21:50+00:00"
         },
         "metrics": {
           "all": {
@@ -73962,27 +73980,27 @@
           }
         },
         "release": {
-          "attributed_to": "octavia-bot-hoard",
-          "attributed_to_kind": "bot",
-          "merge_commit_sha": "94990e16a3e82cfa78d8475e39ff5f4e10b3203d",
-          "merged_at": "2026-09-15T05:36:11Z",
+          "attributed_to": "sophiecuiy",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "edb6c0ec1de27db52a16334561b8ca7ee9ee166c",
+          "merged_at": "2026-09-17T18:21:51Z",
           "pr_author_association": "CONTRIBUTOR",
-          "pr_author_id": 230633153,
-          "pr_author_login": "octavia-bot-hoard",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
-          "pr_merged_by_login": "octavia-bot-hoard",
-          "pr_merged_by_type": "Bot",
-          "pr_number": 86075,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/86075",
-          "released_at": "2026-09-15T05:36:11Z",
+          "pr_merged_by_login": "sophiecuiy",
+          "pr_merged_by_type": "User",
+          "pr_number": 86350,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/86350",
+          "released_at": "2026-09-17T18:21:51Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-hubspot/6.9.1.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-hubspot/6.9.2.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-hubspot/latest/metadata.yaml",
-          "metadata_last_modified": "2026-09-15T05:41:07.172509+00:00",
-          "registry_entry_generated_at": "2026-09-15T05:41:07.172509+00:00"
+          "metadata_last_modified": "2026-09-17T18:26:43.957246+00:00",
+          "registry_entry_generated_at": "2026-09-17T18:26:43.957246+00:00"
         }
       },
       "githubIssueLabel": "source-hubspot",
@@ -74062,778 +74080,6 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/hubspot-migrations",
-        "releaseCandidates": {
-          "6.9.2": {
-            "ab_internal": {
-              "isEnterprise": false,
-              "ql": 400,
-              "requireVersionIncrementsInPullRequests": true,
-              "sl": 300
-            },
-            "allowedHosts": {
-              "hosts": [
-                "api.hubapi.com"
-              ]
-            },
-            "connectorBuildOptions": {
-              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.28.4@sha256:da2dee37f8b6532edfcbde6b5402a14e5d7364b2b7dbfbcb61e9cad85c25fe63"
-            },
-            "connectorTestSuitesOptions": [
-              {
-                "suite": "liveTests",
-                "testConnections": [
-                  {
-                    "id": "52e28dc7-2245-4ebc-a591-0ef954ce4837",
-                    "name": "hubspot_config_dev_null"
-                  },
-                  {
-                    "id": "5a4058bf-0ab3-427e-92e4-9051c0abf655",
-                    "name": "hubspot_config_oauth_dev_null"
-                  },
-                  {
-                    "id": "67bf1886-3ae0-4fad-8c37-90eb51b2c748",
-                    "name": "hubspot_config_oauth_no_start_date_dev_null"
-                  }
-                ]
-              },
-              {
-                "suite": "unitTests"
-              },
-              {
-                "suite": "integrationTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-HUBSPOT_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_oauth.json",
-                    "name": "SECRET_SOURCE-HUBSPOT_OAUTH_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_oauth_no_start_date.json",
-                    "name": "SECRET_SOURCE-HUBSPOT_OAUTH_NO_START_DATE_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_oauth_no_start_date.json",
-                    "name": "SECRET_SOURCE-HUBSPOT_OAUTH_NO_START_DATE__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              },
-              {
-                "suite": "acceptanceTests",
-                "testSecrets": [
-                  {
-                    "fileName": "config.json",
-                    "name": "SECRET_SOURCE-HUBSPOT_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_oauth.json",
-                    "name": "SECRET_SOURCE-HUBSPOT_OAUTH_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_oauth_no_start_date.json",
-                    "name": "SECRET_SOURCE-HUBSPOT_OAUTH_NO_START_DATE_CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  },
-                  {
-                    "fileName": "config_oauth_no_start_date.json",
-                    "name": "SECRET_SOURCE-HUBSPOT_OAUTH_NO_START_DATE__CREDS",
-                    "secretStore": {
-                      "alias": "airbyte-connector-testing-secret-store",
-                      "type": "GSM"
-                    }
-                  }
-                ]
-              }
-            ],
-            "custom": false,
-            "dockerImageTag": "6.9.2",
-            "dockerRepository": "airbyte/source-hubspot",
-            "documentationUrl": "https://docs.airbyte.com/integrations/sources/hubspot",
-            "erdUrl": "https://dbdocs.io/airbyteio/source-hubspot?view=relationships",
-            "externalDocumentationUrls": [
-              {
-                "title": "HubSpot API reference",
-                "type": "api_reference",
-                "url": "https://developers.hubspot.com/docs/api/overview"
-              },
-              {
-                "title": "HubSpot sunsetted and deprecated APIs",
-                "type": "api_deprecations",
-                "url": "https://developers.hubspot.com/docs/api-reference/deprecated-apis"
-              },
-              {
-                "title": "HubSpot API changelog",
-                "type": "api_release_history",
-                "url": "https://developers.hubspot.com/changelog"
-              },
-              {
-                "title": "HubSpot authentication",
-                "type": "authentication_guide",
-                "url": "https://developers.hubspot.com/docs/api/oauth-quickstart-guide"
-              },
-              {
-                "title": "HubSpot rate limits",
-                "type": "rate_limits",
-                "url": "https://developers.hubspot.com/docs/api/usage-details"
-              },
-              {
-                "title": "HubSpot Status",
-                "type": "status_page",
-                "url": "https://status.hubspot.com/"
-              }
-            ],
-            "generated": {
-              "git": {
-                "commit_author": "devin-ai-integration[bot]",
-                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
-                "commit_sha": "edb6c0ec1de27db52a16334561b8ca7ee9ee166c",
-                "commit_timestamp": "2026-09-17T18:21:50+00:00"
-              },
-              "release": {
-                "attributed_to": "sophiecuiy",
-                "attributed_to_kind": "maintainer",
-                "merge_commit_sha": "edb6c0ec1de27db52a16334561b8ca7ee9ee166c",
-                "merged_at": "2026-09-17T18:21:51Z",
-                "pr_author_association": "CONTRIBUTOR",
-                "pr_author_id": 158243242,
-                "pr_author_login": "devin-ai-integration",
-                "pr_author_type": "Bot",
-                "pr_merged_by_login": "sophiecuiy",
-                "pr_merged_by_type": "User",
-                "pr_number": 86350,
-                "pr_url": "https://github.com/airbytehq/airbyte/pull/86350",
-                "released_at": "2026-09-17T18:21:51Z",
-                "source": "publish"
-              },
-              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-hubspot/6.9.2.spdx.json",
-              "source_file_info": {
-                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
-                "metadata_file_path": "metadata/airbyte/source-hubspot/6.9.2/metadata.yaml",
-                "metadata_last_modified": "2026-09-17T18:26:43.957246+00:00",
-                "registry_entry_generated_at": "2026-09-17T18:26:43.957246+00:00"
-              }
-            },
-            "githubIssueLabel": "source-hubspot",
-            "icon": "hubspot.svg",
-            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-hubspot/latest/icon.svg",
-            "language": "manifest-only",
-            "license": "ELv2",
-            "maxSecondsBetweenMessages": 86400,
-            "name": "HubSpot",
-            "packageInfo": {},
-            "public": true,
-            "releaseStage": "generally_available",
-            "releases": {
-              "breakingChanges": {
-                "2.0.0": {
-                  "message": "This version replaces the `Property History` stream in favor of creating 3 different streams: `Contacts`, `Companies`, and `Deals`, which can now all fetch their property history. It will affect only users who use `Property History` stream, who will need to fix schema conflicts and sync `Contacts Property History` stream instead of `Property History`.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/hubspot-migrations#2.0.0",
-                  "upgradeDeadline": "2024-01-15"
-                },
-                "3.0.0": {
-                  "message": "This update brings extended schema with data type changes for the Marketing Emails stream. Users will need to refresh it and reset this stream after upgrading.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/hubspot-migrations#3.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "marketing_emails"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2024-02-12"
-                },
-                "4.0.0": {
-                  "message": "This update brings extended schema with data type changes for the streams `Deals Property History` and `Companies Property History`. Users will need to refresh their schema and reset their streams after upgrading.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/hubspot-migrations#4.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "deals_property_history",
-                        "companies_property_history"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2024-03-10"
-                },
-                "5.0.0": {
-                  "deadlineAction": "auto_upgrade",
-                  "message": "This update deprecates the `contacts_form_submissions`, `contacts_list_memberships`, and `contacts_merged_audit` streams from the source because they are no longer supported in Hubspot's V3 API and the V1 API is being deprecated on 2025-09-30. Updates the `contact_lists` stream to use V3 API, which contains changes to the schema due to old fields no longer exposed by the V3 API. Users will need to refresh the source schema and clear the stream.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/hubspot-migrations#5.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "contact_lists",
-                        "contacts_form_submissions",
-                        "contacts_list_memberships",
-                        "contacts_merged_audit"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2025-06-15"
-                },
-                "6.0.0": {
-                  "deadlineAction": "auto_upgrade",
-                  "message": "This update migrates the `marketing_emails` stream from HubSpot's deprecated v1 API to the new v3 API. While this migration significantly changes the schema of the stream, removing many fields that were previously present, it also enables incremental sync support for the stream. Users will need to refresh the source schema and reset the `marketing_emails` stream after upgrading. Please refer to the [migration guide](https://docs.airbyte.com/integrations/sources/hubspot-migrations) for more information.",
-                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/hubspot-migrations#6.0.0",
-                  "scopedImpact": [
-                    {
-                      "impactedScopes": [
-                        "marketing_emails"
-                      ],
-                      "scopeType": "stream"
-                    }
-                  ],
-                  "upgradeDeadline": "2025-09-30"
-                }
-              },
-              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/hubspot-migrations",
-              "rolloutConfiguration": {
-                "advanceDelayMinutes": 10,
-                "autopilotConfig": {
-                  "autoPromoteStages": true,
-                  "autoStart": true,
-                  "strategy": "fast"
-                },
-                "defaultRolloutMode": "autopilot",
-                "enableProgressiveRollout": true,
-                "initialPercentage": 0,
-                "maxPercentage": 50
-              }
-            },
-            "remoteRegistries": {
-              "pypi": {
-                "enabled": false,
-                "packageName": "airbyte-source-hubspot"
-              }
-            },
-            "resourceRequirements": {
-              "jobSpecific": [
-                {
-                  "jobType": "check_connection",
-                  "resourceRequirements": {
-                    "memory_limit": "1600Mi",
-                    "memory_request": "1600Mi"
-                  }
-                },
-                {
-                  "jobType": "discover_schema",
-                  "resourceRequirements": {
-                    "memory_limit": "1024Mi",
-                    "memory_request": "1024Mi"
-                  }
-                }
-              ]
-            },
-            "sourceDefinitionId": "36c891d9-4bd9-43ac-bad2-10e12756272c",
-            "sourceType": "api",
-            "spec": {
-              "advanced_auth": {
-                "auth_flow_type": "oauth2.0",
-                "oauth_config_specification": {
-                  "complete_oauth_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "refresh_token": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "refresh_token"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_input_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "complete_oauth_server_output_specification": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "client_id": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_id"
-                        ],
-                        "type": "string"
-                      },
-                      "client_secret": {
-                        "path_in_connector_config": [
-                          "credentials",
-                          "client_secret"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "type": "object"
-                  },
-                  "oauth_connector_input_specification": {
-                    "access_token_headers": {
-                      "Content-Type": "application/x-www-form-urlencoded"
-                    },
-                    "access_token_params": {
-                      "client_id": "{{ client_id_value }}",
-                      "client_secret": "{{ client_secret_value }}",
-                      "code": "{{ auth_code_value }}",
-                      "grant_type": "authorization_code",
-                      "redirect_uri": "{{ redirect_uri_value }}"
-                    },
-                    "access_token_url": "https://api.hubapi.com/oauth/v1/token",
-                    "consent_url": "https://app.hubspot.com/oauth/authorize?{{client_id_param}}&{{redirect_uri_param}}&{{state_param}}&{{scopes_param}}&{{optional_scopes_param}}",
-                    "extract_output": [
-                      "refresh_token"
-                    ],
-                    "optional_scopes": [
-                      {
-                        "scope": "content"
-                      },
-                      {
-                        "scope": "automation"
-                      },
-                      {
-                        "scope": "e-commerce"
-                      },
-                      {
-                        "scope": "forms"
-                      },
-                      {
-                        "scope": "sales-email-read"
-                      },
-                      {
-                        "scope": "tickets"
-                      },
-                      {
-                        "scope": "crm.lists.read"
-                      },
-                      {
-                        "scope": "crm.objects.appointments.read"
-                      },
-                      {
-                        "scope": "crm.objects.carts.read"
-                      },
-                      {
-                        "scope": "crm.objects.commercepayments.read"
-                      },
-                      {
-                        "scope": "crm.objects.companies.read"
-                      },
-                      {
-                        "scope": "crm.objects.courses.read"
-                      },
-                      {
-                        "scope": "crm.objects.custom.read"
-                      },
-                      {
-                        "scope": "crm.objects.deals.read"
-                      },
-                      {
-                        "scope": "crm.objects.goals.read"
-                      },
-                      {
-                        "scope": "crm.objects.invoices.read"
-                      },
-                      {
-                        "scope": "crm.objects.leads.read"
-                      },
-                      {
-                        "scope": "crm.objects.line_items.read"
-                      },
-                      {
-                        "scope": "crm.objects.listings.read"
-                      },
-                      {
-                        "scope": "crm.objects.marketing_events.read"
-                      },
-                      {
-                        "scope": "crm.objects.orders.read"
-                      },
-                      {
-                        "scope": "crm.objects.owners.read"
-                      },
-                      {
-                        "scope": "crm.objects.projects.read"
-                      },
-                      {
-                        "scope": "crm.objects.quotes.read"
-                      },
-                      {
-                        "scope": "crm.objects.services.read"
-                      },
-                      {
-                        "scope": "crm.objects.subscriptions.read"
-                      },
-                      {
-                        "scope": "crm.objects.users.read"
-                      },
-                      {
-                        "scope": "crm.schemas.companies.read"
-                      },
-                      {
-                        "scope": "crm.schemas.custom.read"
-                      },
-                      {
-                        "scope": "crm.schemas.deals.read"
-                      },
-                      {
-                        "scope": "business-intelligence"
-                      },
-                      {
-                        "scope": "settings.users.read"
-                      }
-                    ],
-                    "scopes": [
-                      {
-                        "scope": "crm.schemas.contacts.read"
-                      },
-                      {
-                        "scope": "crm.objects.contacts.read"
-                      },
-                      {
-                        "scope": "oauth"
-                      }
-                    ],
-                    "scopes_join_strategy": "space"
-                  }
-                },
-                "predicate_key": [
-                  "credentials",
-                  "credentials_title"
-                ],
-                "predicate_value": "OAuth Credentials"
-              },
-              "connectionSpecification": {
-                "$schema": "http://json-schema.org/draft-07/schema#",
-                "additionalProperties": true,
-                "properties": {
-                  "association_streams": {
-                    "items": {
-                      "description": "Association Between Objects Streams. Associations represent the relationships between objects and activities in the HubSpot CRM.",
-                      "properties": {
-                        "from_object": {
-                          "description": "The name of the object associating.",
-                          "enum": [
-                            "appointments",
-                            "calls",
-                            "carts",
-                            "communications",
-                            "companies",
-                            "contacts",
-                            "courses",
-                            "deals",
-                            "discounts",
-                            "emails",
-                            "feedback_submissions",
-                            "fees",
-                            "goals",
-                            "invoices",
-                            "leads",
-                            "line_items",
-                            "listings",
-                            "meetings",
-                            "notes",
-                            "orders",
-                            "payments",
-                            "postal_mail",
-                            "projects",
-                            "quotes",
-                            "services",
-                            "subscriptions",
-                            "tasks",
-                            "taxes",
-                            "tickets"
-                          ],
-                          "title": "From Object",
-                          "type": "string"
-                        },
-                        "stream_name": {
-                          "description": "The name to use for the Association Between Objects Stream. If not provided, default name associations_<from_object>_<to_object> will be used.",
-                          "title": "Stream Name",
-                          "type": "string"
-                        },
-                        "to_object": {
-                          "description": "The name of the object associating the record to.",
-                          "enum": [
-                            "appointments",
-                            "calls",
-                            "carts",
-                            "communications",
-                            "companies",
-                            "contacts",
-                            "courses",
-                            "deals",
-                            "discounts",
-                            "emails",
-                            "feedback_submissions",
-                            "fees",
-                            "goals",
-                            "invoices",
-                            "leads",
-                            "line_items",
-                            "listings",
-                            "meetings",
-                            "notes",
-                            "orders",
-                            "payments",
-                            "postal_mail",
-                            "projects",
-                            "quotes",
-                            "services",
-                            "subscriptions",
-                            "tasks",
-                            "taxes",
-                            "tickets"
-                          ],
-                          "title": "To Object",
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "from_object",
-                        "to_object"
-                      ],
-                      "type": "object"
-                    },
-                    "title": "Association Between Objects Streams",
-                    "type": "array"
-                  },
-                  "credentials": {
-                    "description": "Choose how to authenticate to HubSpot.",
-                    "oneOf": [
-                      {
-                        "properties": {
-                          "client_id": {
-                            "description": "The Client ID of your HubSpot developer application. See the <a href=\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\">Hubspot docs</a> if you need help finding this ID.",
-                            "examples": [
-                              "123456789000"
-                            ],
-                            "title": "Client ID",
-                            "type": "string"
-                          },
-                          "client_secret": {
-                            "airbyte_secret": true,
-                            "description": "The client secret for your HubSpot developer application. See the <a href=\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\">Hubspot docs</a> if you need help finding this secret.",
-                            "examples": [
-                              "secret"
-                            ],
-                            "title": "Client Secret",
-                            "type": "string"
-                          },
-                          "credentials_title": {
-                            "const": "OAuth Credentials",
-                            "description": "Name of the credentials",
-                            "order": 0,
-                            "title": "Auth Type",
-                            "type": "string"
-                          },
-                          "refresh_token": {
-                            "airbyte_secret": true,
-                            "description": "Refresh token to renew an expired access token. See the <a href=\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\">Hubspot docs</a> if you need help finding this token.",
-                            "examples": [
-                              "refresh_token"
-                            ],
-                            "title": "Refresh Token",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "client_id",
-                          "client_secret",
-                          "refresh_token",
-                          "credentials_title"
-                        ],
-                        "title": "OAuth",
-                        "type": "object"
-                      },
-                      {
-                        "properties": {
-                          "access_token": {
-                            "airbyte_secret": true,
-                            "description": "HubSpot Access token. See the <a href=\"https://developers.hubspot.com/docs/api/private-apps\">Hubspot docs</a> if you need help finding this token.",
-                            "title": "Access token",
-                            "type": "string"
-                          },
-                          "credentials_title": {
-                            "const": "Private App Credentials",
-                            "description": "Name of the credentials set",
-                            "order": 0,
-                            "title": "Auth Type",
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "access_token",
-                          "credentials_title"
-                        ],
-                        "title": "Private App",
-                        "type": "object"
-                      }
-                    ],
-                    "title": "Authentication",
-                    "type": "object"
-                  },
-                  "custom_object_association_streams": {
-                    "items": {
-                      "description": "Association streams involving custom objects. Use this to sync associations where at least one side is a custom object. Custom objects should be referenced by their fullyQualifiedName (e.g., 'p_my_custom_object') or objectTypeId (e.g., '2-12345'). You can find these identifiers in HubSpot Settings or via the /crm/v3/schemas API. Standard object names (e.g., 'contacts', 'companies') can also be used for the other side of the association.",
-                      "properties": {
-                        "from_object": {
-                          "description": "The name or identifier of the source object. For custom objects, use the fullyQualifiedName (e.g., 'p_my_custom_object') or objectTypeId (e.g., '2-12345'). For standard objects, use the object name (e.g., 'contacts', 'companies', 'deals').",
-                          "examples": [
-                            "p_my_custom_object",
-                            "2-12345",
-                            "contacts"
-                          ],
-                          "title": "From Object",
-                          "type": "string"
-                        },
-                        "stream_name": {
-                          "description": "The name to use for the association stream. If not provided, the default name associations_<from_object>_<to_object> will be used.",
-                          "title": "Stream Name",
-                          "type": "string"
-                        },
-                        "to_object": {
-                          "description": "The name or identifier of the target object. For custom objects, use the fullyQualifiedName (e.g., 'p_my_custom_object') or objectTypeId (e.g., '2-12345'). For standard objects, use the object name (e.g., 'contacts', 'companies', 'deals').",
-                          "examples": [
-                            "contacts",
-                            "p_my_custom_object",
-                            "2-12345"
-                          ],
-                          "title": "To Object",
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "from_object",
-                        "to_object"
-                      ],
-                      "type": "object"
-                    },
-                    "title": "Custom Object Association Streams",
-                    "type": "array"
-                  },
-                  "enable_experimental_streams": {
-                    "default": false,
-                    "description": "If enabled then experimental streams become available for sync.",
-                    "title": "Enable experimental streams",
-                    "type": "boolean"
-                  },
-                  "lookback_window": {
-                    "default": 0,
-                    "description": "How far back (in minutes) to re-fetch records during incremental syncs for CRM Search streams (e.g. contacts, companies, deals, tickets). Set this if you notice missing records in CRM Search streams to recover data that may be delayed by the HubSpot API. Does not affect property history streams.",
-                    "examples": [
-                      60
-                    ],
-                    "maximum": 576000,
-                    "minimum": 0,
-                    "title": "CRM Search Lookback Window (minutes)",
-                    "type": "integer"
-                  },
-                  "num_worker": {
-                    "default": 10,
-                    "description": "The number of worker threads to use for the sync.",
-                    "examples": [
-                      1,
-                      2,
-                      3
-                    ],
-                    "maximum": 40,
-                    "minimum": 1,
-                    "title": "Number of concurrent threads",
-                    "type": "integer"
-                  },
-                  "property_history_lookback_window": {
-                    "default": 0,
-                    "description": "How far back (in minutes) to re-fetch records during incremental syncs for property history streams (deals, contacts, companies property history). Set this if you notice missing records in property history streams caused by cursor drift from HubSpot calculated properties.",
-                    "examples": [
-                      43200
-                    ],
-                    "maximum": 576000,
-                    "minimum": 0,
-                    "title": "Property History Lookback Window (minutes)",
-                    "type": "integer"
-                  },
-                  "start_date": {
-                    "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Any data before this date will not be replicated. If not set, \"2006-06-01T00:00:00Z\" (Hubspot creation date) will be used as start date. It's recommended to provide relevant to your data start date value to optimize synchronization.",
-                    "examples": [
-                      "2017-01-25T00:00:00Z"
-                    ],
-                    "format": "date-time",
-                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
-                    "title": "Start date",
-                    "type": "string"
-                  },
-                  "treat_numbers_and_booleans_as_strings": {
-                    "default": false,
-                    "description": "If enabled, HubSpot dynamic `number` and `boolean` properties are exposed as `string`. Useful when HubSpot returns values that do not match the declared type and the destination rejects the records. After changing this setting, refresh the source schema and refresh the affected stream data. See the connector documentation for details.",
-                    "title": "Treat dynamic number and boolean properties as strings",
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "credentials"
-                ],
-                "title": "HubSpot Source Spec",
-                "type": "object"
-              },
-              "supportsDBT": false,
-              "supportsNormalization": false
-            },
-            "suggestedStreams": {
-              "streams": [
-                "contacts",
-                "companies",
-                "deals"
-              ]
-            },
-            "supportLevel": "certified",
-            "supportsDataActivation": false,
-            "supportsFileTransfer": false,
-            "tags": [
-              "language:manifest-only",
-              "cdk:low-code"
-            ],
-            "tombstone": false
-          }
-        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -88759,15 +88005,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-microsoft-onedrive/0.2.44.spdx.json",
@@ -93572,6 +92818,673 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/mysql-migrations",
+        "releaseCandidates": {
+          "3.53.5": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 400,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "${host}",
+                "${tunnel_method.tunnel_host}"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/java-connector-base:2.0.4@sha256:5f343797cfcf021ca98ba9bdf5970ef66cbf6222d8cc17b0d61d13860a5bcc2b"
+            },
+            "connectorIPCOptions": {
+              "dataChannel": {
+                "supportedSerialization": [
+                  "JSONL",
+                  "PROTOBUF"
+                ],
+                "supportedTransport": [
+                  "SOCKET",
+                  "STDIO"
+                ],
+                "version": "0.0.2"
+              }
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "ssh-key-repl-config.json",
+                    "name": "SECRET_SOURCE-MYSQL_SSH-KEY-REPL__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "ssh-key-config.json",
+                    "name": "SECRET_SOURCE-MYSQL_SSH-KEY__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "ssh-pwd-repl-config.json",
+                    "name": "SECRET_SOURCE-MYSQL_SSH-PWD-REPL__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "ssh-pwd-config.json",
+                    "name": "SECRET_SOURCE-MYSQL_SSH-PWD__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "performance-config.json",
+                    "name": "SECRET_SOURCE_MYSQL_PERFORMANCE_TEST_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "cat-config.json",
+                    "name": "SECRET_SOURCE_MYSQL_ACCEPTANCE_TEST_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "cat-config-cdc.json",
+                    "name": "SECRET_SOURCE_MYSQL_ACCEPTANCE_TEST_CDC_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "3.53.5",
+            "dockerRepository": "airbyte/source-mysql",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/mysql",
+            "externalDocumentationUrls": [
+              {
+                "title": "MySQL documentation",
+                "type": "api_reference",
+                "url": "https://dev.mysql.com/doc/"
+              },
+              {
+                "title": "MySQL Release Notes",
+                "type": "api_release_history",
+                "url": "https://dev.mysql.com/doc/relnotes/mysql/en/"
+              },
+              {
+                "title": "MySQL authentication",
+                "type": "authentication_guide",
+                "url": "https://dev.mysql.com/doc/refman/8.0/en/access-control.html"
+              },
+              {
+                "title": "MySQL server source code",
+                "type": "code_repository",
+                "url": "https://github.com/mysql/mysql-server"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "6c579987d656374107f4170fed4789ce2faf17b1",
+                "commit_timestamp": "2026-09-21T16:41:11-03:00"
+              },
+              "release": {
+                "attributed_to": "dee-airbyte",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "6c579987d656374107f4170fed4789ce2faf17b1",
+                "merged_at": "2026-09-21T19:41:11Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "dee-airbyte",
+                "pr_merged_by_type": "User",
+                "pr_number": 77840,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/77840",
+                "released_at": "2026-09-21T19:41:11Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-mysql/3.53.5.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-mysql/3.53.5/metadata.yaml",
+                "metadata_last_modified": "2026-09-21T19:45:06.119682+00:00",
+                "registry_entry_generated_at": "2026-09-21T19:45:06.119682+00:00"
+              }
+            },
+            "githubIssueLabel": "source-mysql",
+            "icon": "mysql.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-mysql/latest/icon.svg",
+            "language": "java",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 7200,
+            "name": "MySQL",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "alpha",
+            "releases": {
+              "breakingChanges": {
+                "3.0.0": {
+                  "message": "Add default cursor for cdc",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/mysql-migrations#3.0.0",
+                  "upgradeDeadline": "2023-08-17"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/mysql-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "slow"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "sourceDefinitionId": "435bb9a5-7887-4809-aa58-28c27df0d7ad",
+            "sourceType": "database",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "check_privileges": {
+                    "default": true,
+                    "description": "When this feature is enabled, during schema discovery the connector will query each table or view individually to check access privileges and inaccessible tables, views, or columns therein will be removed. In large schemas, this might cause schema discovery to take too long, in which case it might be advisable to disable this feature.",
+                    "order": 13,
+                    "title": "Check Table and Column Access Privileges",
+                    "type": "boolean"
+                  },
+                  "checkpoint_target_interval_seconds": {
+                    "default": 300,
+                    "description": "How often (in seconds) a stream should checkpoint, when possible.",
+                    "order": 12,
+                    "title": "Checkpoint Target Time Interval",
+                    "type": "integer"
+                  },
+                  "concurrency": {
+                    "airbyte_hidden": true,
+                    "default": 1,
+                    "description": "Maximum number of concurrent queries to the database.",
+                    "order": 13,
+                    "title": "Concurrency",
+                    "type": "integer"
+                  },
+                  "database": {
+                    "always_show": true,
+                    "description": "The database name.",
+                    "order": 6,
+                    "title": "Database",
+                    "type": "string"
+                  },
+                  "host": {
+                    "description": "Hostname of the database.",
+                    "order": 1,
+                    "title": "Host",
+                    "type": "string"
+                  },
+                  "jdbc_url_params": {
+                    "description": "Additional properties to pass to the JDBC URL string when connecting to the database formatted as 'key=value' pairs separated by the symbol '&'. (example: key1=value1&key2=value2&key3=value3).",
+                    "order": 8,
+                    "title": "JDBC URL Params",
+                    "type": "string"
+                  },
+                  "max_db_connections": {
+                    "description": "Maximum number of concurrent queries to the database. Leave empty to let Airbyte optimize performance.",
+                    "order": 13,
+                    "title": "Max Concurrent Queries to Database",
+                    "type": "integer"
+                  },
+                  "password": {
+                    "airbyte_secret": true,
+                    "always_show": true,
+                    "description": "The password associated with the username.",
+                    "order": 5,
+                    "title": "Password",
+                    "type": "string"
+                  },
+                  "port": {
+                    "default": 3306,
+                    "description": "Port of the database.",
+                    "maximum": 65536,
+                    "minimum": 0,
+                    "order": 2,
+                    "title": "Port",
+                    "type": "integer"
+                  },
+                  "replication_method": {
+                    "description": "Configures how data is extracted from the database.",
+                    "display_type": "radio",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "Incrementally detects new inserts and updates using the <a href=\"https://docs.airbyte.com/understanding-airbyte/connections/incremental-append/#user-defined-cursor\">cursor column</a> chosen when configuring a connection (e.g. created_at, updated_at).",
+                        "properties": {
+                          "method": {
+                            "default": "STANDARD",
+                            "enum": [
+                              "STANDARD"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "method"
+                        ],
+                        "title": "Scan Changes with User Defined Cursor",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "<i>Recommended</i> - Incrementally reads new inserts, updates, and deletes using MySQL's <a href=\"https://docs.airbyte.com/integrations/sources/mysql#change-data-capture-cdc\"> change data capture feature</a>. This must be enabled on your database.",
+                        "properties": {
+                          "initial_load_timeout_hours": {
+                            "always_show": true,
+                            "default": 8,
+                            "description": "The amount of time an initial load is allowed to continue for before catching up on CDC logs.",
+                            "max": 24,
+                            "min": 4,
+                            "order": 3,
+                            "title": "Initial Load Timeout in Hours (Advanced)",
+                            "type": "integer"
+                          },
+                          "invalid_cdc_cursor_position_behavior": {
+                            "always_show": true,
+                            "default": "Fail sync",
+                            "description": "Determines whether Airbyte should fail or re-sync data in case of an stale/invalid cursor value in the mined logs. If 'Fail sync' is chosen, a user will have to manually reset the connection before being able to continue syncing data. If 'Re-sync data' is chosen, Airbyte will automatically trigger a refresh but could lead to higher cloud costs and data loss.",
+                            "enum": [
+                              "Fail sync",
+                              "Re-sync data"
+                            ],
+                            "order": 2,
+                            "title": "Invalid CDC Position Behavior (Advanced)",
+                            "type": "string"
+                          },
+                          "method": {
+                            "default": "CDC",
+                            "enum": [
+                              "CDC"
+                            ],
+                            "type": "string"
+                          },
+                          "server_timezone": {
+                            "always_show": true,
+                            "description": "Enter the configured MySQL server timezone. This should only be done if the configured timezone in your MySQL instance does not conform to IANNA standard.",
+                            "order": 1,
+                            "title": "Configured server timezone for the MySQL source (Advanced)",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "method"
+                        ],
+                        "title": "Read Changes using Change Data Capture (CDC)",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 11,
+                    "title": "Update Method",
+                    "type": "object"
+                  },
+                  "ssl_mode": {
+                    "default": "required",
+                    "description": "The encryption method which is used when communicating with the database.",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "To allow unencrypted communication only when the source doesn't support encryption.",
+                        "properties": {
+                          "mode": {
+                            "default": "preferred",
+                            "enum": [
+                              "preferred"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode"
+                        ],
+                        "title": "preferred",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "To always require encryption. Note: The connection will fail if the source doesn't support encryption.",
+                        "properties": {
+                          "mode": {
+                            "default": "required",
+                            "enum": [
+                              "required"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode"
+                        ],
+                        "title": "required",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "To always require encryption and verify that the source has a valid SSL certificate.",
+                        "properties": {
+                          "ca_certificate": {
+                            "airbyte_secret": true,
+                            "description": "CA certificate",
+                            "multiline": true,
+                            "title": "CA certificate",
+                            "type": "string"
+                          },
+                          "client_certificate": {
+                            "airbyte_secret": true,
+                            "description": "Client certificate (this is not a required field, but if you want to use it, you will need to add the Client key as well)",
+                            "multiline": true,
+                            "title": "Client certificate File",
+                            "type": "string"
+                          },
+                          "client_key": {
+                            "airbyte_secret": true,
+                            "description": "Client key (this is not a required field, but if you want to use it, you will need to add the Client certificate as well)",
+                            "multiline": true,
+                            "title": "Client Key",
+                            "type": "string"
+                          },
+                          "client_key_password": {
+                            "airbyte_secret": true,
+                            "description": "Password for keystorage. This field is optional. If you do not add it - the password will be generated automatically.",
+                            "multiline": true,
+                            "title": "Client key password",
+                            "type": "string"
+                          },
+                          "mode": {
+                            "default": "verify_ca",
+                            "enum": [
+                              "verify_ca"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode",
+                          "ca_certificate"
+                        ],
+                        "title": "verify_ca",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "To always require encryption and verify that the source has a valid SSL certificate.",
+                        "properties": {
+                          "ca_certificate": {
+                            "airbyte_secret": true,
+                            "description": "CA certificate",
+                            "multiline": true,
+                            "title": "CA certificate",
+                            "type": "string"
+                          },
+                          "client_certificate": {
+                            "airbyte_secret": true,
+                            "description": "Client certificate (this is not a required field, but if you want to use it, you will need to add the Client key as well)",
+                            "multiline": true,
+                            "title": "Client certificate File",
+                            "type": "string"
+                          },
+                          "client_key": {
+                            "airbyte_secret": true,
+                            "description": "Client key (this is not a required field, but if you want to use it, you will need to add the Client certificate as well)",
+                            "multiline": true,
+                            "title": "Client Key",
+                            "type": "string"
+                          },
+                          "client_key_password": {
+                            "airbyte_secret": true,
+                            "description": "Password for keystorage. This field is optional. If you do not add it - the password will be generated automatically.",
+                            "multiline": true,
+                            "title": "Client key password",
+                            "type": "string"
+                          },
+                          "mode": {
+                            "default": "verify_identity",
+                            "enum": [
+                              "verify_identity"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode",
+                          "ca_certificate"
+                        ],
+                        "title": "verify_identity",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 9,
+                    "title": "Encryption",
+                    "type": "object"
+                  },
+                  "table_filters": {
+                    "description": "Optional filters to include only specific tables from the specified database.",
+                    "items": {
+                      "additionalProperties": true,
+                      "description": "Inclusion filter configuration for table selection per database.",
+                      "properties": {
+                        "database_name": {
+                          "always_show": true,
+                          "description": "The name of the database to apply this filter to. Should match the database defined in the \"Database\" field above.",
+                          "order": 1,
+                          "title": "Database Name",
+                          "type": "string"
+                        },
+                        "table_name_patterns": {
+                          "always_show": true,
+                          "description": "List of table name patterns to include. Should be a SQL LIKE pattern.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "minItems": 1,
+                          "order": 2,
+                          "title": "Table Filter Patterns",
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "database_name",
+                        "table_name_patterns"
+                      ],
+                      "title": "Table Filter",
+                      "type": "object"
+                    },
+                    "order": 7,
+                    "title": "Table Filters",
+                    "type": "array"
+                  },
+                  "treat_tinyint1_as_integer": {
+                    "default": false,
+                    "description": "When enabled, TINYINT(1) columns are emitted as integers instead of booleans.",
+                    "order": 14,
+                    "title": "Treat TINYINT(1) Columns as Integers",
+                    "type": "boolean"
+                  },
+                  "tunnel_method": {
+                    "description": "Whether to initiate an SSH tunnel before connecting to the database, and if so, which kind of authentication to use.",
+                    "oneOf": [
+                      {
+                        "additionalProperties": true,
+                        "description": "No ssh tunnel needed to connect to database",
+                        "properties": {
+                          "tunnel_method": {
+                            "default": "NO_TUNNEL",
+                            "enum": [
+                              "NO_TUNNEL"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method"
+                        ],
+                        "title": "No Tunnel",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Connect through a jump server tunnel host using username and ssh key",
+                        "properties": {
+                          "ssh_key": {
+                            "airbyte_secret": true,
+                            "description": "OS-level user account ssh key credentials in RSA PEM format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )",
+                            "multiline": true,
+                            "order": 4,
+                            "title": "SSH Private Key",
+                            "type": "string"
+                          },
+                          "tunnel_host": {
+                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
+                            "order": 1,
+                            "title": "SSH Tunnel Jump Server Host",
+                            "type": "string"
+                          },
+                          "tunnel_method": {
+                            "default": "SSH_KEY_AUTH",
+                            "enum": [
+                              "SSH_KEY_AUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "tunnel_port": {
+                            "default": 22,
+                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
+                            "maximum": 65536,
+                            "minimum": 0,
+                            "order": 2,
+                            "title": "SSH Connection Port",
+                            "type": "integer"
+                          },
+                          "tunnel_user": {
+                            "description": "OS-level username for logging into the jump server host",
+                            "order": 3,
+                            "title": "SSH Login Username",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method",
+                          "tunnel_host",
+                          "tunnel_port",
+                          "tunnel_user",
+                          "ssh_key"
+                        ],
+                        "title": "SSH Key Authentication",
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": true,
+                        "description": "Connect through a jump server tunnel host using username and password authentication",
+                        "properties": {
+                          "tunnel_host": {
+                            "description": "Hostname of the jump server host that allows inbound ssh tunnel.",
+                            "order": 1,
+                            "title": "SSH Tunnel Jump Server Host",
+                            "type": "string"
+                          },
+                          "tunnel_method": {
+                            "default": "SSH_PASSWORD_AUTH",
+                            "enum": [
+                              "SSH_PASSWORD_AUTH"
+                            ],
+                            "type": "string"
+                          },
+                          "tunnel_port": {
+                            "default": 22,
+                            "description": "Port on the proxy/jump server that accepts inbound ssh connections.",
+                            "maximum": 65536,
+                            "minimum": 0,
+                            "order": 2,
+                            "title": "SSH Connection Port",
+                            "type": "integer"
+                          },
+                          "tunnel_user": {
+                            "description": "OS-level username for logging into the jump server host",
+                            "order": 3,
+                            "title": "SSH Login Username",
+                            "type": "string"
+                          },
+                          "tunnel_user_password": {
+                            "airbyte_secret": true,
+                            "description": "OS-level password for logging into the jump server host",
+                            "order": 4,
+                            "title": "Password",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tunnel_method",
+                          "tunnel_host",
+                          "tunnel_port",
+                          "tunnel_user",
+                          "tunnel_user_password"
+                        ],
+                        "title": "Password Authentication",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 10,
+                    "title": "SSH Tunnel Method",
+                    "type": "object"
+                  },
+                  "username": {
+                    "description": "The username which is used to access the database.",
+                    "order": 4,
+                    "title": "User",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "host",
+                  "port",
+                  "database",
+                  "username",
+                  "replication_method"
+                ],
+                "title": "MySQL Source Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/mysql",
+              "supported_destination_sync_modes": [],
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "language:java"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -101273,15 +101186,15 @@
         "metrics": {
           "all": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           },
           "cloud": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           },
           "oss": {
             "sync_success_rate": "low",
-            "usage": "medium"
+            "usage": "high"
           }
         },
         "release": {
@@ -101885,15 +101798,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "high",
+            "sync_success_rate": "medium",
             "usage": "medium"
           }
         },
@@ -112398,15 +112311,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "medium"
           }
         },
@@ -114376,15 +114289,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "cloud": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           },
           "oss": {
-            "sync_success_rate": "medium",
+            "sync_success_rate": "low",
             "usage": "medium"
           }
         },
@@ -126030,15 +125943,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "medium",
             "usage": "low"
           }
         },
@@ -129829,6 +129742,377 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations",
+        "releaseCandidates": {
+          "6.0.19": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 400,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "api.stripe.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.29.0@sha256:4e237d2ffb0ccbf293fe204bbba550dea16b4cf35ccb7c40ca0aebd10e6feb74"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "liveTests",
+                "testConnections": [
+                  {
+                    "id": "0f3c8a84-53e2-4a33-89a9-26bf36a2367c",
+                    "name": "stripe_config_dev_null"
+                  },
+                  {
+                    "id": "4f738e2c-a1d2-48b4-9b93-f56e2258068d",
+                    "name": "stripe_performance-config_dev_null"
+                  },
+                  {
+                    "id": "97d55640-b443-49c5-a9d9-aed28396841d",
+                    "name": "stripe_connected_account_config_dev_null"
+                  }
+                ]
+              },
+              {
+                "suite": "unitTests"
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "connected_account_config.json",
+                    "name": "SECRET_SOURCE-STRIPE_CONNECTED_ACCOUNT__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-STRIPE__CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "performance-config.json",
+                    "name": "SECRET_SOURCE-STRIPE__PERFORMANCE",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "6.0.19",
+            "dockerRepository": "airbyte/source-stripe",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/stripe",
+            "erdUrl": "https://dbdocs.io/airbyteio/source-stripe?view=relationships",
+            "externalDocumentationUrls": [
+              {
+                "title": "Stripe API reference",
+                "type": "api_reference",
+                "url": "https://stripe.com/docs/api"
+              },
+              {
+                "title": "API changelog",
+                "type": "api_release_history",
+                "url": "https://docs.stripe.com/changelog"
+              },
+              {
+                "title": "API upgrades",
+                "type": "api_release_history",
+                "url": "https://docs.stripe.com/upgrades"
+              },
+              {
+                "title": "Stripe API changelog",
+                "type": "api_release_history",
+                "url": "https://stripe.com/docs/upgrades"
+              },
+              {
+                "title": "Stripe authentication",
+                "type": "authentication_guide",
+                "url": "https://stripe.com/docs/api/authentication"
+              },
+              {
+                "title": "Stripe API OpenAPI specification",
+                "type": "openapi_spec",
+                "url": "https://github.com/stripe/openapi"
+              },
+              {
+                "title": "Stripe rate limits",
+                "type": "rate_limits",
+                "url": "https://stripe.com/docs/rate-limits"
+              },
+              {
+                "title": "Stripe Status",
+                "type": "status_page",
+                "url": "https://status.stripe.com/"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "ZaneHyattAB",
+                "commit_author_email": "zane.hyatt@airbyte.io",
+                "commit_sha": "9e828f7e445d1fd0f457754eab0985a7d159e0a9",
+                "commit_timestamp": "2026-09-21T10:21:37-07:00"
+              },
+              "release": {
+                "attributed_to": "ZaneHyattAB",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "9e828f7e445d1fd0f457754eab0985a7d159e0a9",
+                "merged_at": "2026-09-21T17:21:38Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 283742782,
+                "pr_author_login": "ZaneHyattAB",
+                "pr_author_type": "User",
+                "pr_merged_by_login": "ZaneHyattAB",
+                "pr_merged_by_type": "User",
+                "pr_number": 85087,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/85087",
+                "released_at": "2026-09-21T17:21:38Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-stripe/6.0.19.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-stripe/6.0.19/metadata.yaml",
+                "metadata_last_modified": "2026-09-21T17:25:49.971369+00:00",
+                "registry_entry_generated_at": "2026-09-21T17:25:49.971369+00:00"
+              }
+            },
+            "githubIssueLabel": "source-stripe",
+            "icon": "stripe.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-stripe/latest/icon.svg",
+            "language": "manifest-only",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 86400,
+            "name": "Stripe",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "4.0.0": {
+                  "message": "Version 4.0.0 changes the cursors in most of the Stripe streams that support incremental sync mode. This is done to not only sync the data that was created since previous sync, but also the data that was modified. A schema refresh of all effected streams is required to use the new cursor format.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations#4.0.0",
+                  "upgradeDeadline": "2023-09-14"
+                },
+                "5.0.0": {
+                  "message": "Version 5.0.0 introduces fixes for the `CheckoutSessions`, `CheckoutSessionsLineItems` and `Refunds` streams. The cursor field is changed for the `CheckoutSessionsLineItems` and `Refunds` streams. This will prevent data loss during incremental syncs. Also, the `Invoices`, `Subscriptions` and `SubscriptionSchedule` stream schemas have been updated.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations#5.0.0",
+                  "upgradeDeadline": "2023-12-11"
+                },
+                "5.4.0": {
+                  "message": "Version 5.4.0 introduces fixes for the `Refunds` streams. The `Refunds`, which previously was `incremental` on the `creation date`, now tracks updates as well. In order to do that, the cursor field needs to be updated and a `resetting` is required to get the updates.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations#5.4.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "refunds"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2024-07-14"
+                },
+                "6.0.0": {
+                  "message": "Version 6.0.0 fixes a bug where the `invoice_line_items` and `subscription_items` incremental streams emitted only one record per event instead of expanding nested line items. Previously synced data for these streams may be incomplete. Users can run a full refresh to recapture the correct values. If choosing Full Refresh, decide between Refresh and Retain (keeps existing destination data) or Refresh and Clear (replaces destination data but may lose events older than 30 days due to the Stripe Events API retention limit). See the [migration guide](https://docs.airbyte.com/integrations/sources/stripe-migrations#upgrading-to-600) for details.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations#6.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "invoice_line_items",
+                        "subscription_items"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2026-05-12"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/stripe-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": false,
+                "packageName": "airbyte-source-stripe"
+              }
+            },
+            "sourceDefinitionId": "e094cb9a-26de-4645-8761-65c0c425d1de",
+            "sourceType": "api",
+            "spec": {
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "properties": {
+                  "account_id": {
+                    "description": "Your Stripe account ID (starts with 'acct_', find yours <a href=\"https://dashboard.stripe.com/settings/account\">here</a>).",
+                    "order": 0,
+                    "title": "Account ID",
+                    "type": "string"
+                  },
+                  "api_retention_streams": {
+                    "default": [],
+                    "description": "Select streams where cursor age is validated against the Stripe API 30-day event retention period. When a selected stream's cursor is older than 30 days, the connector performs a full refresh to avoid missing data. Streams not selected here will always use incremental sync regardless of cursor age.",
+                    "items": {
+                      "enum": [
+                        "accounts",
+                        "application_fees",
+                        "application_fees_refunds",
+                        "authorizations",
+                        "bank_accounts",
+                        "cardholders",
+                        "charges",
+                        "checkout_sessions",
+                        "coupons",
+                        "credit_notes",
+                        "customers",
+                        "disputes",
+                        "early_fraud_warnings",
+                        "external_account_bank_accounts",
+                        "external_account_cards",
+                        "invoice_items",
+                        "invoice_line_items",
+                        "invoices",
+                        "payment_intents",
+                        "payment_methods",
+                        "payouts",
+                        "persons",
+                        "plans",
+                        "prices",
+                        "products",
+                        "promotion_codes",
+                        "refunds",
+                        "reviews",
+                        "setup_intents",
+                        "subscription_items",
+                        "subscription_schedule",
+                        "subscriptions",
+                        "top_ups",
+                        "transactions",
+                        "transfers"
+                      ],
+                      "type": "string"
+                    },
+                    "order": 7,
+                    "title": "Streams with API Data Retention Validation",
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "call_rate_limit": {
+                    "description": "The number of API calls per second that you allow connector to make. This value can not be bigger than real API call rate limit (https://stripe.com/docs/rate-limits). If not specified the default maximum is 25 calls per second for test/sandbox tokens and 100 for production tokens.",
+                    "examples": [
+                      25,
+                      100
+                    ],
+                    "title": "Max number of API calls per second",
+                    "type": "integer"
+                  },
+                  "client_secret": {
+                    "airbyte_secret": true,
+                    "description": "Stripe API key (usually starts with 'sk_live_'; find yours <a href=\"https://dashboard.stripe.com/apikeys\">here</a>).",
+                    "order": 1,
+                    "title": "Secret Key",
+                    "type": "string"
+                  },
+                  "lookback_window_days": {
+                    "default": 0,
+                    "description": "When set, the connector will always re-export data from the past N days, where N is the value set here. This is useful if your data is frequently updated after creation. The Lookback Window only applies to streams that do not support event-based incremental syncs: Events, SetupAttempts, ShippingRates, BalanceTransactions, Files, FileLinks, Refunds. More info <a href=\"https://docs.airbyte.com/integrations/sources/stripe#requirements\">here</a>",
+                    "minimum": 0,
+                    "order": 3,
+                    "title": "Lookback Window in days",
+                    "type": "integer"
+                  },
+                  "num_workers": {
+                    "default": 10,
+                    "description": "The number of worker thread to use for the sync. The performance upper boundary depends on call_rate_limit setting and type of account.",
+                    "examples": [
+                      2,
+                      3,
+                      4
+                    ],
+                    "maximum": 100,
+                    "minimum": 2,
+                    "order": 5,
+                    "title": "Number of concurrent threads",
+                    "type": "integer"
+                  },
+                  "slice_range": {
+                    "default": 365,
+                    "description": "The time increment used by the connector when requesting data from the Stripe API. The bigger the value is, the less requests will be made and faster the sync will be. On the other hand, the more seldom the state is persisted.",
+                    "examples": [
+                      1,
+                      3,
+                      10,
+                      30,
+                      180,
+                      360
+                    ],
+                    "minimum": 1,
+                    "order": 4,
+                    "title": "Data request time increment in days",
+                    "type": "integer"
+                  },
+                  "start_date": {
+                    "default": "2017-01-25T00:00:00Z",
+                    "description": "UTC date and time in the format 2017-01-25T00:00:00Z. Only data generated after this date will be replicated.",
+                    "examples": [
+                      "2017-01-25T00:00:00Z"
+                    ],
+                    "format": "date-time",
+                    "order": 2,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "title": "Replication start date",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "client_secret",
+                  "account_id"
+                ],
+                "title": "Stripe Source Spec",
+                "type": "object"
+              },
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "suggestedStreams": {
+              "streams": [
+                "customers",
+                "invoices",
+                "charges",
+                "subscriptions",
+                "refunds"
+              ]
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "cdk:low-code",
+              "language:manifest-only"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -133726,6 +134010,546 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/tiktok-marketing-migrations",
+        "releaseCandidates": {
+          "5.1.17": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 400,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 300
+            },
+            "allowedHosts": {
+              "hosts": [
+                "sandbox-ads.tiktok.com",
+                "business-api.tiktok.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.28.4@sha256:da2dee37f8b6532edfcbde6b5402a14e5d7364b2b7dbfbcb61e9cad85c25fe63"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "liveTests",
+                "testConnections": [
+                  {
+                    "id": "2a53fa01-351c-45af-84d8-a9f200a0c988",
+                    "name": "tiktok-marketing_prod_config_with_lifetime_granularity_dev_null"
+                  },
+                  {
+                    "id": "35e62f0f-903a-4fcd-afc6-98259a4f2fea",
+                    "name": "tiktok-marketing_prod_config_with_day_granularity_dev_null"
+                  },
+                  {
+                    "id": "36e6778b-a04d-4356-a670-e41123fe9596",
+                    "name": "tiktok-marketing_sandbox_config_dev_null"
+                  },
+                  {
+                    "id": "4da9b9c1-10bd-46c1-915b-bb3d1651153b",
+                    "name": "tiktok-marketing_config_dev_null"
+                  },
+                  {
+                    "id": "59935970-bbee-4122-88c9-219e97dae272",
+                    "name": "tiktok-marketing_new_config_prod_dev_null"
+                  },
+                  {
+                    "id": "5b364ce8-b98d-4ccf-9a43-56ebd53d481a",
+                    "name": "tiktok-marketing_prod_config_dev_null"
+                  },
+                  {
+                    "id": "60c12fbb-bc41-4df1-9b33-9a5455312b0e",
+                    "name": "tiktok-marketing_config_oauth_dev_null"
+                  },
+                  {
+                    "id": "9aab8bf6-b4cd-4bad-b319-ed39bcddfe2a",
+                    "name": "tiktok-marketing_new_config_sandbox_dev_null"
+                  },
+                  {
+                    "id": "bb8311bf-6def-4119-bf32-38c001a1e549",
+                    "name": "tiktok-marketing_prod_config_day_dev_null"
+                  }
+                ]
+              },
+              {
+                "suite": "unitTests",
+                "testSecrets": [
+                  {
+                    "fileName": "sandbox_config.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_SANDBOX_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "prod_config.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_PROD_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              },
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "new_config_sandbox.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_NEW_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "new_config_prod.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_NEW_PROD_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "config_oauth.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_OAUTH_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "prod_config.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_PROD_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "prod_config_with_day_granularity.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_PROD_CREDS_WITH_DAY_GRANULARITY",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "prod_config_with_lifetime_granularity.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_PROD_CREDS_WITH_LIFETIME_GRANULARITY",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "prod_config_day.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_PROD_DAY_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  },
+                  {
+                    "fileName": "sandbox_config.json",
+                    "name": "SECRET_SOURCE-TIKTOK-MARKETING_SANDBOX_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "5.1.17",
+            "dockerRepository": "airbyte/source-tiktok-marketing",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/tiktok-marketing",
+            "externalDocumentationUrls": [
+              {
+                "title": "Versioning docs",
+                "type": "api_reference",
+                "url": "https://business-api.tiktok.com/portal/docs?id=1740029169927169"
+              },
+              {
+                "title": "Changelog",
+                "type": "api_release_history",
+                "url": "https://business-api.tiktok.com/portal/docs?id=1740029165513730"
+              },
+              {
+                "title": "TikTok Business API Documentation",
+                "type": "other",
+                "url": "https://business-api.tiktok.com/portal/docs?id=1740302848670722"
+              },
+              {
+                "title": "API version timelines",
+                "type": "api_deprecations",
+                "url": "https://business-api.tiktok.com/portal/docs/timelines/v1.3"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "2120a5cc660e74ce165aa77cd0159211022b66a0",
+                "commit_timestamp": "2026-09-21T11:19:39-07:00"
+              },
+              "release": {
+                "attributed_to": "pedroslopez",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "2120a5cc660e74ce165aa77cd0159211022b66a0",
+                "merged_at": "2026-09-21T18:19:39Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "pedroslopez",
+                "pr_merged_by_type": "User",
+                "pr_number": 79183,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/79183",
+                "released_at": "2026-09-21T18:19:39Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-tiktok-marketing/5.1.17.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-tiktok-marketing/5.1.17/metadata.yaml",
+                "metadata_last_modified": "2026-09-21T18:23:55.908818+00:00",
+                "registry_entry_generated_at": "2026-09-21T18:23:55.908818+00:00"
+              }
+            },
+            "githubIssueLabel": "source-tiktok-marketing",
+            "icon": "tiktok.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-tiktok-marketing/latest/icon.svg",
+            "language": "manifest-only",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 86400,
+            "name": "TikTok Marketing",
+            "packageInfo": {},
+            "public": true,
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "4.0.0": {
+                  "message": "The source TikTok Marketing connector is being migrated from the Python CDK to our declarative low-code CDK. Due to changes in the handling of state format for incremental substreams, this migration constitutes a breaking change for the following streams - ad_groups, ads, campaigns, creative_assets_images, creative_assets_videos, *_reports_daily, *_reports_hourly, *_reports_by_country_daily, *_reports_by_platform_daily. Also the schema for advertiser_ids stream was changed to use string type of advertiser_id field as API docs declares it. Users will need to reset source configuration, refresh the source schema and reset the impacted streams after upgrading. For more information, see our migration documentation for source TikTok Marketing.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/tiktok-marketing-migrations#4.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "advertiser_ids",
+                        "ad_group_audience_reports_by_country_daily",
+                        "ad_group_audience_reports_by_platform_daily",
+                        "ad_group_audience_reports_daily",
+                        "ad_groups",
+                        "ad_groups_reports_daily",
+                        "ad_groups_reports_hourly",
+                        "ads",
+                        "ads_audience_reports_by_country_daily",
+                        "ads_audience_reports_by_platform_daily",
+                        "ads_audience_reports_by_province_daily",
+                        "ads_audience_reports_daily",
+                        "ads_reports_daily",
+                        "ads_reports_hourly",
+                        "ads_reports_by_country_daily",
+                        "ads_reports_by_country_hourly",
+                        "advertisers_audience_reports_by_country_daily",
+                        "advertisers_audience_reports_by_platform_daily",
+                        "advertisers_audience_reports_daily",
+                        "advertisers_reports_daily",
+                        "advertisers_reports_hourly",
+                        "campaigns",
+                        "campaigns_audience_reports_by_country_daily",
+                        "campaigns_audience_reports_by_platform_daily",
+                        "campaigns_audience_reports_daily",
+                        "campaigns_reports_daily",
+                        "campaigns_reports_hourly",
+                        "creative_assets_images",
+                        "creative_assets_videos"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2024-07-15"
+                },
+                "5.0.0": {
+                  "message": "The `currency` field in the `pixels` stream's `events` array has been corrected from `boolean` to `string` type. Users syncing the `pixels` stream will need to refresh the source schema and reset the stream after upgrading. For more information, see our migration documentation for source TikTok Marketing.",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/tiktok-marketing-migrations#5.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "pixels"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2026-03-03"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/tiktok-marketing-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": false,
+                "packageName": "airbyte-source-tiktok-marketing"
+              }
+            },
+            "sourceDefinitionId": "4bfac00d-ce15-44ff-95b9-9e3c3e8fbd35",
+            "sourceType": "api",
+            "spec": {
+              "advanced_auth": {
+                "auth_flow_type": "oauth2.0",
+                "oauth_config_specification": {
+                  "complete_oauth_output_specification": {
+                    "properties": {
+                      "access_token": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "access_token"
+                        ],
+                        "title": "Access Token",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "access_token"
+                    ],
+                    "title": "CompleteOauthOutputSpecification",
+                    "type": "object"
+                  },
+                  "complete_oauth_server_input_specification": {
+                    "properties": {
+                      "app_id": {
+                        "title": "App Id",
+                        "type": "string"
+                      },
+                      "secret": {
+                        "title": "Secret",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "app_id",
+                      "secret"
+                    ],
+                    "title": "CompleteOauthServerInputSpecification",
+                    "type": "object"
+                  },
+                  "complete_oauth_server_output_specification": {
+                    "properties": {
+                      "app_id": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "app_id"
+                        ],
+                        "title": "App Id",
+                        "type": "string"
+                      },
+                      "secret": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "secret"
+                        ],
+                        "title": "Secret",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "app_id",
+                      "secret"
+                    ],
+                    "title": "CompleteOauthServerOutputSpecification",
+                    "type": "object"
+                  }
+                },
+                "predicate_key": [
+                  "credentials",
+                  "auth_type"
+                ],
+                "predicate_value": "oauth2.0"
+              },
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "attribution_window": {
+                    "default": 3,
+                    "description": "The attribution window in days.",
+                    "maximum": 364,
+                    "minimum": 0,
+                    "order": 3,
+                    "title": "Attribution Window",
+                    "type": "integer"
+                  },
+                  "credentials": {
+                    "default": {},
+                    "description": "Authentication method",
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "access_token": {
+                            "airbyte_secret": true,
+                            "description": "Long-term Authorized Access Token.",
+                            "title": "Access Token",
+                            "type": "string"
+                          },
+                          "advertiser_id": {
+                            "description": "The Advertiser ID to filter reports and streams. Let this empty to retrieve all.",
+                            "title": "Advertiser ID",
+                            "type": "string"
+                          },
+                          "app_id": {
+                            "airbyte_secret": true,
+                            "description": "The Developer Application App ID.",
+                            "title": "App ID",
+                            "type": "string"
+                          },
+                          "auth_type": {
+                            "const": "oauth2.0",
+                            "order": 0,
+                            "title": "Auth Type",
+                            "type": "string"
+                          },
+                          "secret": {
+                            "airbyte_secret": true,
+                            "description": "The Developer Application Secret.",
+                            "title": "Secret",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "app_id",
+                          "secret",
+                          "access_token"
+                        ],
+                        "title": "OAuth2.0",
+                        "type": "object"
+                      },
+                      {
+                        "properties": {
+                          "access_token": {
+                            "airbyte_secret": true,
+                            "description": "The long-term authorized access token.",
+                            "title": "Access Token",
+                            "type": "string"
+                          },
+                          "advertiser_id": {
+                            "description": "The Advertiser ID which generated for the developer's Sandbox application.",
+                            "title": "Advertiser ID",
+                            "type": "string"
+                          },
+                          "auth_type": {
+                            "const": "sandbox_access_token",
+                            "order": 0,
+                            "title": "Auth Type",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "advertiser_id",
+                          "access_token"
+                        ],
+                        "title": "Sandbox Access Token",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 0,
+                    "title": "Authentication Method",
+                    "type": "object"
+                  },
+                  "end_date": {
+                    "description": "The date until which you'd like to replicate data for all incremental streams, in the format YYYY-MM-DD. All data generated between start_date and this date will be replicated. Not setting this option will result in always syncing the data till the current date.",
+                    "format": "date",
+                    "order": 2,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                    "title": "End Date",
+                    "type": "string"
+                  },
+                  "include_deleted": {
+                    "default": false,
+                    "description": "Set to active if you want to include deleted data in report based streams and Ads, Ad Groups and Campaign streams.",
+                    "order": 5,
+                    "title": "Include Deleted Data in Reports and Ads, Ad Groups and Campaign streams.",
+                    "type": "boolean"
+                  },
+                  "report_granularity": {
+                    "default": 30,
+                    "description": "The number of days per API request for daily report streams. Use the default 30 for most accounts. If syncs fail with TikTok API error 40067 (\"query too large\"), reduce this value (e.g., 7 or 1). Smaller values make more API requests but avoid query size limits for accounts with many ads.",
+                    "examples": [
+                      30,
+                      7,
+                      1
+                    ],
+                    "maximum": 30,
+                    "minimum": 1,
+                    "order": 4,
+                    "title": "Daily Reports Date Step",
+                    "type": "integer"
+                  },
+                  "start_date": {
+                    "default": "2016-09-01",
+                    "description": "The Start Date in format: YYYY-MM-DD. Any data before this date will not be replicated. If this parameter is not set, all data will be replicated.",
+                    "format": "date",
+                    "order": 1,
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                    "title": "Replication Start Date",
+                    "type": "string"
+                  }
+                },
+                "title": "TikTok Marketing Source Spec",
+                "type": "object"
+              },
+              "documentationUrl": "https://docs.airbyte.com/integrations/sources/tiktok-marketing",
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "suggestedStreams": {
+              "streams": [
+                "ads_reports_daily",
+                "ads",
+                "campaigns",
+                "campaigns_reports_daily",
+                "ad_groups",
+                "ad_groups_reports_daily",
+                "advertisers_reports_daily"
+              ]
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "cdk:low-code",
+              "language:manifest-only"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -137357,7 +138181,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "1.1.3",
+      "dockerImageTag": "1.2.0",
       "dockerRepository": "airbyte/source-uptick",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/uptick",
       "externalDocumentationUrls": [
@@ -137369,10 +138193,10 @@
       ],
       "generated": {
         "git": {
-          "commit_author": "octavia-bot-hoard[bot]",
-          "commit_author_email": "230633153+octavia-bot-hoard[bot]@users.noreply.github.com",
-          "commit_sha": "edc5e95f859e7328a0e1a6ed5dac7f52cd62c979",
-          "commit_timestamp": "2026-09-15T08:13:44+00:00"
+          "commit_author": "devin-ai-integration[bot]",
+          "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+          "commit_sha": "0edcf5b261c28bb4fb7f0f8cfa2dac074f748469",
+          "commit_timestamp": "2026-09-21T08:36:52-07:00"
         },
         "metrics": {
           "all": {
@@ -137389,27 +138213,27 @@
           }
         },
         "release": {
-          "attributed_to": "octavia-bot-hoard",
-          "attributed_to_kind": "bot",
-          "merge_commit_sha": "edc5e95f859e7328a0e1a6ed5dac7f52cd62c979",
-          "merged_at": "2026-09-15T08:13:45Z",
+          "attributed_to": "darynaishchenko",
+          "attributed_to_kind": "maintainer",
+          "merge_commit_sha": "0edcf5b261c28bb4fb7f0f8cfa2dac074f748469",
+          "merged_at": "2026-09-21T15:36:53Z",
           "pr_author_association": "CONTRIBUTOR",
-          "pr_author_id": 230633153,
-          "pr_author_login": "octavia-bot-hoard",
+          "pr_author_id": 158243242,
+          "pr_author_login": "devin-ai-integration",
           "pr_author_type": "Bot",
-          "pr_merged_by_login": "octavia-bot-hoard",
-          "pr_merged_by_type": "Bot",
-          "pr_number": 86280,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/86280",
-          "released_at": "2026-09-15T08:13:45Z",
+          "pr_merged_by_login": "darynaishchenko",
+          "pr_merged_by_type": "User",
+          "pr_number": 86363,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/86363",
+          "released_at": "2026-09-21T15:36:53Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-uptick/1.1.3.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-uptick/1.2.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-uptick/latest/metadata.yaml",
-          "metadata_last_modified": "2026-09-15T08:18:27.151814+00:00",
-          "registry_entry_generated_at": "2026-09-15T08:18:27.151814+00:00"
+          "metadata_last_modified": "2026-09-21T15:41:19.465874+00:00",
+          "registry_entry_generated_at": "2026-09-21T15:41:19.465874+00:00"
         }
       },
       "githubIssueLabel": "source-uptick",
@@ -142504,15 +143328,15 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "high",
             "usage": "low"
           },
           "oss": {
-            "sync_success_rate": "low",
+            "sync_success_rate": "high",
             "usage": "low"
           }
         },
@@ -142997,6 +143821,324 @@
           }
         },
         "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/youtube-data-migrations",
+        "releaseCandidates": {
+          "1.0.2": {
+            "ab_internal": {
+              "isEnterprise": false,
+              "ql": 300,
+              "requireVersionIncrementsInPullRequests": true,
+              "sl": 200
+            },
+            "allowedHosts": {
+              "hosts": [
+                "www.googleapis.com",
+                "oauth2.googleapis.com"
+              ]
+            },
+            "connectorBuildOptions": {
+              "baseImage": "docker.io/airbyte/source-declarative-manifest:7.28.4@sha256:da2dee37f8b6532edfcbde6b5402a14e5d7364b2b7dbfbcb61e9cad85c25fe63"
+            },
+            "connectorTestSuitesOptions": [
+              {
+                "suite": "acceptanceTests",
+                "testSecrets": [
+                  {
+                    "fileName": "config_oauth.json",
+                    "name": "SECRET_YOUTUBE-DATA_CREDS",
+                    "secretStore": {
+                      "alias": "airbyte-connector-testing-secret-store",
+                      "type": "GSM"
+                    }
+                  }
+                ]
+              }
+            ],
+            "custom": false,
+            "dockerImageTag": "1.0.2",
+            "dockerRepository": "airbyte/source-youtube-data",
+            "documentationUrl": "https://docs.airbyte.com/integrations/sources/youtube-data",
+            "externalDocumentationUrls": [
+              {
+                "title": "YouTube Data API v3",
+                "type": "api_reference",
+                "url": "https://developers.google.com/youtube/v3"
+              },
+              {
+                "title": "YouTube API changelog",
+                "type": "api_release_history",
+                "url": "https://developers.google.com/youtube/v3/revision_history"
+              },
+              {
+                "title": "Google OAuth 2.0",
+                "type": "authentication_guide",
+                "url": "https://developers.google.com/identity/protocols/oauth2"
+              },
+              {
+                "title": "YouTube API quotas",
+                "type": "rate_limits",
+                "url": "https://developers.google.com/youtube/v3/getting-started#quota"
+              }
+            ],
+            "generated": {
+              "git": {
+                "commit_author": "devin-ai-integration[bot]",
+                "commit_author_email": "158243242+devin-ai-integration[bot]@users.noreply.github.com",
+                "commit_sha": "12e1fcfd93edc164495283c0b0e5d06b84e969e1",
+                "commit_timestamp": "2026-09-21T21:24:15+01:00"
+              },
+              "release": {
+                "attributed_to": "lazebnyi",
+                "attributed_to_kind": "maintainer",
+                "merge_commit_sha": "12e1fcfd93edc164495283c0b0e5d06b84e969e1",
+                "merged_at": "2026-09-21T20:24:16Z",
+                "pr_author_association": "CONTRIBUTOR",
+                "pr_author_id": 158243242,
+                "pr_author_login": "devin-ai-integration",
+                "pr_author_type": "Bot",
+                "pr_merged_by_login": "lazebnyi",
+                "pr_merged_by_type": "User",
+                "pr_number": 86466,
+                "pr_url": "https://github.com/airbytehq/airbyte/pull/86466",
+                "released_at": "2026-09-21T20:24:16Z",
+                "source": "publish"
+              },
+              "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-youtube-data/1.0.2.spdx.json",
+              "source_file_info": {
+                "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
+                "metadata_file_path": "metadata/airbyte/source-youtube-data/1.0.2/metadata.yaml",
+                "metadata_last_modified": "2026-09-21T20:28:44.048374+00:00",
+                "registry_entry_generated_at": "2026-09-21T20:28:44.048374+00:00"
+              }
+            },
+            "githubIssueLabel": "source-youtube-data",
+            "icon": "icon.svg",
+            "iconUrl": "https://connectors.airbyte.com/files/metadata/airbyte/source-youtube-data/latest/icon.svg",
+            "language": "manifest-only",
+            "license": "ELv2",
+            "maxSecondsBetweenMessages": 5400,
+            "name": "Youtube Data",
+            "packageInfo": {},
+            "public": true,
+            "releaseDate": "2024-11-08",
+            "releaseStage": "generally_available",
+            "releases": {
+              "breakingChanges": {
+                "1.0.0": {
+                  "deadlineAction": "auto_upgrade",
+                  "message": "Version 1.0.0 declares primary keys on the `comments`, `videos`, and `channel_comments` streams, adds `date-time` formats to nine timestamp fields, and restricts the `videos` stream to actual video results (it previously also returned channel and playlist id records). After upgrading, refresh the source schema. Resetting streams is only needed for Full Refresh | Overwrite connections or destinations that cannot retype columns in place; see the migration guide before clearing Full Refresh | Append streams. For more information, see the [migration guide](https://docs.airbyte.com/integrations/sources/youtube-data-migrations).",
+                  "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/youtube-data-migrations#1.0.0",
+                  "scopedImpact": [
+                    {
+                      "impactedScopes": [
+                        "comments",
+                        "videos",
+                        "channel_comments",
+                        "video",
+                        "channels"
+                      ],
+                      "scopeType": "stream"
+                    }
+                  ],
+                  "upgradeDeadline": "2026-10-31"
+                }
+              },
+              "migrationDocumentationUrl": "https://docs.airbyte.com/integrations/sources/youtube-data-migrations",
+              "rolloutConfiguration": {
+                "advanceDelayMinutes": 10,
+                "autopilotConfig": {
+                  "autoPromoteStages": true,
+                  "autoStart": true,
+                  "strategy": "fast"
+                },
+                "defaultRolloutMode": "autopilot",
+                "enableProgressiveRollout": true,
+                "initialPercentage": 0,
+                "maxPercentage": 50
+              }
+            },
+            "remoteRegistries": {
+              "pypi": {
+                "enabled": false,
+                "packageName": "airbyte-source-youtube-data"
+              }
+            },
+            "sourceDefinitionId": "743a2a44-fd13-4109-a8fe-fb0e68f467f5",
+            "sourceType": "api",
+            "spec": {
+              "advanced_auth": {
+                "auth_flow_type": "oauth2.0",
+                "oauth_config_specification": {
+                  "complete_oauth_output_specification": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "refresh_token": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "refresh_token"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_input_specification": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "client_id": {
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "complete_oauth_server_output_specification": {
+                    "additionalProperties": true,
+                    "properties": {
+                      "client_id": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "client_id"
+                        ],
+                        "type": "string"
+                      },
+                      "client_secret": {
+                        "path_in_connector_config": [
+                          "credentials",
+                          "client_secret"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "oauth_connector_input_specification": {
+                    "access_token_url": "https://oauth2.googleapis.com/token?{{client_id_param}}&{{client_secret_param}}&{{auth_code_param}}&grant_type=authorization_code&{{redirect_uri_param}}",
+                    "consent_url": "https://accounts.google.com/o/oauth2/v2/auth?{{client_id_param}}&{{redirect_uri_param}}&response_type=code&{{scopes_param}}&access_type=offline&{{state_param}}&include_granted_scopes=true&prompt=consent",
+                    "extract_output": [
+                      "refresh_token"
+                    ],
+                    "scopes": [
+                      {
+                        "scope": "https://www.googleapis.com/auth/youtube.force-ssl"
+                      }
+                    ],
+                    "scopes_join_strategy": "space"
+                  }
+                },
+                "predicate_key": [
+                  "credentials",
+                  "auth_method"
+                ],
+                "predicate_value": "oauth2.0"
+              },
+              "connectionSpecification": {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "additionalProperties": true,
+                "properties": {
+                  "channel_ids": {
+                    "description": "The YouTube channel IDs to replicate data for. A channel ID is the 24-character identifier starting with \"UC\" found in the channel URL (youtube.com/channel/<ID>). For channels with a handle-based URL, find the ID under YouTube Studio > Settings > Channel > Advanced settings (\"Channel ID\").",
+                    "order": 1,
+                    "title": "Channel IDs",
+                    "type": "array"
+                  },
+                  "credentials": {
+                    "description": "Choose how to authenticate to the YouTube Data API: Google OAuth 2.0 (recommended, refreshes tokens automatically) or an API key created in the Google Cloud console with the YouTube Data API v3 enabled.",
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "auth_method": {
+                            "const": "oauth2.0",
+                            "default": "oauth2.0",
+                            "enum": [
+                              "oauth2.0"
+                            ],
+                            "type": "string"
+                          },
+                          "client_id": {
+                            "airbyte_secret": true,
+                            "description": "The Client ID of your Google Cloud OAuth 2.0 application, from APIs & Services > Credentials in the Google Cloud console.",
+                            "order": 0,
+                            "title": "Client ID",
+                            "type": "string"
+                          },
+                          "client_secret": {
+                            "airbyte_secret": true,
+                            "description": "The Client Secret of your Google Cloud OAuth 2.0 application.",
+                            "order": 1,
+                            "title": "Client Secret",
+                            "type": "string"
+                          },
+                          "refresh_token": {
+                            "airbyte_secret": true,
+                            "description": "A Google OAuth refresh token granted for the YouTube Data API scope. The connector uses it to obtain access tokens automatically; on Airbyte Cloud it is filled in by the OAuth consent flow.",
+                            "order": 2,
+                            "title": "Refresh Token",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "client_id",
+                          "client_secret",
+                          "refresh_token"
+                        ],
+                        "title": "Google OAuth 2.0",
+                        "type": "object"
+                      },
+                      {
+                        "properties": {
+                          "api_key": {
+                            "airbyte_secret": true,
+                            "description": "A Google Cloud API key with the YouTube Data API v3 enabled. Create one in the Google Cloud console under APIs & Services > Credentials.",
+                            "order": 0,
+                            "title": "API Key",
+                            "type": "string"
+                          },
+                          "auth_method": {
+                            "const": "api_key",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "api_key"
+                        ],
+                        "title": "API Key",
+                        "type": "object"
+                      }
+                    ],
+                    "order": 0,
+                    "title": "Authentication method",
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "credentials",
+                  "channel_ids"
+                ],
+                "type": "object"
+              },
+              "supportsDBT": false,
+              "supportsNormalization": false
+            },
+            "suggestedStreams": {
+              "streams": [
+                "channels",
+                "video",
+                "comments",
+                "channel_comments"
+              ]
+            },
+            "supportLevel": "certified",
+            "supportsDataActivation": false,
+            "supportsFileTransfer": false,
+            "tags": [
+              "language:manifest-only",
+              "cdk:low-code"
+            ],
+            "tombstone": false
+          }
+        },
         "rolloutConfiguration": {
           "advanceDelayMinutes": 10,
           "autopilotConfig": {
@@ -146316,7 +147458,7 @@
         }
       ],
       "custom": false,
-      "dockerImageTag": "0.2.0",
+      "dockerImageTag": "0.3.0",
       "dockerRepository": "airbyte/source-zoho-crm",
       "documentationUrl": "https://docs.airbyte.com/integrations/sources/zoho-crm",
       "externalDocumentationUrls": [
@@ -146345,8 +147487,8 @@
         "git": {
           "commit_author": "Serhii Lazebnyi",
           "commit_author_email": "GL_serhii.lazebnyi@airbyte.io",
-          "commit_sha": "3c9d1463f32a63415abfd31c1c0aeb6ad21ac762",
-          "commit_timestamp": "2026-09-16T14:11:59+01:00"
+          "commit_sha": "75de0e9a03cc07ac96749f421c773d80bdf49ac1",
+          "commit_timestamp": "2026-09-21T21:23:15+01:00"
         },
         "metrics": {
           "all": {
@@ -146365,25 +147507,25 @@
         "release": {
           "attributed_to": "lazebnyi",
           "attributed_to_kind": "maintainer",
-          "merge_commit_sha": "3c9d1463f32a63415abfd31c1c0aeb6ad21ac762",
-          "merged_at": "2026-09-16T13:12:00Z",
+          "merge_commit_sha": "75de0e9a03cc07ac96749f421c773d80bdf49ac1",
+          "merged_at": "2026-09-21T20:23:16Z",
           "pr_author_association": "CONTRIBUTOR",
           "pr_author_id": 53845333,
           "pr_author_login": "lazebnyi",
           "pr_author_type": "User",
           "pr_merged_by_login": "lazebnyi",
           "pr_merged_by_type": "User",
-          "pr_number": 85833,
-          "pr_url": "https://github.com/airbytehq/airbyte/pull/85833",
-          "released_at": "2026-09-16T13:12:00Z",
+          "pr_number": 86491,
+          "pr_url": "https://github.com/airbytehq/airbyte/pull/86491",
+          "released_at": "2026-09-21T20:23:16Z",
           "source": "publish"
         },
-        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zoho-crm/0.2.0.spdx.json",
+        "sbomUrl": "https://connectors.airbyte.com/files/sbom/airbyte/source-zoho-crm/0.3.0.spdx.json",
         "source_file_info": {
           "metadata_bucket_name": "prod-airbyte-cloud-connector-metadata-service",
           "metadata_file_path": "metadata/airbyte/source-zoho-crm/latest/metadata.yaml",
-          "metadata_last_modified": "2026-09-16T13:17:57.811167+00:00",
-          "registry_entry_generated_at": "2026-09-16T13:17:57.811167+00:00"
+          "metadata_last_modified": "2026-09-21T20:30:53.348022+00:00",
+          "registry_entry_generated_at": "2026-09-21T20:30:53.348022+00:00"
         }
       },
       "githubIssueLabel": "source-zoho-crm",
@@ -146470,6 +147612,9 @@
                 },
                 {
                   "scope": "ZohoCRM.modules.custom.READ"
+                },
+                {
+                  "scope": "ZohoCRM.org.READ"
                 }
               ],
               "scopes_join_strategy": "comma"
@@ -146517,19 +147662,6 @@
               "title": "Data Center Location",
               "type": "string"
             },
-            "edition": {
-              "default": "Free",
-              "description": "Choose your Edition of Zoho CRM to determine API Concurrency Limits",
-              "enum": [
-                "Free",
-                "Standard",
-                "Professional",
-                "Enterprise",
-                "Ultimate"
-              ],
-              "title": "Zoho CRM Edition",
-              "type": "string"
-            },
             "environment": {
               "description": "Please choose the environment",
               "enum": [
@@ -146539,6 +147671,13 @@
               ],
               "title": "Environment",
               "type": "string"
+            },
+            "max_concurrent_requests": {
+              "description": "Maximum number of concurrent requests to the Zoho CRM API. When left empty, the connector detects your Zoho CRM edition via the organization API and uses that edition's limit (Free: 5, Standard: 10, Professional: 15, Enterprise: 20, Ultimate: 25), defaulting to 5 if detection fails. Set this to raise the limit without re-authenticating, or to throttle the connector when sharing API credits with other integrations.",
+              "minimum": 1,
+              "order": 6,
+              "title": "Max Concurrent Requests",
+              "type": "integer"
             },
             "refresh_token": {
               "airbyte_secret": true,
@@ -146568,8 +147707,7 @@
             "client_secret",
             "refresh_token",
             "environment",
-            "dc_region",
-            "edition"
+            "dc_region"
           ],
           "title": "Zoho Crm Configuration",
           "type": "object"
@@ -147083,16 +148221,16 @@
         },
         "metrics": {
           "all": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "cloud": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           },
           "oss": {
-            "sync_success_rate": null,
-            "usage": null
+            "sync_success_rate": "low",
+            "usage": "low"
           }
         },
         "release": {
