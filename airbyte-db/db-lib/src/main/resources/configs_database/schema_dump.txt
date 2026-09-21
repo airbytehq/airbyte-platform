@@ -20,6 +20,10 @@ create table "public"."actor" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "resource_requirements" jsonb,
+  "enable_agent_access" boolean not null default false,
+  "enable_indexing" boolean not null default false,
+  "enable_backfill" boolean not null default false,
+  "backfill_start_time" timestamp(6) with time zone,
   constraint "actor_pkey" primary key ("id")
 );
 create table "public"."actor_catalog" (
