@@ -173,12 +173,14 @@ class WarnOrDisableConnectionHelper(
   ): Boolean {
     val priorDaysWithoutSuccess = getDaysBetweenTimestamps(daysWithoutSuccessWindowStart, Instant.ofEpochSecond(priorFailedJob.createdAtInSecond))
     val wasPriorWarningSent =
-      priorDaysWithoutSuccess >= airbyteServerConfiguration.connectionLimits.limits.maxDaysWarning &&
+      priorDaysWithoutSuccess >= airbyteServerConfiguration.connectionLimits.limits.maxDaysWarning ||
         numConsecutiveFailedJobs - 1 >= airbyteServerConfiguration.connectionLimits.limits.maxJobsWarning
 
     return !wasPriorWarningSent &&
-      daysWithoutSuccess >= airbyteServerConfiguration.connectionLimits.limits.maxDaysWarning &&
-      numConsecutiveFailedJobs >= airbyteServerConfiguration.connectionLimits.limits.maxJobsWarning
+      (
+        daysWithoutSuccess >= airbyteServerConfiguration.connectionLimits.limits.maxDaysWarning ||
+          numConsecutiveFailedJobs >= airbyteServerConfiguration.connectionLimits.limits.maxJobsWarning
+      )
   }
 
   private fun warnAboutConnection(mostRecentJob: Job) {

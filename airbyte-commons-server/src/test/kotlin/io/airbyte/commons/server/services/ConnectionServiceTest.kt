@@ -291,12 +291,11 @@ class ConnectionServiceTest {
       }
 
       @Test
-      fun `should not send a warning if days threshold is not met`() {
+      fun `should send warning if only job count threshold is met`() {
         val priorFailedJob =
           mockJob(
             id = jobId1,
             status = JobStatus.FAILED,
-            // not long enough ago
             createdAt = timestamp.minus(Duration.ofDays(14)).epochSecond,
           )
         val failedJob =
@@ -323,7 +322,115 @@ class ConnectionServiceTest {
 
         helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
 
+        verify { jobNotifier.autoDisableConnectionWarning(failedJob, any()) }
+      }
+
+      @Test
+      fun `should send warning if only days threshold is met`() {
+        val priorFailedJob =
+          mockJob(
+            id = jobId1,
+            status = JobStatus.FAILED,
+            createdAt = timestamp.minus(Duration.ofDays(20)).epochSecond,
+          )
+        val failedJob =
+          mockJob(
+            id = jobId2,
+            status = JobStatus.FAILED,
+            createdAt = timestamp.epochSecond,
+          )
+        val sync =
+          mockk<StandardSync>(relaxed = true).also {
+            every { it.status } returns StandardSync.Status.ACTIVE
+          }
+
+        every { jobService.countFailedJobsSinceLastSuccessForScope(connectionId.toString()) } returns maxJobsBeforeWarning - 1
+
+        every { jobService.getPriorJobWithStatusForScopeAndJobId(connectionId.toString(), jobId2, JobStatus.FAILED) } returns priorFailedJob
+        every { jobService.lastSuccessfulJobForScope(connectionId.toString()) } returns null
+        every { jobPersistence.getFirstReplicationJob(connectionId) } returns Optional.of(priorFailedJob)
+        every { jobPersistence.getLastReplicationJob(connectionId) } returns Optional.of(failedJob)
+        every { connectionRepository.getStandardSync(connectionId) } returns sync
+        every { jobNotifier.autoDisableConnectionWarning(any(), any()) } just Runs
+        every { jobPersistence.getAttemptStats(any(), any()) } returns mockk()
+
+        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+
+        verify(exactly = 1) { jobNotifier.autoDisableConnectionWarning(failedJob, any()) }
+      }
+
+      @Test
+      fun `should not send warning if neither threshold is met`() {
+        val priorFailedJob =
+          mockJob(
+            id = jobId1,
+            status = JobStatus.FAILED,
+            createdAt = timestamp.minus(Duration.ofDays(14)).epochSecond,
+          )
+        val failedJob =
+          mockJob(
+            id = jobId2,
+            status = JobStatus.FAILED,
+            createdAt = timestamp.epochSecond,
+          )
+        val sync =
+          mockk<StandardSync>(relaxed = true).also {
+            every { it.status } returns StandardSync.Status.ACTIVE
+          }
+
+        every { jobService.countFailedJobsSinceLastSuccessForScope(connectionId.toString()) } returns maxJobsBeforeWarning - 1
+
+        every { jobService.getPriorJobWithStatusForScopeAndJobId(connectionId.toString(), jobId2, JobStatus.FAILED) } returns priorFailedJob
+        every { jobService.lastSuccessfulJobForScope(connectionId.toString()) } returns null
+        every { jobPersistence.getFirstReplicationJob(connectionId) } returns Optional.of(priorFailedJob)
+        every { jobPersistence.getLastReplicationJob(connectionId) } returns Optional.of(failedJob)
+        every { connectionRepository.getStandardSync(connectionId) } returns sync
+        every { jobNotifier.autoDisableConnectionWarning(any(), any()) } just Runs
+        every { jobPersistence.getAttemptStats(any(), any()) } returns mockk()
+
+        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+
         verify(exactly = 0) { jobNotifier.autoDisableConnectionWarning(failedJob, any()) }
+      }
+
+      @Test
+      fun `should not resend warning when job threshold was already met by prior job`() {
+        val firstJob =
+          mockJob(
+            id = jobId1,
+            status = JobStatus.FAILED,
+            createdAt = timestamp.minus(Duration.ofDays(2)).epochSecond,
+          )
+        val priorJob =
+          mockJob(
+            id = jobId2,
+            status = JobStatus.FAILED,
+            createdAt = timestamp.minus(Duration.ofDays(1)).epochSecond,
+          )
+        val mostRecentJob =
+          mockJob(
+            id = jobId3,
+            status = JobStatus.FAILED,
+            createdAt = timestamp.epochSecond,
+          )
+        val sync =
+          mockk<StandardSync>(relaxed = true).also {
+            every { it.status } returns StandardSync.Status.ACTIVE
+          }
+
+        every { jobService.countFailedJobsSinceLastSuccessForScope(connectionId.toString()) } returns maxJobsBeforeWarning + 1
+
+        every { jobService.getPriorJobWithStatusForScopeAndJobId(connectionId.toString(), jobId3, JobStatus.FAILED) } returns priorJob
+        every { jobService.lastSuccessfulJobForScope(connectionId.toString()) } returns null
+        every { jobPersistence.getFirstReplicationJob(connectionId) } returns Optional.of(firstJob)
+        every { jobPersistence.getLastReplicationJob(connectionId) } returns Optional.of(mostRecentJob)
+        every { connectionRepository.getStandardSync(connectionId) } returns sync
+        every { jobNotifier.autoDisableConnectionWarning(any(), any()) } just Runs
+        every { jobPersistence.getAttemptStats(any(), any()) } returns mockk()
+
+        helper.warnOrDisable(connectionService, connectionIdWrapped, timestamp).shouldBeFalse()
+
+        verify(exactly = 0) { jobNotifier.autoDisableConnectionWarning(mostRecentJob, any()) }
       }
 
       @Test
