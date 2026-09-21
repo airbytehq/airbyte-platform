@@ -1783,6 +1783,51 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/{workspaceId}/skills/docs:
+    get:
+      tags:
+        - workspace
+      operationId: getWorkspaceSkillDocs
+      summary: Read connector skill documentation
+      description: Cloud-only connector source documentation. Requires workspace reader access and enabled agent access.
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: UUID
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: section
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Connector skill documentation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SkillDocsResponse"
+        "401":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "403":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "404":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "422":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "502":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "503":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "504":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
   /v1/sources/{sourceId}/execute:
     post:
       tags:
@@ -21576,6 +21621,9 @@ components:
     SourceExecuteMeta:
       type: object
       description: Opaque connector metadata, including pagination cursors when supplied by the connector. Nested values and null-valued properties are preserved.
+    SkillDocsResponse:
+      type: object
+      additionalProperties: true
     SourceExecuteProblem:
       type: object
       required: [status, type, title, detail]
@@ -24034,6 +24082,12 @@ components:
           description: One-time bearer token returned only after initial enable or rotation.
 
   responses:
+    CloudExecutionProblemResponse:
+      description: Cloud request failed. Error details are sanitized.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SourceExecuteProblem"
     NotFoundResponse:
       description: Object with given id was not found.
       content:

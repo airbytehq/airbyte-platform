@@ -78,6 +78,7 @@ open class RoleResolver(
     var subject: Subject? = null
     val props: MutableMap<String, String> = mutableMapOf()
     val orgs: MutableSet<UUID> = mutableSetOf()
+    private val workspaceOrganizations: MutableMap<UUID, UUID> = mutableMapOf()
 
     fun withCurrentUser() =
       apply {
@@ -143,6 +144,16 @@ open class RoleResolver(
       withRef(key, value.toString())
     }
 
+    // Bind authorization to a trusted workspace snapshot instead of the cached organization mapping.
+    fun withWorkspace(
+      workspaceId: UUID,
+      organizationId: UUID,
+    ) = apply {
+      withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
+      withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
+      workspaceOrganizations[workspaceId] = organizationId
+    }
+
     fun withWorkspaces(ids: List<UUID>) =
       apply {
         withRef(AuthenticationId.WORKSPACE_IDS, Jsons.serialize(ids))
@@ -203,7 +214,11 @@ open class RoleResolver(
       val workspaceIds = authenticationHeaderResolver.resolveWorkspace(props)?.toSet() ?: emptySet()
       val resolvedOrgIds = authenticationHeaderResolver.resolveOrganization(props)?.toSet() ?: emptySet()
       val workspaceOrganizationIds =
-        if (usePerTargetPermissionReduction) authenticationHeaderResolver.resolveWorkspaceOrganizations(workspaceIds) else emptyMap()
+        if (usePerTargetPermissionReduction) {
+          authenticationHeaderResolver.resolveWorkspaceOrganizations(workspaceIds - workspaceOrganizations.keys) + workspaceOrganizations
+        } else {
+          emptyMap()
+        }
       val authUserIds = authenticationHeaderResolver.resolveAuthUserIds(props.toMap()) ?: emptySet()
       val allOrgIds = orgs + resolvedOrgIds
 

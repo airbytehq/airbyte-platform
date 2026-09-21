@@ -59,6 +59,29 @@ class RoleResolverTest {
   }
 
   @Test
+  fun trustedWorkspaceOrganizationOverridesStaleCachedOrganization() {
+    val workspaceId = UUID.randomUUID()
+    val oldOrganizationId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns oldOrganizationId
+    val request =
+      roleResolver.newRequest().withSubject("auth-user-1", TokenType.USER).withWorkspace(workspaceId, organizationId)
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_READER).withOrganizationId(oldOrganizationId))
+
+    assertThrows<ForbiddenProblem> { request.requireRole(AuthRoleConstants.WORKSPACE_READER) }
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(Permission().withPermissionType(Permission.PermissionType.ORGANIZATION_READER).withOrganizationId(organizationId))
+    request.requireRole(AuthRoleConstants.WORKSPACE_READER)
+
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(Permission().withPermissionType(Permission.PermissionType.WORKSPACE_READER).withWorkspaceId(workspaceId))
+    request.requireRole(AuthRoleConstants.WORKSPACE_READER)
+    verify(exactly = 0) { workspaceHelper.getOrganizationForWorkspace(any()) }
+  }
+
+  @Test
   fun testWithCurrentUser() {
     every { currentUserService.getCurrentUser() } returns AuthenticatedUser().withAuthUserId("auth-user-1")
     val req = roleResolver.newRequest().withCurrentUser()

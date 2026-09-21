@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.generated.WorkspaceApi
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
@@ -43,11 +44,15 @@ import io.airbyte.server.apis.execute
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
+import io.micronaut.http.annotation.Get
+import io.micronaut.http.annotation.PathVariable
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import java.util.UUID
 
 @Controller("/api/v1/workspaces")
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -56,6 +61,13 @@ open class WorkspaceApiController(
   private val permissionHandler: PermissionHandler,
   private val currentUserService: CurrentUserService,
 ) : WorkspaceApi {
+  @Get("/{workspaceId}/skills/docs")
+  override fun getWorkspaceSkillDocs(
+    @PathVariable workspaceId: UUID,
+    @QueryValue id: String,
+    @QueryValue section: String?,
+  ): JsonNode = throw ApiNotImplementedInOssProblem()
+
   @Post("/create")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @AuditLogging(provider = AuditLoggingProvider.WORKSPACE)

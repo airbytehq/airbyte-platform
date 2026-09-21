@@ -88,6 +88,8 @@ class SourceExecuteGeneratedContractTest {
           yamlMapper.readTree(input)
         }
       assertFalse(spec.path("paths").has("/sources/{sourceId}/execute"), name)
+      assertFalse(spec.path("paths").has("/workspaces/{workspaceId}/skills/docs"), name)
+      assertFalse(spec.path("components").path("schemas").has("SkillDocsResponse"), name)
       assertFalse(spec.path("paths").has("/v1/sources/{sourceId}/execute"), name)
       for (schema in listOf(
         "SourceExecuteRequest",
