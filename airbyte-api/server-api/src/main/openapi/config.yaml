@@ -1789,7 +1789,7 @@ paths:
         - workspace
       operationId: getWorkspaceSkillDocs
       summary: Read connector skill documentation
-      description: Cloud-only connector source documentation. Requires workspace reader access and enabled agent access.
+      description: Cloud-only connector documentation. Requires workspace reader access and enabled agent access.
       parameters:
         - name: workspaceId
           in: path
@@ -1819,6 +1819,51 @@ paths:
         "403":
           $ref: "#/components/responses/CloudExecutionProblemResponse"
         "404":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "422":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "502":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "503":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "504":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+  /v1/destinations/{destinationId}/execute:
+    post:
+      tags:
+        - destination_execution
+      operationId: executeDestination
+      summary: Execute a read-only destination SQL query
+      description: Cloud-only sql_select execution for an enabled destination. Requires workspace reader access.
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationExecuteRequest"
+      responses:
+        "200":
+          description: Query data and optional metadata.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationExecuteResponse"
+        "401":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "403":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "404":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "405":
+          $ref: "#/components/responses/CloudExecutionProblemResponse"
+        "413":
           $ref: "#/components/responses/CloudExecutionProblemResponse"
         "422":
           $ref: "#/components/responses/CloudExecutionProblemResponse"
@@ -21619,6 +21664,59 @@ components:
       nullable: true
       description: Opaque JSON result, including objects, arrays, scalars or null. Nested values and null-valued properties are preserved.
     SourceExecuteMeta:
+      type: object
+      description: Opaque connector metadata, including pagination cursors when supplied by the connector. Nested values and null-valued properties are preserved.
+    DestinationExecuteRequest:
+      type: object
+      additionalProperties: false
+      required: [entity, action]
+      properties:
+        entity:
+          type: string
+          minLength: 1
+        action:
+          type: string
+          minLength: 1
+          description: Read-only destination action, such as sql_select.
+        params:
+          $ref: "#/components/schemas/DestinationExecuteParams"
+        select_fields:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Dot-path field allowlist. Takes precedence over exclude_fields.
+        exclude_fields:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Dot-path fields to omit when select_fields is not provided.
+        skip_truncation:
+          type: boolean
+          default: true
+          description: Disable truncation of long text fields in query results.
+        intent:
+          type: string
+          nullable: true
+          maxLength: 512
+          description: Caller-provided purpose recorded with execution auditing.
+    DestinationExecuteParams:
+      type: object
+      # The OpenAPI default permits arbitrary properties without a generated map initializer.
+      description: Connector-specific JSON parameters, preserving nested nulls. Defaults to an empty object when omitted.
+    DestinationExecuteResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/DestinationExecuteData"
+        meta:
+          $ref: "#/components/schemas/DestinationExecuteMeta"
+    DestinationExecuteData:
+      nullable: true
+      description: Opaque JSON result, including objects, arrays, scalars or null. Nested values and null-valued properties are preserved.
+    DestinationExecuteMeta:
       type: object
       description: Opaque connector metadata, including pagination cursors when supplied by the connector. Nested values and null-valued properties are preserved.
     SkillDocsResponse:

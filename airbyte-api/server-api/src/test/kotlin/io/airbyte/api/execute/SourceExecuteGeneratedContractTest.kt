@@ -10,8 +10,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion
+import io.airbyte.api.generated.DestinationExecutionApi
 import io.airbyte.api.generated.SourceApi
 import io.airbyte.api.generated.SourceExecutionApi
+import io.airbyte.api.model.generated.DestinationExecuteRequest
 import io.airbyte.api.model.generated.SourceExecuteRequest
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
@@ -22,8 +24,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.yaml.snakeyaml.LoaderOptions
 import java.util.UUID
+import io.airbyte.api.server.generated.apis.DestinationExecutionApi as KotlinDestinationExecutionApi
 import io.airbyte.api.server.generated.apis.SourceApi as KotlinSourceApi
 import io.airbyte.api.server.generated.apis.SourceExecutionApi as KotlinSourceExecutionApi
+import io.airbyte.api.server.generated.models.DestinationExecuteRequest as KotlinDestinationExecuteRequest
 import io.airbyte.api.server.generated.models.SourceExecuteRequest as KotlinSourceExecuteRequest
 
 class SourceExecuteGeneratedContractTest {
@@ -65,13 +69,45 @@ class SourceExecuteGeneratedContractTest {
   }
 
   @Test
+  fun `destination execution exposes independent request and response schemas`() {
+    for ((api, request) in listOf(
+      DestinationExecutionApi::class.java to DestinationExecuteRequest::class.java,
+      KotlinDestinationExecutionApi::class.java to KotlinDestinationExecuteRequest::class.java,
+    )) {
+      val method = api.declaredMethods.single { it.name == "executeDestination" }
+      assertTrue(method.parameters.any { it.type == request })
+      assertEquals(JsonNode::class.java, method.returnType)
+      assertEquals(Any::class.java, request.superclass)
+    }
+    val operation = contract.path("paths").path("/v1/destinations/{destinationId}/execute").path("post")
+    assertEquals(
+      "#/components/schemas/DestinationExecuteRequest",
+      operation.at("/requestBody/content/application~1json/schema/\$ref").asText(),
+    )
+    assertEquals(
+      "#/components/schemas/DestinationExecuteResponse",
+      operation.at("/responses/200/content/application~1json/schema/\$ref").asText(),
+    )
+    val schemas = contract.path("components").path("schemas")
+    for (name in listOf("Request", "Response", "Params", "Data", "Meta")) {
+      assertTrue(schemas.has("DestinationExecute$name"))
+      assertFalse(schemas.path("DestinationExecute$name").toString().contains("SourceExecute"))
+    }
+  }
+
+  @Test
   fun `generated server requests preserve opaque parameters and snake case controls`() {
     val json =
       """
       {"entity":"contacts","action":"api_search","params":{"filter":[null,{"active":false}],"cursor":null,"id":9223372036854775000},
       "select_fields":["name"],"exclude_fields":[],"skip_truncation":false,"intent":"lookup"}
       """.trimIndent()
-    for (model in listOf(SourceExecuteRequest::class.java, KotlinSourceExecuteRequest::class.java)) {
+    for (model in listOf(
+      SourceExecuteRequest::class.java,
+      KotlinSourceExecuteRequest::class.java,
+      DestinationExecuteRequest::class.java,
+      KotlinDestinationExecuteRequest::class.java,
+    )) {
       val request = objectMapper.readValue(json, model)
       assertEquals(JsonNode::class.java, model.getMethod("getParams").returnType)
       assertEquals(objectMapper.readTree(json), objectMapper.readTree(objectMapper.writeValueAsString(request)))
@@ -88,6 +124,8 @@ class SourceExecuteGeneratedContractTest {
           yamlMapper.readTree(input)
         }
       assertFalse(spec.path("paths").has("/sources/{sourceId}/execute"), name)
+      assertFalse(spec.path("paths").has("/destinations/{destinationId}/execute"), name)
+      assertFalse(spec.path("paths").has("/v1/destinations/{destinationId}/execute"), name)
       assertFalse(spec.path("paths").has("/workspaces/{workspaceId}/skills/docs"), name)
       assertFalse(spec.path("components").path("schemas").has("SkillDocsResponse"), name)
       assertFalse(spec.path("paths").has("/v1/sources/{sourceId}/execute"), name)
@@ -98,6 +136,11 @@ class SourceExecuteGeneratedContractTest {
         "SourceExecuteResponse",
         "SourceExecuteData",
         "SourceExecuteProblem",
+        "DestinationExecuteRequest",
+        "DestinationExecuteResponse",
+        "DestinationExecuteParams",
+        "DestinationExecuteData",
+        "DestinationExecuteMeta",
       )) {
         assertFalse(spec.path("components").path("schemas").has(schema), "$name $schema")
       }
@@ -108,23 +151,25 @@ class SourceExecuteGeneratedContractTest {
   fun `config execute schemas validate nullable options and opaque JSON semantics`() {
     val components = contract.path("components").deepCopy<ObjectNode>()
     val schemas = components.path("schemas")
-    val properties = schemas.path("SourceExecuteRequest").path("properties")
-    for (field in listOf("select_fields", "exclude_fields", "intent")) {
-      val property = properties.path(field) as ObjectNode
-      assertTrue(property.path("nullable").asBoolean(), field)
-      // OpenAPI 3.0 nullable is expressed as a type union for the JSON Schema validator.
-      val type = property.path("type").asText()
-      property.putArray("type").add(type).add("null")
-      property.remove("nullable")
+    for (request in listOf("SourceExecuteRequest", "DestinationExecuteRequest")) {
+      val properties = schemas.path(request).path("properties")
+      for (field in listOf("select_fields", "exclude_fields", "intent")) {
+        val property = properties.path(field) as ObjectNode
+        assertTrue(property.path("nullable").asBoolean(), field)
+        // OpenAPI 3.0 nullable is expressed as a type union for the JSON Schema validator.
+        val type = property.path("type").asText()
+        property.putArray("type").add(type).add("null")
+        property.remove("nullable")
+      }
     }
     val factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)
-    for (model in listOf("SourceExecuteRequest", "SourceExecuteResponse")) {
+    for (model in listOf("SourceExecuteRequest", "SourceExecuteResponse", "DestinationExecuteRequest", "DestinationExecuteResponse")) {
       val root = objectMapper.createObjectNode()
       root.put("\$ref", "#/components/schemas/$model")
       root.set<JsonNode>("components", components)
       val schema = factory.getSchema(root)
       val valid =
-        if (model == "SourceExecuteRequest") {
+        if (model.endsWith("Request")) {
           listOf(
             """{"entity":"contacts","action":"list"}""",
             """{"entity":"contacts","action":"api_search","params":{"cursor":null},"select_fields":null,"exclude_fields":null,"intent":null}""",
@@ -137,7 +182,7 @@ class SourceExecuteGeneratedContractTest {
         }
       for (json in valid) assertTrue(schema.validate(objectMapper.readTree(json)).isEmpty(), "$model $json")
       val invalid =
-        if (model == "SourceExecuteRequest") {
+        if (model.endsWith("Request")) {
           listOf(
             "{}",
             """{"entity":"","action":"list"}""",
