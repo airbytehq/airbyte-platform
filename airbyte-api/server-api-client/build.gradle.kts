@@ -255,3 +255,12 @@ $body
     """.trimIndent(),
   )
 }
+
+// Every Kotlin source here is generated; the models annotate constructor parameters (@JsonProperty,
+// @field:Valid, ...). Keep the current parameter-only annotation target and drop the K2 warning that
+// the default will change, which nothing hand-written can act on in this module.
+kotlin {
+  compilerOptions {
+    freeCompilerArgs.add("-Xannotation-default-target=first-only")
+  }
+}
