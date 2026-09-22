@@ -44,12 +44,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.nio.file.Path
 import java.util.stream.Stream
+import kotlin.time.TimeMark
 
 @ExtendWith(MockKExtension::class)
 internal class ConnectorWatchTest {
@@ -343,6 +345,26 @@ internal class ConnectorWatchTest {
 
     assertTrue(exitCauseFileWasNotFound)
     verify { streamFactory.create(any(), any()) }
+  }
+
+  @Test
+  fun `file timeout reuses the start mark across polls`() {
+    val startMarks = mutableListOf<TimeMark>()
+
+    every { connectorWatcher.areNeededFilesPresent() } returns false
+    every { connectorWatcher.hasFileTimeoutReached(capture(startMarks), false) } returns false andThen true
+    every { connectorWatcher.handleException(any(), any()) } just Runs
+    every { connectorWatcher.exitFileNotFound() } throws RuntimeException("file timeout")
+    every { workloadApiClient.workloadFailure(any()) } returns Unit
+    every { logContextFactory.createConnectorContext(any()) } returns mapOf()
+    every { logContextFactory.inferLogSource() } returns LogSource.SOURCE
+    every { streamFactory.create(any(), any()) } returns Stream.empty()
+    every { sidecarInput.operationType } returns OperationType.CHECK
+
+    connectorWatcher.run()
+
+    assertEquals(startMarks[0], startMarks[1])
+    verify { connectorWatcher.exitFileNotFound() }
   }
 
   @ParameterizedTest

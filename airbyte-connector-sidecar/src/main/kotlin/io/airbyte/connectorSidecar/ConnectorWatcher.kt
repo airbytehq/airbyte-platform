@@ -42,6 +42,7 @@ import java.nio.file.Path
 import java.time.Duration
 import java.util.Optional
 import kotlin.system.exitProcess
+import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlin.time.toJavaDuration
 
@@ -112,7 +113,7 @@ class ConnectorWatcher(
   }
 
   private fun waitForConnectorOutput(input: SidecarInput) {
-    val stopwatch = TimeSource.Monotonic
+    val stopwatch = TimeSource.Monotonic.markNow()
     while (!areNeededFilesPresent()) {
       Thread.sleep(100)
       if (heartbeatMonitor.shouldAbort()) {
@@ -310,11 +311,11 @@ class ConnectorWatcher(
   }
 
   fun hasFileTimeoutReached(
-    stopwatch: TimeSource.Monotonic,
+    stopwatch: TimeMark,
     withinSync: Boolean,
   ): Boolean {
     val timeoutMinutes = if (withinSync) airbyteSidecarConfig.fileTimeoutMinutesWithinSync else airbyteSidecarConfig.fileTimeoutMinutes
-    return stopwatch.markNow().elapsedNow().toJavaDuration() > Duration.ofMinutes(timeoutMinutes.toLong())
+    return stopwatch.elapsedNow().toJavaDuration() > Duration.ofMinutes(timeoutMinutes.toLong())
   }
 
   @InternalForTesting
