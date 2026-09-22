@@ -6,6 +6,7 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import {
   useAgentsProvisioningStatusQuery,
   useAgentsProvisioningStatus,
+  useUnenrollOrganizationFromAgents,
   useEnrollOrganizationInAgents,
   useExternalWorkspaceConnectors,
   useListWorkspacesInOrganization,
@@ -13,7 +14,7 @@ import {
 } from "core/api";
 import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { useModalService } from "core/services/Modal";
-import { useNotificationService } from "core/services/Notification";
+import { NotificationService, useNotificationService } from "core/services/Notification";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { ContextLayerPage } from "./ContextLayerPage";
@@ -26,6 +27,7 @@ jest.mock("area/organization/utils", () => ({
 jest.mock("core/api", () => ({
   useAgentsProvisioningStatusQuery: jest.fn(),
   useAgentsProvisioningStatus: jest.fn(),
+  useUnenrollOrganizationFromAgents: jest.fn(),
   useEnrollOrganizationInAgents: jest.fn(),
   useExternalWorkspaceConnectors: jest.fn(),
   useListWorkspacesInOrganization: jest.fn(),
@@ -37,6 +39,7 @@ jest.mock("core/services/Modal", () => ({
 }));
 
 jest.mock("core/services/Notification", () => ({
+  ...jest.requireActual("core/services/Notification"),
   useNotificationService: jest.fn(),
 }));
 
@@ -68,6 +71,9 @@ const mockUseAgentsProvisioningStatusQuery = useAgentsProvisioningStatusQuery as
 >;
 const mockUseEnrollOrganizationInAgents = useEnrollOrganizationInAgents as jest.MockedFunction<
   typeof useEnrollOrganizationInAgents
+>;
+const mockUseUnenrollOrganizationFromAgents = useUnenrollOrganizationFromAgents as jest.MockedFunction<
+  typeof useUnenrollOrganizationFromAgents
 >;
 const mockUseListWorkspacesInOrganization = useListWorkspacesInOrganization as jest.MockedFunction<
   typeof useListWorkspacesInOrganization
@@ -143,6 +149,11 @@ const messages = {
     "Agents will no longer be able to access {name}. You can re-enable it at any time.",
   "cloud.contextLayer.disableConfirm.submit": "Disable",
   "cloud.contextLayer.disableConfirm.dontAskAgain": "Don't ask again",
+  "cloud.contextLayer.disableOrg.title": "Disable the Context layer for this organization?",
+  "cloud.contextLayer.disableOrg.text":
+    "Agents will lose access to every connector in this organization. Your connector selections are kept and will be restored if you re-enable the Context layer.",
+  "cloud.contextLayer.disableOrg.submit": "Disable",
+  "cloud.contextLayer.disableOrg.error": "Could not disable the Context layer. Please try again.",
   "form.cancel": "Cancel",
   "form.tryAgain": "Try again",
   "ui.loading": "Loading …",
@@ -152,9 +163,11 @@ const renderWithIntl = () =>
   render(
     <MemoryRouter>
       <IntlProvider locale="en" messages={messages}>
-        <ConfirmationModalService>
-          <ContextLayerPage />
-        </ConfirmationModalService>
+        <NotificationService>
+          <ConfirmationModalService>
+            <ContextLayerPage />
+          </ConfirmationModalService>
+        </NotificationService>
       </IntlProvider>
     </MemoryRouter>
   );
@@ -186,6 +199,7 @@ describe("ContextLayerPage", () => {
     mockUseModalService.mockReturnValue({ openModal: jest.fn() } as never);
     mockUseNotificationService.mockReturnValue({ registerNotification: jest.fn() } as never);
     mockUseEnrollOrganizationInAgents.mockReturnValue({ mutateAsync: jest.fn() } as never);
+    mockUseUnenrollOrganizationFromAgents.mockReturnValue({ mutateAsync: jest.fn() } as never);
   });
 
   it("renders the disabled state and opens the terms modal", () => {
@@ -284,6 +298,103 @@ describe("ContextLayerPage", () => {
       "target",
       "_blank"
     );
+  });
+
+  it("asks for confirmation before disabling the Context layer for an enrolled organization", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    const mutateAsync = jest.fn().mockResolvedValue(undefined);
+    mockUseUnenrollOrganizationFromAgents.mockReturnValue({ mutateAsync } as never);
+
+    renderWithIntl();
+
+    const toggle = screen.getByRole("checkbox", { name: "Context layer" });
+    expect(toggle).toBeEnabled();
+    fireEvent.click(toggle);
+
+    expect(await screen.findByText("Disable the Context layer for this organization?")).toBeInTheDocument();
+    expect(mutateAsync).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Disable" }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+  });
+
+  it("keeps the confirmation modal open and shows an error notification when unenrollment fails", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    const mutateAsync = jest.fn().mockRejectedValue(new Error("failed"));
+    mockUseUnenrollOrganizationFromAgents.mockReturnValue({ mutateAsync } as never);
+    const registerNotification = jest.fn();
+    mockUseNotificationService.mockReturnValue({ registerNotification } as never);
+
+    renderWithIntl();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Context layer" }));
+    expect(await screen.findByText("Disable the Context layer for this organization?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Disable" }));
+
+    await waitFor(() =>
+      expect(registerNotification).toHaveBeenCalledWith({
+        id: "context-layer-disable-org-error",
+        text: "Could not disable the Context layer. Please try again.",
+        type: "error",
+      })
+    );
+    expect(screen.getByTestId("confirmationModal")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Disable" })).toBeInTheDocument();
+  });
+
+  it("does not disable the Context layer when the confirmation is cancelled", async () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    const mutateAsync = jest.fn().mockResolvedValue(undefined);
+    mockUseUnenrollOrganizationFromAgents.mockReturnValue({ mutateAsync } as never);
+
+    renderWithIntl();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Context layer" }));
+    expect(await screen.findByText("Disable the Context layer for this organization?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument());
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("disables the organization toggle for enrolled non-admin viewers", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    mockUseGeneratedIntent.mockImplementation((intent) => intent !== Intent.UpdateOrganizationPermissions);
+
+    renderWithIntl();
+
+    expect(screen.getByRole("checkbox", { name: "Context layer" })).toBeDisabled();
   });
 
   it("renders real workspace connectors and the empty state", async () => {
@@ -455,9 +566,11 @@ describe("ContextLayerPage", () => {
     view.rerender(
       <MemoryRouter>
         <IntlProvider locale="en" messages={messages}>
-          <ConfirmationModalService>
-            <ContextLayerPage />
-          </ConfirmationModalService>
+          <NotificationService>
+            <ConfirmationModalService>
+              <ContextLayerPage />
+            </ConfirmationModalService>
+          </NotificationService>
         </IntlProvider>
       </MemoryRouter>
     );
@@ -560,9 +673,11 @@ describe("ContextLayerPage", () => {
     view.rerender(
       <MemoryRouter>
         <IntlProvider locale="en" messages={messages}>
-          <ConfirmationModalService>
-            <ContextLayerPage />
-          </ConfirmationModalService>
+          <NotificationService>
+            <ConfirmationModalService>
+              <ContextLayerPage />
+            </ConfirmationModalService>
+          </NotificationService>
         </IntlProvider>
       </MemoryRouter>
     );

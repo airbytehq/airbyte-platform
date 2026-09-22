@@ -14,11 +14,13 @@ import { Text } from "components/ui/Text";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import {
   useAgentsProvisioningStatusQuery,
+  useUnenrollOrganizationFromAgents,
   useEnrollOrganizationInAgents,
   useExternalWorkspaceConnectors,
   useListWorkspacesInOrganization,
   useSetExternalActorEnabled,
 } from "core/api";
+import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { useModalService } from "core/services/Modal";
 import { useNotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
@@ -308,7 +310,7 @@ const ContextLayerToggle: React.FC<{ enabled: boolean; onClick?: () => void }> =
         <Switch
           size="sm"
           checked={enabled}
-          disabled={enabled || !onClick}
+          disabled={!onClick}
           onChange={onClick ? () => onClick() : undefined}
           aria-label={formatMessage({ id: "cloud.contextLayer.toggle.label" })}
         />
@@ -387,7 +389,10 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
   const status = statusQuery.data;
   const isEligible = Boolean(status && (status.is_enrolled || (status.external_cloud_eligible && showAgentsOptIn)));
   const enrollOrganization = useEnrollOrganizationInAgents();
+  const unenrollOrganization = useUnenrollOrganizationFromAgents();
   const { openModal } = useModalService();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
   const canManageOrganizationPermissions = useGeneratedIntent(Intent.UpdateOrganizationPermissions, { organizationId });
   const workspacesQuery = useListWorkspacesInOrganization({
@@ -447,6 +452,28 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
     }).finally(() => setIsOpeningModal(false));
   };
 
+  const openDisableConfirmation = () => {
+    openConfirmationModal({
+      title: "cloud.contextLayer.disableOrg.title",
+      text: "cloud.contextLayer.disableOrg.text",
+      submitButtonText: "cloud.contextLayer.disableOrg.submit",
+      submitButtonVariant: "danger",
+      submitButtonDataId: "context-layer-disable-org-confirm",
+      onSubmit: async () => {
+        try {
+          await unenrollOrganization.mutateAsync();
+          closeConfirmationModal();
+        } catch {
+          registerNotification({
+            id: "context-layer-disable-org-error",
+            text: formatMessage({ id: "cloud.contextLayer.disableOrg.error" }),
+            type: "error",
+          });
+        }
+      },
+    });
+  };
+
   return (
     <div className={styles.page}>
       <FlexContainer direction="column" gap="xl">
@@ -474,7 +501,13 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
             </Text>
             <ContextLayerToggle
               enabled={status.is_enrolled}
-              onClick={status.is_enrolled || !canManageOrganizationPermissions ? undefined : openTermsModal}
+              onClick={
+                canManageOrganizationPermissions
+                  ? status.is_enrolled
+                    ? openDisableConfirmation
+                    : openTermsModal
+                  : undefined
+              }
             />
             {!status.is_enrolled && (
               <>

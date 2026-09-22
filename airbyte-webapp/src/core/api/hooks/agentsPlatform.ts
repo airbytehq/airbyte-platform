@@ -116,6 +116,46 @@ export const useEnrollOrganizationInAgents = () => {
   );
 };
 
+export const useUnenrollOrganizationFromAgents = () => {
+  const { sonarApiUrl: baseUrl } = useWebappConfig();
+  const organizationId = useCurrentOrganizationId();
+  const { getAccessToken } = useRequestOptions();
+  const queryClient = useQueryClient();
+  const queryKey = agentsPlatformKeys.provisioningStatus(organizationId);
+
+  return useMutation(
+    async () => {
+      if (!baseUrl) {
+        throw new Error("Agents API URL is not configured");
+      }
+
+      const accessToken = await getAccessToken();
+      const response = await fetch(`${baseUrl}/api/v1/organizations/external/${organizationId}`, {
+        method: "DELETE",
+        headers: {
+          "X-Organization-Id": organizationId,
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Agents disable request failed: ${response.status}`);
+      }
+    },
+    {
+      onSuccess: async () => {
+        await queryClient.invalidateQueries(queryKey);
+        await queryClient.invalidateQueries([
+          SCOPE_ORGANIZATION,
+          "agentsPlatform",
+          "externalWorkspaceConnectors",
+          organizationId,
+        ]);
+      },
+    }
+  );
+};
+
 export const useAgentsSupportedSourceDefinitionIds = (): Set<string> => {
   return AGENTS_SUPPORTED_SOURCE_DEFINITION_IDS_SET;
 };
