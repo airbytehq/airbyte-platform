@@ -14,7 +14,7 @@ import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 interface AgentsSidebarLinkContentProps {
   labelId: string;
   icon: "aiStars" | "mcp";
-  routePath: string;
+  organizationPath: string;
   testId: string;
   isContextLayer?: boolean;
 }
@@ -22,7 +22,7 @@ interface AgentsSidebarLinkContentProps {
 const AgentsSidebarLinkContent: React.FC<AgentsSidebarLinkContentProps> = ({
   labelId,
   icon,
-  routePath,
+  organizationPath,
   testId,
   isContextLayer,
 }) => {
@@ -35,7 +35,7 @@ const AgentsSidebarLinkContent: React.FC<AgentsSidebarLinkContentProps> = ({
     return null;
   }
 
-  const href = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${routePath}`;
+  const href = `/${RoutePaths.Organization}/${organizationId}/${organizationPath}`;
 
   return (
     <NavItem
@@ -56,7 +56,7 @@ export const AgentsSidebarLink: React.FC = () => {
       <AgentsSidebarLinkContent
         labelId="cloud.contextLayer.sidebar"
         icon="aiStars"
-        routePath={CloudSettingsRoutePaths.ContextLayer}
+        organizationPath={RoutePaths.ContextLayer}
         testId="agentsSidebarLink"
         isContextLayer
       />
@@ -70,7 +70,7 @@ export const InstallMcpSidebarLink: React.FC = () => {
       <AgentsSidebarLinkContent
         labelId="cloud.installMcp.sidebar"
         icon="mcp"
-        routePath={CloudSettingsRoutePaths.InstallMcp}
+        organizationPath={`${RoutePaths.Settings}/${CloudSettingsRoutePaths.InstallMcp}`}
         testId="installMcpSidebarLink"
       />
     </React.Suspense>

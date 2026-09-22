@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "components/ui/Button";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
-import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useAgentsProvisioningStatus, useAgentsSupportedSourceDefinitionIds } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 import { RoutePaths } from "pages/routePaths";
@@ -40,9 +39,7 @@ const AgentsSourceCtaContent: React.FC<AgentsSourceCtaProps> = ({ actorType, act
     event.preventDefault();
     event.stopPropagation();
 
-    navigate(
-      `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`
-    );
+    navigate(`/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`);
   };
 
   return (

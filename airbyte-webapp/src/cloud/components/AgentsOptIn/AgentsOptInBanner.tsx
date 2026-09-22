@@ -5,7 +5,6 @@ import { AlertBanner } from "components/ui/Banner/AlertBanner";
 import { Link } from "components/ui/Link";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
-import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { useAgentsProvisioningStatus } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 import { RoutePaths } from "pages/routePaths";
@@ -22,7 +21,7 @@ const AgentsOptInBannerContent: React.FC = () => {
     return null;
   }
 
-  const settingsUrl = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`;
+  const settingsUrl = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`;
 
   return (
     <AlertBanner

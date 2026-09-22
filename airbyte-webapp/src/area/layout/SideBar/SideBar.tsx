@@ -95,9 +95,8 @@ const OrganizationNavItems = () => {
   const canViewOrganizationSettings = useGeneratedIntent(Intent.ViewOrganizationSettings);
   const basePath = `${RoutePaths.Organization}/${organizationId}/`;
   const { pathname } = useLocation();
-  const isAgentsRoute = [CloudSettingsRoutePaths.ContextLayer, CloudSettingsRoutePaths.InstallMcp].some(
-    (path) => matchPath(`/${basePath}${RoutePaths.Settings}/${path}/*`, pathname) !== null
-  );
+  const isInstallMcpRoute =
+    matchPath(`/${basePath}${RoutePaths.Settings}/${CloudSettingsRoutePaths.InstallMcp}/*`, pathname) !== null;
   return (
     <MenuContent data-testid="navMainItems">
       <NavItem
@@ -114,7 +113,7 @@ const OrganizationNavItems = () => {
           icon="gear"
           to={basePath + RoutePaths.Settings}
           testId="orgSettingsLink"
-          isActive={isAgentsRoute ? false : undefined}
+          isActive={isInstallMcpRoute ? false : undefined}
         />
       )}
     </MenuContent>

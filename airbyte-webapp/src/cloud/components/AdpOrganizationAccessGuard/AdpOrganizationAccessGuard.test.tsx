@@ -88,7 +88,20 @@ describe("AdpOrganizationAccessGuard", () => {
     expect(screen.getByText(/Sorry, you don't have permission/)).toBeInTheDocument();
   });
 
-  it("renders the Context Layer for a locked-down ADP organization member", () => {
+  it("renders the first-class Context Layer page for a locked-down ADP organization member", () => {
+    mockUseIsAdpOrganization.mockReturnValue(true);
+    mockUseIsInstanceAdmin.mockReturnValue(false);
+
+    renderGuard(
+      <div data-testid="protected-content">protected</div>,
+      `/${RoutePaths.Organization}/organization-id/${RoutePaths.ContextLayer}`
+    );
+
+    expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+    expect(screen.queryByText(/Sorry, you don't have permission/)).not.toBeInTheDocument();
+  });
+
+  it("allows the legacy organization Context Layer URL to redirect for a locked-down ADP member", () => {
     mockUseIsAdpOrganization.mockReturnValue(true);
     mockUseIsInstanceAdmin.mockReturnValue(false);
 

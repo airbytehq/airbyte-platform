@@ -165,6 +165,16 @@ describe("SideBar organization navigation", () => {
     expect(screen.getByTestId("installMcpSidebarLink")).toHaveTextContent("Beta");
   });
 
+  it("only highlights Context Layer on the first-class Context Layer route", () => {
+    renderSidebar("/organization/test-org/context-layer");
+
+    expect(screen.getByTestId("agentsSidebarLink")).toHaveClass("active");
+    expect(screen.getByTestId("agentsSidebarLink")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByTestId("orgSettingsLink")).not.toHaveClass("active");
+    expect(screen.getByTestId("orgSettingsLink")).not.toHaveAttribute("aria-current", "page");
+    expect(screen.getByTestId("installMcpSidebarLink")).not.toHaveClass("active");
+  });
+
   it("highlights Organization settings on organization settings routes", () => {
     renderSidebar("/organization/test-org/settings");
 

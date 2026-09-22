@@ -7,6 +7,7 @@ export enum RoutePaths {
   Destination = "destination",
   Source = "source",
   Settings = "settings",
+  ContextLayer = "context-layer",
   ConnectorBuilder = "connector-builder",
   Organization = "organization",
   Onboarding = "onboarding",

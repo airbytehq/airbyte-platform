@@ -14,10 +14,15 @@ export const AdpOrganizationAccessGuard: React.FC<React.PropsWithChildren> = ({ 
   const allowAdpDataReplicationAccess = useExperiment("allowAgentsDataReplicationAccess");
   const { pathname } = useLocation();
   const isAgentsRoute =
-    [CloudSettingsRoutePaths.ContextLayer, CloudSettingsRoutePaths.InstallMcp].some(
-      (path) =>
-        matchPath(`/${RoutePaths.Organization}/:organizationId/${RoutePaths.Settings}/${path}`, pathname) !== null
-    ) ||
+    matchPath(`/${RoutePaths.Organization}/:organizationId/${RoutePaths.ContextLayer}/*`, pathname) !== null ||
+    matchPath(
+      `/${RoutePaths.Organization}/:organizationId/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`,
+      pathname
+    ) !== null ||
+    matchPath(
+      `/${RoutePaths.Organization}/:organizationId/${RoutePaths.Settings}/${CloudSettingsRoutePaths.InstallMcp}`,
+      pathname
+    ) !== null ||
     matchPath(
       `/${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`,
       pathname

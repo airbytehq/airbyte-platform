@@ -9,6 +9,7 @@ import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { ContextLayerPage } from "pages/ContextLayerPage/ContextLayerPage";
 import { OrganizationSettingsPage } from "pages/SettingsPage/OrganizationSettingsPage";
 import { DestinationsPage, SourcesPage } from "pages/SettingsPage/pages/ConnectorsPage";
 import { LicenseSettingsPage } from "pages/SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
@@ -24,7 +25,7 @@ const OrganizationWorkspacesPage = React.lazy(() => import("pages/workspaces/Org
 const OrganizationBillingPage = React.lazy(() => import("cloud/views/billing/OrganizationBillingPage"));
 const OrganizationPlanPage = React.lazy(() => import("cloud/views/billing/OrganizationPlanPage"));
 const OrganizationUsagePage = React.lazy(() => import("cloud/views/billing/OrganizationUsagePage"));
-const OrganizationContextLayerPage = React.lazy(() => import("pages/SettingsPage/pages/OrganizationContextLayerPage"));
+const OrganizationContextLayerPage = React.lazy(() => import("pages/ContextLayerPage/OrganizationContextLayerPage"));
 const OrganizationInstallMcpPage = React.lazy(() => import("pages/SettingsPage/pages/OrganizationInstallMcpPage"));
 
 export const OrganizationRoutes: React.FC = () => {
@@ -53,6 +54,25 @@ export const OrganizationRoutes: React.FC = () => {
         <Route path={RoutePaths.Workspaces} element={<OrganizationWorkspacesPage />} />
         <Route path="*" element={<Navigate to={RoutePaths.Workspaces} replace />} />
       </Route>
+      {isCloudApp && (
+        <>
+          <Route path={`${RoutePaths.ContextLayer}/*`} element={<ContextLayerPage />}>
+            <Route index element={<OrganizationContextLayerPage />} />
+            <Route
+              path="*"
+              element={
+                <Navigate to={`/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`} replace />
+              }
+            />
+          </Route>
+          <Route
+            path={`${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`}
+            element={
+              <Navigate to={`/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`} replace />
+            }
+          />
+        </>
+      )}
       {canViewOrgSettings && (
         <Route path={`${RoutePaths.Settings}/*`} element={<OrganizationSettingsPage />}>
           <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
@@ -78,9 +98,6 @@ export const OrganizationRoutes: React.FC = () => {
           {canViewOrganizationUsage && (
             <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
           )}
-          {isCloudApp && (
-            <Route path={CloudSettingsRoutePaths.ContextLayer} element={<OrganizationContextLayerPage />} />
-          )}
           {isCloudApp && <Route path={CloudSettingsRoutePaths.InstallMcp} element={<OrganizationInstallMcpPage />} />}
           <Route path={SettingsRoutePaths.Source} element={<SourcesPage />} />
           <Route path={SettingsRoutePaths.Destination} element={<DestinationsPage />} />
@@ -89,7 +106,6 @@ export const OrganizationRoutes: React.FC = () => {
       )}
       {!canViewOrgSettings && isCloudApp && (
         <Route path={`${RoutePaths.Settings}/*`} element={<OrganizationSettingsPage />}>
-          <Route path={CloudSettingsRoutePaths.ContextLayer} element={<OrganizationContextLayerPage />} />
           <Route path={CloudSettingsRoutePaths.InstallMcp} element={<OrganizationInstallMcpPage />} />
           <Route path="*" element={<Navigate to={`../../${RoutePaths.Workspaces}`} replace />} />
         </Route>

@@ -17,8 +17,7 @@ const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunc
 const mockOrganizationId = "test-org-123";
 
 const messages = {
-  "cloud.adpOrganization.banner":
-    "This is an Airbyte Agents organization. <lnk>Manage the Context Layer in organization settings</lnk>.",
+  "cloud.adpOrganization.banner": "This is an Airbyte Agents organization. <lnk>Manage the Context Layer</lnk>.",
 };
 
 const renderWithIntl = (component: React.ReactElement) => {
@@ -58,7 +57,7 @@ describe("AdpOrganizationBanner", () => {
     renderWithIntl(<AdpOrganizationBanner />);
 
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", `/organization/${mockOrganizationId}/settings/context-layer`);
+    expect(link).toHaveAttribute("href", `/organization/${mockOrganizationId}/context-layer`);
   });
 
   it("should have correct data-testid attribute", () => {

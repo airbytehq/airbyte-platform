@@ -5,7 +5,6 @@ import { AlertBanner } from "components/ui/Banner/AlertBanner";
 import { Link } from "components/ui/Link";
 
 import { useCurrentOrganizationId, useIsAdpOrganization } from "area/organization/utils";
-import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import { RoutePaths } from "pages/routePaths";
 
 const AdpOrganizationBannerContent: React.FC = () => {
@@ -16,7 +15,7 @@ const AdpOrganizationBannerContent: React.FC = () => {
     return null;
   }
 
-  const contextLayerUrl = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`;
+  const contextLayerUrl = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.ContextLayer}`;
 
   return (
     <AlertBanner

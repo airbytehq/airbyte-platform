@@ -181,7 +181,7 @@ describe("OrganizationSettingsPage", () => {
     expect(screen.getByText("Audit Logs")).toBeInTheDocument();
   });
 
-  it("shows the Agents and Install MCP nav links when the opt-in is enabled for an eligible organization", async () => {
+  it("shows the Install MCP nav link when the opt-in is enabled for an eligible organization", async () => {
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseShowAgentsOptIn.mockReturnValue(true);
     mockUseAgentsProvisioningStatus.mockReturnValue({
@@ -196,11 +196,11 @@ describe("OrganizationSettingsPage", () => {
 
     await render(<OrganizationSettingsPage />);
 
-    expect(screen.getByText("Context layer")).toBeInTheDocument();
+    expect(screen.queryByText("Context layer")).not.toBeInTheDocument();
     expect(screen.getByText("Install MCP")).toBeInTheDocument();
   });
 
-  it("shows the Agents and Install MCP nav links to eligible organization members", async () => {
+  it("shows the Install MCP nav link to eligible organization members", async () => {
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseShowAgentsOptIn.mockReturnValue(true);
     mockUseAgentsProvisioningStatus.mockReturnValue({
@@ -216,7 +216,7 @@ describe("OrganizationSettingsPage", () => {
 
     await render(<OrganizationSettingsPage />);
 
-    expect(screen.getByText("Context layer")).toBeInTheDocument();
+    expect(screen.queryByText("Context layer")).not.toBeInTheDocument();
     expect(screen.getByText("Install MCP")).toBeInTheDocument();
     expect(screen.queryByText("SSO")).not.toBeInTheDocument();
     expect(screen.queryByText("General")).not.toBeInTheDocument();

@@ -47,7 +47,6 @@ const SourceSettingsPage = React.lazy(() => import("pages/source/SourceSettingsP
 
 const ConnectionsRoutes = React.lazy(() => import("pages/connections/ConnectionsRoutes"));
 const ConnectorBuilderRoutes = React.lazy(() => import("pages/connectorBuilder/ConnectorBuilderRoutes"));
-const OrganizationContextLayerPage = React.lazy(() => import("pages/SettingsPage/pages/OrganizationContextLayerPage"));
 
 export const WorkspacesRoutes: React.FC = () => {
   usePrefetchWorkspaceData();
@@ -128,7 +127,17 @@ export const WorkspacesRoutes: React.FC = () => {
         {canViewOrganizationUsage && (
           <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
         )}
-        {isCloudApp && <Route path={CloudSettingsRoutePaths.ContextLayer} element={<OrganizationContextLayerPage />} />}
+        {isCloudApp && (
+          <Route
+            path={CloudSettingsRoutePaths.ContextLayer}
+            element={
+              <Navigate
+                to={`/${RoutePaths.Organization}/${workspace.organizationId}/${RoutePaths.ContextLayer}`}
+                replace
+              />
+            }
+          />
+        )}
         <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
         <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Workspace} replace />} />
       </Route>

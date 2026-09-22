@@ -96,7 +96,7 @@ describe("AgentsSourceCta", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Try with Agents" }));
 
-    expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org-123/settings/context-layer");
+    expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org-123/context-layer");
   });
 
   it("does not render when provisioning status is unavailable", () => {

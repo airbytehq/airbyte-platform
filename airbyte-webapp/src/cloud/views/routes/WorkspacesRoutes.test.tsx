@@ -195,11 +195,6 @@ jest.mock("pages/connectorBuilder/ConnectorBuilderRoutes", () => ({
   default: () => null,
 }));
 
-jest.mock("pages/SettingsPage/pages/OrganizationContextLayerPage", () => ({
-  __esModule: true,
-  default: () => <div data-testid="organization-context-layer-page" />,
-}));
-
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
 const mockUseCurrentWorkspace = useCurrentWorkspace as jest.MockedFunction<typeof useCurrentWorkspace>;
 const mockUseExperiment = useExperiment as jest.MockedFunction<typeof useExperiment>;
@@ -229,7 +224,7 @@ describe("WorkspacesRoutes", () => {
     mockUseIntent.mockReturnValue(false);
   });
 
-  it("registers the context layer route for cloud when the agents opt-in flag is off", async () => {
+  it("redirects the legacy Context Layer route to the organization page when the opt-in flag is off", async () => {
     mockUseShowAgentsOptIn.mockReturnValue(false);
 
     render(
@@ -243,11 +238,12 @@ describe("WorkspacesRoutes", () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(screen.getByTestId("organization-context-layer-page")).toBeInTheDocument());
-    expect(screen.getByTestId("location")).toHaveTextContent("/workspaces/test-ws/settings/context-layer");
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/context-layer")
+    );
   });
 
-  it("registers the context layer route for cloud when the agents opt-in flag is on", async () => {
+  it("redirects the legacy Context Layer route to the organization page when the opt-in flag is on", async () => {
     mockUseShowAgentsOptIn.mockReturnValue(true);
 
     render(
@@ -261,8 +257,9 @@ describe("WorkspacesRoutes", () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(screen.getByTestId("organization-context-layer-page")).toBeInTheDocument());
-    expect(screen.getByTestId("location")).toHaveTextContent("/workspaces/test-ws/settings/context-layer");
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/context-layer")
+    );
   });
 
   it("does not register the context layer route outside cloud", async () => {
@@ -282,6 +279,5 @@ describe("WorkspacesRoutes", () => {
     await waitFor(() =>
       expect(screen.getByTestId("location")).not.toHaveTextContent("/workspaces/test-ws/settings/context-layer")
     );
-    expect(screen.queryByTestId("organization-context-layer-page")).not.toBeInTheDocument();
   });
 });
