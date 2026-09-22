@@ -21,7 +21,10 @@ spec:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
-      maxSurge: 100%
+      # maxSurge: 100% doubles the pod count during a rollout, which pulls in
+      # new nodes that the cluster-autoscaler then reclaims ~10min later,
+      # evicting every replica at once. Surge one pod at a time instead.
+      maxSurge: 1
   template:
     metadata:
       labels:
@@ -126,7 +129,7 @@ spec:
         {{- if .Values.workloadApiServer.readinessProbe.enabled }}
         readinessProbe:
           httpGet:
-            path: /health/liveness
+            path: /health/readiness
             port: management
           initialDelaySeconds: {{ .Values.workloadApiServer.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.workloadApiServer.readinessProbe.periodSeconds }}
