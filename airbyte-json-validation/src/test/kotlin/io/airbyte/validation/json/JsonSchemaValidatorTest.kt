@@ -4,7 +4,6 @@
 
 package io.airbyte.validation.json
 
-import io.airbyte.commons.io.IOs.writeFile
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.validation.json.JsonSchemaValidator.Companion.getSchema
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
@@ -15,6 +14,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.net.URI
 import java.nio.file.Files
+import kotlin.io.path.writeText
 
 internal class JsonSchemaValidatorTest {
   @Test
@@ -69,7 +69,7 @@ internal class JsonSchemaValidatorTest {
     )
 
     val schemaFile = Files.createTempDirectory("test").resolve("schema.json")
-    writeFile(schemaFile, schema)
+    schemaFile.writeText(schema)
 
     // outer object
     assertTrue(getSchema(schemaFile.toFile()).get(PROPERTIES).has("field1"))
@@ -97,7 +97,7 @@ internal class JsonSchemaValidatorTest {
       
       """.trimIndent()
     val schemaFile = Files.createTempDirectory("test").resolve("WellKnownTypes.json")
-    writeFile(schemaFile, referencableSchemas)
+    schemaFile.writeText(referencableSchemas)
     val jsonSchemaValidator =
       JsonSchemaValidator(URI("file://" + schemaFile.toFile().getParentFile().getAbsolutePath() + "/foo.json"))
 

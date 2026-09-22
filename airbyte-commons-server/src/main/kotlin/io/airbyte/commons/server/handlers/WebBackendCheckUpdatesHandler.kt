@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.model.generated.DestinationDefinitionRead
 import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.specs.RemoteDefinitionsProvider
@@ -59,7 +58,11 @@ open class WebBackendCheckUpdatesHandler(
       }
 
       val latestDestinationDefinitions =
-        Exceptions.swallowWithDefault({ remoteDefinitionsProvider.getDestinationDefinitions() }, emptyList())
+        try {
+          remoteDefinitionsProvider.getDestinationDefinitions()
+        } catch (e: Exception) {
+          emptyList()
+        }
       newActorDefToDockerImageTag =
         latestDestinationDefinitions
           .stream()
@@ -92,7 +95,11 @@ open class WebBackendCheckUpdatesHandler(
       }
 
       val latestSourceDefinitions =
-        Exceptions.swallowWithDefault({ remoteDefinitionsProvider.getSourceDefinitions() }, emptyList())
+        try {
+          remoteDefinitionsProvider.getSourceDefinitions()
+        } catch (e: Exception) {
+          emptyList()
+        }
       newActorDefToDockerImageTag =
         latestSourceDefinitions
           .stream()

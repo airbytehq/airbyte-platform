@@ -65,7 +65,7 @@ class ConnectorWatcher(
 ) {
   fun run() {
     withLoggingContext(logContextFactory.create(sidecarInput.logPath)) {
-      LineGobbler.startSection(sidecarInput.operationType.toString())
+      logger.info { LineGobbler.formatStartSection(sidecarInput.operationType.toString()) }
       var heartbeatStarted = false
       var throwableHandled = false
       try {
@@ -101,7 +101,7 @@ class ConnectorWatcher(
         if (heartbeatStarted) {
           heartbeatMonitor.stopHeartbeatThread()
         }
-        LineGobbler.endSection(sidecarInput.operationType.toString())
+        logger.info { LineGobbler.formatEndSection(sidecarInput.operationType.toString()) }
         if (throwableHandled) {
           exitInternalError()
         } else {

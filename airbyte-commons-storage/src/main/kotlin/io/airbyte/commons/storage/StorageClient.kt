@@ -13,7 +13,6 @@ import com.google.cloud.storage.BucketInfo
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
 import io.airbyte.commons.annotation.InternalForTesting
-import io.airbyte.commons.io.IOs
 import io.airbyte.micronaut.runtime.AirbyteStorageConfig
 import io.airbyte.micronaut.runtime.StorageType
 import io.micronaut.context.annotation.Parameter
@@ -43,7 +42,9 @@ import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.pathString
+import kotlin.io.path.readText
 import kotlin.io.path.relativeTo
+import kotlin.io.path.writeText
 
 private fun prependIfMissing(
   prefix: String,
@@ -346,13 +347,13 @@ class LocalStorageClient(
   ) {
     val path =
       toPath(id).also { it.createParentDirectories() }
-    IOs.writeFile(path, document)
+    path.writeText(document)
   }
 
   override fun read(id: String): String? =
     toPath(id)
       .takeIf { it.exists() }
-      ?.let { IOs.readFile(it) }
+      ?.readText()
 
   override fun delete(id: String): Boolean =
     toPath(id)

@@ -9,7 +9,6 @@ import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.commons.json.Jsons.jsonNode
-import io.airbyte.commons.lang.Exceptions.toRuntime
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.DestinationConnection
@@ -282,8 +281,8 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
         .withDockerImageTag(DESTINATION_DOCKER_TAG)
         .withSpec(
           ConnectorSpecification()
-            .withDocumentationUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
-            .withChangelogUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
+            .withDocumentationUrl(URI(CONNECTOR_URL))
+            .withChangelogUrl(URI(CONNECTOR_URL))
             .withConnectionSpecification(jsonNode(emptyMap<Any?, Any?>()))
             .withSupportedDestinationSyncModes(
               listOf(
@@ -357,8 +356,8 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
         .withDockerImageTag(DESTINATION_DOCKER_TAG)
         .withSpec(
           ConnectorSpecification()
-            .withDocumentationUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
-            .withChangelogUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
+            .withDocumentationUrl(URI(CONNECTOR_URL))
+            .withChangelogUrl(URI(CONNECTOR_URL))
             .withConnectionSpecification(jsonNode(emptyMap<Any?, Any?>()))
             .withSupportedDestinationSyncModes(
               listOf(
@@ -406,8 +405,8 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
 
     val connectorSpecification =
       ConnectorSpecification()
-        .withDocumentationUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
-        .withChangelogUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
+        .withDocumentationUrl(URI(CONNECTOR_URL))
+        .withChangelogUrl(URI(CONNECTOR_URL))
         .withConnectionSpecification(jsonNode(emptyMap<Any?, Any?>()))
         .withAdvancedAuth(
           AdvancedAuth().withAuthFlowType(AdvancedAuth.AuthFlowType.OAUTH_2_0).withOauthConfigSpecification(OAuthConfigSpecification()),
@@ -439,8 +438,8 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
 
     val connectorSpecification =
       ConnectorSpecification()
-        .withDocumentationUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
-        .withChangelogUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
+        .withDocumentationUrl(URI(CONNECTOR_URL))
+        .withChangelogUrl(URI(CONNECTOR_URL))
         .withConnectionSpecification(jsonNode(emptyMap<Any?, Any?>()))
         .withAdvancedAuth(
           AdvancedAuth().withAuthFlowType(AdvancedAuth.AuthFlowType.OAUTH_2_0).withOauthConfigSpecification(OAuthConfigSpecification()),
@@ -464,13 +463,13 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
 
     private val CONNECTOR_SPECIFICATION: ConnectorSpecification =
       ConnectorSpecification()
-        .withDocumentationUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
-        .withChangelogUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
+        .withDocumentationUrl(URI(CONNECTOR_URL))
+        .withChangelogUrl(URI(CONNECTOR_URL))
         .withConnectionSpecification(jsonNode(emptyMap<Any?, Any?>()))
 
     private val CONNECTOR_SPECIFICATION_WITHOUT_DOCS_URL: ConnectorSpecification =
       ConnectorSpecification()
-        .withChangelogUrl(toRuntime<URI?> { URI(CONNECTOR_URL) })
+        .withChangelogUrl(URI(CONNECTOR_URL))
         .withConnectionSpecification(jsonNode(emptyMap<Any?, Any?>()))
   }
 }

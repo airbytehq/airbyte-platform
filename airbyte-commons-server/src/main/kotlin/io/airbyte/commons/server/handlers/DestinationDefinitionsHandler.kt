@@ -21,7 +21,6 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.InternalServerKnownException
@@ -162,7 +161,11 @@ open class DestinationDefinitionsHandler
     fun listLatestDestinationDefinitions(): DestinationDefinitionReadList {
       // Swallow exceptions when fetching registry, so we don't hard-fail for airgapped deployments.
       val latestDestinations =
-        Exceptions.swallowWithDefault({ remoteDefinitionsProvider.getDestinationDefinitions() }, emptyList())
+        try {
+          remoteDefinitionsProvider.getDestinationDefinitions()
+        } catch (e: Exception) {
+          emptyList()
+        }
       val destinationDefs =
         latestDestinations
           .stream()
@@ -174,14 +177,11 @@ open class DestinationDefinitionsHandler
           Collectors.toMap(
             Function { obj: ConnectorRegistryDestinationDefinition -> obj.destinationDefinitionId },
             Function { destination: ConnectorRegistryDestinationDefinition? ->
-              Exceptions.swallowWithDefault(
-                {
-                  toActorDefinitionVersion(
-                    destination!!,
-                  )
-                },
-                null,
-              )
+              try {
+                toActorDefinitionVersion(destination!!)
+              } catch (e: Exception) {
+                null
+              }
             },
           ),
         )

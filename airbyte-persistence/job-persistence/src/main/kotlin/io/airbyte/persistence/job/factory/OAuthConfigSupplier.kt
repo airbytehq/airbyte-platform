@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.node.JsonNodeType
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.DestinationOAuthParameter
 import io.airbyte.config.ScopeType
 import io.airbyte.config.SourceOAuthParameter
@@ -159,14 +158,14 @@ class OAuthConfigSupplier(
             )
           ) {
             val metadata = TrackingMetadata.generateSourceDefinitionMetadata(sourceDefinition, sourceVersion)
-            Exceptions.swallow {
+            runCatching {
               trackingClient.track(
                 workspaceId,
                 ScopeType.WORKSPACE,
                 "OAuth Injection - Backend",
                 metadata,
               )
-            }
+            }.onFailure { log.error(it) { "Failed to track the source OAuth injection" } }
           }
         }
       return sourceConnectorConfig
@@ -217,14 +216,14 @@ class OAuthConfigSupplier(
             )
           ) {
             val metadata = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion)
-            Exceptions.swallow {
+            runCatching {
               trackingClient.track(
                 workspaceId,
                 ScopeType.WORKSPACE,
                 "OAuth Injection - Backend",
                 metadata,
               )
-            }
+            }.onFailure { log.error(it) { "Failed to track the destination OAuth injection" } }
           }
         }
       return destinationConnectorConfig

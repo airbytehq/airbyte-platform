@@ -96,7 +96,7 @@ class ReplicationWorker(
       val mdc = MDC.getCopyOfContextMap() ?: emptyMap()
       coroutineScope {
         logger.info { "Starting replication worker. job id: ${context.getJobId()} attempt: ${context.getAttempt()}" }
-        LineGobbler.startSection("REPLICATION")
+        logger.info { LineGobbler.formatStartSection("REPLICATION") }
 
         context.replicationWorkerHelper.initialize(jobRoot)
 

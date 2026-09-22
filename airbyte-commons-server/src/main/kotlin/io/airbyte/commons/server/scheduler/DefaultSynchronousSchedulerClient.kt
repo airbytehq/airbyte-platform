@@ -6,7 +6,6 @@ package io.airbyte.commons.server.scheduler
 
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.security.md5
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.temporal.TemporalClient
@@ -407,7 +406,7 @@ class DefaultSynchronousSchedulerClient(
     workspaceId: UUID?,
     @Nullable actorType: ActorType?,
   ) {
-    Exceptions.swallow {
+    runCatching {
       when (configType) {
         ConfigType.CHECK_CONNECTION_SOURCE ->
           jobErrorReporter.reportSourceCheckJobFailure(
@@ -443,6 +442,6 @@ class DefaultSynchronousSchedulerClient(
         else ->
           log.error { "Tried to report job failure for type $configType, but this job type is not supported" }
       }
-    }
+    }.onFailure { log.error(it) { "Failed to report the $configType job failure" } }
   }
 }

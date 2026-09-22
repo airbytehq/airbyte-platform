@@ -46,7 +46,6 @@ import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.json.Jsons.jsonNode
-import io.airbyte.commons.lang.Exceptions.toRuntime
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.logging.LogEvents
 import io.airbyte.commons.logging.LogUtils
@@ -2469,8 +2468,8 @@ internal class SchedulerHandlerTest {
 
     private val CONNECTOR_SPECIFICATION: ConnectorSpecification =
       ConnectorSpecification()
-        .withDocumentationUrl(toRuntime<URI?> { URI("https://google.com") })
-        .withChangelogUrl(toRuntime<URI?> { URI("https://google.com") })
+        .withDocumentationUrl(URI("https://google.com"))
+        .withChangelogUrl(URI("https://google.com"))
         .withConnectionSpecification(jsonNode<HashMap<Any?, Any?>?>(HashMap<Any?, Any?>()))
 
     private val STREAM_DESCRIPTOR: StreamDescriptor = StreamDescriptor().withName("1")

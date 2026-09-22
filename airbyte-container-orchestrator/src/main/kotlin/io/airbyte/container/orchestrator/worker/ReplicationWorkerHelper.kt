@@ -252,7 +252,7 @@ class ReplicationWorkerHelper(
       metricClient.count(metric = OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, attributes = metricAttrs.toTypedArray())
     }
 
-    LineGobbler.endSection("REPLICATION")
+    logger.info { LineGobbler.formatEndSection("REPLICATION") }
     return output
   }
 

@@ -6,7 +6,6 @@ package io.airbyte.config.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.resources.Resources
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.persistence.SecretPersistence
@@ -26,41 +25,19 @@ interface SecretsTestCase {
   val persistenceUpdater: Consumer<SecretPersistence>
   val spec: ConnectorSpecification
     get() =
-      Exceptions.toRuntime<ConnectorSpecification> {
-        ConnectorSpecification().withConnectionSpecification(
-          getNodeResource(name, "spec.json"),
-        )
-      }
+      ConnectorSpecification().withConnectionSpecification(
+        getNodeResource(name, "spec.json"),
+      )
   val fullConfig: JsonNode
-    get() {
-      return Exceptions.toRuntime<JsonNode> {
-        getNodeResource(name, "full_config.json")
-      }
-    }
+    get() = getNodeResource(name, "full_config.json")
   val partialConfig: JsonNode
-    get() {
-      return Exceptions.toRuntime<JsonNode> {
-        getNodeResource(name, "partial_config.json")
-      }
-    }
+    get() = getNodeResource(name, "partial_config.json")
   val sortedPartialConfig: JsonNode
-    get() {
-      return Exceptions.toRuntime<JsonNode> {
-        getNodeResource(name, "partial_config.json")
-      }
-    }
+    get() = getNodeResource(name, "partial_config.json")
   val updateConfig: JsonNode
-    get() {
-      return Exceptions.toRuntime<JsonNode> {
-        getNodeResource(name, "update_config.json")
-      }
-    }
+    get() = getNodeResource(name, "update_config.json")
   val updatedPartialConfig: JsonNode
-    get() {
-      return Exceptions.toRuntime<JsonNode> {
-        getNodeResource(name, "updated_partial_config.json")
-      }
-    }
+    get() = getNodeResource(name, "updated_partial_config.json")
 
   fun getNodeResource(
     testCase: String,

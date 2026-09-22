@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
 import io.airbyte.config.AttemptSyncConfig
@@ -41,12 +40,14 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.tracker.JobTracker.JobState
 import io.airbyte.validation.json.JsonSchemaValidator
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.Locale
 import java.util.Optional
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 
+private val log = KotlinLogging.logger {}
 private val TERMINAL_JOB_STATES = listOf(JobState.SUCCEEDED, JobState.FAILED)
 
 /**
@@ -97,7 +98,7 @@ class JobTracker
       val responseOutput = jobOutput?.checkConnection
       val failureReason = jobOutput?.failureReason
 
-      Exceptions.swallow {
+      runCatching {
         val checkConnMetadata = generateCheckConnectionMetadata(responseOutput)
         val failureReasonMetadata = generateFailureReasonMetadata(failureReason)
         val jobMetadata =
@@ -110,7 +111,7 @@ class JobTracker
           action = CHECK_CONNECTION_SOURCE_EVENT,
           metadata = checkConnMetadata + failureReasonMetadata + jobMetadata + sourceDefMetadata + stateMetadata,
         )
-      }
+      }.onFailure { log.error(it) { "Failed to track the source check connection job" } }
     }
 
     /**
@@ -133,7 +134,7 @@ class JobTracker
       val responseOutput = jobOutput?.checkConnection
       val failureReason = jobOutput?.failureReason
 
-      Exceptions.swallow {
+      runCatching {
         val checkConnMetadata = generateCheckConnectionMetadata(responseOutput)
         val failureReasonMetadata = generateFailureReasonMetadata(failureReason)
         val jobMetadata =
@@ -146,7 +147,7 @@ class JobTracker
           action = CHECK_CONNECTION_DESTINATION_EVENT,
           metadata = checkConnMetadata + failureReasonMetadata + jobMetadata + destinationDefinitionMetadata + stateMetadata,
         )
-      }
+      }.onFailure { log.error(it) { "Failed to track the destination check connection job" } }
     }
 
     /**
@@ -169,7 +170,7 @@ class JobTracker
     ) {
       val failureReason = jobOutput?.failureReason
 
-      Exceptions.swallow {
+      runCatching {
         val jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.DISCOVER_SCHEMA)
         val failureReasonMetadata = generateFailureReasonMetadata(failureReason)
         val actorDefMetadata =
@@ -184,7 +185,7 @@ class JobTracker
           action = DISCOVER_EVENT,
           metadata = jobMetadata + failureReasonMetadata + actorDefMetadata + stateMetadata,
         )
-      }
+      }.onFailure { log.error(it) { "Failed to track the discover job" } }
     }
 
     /**
@@ -197,7 +198,7 @@ class JobTracker
       job: Job,
       jobState: JobState,
     ) {
-      Exceptions.swallow {
+      runCatching {
         val jobConfig = JobConfigProxy(job.config)
         val configType = job.configType
         val allowedJob = Job.REPLICATION_TYPES.contains(configType)
@@ -266,7 +267,7 @@ class JobTracker
               syncConfigMetadata +
               refreshMetadata,
         )
-      }
+      }.onFailure { log.error(it) { "Failed to track the sync job" } }
     }
 
     /**
@@ -314,7 +315,7 @@ class JobTracker
       jobState: JobState,
       e: Exception,
     ) {
-      Exceptions.swallow {
+      runCatching {
         val workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)
         val standardSync = connectionService.getStandardSync(connectionId)
         val sourceDefinition = sourceService.getSourceDefinitionFromConnection(connectionId)
@@ -345,7 +346,7 @@ class JobTracker
           action = INTERNAL_FAILURE_SYNC_EVENT,
           metadata = jobMetadata + jobAttemptMetadata + sourceDefMetadata + destinationDefMetadata + syncMetadata + stateMetadata + generalMetadata,
         )
-      }
+      }.onFailure { log.error(it) { "Failed to track the internal sync failure" } }
     }
 
     private fun generateRefreshMetadata(jobConfig: JobConfigProxy): Map<String, Any?> {

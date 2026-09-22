@@ -5,7 +5,6 @@
 package io.airbyte.config.secrets.test.cases
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.SecretsTestCase
@@ -38,41 +37,13 @@ class NestedOneOfTestCase : SecretsTestCase {
     }
   val updatedPartialConfigAfterUpdate1: JsonNode
     // the following helpers are for the custom test suite for evaluating updating individual secret
-    get() {
-      return Exceptions.toRuntime<JsonNode> {
-        getNodeResource(
-          name,
-          "updated_partial_config_update1.json",
-        )
-      }
-    }
+    get() = getNodeResource(name, "updated_partial_config_update1.json")
   val updatedPartialConfigAfterUpdate2: JsonNode
-    get() {
-      return Exceptions.toRuntime<JsonNode> {
-        getNodeResource(
-          name,
-          "updated_partial_config_update2.json",
-        )
-      }
-    }
+    get() = getNodeResource(name, "updated_partial_config_update2.json")
   val fullConfigUpdate1: JsonNode
-    get() {
-      return Exceptions.toRuntime<JsonNode> {
-        getNodeResource(
-          name,
-          "full_config_update1.json",
-        )
-      }
-    }
+    get() = getNodeResource(name, "full_config_update1.json")
   val fullConfigUpdate2: JsonNode
-    get() {
-      return Exceptions.toRuntime<JsonNode> {
-        getNodeResource(
-          name,
-          "full_config_update2.json",
-        )
-      }
-    }
+    get() = getNodeResource(name, "full_config_update2.json")
   val secretMapAfterUpdate1: Map<SecretCoordinate, String>
     get() {
       return mapOf(

@@ -5,7 +5,6 @@
 package io.airbyte.commons.temporal
 
 import io.airbyte.commons.duration.formatMilli
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.temporal.factories.TemporalCloudConfig
 import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig
@@ -172,7 +171,7 @@ class TemporalUtils(
       }
 
       log.warn { "Waiting for namespace $namespace to be initialized in temporal..." }
-      Exceptions.toRuntime { Thread.sleep(waitInterval.toMillis()) }
+      Thread.sleep(waitInterval.toMillis())
       millisWaited += waitInterval.toMillis()
 
       try {
@@ -186,7 +185,7 @@ class TemporalUtils(
     }
 
     // sometimes it takes a few additional seconds for workflow queue listening to be available
-    Exceptions.toRuntime { Thread.sleep(waitAfterConnection.toMillis()) }
+    Thread.sleep(waitAfterConnection.toMillis())
 
     log.info { "Temporal namespace $namespace initialized!" }
 

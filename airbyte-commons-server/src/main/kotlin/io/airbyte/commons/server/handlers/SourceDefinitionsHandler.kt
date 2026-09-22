@@ -22,7 +22,6 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.errors.InternalServerKnownException
@@ -161,7 +160,11 @@ open class SourceDefinitionsHandler
     fun listLatestSourceDefinitions(): SourceDefinitionReadList {
       // Swallow exceptions when fetching registry, so we don't hard-fail for airgapped deployments.
       val latestSources =
-        Exceptions.swallowWithDefault({ remoteDefinitionsProvider.getSourceDefinitions() }, emptyList())
+        try {
+          remoteDefinitionsProvider.getSourceDefinitions()
+        } catch (e: Exception) {
+          emptyList()
+        }
       val sourceDefs =
         latestSources
           .stream()
@@ -173,14 +176,11 @@ open class SourceDefinitionsHandler
           Collectors.toMap(
             Function { obj: ConnectorRegistrySourceDefinition -> obj.sourceDefinitionId },
             Function { destination: ConnectorRegistrySourceDefinition? ->
-              Exceptions.swallowWithDefault(
-                {
-                  toActorDefinitionVersion(
-                    destination!!,
-                  )
-                },
-                null,
-              )
+              try {
+                toActorDefinitionVersion(destination!!)
+              } catch (e: Exception) {
+                null
+              }
             },
           ),
         )

@@ -4,7 +4,6 @@
 
 package io.airbyte.persistence.job.errorreporter
 
-import io.airbyte.commons.lang.Exceptions
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.sentry.protocol.SentryException
 import io.sentry.protocol.SentryStackFrame
@@ -61,20 +60,15 @@ class SentryExceptionHelper {
    * encountered, an empty optional will be returned, in which case we can fall back to alternate
    * grouping.
    */
-  fun buildSentryExceptions(stacktrace: String): Optional<SentryParsedException> {
-    return Exceptions.swallowWithDefault({
-      if (stacktrace.startsWith("Traceback (most recent call last):")) {
-        return@swallowWithDefault buildPythonSentryExceptions(stacktrace)
+  fun buildSentryExceptions(stacktrace: String): Optional<SentryParsedException> =
+    runCatching {
+      when {
+        stacktrace.startsWith("Traceback (most recent call last):") -> buildPythonSentryExceptions(stacktrace)
+        stacktrace.contains("\tat ") && (stacktrace.contains(".java") || stacktrace.contains(".kt")) -> buildJavaSentryExceptions(stacktrace)
+        stacktrace.startsWith("AirbyteDbtError: ") -> buildNormalizationDbtSentryExceptions(stacktrace)
+        else -> Optional.empty<SentryParsedException>()
       }
-      if (stacktrace.contains("\tat ") && (stacktrace.contains(".java") || stacktrace.contains(".kt"))) {
-        return@swallowWithDefault buildJavaSentryExceptions(stacktrace)
-      }
-      if (stacktrace.startsWith("AirbyteDbtError: ")) {
-        return@swallowWithDefault buildNormalizationDbtSentryExceptions(stacktrace)
-      }
-      Optional.empty<SentryParsedException>()
-    }, Optional.empty<SentryParsedException>())
-  }
+    }.getOrDefault(Optional.empty())
 
   companion object {
     private val log = KotlinLogging.logger {}

@@ -14,7 +14,6 @@ import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.PermissionUpdate
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest
 import io.airbyte.commons.enums.convertTo
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.config.Permission
@@ -201,12 +200,10 @@ open class PermissionHandler(
 
     val anyMatch =
       userPermissions.stream().anyMatch { userPermission: PermissionRead ->
-        Exceptions.toRuntime<Boolean> {
-          checkPermissions(
-            permissionCheckRequest,
-            userPermission,
-          )
-        }
+        checkPermissions(
+          permissionCheckRequest,
+          userPermission,
+        )
       }
 
     return PermissionCheckRead().status(if (anyMatch) PermissionCheckRead.StatusEnum.SUCCEEDED else PermissionCheckRead.StatusEnum.FAILED)

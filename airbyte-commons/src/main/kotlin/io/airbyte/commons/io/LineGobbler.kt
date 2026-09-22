@@ -100,38 +100,17 @@ class LineGobbler
       }
 
       /**
-       * Connect a message to be consumed by LOGGER.info.
-       *
-       * @param message message to be consumed
-       */
-      private fun gobble(message: String) {
-        gobble(message) { msg: String? -> log.info { msg } }
-      }
-
-      /**
-       * Used to emit a visual separator in the user-facing logs indicating a start of a meaningful
-       * temporal activity.
+       * Visual separator for the user-facing logs marking the start of a meaningful activity.
        *
        * @param message message to emphasize
        */
-      @Deprecated("use info logging with correct mdc context instead")
-      fun startSection(message: String) {
-        gobble(formatStartSection(message))
-      }
-
       fun formatStartSection(message: String): String = "\r\n----- START $message -----\r\n\r\n"
 
       /**
-       * Used to emit a visual separator in the user-facing logs indicating a end of a meaningful
-       * temporal. activity
+       * Visual separator for the user-facing logs marking the end of a meaningful activity.
        *
        * @param message message to emphasize
        */
-      @Deprecated("use info logging with correct mdc context instead")
-      fun endSection(message: String) {
-        gobble(formatEndSection(message))
-      }
-
       fun formatEndSection(message: String): String = "\r\n----- END $message -----\r\n\r\n"
     }
   }

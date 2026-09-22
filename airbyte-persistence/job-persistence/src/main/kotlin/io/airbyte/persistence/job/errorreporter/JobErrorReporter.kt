@@ -5,7 +5,6 @@
 package io.airbyte.persistence.job.errorreporter
 
 import io.airbyte.api.client.WebUrlHelper
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.ActorType
 import io.airbyte.config.AttemptFailureSummary
 import io.airbyte.config.Configs.AirbyteEdition
@@ -56,69 +55,66 @@ class JobErrorReporter(
     jobContext: SyncJobReportingContext,
     attemptConfig: AttemptConfigReportingContext?,
   ) {
-    Exceptions.swallow {
-      try {
-        log.info {
-          "${if (failureSummary.failures == null) 0 else failureSummary.failures.size} failures incoming for jobId '${jobContext.jobId}' connectionId '$connectionId'"
-        }
-        val traceMessageFailures =
-          failureSummary.failures
-            .stream()
-            .filter { failure: FailureReason ->
-              failure.metadata != null &&
-                failure.metadata.additionalProperties.containsKey(
-                  FROM_TRACE_MESSAGE,
-                )
-            }.toList()
-
-        val workspace = workspaceService.getStandardWorkspaceFromConnection(connectionId, true)
-        val commonMetadata = mutableMapOf<String?, String?>()
-        commonMetadata.putAll(mapOf(JOB_ID_KEY to jobContext.jobId.toString()))
-        commonMetadata.putAll(getConnectionMetadata(workspace.workspaceId, connectionId))
-
-        log.info { "${traceMessageFailures.size} failures to report for jobId '${jobContext.jobId}' connectionId '$connectionId'" }
-        for (failureReason in traceMessageFailures) {
-          val failureOrigin = failureReason.failureOrigin
-          log.info { "Reporting failure for jobId '${jobContext.jobId}' connectionId '$connectionId' origin '$failureOrigin'" }
-
-          // We only care about the failure origins listed below, i.e. those that come from connectors.
-          // The rest are ignored.
-          if (failureOrigin == FailureReason.FailureOrigin.SOURCE) {
-            val sourceDefinition =
-              sourceService.getSourceDefinitionFromConnection(connectionId)
-            val sourceVersion =
-              actorDefinitionService.getActorDefinitionVersion(jobContext.sourceVersionId!!)
-            val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion)
-            if (sourceVersion.language != null) {
-              commonMetadata[SOURCE_TYPE_META_KEY] = sourceVersion.language
-            }
-            val metadata =
-              commonMetadata +
-                getSourceMetadata(sourceDefinition, dockerImage, sourceVersion.releaseStage, sourceVersion.internalSupportLevel)
-
-            reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig)
-          } else if (failureOrigin == FailureReason.FailureOrigin.DESTINATION) {
-            val destinationDefinition =
-              destinationService.getDestinationDefinitionFromConnection(connectionId)
-            val destinationVersion =
-              actorDefinitionService.getActorDefinitionVersion(jobContext.destinationVersionId!!)
-            val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationVersion)
-            val metadata =
-              commonMetadata +
-                getDestinationMetadata(
-                  destinationDefinition,
-                  dockerImage,
-                  destinationVersion.releaseStage,
-                  destinationVersion.internalSupportLevel,
-                )
-
-            reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig)
-          }
-        }
-      } catch (e: Exception) {
-        log.error(e) { "Failed to report status for jobId '${jobContext.jobId}' connectionId '$connectionId': {}" }
-        throw e
+    try {
+      log.info {
+        "${if (failureSummary.failures == null) 0 else failureSummary.failures.size} failures incoming for jobId '${jobContext.jobId}' connectionId '$connectionId'"
       }
+      val traceMessageFailures =
+        failureSummary.failures
+          .stream()
+          .filter { failure: FailureReason ->
+            failure.metadata != null &&
+              failure.metadata.additionalProperties.containsKey(
+                FROM_TRACE_MESSAGE,
+              )
+          }.toList()
+
+      val workspace = workspaceService.getStandardWorkspaceFromConnection(connectionId, true)
+      val commonMetadata = mutableMapOf<String?, String?>()
+      commonMetadata.putAll(mapOf(JOB_ID_KEY to jobContext.jobId.toString()))
+      commonMetadata.putAll(getConnectionMetadata(workspace.workspaceId, connectionId))
+
+      log.info { "${traceMessageFailures.size} failures to report for jobId '${jobContext.jobId}' connectionId '$connectionId'" }
+      for (failureReason in traceMessageFailures) {
+        val failureOrigin = failureReason.failureOrigin
+        log.info { "Reporting failure for jobId '${jobContext.jobId}' connectionId '$connectionId' origin '$failureOrigin'" }
+
+        // We only care about the failure origins listed below, i.e. those that come from connectors.
+        // The rest are ignored.
+        if (failureOrigin == FailureReason.FailureOrigin.SOURCE) {
+          val sourceDefinition =
+            sourceService.getSourceDefinitionFromConnection(connectionId)
+          val sourceVersion =
+            actorDefinitionService.getActorDefinitionVersion(jobContext.sourceVersionId!!)
+          val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion)
+          if (sourceVersion.language != null) {
+            commonMetadata[SOURCE_TYPE_META_KEY] = sourceVersion.language
+          }
+          val metadata =
+            commonMetadata +
+              getSourceMetadata(sourceDefinition, dockerImage, sourceVersion.releaseStage, sourceVersion.internalSupportLevel)
+
+          reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig)
+        } else if (failureOrigin == FailureReason.FailureOrigin.DESTINATION) {
+          val destinationDefinition =
+            destinationService.getDestinationDefinitionFromConnection(connectionId)
+          val destinationVersion =
+            actorDefinitionService.getActorDefinitionVersion(jobContext.destinationVersionId!!)
+          val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationVersion)
+          val metadata =
+            commonMetadata +
+              getDestinationMetadata(
+                destinationDefinition,
+                dockerImage,
+                destinationVersion.releaseStage,
+                destinationVersion.internalSupportLevel,
+              )
+
+          reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig)
+        }
+      }
+    } catch (e: Exception) {
+      log.error(e) { "Failed to report status for jobId '${jobContext.jobId}' connectionId '$connectionId'" }
     }
   }
 

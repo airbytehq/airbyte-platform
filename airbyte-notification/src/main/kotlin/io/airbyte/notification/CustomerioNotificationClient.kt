@@ -17,7 +17,6 @@ import io.airbyte.api.model.generated.StreamTransform
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorType
 import io.airbyte.metrics.MetricAttribute
@@ -87,7 +86,8 @@ class CustomerioNotificationClient(
         )
       ) {
         log.info { "sleeping for 10s due to rate limit hit when sending broadcast..." }
-        Exceptions.swallow { Thread.sleep(10000) }
+        runCatching { Thread.sleep(10000) }
+          .onFailure { log.error(it) { "Interrupted while waiting to retry after a rate limit" } }
         response = chain.proceed(request)
         retryCount++
       }
