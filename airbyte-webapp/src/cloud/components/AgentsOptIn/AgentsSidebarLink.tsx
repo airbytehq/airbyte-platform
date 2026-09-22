@@ -8,16 +8,24 @@ import { useAgentsProvisioningStatus } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 import { RoutePaths } from "pages/routePaths";
 
+import styles from "./AgentsSidebarLink.module.scss";
 import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 
 interface AgentsSidebarLinkContentProps {
   labelId: string;
-  icon: "aiStars" | "download";
+  icon: "aiStars" | "mcp";
   routePath: string;
   testId: string;
+  isContextLayer?: boolean;
 }
 
-const AgentsSidebarLinkContent: React.FC<AgentsSidebarLinkContentProps> = ({ labelId, icon, routePath, testId }) => {
+const AgentsSidebarLinkContent: React.FC<AgentsSidebarLinkContentProps> = ({
+  labelId,
+  icon,
+  routePath,
+  testId,
+  isContextLayer,
+}) => {
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
   const organizationId = useCurrentOrganizationId();
@@ -29,7 +37,17 @@ const AgentsSidebarLinkContent: React.FC<AgentsSidebarLinkContentProps> = ({ lab
 
   const href = `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Settings}/${routePath}`;
 
-  return <NavItem label={<FormattedMessage id={labelId} />} icon={icon} to={href} testId={testId} />;
+  return (
+    <NavItem
+      label={<FormattedMessage id={labelId} />}
+      icon={icon}
+      to={href}
+      testId={testId}
+      className={isContextLayer ? styles.contextLayerLink : styles.installMcpLink}
+      labelColor={isContextLayer ? "blue" : undefined}
+      withBadge={isContextLayer ? "new" : "beta"}
+    />
+  );
 };
 
 export const AgentsSidebarLink: React.FC = () => {
@@ -40,6 +58,7 @@ export const AgentsSidebarLink: React.FC = () => {
         icon="aiStars"
         routePath={CloudSettingsRoutePaths.ContextLayer}
         testId="agentsSidebarLink"
+        isContextLayer
       />
     </React.Suspense>
   );
@@ -50,7 +69,7 @@ export const InstallMcpSidebarLink: React.FC = () => {
     <React.Suspense>
       <AgentsSidebarLinkContent
         labelId="cloud.installMcp.sidebar"
-        icon="download"
+        icon="mcp"
         routePath={CloudSettingsRoutePaths.InstallMcp}
         testId="installMcpSidebarLink"
       />

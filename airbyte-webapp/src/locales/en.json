@@ -102,6 +102,7 @@
   "sidebar.lightMode": "Light mode",
   "sidebar.darkMode": "Dark mode",
   "sidebar.beta": "Beta",
+  "sidebar.new": "New",
   "sidebar.defaultUsername": "User",
   "sidebar.workspaceAndOrg": "{workspace} | {organization}",
   "sidebar.workspaceSettings": "Workspace settings",

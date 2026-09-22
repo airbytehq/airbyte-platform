@@ -123,6 +123,7 @@ const renderSidebar = (pathname: string) =>
         "cloud.installMcp.sidebar": "Install MCP",
         "settings.organization": "Organization",
         "settings.organizationSettings": "Organization settings",
+        "sidebar.beta": "Beta",
         "sidebar.defaultUsername": "User",
         "sidebar.home": "Home",
       }}
@@ -160,6 +161,8 @@ describe("SideBar organization navigation", () => {
     expect(screen.getByTestId("orgSettingsLink")).not.toHaveAttribute("aria-current", "page");
     expect(screen.getByTestId("installMcpSidebarLink")).toHaveClass("active");
     expect(screen.getByTestId("installMcpSidebarLink")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByTestId("installMcpSidebarLink").querySelector('[data-icon="mcp"]')).toBeInTheDocument();
+    expect(screen.getByTestId("installMcpSidebarLink")).toHaveTextContent("Beta");
   });
 
   it("highlights Organization settings on organization settings routes", () => {

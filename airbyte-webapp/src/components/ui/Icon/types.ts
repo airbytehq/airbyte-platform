@@ -81,6 +81,7 @@ export type IconType =
   | "location"
   | "lock"
   | "mapping"
+  | "mcp"
   | "menu"
   | "metricSuccessHigh"
   | "metricSuccessLow"

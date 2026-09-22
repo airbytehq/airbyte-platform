@@ -1,0 +1,14 @@
+@use "scss/colors";
+
+.contextLayerLink {
+  --start-color: #{colors.$purple-400};
+  --stop-color: #{colors.$cyan-500};
+}
+
+:global(.airbyteThemeDark) .contextLayerLink:not([aria-current="page"]) p {
+  color: colors.$blue-500;
+}
+
+.installMcpLink [data-icon="mcp"] {
+  color: colors.$grey-400;
+}
