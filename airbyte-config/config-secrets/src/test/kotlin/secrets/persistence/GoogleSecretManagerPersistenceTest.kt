@@ -7,6 +7,7 @@ package io.airbyte.config.secrets.persistence
 import com.google.api.gax.grpc.GrpcStatusCode
 import com.google.api.gax.rpc.NotFoundException
 import com.google.cloud.secretmanager.v1.AccessSecretVersionResponse
+import com.google.cloud.secretmanager.v1.CustomerManagedEncryption
 import com.google.cloud.secretmanager.v1.Replication
 import com.google.cloud.secretmanager.v1.Secret
 import com.google.cloud.secretmanager.v1.SecretManagerServiceClient
@@ -476,5 +477,237 @@ class GoogleSecretManagerPersistenceTest {
     verify {
       mockGoogleClient.deleteSecret(any<SecretName>())
     }
+  }
+
+  @Test
+  fun `test reading a regional secret requests the latest version`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+
+    val mockPayload: SecretPayload = mockk()
+    every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
+
+    val mockResponse: AccessSecretVersionResponse = mockk()
+    every { mockResponse.payload } returns mockPayload
+
+    val regionalVersionName =
+      SecretVersionName.parse("projects/test-project/locations/us-east1/secrets/${coordinate.fullCoordinate}/versions/latest")
+
+    val mockGoogleClient: SecretManagerServiceClient = mockk()
+    every { mockGoogleClient.accessSecretVersion(regionalVersionName) } returns mockResponse
+    every { mockGoogleClient.close() } returns Unit
+
+    mockkObject(GoogleSecretManagerClient.Companion)
+    every { GoogleSecretManagerClient.clientForCredentials(any<String>(), any<String>()) } returns mockGoogleClient
+
+    val gsmClient =
+      SystemGoogleSecretManagerClient(
+        AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.GoogleSecretsManagerConfig(
+          projectId = "test-project",
+          credentials = "{}",
+          region = "us-east1",
+        ),
+      )
+
+    val mockMetric: MetricClient = mockk()
+
+    val persistence = GoogleSecretManagerPersistence(gsmClient, mockMetric)
+    Assertions.assertEquals(secret, persistence.read(coordinate))
+
+    verify { mockGoogleClient.accessSecretVersion(regionalVersionName) }
+  }
+
+  @Test
+  fun `test regional secret is created without a replication policy`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+    val regionalParent = "projects/test-project/locations/us-east1"
+
+    val mockSecret: Secret = mockk()
+    every { mockSecret.name } returns secret
+
+    val regionalVersionName =
+      SecretVersionName.parse("projects/test-project/locations/us-east1/secrets/${coordinate.fullCoordinate}/versions/latest")
+
+    val mockGoogleClient: SecretManagerServiceClient = mockk()
+    every { mockGoogleClient.createSecret(regionalParent, any(), any<Secret>()) } returns mockSecret
+    every { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) } returns mockk<SecretVersion>()
+    every { mockGoogleClient.close() } returns Unit
+    every { mockGoogleClient.accessSecretVersion(regionalVersionName) } throws
+      NotFoundException(
+        NullPointerException("test"),
+        GrpcStatusCode.of(
+          Status.Code.NOT_FOUND,
+        ),
+        false,
+      )
+
+    mockkObject(GoogleSecretManagerClient.Companion)
+    every { GoogleSecretManagerClient.clientForCredentials(any<String>(), any<String>()) } returns mockGoogleClient
+
+    val gsmClient =
+      SystemGoogleSecretManagerClient(
+        AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.GoogleSecretsManagerConfig(
+          projectId = "test-project",
+          credentials = "{}",
+          region = "us-east1",
+        ),
+      )
+
+    val mockMetric: MetricClient = mockk()
+    every { mockMetric.count(metric = any(), attributes = anyVararg()) } returns mockk<Counter>()
+
+    val persistence = GoogleSecretManagerPersistence(gsmClient, mockMetric)
+    persistence.write(coordinate, secret)
+
+    Assertions.assertNull(gsmClient.getReplicationPolicy())
+    verify {
+      mockGoogleClient.createSecret(regionalParent, coordinate.fullCoordinate, Secret.newBuilder().build())
+    }
+  }
+
+  @Test
+  fun `test regional secret is created with CMEK when a kms key is configured`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+    val regionalParent = "projects/test-project/locations/us-east1"
+    val kmsKeyName = "projects/test-project/locations/us-east1/keyRings/test-ring/cryptoKeys/test-key"
+
+    val mockSecret: Secret = mockk()
+    every { mockSecret.name } returns secret
+
+    val regionalVersionName =
+      SecretVersionName.parse("projects/test-project/locations/us-east1/secrets/${coordinate.fullCoordinate}/versions/latest")
+
+    val mockGoogleClient: SecretManagerServiceClient = mockk()
+    every { mockGoogleClient.createSecret(regionalParent, any(), any<Secret>()) } returns mockSecret
+    every { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) } returns mockk<SecretVersion>()
+    every { mockGoogleClient.close() } returns Unit
+    every { mockGoogleClient.accessSecretVersion(regionalVersionName) } throws
+      NotFoundException(
+        NullPointerException("test"),
+        GrpcStatusCode.of(
+          Status.Code.NOT_FOUND,
+        ),
+        false,
+      )
+
+    mockkObject(GoogleSecretManagerClient.Companion)
+    every { GoogleSecretManagerClient.clientForCredentials(any<String>(), any<String>()) } returns mockGoogleClient
+
+    val gsmClient =
+      SystemGoogleSecretManagerClient(
+        AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.GoogleSecretsManagerConfig(
+          projectId = "test-project",
+          credentials = "{}",
+          region = "us-east1",
+          kmsKeyName = kmsKeyName,
+        ),
+      )
+
+    val mockMetric: MetricClient = mockk()
+    every { mockMetric.count(metric = any(), attributes = anyVararg()) } returns mockk<Counter>()
+
+    val persistence = GoogleSecretManagerPersistence(gsmClient, mockMetric)
+    persistence.write(coordinate, secret)
+
+    val expectedSecret =
+      Secret
+        .newBuilder()
+        .setCustomerManagedEncryption(
+          CustomerManagedEncryption
+            .newBuilder()
+            .setKmsKeyName(kmsKeyName)
+            .build(),
+        ).build()
+
+    verify {
+      mockGoogleClient.createSecret(regionalParent, coordinate.fullCoordinate, expectedSecret)
+    }
+  }
+
+  @Test
+  fun `test global secret is created with CMEK inside the automatic replication policy`() {
+    val secret = "secret value"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+    val kmsKeyName = "projects/test-project/locations/global/keyRings/test-ring/cryptoKeys/test-key"
+
+    val mockSecret: Secret = mockk()
+    every { mockSecret.name } returns secret
+
+    val versionName = SecretVersionName.of("test-project", coordinate.fullCoordinate, "latest")
+    val mockGoogleClient: SecretManagerServiceClient = mockk()
+    every { mockGoogleClient.createSecret("projects/test-project", any(), any<Secret>()) } returns mockSecret
+    every { mockGoogleClient.addSecretVersion(any<SecretName>(), any<SecretPayload>()) } returns mockk<SecretVersion>()
+    every { mockGoogleClient.close() } returns Unit
+    every { mockGoogleClient.accessSecretVersion(versionName) } throws
+      NotFoundException(
+        NullPointerException("test"),
+        GrpcStatusCode.of(
+          Status.Code.NOT_FOUND,
+        ),
+        false,
+      )
+
+    mockkObject(GoogleSecretManagerClient.Companion)
+    every { GoogleSecretManagerClient.clientForCredentials(any<String>(), any<String>()) } returns mockGoogleClient
+
+    val gsmClient =
+      SystemGoogleSecretManagerClient(
+        AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.GoogleSecretsManagerConfig(
+          projectId = "test-project",
+          credentials = "{}",
+          region = "",
+          kmsKeyName = kmsKeyName,
+        ),
+      )
+
+    val mockMetric: MetricClient = mockk()
+    every { mockMetric.count(metric = any(), attributes = anyVararg()) } returns mockk<Counter>()
+
+    val persistence = GoogleSecretManagerPersistence(gsmClient, mockMetric)
+    persistence.write(coordinate, secret)
+
+    val expectedSecret =
+      Secret
+        .newBuilder()
+        .setReplication(
+          Replication
+            .newBuilder()
+            .setAutomatic(
+              Replication.Automatic
+                .newBuilder()
+                .setCustomerManagedEncryption(
+                  CustomerManagedEncryption
+                    .newBuilder()
+                    .setKmsKeyName(kmsKeyName)
+                    .build(),
+                ).build(),
+            ).build(),
+        ).build()
+
+    verify {
+      mockGoogleClient.createSecret("projects/test-project", coordinate.fullCoordinate, expectedSecret)
+    }
+  }
+
+  @Test
+  fun `test global secret without a kms key keeps a plain automatic replication policy`() {
+    val gsmClient =
+      SystemGoogleSecretManagerClient(
+        AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.GoogleSecretsManagerConfig(
+          projectId = "test-project",
+          credentials = "{}",
+          region = "",
+        ),
+      )
+
+    val expected =
+      Replication
+        .newBuilder()
+        .setAutomatic(Replication.Automatic.newBuilder().build())
+        .build()
+
+    Assertions.assertEquals(expected, gsmClient.getReplicationPolicy())
   }
 }
