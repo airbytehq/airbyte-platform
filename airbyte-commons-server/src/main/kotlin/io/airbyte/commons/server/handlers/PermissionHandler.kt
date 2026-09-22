@@ -357,9 +357,17 @@ open class PermissionHandler(
    */
   fun permissionReadListForUser(userId: UUID): PermissionReadList {
     val permissions = permissionService.getPermissionsForUser(userId)
+    val workspaceIds = permissions.mapNotNull { it.workspaceId }.distinct()
+    val liveWorkspaceIds =
+      if (workspaceIds.isNotEmpty()) {
+        workspaceService.listStandardWorkspacesWithIds(workspaceIds, false).map { it.workspaceId }.toSet()
+      } else {
+        emptySet()
+      }
     return PermissionReadList().permissions(
       permissions
         .stream()
+        .filter { permission: Permission -> permission.workspaceId == null || liveWorkspaceIds.contains(permission.workspaceId) }
         .map { permission: Permission -> buildPermissionRead(permission) }
         .collect(Collectors.toList<@Valid PermissionRead?>()),
     )

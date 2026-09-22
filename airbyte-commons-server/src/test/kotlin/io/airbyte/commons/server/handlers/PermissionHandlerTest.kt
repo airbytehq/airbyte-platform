@@ -31,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -341,6 +342,9 @@ internal class PermissionHandlerTest {
         ),
       )
 
+      whenever(workspaceService.listStandardWorkspacesWithIds(listOf(workspaceId), false))
+        .thenReturn(listOf(StandardWorkspace().withWorkspaceId(workspaceId)))
+
       val request =
         PermissionCheckRequest()
           .permissionType(PermissionType.WORKSPACE_ADMIN)
@@ -390,6 +394,14 @@ internal class PermissionHandlerTest {
         ),
       )
 
+      whenever(workspaceService.listStandardWorkspacesWithIds(listOf(workspaceId, otherWorkspaceId), false))
+        .thenReturn(
+          listOf(
+            StandardWorkspace().withWorkspaceId(workspaceId),
+            StandardWorkspace().withWorkspaceId(otherWorkspaceId),
+          ),
+        )
+
       // EDITOR fails because READER is below editor
       val editorResult =
         permissionHandler.permissionsCheckMultipleWorkspaces(
@@ -428,6 +440,9 @@ internal class PermissionHandlerTest {
             .withOrganizationId(organizationId),
         ),
       )
+
+      whenever(workspaceService.listStandardWorkspacesWithIds(listOf(workspaceId), false))
+        .thenReturn(listOf(StandardWorkspace().withWorkspaceId(workspaceId)))
 
       // otherWorkspace is in the user's organization, so the user's Org Reader permission should apply
       whenever(workspaceService.getStandardWorkspaceNoSecrets(otherWorkspaceId, false))
@@ -503,6 +518,9 @@ internal class PermissionHandlerTest {
             .withUserId(userId),
         ),
       )
+
+      whenever(workspaceService.listStandardWorkspacesWithIds(listOf(workspaceId), false))
+        .thenReturn(listOf(StandardWorkspace().withWorkspaceId(workspaceId)))
 
       if (userPermissionType == Permission.PermissionType.WORKSPACE_OWNER) {
         Assertions.assertEquals(
@@ -969,6 +987,9 @@ internal class PermissionHandlerTest {
         ),
       )
 
+      whenever(workspaceService.listStandardWorkspacesWithIds(listOf(workspaceId), false))
+        .thenReturn(listOf(StandardWorkspace().withWorkspaceId(workspaceId)))
+
       whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false))
         .thenReturn(StandardWorkspace().withWorkspaceId(workspaceId))
 
@@ -1000,6 +1021,9 @@ internal class PermissionHandlerTest {
             .withUserId(userId),
         ),
       )
+
+      whenever(workspaceService.listStandardWorkspacesWithIds(listOf(workspaceId), false))
+        .thenReturn(listOf(StandardWorkspace().withWorkspaceId(workspaceId)))
 
       whenever(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false))
         .thenReturn(StandardWorkspace().withWorkspaceId(workspaceId))
@@ -1096,6 +1120,9 @@ internal class PermissionHandlerTest {
         ),
       )
 
+      whenever(workspaceService.listStandardWorkspacesWithIds(listOf(workspaceId), false))
+        .thenReturn(listOf(StandardWorkspace().withWorkspaceId(workspaceId)))
+
       val result = permissionHandler.permissionReadListForUser(userId)
 
       Assertions.assertEquals(1, result.permissions.size)
@@ -1129,6 +1156,102 @@ internal class PermissionHandlerTest {
         .permissionType(targetPermissionType.convertTo<PermissionType>())
         .userId(userId)
         .organizationId(organizationId)
+  }
+
+  @Nested
+  internal inner class PermissionReadListForUser {
+    private val userId: UUID = UUID.randomUUID()
+    private val liveWorkspaceId: UUID = UUID.randomUUID()
+    private val tombstonedWorkspaceId1: UUID = UUID.randomUUID()
+    private val tombstonedWorkspaceId2: UUID = UUID.randomUUID()
+
+    @Test
+    fun filtersOutPermissionsForTombstonedWorkspaces() {
+      val liveWorkspacePermission =
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userId)
+          .withWorkspaceId(liveWorkspaceId)
+          .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
+      val tombstonedWorkspacePermission1 =
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userId)
+          .withWorkspaceId(tombstonedWorkspaceId1)
+          .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
+      val tombstonedWorkspacePermission2 =
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userId)
+          .withWorkspaceId(tombstonedWorkspaceId2)
+          .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
+      val organizationPermission =
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userId)
+          .withOrganizationId(UUID.randomUUID())
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+      val instancePermission =
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userId)
+          .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN)
+
+      whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
+        listOf<Permission>(
+          liveWorkspacePermission,
+          tombstonedWorkspacePermission1,
+          tombstonedWorkspacePermission2,
+          organizationPermission,
+          instancePermission,
+        ),
+      )
+      whenever(workspaceService.listStandardWorkspacesWithIds(listOf(liveWorkspaceId, tombstonedWorkspaceId1, tombstonedWorkspaceId2), false))
+        .thenReturn(listOf(StandardWorkspace().withWorkspaceId(liveWorkspaceId)))
+
+      val result = permissionHandler.permissionReadListForUser(userId)
+
+      Assertions.assertEquals(
+        setOf(liveWorkspacePermission.getPermissionId(), organizationPermission.getPermissionId(), instancePermission.getPermissionId()),
+        result.permissions.map { it.permissionId }.toSet(),
+      )
+      verify(workspaceService, times(1))
+        .listStandardWorkspacesWithIds(listOf(liveWorkspaceId, tombstonedWorkspaceId1, tombstonedWorkspaceId2), false)
+    }
+
+    @Test
+    fun skipsWorkspaceLookupWhenNoWorkspacePermissions() {
+      val organizationPermission =
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userId)
+          .withOrganizationId(UUID.randomUUID())
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+      val instancePermission =
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userId)
+          .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN)
+
+      whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
+        listOf<Permission>(organizationPermission, instancePermission),
+      )
+
+      val result = permissionHandler.permissionReadListForUser(userId)
+
+      Assertions.assertEquals(2, result.permissions.size)
+      verify(workspaceService, times(0)).listStandardWorkspacesWithIds(anyOrNull(), eq(false))
+    }
+
+    @Test
+    fun returnsEmptyListWhenUserHasNoPermissions() {
+      whenever(permissionService.getPermissionsForUser(userId)).thenReturn(emptyList())
+
+      val result = permissionHandler.permissionReadListForUser(userId)
+
+      Assertions.assertTrue(result.permissions.isEmpty())
+      verify(workspaceService, times(0)).listStandardWorkspacesWithIds(anyOrNull(), eq(false))
+    }
   }
 
   @Nested
