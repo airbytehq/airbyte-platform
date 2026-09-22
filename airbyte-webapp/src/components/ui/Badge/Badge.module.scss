@@ -53,4 +53,20 @@
     color: colors.$dark-blue-900;
     background-color: colors.$green-100;
   }
+
+  &--purple,
+  &--coral {
+    font-size: 11px;
+    line-height: 14px;
+    padding: 4px 6px;
+    color: colors.$dark-blue-900;
+  }
+
+  &--purple {
+    background-color: colors.$badge-purple-background;
+  }
+
+  &--coral {
+    background-color: colors.$badge-coral-background;
+  }
 }

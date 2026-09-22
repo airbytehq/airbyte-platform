@@ -18,6 +18,8 @@ import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import {
   useCurrentWorkspace,
   useFilters,
+  useAgentsSupportedDestinationDefinitionIds,
+  useAgentsSupportedSourceDefinitionIds,
   useListEnterpriseSourceStubs,
   useListEnterpriseDestinationStubs,
 } from "core/api";
@@ -31,6 +33,7 @@ import { useAirbyteTheme } from "core/utils/useAirbyteTheme";
 import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 import { RoutePaths, SourcePaths, DestinationPaths } from "pages/routePaths";
 
+import { isAgentConnectorDefinition, useShowConnectorCapabilities } from "./ConnectorDefinitionBadges";
 import { ConnectorList } from "./ConnectorList";
 import { RequestConnectorModal } from "./RequestConnectorModal";
 import styles from "./SelectConnector.module.scss";
@@ -40,6 +43,7 @@ const AIRBYTE_CONNECTORS_CHECKBOX = "airbyteConnectorsCheckbox";
 const ENTERPRISE_CONNECTORS_CHECKBOX = "enterpriseConnectorsCheckbox";
 const MARKETPLACE_CONNECTORS_CHECKBOX = "marketplaceConnectorsCheckbox";
 const CUSTOM_CONNECTORS_CHECKBOX = "customConnectorsCheckbox";
+const AGENT_CONNECTORS_CHECKBOX = "agentConnectorsCheckbox";
 
 export type UnifiedConnectorCategory = "enterprise" | "certified" | "marketplace" | "custom";
 
@@ -71,21 +75,32 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { showProFeatureModalIfNeeded } = useProFeaturesModal("enterprise-connectors");
 
   const isUnifiedView = useExperiment("connector.unifiedConnectorView");
+  const showConnectorCapabilities = useShowConnectorCapabilities();
+  const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
+  const supportedDestinationDefinitionIds = useAgentsSupportedDestinationDefinitionIds();
 
   const [showAirbyteConnectors, setShowAirbyteConnectors] = useState(true);
   const [showEnterpriseConnectors, setShowEnterpriseConnectors] = useState(true);
   const [showMarketplaceConnectors, setShowMarketplaceConnectors] = useState(true);
   const [showCustomConnectors, setShowCustomConnectors] = useState(true);
+  const [showAgentConnectors, setShowAgentConnectors] = useState(true);
+  const agentCategorySelected = showConnectorCapabilities && showAgentConnectors;
 
   const handleAirbyteCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (showEnterpriseConnectors || e.target.checked) {
+    if (showEnterpriseConnectors || agentCategorySelected || e.target.checked) {
       setShowAirbyteConnectors(e.target.checked);
     }
   };
 
   const handleEnterpriseCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (showAirbyteConnectors || e.target.checked) {
+    if (showAirbyteConnectors || agentCategorySelected || e.target.checked) {
       setShowEnterpriseConnectors(e.target.checked);
+    }
+  };
+
+  const handleAgentCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (showAirbyteConnectors || showEnterpriseConnectors || e.target.checked) {
+      setShowAgentConnectors(e.target.checked);
     }
   };
 
@@ -220,6 +235,8 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       // Reset filter checkboxes when switching tabs
       setShowAirbyteConnectors(true);
       setShowEnterpriseConnectors(true);
+      setShowMarketplaceConnectors(true);
+      setShowAgentConnectors(true);
     },
     [setFilterValue, tabFilterName, colFilterName, ascFilterName]
   );
@@ -243,6 +260,12 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     return allConnectors.filter((definition) => {
       if (!keywordMatch(definition, searchTerm)) {
         return false;
+      }
+      if (
+        showConnectorCapabilities &&
+        isAgentConnectorDefinition(definition, supportedSourceDefinitionIds, supportedDestinationDefinitionIds)
+      ) {
+        return showAgentConnectors;
       }
       const isEnterpriseConnector = "isEnterprise" in definition || definition.enterprise;
       if (isEnterpriseConnector) {
@@ -271,6 +294,10 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     showAirbyteConnectors,
     showMarketplaceConnectors,
     showCustomConnectors,
+    showConnectorCapabilities,
+    showAgentConnectors,
+    supportedSourceDefinitionIds,
+    supportedDestinationDefinitionIds,
   ]);
 
   // Combine regular connectors with enterprise stubs
@@ -299,23 +326,33 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     () =>
       allSearchResults.reduce(
         (acc, definition) => {
+          const isAgentConnector =
+            showConnectorCapabilities &&
+            isAgentConnectorDefinition(definition, supportedSourceDefinitionIds, supportedDestinationDefinitionIds);
+
           const isEnterpriseConnector = "isEnterprise" in definition || definition.enterprise;
           const supportLevel = isEnterpriseConnector ? "certified" : definition.supportLevel;
 
           switch (supportLevel) {
             case "certified":
               if (
-                (isEnterpriseConnector && showEnterpriseConnectors) ||
-                (!isEnterpriseConnector && showAirbyteConnectors)
+                isAgentConnector
+                  ? showAgentConnectors
+                  : (isEnterpriseConnector && showEnterpriseConnectors) ||
+                    (!isEnterpriseConnector && showAirbyteConnectors)
               ) {
                 acc.certified.push(definition);
               }
               break;
             case "community":
-              acc.marketplace.push(definition);
+              if (isAgentConnector ? showAgentConnectors : showMarketplaceConnectors) {
+                acc.marketplace.push(definition);
+              }
               break;
             case "none":
-              acc.custom.push(definition);
+              if (!isAgentConnector || showAgentConnectors) {
+                acc.custom.push(definition);
+              }
               break;
             case undefined:
               break;
@@ -328,7 +365,27 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
           custom: [],
         } as Record<ConnectorTab, ConnectorDefinitionOrEnterpriseStub[]>
       ),
-    [allSearchResults, showAirbyteConnectors, showEnterpriseConnectors]
+    [
+      allSearchResults,
+      showAirbyteConnectors,
+      showEnterpriseConnectors,
+      showMarketplaceConnectors,
+      showConnectorCapabilities,
+      showAgentConnectors,
+      supportedSourceDefinitionIds,
+      supportedDestinationDefinitionIds,
+    ]
+  );
+
+  const visibleDefinitionIds = new Set(
+    (isUnifiedView ? unifiedFilteredConnectors : searchResultsByTab[selectedTab]).flatMap((definition) =>
+      "isEnterprise" in definition
+        ? []
+        : [isSourceDefinition(definition) ? definition.sourceDefinitionId : definition.destinationDefinitionId]
+    )
+  );
+  const filteredSuggestedConnectorDefinitionIds = suggestedConnectorDefinitionIds.filter((id) =>
+    visibleDefinitionIds.has(id)
   );
 
   const certifiedBadge = useMemo(
@@ -498,6 +555,21 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
                 </label>
               </FlexContainer>
             )}
+            {showConnectorCapabilities && (
+              <FlexContainer alignItems="center" gap="md">
+                <CheckBox
+                  id={AGENT_CONNECTORS_CHECKBOX}
+                  checked={showAgentConnectors}
+                  onChange={(e) => setShowAgentConnectors(e.target.checked)}
+                />
+                {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+                <label htmlFor={AGENT_CONNECTORS_CHECKBOX} className={styles.checkboxLabel}>
+                  <Text size="sm">
+                    <FormattedMessage id="connector.checkboxFilter.agent" />
+                  </Text>
+                </label>
+              </FlexContainer>
+            )}
           </FlexContainer>
           <FlexContainer
             direction="row"
@@ -537,7 +609,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
             }}
             displayType="grid"
             connectorDefinitions={unifiedFilteredConnectors}
-            suggestedConnectorDefinitionIds={searchTerm ? [] : suggestedConnectorDefinitionIds}
+            suggestedConnectorDefinitionIds={searchTerm ? [] : filteredSuggestedConnectorDefinitionIds}
             onConnectorButtonClick={handleConnectorButtonClick}
             onOpenRequestConnectorModal={onOpenRequestConnectorModal}
             showConnectorBuilderButton={connectorType === "source"}
@@ -605,13 +677,14 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
                 id={AIRBYTE_CONNECTORS_CHECKBOX}
                 checked={showAirbyteConnectors}
                 onChange={handleAirbyteCheckboxChange}
-                disabled={showAirbyteConnectors && !showEnterpriseConnectors}
+                disabled={showAirbyteConnectors && !showEnterpriseConnectors && !agentCategorySelected}
               />
               {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
               <label
                 htmlFor={AIRBYTE_CONNECTORS_CHECKBOX}
                 className={classNames(styles.checkboxLabel, {
-                  [styles.disabledCheckboxLabel]: showAirbyteConnectors && !showEnterpriseConnectors,
+                  [styles.disabledCheckboxLabel]:
+                    showAirbyteConnectors && !showEnterpriseConnectors && !agentCategorySelected,
                 })}
               >
                 <Text size="sm">
@@ -624,13 +697,14 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
                 id={ENTERPRISE_CONNECTORS_CHECKBOX}
                 checked={showEnterpriseConnectors}
                 onChange={handleEnterpriseCheckboxChange}
-                disabled={showEnterpriseConnectors && !showAirbyteConnectors}
+                disabled={showEnterpriseConnectors && !showAirbyteConnectors && !agentCategorySelected}
               />
               {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
               <label
                 htmlFor={ENTERPRISE_CONNECTORS_CHECKBOX}
                 className={classNames(styles.checkboxLabel, {
-                  [styles.disabledCheckboxLabel]: showEnterpriseConnectors && !showAirbyteConnectors,
+                  [styles.disabledCheckboxLabel]:
+                    showEnterpriseConnectors && !showAirbyteConnectors && !agentCategorySelected,
                 })}
               >
                 <Text size="sm">
@@ -638,6 +712,63 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
                 </Text>
               </label>
             </FlexContainer>
+            {showConnectorCapabilities && (
+              <FlexContainer alignItems="center" justifyContent="space-between" gap="md">
+                <CheckBox
+                  id={AGENT_CONNECTORS_CHECKBOX}
+                  checked={showAgentConnectors}
+                  onChange={handleAgentCheckboxChange}
+                  disabled={showAgentConnectors && !showAirbyteConnectors && !showEnterpriseConnectors}
+                />
+                {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+                <label
+                  htmlFor={AGENT_CONNECTORS_CHECKBOX}
+                  className={classNames(styles.checkboxLabel, {
+                    [styles.disabledCheckboxLabel]:
+                      showAgentConnectors && !showAirbyteConnectors && !showEnterpriseConnectors,
+                  })}
+                >
+                  <Text size="sm">
+                    <FormattedMessage id="connector.checkboxFilter.agent" />
+                  </Text>
+                </label>
+              </FlexContainer>
+            )}
+          </FlexContainer>
+        )}
+        {selectedTab === "marketplace" && (
+          <FlexContainer direction="row" gap="lg" alignItems="center">
+            <Text size="lg">
+              <FormattedMessage id="connector.checkboxFilter.type" />
+            </Text>
+            <FlexContainer alignItems="center" gap="md">
+              <CheckBox
+                id={MARKETPLACE_CONNECTORS_CHECKBOX}
+                checked={showMarketplaceConnectors}
+                onChange={(e) => setShowMarketplaceConnectors(e.target.checked)}
+              />
+              {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+              <label htmlFor={MARKETPLACE_CONNECTORS_CHECKBOX} className={styles.checkboxLabel}>
+                <Text size="sm">
+                  <FormattedMessage id="connector.checkboxFilter.marketplace" />
+                </Text>
+              </label>
+            </FlexContainer>
+            {showConnectorCapabilities && (
+              <FlexContainer alignItems="center" gap="md">
+                <CheckBox
+                  id={AGENT_CONNECTORS_CHECKBOX}
+                  checked={showAgentConnectors}
+                  onChange={(e) => setShowAgentConnectors(e.target.checked)}
+                />
+                {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
+                <label htmlFor={AGENT_CONNECTORS_CHECKBOX} className={styles.checkboxLabel}>
+                  <Text size="sm">
+                    <FormattedMessage id="connector.checkboxFilter.agent" />
+                  </Text>
+                </label>
+              </FlexContainer>
+            )}
           </FlexContainer>
         )}
         <FlexContainer
@@ -703,7 +834,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
           displayType={selectedTab === "marketplace" ? "list" : "grid"}
           connectorDefinitions={searchResultsByTab[selectedTab]}
           suggestedConnectorDefinitionIds={
-            selectedTab === "certified" ? (searchTerm ? [] : suggestedConnectorDefinitionIds) : undefined
+            selectedTab === "certified" ? (searchTerm ? [] : filteredSuggestedConnectorDefinitionIds) : undefined
           }
           onConnectorButtonClick={handleConnectorButtonClick}
           onOpenRequestConnectorModal={onOpenRequestConnectorModal}

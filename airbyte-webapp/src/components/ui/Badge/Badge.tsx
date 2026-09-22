@@ -4,7 +4,7 @@ import styles from "./Badge.module.scss";
 
 interface BadgeProps {
   className?: string;
-  variant: "blue" | "grey" | "green" | "darkBlue" | "lightBlue" | "yellow" | "red" | "teal";
+  variant: "blue" | "grey" | "green" | "darkBlue" | "lightBlue" | "yellow" | "red" | "teal" | "purple" | "coral";
   uppercase?: boolean;
   radius?: "pill" | "2xs";
   "data-testid"?: string;
@@ -29,6 +29,8 @@ export const Badge: React.FC<React.PropsWithChildren<BadgeProps>> = ({
         [styles["badge--red"]]: variant === "red",
         [styles["badge--yellow"]]: variant === "yellow",
         [styles["badge--teal"]]: variant === "teal",
+        [styles["badge--purple"]]: variant === "purple",
+        [styles["badge--coral"]]: variant === "coral",
         [styles["badge--uppercase"]]: uppercase,
         [styles["badge--radius2xs"]]: radius === "2xs",
       })}

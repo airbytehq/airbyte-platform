@@ -21,3 +21,21 @@ export const Teal: StoryObj<typeof Badge> = {
     children: "SCIM Enabled",
   },
 };
+
+export const Purple: StoryObj<typeof Badge> = {
+  args: {
+    variant: "purple",
+    radius: "2xs",
+    uppercase: false,
+    children: "Data replication",
+  },
+};
+
+export const Coral: StoryObj<typeof Badge> = {
+  args: {
+    variant: "coral",
+    radius: "2xs",
+    uppercase: false,
+    children: "Agent",
+  },
+};

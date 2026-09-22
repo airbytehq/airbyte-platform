@@ -10,11 +10,11 @@ import { Text } from "components/ui/Text";
 import { ConnectorIcon } from "area/connector/components/ConnectorIcon";
 import { convertToConnectorDefinitionWithMetrics, MetricIcon } from "area/connector/components/ConnectorQualityMetrics";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { ContextLayerDefinitionBadge } from "cloud/components/AgentsOptIn/ContextLayerDefinitionBadge";
 import { ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectorButton.module.scss";
+import { ConnectorDefinitionBadges } from "./ConnectorDefinitionBadges";
 
 interface ConnectorButtonProps<T extends ConnectorDefinitionOrEnterpriseStub> {
   className?: string;
@@ -43,7 +43,7 @@ export const ConnectorButton = <T extends ConnectorDefinitionOrEnterpriseStub>({
     <button className={classNames(styles.button, className)} onClick={() => onClick(definition)}>
       <FlexContainer alignItems="center" className={styles.iconAndName}>
         <ConnectorIcon icon={definition.icon} className={styles.icon} />
-        <FlexContainer direction="column" gap="xs" alignItems="flex-start" className={styles.nameAndBadge}>
+        <FlexContainer direction="column" alignItems="flex-start" className={styles.nameAndBadge}>
           <Text
             size="sm"
             className={classNames(styles.text, {
@@ -53,7 +53,7 @@ export const ConnectorButton = <T extends ConnectorDefinitionOrEnterpriseStub>({
           >
             {definition.name}
           </Text>
-          <ContextLayerDefinitionBadge definition={definition} />
+          <ConnectorDefinitionBadges definition={definition} />
         </FlexContainer>
       </FlexContainer>
       {
