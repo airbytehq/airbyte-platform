@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM
 import io.airbyte.commons.auth.support.JwtTokenParser.tokenToAttributes
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.airbyte.featureflag.ConfigurableSsoDefaultRole
@@ -75,7 +76,8 @@ class AirbyteKeycloakClient(
   /**
    * Creates a complete OIDC SSO configuration including realm, identity provider, and client.
    * Sets up the full authentication flow for an organization's SSO integration. The Sonar webapp
-   * client is only registered when ConfigurableSsoDefaultRole is enabled for the organization.
+   * client is only registered when ConfigurableSsoDefaultRole is enabled for the organization, and the
+   * hosted MCP client is only cloned in on Airbyte Cloud.
    * If any step fails after the realm is created, the realm is deleted before throwing the exception.
    * @throws RealmCreationException, IdpCreationException, CreateClientException, or ImportConfigException on failures.
    */
@@ -129,6 +131,8 @@ class AirbyteKeycloakClient(
         redirectUris = listOf("${airbyteConfig.airbyteUrl}/*"),
         webOrigins = listOf(airbyteConfig.airbyteUrl),
       )
+
+      ensureMcpClientInRealm(request.companyIdentifier)
 
       // Registration of the Sonar webapp client is dark-launched behind ConfigurableSsoDefaultRole.
       // While the flag is off for an organization we skip it, preserving pre-feature behavior.
@@ -270,6 +274,99 @@ class AirbyteKeycloakClient(
     } catch (e: Exception) {
       logger.error(e) { "Create client request failed" }
       throw CreateClientException("Create client request failed! Server error: $e")
+    }
+  }
+
+  /**
+   * Clones the hosted MCP server's OAuth client from the configured source realm into [realmName],
+   * so MCP logins can run Authorization Code + PKCE against a customer's own SSO realm with the same
+   * client id and secret. Idempotent: creates the client when it is absent and updates it otherwise,
+   * so redirect-URI and secret changes propagate on re-run.
+   * Cloud-only: the source realm is provisioned for Airbyte Cloud, so there is nothing to clone from
+   * in community and self-managed deployments, which reach this path through the same SSO setup API.
+   * @throws CreateClientException if the source client cannot be read or the target write fails.
+   */
+  fun ensureMcpClientInRealm(realmName: String) {
+    if (airbyteConfig.edition != AirbyteEdition.CLOUD) {
+      return
+    }
+
+    val mcpClientId = keycloakConfiguration.mcpClientId
+    if (mcpClientId.isBlank()) {
+      return
+    }
+
+    val clientToClone = readMcpSourceClient(mcpClientId)
+    val targetClients = keycloakAdminClient.realms().realm(realmName).clients()
+    val existingClient =
+      try {
+        targetClients.findByClientId(mcpClientId).firstOrNull()
+      } catch (e: Exception) {
+        logger.error(e) { "Read MCP client request failed" }
+        throw CreateClientException("Read MCP client $mcpClientId from realm $realmName failed! Server error: $e")
+      }
+
+    if (existingClient == null) {
+      createClientForRealm(realmName, clientToClone)
+      logger.info { "Created MCP client $mcpClientId in realm $realmName" }
+    } else {
+      try {
+        targetClients[existingClient.id].update(clientToClone.apply { id = existingClient.id })
+      } catch (e: Exception) {
+        logger.error(e) { "Update MCP client request failed" }
+        throw CreateClientException("Update MCP client $mcpClientId in realm $realmName failed! Server error: $e")
+      }
+      logger.info { "Updated MCP client $mcpClientId in realm $realmName" }
+    }
+  }
+
+  /**
+   * Reads the MCP client from the source realm and returns a realm-independent copy of it, ready to
+   * be written into another realm. Realm-scoped identifiers are dropped so Keycloak assigns fresh
+   * ones, and the client secret is resolved from the credential endpoint when the representation
+   * does not carry it.
+   * @throws CreateClientException if the source client is missing or has no readable secret.
+   */
+  private fun readMcpSourceClient(mcpClientId: String): ClientRepresentation {
+    val sourceRealm = keycloakConfiguration.mcpClientSourceRealm
+    val sourceClients = keycloakAdminClient.realms().realm(sourceRealm).clients()
+    val source =
+      try {
+        sourceClients.findByClientId(mcpClientId).firstOrNull()
+      } catch (e: Exception) {
+        logger.error(e) { "Read MCP client request failed" }
+        throw CreateClientException("Read MCP client $mcpClientId from realm $sourceRealm failed! Server error: $e")
+      }
+        ?: throw CreateClientException("MCP client $mcpClientId does not exist in source realm $sourceRealm")
+
+    val sourceSecret = source.secret ?: sourceClients[source.id].secret?.value
+    if (source.isPublicClient != true && sourceSecret == null) {
+      throw CreateClientException("MCP client $mcpClientId in source realm $sourceRealm is confidential but has no readable secret")
+    }
+
+    return ClientRepresentation().apply {
+      clientId = source.clientId
+      name = source.name
+      description = source.description
+      protocol = source.protocol
+      secret = sourceSecret
+      rootUrl = source.rootUrl
+      baseUrl = source.baseUrl
+      redirectUris = source.redirectUris
+      webOrigins = source.webOrigins
+      attributes = source.attributes
+      defaultClientScopes = source.defaultClientScopes
+      optionalClientScopes = source.optionalClientScopes
+      // Protocol mappers are carried over so the cloned client mints the same claims, but their ids
+      // belong to the source realm and must be dropped for Keycloak to assign fresh ones.
+      protocolMappers = source.protocolMappers?.map { it.apply { id = null } }
+      isEnabled = source.isEnabled
+      isPublicClient = source.isPublicClient
+      isStandardFlowEnabled = source.isStandardFlowEnabled
+      isDirectAccessGrantsEnabled = source.isDirectAccessGrantsEnabled
+      isServiceAccountsEnabled = source.isServiceAccountsEnabled
+      isImplicitFlowEnabled = source.isImplicitFlowEnabled
+      isFrontchannelLogout = source.isFrontchannelLogout
     }
   }
 

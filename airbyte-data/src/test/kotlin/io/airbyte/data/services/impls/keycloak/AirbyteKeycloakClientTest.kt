@@ -5,6 +5,7 @@
 package io.airbyte.data.services.impls.keycloak
 
 import com.auth0.jwt.algorithms.Algorithm
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigStatus
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
@@ -31,18 +32,22 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.keycloak.admin.client.Keycloak
+import org.keycloak.admin.client.resource.ClientResource
 import org.keycloak.admin.client.resource.ClientsResource
 import org.keycloak.admin.client.resource.IdentityProviderResource
 import org.keycloak.admin.client.resource.IdentityProvidersResource
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.admin.client.resource.RealmsResource
 import org.keycloak.representations.idm.ClientRepresentation
+import org.keycloak.representations.idm.CredentialRepresentation
 import org.keycloak.representations.idm.IdentityProviderRepresentation
+import org.keycloak.representations.idm.ProtocolMapperRepresentation
 import org.keycloak.representations.idm.RealmRepresentation
 import java.util.UUID
 
@@ -58,7 +63,8 @@ class AirbyteKeycloakClientTest {
       airbyteAgentsValidRedirectUris = airbyteAgentsValidRedirectUris,
       airbyteAgentsWebOrigins = airbyteAgentsWebOrigins,
     )
-  private val keycloakConfiguration: AirbyteKeycloakConfig = mockk<AirbyteKeycloakConfig>(relaxed = true)
+  private val cloudAirbyteConfig: AirbyteConfig = airbyteConfig.copy(edition = AirbyteEdition.CLOUD)
+  private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
   private lateinit var airbyteKeycloakAdminClientProvider: AirbyteKeycloakAdminClientProvider
   private lateinit var airbyteKeycloakClient: AirbyteKeycloakClient
   private lateinit var mockHttpClient: OkHttpClient
@@ -70,6 +76,7 @@ class AirbyteKeycloakClientTest {
   @BeforeEach
   fun setup() {
     airbyteKeycloakAdminClientProvider = mockk<AirbyteKeycloakAdminClientProvider>(relaxed = true)
+    keycloakConfiguration = mockk<AirbyteKeycloakConfig>(relaxed = true)
     mockHttpClient = mockk<OkHttpClient>()
     mockMetricClient = mockk<MetricClient>(relaxed = true)
     mockFeatureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
@@ -628,6 +635,293 @@ class AirbyteKeycloakClientTest {
     }
   }
 
+  @Test
+  fun `createOidcSsoConfig clones the configured MCP client into the new realm`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val config = ssoConfig()
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns listOf(mcpSourceClient())
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(config.companyIdentifier) } returns realmMock
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    every { clientsMock.findByClientId(MCP_CLIENT_ID) } returns emptyList()
+    val capturedClientRepresentations = mutableListOf<ClientRepresentation>()
+    every { clientsMock.create(capture(capturedClientRepresentations)) } returns mockResponse
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { realmMock.identityProviders() } returns idpMock
+    every { idpMock.create(any()) } returns mockResponse
+    every { idpMock.importFrom(any()) } returns
+      mapOf(
+        "authorizationUrl" to "https://auth.airbyte.com/authorize",
+        "tokenUrl" to "https://auth.airbyte.com/token",
+      )
+
+    cloudKeycloakClient().createOidcSsoConfig(config)
+
+    verify(exactly = 3) { clientsMock.create(any()) }
+    val mcpClient = capturedClientRepresentations.associateBy { it.clientId }.getValue(MCP_CLIENT_ID)
+    assertNull(mcpClient.id)
+    assertEquals("Airbyte Cloud MCP", mcpClient.name)
+    assertEquals("openid-connect", mcpClient.protocol)
+    assertEquals(MCP_CLIENT_SECRET, mcpClient.secret)
+    assertEquals(listOf("https://mcp.airbyte.com/auth/callback"), mcpClient.redirectUris)
+    assertEquals(listOf("https://mcp.airbyte.com"), mcpClient.webOrigins)
+    assertEquals(mapOf("pkce.code.challenge.method" to "S256"), mcpClient.attributes)
+    assertEquals(listOf("profile", "email"), mcpClient.defaultClientScopes)
+    assertEquals(listOf("offline_access"), mcpClient.optionalClientScopes)
+    assertTrue(mcpClient.isEnabled)
+    assertFalse(mcpClient.isPublicClient)
+    assertTrue(mcpClient.isStandardFlowEnabled)
+    // Protocol mappers are cloned, but their source-realm ids are dropped.
+    assertEquals(listOf("audience"), mcpClient.protocolMappers.map { it.name })
+    assertNull(mcpClient.protocolMappers.single().id)
+  }
+
+  @Test
+  fun `createOidcSsoConfig skips the MCP client when the client id is blank`() {
+    every { keycloakConfiguration.mcpClientId } returns ""
+
+    val config = ssoConfig()
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(any()) } returns realmMock
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    val capturedClientRepresentations = mutableListOf<ClientRepresentation>()
+    every { clientsMock.create(capture(capturedClientRepresentations)) } returns mockResponse
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { realmMock.identityProviders() } returns idpMock
+    every { idpMock.create(any()) } returns mockResponse
+    every { idpMock.importFrom(any()) } returns
+      mapOf(
+        "authorizationUrl" to "https://auth.airbyte.com/authorize",
+        "tokenUrl" to "https://auth.airbyte.com/token",
+      )
+
+    cloudKeycloakClient().createOidcSsoConfig(config)
+
+    verify(exactly = 2) { clientsMock.create(any()) }
+    assertFalse(capturedClientRepresentations.any { it.clientId == MCP_CLIENT_ID })
+  }
+
+  @Test
+  fun `createOidcSsoConfig deletes the realm when the MCP source client is missing`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val config = ssoConfig()
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns emptyList()
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(config.companyIdentifier) } returns realmMock
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    every { clientsMock.create(any()) } returns mockResponse
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { realmMock.identityProviders() } returns idpMock
+    every { idpMock.create(any()) } returns mockResponse
+    every { idpMock.importFrom(any()) } returns
+      mapOf(
+        "authorizationUrl" to "https://auth.airbyte.com/authorize",
+        "tokenUrl" to "https://auth.airbyte.com/token",
+      )
+
+    assertThrows<CreateClientException> { cloudKeycloakClient().createOidcSsoConfig(config) }
+
+    verify(exactly = 1) { realmMock.remove() }
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm updates the client when it already exists in the realm`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns listOf(mcpSourceClient())
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm("acme") } returns realmMock
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    every { clientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(ClientRepresentation().apply { id = "existing-uuid" })
+    val existingClientResource = mockk<ClientResource>(relaxed = true)
+    every { clientsMock["existing-uuid"] } returns existingClientResource
+    val capturedUpdate = slot<ClientRepresentation>()
+    every { existingClientResource.update(capture(capturedUpdate)) } just Runs
+
+    cloudKeycloakClient().ensureMcpClientInRealm("acme")
+
+    verify(exactly = 0) { clientsMock.create(any()) }
+    assertEquals("existing-uuid", capturedUpdate.captured.id)
+    assertEquals(MCP_CLIENT_ID, capturedUpdate.captured.clientId)
+    assertEquals(MCP_CLIENT_SECRET, capturedUpdate.captured.secret)
+    assertEquals(listOf("https://mcp.airbyte.com/auth/callback"), capturedUpdate.captured.redirectUris)
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm reads the secret from the credential endpoint when the representation omits it`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(mcpSourceClient().apply { secret = null })
+    val sourceClientResource = mockk<ClientResource>(relaxed = true)
+    every { sourceClientsMock["source-uuid"] } returns sourceClientResource
+    every { sourceClientResource.secret } returns CredentialRepresentation().apply { value = MCP_CLIENT_SECRET }
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm("acme") } returns realmMock
+
+    val clientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmMock.clients() } returns clientsMock
+    every { clientsMock.findByClientId(MCP_CLIENT_ID) } returns emptyList()
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+    val capturedCreate = slot<ClientRepresentation>()
+    every { clientsMock.create(capture(capturedCreate)) } returns mockResponse
+
+    cloudKeycloakClient().ensureMcpClientInRealm("acme")
+
+    assertEquals(MCP_CLIENT_SECRET, capturedCreate.captured.secret)
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm throws when the source client is confidential without a readable secret`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val sourceRealmMock = mockk<RealmResource>(relaxed = true)
+    val sourceClientsMock = mockk<ClientsResource>(relaxed = true)
+    every { realmsMock.realm(MCP_SOURCE_REALM) } returns sourceRealmMock
+    every { sourceRealmMock.clients() } returns sourceClientsMock
+    every { sourceClientsMock.findByClientId(MCP_CLIENT_ID) } returns
+      listOf(mcpSourceClient().apply { secret = null })
+    val sourceClientResource = mockk<ClientResource>(relaxed = true)
+    every { sourceClientsMock["source-uuid"] } returns sourceClientResource
+    every { sourceClientResource.secret } returns null
+
+    assertThrows<CreateClientException> { cloudKeycloakClient().ensureMcpClientInRealm("acme") }
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm is a no-op when the client id is blank`() {
+    every { keycloakConfiguration.mcpClientId } returns ""
+
+    cloudKeycloakClient().ensureMcpClientInRealm("acme")
+
+    verify(exactly = 0) { keycloakClientMock.realms() }
+  }
+
+  @Test
+  fun `ensureMcpClientInRealm is a no-op outside Airbyte Cloud`() {
+    every { keycloakConfiguration.mcpClientId } returns MCP_CLIENT_ID
+    every { keycloakConfiguration.mcpClientSourceRealm } returns MCP_SOURCE_REALM
+
+    // airbyteKeycloakClient is built on the COMMUNITY-edition fixture. Self-managed deployments
+    // reach createOidcSsoConfig through the same API but have no source realm to clone from.
+    airbyteKeycloakClient.ensureMcpClientInRealm("acme")
+
+    verify(exactly = 0) { keycloakClientMock.realms() }
+  }
+
+  private fun cloudKeycloakClient() =
+    AirbyteKeycloakClient(
+      airbyteKeycloakAdminClientProvider,
+      cloudAirbyteConfig,
+      keycloakConfiguration,
+      mockHttpClient,
+      mockMetricClient,
+      mockFeatureFlagClient,
+    )
+
+  private fun ssoConfig(companyIdentifier: String = "airbyte") =
+    SsoConfig(
+      organizationId = UUID.randomUUID(),
+      emailDomain = "testdomain",
+      companyIdentifier = companyIdentifier,
+      clientId = "client-id",
+      clientSecret = "client-secret",
+      discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+      status = SsoConfigStatus.ACTIVE,
+    )
+
+  private fun mcpSourceClient() =
+    ClientRepresentation().apply {
+      id = "source-uuid"
+      clientId = MCP_CLIENT_ID
+      name = "Airbyte Cloud MCP"
+      protocol = "openid-connect"
+      secret = MCP_CLIENT_SECRET
+      redirectUris = listOf("https://mcp.airbyte.com/auth/callback")
+      webOrigins = listOf("https://mcp.airbyte.com")
+      attributes = mapOf("pkce.code.challenge.method" to "S256")
+      defaultClientScopes = listOf("profile", "email")
+      optionalClientScopes = listOf("offline_access")
+      protocolMappers =
+        listOf(
+          ProtocolMapperRepresentation().apply {
+            id = "source-mapper-uuid"
+            name = "audience"
+            protocol = "openid-connect"
+          },
+        )
+      isEnabled = true
+      isPublicClient = false
+      isStandardFlowEnabled = true
+    }
+
   private fun assertWebappClient(
     client: ClientRepresentation,
     name: String,
@@ -651,6 +945,10 @@ class AirbyteKeycloakClientTest {
   }
 
   companion object {
+    private const val MCP_CLIENT_ID = "cloud-mcp"
+    private const val MCP_CLIENT_SECRET = "mcp-client-secret"
+    private const val MCP_SOURCE_REALM = "_airbyte-cloud-users"
+
     // Note that this token was specifically constructed to include an underscore
     private val VALID_ACCESS_TOKEN =
       """

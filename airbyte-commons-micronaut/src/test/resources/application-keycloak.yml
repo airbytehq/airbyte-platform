@@ -8,6 +8,8 @@ airbyte:
     connection-checkout-timeout: PT0.225S
     host: test-host
     internal-realm: test-internal-realm
+    mcp-client-id: test-mcp-client-id
+    mcp-client-source-realm: test-mcp-client-source-realm
     password: test-password
     protocol: test-protocol
     realm: test-realm

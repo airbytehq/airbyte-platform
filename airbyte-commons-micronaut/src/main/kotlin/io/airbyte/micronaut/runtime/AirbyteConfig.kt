@@ -110,6 +110,8 @@ internal const val DEFAULT_KEYCLOAK_CLIENT_REALM = "airbyte"
 internal const val DEFAULT_KEYCLOAK_CONNECT_TIMEOUT = "PT5S"
 internal const val DEFAULT_KEYCLOAK_CONNECTION_CHECKOUT_TIMEOUT = "PT5S"
 internal const val DEFAULT_KEYCLOAK_INTERNAL_REALM = "_airbyte-internal"
+internal const val DEFAULT_KEYCLOAK_MCP_CLIENT_ID = "cloud-mcp"
+internal const val DEFAULT_KEYCLOAK_MCP_CLIENT_SOURCE_REALM = "_airbyte-cloud-users"
 internal const val DEFAULT_KEYCLOAK_PASSWORD = "keycloak123"
 internal const val DEFAULT_KEYCLOAK_PROTOCOL = "http"
 internal const val DEFAULT_KEYCLOAK_REALM = "master"
@@ -682,6 +684,10 @@ data class AirbyteKeycloakConfig(
   val connectionCheckoutTimeout: Duration = Duration.parse(DEFAULT_KEYCLOAK_CONNECTION_CHECKOUT_TIMEOUT),
   val host: String = "",
   val internalRealm: String = DEFAULT_KEYCLOAK_INTERNAL_REALM,
+  // The hosted MCP server's OAuth client, cloned into every SSO realm so MCP logins can complete
+  // against a customer's own realm. Cloud-only, and only ever overridden for local Keycloak setups.
+  val mcpClientId: String = DEFAULT_KEYCLOAK_MCP_CLIENT_ID,
+  val mcpClientSourceRealm: String = DEFAULT_KEYCLOAK_MCP_CLIENT_SOURCE_REALM,
   val password: String = DEFAULT_KEYCLOAK_PASSWORD,
   val protocol: String = DEFAULT_KEYCLOAK_PROTOCOL,
   val realm: String = DEFAULT_KEYCLOAK_REALM,
