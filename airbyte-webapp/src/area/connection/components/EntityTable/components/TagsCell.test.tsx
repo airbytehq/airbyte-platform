@@ -73,7 +73,7 @@ describe("TagsCell", () => {
     expect(screen.getByText("Staging")).toBeInTheDocument();
   });
 
-  it("renders Burst tag when onDemandEnabled is true and feature flag is enabled", () => {
+  it("renders On-demand tag when onDemandEnabled is true and feature flag is enabled", () => {
     render(
       <TestSuspenseBoundary>
         <TagsCell {...makeCellProps("conn-1", [], true)} />
@@ -81,10 +81,10 @@ describe("TagsCell", () => {
       { wrapper: WrapperWithOnDemand }
     );
 
-    expect(screen.getByText("Burst")).toBeInTheDocument();
+    expect(screen.getByText("On-demand")).toBeInTheDocument();
   });
 
-  it("does NOT render Burst tag when onDemandEnabled is false", () => {
+  it("does NOT render On-demand tag when onDemandEnabled is false", () => {
     render(
       <TestSuspenseBoundary>
         <TagsCell {...makeCellProps("conn-1", [], false)} />
@@ -92,10 +92,10 @@ describe("TagsCell", () => {
       { wrapper: WrapperWithOnDemand }
     );
 
-    expect(screen.queryByText("Burst")).not.toBeInTheDocument();
+    expect(screen.queryByText("On-demand")).not.toBeInTheDocument();
   });
 
-  it("does NOT render Burst tag when feature flag is disabled", () => {
+  it("does NOT render On-demand tag when feature flag is disabled", () => {
     render(
       <TestSuspenseBoundary>
         <TagsCell {...makeCellProps("conn-1", [], true)} />
@@ -103,10 +103,10 @@ describe("TagsCell", () => {
       { wrapper: WrapperWithoutOnDemand }
     );
 
-    expect(screen.queryByText("Burst")).not.toBeInTheDocument();
+    expect(screen.queryByText("On-demand")).not.toBeInTheDocument();
   });
 
-  it("renders both Burst tag and user tags together", () => {
+  it("renders both On-demand tag and user tags together", () => {
     render(
       <TestSuspenseBoundary>
         <TagsCell {...makeCellProps("conn-1", mockTags, true)} />
@@ -114,7 +114,7 @@ describe("TagsCell", () => {
       { wrapper: WrapperWithOnDemand }
     );
 
-    expect(screen.getByText("Burst")).toBeInTheDocument();
+    expect(screen.getByText("On-demand")).toBeInTheDocument();
     expect(screen.getByText("Production")).toBeInTheDocument();
     expect(screen.getByText("Staging")).toBeInTheDocument();
   });
