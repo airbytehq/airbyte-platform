@@ -133,7 +133,7 @@ describe("AdpOrganizationAccessGuard", () => {
 
     renderGuard(
       <div data-testid="protected-content">protected</div>,
-      `/${RoutePaths.Organization}/organization-id/${RoutePaths.Settings}/${CloudSettingsRoutePaths.InstallMcp}`
+      `/${RoutePaths.Organization}/organization-id/${CloudSettingsRoutePaths.InstallMcp}`
     );
 
     expect(screen.getByTestId("protected-content")).toBeInTheDocument();

@@ -56,6 +56,7 @@ export const OrganizationRoutes: React.FC = () => {
       </Route>
       {isCloudApp && (
         <>
+          <Route path={CloudSettingsRoutePaths.InstallMcp} element={<OrganizationInstallMcpPage />} />
           <Route path={`${RoutePaths.ContextLayer}/*`} element={<ContextLayerPage />}>
             <Route index element={<OrganizationContextLayerPage />} />
             <Route
@@ -98,16 +99,9 @@ export const OrganizationRoutes: React.FC = () => {
           {canViewOrganizationUsage && (
             <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
           )}
-          {isCloudApp && <Route path={CloudSettingsRoutePaths.InstallMcp} element={<OrganizationInstallMcpPage />} />}
           <Route path={SettingsRoutePaths.Source} element={<SourcesPage />} />
           <Route path={SettingsRoutePaths.Destination} element={<DestinationsPage />} />
           <Route path="*" element={<Navigate to={SettingsRoutePaths.Organization} replace />} />
-        </Route>
-      )}
-      {!canViewOrgSettings && isCloudApp && (
-        <Route path={`${RoutePaths.Settings}/*`} element={<OrganizationSettingsPage />}>
-          <Route path={CloudSettingsRoutePaths.InstallMcp} element={<OrganizationInstallMcpPage />} />
-          <Route path="*" element={<Navigate to={`../../${RoutePaths.Workspaces}`} replace />} />
         </Route>
       )}
     </Routes>

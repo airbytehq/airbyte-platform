@@ -3,6 +3,8 @@
 
 .page {
   width: 100%;
+  padding: variables.$spacing-2xl;
+  box-sizing: border-box;
 }
 
 .header {
@@ -13,19 +15,6 @@
 
 .card {
   border: variables.$border-thin solid colors.$border-color;
-}
-
-.urlField {
-  display: flex;
-  align-items: stretch;
-}
-
-.urlField > div:first-child {
-  flex: 1;
-}
-
-.urlField > button {
-  align-self: stretch;
 }
 
 .divider {
@@ -41,30 +30,22 @@
 .codeBlock {
   position: relative;
   overflow: hidden;
-  padding: variables.$spacing-xl;
+  padding: variables.$spacing-lg;
   border-radius: variables.$border-radius-xs;
-  background: colors.$dark-blue-30;
+  background: colors.$grey-50;
   color: colors.$dark-blue;
 }
 
 .codeBlock pre {
-  padding-right: variables.$spacing-2xl;
+  padding-right: 90px;
   overflow-x: auto;
   color: colors.$dark-blue;
+  font-size: variables.$font-size-sm;
 }
 
 .codeBlock .codeCopyButton {
   position: absolute;
-  top: variables.$spacing-sm;
-  right: variables.$spacing-sm;
-  color: colors.$dark-blue;
-
-  &:hover,
-  &:active {
-    color: colors.$grey-500;
-  }
-
-  &:focus-visible {
-    outline-color: colors.$blue-500;
-  }
+  top: 50%;
+  right: variables.$spacing-md;
+  transform: translateY(-50%);
 }

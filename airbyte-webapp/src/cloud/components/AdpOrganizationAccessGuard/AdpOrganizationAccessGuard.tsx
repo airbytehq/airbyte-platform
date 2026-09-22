@@ -19,10 +19,7 @@ export const AdpOrganizationAccessGuard: React.FC<React.PropsWithChildren> = ({ 
       `/${RoutePaths.Organization}/:organizationId/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`,
       pathname
     ) !== null ||
-    matchPath(
-      `/${RoutePaths.Organization}/:organizationId/${RoutePaths.Settings}/${CloudSettingsRoutePaths.InstallMcp}`,
-      pathname
-    ) !== null ||
+    matchPath(`/${RoutePaths.Organization}/:organizationId/${CloudSettingsRoutePaths.InstallMcp}`, pathname) !== null ||
     matchPath(
       `/${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.Settings}/${CloudSettingsRoutePaths.ContextLayer}`,
       pathname

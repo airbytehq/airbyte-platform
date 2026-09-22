@@ -61,7 +61,11 @@ jest.mock("core/utils/rbac", () => ({
 jest.mock("pages/SettingsPage/OrganizationSettingsPage", () => ({
   OrganizationSettingsPage: () => {
     const { Outlet: MockOutlet } = jest.requireActual("react-router-dom");
-    return <MockOutlet />;
+    return (
+      <div data-testid="organization-settings-layout">
+        <MockOutlet />
+      </div>
+    );
   },
 }));
 
@@ -247,7 +251,7 @@ describe("OrganizationRoutes", () => {
     mockUseShowAgentsOptIn.mockReturnValue(false);
 
     render(
-      <MemoryRouter initialEntries={["/organization/test-org/settings/install-mcp"]}>
+      <MemoryRouter initialEntries={["/organization/test-org/install-mcp"]}>
         <Suspense fallback={<div>Loading...</div>}>
           <Routes>
             <Route path="/organization/:organizationId/*" element={<OrganizationRoutes />} />
@@ -258,7 +262,8 @@ describe("OrganizationRoutes", () => {
     );
 
     await waitFor(() => expect(screen.getByTestId("organization-install-mcp-page")).toBeInTheDocument());
-    expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/settings/install-mcp");
+    expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/install-mcp");
+    expect(screen.queryByTestId("organization-settings-layout")).not.toBeInTheDocument();
   });
 
   it("registers the install MCP route for org settings viewers even when the agents opt-in flag is off", async () => {
@@ -266,7 +271,7 @@ describe("OrganizationRoutes", () => {
     mockUseGeneratedIntent.mockImplementation((intent) => intent === "ViewOrganizationSettings");
 
     render(
-      <MemoryRouter initialEntries={["/organization/test-org/settings/install-mcp"]}>
+      <MemoryRouter initialEntries={["/organization/test-org/install-mcp"]}>
         <Suspense fallback={<div>Loading...</div>}>
           <Routes>
             <Route path="/organization/:organizationId/*" element={<OrganizationRoutes />} />
@@ -277,6 +282,7 @@ describe("OrganizationRoutes", () => {
     );
 
     await waitFor(() => expect(screen.getByTestId("organization-install-mcp-page")).toBeInTheDocument());
-    expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/settings/install-mcp");
+    expect(screen.getByTestId("location")).toHaveTextContent("/organization/test-org/install-mcp");
+    expect(screen.queryByTestId("organization-settings-layout")).not.toBeInTheDocument();
   });
 });

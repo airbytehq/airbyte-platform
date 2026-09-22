@@ -48,7 +48,14 @@ describe("InstallMcpPage", () => {
     await render(<InstallMcpPage />);
 
     expect(screen.getByRole("heading", { name: "Install MCP" })).toBeInTheDocument();
-    expect(screen.getByDisplayValue(CLOUD_MCP_URL)).toBeInTheDocument();
+    expect(screen.getAllByText(CLOUD_MCP_URL, { exact: false }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
+      "Paste a URL",
+      "One click install",
+      "CLI command",
+      "JSON config file",
+    ]);
+    expect(screen.getAllByRole("button", { name: "Copy" })).toHaveLength(5);
     expect(screen.getByText(/"servers":/)).toBeInTheDocument();
     expect(screen.getByText(/"mcpServers":/)).toBeInTheDocument();
   });

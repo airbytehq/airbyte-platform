@@ -155,12 +155,13 @@ describe("SideBar organization navigation", () => {
   });
 
   it("only highlights Install MCP on the Install MCP route", () => {
-    renderSidebar("/organization/test-org/settings/install-mcp");
+    renderSidebar("/organization/test-org/install-mcp");
 
     expect(screen.getByTestId("orgSettingsLink")).not.toHaveClass("active");
     expect(screen.getByTestId("orgSettingsLink")).not.toHaveAttribute("aria-current", "page");
     expect(screen.getByTestId("installMcpSidebarLink")).toHaveClass("active");
     expect(screen.getByTestId("installMcpSidebarLink")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByTestId("installMcpSidebarLink")).toHaveAttribute("href", "/organization/test-org/install-mcp");
     expect(screen.getByTestId("installMcpSidebarLink").querySelector('[data-icon="mcp"]')).toBeInTheDocument();
     expect(screen.getByTestId("installMcpSidebarLink")).toHaveTextContent("Beta");
   });

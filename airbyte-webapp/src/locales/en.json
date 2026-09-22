@@ -2782,7 +2782,6 @@
   "cloud.installMcp.or": "OR",
   "cloud.installMcp.copy": "Copy",
   "cloud.installMcp.sidebar": "Install MCP",
-  "cloud.installMcp.urlInputLabel": "MCP server URL",
   "cloud.installMcp.pasteUrl.title": "Paste a URL",
   "cloud.installMcp.pasteUrl.clients": "Claude · Claude Desktop · ChatGPT · any client with a URL field",
   "cloud.installMcp.pasteUrl.description": "Open your client's MCP or connector settings (in Claude and Claude Desktop: Settings → Connectors → Add custom connector), paste this URL, and save.",

@@ -70,7 +70,7 @@ export const InstallMcpSidebarLink: React.FC = () => {
       <AgentsSidebarLinkContent
         labelId="cloud.installMcp.sidebar"
         icon="mcp"
-        organizationPath={`${RoutePaths.Settings}/${CloudSettingsRoutePaths.InstallMcp}`}
+        organizationPath={CloudSettingsRoutePaths.InstallMcp}
         testId="installMcpSidebarLink"
       />
     </React.Suspense>

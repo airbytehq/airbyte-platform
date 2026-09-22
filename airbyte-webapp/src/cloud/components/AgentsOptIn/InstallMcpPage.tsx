@@ -1,12 +1,11 @@
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Input } from "components/ui/Input";
 import { ExternalLink } from "components/ui/Link";
 import { LoadingPage } from "components/ui/LoadingPage";
 import { Pre } from "components/ui/Pre";
@@ -32,7 +31,9 @@ import { useShowAgentsOptIn } from "./useShowAgentsOptIn";
 const CodeBlock: React.FC<{ content: string }> = ({ content }) => (
   <div className={styles.codeBlock}>
     <Pre>{content}</Pre>
-    <CopyButton content={content} variant="clear" className={styles.codeCopyButton} />
+    <CopyButton content={content} className={styles.codeCopyButton}>
+      <FormattedMessage id="cloud.installMcp.copy" />
+    </CopyButton>
   </div>
 );
 
@@ -83,8 +84,6 @@ const openInstallLink = (href: string, external = false) => {
 };
 
 const InstallMcpPageContent: React.FC = () => {
-  const { formatMessage } = useIntl();
-
   return (
     <div className={styles.page}>
       <FlexContainer direction="column" gap="xl">
@@ -107,42 +106,7 @@ const InstallMcpPageContent: React.FC = () => {
           clientsId="cloud.installMcp.pasteUrl.clients"
           descriptionId="cloud.installMcp.pasteUrl.description"
         >
-          <div className={styles.urlField}>
-            <Input
-              value={CLOUD_MCP_URL}
-              readOnly
-              aria-label={formatMessage({ id: "cloud.installMcp.urlInputLabel" })}
-            />
-            <CopyButton content={CLOUD_MCP_URL}>
-              <FormattedMessage id="cloud.installMcp.copy" />
-            </CopyButton>
-          </div>
-        </InstallCard>
-        <Divider />
-        <InstallCard
-          titleId="cloud.installMcp.jsonConfig.title"
-          clientsId="cloud.installMcp.jsonConfig.clients"
-          descriptionId="cloud.installMcp.jsonConfig.description"
-        >
-          <FlexContainer direction="column" gap="md">
-            <Label id="cloud.installMcp.jsonConfig.vscodeLabel" />
-            <CodeBlock content={buildVsCodeConfig(CLOUD_MCP_URL)} />
-            <Label id="cloud.installMcp.jsonConfig.cursorLabel" />
-            <CodeBlock content={buildCursorConfig(CLOUD_MCP_URL)} />
-          </FlexContainer>
-        </InstallCard>
-        <Divider />
-        <InstallCard
-          titleId="cloud.installMcp.cli.title"
-          clientsId="cloud.installMcp.cli.clients"
-          descriptionId="cloud.installMcp.cli.description"
-        >
-          <FlexContainer direction="column" gap="md">
-            <Label id="cloud.installMcp.cli.claudeLabel" />
-            <CodeBlock content={buildClaudeCodeCommand(CLOUD_MCP_URL)} />
-            <Label id="cloud.installMcp.cli.vscodeLabel" />
-            <CodeBlock content={buildVsCodeCliCommand(CLOUD_MCP_URL)} />
-          </FlexContainer>
+          <CodeBlock content={CLOUD_MCP_URL} />
         </InstallCard>
         <Divider />
         <InstallCard
@@ -172,6 +136,32 @@ const InstallMcpPageContent: React.FC = () => {
             >
               <FormattedMessage id="cloud.installMcp.oneClick.vscodeInsiders" />
             </Button>
+          </FlexContainer>
+        </InstallCard>
+        <Divider />
+        <InstallCard
+          titleId="cloud.installMcp.cli.title"
+          clientsId="cloud.installMcp.cli.clients"
+          descriptionId="cloud.installMcp.cli.description"
+        >
+          <FlexContainer direction="column" gap="md">
+            <Label id="cloud.installMcp.cli.claudeLabel" />
+            <CodeBlock content={buildClaudeCodeCommand(CLOUD_MCP_URL)} />
+            <Label id="cloud.installMcp.cli.vscodeLabel" />
+            <CodeBlock content={buildVsCodeCliCommand(CLOUD_MCP_URL)} />
+          </FlexContainer>
+        </InstallCard>
+        <Divider />
+        <InstallCard
+          titleId="cloud.installMcp.jsonConfig.title"
+          clientsId="cloud.installMcp.jsonConfig.clients"
+          descriptionId="cloud.installMcp.jsonConfig.description"
+        >
+          <FlexContainer direction="column" gap="md">
+            <Label id="cloud.installMcp.jsonConfig.vscodeLabel" />
+            <CodeBlock content={buildVsCodeConfig(CLOUD_MCP_URL)} />
+            <Label id="cloud.installMcp.jsonConfig.cursorLabel" />
+            <CodeBlock content={buildCursorConfig(CLOUD_MCP_URL)} />
           </FlexContainer>
         </InstallCard>
         <Text size="sm" color="grey">

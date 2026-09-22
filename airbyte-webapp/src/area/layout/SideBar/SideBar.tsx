@@ -17,7 +17,6 @@ import { useCurrentOrganizationId, useTrackLastOrganization } from "area/organiz
 import { WorkspacesPickerNext } from "area/workspace/components/WorkspacesPickerNext";
 import { AgentsSidebarLink, InstallMcpSidebarLink } from "cloud/components/AgentsOptIn";
 import { CloudHelpDropdown } from "cloud/components/CloudHelpDropdown";
-import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
 import {
   useCurrentWorkspaceOrUndefined,
   useDefaultWorkspaceInOrganization,
@@ -94,9 +93,6 @@ const OrganizationNavItems = () => {
   const organizationId = useCurrentOrganizationId();
   const canViewOrganizationSettings = useGeneratedIntent(Intent.ViewOrganizationSettings);
   const basePath = `${RoutePaths.Organization}/${organizationId}/`;
-  const { pathname } = useLocation();
-  const isInstallMcpRoute =
-    matchPath(`/${basePath}${RoutePaths.Settings}/${CloudSettingsRoutePaths.InstallMcp}/*`, pathname) !== null;
   return (
     <MenuContent data-testid="navMainItems">
       <NavItem
@@ -113,7 +109,6 @@ const OrganizationNavItems = () => {
           icon="gear"
           to={basePath + RoutePaths.Settings}
           testId="orgSettingsLink"
-          isActive={isInstallMcpRoute ? false : undefined}
         />
       )}
     </MenuContent>

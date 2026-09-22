@@ -8,9 +8,8 @@ import { useGetConnectorsOutOfDate } from "area/connector/utils/useConnector";
 import { isOrganizationSubscribed, useCurrentOrganizationId } from "area/organization/utils";
 import { SettingsLayout, SettingsLayoutContent } from "area/settings/components/SettingsLayout";
 import { SettingsLink, SettingsNavigation, SettingsNavigationBlock } from "area/settings/components/SettingsNavigation";
-import { useShowAgentsOptIn } from "cloud/components/AgentsOptIn/useShowAgentsOptIn";
 import { CloudSettingsRoutePaths } from "cloud/views/settings/routePaths";
-import { useAgentsProvisioningStatus, useDefaultWorkspaceInOrganization, useOrgInfo } from "core/api";
+import { useDefaultWorkspaceInOrganization, useOrgInfo } from "core/api";
 import { useExperiment } from "core/services/Experiment";
 import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
@@ -21,7 +20,6 @@ export const OrganizationSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const organizationId = useCurrentOrganizationId();
   const isCloudApp = useIsCloudApp();
-  const showAgentsOptIn = useShowAgentsOptIn();
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canUpdateSSOConfig = useFeature(FeatureItem.AllowUpdateSSOConfig);
   const auditLogsEntitled = useFeature(FeatureItem.AllowAuditLogs);
@@ -39,20 +37,17 @@ export const OrganizationSettingsPage: React.FC = () => {
     organizationId,
   });
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
-  const agentsStatus = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
   const isSubscribed = isOrganizationSubscribed(billing);
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
 
   const defaultWorkspace = useDefaultWorkspaceInOrganization(organizationId);
   const isBillingNavVisible =
     isCloudApp && canManageOrganizationBilling && (!isSelfServePlusPlanEnabled || isSubscribed);
-  const showInstallMcpLink =
-    isCloudApp && showAgentsOptIn && agentsStatus && (agentsStatus.is_enrolled || agentsStatus.external_cloud_eligible);
 
   return (
     <SettingsLayout>
       <SettingsNavigation>
-        {(canViewOrganizationSettings || showInstallMcpLink) && (
+        {canViewOrganizationSettings && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organization" })}>
             {canViewOrganizationSettings && (
               <>
@@ -134,13 +129,6 @@ export const OrganizationSettingsPage: React.FC = () => {
                   </IfFeatureEnabled>
                 )}
               </>
-            )}
-            {showInstallMcpLink && (
-              <SettingsLink
-                iconType="download"
-                name={formatMessage({ id: "cloud.installMcp.sidebar" })}
-                to={CloudSettingsRoutePaths.InstallMcp}
-              />
             )}
           </SettingsNavigationBlock>
         )}
