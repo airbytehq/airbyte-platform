@@ -21,6 +21,8 @@ const mockColorValues = {
   comparisonBarColor: "#comparison",
   barHover: "#hover",
   committedLine: "#committed",
+  committedLabelText: "#labelText",
+  committedLabelBackground: "#labelBackground",
   tickColor: "#tick",
 };
 
@@ -100,7 +102,7 @@ describe(`${DataWorkerUsageBarChart.name}`, () => {
         chartMargin={{ top: 0, right: 0, bottom: 0, left: 0 }}
         tooltipPosition={{ y: 20 }}
         barSize={16}
-        referenceLine={{ value: 12, label: "Contracted capacity" }}
+        referenceLine={{ value: 12, label: "Allocated capacity" }}
       />
     );
 
@@ -133,14 +135,31 @@ describe(`${DataWorkerUsageBarChart.name}`, () => {
       })
     );
     expect(lastProps(mockCartesianGrid)).toEqual({ stroke: "#grid", vertical: false });
-    expect(lastProps(mockReferenceLine)).toEqual(
-      expect.objectContaining({
-        y: 12,
-        stroke: "#committed",
-        ifOverflow: "extendDomain",
-        label: expect.objectContaining({ value: "Contracted capacity", fill: "#committed" }),
-      })
+    const referenceLineProps = lastProps<{
+      y: number;
+      stroke: string;
+      ifOverflow: string;
+      label: (props: { viewBox: { x: number; y: number; width: number; height: number } }) => JSX.Element;
+    }>(mockReferenceLine);
+    expect(referenceLineProps).toEqual(
+      expect.objectContaining({ y: 12, stroke: "#committed", ifOverflow: "extendDomain" })
     );
+    const { container: labelContainer } = await render(
+      <svg>{referenceLineProps.label({ viewBox: { x: 0, y: 100, width: 400, height: 0 } })}</svg>
+    );
+    const labelText = labelContainer.querySelector("text");
+    const labelBackground = labelContainer.querySelector("rect");
+    expect(labelText).toHaveTextContent("Allocated capacity");
+    expect(labelText).toHaveAttribute("fill", "#labelText");
+    expect(labelBackground).toHaveAttribute("fill", "#labelBackground");
+    expect(labelBackground).toHaveAttribute("stroke", "#committed");
+    expect(Number(labelBackground?.getAttribute("y"))).toBeLessThan(100);
+
+    const { container: topLabelContainer } = await render(
+      <svg>{referenceLineProps.label({ viewBox: { x: 0, y: 0, width: 400, height: 0 } })}</svg>
+    );
+    const topLabelBackground = topLabelContainer.querySelector("rect");
+    expect(Number(topLabelBackground?.getAttribute("y"))).toBeGreaterThanOrEqual(0);
     expect(lastProps(mockBar)).toEqual(
       expect.objectContaining({
         dataKey: "maxWorkspaceUsage",
@@ -223,7 +242,7 @@ describe(`${DataWorkerUsageBarChart.name}`, () => {
         comparisonBarDataKey="previousUsage"
         renderTooltipContent={renderTooltipContent}
         barSize={8}
-        referenceLine={{ value: 12, label: "Contracted capacity" }}
+        referenceLine={{ value: 12, label: "Allocated capacity" }}
       />
     );
 

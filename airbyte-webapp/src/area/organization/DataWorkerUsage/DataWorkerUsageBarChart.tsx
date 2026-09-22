@@ -16,6 +16,8 @@ interface ColorMap {
   comparisonBarColor: string;
   barHover: string;
   committedLine: string;
+  committedLabelText: string;
+  committedLabelBackground: string;
   tickColor: string;
 }
 
@@ -57,6 +59,54 @@ const tooltipConfig: TooltipProps<number, string> = {
 };
 
 const BASE_CHART_HEIGHT = 250;
+const REFERENCE_LABEL_FONT_SIZE = 10;
+const REFERENCE_LABEL_PADDING_X = 6;
+const REFERENCE_LABEL_PADDING_Y = 3;
+const REFERENCE_LABEL_HEIGHT = REFERENCE_LABEL_FONT_SIZE + REFERENCE_LABEL_PADDING_Y * 2;
+const REFERENCE_LABEL_CHAR_WIDTH = 5.5;
+const REFERENCE_LABEL_OFFSET = 4;
+
+interface ReferenceLineLabelProps {
+  viewBox?: { x?: number; y?: number; width?: number; height?: number };
+  label: string;
+  textColor: string;
+  backgroundColor: string;
+  borderColor: string;
+}
+
+const ReferenceLineLabel = ({ viewBox, label, textColor, backgroundColor, borderColor }: ReferenceLineLabelProps) => {
+  const { x = 0, y = 0, width = 0 } = viewBox ?? {};
+  const labelWidth = label.length * REFERENCE_LABEL_CHAR_WIDTH + REFERENCE_LABEL_PADDING_X * 2;
+  const rectX = x + width - labelWidth;
+  const rectYAbove = y - REFERENCE_LABEL_HEIGHT - REFERENCE_LABEL_OFFSET;
+  const rectY = rectYAbove >= 0 ? rectYAbove : y + REFERENCE_LABEL_OFFSET;
+
+  return (
+    <g>
+      <rect
+        x={rectX}
+        y={rectY}
+        width={labelWidth}
+        height={REFERENCE_LABEL_HEIGHT}
+        rx={REFERENCE_LABEL_HEIGHT / 2}
+        fill={backgroundColor}
+        stroke={borderColor}
+        strokeWidth={1}
+      />
+      <text
+        x={rectX + labelWidth / 2}
+        y={rectY + REFERENCE_LABEL_HEIGHT / 2}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={REFERENCE_LABEL_FONT_SIZE}
+        fontWeight={500}
+        fill={textColor}
+      >
+        {label}
+      </text>
+    </g>
+  );
+};
 
 export const DataWorkerUsageBarChart = <ChartData extends object>({
   data,
@@ -81,6 +131,8 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
     comparisonBarColor: "",
     barHover: "",
     committedLine: "",
+    committedLabelText: "",
+    committedLabelBackground: "",
     tickColor: "",
   });
   const { colorValues } = useAirbyteTheme();
@@ -92,6 +144,8 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
       comparisonBarColor: colorValues[styles.comparisonBarColor],
       barHover: colorValues[styles.barHover],
       committedLine: colorValues[styles.committedLine],
+      committedLabelText: colorValues[styles.committedLabelText],
+      committedLabelBackground: colorValues[styles.committedLabelBackground],
       tickColor: colorValues[styles.tickColor],
     });
   }, [colorValues]);
@@ -129,21 +183,6 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
             {...tooltipConfig}
           />
           <CartesianGrid stroke={colorMap.gridLine} vertical={false} />
-          {referenceLine && (
-            <ReferenceLine
-              y={referenceLine.value}
-              stroke={colorMap.committedLine}
-              strokeDasharray="6 4"
-              strokeWidth={1.5}
-              ifOverflow="extendDomain"
-              label={{
-                value: referenceLine.label,
-                position: "insideTopRight",
-                fontSize: 10,
-                fill: colorMap.committedLine,
-              }}
-            />
-          )}
           <Bar
             dataKey={barDataKey}
             fill={colorMap.barColor}
@@ -158,6 +197,24 @@ export const DataWorkerUsageBarChart = <ChartData extends object>({
               barSize={barSize}
               animationDuration={300}
               animationEasing="linear"
+            />
+          )}
+          {referenceLine && (
+            <ReferenceLine
+              y={referenceLine.value}
+              stroke={colorMap.committedLine}
+              strokeDasharray="6 4"
+              strokeWidth={1.5}
+              ifOverflow="extendDomain"
+              label={(labelProps: { viewBox?: ReferenceLineLabelProps["viewBox"] }) => (
+                <ReferenceLineLabel
+                  viewBox={labelProps.viewBox}
+                  label={referenceLine.label}
+                  textColor={colorMap.committedLabelText}
+                  backgroundColor={colorMap.committedLabelBackground}
+                  borderColor={colorMap.committedLine}
+                />
+              )}
             />
           )}
         </BarChart>

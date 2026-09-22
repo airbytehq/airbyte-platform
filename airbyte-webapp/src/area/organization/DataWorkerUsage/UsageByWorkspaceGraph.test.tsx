@@ -163,7 +163,7 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
         chartKey: "region-1-1d",
         xAxisInterval: 0,
         barSize: 16,
-        referenceLine: { value: 4, label: "Contracted capacity" },
+        referenceLine: { value: 4, label: "Allocated capacity" },
       })
     );
 
@@ -317,7 +317,7 @@ describe(`${UsageByWorkspaceGraph.name}`, () => {
         comparisonBarDataKey: "previousUsage",
         barSize: 8,
         chartKey: "region-1-1d-comparison",
-        referenceLine: { value: 4, label: "Contracted capacity" },
+        referenceLine: { value: 4, label: "Allocated capacity" },
       })
     );
     expect(chartProps.data).toHaveLength(24);

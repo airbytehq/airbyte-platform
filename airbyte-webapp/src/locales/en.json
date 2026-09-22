@@ -1484,7 +1484,7 @@
   "settings.organization.usage.graph.tooltip.workspaceUsageDescription": "Peaks can occur at different times, so they may total more than the region max.",
   "settings.organization.usage.graph.tooltip.top10": "top 10",
   "settings.organization.usage.graph.tooltip.other": "Other",
-  "settings.organization.usage.graph.committedCapacity": "Contracted capacity",
+  "settings.organization.usage.graph.committedCapacity": "Allocated capacity",
   "settings.organization.usage.capacity.title": "Region capacity",
   "settings.organization.usage.capacity.description": "Data workers are always fully allocated, so adding capacity to one region takes it from another.",
   "settings.organization.usage.capacity.contracted": "Contracted <strong>{count} DW</strong>",

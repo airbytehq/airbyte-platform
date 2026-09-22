@@ -186,7 +186,7 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
         chartKey: "1w",
         chartMargin: { top: 0, right: 20, left: 0, bottom: 0 },
         barSize: 4,
-        referenceLine: { value: 4, label: "Contracted capacity" },
+        referenceLine: { value: 4, label: "Allocated capacity" },
       })
     );
     expect(chartProps.xAxisTicks).toHaveLength(7);
@@ -443,7 +443,7 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
         comparisonBarDataKey: "previousUsage",
         barSize: 2,
         chartKey: "1w-comparison",
-        referenceLine: { value: 4, label: "Contracted capacity" },
+        referenceLine: { value: 4, label: "Allocated capacity" },
       })
     );
 
@@ -733,7 +733,7 @@ describe(`${WorkspaceDataWorkerUsageGraph.name}`, () => {
     expect(lastChartProps().data.at(-1)).toEqual({ date: "2026-08-25T01:00:00.000Z", used: 0 });
   });
 
-  it("omits the contracted capacity line when committed capacity is zero", async () => {
+  it("omits the allocated capacity line when committed capacity is zero", async () => {
     mockOrganizationUsage = {
       ...workspaceUsage([{ date: "2026-08-24T19:15:00Z", used: 1 }]),
       committedDataWorkers: 0,
