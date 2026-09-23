@@ -7,7 +7,14 @@ import { Switch } from "components/ui/Switch";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useExternalWorkspaceConnectors, useAgentsProvisioningStatus, useSetExternalActorEnabled } from "core/api";
+import {
+  useFusionWorkspaceConnectors,
+  useAgentsProvisioningStatus,
+  useSetFusionActorEnablement,
+  useFusionActorEnablement,
+  useFusionActorSaving,
+  fusionEnablementState,
+} from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
@@ -30,7 +37,9 @@ export const useShowActorContextLayerToggles = (): boolean => {
   return isCloudApp && showAgentsOptIn;
 };
 
-const ActorAgentAccessToggleContent: React.FC<ActorContextLayerToggleProps> = ({ actorId, actorType }) => {
+const ActorAgentAccessToggleContent: React.FC<
+  ActorContextLayerToggleProps & { field?: "enable_agent_access" | "enable_indexing" }
+> = ({ actorId, actorType, field = "enable_agent_access" }) => {
   const isVisible = useShowActorContextLayerToggles();
   const workspaceId = useCurrentWorkspaceId();
   const provisioningStatus = useAgentsProvisioningStatus({ enabled: isVisible });
@@ -39,15 +48,21 @@ const ActorAgentAccessToggleContent: React.FC<ActorContextLayerToggleProps> = ({
     actorType === "source" ? Intent.CreateOrEditSource : Intent.CreateOrEditDestination
   );
   const { formatMessage } = useIntl();
-  const { sources, destinations, isLoading, sourcesError, destinationsError } = useExternalWorkspaceConnectors(
+  const { sources, destinations, isLoading, sourcesError, destinationsError } = useFusionWorkspaceConnectors(
     workspaceId,
     {
       enabled: isVisible && isEnrolled,
+      hydrate: false,
     }
   );
-  const { mutateAsync: setExternalActorEnabled } = useSetExternalActorEnabled();
+  const actor = { actorId, actorKind: actorType, workspaceId };
+  const enablement = useFusionActorEnablement(actor, isVisible && isEnrolled);
+  const saving = useFusionActorSaving(actor);
+  const values = enablement.data ? fusionEnablementState(enablement.data) : undefined;
+  const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
   const confirmDisable = useConfirmContextLayerDisable();
   const agentAccessTitle = useContextLayerSettingTitle("agentAccess");
+  const semanticSearchTitle = useContextLayerSettingTitle("semanticSearch");
   const [optimisticEnabled, setOptimisticEnabled] = useState<boolean>();
   const [status, setStatus] = useState<"loading" | "success" | "warning">();
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -66,15 +81,30 @@ const ActorAgentAccessToggleContent: React.FC<ActorContextLayerToggleProps> = ({
   }
 
   const connector = (actorType === "source" ? sources : destinations).find(({ id }) => id === actorId);
-  const queryError = actorType === "source" ? sourcesError : destinationsError;
+  const queryError = enablement.isError || (actorType === "source" ? sourcesError : destinationsError);
   const unavailable = !isEnrolled || queryError;
   const checked =
-    !unavailable && !isLoading && connector?.supported === true && (optimisticEnabled ?? connector.enabled);
-  const disabled = unavailable || isLoading || !connector || !connector.supported || !canManage || status === "loading";
+    !unavailable &&
+    !enablement.isLoading &&
+    connector?.supported === true &&
+    (optimisticEnabled ?? values?.[field] === true);
+  const disabled =
+    unavailable ||
+    isLoading ||
+    enablement.isLoading ||
+    !connector ||
+    !connector.supported ||
+    !canManage ||
+    saving ||
+    status === "loading" ||
+    (field !== "enable_agent_access" && !values?.enable_agent_access);
 
   const handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!values) {
+      return;
+    }
     const enabled = event.target.checked;
-    if (!enabled && !(await confirmDisable(connector?.name ?? ""))) {
+    if (field === "enable_agent_access" && !enabled && !(await confirmDisable(connector?.name ?? ""))) {
       return;
     }
     setStatus("loading");
@@ -82,10 +112,20 @@ const ActorAgentAccessToggleContent: React.FC<ActorContextLayerToggleProps> = ({
     setOptimisticEnabled(enabled);
 
     try {
-      await setExternalActorEnabled({
+      await setFusionActorEnablement({
         actorId,
         actorKind: actorType,
-        enabled,
+        workspaceId,
+        state:
+          field === "enable_agent_access"
+            ? {
+                ...values,
+                enable_agent_access: enabled,
+                enable_indexing: actorType === "destination" ? enabled : enabled && values.enable_indexing,
+                ...("enable_backfill" in values ? { enable_backfill: enabled && values.enable_backfill } : {}),
+              }
+            : { ...values, [field]: enabled },
+        expectedState: values,
       });
       setOptimisticEnabled(undefined);
       setStatus("success");
@@ -105,7 +145,7 @@ const ActorAgentAccessToggleContent: React.FC<ActorContextLayerToggleProps> = ({
         onChange={!unavailable && canManage ? handleChange : undefined}
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
-        aria-label={agentAccessTitle}
+        aria-label={field === "enable_indexing" ? semanticSearchTitle : agentAccessTitle}
       />
     </span>
   );
@@ -150,42 +190,8 @@ export const ActorAgentAccessToggle: React.FC<ActorContextLayerToggleProps> = (p
   </React.Suspense>
 );
 
-const ActorSemanticSearchToggleContent: React.FC<ActorContextLayerToggleProps> = () => {
-  const isVisible = useShowActorContextLayerToggles();
-  const status = useAgentsProvisioningStatus({ enabled: isVisible });
-  const isEnrolled = status?.is_enrolled === true;
-  const semanticSearchTitle = useContextLayerSettingTitle("semanticSearch");
-
-  if (!isVisible) {
-    return null;
-  }
-
-  const switchControl = (
-    <span className={styles.control}>
-      <Switch
-        size="sm"
-        checked={false}
-        disabled
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-        aria-label={semanticSearchTitle}
-      />
-    </span>
-  );
-
-  return (
-    <Tooltip placement="bottom" control={switchControl}>
-      {isEnrolled ? (
-        <FormattedMessage id="cloud.contextLayer.actor.semanticSearch.comingSoon" />
-      ) : (
-        <FormattedMessage id="cloud.contextLayer.actor.notEnrolled" />
-      )}
-    </Tooltip>
-  );
-};
-
 export const ActorSemanticSearchToggle: React.FC<ActorContextLayerToggleProps> = (props) => (
   <React.Suspense>
-    <ActorSemanticSearchToggleContent {...props} />
+    <ActorAgentAccessToggleContent {...props} field="enable_indexing" />
   </React.Suspense>
 );

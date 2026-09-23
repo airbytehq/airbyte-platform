@@ -3,7 +3,12 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useAgentsProvisioningStatus, useExternalWorkspaceConnectors, useSetExternalActorEnabled } from "core/api";
+import {
+  useAgentsProvisioningStatus,
+  useFusionWorkspaceConnectors,
+  useSetFusionActorEnablement,
+  useFusionActorEnablement,
+} from "core/api";
 import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { NotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
@@ -19,8 +24,20 @@ jest.mock("area/workspace/utils", () => ({
 
 jest.mock("core/api", () => ({
   useAgentsProvisioningStatus: jest.fn(),
-  useExternalWorkspaceConnectors: jest.fn(),
-  useSetExternalActorEnabled: jest.fn(),
+  useFusionWorkspaceConnectors: jest.fn(),
+  useSetFusionActorEnablement: jest.fn(),
+  useFusionActorEnablement: jest.fn(() => ({
+    data: { enable_agent_access: false, enable_indexing: false },
+    isLoading: false,
+  })),
+  useFusionActorSaving: jest.fn(() => false),
+  fusionEnablementState: jest.fn((read) => ({
+    enable_agent_access: read.enable_agent_access,
+    enable_indexing: read.enable_indexing,
+    ...("enable_backfill" in read
+      ? { enable_backfill: read.enable_backfill, backfill_start_time: read.backfill_start_time ?? null }
+      : {}),
+  })),
 }));
 
 jest.mock("core/utils/app", () => ({
@@ -40,17 +57,19 @@ const mockUseCurrentWorkspaceId = useCurrentWorkspaceId as jest.MockedFunction<t
 const mockUseAgentsProvisioningStatus = useAgentsProvisioningStatus as jest.MockedFunction<
   typeof useAgentsProvisioningStatus
 >;
-const mockUseExternalWorkspaceConnectors = useExternalWorkspaceConnectors as jest.MockedFunction<
-  typeof useExternalWorkspaceConnectors
+const mockUseFusionWorkspaceConnectors = useFusionWorkspaceConnectors as jest.MockedFunction<
+  typeof useFusionWorkspaceConnectors
 >;
-const mockUseSetExternalActorEnabled = useSetExternalActorEnabled as jest.MockedFunction<
-  typeof useSetExternalActorEnabled
+const mockUseSetFusionActorEnablement = useSetFusionActorEnablement as jest.MockedFunction<
+  typeof useSetFusionActorEnablement
 >;
 const mockUseIsCloudApp = useIsCloudApp as jest.MockedFunction<typeof useIsCloudApp>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
 const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof useGeneratedIntent>;
 
 const messages = {
+  "cloud.contextLayer.semanticSearch.description":
+    "Data will be indexed when this source is synced to an enabled Context Layer destination.",
   "cloud.contextLayer.actor.notSupported": "This connector is not yet supported by the context layer.",
   "cloud.contextLayer.actor.noPermission":
     "You need edit permission for this workspace's sources or destinations to change this.",
@@ -87,6 +106,9 @@ describe("ActorContextLayerToggles", () => {
     jest.clearAllMocks();
     window.localStorage.clear();
     resetContextLayerDisableConfirmationState();
+    jest
+      .mocked(useFusionActorEnablement)
+      .mockReturnValue({ data: { enable_agent_access: true, enable_indexing: false }, isLoading: false } as never);
     mockUseCurrentWorkspaceId.mockReturnValue("workspace-id");
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: true,
@@ -97,14 +119,14 @@ describe("ActorContextLayerToggles", () => {
       external_cloud_eligible: true,
       eligible_external_organization_id: null,
     });
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [],
       destinations: [],
       isLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync: jest.fn() } as never);
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync: jest.fn() } as never);
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseShowAgentsOptIn.mockReturnValue(true);
     mockUseGeneratedIntent.mockReturnValue(true);
@@ -113,13 +135,13 @@ describe("ActorContextLayerToggles", () => {
   it("renders a disabled unchecked toggle with an enrollment tooltip before enrollment", async () => {
     mockUseAgentsProvisioningStatus.mockReturnValue(null);
     const mutateAsync = jest.fn();
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
     renderToggle(<ActorAgentAccessToggle actorId="actor-id" actorType="source" />);
 
     const toggle = screen.getByRole("checkbox", { name: "Agent Access" });
     expect(toggle).not.toBeChecked();
     expect(toggle).toBeDisabled();
-    expect(mockUseExternalWorkspaceConnectors).toHaveBeenCalledWith("workspace-id", { enabled: false });
+    expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-id", { enabled: false, hydrate: false });
     fireEvent.click(toggle);
     expect(mutateAsync).not.toHaveBeenCalled();
     fireEvent.mouseOver(toggle);
@@ -140,8 +162,16 @@ describe("ActorContextLayerToggles", () => {
   });
 
   it("renders Agent Access checked and enabled for a supported enabled actor", () => {
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "actor-id", name: "GitHub", supported: true, enabled: true }],
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
       destinations: [],
       isLoading: false,
       sourcesError: false,
@@ -157,8 +187,16 @@ describe("ActorContextLayerToggles", () => {
   });
 
   it("renders an unsupported Agent Access toggle disabled and unchecked", () => {
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "actor-id", name: "Unsupported", supported: false, enabled: true }],
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "Unsupported",
+          supported: false,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
       destinations: [],
       isLoading: false,
       sourcesError: false,
@@ -174,8 +212,16 @@ describe("ActorContextLayerToggles", () => {
 
   it("renders a workspace permission tooltip when the actor cannot be edited", async () => {
     mockUseGeneratedIntent.mockReturnValue(false);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "actor-id", name: "GitHub", supported: true, enabled: true }],
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
       destinations: [],
       isLoading: false,
       sourcesError: false,
@@ -193,7 +239,7 @@ describe("ActorContextLayerToggles", () => {
   });
 
   it("renders a disabled unchecked toggle with a load error tooltip when the connector query fails", async () => {
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [],
       destinations: [],
       isLoading: false,
@@ -225,9 +271,17 @@ describe("ActorContextLayerToggles", () => {
           resolveMutation = resolve;
         })
     );
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "actor-id", name: "GitHub", supported: true, enabled: true }],
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
       destinations: [],
       isLoading: false,
       sourcesError: false,
@@ -245,7 +299,9 @@ describe("ActorContextLayerToggles", () => {
       expect(mutateAsync).toHaveBeenCalledWith({
         actorId: "actor-id",
         actorKind: "source",
-        enabled: false,
+        workspaceId: "workspace-id",
+        state: { enable_agent_access: false, enable_indexing: false },
+        expectedState: { enable_agent_access: true, enable_indexing: false },
       });
     });
     expect(screen.getByRole("checkbox", { name: "Agent Access" })).toBeDisabled();
@@ -256,9 +312,17 @@ describe("ActorContextLayerToggles", () => {
 
   it("reverts the toggle and shows the mutation error when updating actor access fails", async () => {
     const mutateAsync = jest.fn().mockRejectedValue(new Error("boom"));
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "actor-id", name: "GitHub", supported: true, enabled: true }],
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
       destinations: [],
       isLoading: false,
       sourcesError: false,
@@ -275,13 +339,94 @@ describe("ActorContextLayerToggles", () => {
     expect(await screen.findByTitle("boom")).toBeInTheDocument();
   });
 
+  it("enables actor access without showing a confirmation modal", async () => {
+    jest
+      .mocked(useFusionActorEnablement)
+      .mockReturnValue({ data: { enable_agent_access: false, enable_indexing: false }, isLoading: false } as never);
+    const mutateAsync = jest.fn().mockResolvedValue({ enabled: true });
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: false,
+        },
+      ],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    });
+
+    renderToggle(<ActorAgentAccessToggle actorId="actor-id" actorType="source" />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Agent Access" }));
+
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith({
+        actorId: "actor-id",
+        actorKind: "source",
+        workspaceId: "workspace-id",
+        state: { enable_agent_access: true, enable_indexing: false },
+        expectedState: { enable_agent_access: false, enable_indexing: false },
+      });
+    });
+    expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
+  });
+
+  it("does not call the mutation when the disable confirmation is cancelled", async () => {
+    const mutateAsync = jest.fn().mockResolvedValue({ enabled: false });
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    });
+
+    renderToggle(<ActorAgentAccessToggle actorId="actor-id" actorType="source" />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Agent Access" }));
+
+    expect(await screen.findByText("Disable Agents access?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
+    });
+    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(screen.getByRole("checkbox", { name: "Agent Access" })).toBeChecked();
+  });
+
   it('persists "Don\'t ask again" and skips the modal for every toggle afterwards', async () => {
     const mutateAsync = jest.fn().mockResolvedValue({ enabled: false });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [
-        { id: "actor-id-1", name: "GitHub", supported: true, enabled: true },
-        { id: "actor-id-2", name: "Stripe", supported: true, enabled: true },
+        {
+          id: "actor-id-1",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+        {
+          id: "actor-id-2",
+          name: "Stripe",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
       ],
       destinations: [],
       isLoading: false,
@@ -305,7 +450,9 @@ describe("ActorContextLayerToggles", () => {
       expect(mutateAsync).toHaveBeenCalledWith({
         actorId: "actor-id-1",
         actorKind: "source",
-        enabled: false,
+        workspaceId: "workspace-id",
+        state: { enable_agent_access: false, enable_indexing: false },
+        expectedState: { enable_agent_access: true, enable_indexing: false },
       });
     });
     expect(window.localStorage.getItem("airbyte_context-layer-skip-disable-confirmation")).toBe("true");
@@ -317,7 +464,9 @@ describe("ActorContextLayerToggles", () => {
       expect(mutateAsync).toHaveBeenCalledWith({
         actorId: "actor-id-2",
         actorKind: "source",
-        enabled: false,
+        workspaceId: "workspace-id",
+        state: { enable_agent_access: false, enable_indexing: false },
+        expectedState: { enable_agent_access: true, enable_indexing: false },
       });
     });
     expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
@@ -329,61 +478,25 @@ describe("ActorContextLayerToggles", () => {
     expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
   });
 
-  it("enables actor access without showing a confirmation modal", async () => {
-    const mutateAsync = jest.fn().mockResolvedValue({ enabled: true });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "actor-id", name: "GitHub", supported: true, enabled: false }],
-      destinations: [],
-      isLoading: false,
-      sourcesError: false,
-      destinationsError: false,
-    });
-
-    renderToggle(<ActorAgentAccessToggle actorId="actor-id" actorType="source" />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Agent Access" }));
-
-    await waitFor(() => {
-      expect(mutateAsync).toHaveBeenCalledWith({
-        actorId: "actor-id",
-        actorKind: "source",
-        enabled: true,
-      });
-    });
-    expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
-  });
-
-  it("does not call the mutation when the disable confirmation is cancelled", async () => {
-    const mutateAsync = jest.fn().mockResolvedValue({ enabled: false });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "actor-id", name: "GitHub", supported: true, enabled: true }],
-      destinations: [],
-      isLoading: false,
-      sourcesError: false,
-      destinationsError: false,
-    });
-
-    renderToggle(<ActorAgentAccessToggle actorId="actor-id" actorType="source" />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Agent Access" }));
-
-    expect(await screen.findByText("Disable Agents access?")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-
-    await waitFor(() => {
-      expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
-    });
-    expect(mutateAsync).not.toHaveBeenCalled();
-    expect(screen.getByRole("checkbox", { name: "Agent Access" })).toBeChecked();
-  });
-
   it("resolves an earlier pending confirmation as cancelled when a second toggle opens the modal", async () => {
     const mutateAsync = jest.fn().mockResolvedValue({ enabled: false });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [
-        { id: "actor-id-1", name: "GitHub", supported: true, enabled: true },
-        { id: "actor-id-2", name: "Stripe", supported: true, enabled: true },
+        {
+          id: "actor-id-1",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+        {
+          id: "actor-id-2",
+          name: "Stripe",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
       ],
       destinations: [],
       isLoading: false,
@@ -412,7 +525,9 @@ describe("ActorContextLayerToggles", () => {
       expect(mutateAsync).toHaveBeenCalledWith({
         actorId: "actor-id-2",
         actorKind: "source",
-        enabled: false,
+        workspaceId: "workspace-id",
+        state: { enable_agent_access: false, enable_indexing: false },
+        expectedState: { enable_agent_access: true, enable_indexing: false },
       });
     });
     expect(mutateAsync).toHaveBeenCalledTimes(1);
@@ -422,9 +537,17 @@ describe("ActorContextLayerToggles", () => {
   it("skips the confirmation modal when the skip preference is already set", async () => {
     window.localStorage.setItem("airbyte_context-layer-skip-disable-confirmation", "true");
     const mutateAsync = jest.fn().mockResolvedValue({ enabled: false });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "actor-id", name: "GitHub", supported: true, enabled: true }],
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
       destinations: [],
       isLoading: false,
       sourcesError: false,
@@ -438,7 +561,9 @@ describe("ActorContextLayerToggles", () => {
       expect(mutateAsync).toHaveBeenCalledWith({
         actorId: "actor-id",
         actorKind: "source",
-        enabled: false,
+        workspaceId: "workspace-id",
+        state: { enable_agent_access: false, enable_indexing: false },
+        expectedState: { enable_agent_access: true, enable_indexing: false },
       });
     });
     expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
@@ -447,8 +572,188 @@ describe("ActorContextLayerToggles", () => {
   it("renders Semantic Search disabled", () => {
     renderToggle(<ActorSemanticSearchToggle actorId="actor-id" actorType="destination" />);
 
-    const toggle = screen.getByRole("checkbox", { name: "Semantic Search" });
-    expect(toggle).not.toBeChecked();
-    expect(toggle).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Semantic Search" })).toBeDisabled();
   });
+
+  it("adds source indexing while retaining direct access", async () => {
+    const mutateAsync = jest.fn().mockResolvedValue({ state: { enable_agent_access: true, enable_indexing: true } });
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: false,
+        },
+      ],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    });
+    renderToggle(<ActorSemanticSearchToggle actorId="actor-id" actorType="source" />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Semantic Search" }));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        actorId: "actor-id",
+        actorKind: "source",
+        workspaceId: "workspace-id",
+        expectedState: { enable_agent_access: true, enable_indexing: false },
+        state: { enable_agent_access: true, enable_indexing: true },
+      })
+    );
+  });
+
+  it("disabling source direct access revokes indexing too", async () => {
+    jest
+      .mocked(useFusionActorEnablement)
+      .mockReturnValue({ data: { enable_agent_access: true, enable_indexing: true }, isLoading: false } as never);
+    const mutateAsync = jest.fn().mockResolvedValue({ state: { enable_agent_access: false, enable_indexing: false } });
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: false,
+        },
+      ],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    });
+    renderToggle(<ActorAgentAccessToggle actorId="actor-id" actorType="source" />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Agent Access" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        actorId: "actor-id",
+        actorKind: "source",
+        workspaceId: "workspace-id",
+        expectedState: { enable_agent_access: true, enable_indexing: true },
+        state: { enable_agent_access: false, enable_indexing: false },
+      })
+    );
+  });
+
+  it("indexing is unavailable until direct access is enabled", () => {
+    jest
+      .mocked(useFusionActorEnablement)
+      .mockReturnValue({ data: { enable_agent_access: false, enable_indexing: false }, isLoading: false } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "actor-id",
+          name: "GitHub",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
+      destinations: [],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    });
+    renderToggle(<ActorSemanticSearchToggle actorId="actor-id" actorType="source" />);
+    expect(screen.getByRole("checkbox", { name: "Semantic Search" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Semantic Search" })).not.toBeChecked();
+  });
+
+  it("enabling destination agent access forces indexing on regardless of its prior state", async () => {
+    jest.mocked(useFusionActorEnablement).mockReturnValue({
+      data: { enable_agent_access: false, enable_indexing: false, enable_backfill: false, backfill_start_time: null },
+      isLoading: false,
+    } as never);
+    const mutateAsync = jest.fn().mockResolvedValue({});
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [],
+      destinations: [
+        {
+          id: "actor-id",
+          name: "Snowflake",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false, enable_backfill: false },
+          enabled: false,
+        },
+      ],
+      isLoading: false,
+      sourcesError: false,
+      destinationsError: false,
+    });
+    renderToggle(<ActorAgentAccessToggle actorId="actor-id" actorType="destination" />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Agent Access" }));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        actorId: "actor-id",
+        actorKind: "destination",
+        workspaceId: "workspace-id",
+        expectedState: {
+          enable_agent_access: false,
+          enable_indexing: false,
+          enable_backfill: false,
+          backfill_start_time: null,
+        },
+        state: {
+          enable_agent_access: true,
+          enable_indexing: true,
+          enable_backfill: false,
+          backfill_start_time: null,
+        },
+      })
+    );
+  });
+
+  it.each(["indexing", "access"] as const)(
+    "destination %s changes preserve independent flags and exact saved timestamp",
+    async (field) => {
+      const state = {
+        enable_agent_access: true,
+        enable_indexing: false,
+        enable_backfill: true,
+        backfill_start_time: "2026-09-01T00:00:00.123456Z",
+      };
+      jest.mocked(useFusionActorEnablement).mockReturnValue({ data: state, isLoading: false } as never);
+      mockUseFusionWorkspaceConnectors.mockReturnValue({
+        sources: [],
+        destinations: [{ id: "actor-id", name: "Snowflake", supported: true, enabled: true, state }],
+        sourcesError: false,
+        destinationsError: false,
+        isLoading: false,
+      });
+      const mutateAsync = jest.fn().mockResolvedValue({});
+      mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+      renderToggle(
+        field === "indexing" ? (
+          <ActorSemanticSearchToggle actorId="actor-id" actorType="destination" />
+        ) : (
+          <ActorAgentAccessToggle actorId="actor-id" actorType="destination" />
+        )
+      );
+      fireEvent.click(screen.getByRole("checkbox"));
+      if (field === "access") {
+        fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
+      }
+      await waitFor(() =>
+        expect(mutateAsync).toHaveBeenCalledWith({
+          actorId: "actor-id",
+          actorKind: "destination",
+          workspaceId: "workspace-id",
+          expectedState: state,
+          state: {
+            ...state,
+            ...(field === "indexing"
+              ? { enable_indexing: true }
+              : { enable_agent_access: false, enable_indexing: false, enable_backfill: false }),
+          },
+        })
+      );
+    }
+  );
 });

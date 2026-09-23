@@ -24,7 +24,7 @@ import {
   useCreateDestination,
   useDestinationDefinitionList,
   useGetDestinationDefinitionSpecificationAsync,
-  useSetExternalActorEnabled,
+  useSetFusionActorEnablement,
 } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
@@ -49,7 +49,7 @@ export const CreateDestinationPage: React.FC = () => {
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { destinationDefinitions } = useDestinationDefinitionList();
   const { mutateAsync: createDestination } = useCreateDestination();
-  const { mutateAsync: setExternalActorEnabled } = useSetExternalActorEnabled();
+  const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
   const { registerNotification } = useNotificationService();
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
@@ -98,9 +98,10 @@ export const CreateDestinationPage: React.FC = () => {
       values.setupFlow !== "agent" &&
       supportedDestinationDefinitionIds.has(connector.destinationDefinitionId);
     if (shouldSyncContextLayer) {
-      void setExternalActorEnabled({
+      void setFusionActorEnablement({
         actorId: result.destinationId,
         actorKind: "destination",
+        workspaceId: result.workspaceId,
         enabled: contextLayerAgentAccess,
       }).catch(() => {
         registerNotification({

@@ -8,9 +8,10 @@ import {
   useAgentsProvisioningStatus,
   useUnenrollOrganizationFromAgents,
   useEnrollOrganizationInAgents,
-  useExternalWorkspaceConnectors,
+  useEnableFusionWorkspaceActors,
+  useFusionWorkspaceConnectors,
   useListWorkspacesInOrganization,
-  useSetExternalActorEnabled,
+  useSetFusionActorEnablement,
 } from "core/api";
 import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { useModalService } from "core/services/Modal";
@@ -29,9 +30,10 @@ jest.mock("core/api", () => ({
   useAgentsProvisioningStatus: jest.fn(),
   useUnenrollOrganizationFromAgents: jest.fn(),
   useEnrollOrganizationInAgents: jest.fn(),
-  useExternalWorkspaceConnectors: jest.fn(),
+  useFusionWorkspaceConnectors: jest.fn(),
   useListWorkspacesInOrganization: jest.fn(),
-  useSetExternalActorEnabled: jest.fn(),
+  useSetFusionActorEnablement: jest.fn(),
+  useEnableFusionWorkspaceActors: jest.fn(() => ({ mutateAsync: jest.fn().mockResolvedValue([]) })),
 }));
 
 jest.mock("core/services/Modal", () => ({
@@ -78,11 +80,11 @@ const mockUseUnenrollOrganizationFromAgents = useUnenrollOrganizationFromAgents 
 const mockUseListWorkspacesInOrganization = useListWorkspacesInOrganization as jest.MockedFunction<
   typeof useListWorkspacesInOrganization
 >;
-const mockUseExternalWorkspaceConnectors = useExternalWorkspaceConnectors as jest.MockedFunction<
-  typeof useExternalWorkspaceConnectors
+const mockUseFusionWorkspaceConnectors = useFusionWorkspaceConnectors as jest.MockedFunction<
+  typeof useFusionWorkspaceConnectors
 >;
-const mockUseSetExternalActorEnabled = useSetExternalActorEnabled as jest.MockedFunction<
-  typeof useSetExternalActorEnabled
+const mockUseSetFusionActorEnablement = useSetFusionActorEnablement as jest.MockedFunction<
+  typeof useSetFusionActorEnablement
 >;
 const mockUseModalService = useModalService as jest.MockedFunction<typeof useModalService>;
 const mockUseNotificationService = useNotificationService as jest.MockedFunction<typeof useNotificationService>;
@@ -187,14 +189,14 @@ describe("ContextLayerPage", () => {
         }) as never
     );
     mockUseListWorkspacesInOrganization.mockReturnValue({ data: { pages: [] } } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [],
       destinations: [],
       isLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync: jest.fn() } as never);
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync: jest.fn() } as never);
     mockUseGeneratedIntent.mockReturnValue(true);
     mockUseModalService.mockReturnValue({ openModal: jest.fn() } as never);
     mockUseNotificationService.mockReturnValue({ registerNotification: jest.fn() } as never);
@@ -270,9 +272,60 @@ describe("ContextLayerPage", () => {
     await waitFor(() =>
       expect(mutateAsync).toHaveBeenCalledWith({
         workspaceIds: ["workspace-1", "workspace-2"],
-        addAllSupportedActors: true,
+        addAllSupportedActors: false,
       })
     );
+  });
+
+  it.each(["inventory", "actor"])("retries %s failures in the existing enrollment modal", async (failure) => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: false,
+      external_cloud_eligible: true,
+    } as never);
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
+    } as never);
+    const failedActors = [{ actorId: "source-1", actorKind: "source", workspaceId: "workspace-1" }];
+    const enableActors = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockImplementationOnce(() =>
+        failure === "inventory" ? Promise.reject(new Error("Inventory unavailable")) : Promise.resolve(failedActors)
+      )
+      .mockResolvedValueOnce([]);
+    jest.mocked(useEnableFusionWorkspaceActors).mockReturnValue({ mutateAsync: enableActors } as never);
+    mockUseModalService.mockReturnValue({
+      openModal: jest.fn().mockImplementation(({ content }) => {
+        const Content = content;
+        const modal = render(
+          <IntlProvider locale="en" messages={messages}>
+            <Content onCancel={jest.fn()} onComplete={() => modal.unmount()} />
+          </IntlProvider>
+        );
+        return Promise.resolve();
+      }),
+    } as never);
+
+    renderWithIntl();
+    const acceptEnrollment = () => {
+      fireEvent.click(screen.getByRole("button", { name: "Enable Context Layer" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: messages["cloud.contextLayer.terms.acceptTerms"] }));
+      fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
+    };
+    acceptEnrollment();
+    await waitFor(() => expect(enableActors).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Accept and Enable" })).not.toBeInTheDocument());
+    acceptEnrollment();
+    await waitFor(() => expect(enableActors).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Accept and Enable" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Accept and Enable" }));
+    await waitFor(() =>
+      expect(enableActors).toHaveBeenNthCalledWith(3, {
+        workspaceIds: ["workspace-1"],
+        retryActors: failure === "inventory" ? undefined : failedActors,
+      })
+    );
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Accept and Enable" })).not.toBeInTheDocument());
   });
 
   it("renders workspace connector access for an enrolled organization", () => {
@@ -420,17 +473,24 @@ describe("ContextLayerPage", () => {
       },
     } as never);
     const mutateAsync = jest.fn().mockResolvedValue({ enabled: false });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
-    mockUseExternalWorkspaceConnectors.mockImplementation((workspaceId) =>
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockImplementation((workspaceId) =>
       workspaceId === "workspace-1"
         ? {
             sources: [
-              { id: "source-1", name: "GitHub account", supported: true, enabled: true },
+              {
+                id: "source-1",
+                name: "GitHub account",
+                supported: true,
+                state: { enable_agent_access: true, enable_indexing: false },
+                enabled: true,
+              },
               {
                 id: "source-2",
                 name: "Stripe account",
                 supported: true,
                 enabled: false,
+                state: { enable_agent_access: false, enable_indexing: false },
               },
             ],
             destinations: [
@@ -439,12 +499,14 @@ describe("ContextLayerPage", () => {
                 name: "BigQuery warehouse",
                 supported: false,
                 enabled: false,
+                state: { enable_agent_access: false, enable_indexing: false },
               },
               {
                 id: "destination-2",
                 name: "Snowflake warehouse",
                 supported: true,
                 enabled: true,
+                state: { enable_agent_access: false, enable_indexing: false },
               },
             ],
             isLoading: false,
@@ -472,6 +534,8 @@ describe("ContextLayerPage", () => {
       expect(mutateAsync).toHaveBeenCalledWith({
         actorId: "source-1",
         actorKind: "source",
+        workspaceId: "workspace-1",
+        expectedState: { enable_agent_access: true, enable_indexing: false },
         enabled: false,
       })
     );
@@ -492,11 +556,23 @@ describe("ContextLayerPage", () => {
       isLoading: false,
     } as never);
     const mutateAsync = jest.fn().mockResolvedValue({ enabled: true });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [
-        { id: "source-1", name: "GitHub account", supported: true, enabled: true },
-        { id: "source-2", name: "Stripe account", supported: true, enabled: false },
+        {
+          id: "source-1",
+          name: "GitHub account",
+          supported: true,
+          state: { enable_agent_access: true, enable_indexing: false },
+          enabled: true,
+        },
+        {
+          id: "source-2",
+          name: "Stripe account",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: false,
+        },
       ],
       destinations: [],
       isLoading: false,
@@ -511,12 +587,24 @@ describe("ContextLayerPage", () => {
     expect(mutateAsync).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Disable" }));
     await waitFor(() =>
-      expect(mutateAsync).toHaveBeenCalledWith({ actorId: "source-1", actorKind: "source", enabled: false })
+      expect(mutateAsync).toHaveBeenCalledWith({
+        actorId: "source-1",
+        actorKind: "source",
+        workspaceId: "workspace-1",
+        expectedState: { enable_agent_access: true, enable_indexing: false },
+        enabled: false,
+      })
     );
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Stripe account" }));
     await waitFor(() =>
-      expect(mutateAsync).toHaveBeenCalledWith({ actorId: "source-2", actorKind: "source", enabled: true })
+      expect(mutateAsync).toHaveBeenCalledWith({
+        actorId: "source-2",
+        actorKind: "source",
+        workspaceId: "workspace-1",
+        expectedState: { enable_agent_access: false, enable_indexing: false },
+        enabled: true,
+      })
     );
     expect(screen.queryByTestId("confirmationModal")).not.toBeInTheDocument();
   });
@@ -552,7 +640,7 @@ describe("ContextLayerPage", () => {
           isLoading: false,
         }) as never
     );
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [],
       destinations: [],
       isLoading: false,
@@ -593,11 +681,27 @@ describe("ContextLayerPage", () => {
       isLoading: false,
     } as never);
     const mutateAsync = jest.fn();
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
     mockUseGeneratedIntent.mockReturnValue(false);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "source-1", name: "GitHub account", supported: true, enabled: true }],
-      destinations: [{ id: "destination-1", name: "BigQuery warehouse", supported: false, enabled: false }],
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "source-1",
+          name: "GitHub account",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
+      destinations: [
+        {
+          id: "destination-1",
+          name: "BigQuery warehouse",
+          supported: false,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: false,
+        },
+      ],
       isLoading: false,
       sourcesError: false,
       destinationsError: false,
@@ -624,9 +728,17 @@ describe("ContextLayerPage", () => {
       data: { pages: [{ workspaces: [{ workspaceId: "workspace-1", name: "Workspace 1" }] }] },
       isLoading: false,
     } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [],
-      destinations: [{ id: "destination-1", name: "BigQuery warehouse", supported: true, enabled: true }],
+      destinations: [
+        {
+          id: "destination-1",
+          name: "BigQuery warehouse",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
       isLoading: false,
       sourcesError: true,
       destinationsError: false,
@@ -656,9 +768,17 @@ describe("ContextLayerPage", () => {
       isLoading: false,
     } as never);
     const mutateAsync = jest.fn().mockResolvedValue({ enabled: false });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "source-1", name: "GitHub account", supported: true, enabled: true }],
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "source-1",
+          name: "GitHub account",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
       destinations: [],
       isLoading: false,
       sourcesError: false,
@@ -700,11 +820,19 @@ describe("ContextLayerPage", () => {
       isLoading: false,
     } as never);
     const mutateAsync = jest.fn().mockRejectedValue(new Error("failed"));
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync } as never);
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync } as never);
     const registerNotification = jest.fn();
     mockUseNotificationService.mockReturnValue({ registerNotification } as never);
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
-      sources: [{ id: "source-1", name: "GitHub account", supported: true, enabled: true }],
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
+      sources: [
+        {
+          id: "source-1",
+          name: "GitHub account",
+          supported: true,
+          state: { enable_agent_access: false, enable_indexing: false },
+          enabled: true,
+        },
+      ],
       destinations: [],
       isLoading: false,
       sourcesError: false,

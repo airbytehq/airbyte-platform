@@ -49,3 +49,5 @@ export * from "./tags";
 export * from "./workspaces";
 export * from "./agents";
 export * from "./agentsPlatform";
+
+export * from "./fusionEnablements";

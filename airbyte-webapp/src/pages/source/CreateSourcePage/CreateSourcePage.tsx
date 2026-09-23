@@ -23,7 +23,7 @@ import {
   useAgentsSupportedSourceDefinitionIds,
   useCreateSource,
   useGetSourceDefinitionSpecificationAsync,
-  useSetExternalActorEnabled,
+  useSetFusionActorEnablement,
   useSourceDefinitionList,
 } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
@@ -50,14 +50,13 @@ export const CreateSourcePage: React.FC = () => {
   const { isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId || null);
   const { sourceDefinitions } = useSourceDefinitionList();
   const { mutateAsync: createSource } = useCreateSource();
-  const { mutateAsync: setExternalActorEnabled } = useSetExternalActorEnabled();
+  const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
   const { registerNotification } = useNotificationService();
   const isCloudApp = useIsCloudApp();
   const showAgentsOptIn = useShowAgentsOptIn();
   const status = useAgentsProvisioningStatus({ enabled: isCloudApp && showAgentsOptIn });
   const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
   const canManage = useGeneratedIntent(Intent.CreateOrEditSource);
-  // Semantic search is UI-only until Sonar exposes an endpoint.
   // Users who cannot change the toggles must not be opted in by default.
   const [contextLayerOptIn, setContextLayerOptIn] = useState<SourceContextLayerOptInValue>({
     agentAccess: canManage,
@@ -111,10 +110,14 @@ export const CreateSourcePage: React.FC = () => {
       values.setupFlow !== "agent" &&
       supportedSourceDefinitionIds.has(connector.sourceDefinitionId);
     if (shouldSyncContextLayer) {
-      void setExternalActorEnabled({
+      void setFusionActorEnablement({
         actorId: result.sourceId,
         actorKind: "source",
-        enabled: contextLayerOptIn.agentAccess,
+        workspaceId: result.workspaceId,
+        state: {
+          enable_agent_access: contextLayerOptIn.agentAccess,
+          enable_indexing: contextLayerOptIn.agentAccess && contextLayerOptIn.semanticSearch,
+        },
       }).catch(() => {
         registerNotification({
           id: "cloud.contextLayer.sourceOptIn.syncFailed",

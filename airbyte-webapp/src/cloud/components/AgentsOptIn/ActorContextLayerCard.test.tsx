@@ -3,7 +3,7 @@ import { IntlProvider } from "react-intl";
 import { MemoryRouter } from "react-router-dom";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useAgentsProvisioningStatus, useExternalWorkspaceConnectors, useSetExternalActorEnabled } from "core/api";
+import { useAgentsProvisioningStatus, useFusionWorkspaceConnectors, useSetFusionActorEnablement } from "core/api";
 import { ConfirmationModalService } from "core/services/ConfirmationModal";
 import { NotificationService } from "core/services/Notification";
 import { useIsCloudApp } from "core/utils/app";
@@ -18,8 +18,14 @@ jest.mock("area/workspace/utils", () => ({
 
 jest.mock("core/api", () => ({
   useAgentsProvisioningStatus: jest.fn(),
-  useExternalWorkspaceConnectors: jest.fn(),
-  useSetExternalActorEnabled: jest.fn(),
+  useFusionWorkspaceConnectors: jest.fn(),
+  useSetFusionActorEnablement: jest.fn(),
+  useFusionActorEnablement: jest.fn(() => ({
+    data: { enable_agent_access: false, enable_indexing: false },
+    isLoading: false,
+  })),
+  useFusionActorSaving: jest.fn(() => false),
+  fusionEnablementState: jest.fn((read) => read),
 }));
 
 jest.mock("core/utils/app", () => ({
@@ -39,11 +45,11 @@ const mockUseCurrentWorkspaceId = useCurrentWorkspaceId as jest.MockedFunction<t
 const mockUseAgentsProvisioningStatus = useAgentsProvisioningStatus as jest.MockedFunction<
   typeof useAgentsProvisioningStatus
 >;
-const mockUseExternalWorkspaceConnectors = useExternalWorkspaceConnectors as jest.MockedFunction<
-  typeof useExternalWorkspaceConnectors
+const mockUseFusionWorkspaceConnectors = useFusionWorkspaceConnectors as jest.MockedFunction<
+  typeof useFusionWorkspaceConnectors
 >;
-const mockUseSetExternalActorEnabled = useSetExternalActorEnabled as jest.MockedFunction<
-  typeof useSetExternalActorEnabled
+const mockUseSetFusionActorEnablement = useSetFusionActorEnablement as jest.MockedFunction<
+  typeof useSetFusionActorEnablement
 >;
 const mockUseIsCloudApp = useIsCloudApp as jest.MockedFunction<typeof useIsCloudApp>;
 const mockUseShowAgentsOptIn = useShowAgentsOptIn as jest.MockedFunction<typeof useShowAgentsOptIn>;
@@ -90,14 +96,14 @@ describe("ActorContextLayerCard", () => {
       external_cloud_eligible: true,
       eligible_external_organization_id: null,
     });
-    mockUseExternalWorkspaceConnectors.mockReturnValue({
+    mockUseFusionWorkspaceConnectors.mockReturnValue({
       sources: [{ id: "actor-id", name: "GitHub", supported: true, enabled: true }],
       destinations: [{ id: "actor-id", name: "Snowflake", supported: true, enabled: true }],
       isLoading: false,
       sourcesError: false,
       destinationsError: false,
     });
-    mockUseSetExternalActorEnabled.mockReturnValue({ mutateAsync: jest.fn() } as never);
+    mockUseSetFusionActorEnablement.mockReturnValue({ mutateAsync: jest.fn() } as never);
     mockUseIsCloudApp.mockReturnValue(true);
     mockUseShowAgentsOptIn.mockReturnValue(true);
     mockUseGeneratedIntent.mockReturnValue(true);

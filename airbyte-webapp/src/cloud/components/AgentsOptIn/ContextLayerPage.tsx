@@ -16,9 +16,11 @@ import {
   useAgentsProvisioningStatusQuery,
   useUnenrollOrganizationFromAgents,
   useEnrollOrganizationInAgents,
-  useExternalWorkspaceConnectors,
+  useFusionWorkspaceConnectors,
   useListWorkspacesInOrganization,
-  useSetExternalActorEnabled,
+  useSetFusionActorEnablement,
+  useEnableFusionWorkspaceActors,
+  FusionEnablementState,
 } from "core/api";
 import { useConfirmationModalService } from "core/services/ConfirmationModal";
 import { useModalService } from "core/services/Modal";
@@ -37,6 +39,9 @@ interface Connector {
   name: string;
   enabled: boolean;
   supported: boolean;
+  state?: FusionEnablementState;
+  loading?: boolean;
+  error?: boolean;
 }
 
 interface WorkspaceConnectorData {
@@ -55,10 +60,11 @@ const WorkspaceConnectorCard: React.FC<{
   const [pendingConnectors, setPendingConnectors] = useState<Record<string, boolean>>({});
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
-  const { sources, destinations, isLoading, sourcesError, destinationsError } = useExternalWorkspaceConnectors(
-    workspace.workspaceId
+  const { sources, destinations, isLoading, sourcesError, destinationsError } = useFusionWorkspaceConnectors(
+    workspace.workspaceId,
+    { hydrate: isExpanded }
   );
-  const { mutateAsync: setExternalActorEnabled } = useSetExternalActorEnabled();
+  const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
   const confirmDisable = useConfirmContextLayerDisable();
   const sourceCount = sources.filter(
     (connector) =>
@@ -83,7 +89,13 @@ const WorkspaceConnectorCard: React.FC<{
           <Switch
             size="sm"
             checked={checked}
-            disabled={!canManageOrganizationPermissions || !connector.supported || pendingConnectors[key]}
+            disabled={
+              !canManageOrganizationPermissions ||
+              !connector.supported ||
+              connector.loading ||
+              connector.error ||
+              pendingConnectors[key]
+            }
             onChange={
               canManageOrganizationPermissions
                 ? async (event) => {
@@ -94,8 +106,10 @@ const WorkspaceConnectorCard: React.FC<{
                     setPendingConnectors((current) => ({ ...current, [key]: true }));
                     onToggle(key, enabled);
                     try {
-                      const result = await setExternalActorEnabled({
+                      const result = await setFusionActorEnablement({
                         actorId: connector.id,
+                        workspaceId: workspace.workspaceId,
+                        expectedState: connector.state,
                         actorKind,
                         enabled,
                       });
@@ -389,6 +403,7 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
   const status = statusQuery.data;
   const isEligible = Boolean(status && (status.is_enrolled || (status.external_cloud_eligible && showAgentsOptIn)));
   const enrollOrganization = useEnrollOrganizationInAgents();
+  const enableWorkspaceActors = useEnableFusionWorkspaceActors();
   const unenrollOrganization = useUnenrollOrganizationFromAgents();
   const { openModal } = useModalService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -413,6 +428,8 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
   }
 
   const openTermsModal = () => {
+    let enrolled = false;
+    let retryActors: Parameters<typeof enableWorkspaceActors.mutateAsync>[0]["retryActors"];
     setIsOpeningModal(true);
     void openModal({
       title: formatMessage({ id: "cloud.contextLayer.terms.title" }),
@@ -445,7 +462,19 @@ const ContextLayerPageContent: React.FC<{ showAgentsOptIn: boolean }> = ({ showA
             if (workspaceIds.length === 0) {
               throw new Error("No workspaces available for enrollment");
             }
-            await enrollOrganization.mutateAsync({ workspaceIds, addAllSupportedActors: true });
+            if (!enrolled) {
+              await enrollOrganization.mutateAsync({ workspaceIds, addAllSupportedActors: false });
+              enrolled = true;
+            }
+            try {
+              retryActors = await enableWorkspaceActors.mutateAsync({ workspaceIds, retryActors });
+            } catch (error) {
+              retryActors = undefined;
+              throw error;
+            }
+            if (retryActors.length > 0) {
+              throw new Error("Connector enablement failed");
+            }
           }}
         />
       ),
