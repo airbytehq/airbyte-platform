@@ -277,3 +277,5 @@ object ConfigurableSsoDefaultRole : Temporary<Boolean>(key = "platform.configura
 object UseOptimizedStreamStatusQuery : Temporary<Boolean>(key = "platform.use-optimized-stream-status-query", default = false)
 
 object UseReadReplicaForStreamStatus : Temporary<Boolean>(key = "platform.use-read-replica-for-stream-status", default = false)
+
+object AdpExternalCloudOrganizationsEnabled : Temporary<Boolean>(key = "adp.external-cloud-orgs.enabled", default = false)

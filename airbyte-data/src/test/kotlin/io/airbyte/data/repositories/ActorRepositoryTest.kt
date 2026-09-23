@@ -54,4 +54,27 @@ class ActorRepositoryTest : AbstractConfigRepositoryTest() {
 
     assertEquals(name, foundActor?.name)
   }
+
+  @Test
+  fun `ordinary entity updates preserve independently written enablements`() {
+    for (type in listOf(ActorType.source, ActorType.destination)) {
+      val actor =
+        actorRepository.save(
+          Actor(
+            workspaceId = UUID.randomUUID(),
+            actorDefinitionId = UUID.randomUUID(),
+            name = "before",
+            configuration = Jsons.emptyObject(),
+            actorType = type,
+          ),
+        )
+      jooqDslContext.execute("UPDATE actor SET enable_agent_access = true, enable_indexing = true WHERE id = ?", actor.id)
+      // Updating an entity read before enablement was written must preserve that later write.
+      actor.name = "after"
+      actor.configuration = Jsons.jsonNode(mapOf("edited" to true))
+      actorRepository.update(actor)
+      assertEquals("after", actorRepository.findByActorId(actor.id!!)!!.name)
+      assertEquals(true, jooqDslContext.fetchValue("SELECT enable_agent_access AND enable_indexing FROM actor WHERE id = ?", actor.id))
+    }
+  }
 }

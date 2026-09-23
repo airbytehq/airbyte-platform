@@ -20,6 +20,9 @@ import io.airbyte.api.client.generated.DestinationApi
 import io.airbyte.api.client.generated.DestinationDefinitionApi
 import io.airbyte.api.client.generated.DestinationDefinitionSpecificationApi
 import io.airbyte.api.client.generated.DomainVerificationsApi
+import io.airbyte.api.client.generated.FusionDestinationEnablementApi
+import io.airbyte.api.client.generated.FusionEnablementResolverApi
+import io.airbyte.api.client.generated.FusionSourceEnablementApi
 import io.airbyte.api.client.generated.HealthApi
 import io.airbyte.api.client.generated.JobRetryStatesApi
 import io.airbyte.api.client.generated.JobsApi
@@ -88,6 +91,9 @@ open class AirbyteApiClient(
   val destinationDefinitionSpecificationApi =
     DestinationDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
   val domainVerificationsApi = DomainVerificationsApi(basePath = basePath, client = httpClient, policy = policy)
+  val fusionSourceEnablementApi = FusionSourceEnablementApi(basePath = basePath, client = httpClient, policy = policy)
+  val fusionDestinationEnablementApi = FusionDestinationEnablementApi(basePath = basePath, client = httpClient, policy = policy)
+  val fusionEnablementResolverApi = FusionEnablementResolverApi(basePath = basePath, client = httpClient, policy = policy)
   val healthApi = HealthApi(basePath = basePath, client = httpClient, policy = policy)
   val jobsApi = JobsApi(basePath = basePath, client = httpClient, policy = policy)
   val jobRetryStatesApi = JobRetryStatesApi(basePath = basePath, client = httpClient, policy = policy)

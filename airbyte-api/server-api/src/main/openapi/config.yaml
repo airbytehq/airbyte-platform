@@ -111,6 +111,348 @@ tags:
     description: Organization domain verification endpoints.
 
 paths:
+  /v1/sources/{sourceId}/enablement:
+    post:
+      tags: [fusion_source_enablement]
+      operationId: createFusionSourceEnablement
+      summary: Create source enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags with null backfill start timestamp
+        or retries identical state, otherwise returns 409. PUT requires the last-read expectedState
+        and atomically compares all flags and nullable backfill start timestamp, returning 409 on stale state.
+        Omitted or null backfill start timestamp clears the configured value. DELETE clears all flags and backfill start timestamp without deleting the actor.
+        Search indexing requires enable_agent_access. Sources cannot configure enable_backfill or backfill start timestamp.
+        Enabling flags or changing backfill start timestamp while enable_backfill is enabled requires an Airbyte-managed region;
+        disabling flags remains possible after region moves.
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FusionSourceEnablementCreate"
+      responses:
+        "200":
+          description: Canonical actor enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionSourceEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Actor permission required
+        "404":
+          description: Active actor of the requested kind not found
+        "409":
+          description: Stale expected state, conflicting initialization, or ineligible region
+    get:
+      tags: [fusion_source_enablement]
+      operationId: getFusionSourceEnablement
+      summary: Get source enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags with null backfill start timestamp
+        or retries identical state, otherwise returns 409. PUT requires the last-read expectedState
+        and atomically compares all flags and nullable backfill start timestamp, returning 409 on stale state.
+        Omitted or null backfill start timestamp clears the configured value. DELETE clears all flags and backfill start timestamp without deleting the actor.
+        Search indexing requires enable_agent_access. Sources cannot configure enable_backfill or backfill start timestamp.
+        Enabling flags or changing backfill start timestamp while enable_backfill is enabled requires an Airbyte-managed region;
+        disabling flags remains possible after region moves.
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Canonical actor enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionSourceEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Actor permission required
+        "404":
+          description: Active actor of the requested kind not found
+        "409":
+          description: Stale expected state, conflicting initialization, or ineligible region
+    put:
+      tags: [fusion_source_enablement]
+      operationId: updateFusionSourceEnablement
+      summary: Update source enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags with null backfill start timestamp
+        or retries identical state, otherwise returns 409. PUT requires the last-read expectedState
+        and atomically compares all flags and nullable backfill start timestamp, returning 409 on stale state.
+        Omitted or null backfill start timestamp clears the configured value. DELETE clears all flags and backfill start timestamp without deleting the actor.
+        Search indexing requires enable_agent_access. Sources cannot configure enable_backfill or backfill start timestamp.
+        Enabling flags or changing backfill start timestamp while enable_backfill is enabled requires an Airbyte-managed region;
+        disabling flags remains possible after region moves.
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FusionSourceEnablementUpdate"
+      responses:
+        "200":
+          description: Canonical actor enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionSourceEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Actor permission required
+        "404":
+          description: Active actor of the requested kind not found
+        "409":
+          description: Stale expected state, conflicting initialization, or ineligible region
+    delete:
+      tags: [fusion_source_enablement]
+      operationId: deleteFusionSourceEnablement
+      summary: Delete source enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags with null backfill start timestamp
+        or retries identical state, otherwise returns 409. PUT requires the last-read expectedState
+        and atomically compares all flags and nullable backfill start timestamp, returning 409 on stale state.
+        Omitted or null backfill start timestamp clears the configured value. DELETE clears all flags and backfill start timestamp without deleting the actor.
+        Search indexing requires enable_agent_access. Sources cannot configure enable_backfill or backfill start timestamp.
+        Enabling flags or changing backfill start timestamp while enable_backfill is enabled requires an Airbyte-managed region;
+        disabling flags remains possible after region moves.
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Canonical actor enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionSourceEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Actor permission required
+        "404":
+          description: Active actor of the requested kind not found
+        "409":
+          description: Stale expected state, conflicting initialization, or ineligible region
+  /v1/destinations/{destinationId}/enablement:
+    post:
+      tags: [fusion_destination_enablement]
+      operationId: createFusionDestinationEnablement
+      summary: Create destination enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags with null backfill start timestamp
+        or retries identical state, otherwise returns 409. PUT requires the last-read expectedState
+        and atomically compares all flags and nullable backfill start timestamp, returning 409 on stale state.
+        Omitted or null backfill start timestamp clears the configured value. DELETE clears all flags and backfill start timestamp without deleting the actor.
+        Search indexing and enable_backfill independently require enable_agent_access.
+        Enabling flags or changing backfill start timestamp while enable_backfill is enabled requires an Airbyte-managed region;
+        disabling flags remains possible after region moves.
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FusionDestinationEnablementCreate"
+      responses:
+        "200":
+          description: Canonical actor enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionDestinationEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Actor permission required
+        "404":
+          description: Active actor of the requested kind not found
+        "409":
+          description: Stale expected state, conflicting initialization, or ineligible region
+    get:
+      tags: [fusion_destination_enablement]
+      operationId: getFusionDestinationEnablement
+      summary: Get destination enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags with null backfill start timestamp
+        or retries identical state, otherwise returns 409. PUT requires the last-read expectedState
+        and atomically compares all flags and nullable backfill start timestamp, returning 409 on stale state.
+        Omitted or null backfill start timestamp clears the configured value. DELETE clears all flags and backfill start timestamp without deleting the actor.
+        Search indexing and enable_backfill independently require enable_agent_access.
+        Enabling flags or changing backfill start timestamp while enable_backfill is enabled requires an Airbyte-managed region;
+        disabling flags remains possible after region moves.
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Canonical actor enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionDestinationEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Actor permission required
+        "404":
+          description: Active actor of the requested kind not found
+        "409":
+          description: Stale expected state, conflicting initialization, or ineligible region
+    put:
+      tags: [fusion_destination_enablement]
+      operationId: updateFusionDestinationEnablement
+      summary: Update destination enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags with null backfill start timestamp
+        or retries identical state, otherwise returns 409. PUT requires the last-read expectedState
+        and atomically compares all flags and nullable backfill start timestamp, returning 409 on stale state.
+        Omitted or null backfill start timestamp clears the configured value. DELETE clears all flags and backfill start timestamp without deleting the actor.
+        Search indexing and enable_backfill independently require enable_agent_access.
+        Enabling flags or changing backfill start timestamp while enable_backfill is enabled requires an Airbyte-managed region;
+        disabling flags remains possible after region moves.
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FusionDestinationEnablementUpdate"
+      responses:
+        "200":
+          description: Canonical actor enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionDestinationEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Actor permission required
+        "404":
+          description: Active actor of the requested kind not found
+        "409":
+          description: Stale expected state, conflicting initialization, or ineligible region
+    delete:
+      tags: [fusion_destination_enablement]
+      operationId: deleteFusionDestinationEnablement
+      summary: Delete destination enablements (Cloud only)
+      description: >-
+        Internal Config API only. POST initializes all-false flags with null backfill start timestamp
+        or retries identical state, otherwise returns 409. PUT requires the last-read expectedState
+        and atomically compares all flags and nullable backfill start timestamp, returning 409 on stale state.
+        Omitted or null backfill start timestamp clears the configured value. DELETE clears all flags and backfill start timestamp without deleting the actor.
+        Search indexing and enable_backfill independently require enable_agent_access.
+        Enabling flags or changing backfill start timestamp while enable_backfill is enabled requires an Airbyte-managed region;
+        disabling flags remains possible after region moves.
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Canonical actor enablements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionDestinationEnablementRead"
+        "400":
+          description: Invalid enablements
+        "401":
+          description: Authentication required
+        "403":
+          description: Actor permission required
+        "404":
+          description: Active actor of the requested kind not found
+        "409":
+          description: Stale expected state, conflicting initialization, or ineligible region
+  /v1/connections/resolve_enablement_for_sync:
+    post:
+      tags: [fusion_enablement_resolver]
+      operationId: resolveFusionEnablementForSync
+      summary: Resolve trusted destination runtime settings for an assigned sync (Cloud only)
+      description: >-
+        Requires a dataplane service account assigned to the persisted workload. All identity
+        assertions and the actual connector image are verified against platform metadata.
+        No secret values are returned. Rollout is disabled by default.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FusionEnablementResolveRequest"
+      responses:
+        "200":
+          description: Trusted destination settings, or an explicit disabled result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionEnablementResolveResponse"
+        "403":
+          description: Workload is not assigned to this dataplane identity
+        "404":
+          description: Active sync identity not found
+        "409":
+          description: Enabled sync has invalid routing, connector image, or runtime configuration
   /v1/workspaces/create:
     post:
       tags:
@@ -11825,6 +12167,198 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    FusionSourceEnablementState:
+      type: object
+      additionalProperties: false
+      required: [enable_agent_access, enable_indexing]
+      properties:
+        enable_agent_access:
+          type: boolean
+        enable_indexing:
+          type: boolean
+    FusionSourceEnablementCreate:
+      type: object
+      additionalProperties: false
+      required: [enable_agent_access, enable_indexing]
+      properties:
+        enable_agent_access:
+          type: boolean
+        enable_indexing:
+          type: boolean
+    FusionSourceEnablementUpdate:
+      type: object
+      additionalProperties: false
+      required: [enable_agent_access, enable_indexing, expectedState]
+      properties:
+        enable_agent_access:
+          type: boolean
+        enable_indexing:
+          type: boolean
+        expectedState:
+          $ref: "#/components/schemas/FusionSourceEnablementState"
+    FusionSourceEnablementRead:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          organizationId,
+          workspaceId,
+          actorId,
+          actorType,
+          enable_agent_access,
+          enable_indexing,
+        ]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        actorId:
+          type: string
+          format: uuid
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+        enable_agent_access:
+          type: boolean
+        enable_indexing:
+          type: boolean
+    FusionDestinationEnablementState:
+      type: object
+      additionalProperties: false
+      required: [enable_agent_access, enable_indexing, enable_backfill]
+      properties:
+        enable_agent_access:
+          type: boolean
+        enable_indexing:
+          type: boolean
+        enable_backfill:
+          type: boolean
+        backfill_start_time:
+          description: Optional backfill start timestamp with timezone and at most six fractional-second digits. Local and normalized UTC years must be 0001-9999 for PostgreSQL and RFC3339 roundtrip. Retained while agent access or backfill is disabled. Null or omission clears the saved timestamp.
+          type: string
+          format: date-time
+          nullable: true
+    FusionDestinationEnablementCreate:
+      type: object
+      additionalProperties: false
+      required: [enable_agent_access, enable_indexing, enable_backfill]
+      properties:
+        enable_agent_access:
+          type: boolean
+        enable_indexing:
+          type: boolean
+        enable_backfill:
+          type: boolean
+        backfill_start_time:
+          description: Optional backfill start timestamp with timezone and at most six fractional-second digits. Local and normalized UTC years must be 0001-9999 for PostgreSQL and RFC3339 roundtrip. Retained while agent access or backfill is disabled. Null or omission clears the saved timestamp.
+          type: string
+          format: date-time
+          nullable: true
+    FusionDestinationEnablementUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        [enable_agent_access, enable_indexing, enable_backfill, expectedState]
+      properties:
+        enable_agent_access:
+          type: boolean
+        enable_indexing:
+          type: boolean
+        enable_backfill:
+          type: boolean
+        backfill_start_time:
+          description: Optional backfill start timestamp with timezone and at most six fractional-second digits. Local and normalized UTC years must be 0001-9999 for PostgreSQL and RFC3339 roundtrip. Retained while agent access or backfill is disabled. Null or omission clears the saved timestamp.
+          type: string
+          format: date-time
+          nullable: true
+        expectedState:
+          $ref: "#/components/schemas/FusionDestinationEnablementState"
+    FusionDestinationEnablementRead:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          organizationId,
+          workspaceId,
+          actorId,
+          actorType,
+          enable_agent_access,
+          enable_indexing,
+          enable_backfill,
+        ]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        actorId:
+          type: string
+          format: uuid
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+        enable_agent_access:
+          type: boolean
+        enable_indexing:
+          type: boolean
+        enable_backfill:
+          type: boolean
+        backfill_start_time:
+          description: Optional backfill start timestamp with timezone and at most six fractional-second digits. Local and normalized UTC years must be 0001-9999 for PostgreSQL and RFC3339 roundtrip. Retained while agent access or backfill is disabled. Null or omission clears the saved timestamp.
+          type: string
+          format: date-time
+          nullable: true
+    FusionEnablementResolveRequest:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          organizationId,
+          workspaceId,
+          connectionId,
+          sourceId,
+          destinationId,
+          workloadId,
+          dataplaneGroupId,
+        ]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        connectionId:
+          type: string
+          format: uuid
+        sourceId:
+          type: string
+          format: uuid
+        destinationId:
+          type: string
+          format: uuid
+        dataplaneGroupId:
+          type: string
+          format: uuid
+        workloadId:
+          type: string
+          minLength: 1
+    FusionEnablementResolveResponse:
+      type: object
+      required: [destinationEnvironment, injectAwsBootstrapCredentials, reason]
+      properties:
+        destinationEnvironment:
+          type: object
+          additionalProperties:
+            type: string
+        injectAwsBootstrapCredentials:
+          type: boolean
+        reason:
+          type: string
+          enum: [rollout_disabled, not_enabled, enabled]
     # Private Link
     PrivateLinkStatus:
       type: string

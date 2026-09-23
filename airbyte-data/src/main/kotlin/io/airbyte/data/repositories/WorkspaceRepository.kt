@@ -12,6 +12,11 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface WorkspaceRepository : PageableRepository<Workspace, UUID> {
+  fun findByIdAndOrganizationIdAndTombstoneFalse(
+    id: UUID,
+    organizationId: UUID,
+  ): Workspace?
+
   fun findByNameAndOrganizationIdAndTombstoneFalse(
     name: String,
     organizationId: UUID,
