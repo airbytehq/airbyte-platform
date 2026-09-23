@@ -256,24 +256,32 @@ class AzureStorageClient(
  * @param gcsClient the [Storage] client, should only be specified for testing purposes
  */
 @Prototype
-class GcsStorageClient(
-  bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
+class GcsStorageClient private constructor(
+  override val bucketName: String,
   private val type: DocumentType,
   private val gcsClient: Storage,
+  checkBucketAccess: Boolean,
 ) : StorageClient {
   override val storageType = StorageType.GCS
   override val documentType = type
-  override val bucketName = bucketConfig.bucketName(type)
 
   @Inject
   constructor(
     bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
     storageConfig: AirbyteStorageConfig.GcsStorageConfig,
     @Parameter type: DocumentType,
-  ) : this(bucketConfig = bucketConfig, type = type, gcsClient = storageConfig.gcsClient())
+  ) : this(bucketName = bucketConfig.bucketName(type), type = type, gcsClient = storageConfig.gcsClient(), checkBucketAccess = true)
+
+  constructor(
+    bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
+    type: DocumentType,
+    gcsClient: Storage,
+  ) : this(bucketName = bucketConfig.bucketName(type), type = type, gcsClient = gcsClient, checkBucketAccess = true)
 
   init {
-    runCatching { createBucketIfNotExists() }
+    if (checkBucketAccess) {
+      runCatching { createBucketIfNotExists() }
+    }
   }
 
   override fun list(id: String): List<String> =
@@ -310,6 +318,15 @@ class GcsStorageClient(
     if (gcsClient.get(bucketName) == null) {
       gcsClient.create(BucketInfo.of(bucketName))
     }
+  }
+
+  companion object {
+    /** Builds a client around a preconfigured GCS client without requiring bucket metadata permissions. */
+    fun fromPrebuiltClient(
+      bucketName: String,
+      type: DocumentType,
+      gcsClient: Storage,
+    ): GcsStorageClient = GcsStorageClient(bucketName, type, gcsClient, checkBucketAccess = false)
   }
 }
 

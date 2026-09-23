@@ -40,6 +40,7 @@ dependencies {
   implementation(libs.kubernetes.client)
   implementation(libs.kotlin.coroutines)
   implementation(libs.kotlin.coroutines.sl4j)
+  implementation(libs.bundles.logback)
 
   implementation(project(":oss:airbyte-api:server-api-client"))
   implementation(project(":oss:airbyte-api:workload-api"))
@@ -66,8 +67,6 @@ dependencies {
   implementation(libs.retrofit)
 
   runtimeOnly(libs.snakeyaml)
-  runtimeOnly(libs.bundles.logback)
-
   testImplementation(libs.bundles.junit)
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.bundles.mockito.inline)

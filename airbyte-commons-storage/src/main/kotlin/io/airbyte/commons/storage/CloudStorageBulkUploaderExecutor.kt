@@ -40,6 +40,11 @@ object CloudStorageBulkUploaderExecutor {
     unit: TimeUnit,
   ): ScheduledFuture<*> = executorService.scheduleAtFixedRate(runnable, initDelay, period, unit)
 
+  /** Executes a one-time upload task on the shared appender executor. */
+  fun executeTask(runnable: Runnable) {
+    executorService.execute(runnable)
+  }
+
   /**
    * Stops the shared executor service.  This method should be called from a JVM shutdown hook
    * to ensure that the thread pool is stopped prior to exit/stopping the appenders.

@@ -44,6 +44,7 @@ fun main(args: Array<String>) {
 class Application(
   private val jobOrchestrator: ReplicationJobOrchestrator,
   @Named("replicationMdcScopeBuilder") private val replicationLogMdcBuilder: MdcScope.Builder,
+  private val flexLogAppenderInitializer: FlexLogAppenderInitializer,
 ) {
   /**
    * Configures logging/mdc scope, and creates all objects necessary to handle state updates.
@@ -54,9 +55,15 @@ class Application(
    * is updated appropriately.
    */
   @InternalForTesting
-  fun run(): Int =
+  fun run(): Int {
+    try {
+      flexLogAppenderInitializer.initialize()
+    } catch (_: Throwable) {
+      logger.warn { "Unable to initialize workload log delivery. Continuing workload execution." }
+    }
+
     // set mdc scope for the remaining execution
-    replicationLogMdcBuilder.build().use { _ ->
+    return replicationLogMdcBuilder.build().use { _ ->
       try {
         val result: String = jobOrchestrator.runJob().orElse("")
         logger.debug { "Job orchestrator completed with result: $result" }
@@ -66,4 +73,5 @@ class Application(
         FAILURE_EXIT_CODE
       }
     }
+  }
 }

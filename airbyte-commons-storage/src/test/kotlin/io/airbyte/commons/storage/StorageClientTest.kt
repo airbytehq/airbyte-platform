@@ -236,6 +236,22 @@ internal class GcsStorageClientTest {
   private val config = AirbyteStorageConfig.GcsStorageConfig(applicationCredentials = "app-creds")
 
   @Test
+  fun `prebuilt client skips bucket access checks`() {
+    val gcsClient = mockk<Storage>()
+
+    val client =
+      GcsStorageClient.fromPrebuiltClient(
+        bucketName = buckets.bucketName(DocumentType.LOGS),
+        type = DocumentType.LOGS,
+        gcsClient = gcsClient,
+      )
+
+    assertEquals(buckets.bucketName(DocumentType.LOGS), client.bucketName)
+    verify(exactly = 0) { gcsClient.get(any<String>(), *anyVararg()) }
+    verify(exactly = 0) { gcsClient.create(any<BucketInfo>()) }
+  }
+
+  @Test
   fun `blobId matches`() {
     val gcsClient: Storage =
       mockk {
