@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.api.client
 
+import com.fasterxml.jackson.core.JsonProcessingException
 import dev.failsafe.RetryPolicy
 import dev.failsafe.RetryPolicyBuilder
 import dev.failsafe.retrofit.FailsafeCall
@@ -13,6 +14,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workload.api.domain.ClaimResponse
 import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
+import io.airbyte.workload.api.domain.LogUploadAuthorization
 import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
@@ -36,6 +38,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import okhttp3.HttpUrl
 import retrofit2.Call
 import retrofit2.Response
+import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.time.toJavaDuration
@@ -48,6 +51,18 @@ class WorkloadApiClient internal constructor(
   private val retryConfig: RetryPolicyConfig,
 ) {
   private val retryPolicies = ConcurrentHashMap<KClass<*>, RetryPolicy<Response<Any>>>()
+  private val logUploadAuthorizationRetryPolicy: RetryPolicy<Response<LogUploadAuthorization>> by lazy {
+    createRetryPolicy(
+      exceptions = listOf(IOException::class.java),
+      abortExceptions = listOf(JsonProcessingException::class.java),
+      retryableResult = { response -> response.code() in 500..599 },
+      requestAttributes =
+        arrayOf(
+          MetricAttribute("method", "POST"),
+          MetricAttribute("url", LOG_UPLOAD_AUTHORIZATION_ROUTE),
+        ),
+    )
+  }
 
   fun workloadCreate(workloadCreateRequest: WorkloadCreateRequest) = api.workloadCreate(workloadCreateRequest).unit()
 
@@ -64,6 +79,9 @@ class WorkloadApiClient internal constructor(
   fun workloadLaunched(workloadLaunchedRequest: WorkloadLaunchedRequest) = api.workloadLaunched(workloadLaunchedRequest).unit()
 
   fun workloadGet(workloadId: String): Workload = api.workloadGet(workloadId).body()
+
+  fun workloadLogUploadAuthorization(workloadId: String): LogUploadAuthorization? =
+    api.workloadLogUploadAuthorization(workloadId).bodyOrNull(logUploadAuthorizationRetryPolicy, nullableSuccessCode = 204)
 
   fun workloadHeartbeat(workloadHeartbeatRequest: WorkloadHeartbeatRequest) = api.workloadHeartbeat(workloadHeartbeatRequest).unit()
 
@@ -119,9 +137,24 @@ class WorkloadApiClient internal constructor(
     val policy: RetryPolicy<Response<T>> =
       retryPolicies.computeIfAbsent(T::class) { createRetryPolicy<T>() as RetryPolicy<Response<Any>> } as RetryPolicy<Response<T>>
 
+    return bodyOrNull(policy)
+  }
+
+  private fun <T> Call<T>.bodyOrNull(
+    policy: RetryPolicy<Response<T>>,
+    nullableSuccessCode: Int? = null,
+  ): T? {
     val response = FailsafeCall.with(policy).compose(this).execute()
     if (response.isSuccessful) {
-      return response.body()
+      val body = response.body()
+      if (body == null && nullableSuccessCode != null && response.code() != nullableSuccessCode) {
+        throw ApiException(
+          statusCode = response.code(),
+          url = request().url.toString(),
+          message = "body cannot be null",
+        )
+      }
+      return body
     }
 
     throw ApiException(
@@ -169,25 +202,35 @@ class WorkloadApiClient internal constructor(
    *
    * TODO(cole): Extract this out when we start using more retrofit clients.
    */
-  private fun <T> createRetryPolicy(): RetryPolicy<Response<T>> {
+  private fun <T> createRetryPolicy(
+    exceptions: List<Class<out Exception>> = retryConfig.exceptions,
+    abortExceptions: List<Class<out Exception>> = emptyList(),
+    retryableResult: ((Response<T>) -> Boolean)? = null,
+    requestAttributes: Array<MetricAttribute>? = null,
+  ): RetryPolicy<Response<T>> {
     /**
      * Helper function for handling all the attributes published via the [MetricClient].
      */
     fun attrs(
       attempt: Int,
-      result: Response<T>,
+      result: Response<T>?,
     ): Array<MetricAttribute> =
       arrayOf(
         MetricAttribute("max-retries", retryConfig.maxRetries.toString()),
         MetricAttribute("retry-attempt", attempt.toString()),
-        MetricAttribute("method", result.raw().request.method),
       ) +
-        getUrlTags(result.raw().request.url)
+        (
+          requestAttributes
+            ?: result?.let {
+              arrayOf(MetricAttribute("method", it.raw().request.method)) + getUrlTags(it.raw().request.url)
+            }
+            ?: emptyArray()
+        )
 
     val policy: RetryPolicyBuilder<Response<T>> =
       RetryPolicy
         .builder<Response<T>>()
-        .handle(retryConfig.exceptions)
+        .handle(exceptions)
         // TODO move these metrics into a centralized metric registry as part of the MetricClient refactor/cleanup
         .onAbort {
           logger.warn { "Attempt aborted.  Attempt count ${it.attemptCount}" }
@@ -196,8 +239,9 @@ class WorkloadApiClient internal constructor(
           logger.error(it.exception) {
             val request =
               it.result
-                .raw()
-                .request.url
+                ?.raw()
+                ?.request
+                ?.url
             "Failed to call $request.  Last response: ${it.result}"
           }
           metricClient.count(metric = OssMetricsRegistry.WORKLOAD_API_CLIENT_REQUEST_FAILURE, attributes = attrs(it.attemptCount, it.result))
@@ -213,6 +257,11 @@ class WorkloadApiClient internal constructor(
         }.withJitter(retryConfig.jitterFactor)
         .withMaxRetries(retryConfig.maxRetries)
 
+    if (abortExceptions.isNotEmpty()) {
+      policy.abortOn(abortExceptions)
+    }
+    retryableResult?.let { policy.handleResultIf(it) }
+
     retryConfig.maxDelay?.let {
       policy.withDelay(retryConfig.delay.toJavaDuration(), it.toJavaDuration())
     } ?: run {
@@ -223,6 +272,7 @@ class WorkloadApiClient internal constructor(
   }
 }
 
+private const val LOG_UPLOAD_AUTHORIZATION_ROUTE = "/api/v1/workload/{workloadId}/log-upload-authorization"
 private val UUID_REGEX = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}".toRegex()
 
 private fun getUrlTags(httpUrl: HttpUrl?): Array<MetricAttribute> =

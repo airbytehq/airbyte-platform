@@ -26,6 +26,8 @@ interface WorkloadHandler {
 
   fun getWorkload(workloadId: String): ApiWorkload
 
+  fun getWorkloadOrganizationId(workloadId: String): UUID?
+
   fun getWorkloads(
     dataplaneId: List<String>?,
     workloadStatus: List<ApiWorkloadStatus>?,

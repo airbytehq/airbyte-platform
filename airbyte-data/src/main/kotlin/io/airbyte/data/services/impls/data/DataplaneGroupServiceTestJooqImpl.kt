@@ -58,6 +58,19 @@ class DataplaneGroupServiceTestJooqImpl(
         ?: throw ConfigNotFoundException(DataplaneGroup::class.toString(), id.toString())
     }
 
+  override fun getDataplaneGroup(
+    id: UUID,
+    organizationId: UUID,
+  ): DataplaneGroup =
+    database.query { ctx: DSLContext ->
+      ctx
+        .selectFrom(Tables.DATAPLANE_GROUP)
+        .where(Tables.DATAPLANE_GROUP.ID.eq(id))
+        .and(Tables.DATAPLANE_GROUP.ORGANIZATION_ID.eq(organizationId))
+        .fetchOneInto(DataplaneGroup::class.java)
+        ?: throw ConfigNotFoundException(DataplaneGroup::class.toString(), id.toString())
+    }
+
   override fun getDataplaneGroupByOrganizationIdAndName(
     organizationId: UUID,
     name: String,

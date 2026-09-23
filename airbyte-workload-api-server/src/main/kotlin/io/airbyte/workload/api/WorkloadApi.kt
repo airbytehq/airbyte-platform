@@ -295,8 +295,9 @@ open class WorkloadApi(
     @PathParam("workloadId") workloadId: String,
   ): Workload {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadId))
-    authorize(workloadId = workloadId)
-    return workloadHandler.getWorkload(workloadId)
+    val workload = workloadHandler.getWorkload(workloadId)
+    authorize(orgId = workload.organizationId)
+    return workload
   }
 
   /**
@@ -526,7 +527,7 @@ open class WorkloadApi(
     }
 
     if (workloadId != null) {
-      val orgId = workloadHandler.getWorkload(workloadId).organizationId
+      val orgId = workloadHandler.getWorkloadOrganizationId(workloadId)
       if (orgId != null) {
         req.withOrg(orgId)
       }

@@ -31,4 +31,9 @@ data class Workload(
   var signalInput: String? = null,
   var dataplaneGroup: String? = null,
   var priority: WorkloadPriority? = null,
+  @field:Schema(
+    accessMode = Schema.AccessMode.READ_ONLY,
+    requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+  )
+  var logDeliveryMode: LogDeliveryMode = LogDeliveryMode.STANDARD,
 )

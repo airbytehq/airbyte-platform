@@ -5,9 +5,13 @@
 package io.airbyte.workload.handler
 
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteWorkloadApiClientConfig
+import io.airbyte.workload.api.domain.LogDeliveryMode
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.errors.ConflictException
@@ -15,6 +19,7 @@ import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.DATAPLANE_ID
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.WORKLOAD_ID
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.dataplaneGroupService
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadHandler
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadQueueRepository
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadRepository
@@ -91,6 +96,103 @@ class WorkloadHandlerImplTest {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.of(domainWorkload))
     val apiWorkload = workloadHandler.getWorkload(WORKLOAD_ID)
     assertEquals(domainWorkload.id, apiWorkload.id)
+  }
+
+  @Test
+  fun `getWorkloadOrganizationId returns the organization without resolving log delivery topology`() {
+    val organizationId = UUID.randomUUID()
+    val domainWorkload =
+      Fixtures.workload(
+        organizationId = organizationId,
+        dataplaneGroup = UUID.randomUUID().toString(),
+        type = WorkloadType.SYNC,
+      )
+    every { workloadRepository.findById(WORKLOAD_ID) } returns Optional.of(domainWorkload)
+
+    val result = workloadHandler.getWorkloadOrganizationId(WORKLOAD_ID)
+
+    assertEquals(organizationId, result)
+    verify(exactly = 0) { dataplaneGroupService.getDataplaneGroup(any(), any()) }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = WorkloadType::class, names = ["SYNC", "CHECK", "DISCOVER"])
+  fun `getWorkload returns FLEX for an eligible workload in an organization-owned dataplane group`(workloadType: WorkloadType) {
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val domainWorkload =
+      Fixtures.workload(
+        organizationId = organizationId,
+        dataplaneGroup = dataplaneGroupId.toString(),
+        type = workloadType,
+      )
+    every { workloadRepository.findById(WORKLOAD_ID) } returns Optional.of(domainWorkload)
+    every { dataplaneGroupService.getDataplaneGroup(dataplaneGroupId, organizationId) } returns
+      DataplaneGroup().withId(dataplaneGroupId).withOrganizationId(organizationId)
+
+    val apiWorkload = workloadHandler.getWorkload(WORKLOAD_ID)
+
+    assertEquals(LogDeliveryMode.FLEX, apiWorkload.logDeliveryMode)
+    verify { dataplaneGroupService.getDataplaneGroup(dataplaneGroupId, organizationId) }
+  }
+
+  @ParameterizedTest
+  @MethodSource("missingOrMalformedTopology")
+  fun `getWorkload returns STANDARD for missing or malformed topology`(
+    organizationId: UUID?,
+    dataplaneGroup: String?,
+  ) {
+    val domainWorkload = Fixtures.workload(organizationId = organizationId, dataplaneGroup = dataplaneGroup)
+    every { workloadRepository.findById(WORKLOAD_ID) } returns Optional.of(domainWorkload)
+
+    val apiWorkload = workloadHandler.getWorkload(WORKLOAD_ID)
+
+    assertEquals(LogDeliveryMode.STANDARD, apiWorkload.logDeliveryMode)
+  }
+
+  @Test
+  fun `getWorkload returns STANDARD for SPEC without resolving topology`() {
+    val domainWorkload =
+      Fixtures.workload(
+        organizationId = UUID.randomUUID(),
+        dataplaneGroup = UUID.randomUUID().toString(),
+        type = WorkloadType.SPEC,
+      )
+    every { workloadRepository.findById(WORKLOAD_ID) } returns Optional.of(domainWorkload)
+
+    val apiWorkload = workloadHandler.getWorkload(WORKLOAD_ID)
+
+    assertEquals(LogDeliveryMode.STANDARD, apiWorkload.logDeliveryMode)
+    verify(exactly = 0) { dataplaneGroupService.getDataplaneGroup(any(), any()) }
+  }
+
+  @Test
+  fun `getWorkload returns STANDARD when dataplane group is not owned by the workload organization`() {
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val domainWorkload = Fixtures.workload(organizationId = organizationId, dataplaneGroup = dataplaneGroupId.toString())
+    every { workloadRepository.findById(WORKLOAD_ID) } returns Optional.of(domainWorkload)
+    every { dataplaneGroupService.getDataplaneGroup(dataplaneGroupId, organizationId) } returns
+      DataplaneGroup().withId(dataplaneGroupId).withOrganizationId(UUID.randomUUID())
+
+    val apiWorkload = workloadHandler.getWorkload(WORKLOAD_ID)
+
+    assertEquals(LogDeliveryMode.STANDARD, apiWorkload.logDeliveryMode)
+    verify { dataplaneGroupService.getDataplaneGroup(dataplaneGroupId, organizationId) }
+  }
+
+  @Test
+  fun `getWorkload returns STANDARD when the dataplane group no longer exists`() {
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val domainWorkload = Fixtures.workload(organizationId = organizationId, dataplaneGroup = dataplaneGroupId.toString())
+    every { workloadRepository.findById(WORKLOAD_ID) } returns Optional.of(domainWorkload)
+    every { dataplaneGroupService.getDataplaneGroup(dataplaneGroupId, organizationId) } throws
+      ConfigNotFoundException("dataplane group", dataplaneGroupId.toString())
+
+    val apiWorkload = workloadHandler.getWorkload(WORKLOAD_ID)
+
+    assertEquals(LogDeliveryMode.STANDARD, apiWorkload.logDeliveryMode)
   }
 
   @Test
@@ -386,6 +488,7 @@ class WorkloadHandlerImplTest {
               .toInt(),
         ),
         featureFlagClient = mockk(relaxed = true),
+        dataplaneGroupService = mockk(),
       )
     val offsetDateTime = workloadHandlerImpl.offsetDateTime()
     Thread.sleep(10)
@@ -448,6 +551,7 @@ class WorkloadHandlerImplTest {
           metricClient = metricClient,
         ),
       )
+    val dataplaneGroupService = mockk<DataplaneGroupService>()
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
     val redeliveryWindow: Duration = 30.minutes
@@ -463,6 +567,7 @@ class WorkloadHandlerImplTest {
             workloadRedeliveryWindowSeconds = redeliveryWindow.toJavaDuration().toSeconds().toInt(),
           ),
           featureFlagClient = mockk(relaxed = true),
+          dataplaneGroupService = dataplaneGroupService,
         ),
       )
 
@@ -499,6 +604,14 @@ class WorkloadHandlerImplTest {
   }
 
   companion object {
+    @JvmStatic
+    fun missingOrMalformedTopology(): List<Arguments> =
+      listOf(
+        Arguments.of(UUID.randomUUID(), null),
+        Arguments.of(null, UUID.randomUUID().toString()),
+        Arguments.of(UUID.randomUUID(), "not-a-uuid"),
+      )
+
     @JvmStatic
     fun pendingWorkloadMatrix(): List<Arguments> =
       listOf(

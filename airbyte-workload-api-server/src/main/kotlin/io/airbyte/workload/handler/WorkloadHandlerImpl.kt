@@ -6,10 +6,13 @@ package io.airbyte.workload.handler
 
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
+import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseDeadlineInWorkloadMonitorQueries
 import io.airbyte.micronaut.runtime.AirbyteWorkloadApiClientConfig
+import io.airbyte.workload.api.domain.LogDeliveryMode
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.api.domain.WorkloadQueueStats
@@ -24,6 +27,14 @@ import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import java.util.UUID
 import io.airbyte.workload.repository.domain.Workload as DomainWorkload
+import io.airbyte.workload.repository.domain.WorkloadType as DomainWorkloadType
+
+private val FLEX_LOGGING_WORKLOAD_TYPES =
+  setOf(
+    DomainWorkloadType.SYNC,
+    DomainWorkloadType.CHECK,
+    DomainWorkloadType.DISCOVER,
+  )
 
 /**
  * Interface layer between the API and Persistence layers.
@@ -35,8 +46,39 @@ class WorkloadHandlerImpl(
   private val workloadQueueRepository: WorkloadQueueRepository,
   private val airbyteWorkloadApiClientConfig: AirbyteWorkloadApiClientConfig,
   private val featureFlagClient: FeatureFlagClient,
+  private val dataplaneGroupService: DataplaneGroupService,
 ) : WorkloadHandler {
-  override fun getWorkload(workloadId: String): ApiWorkload = getDomainWorkload(workloadId).toApi()
+  override fun getWorkload(workloadId: String): ApiWorkload {
+    val workload = getDomainWorkload(workloadId)
+    return workload.toApi().apply {
+      logDeliveryMode = workload.getLogDeliveryMode()
+    }
+  }
+
+  override fun getWorkloadOrganizationId(workloadId: String): UUID? = getDomainWorkload(workloadId).organizationId
+
+  private fun DomainWorkload.getLogDeliveryMode(): LogDeliveryMode {
+    val workloadOrganizationId = organizationId
+    if (type !in FLEX_LOGGING_WORKLOAD_TYPES || workloadOrganizationId == null || dataplaneGroup == null) {
+      return LogDeliveryMode.STANDARD
+    }
+
+    val dataplaneGroupId =
+      try {
+        UUID.fromString(dataplaneGroup)
+      } catch (_: IllegalArgumentException) {
+        return LogDeliveryMode.STANDARD
+      }
+
+    val group =
+      try {
+        dataplaneGroupService.getDataplaneGroup(dataplaneGroupId, workloadOrganizationId)
+      } catch (_: ConfigNotFoundException) {
+        return LogDeliveryMode.STANDARD
+      }
+
+    return if (group.organizationId == workloadOrganizationId) LogDeliveryMode.FLEX else LogDeliveryMode.STANDARD
+  }
 
   private fun getDomainWorkload(workloadId: String): DomainWorkload =
     withWorkloadServiceExceptionConverter {

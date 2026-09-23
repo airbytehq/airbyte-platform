@@ -54,6 +54,23 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `find dataplane group by id is scoped to organization`() {
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroup =
+      DataplaneGroup(
+        organizationId = organizationId,
+        name = AUTO_DATAPLANE_GROUP,
+        enabled = false,
+        tombstone = false,
+      )
+    val savedDataplaneGroup = dataplaneGroupRepository.save(dataplaneGroup)
+    val dataplaneGroupId = savedDataplaneGroup.id!!
+
+    assertThat(dataplaneGroupRepository.findByIdAndOrganizationId(dataplaneGroupId, organizationId)).isPresent
+    assertThat(dataplaneGroupRepository.findByIdAndOrganizationId(dataplaneGroupId, UUID.randomUUID())).isEmpty
+  }
+
+  @Test
   fun `update dataplane group`() {
     val updatedName = US_DATAPLANE_GROUP
     val updatedEnabled = true

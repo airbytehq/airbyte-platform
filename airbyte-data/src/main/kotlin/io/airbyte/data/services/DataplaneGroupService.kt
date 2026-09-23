@@ -15,6 +15,14 @@ interface DataplaneGroupService {
   fun getDataplaneGroup(id: UUID): DataplaneGroup
 
   /**
+   * Get a dataplane group by its id, scoped to an organization.
+   */
+  fun getDataplaneGroup(
+    id: UUID,
+    organizationId: UUID,
+  ): DataplaneGroup
+
+  /**
    * Get the dataplane group by organization ID and name.
    */
   fun getDataplaneGroupByOrganizationIdAndName(

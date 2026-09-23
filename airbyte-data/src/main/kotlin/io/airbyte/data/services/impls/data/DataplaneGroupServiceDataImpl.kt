@@ -32,6 +32,16 @@ open class DataplaneGroupServiceDataImpl(
         ConfigNotFoundException(ConfigNotFoundType.DATAPLANE_GROUP, id)
       }.toConfigModel()
 
+  override fun getDataplaneGroup(
+    id: UUID,
+    organizationId: UUID,
+  ): DataplaneGroup =
+    repository
+      .findByIdAndOrganizationId(id, organizationId)
+      .orElseThrow {
+        ConfigNotFoundException(ConfigNotFoundType.DATAPLANE_GROUP, id)
+      }.toConfigModel()
+
   override fun getDataplaneGroupByOrganizationIdAndName(
     organizationId: UUID,
     name: String,

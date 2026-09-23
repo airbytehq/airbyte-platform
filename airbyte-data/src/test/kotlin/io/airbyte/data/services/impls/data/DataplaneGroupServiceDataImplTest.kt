@@ -50,6 +50,33 @@ class DataplaneGroupServiceDataImplTest {
   }
 
   @Test
+  fun `test get dataplane group by id and organization id`() {
+    val dataplaneGroupId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroup = createDataplaneGroup(dataplaneGroupId).apply { this.organizationId = organizationId }
+
+    every { dataplaneGroupRepository.findByIdAndOrganizationId(dataplaneGroupId, organizationId) } returns Optional.of(dataplaneGroup)
+
+    val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.getDataplaneGroup(dataplaneGroupId, organizationId)
+
+    assertEquals(dataplaneGroup.toConfigModel(), retrievedDataplaneGroup)
+    verify { dataplaneGroupRepository.findByIdAndOrganizationId(dataplaneGroupId, organizationId) }
+  }
+
+  @Test
+  fun `test get dataplane group by id cannot resolve under another organization`() {
+    val dataplaneGroupId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    every { dataplaneGroupRepository.findByIdAndOrganizationId(dataplaneGroupId, organizationId) } returns Optional.empty()
+
+    assertThrows<ConfigNotFoundException> {
+      dataplaneGroupServiceDataImpl.getDataplaneGroup(dataplaneGroupId, organizationId)
+    }
+
+    verify { dataplaneGroupRepository.findByIdAndOrganizationId(dataplaneGroupId, organizationId) }
+  }
+
+  @Test
   fun `test get dataplane group by non-existent id throws`() {
     every { dataplaneGroupRepository.findById(any()) } returns Optional.empty()
 
