@@ -5,7 +5,9 @@
 package io.airbyte.commons.entitlements
 
 import io.airbyte.api.problems.model.generated.ProblemEntitlementServiceData
+import io.airbyte.api.problems.model.generated.ProblemLicenseEntitlementData
 import io.airbyte.api.problems.throwable.generated.EntitlementServiceInvalidOrganizationStateProblem
+import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationSalesforceEnterpriseConnector
@@ -104,6 +106,30 @@ class EntitlementServiceTest {
     assertEquals(false, result.hasAccess)
     assertNull(result.value)
     assertEquals("Exception while getting numeric entitlement: Stigg API error", result.reason)
+  }
+
+  @Test
+  fun `ensureNumericEntitled passes when the numeric entitlement grants access`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val entitlement = FeatureEntitlement("feature-committed-data-workers")
+
+    every { entitlementClient.getNumericEntitlement(orgId, entitlement) } returns
+      NumericEntitlementResult("feature-committed-data-workers", true, 8L)
+
+    assertDoesNotThrow { entitlementService.ensureNumericEntitled(orgId, entitlement) }
+    verify(exactly = 0) { entitlementClient.checkEntitlement(any(), any()) }
+  }
+
+  @Test
+  fun `ensureNumericEntitled throws when the numeric entitlement denies access`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val entitlement = FeatureEntitlement("feature-committed-data-workers")
+
+    every { entitlementClient.getNumericEntitlement(orgId, entitlement) } returns
+      NumericEntitlementResult("feature-committed-data-workers", false, null)
+
+    val problem = assertThrows(LicenseEntitlementProblem::class.java) { entitlementService.ensureNumericEntitled(orgId, entitlement) }
+    assertEquals("feature-committed-data-workers", (problem.problem.getData() as ProblemLicenseEntitlementData).entitlement)
   }
 
   @Test
