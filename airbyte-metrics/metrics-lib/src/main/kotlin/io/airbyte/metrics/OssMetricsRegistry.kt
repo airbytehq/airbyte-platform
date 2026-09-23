@@ -560,6 +560,10 @@ enum class OssMetricsRegistry(
     metricName = "workload_hydration_fetch_failure",
     metricDescription = "Count of failures fetching workload during hydration step.",
   ),
+  WORKLOAD_LOG_DELIVERY_HANDOFF_FAILURE(
+    metricName = "workload_log_delivery_handoff_failure",
+    metricDescription = "Count of best-effort log delivery handoff failures during workload initialization.",
+  ),
   INIT_FILE_CLIENT_FAILURE(
     metricName = "init_file_client_failure",
     metricDescription = "Count of failures prepping files during hydration step.",

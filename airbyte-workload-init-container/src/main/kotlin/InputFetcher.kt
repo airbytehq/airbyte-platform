@@ -5,13 +5,20 @@
 package io.airbyte.initContainer
 
 import io.airbyte.config.FailureReason.FailureOrigin
+import io.airbyte.config.WorkloadType
 import io.airbyte.initContainer.input.InputHydrationProcessor
+import io.airbyte.initContainer.serde.ObjectSerializer
+import io.airbyte.initContainer.system.FileClient
 import io.airbyte.initContainer.system.SystemClient
+import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.workers.models.InitContainerConstants
+import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workload.api.client.WorkloadApiClient
+import io.airbyte.workload.api.domain.LogDeliveryMode
+import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Context
@@ -26,6 +33,8 @@ class InputFetcher(
   private val systemClient: SystemClient,
   private val metricClient: MetricClient,
   private val airbyteContextConfig: AirbyteContextConfig,
+  private val serializer: ObjectSerializer,
+  private val fileClient: FileClient,
 ) {
   fun fetch() {
     logger.info { "Fetching workload..." }
@@ -39,6 +48,7 @@ class InputFetcher(
       }
 
     logger.info { "Workload ${workload.id} fetched." }
+    prepareSyncLogDelivery(workload)
     logger.info { "Processing workload..." }
 
     try {
@@ -49,6 +59,61 @@ class InputFetcher(
       return failWorkloadAndExit(airbyteContextConfig.workloadId, "processing workload", e, InitContainerConstants.UNEXPECTED_ERROR_EXIT_CODE)
     }
     logger.info { "Workload processed." }
+  }
+
+  private fun prepareSyncLogDelivery(workload: Workload) {
+    if (workload.type != WorkloadType.SYNC) {
+      return
+    }
+
+    val serializedMode =
+      try {
+        serializer.serialize(workload.logDeliveryMode)
+      } catch (_: Exception) {
+        reportLogDeliveryHandoffFailure("mode-serialization")
+        return
+      }
+
+    try {
+      fileClient.writeInputFile(FileConstants.LOG_DELIVERY_MODE_FILE, serializedMode)
+    } catch (_: Exception) {
+      reportLogDeliveryHandoffFailure("mode-file-write")
+      return
+    }
+
+    if (workload.logDeliveryMode != LogDeliveryMode.FLEX) {
+      return
+    }
+
+    val authorization =
+      try {
+        workloadApiClient.workloadLogUploadAuthorization(workload.id)
+      } catch (_: Exception) {
+        reportLogDeliveryHandoffFailure("authorization-fetch")
+        return
+      } ?: return
+
+    val serializedAuthorization =
+      try {
+        serializer.serialize(authorization)
+      } catch (_: Exception) {
+        reportLogDeliveryHandoffFailure("authorization-serialization")
+        return
+      }
+
+    try {
+      fileClient.writeInputFileAtomically(FileConstants.LOG_UPLOAD_AUTHORIZATION_FILE, serializedAuthorization)
+    } catch (_: Exception) {
+      reportLogDeliveryHandoffFailure("authorization-file-write")
+    }
+  }
+
+  private fun reportLogDeliveryHandoffFailure(step: String) {
+    logger.warn { "Unable to complete the SYNC log delivery handoff during $step. Continuing workload hydration." }
+    metricClient.count(
+      metric = OssMetricsRegistry.WORKLOAD_LOG_DELIVERY_HANDOFF_FAILURE,
+      attributes = arrayOf(MetricAttribute("step", step)),
+    )
   }
 
   private fun failWorkloadAndExit(
