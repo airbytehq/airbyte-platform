@@ -21,8 +21,8 @@ import io.mockk.verify
 import io.stigg.api.operations.GetPaywallQuery
 import io.stigg.sidecar.proto.v1.EntitlementFeature
 import io.stigg.sidecar.proto.v1.EnumEntitlement
-import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
-import io.stigg.sidecar.proto.v1.GetBooleanEntitlementResponse
+import io.stigg.sidecar.proto.v1.GetEntitlementRequest
+import io.stigg.sidecar.proto.v1.GetEntitlementResponse
 import io.stigg.sidecar.proto.v1.GetEntitlementsRequest
 import io.stigg.sidecar.proto.v1.GetEntitlementsResponse
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
@@ -74,17 +74,41 @@ internal class StiggWrapperTest {
   }
 
   @Test
+  fun `checkEntitlement grants a numeric feature`() {
+    val entitlement = FeatureEntitlement("feature-committed-data-workers")
+    val stigg =
+      createOfflineStigg(
+        mapOf(
+          organizationId.value.toString() to
+            mapOf(
+              "feature-committed-data-workers" to
+                Entitlement
+                  .builder()
+                  .type(EntitlementType.NUMERIC)
+                  .value(8.0)
+                  .build(),
+            ),
+        ),
+      )
+
+    val result = StiggWrapper(stigg, metricClient).checkEntitlement(organizationId, entitlement)
+
+    assertEquals(true, result.isEntitled)
+    assertEquals(true, result.isEntitlementCheckSuccessful)
+  }
+
+  @Test
   fun `checkEntitlement returns an indeterminate result for a Stigg fallback`() {
     val stigg = mockk<Stigg>(relaxed = true)
     val entitlement = FeatureEntitlement("missing-feature")
     val response =
-      GetBooleanEntitlementResponse
+      GetEntitlementResponse
         .newBuilder()
         .setHasAccess(false)
         .setIsFallback(true)
         .build()
 
-    every { stigg.getBooleanEntitlement(any<GetBooleanEntitlementRequest>()) } returns response
+    every { stigg.getEntitlement(any<GetEntitlementRequest>()) } returns response
 
     val result = StiggWrapper(stigg, metricClient).checkEntitlement(organizationId, entitlement)
 
@@ -308,7 +332,7 @@ internal class StiggWrapperTest {
     assertEquals(false, result.isEntitlementCheckSuccessful)
 
     // Verify Stigg was never called
-    verify(exactly = 0) { stigg.getBooleanEntitlement(any()) }
+    verify(exactly = 0) { stigg.getEntitlement(any()) }
   }
 
   @Test
@@ -525,24 +549,20 @@ internal class StiggWrapperTest {
     verify(exactly = 4) { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) }
   }
 
-  private fun createOfflineStigg(vararg entitlements: Pair<String, String>): Stigg {
+  private fun createOfflineStigg(vararg entitlements: Pair<String, String>): Stigg =
+    createOfflineStigg(
+      entitlements
+        .groupBy({ it.first }, { it.second })
+        .mapValues { entry -> entry.value.associateWith { Entitlement.builder().type(EntitlementType.BOOLEAN).build() } },
+    )
+
+  private fun createOfflineStigg(entitlementsByCustomer: Map<String, Map<String, Entitlement>>): Stigg {
     val customers =
-      if (entitlements.isEmpty()) {
-        emptyMap()
-      } else {
-        entitlements
-          .groupBy({ it.first }, { it.second })
-          .entries
-          .associate { entry ->
-            entry.key to
-              CustomerEntitlements
-                .builder()
-                .entitlements(
-                  entry.value.associate {
-                    it to Entitlement.builder().type(EntitlementType.BOOLEAN).build()
-                  },
-                ).build()
-          }
+      entitlementsByCustomer.mapValues { entry ->
+        CustomerEntitlements
+          .builder()
+          .entitlements(entry.value)
+          .build()
       }
 
     return Stigg.init(

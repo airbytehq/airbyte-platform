@@ -31,7 +31,7 @@ import io.stigg.api.operations.type.GetPaywallInput
 import io.stigg.api.operations.type.ProvisionCustomerInput
 import io.stigg.api.operations.type.ProvisionCustomerSubscriptionInput
 import io.stigg.api.operations.type.ProvisionSubscriptionInput
-import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
+import io.stigg.sidecar.proto.v1.GetEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEntitlementsRequest
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetNumericEntitlementRequest
@@ -234,8 +234,8 @@ internal class StiggWrapper(
 
     val result =
       withStiggTimeout("checkEntitlement(organizationId=$organizationId, entitlement=${entitlement.featureId})") {
-        stigg.getBooleanEntitlement(
-          GetBooleanEntitlementRequest
+        stigg.getEntitlement(
+          GetEntitlementRequest
             .newBuilder()
             .setCustomerId(organizationId.value.toString())
             .setFeatureId(entitlement.featureId)

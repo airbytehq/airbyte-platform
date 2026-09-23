@@ -97,26 +97,6 @@ interface EntitlementService {
     }
   }
 
-  /**
-   * Verifies that an organization has access to a numeric entitlement, throwing an exception if not.
-   *
-   * Numeric features must be read with [getNumericEntitlement]; a boolean check on a numeric
-   * feature is denied by the entitlement provider regardless of the organization's plan.
-   *
-   * @throws LicenseEntitlementProblem if the organization does not have the required entitlement
-   */
-  fun ensureNumericEntitled(
-    organizationId: OrganizationId,
-    entitlement: Entitlement,
-  ) {
-    if (!getNumericEntitlement(organizationId, entitlement).hasAccess) {
-      throw LicenseEntitlementProblem(
-        ProblemLicenseEntitlementData()
-          .entitlement(entitlement.featureId),
-      )
-    }
-  }
-
   fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse>
 
   fun getCurrentPlanId(organizationId: OrganizationId): String?
