@@ -86,6 +86,11 @@ airbyte:
       signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
   secret:
     persistence: "no_op"
+  cloud:
+    storage:
+      type: ${STORAGE_TYPE:MINIO}
+      bucket:
+        log: ${STORAGE_BUCKET_LOG:}
   auth:
     identity-provider:
       type: simple

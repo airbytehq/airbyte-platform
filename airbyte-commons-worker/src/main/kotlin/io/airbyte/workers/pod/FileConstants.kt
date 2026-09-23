@@ -27,8 +27,6 @@ object FileConstants {
   const val CATALOG_FILE = "catalog.json"
   const val NAMESPACE_MAPPING_FILE = "namespace-mapping.json"
   const val INPUT_STATE_FILE = "inputState.json"
-  const val LOG_DELIVERY_MODE_FILE = "log-delivery-mode.json"
-  const val LOG_UPLOAD_AUTHORIZATION_FILE = "log-upload-authorization.json"
 
   // marker files
   const val TERMINATION_MARKER_FILE = "TERMINATED"

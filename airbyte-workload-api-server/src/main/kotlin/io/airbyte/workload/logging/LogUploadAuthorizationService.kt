@@ -48,6 +48,7 @@ open class LogUploadAuthorizationService(
   open fun authorize(workloadId: String): LogUploadAuthorization? {
     val startedAt = System.nanoTime()
     var outcome = OUTCOME_REJECTED
+    var primaryFailure: Throwable? = null
 
     try {
       val subject = currentServiceAccountSubject()
@@ -76,25 +77,52 @@ open class LogUploadAuthorizationService(
         credentialBroker.issue(storageConfig.bucket.log, objectKeyPrefix).also {
           outcome = OUTCOME_ISSUED
         }
+      } catch (_: InterruptedException) {
+        Thread.currentThread().interrupt()
+        outcome = OUTCOME_BROKER_ERROR
+        throw LogUploadAuthorizationBrokerException()
       } catch (_: Exception) {
         outcome = OUTCOME_BROKER_ERROR
         throw LogUploadAuthorizationBrokerException()
       }
+    } catch (failure: Throwable) {
+      primaryFailure = failure
+      throw failure
     } finally {
       val attributes =
         arrayOf(
           MetricAttribute(MetricTags.ROUTE, LOG_UPLOAD_AUTHORIZATION_ROUTE),
           MetricAttribute(MetricTags.OUTCOME, outcome),
         )
-      metricClient.count(
-        metric = OssMetricsRegistry.WORKLOAD_LOG_UPLOAD_AUTHORIZATION,
-        attributes = attributes,
-      )
-      metricClient.distribution(
-        metric = OssMetricsRegistry.WORKLOAD_LOG_UPLOAD_AUTHORIZATION_LATENCY_MS,
-        value = (System.nanoTime() - startedAt) / NANOS_PER_MILLISECOND,
-        attributes = attributes,
-      )
+      reportMetric(primaryFailure) {
+        metricClient.count(
+          metric = OssMetricsRegistry.WORKLOAD_LOG_UPLOAD_AUTHORIZATION,
+          attributes = attributes,
+        )
+      }
+      reportMetric(primaryFailure) {
+        metricClient.distribution(
+          metric = OssMetricsRegistry.WORKLOAD_LOG_UPLOAD_AUTHORIZATION_LATENCY_MS,
+          value = (System.nanoTime() - startedAt) / NANOS_PER_MILLISECOND,
+          attributes = attributes,
+        )
+      }
+    }
+  }
+
+  private fun reportMetric(
+    primaryFailure: Throwable?,
+    report: () -> Unit,
+  ) {
+    try {
+      report()
+    } catch (reportingFailure: Throwable) {
+      if (reportingFailure is VirtualMachineError && primaryFailure !is VirtualMachineError) {
+        throw reportingFailure
+      }
+      if (reportingFailure is InterruptedException) {
+        Thread.currentThread().interrupt()
+      }
     }
   }
 
@@ -105,11 +133,12 @@ open class LogUploadAuthorizationService(
       rejectNotFound()
     }
 
+  @Suppress("DEPRECATION")
   private fun currentServiceAccountSubject(): RoleResolver.Subject {
     val subject =
       roleResolver.newRequest().withCurrentAuthentication().subject
         ?: throw UnauthorizedException(UNAVAILABLE_MESSAGE)
-    if (subject.type != TokenType.SERVICE_ACCOUNT) {
+    if (subject.type != TokenType.SERVICE_ACCOUNT && subject.type != TokenType.DATAPLANE_V1) {
       rejectNotFound()
     }
     return subject

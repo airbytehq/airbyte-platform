@@ -56,7 +56,7 @@ class RefreshableGcsLogUploader<T : Any> internal constructor(
   private val period: Long = 60L,
   private val unit: TimeUnit = TimeUnit.SECONDS,
   flushSize: Int = BUFFERED_LOG_EVENT_LIMIT,
-  private val onFailure: (String) -> Unit = {},
+  private var onFailure: (String) -> Unit = {},
   private val executeTask: (Runnable) -> Unit = CloudStorageBulkUploaderExecutor::executeTask,
   storageClientFactory: (String, OAuth2CredentialsWithRefresh) -> StorageClient,
 ) {
@@ -75,7 +75,10 @@ class RefreshableGcsLogUploader<T : Any> internal constructor(
   private var uploadInFlight = false
   private var uploadThread: Thread? = null
   private var thresholdUploadScheduled = false
+  private var thresholdSubmissionInProgress = false
+  private var thresholdSubmissionGeneration = 0L
   private var uploadTask: ScheduledFuture<*>? = null
+  private var failureReported = false
 
   private val credentials: OAuth2CredentialsWithRefresh =
     OAuth2CredentialsWithRefresh
@@ -112,50 +115,77 @@ class RefreshableGcsLogUploader<T : Any> internal constructor(
     get() = lifecycleLock.withLock { state == State.DISABLED }
 
   fun start() {
-    try {
-      lifecycleLock.withLock {
+    var schedulingFailure: Throwable? = null
+    var failureCallback: ((String) -> Unit)? = null
+    lifecycleLock.withLock {
+      try {
         if (state == State.ACTIVE && uploadTask == null) {
           uploadTask = CloudStorageBulkUploaderExecutor.scheduleTask(this::flush, period, period, unit)
         }
+      } catch (failure: Throwable) {
+        schedulingFailure = failure
+        if (failure is VirtualMachineError) {
+          disableLocked()
+        } else {
+          handleCaughtFailure(failure)
+          failureCallback = failAndDisableLocked()
+        }
       }
-    } catch (_: Throwable) {
-      reportFailure(SCHEDULE_FAILURE_MESSAGE)
     }
+    val failure = schedulingFailure ?: return
+    failureCallback?.let { callback -> reportFailure(callback, SCHEDULE_FAILURE_MESSAGE) }
+    throw failure
   }
 
   fun append(event: T) {
-    val shouldScheduleUpload =
+    val thresholdSubmission =
       lifecycleLock.withLock {
         if (state != State.ACTIVE) return
         buffer.addLast(event)
         reserveThresholdUploadLocked()
       }
-    if (shouldScheduleUpload) {
-      scheduleThresholdUpload()
+    if (thresholdSubmission != null) {
+      scheduleThresholdUpload(thresholdSubmission)
     }
   }
 
   fun flush() {
-    val pendingUpload = lifecycleLock.withLock { reserveActiveUploadLocked() } ?: return
+    val pendingUpload =
+      try {
+        lifecycleLock.withLock {
+          awaitThresholdSubmissionLocked()
+          reserveActiveUploadLocked()
+        }
+      } catch (_: InterruptedException) {
+        Thread.currentThread().interrupt()
+        return
+      } ?: return
     upload(pendingUpload)
   }
 
   fun stop() {
     var periodicTask: ScheduledFuture<*>? = null
     val action =
-      lifecycleLock.withLock {
-        when (state) {
-          State.ACTIVE -> {
-            state = State.STOPPING
-            thresholdUploadScheduled = false
-            periodicTask = uploadTask
-            uploadTask = null
-            if (uploadThread === Thread.currentThread()) StopAction.SCHEDULE_DRAIN else StopAction.DRAIN
+      try {
+        lifecycleLock.withLock {
+          awaitThresholdSubmissionLocked()
+          when (state) {
+            State.ACTIVE -> {
+              state = State.STOPPING
+              thresholdUploadScheduled = false
+              periodicTask = uploadTask
+              uploadTask = null
+              if (uploadThread === Thread.currentThread()) StopAction.SCHEDULE_DRAIN else StopAction.DRAIN
+            }
+            State.STOPPING ->
+              if (uploadThread === Thread.currentThread()) StopAction.RETURN else StopAction.WAIT
+            State.DISABLED -> StopAction.RETURN
           }
-          State.STOPPING ->
-            if (uploadThread === Thread.currentThread()) StopAction.RETURN else StopAction.WAIT
-          State.DISABLED -> StopAction.RETURN
         }
+      } catch (_: InterruptedException) {
+        Thread.currentThread().interrupt()
+        failAndDisable(SHUTDOWN_FAILURE_MESSAGE)
+        return
       }
     periodicTask?.cancel(false)
 
@@ -191,9 +221,12 @@ class RefreshableGcsLogUploader<T : Any> internal constructor(
       }
     return when (validatedResult) {
       is LogUploadAuthorizationRefreshResult.Refreshed -> validatedResult.target.toAccessToken()
-      LogUploadAuthorizationRefreshResult.RetryableFailure -> throw IOException(REFRESH_RETRYABLE_MESSAGE)
+      LogUploadAuthorizationRefreshResult.RetryableFailure -> {
+        failAndDisable(REFRESH_RETRYABLE_MESSAGE)
+        throw IOException(REFRESH_RETRYABLE_MESSAGE)
+      }
       LogUploadAuthorizationRefreshResult.TerminalFailure -> {
-        disable()
+        failAndDisable(REFRESH_UNAVAILABLE_MESSAGE)
         throw IOException(REFRESH_UNAVAILABLE_MESSAGE)
       }
     }
@@ -201,26 +234,47 @@ class RefreshableGcsLogUploader<T : Any> internal constructor(
 
   private fun tryBeginRemoteCall(): Boolean = lifecycleLock.withLock { state != State.DISABLED }
 
-  private fun reserveThresholdUploadLocked(): Boolean {
-    if (state != State.ACTIVE || buffer.size < flushSize || uploadInFlight || thresholdUploadScheduled) return false
-    thresholdUploadScheduled = true
-    return true
-  }
-
-  private fun scheduleThresholdUpload() {
-    try {
-      executeTask(Runnable(this::runThresholdUpload))
-    } catch (failure: Throwable) {
-      if (failure is VirtualMachineError) throw failure
-      lifecycleLock.withLock { thresholdUploadScheduled = false }
-      reportFailure(SCHEDULE_FAILURE_MESSAGE)
+  private fun awaitThresholdSubmissionLocked() {
+    while (state == State.ACTIVE && thresholdSubmissionInProgress) {
+      uploadFinished.await()
     }
   }
 
-  private fun runThresholdUpload() {
+  private fun reserveThresholdUploadLocked(): Long? {
+    if (state != State.ACTIVE || buffer.size < flushSize || uploadInFlight || thresholdUploadScheduled) return null
+    thresholdUploadScheduled = true
+    thresholdSubmissionInProgress = true
+    thresholdSubmissionGeneration++
+    return thresholdSubmissionGeneration
+  }
+
+  private fun scheduleThresholdUpload(submissionGeneration: Long) {
+    try {
+      executeTask(Runnable { runThresholdUpload(submissionGeneration) })
+    } catch (failure: Throwable) {
+      if (failure is VirtualMachineError) {
+        disable()
+        throw failure
+      }
+      handleCaughtFailure(failure)
+      failAndDisable(SCHEDULE_FAILURE_MESSAGE)
+      return
+    }
+    lifecycleLock.withLock {
+      if (thresholdSubmissionGeneration == submissionGeneration && thresholdSubmissionInProgress) {
+        thresholdSubmissionInProgress = false
+        uploadFinished.signalAll()
+      }
+    }
+  }
+
+  private fun runThresholdUpload(submissionGeneration: Long) {
     val pendingUpload =
       lifecycleLock.withLock {
+        if (thresholdSubmissionGeneration != submissionGeneration) return
+        thresholdSubmissionInProgress = false
         thresholdUploadScheduled = false
+        uploadFinished.signalAll()
         reserveActiveUploadLocked()
       } ?: return
     upload(pendingUpload)
@@ -242,23 +296,37 @@ class RefreshableGcsLogUploader<T : Any> internal constructor(
 
   private fun upload(pendingUpload: PendingUpload<T>) {
     var failureMessage: String? = null
+    var failureCallback: ((String) -> Unit)? = null
+    var uploadFailed = false
     try {
       val document = encode(pendingUpload.events)
       if (!tryBeginRemoteCall()) return
       storageClient.write(pendingUpload.storageId, document)
     } catch (failure: Throwable) {
-      if (failure is VirtualMachineError) throw failure
+      uploadFailed = true
+      handleCaughtFailure(failure)
       failureMessage = UPLOAD_FAILURE_MESSAGE
     } finally {
-      val shouldScheduleUpload =
+      val thresholdSubmission =
         lifecycleLock.withLock {
+          if (uploadFailed) {
+            failureCallback =
+              if (failureMessage == null) {
+                disableLocked(signalWaiters = false)
+                null
+              } else {
+                failAndDisableLocked(signalWaiters = false)
+              }
+          }
           uploadInFlight = false
           uploadThread = null
           uploadFinished.signalAll()
-          reserveThresholdUploadLocked()
+          if (uploadFailed) null else reserveThresholdUploadLocked()
         }
-      failureMessage?.let(::reportFailure)
-      if (shouldScheduleUpload) scheduleThresholdUpload()
+      failureCallback?.let { callback ->
+        reportFailure(callback, requireNotNull(failureMessage))
+      }
+      if (thresholdSubmission != null) scheduleThresholdUpload(thresholdSubmission)
     }
   }
 
@@ -280,10 +348,12 @@ class RefreshableGcsLogUploader<T : Any> internal constructor(
         upload(pendingUpload)
       }
     } catch (failure: Throwable) {
-      if (failure is VirtualMachineError) throw failure
-      if (failure is InterruptedException) Thread.currentThread().interrupt()
-      reportFailure(SHUTDOWN_FAILURE_MESSAGE)
-      disable()
+      if (failure is VirtualMachineError) {
+        disable()
+        throw failure
+      }
+      handleCaughtFailure(failure)
+      failAndDisable(SHUTDOWN_FAILURE_MESSAGE)
     }
   }
 
@@ -291,9 +361,12 @@ class RefreshableGcsLogUploader<T : Any> internal constructor(
     try {
       executeTask(Runnable(this::drainAndDisable))
     } catch (failure: Throwable) {
-      if (failure is VirtualMachineError) throw failure
-      reportFailure(SHUTDOWN_FAILURE_MESSAGE)
-      disable()
+      if (failure is VirtualMachineError) {
+        disable()
+        throw failure
+      }
+      handleCaughtFailure(failure)
+      failAndDisable(SHUTDOWN_FAILURE_MESSAGE)
     }
   }
 
@@ -306,25 +379,49 @@ class RefreshableGcsLogUploader<T : Any> internal constructor(
       }
     } catch (failure: InterruptedException) {
       Thread.currentThread().interrupt()
-      reportFailure(SHUTDOWN_FAILURE_MESSAGE)
+      failAndDisable(SHUTDOWN_FAILURE_MESSAGE)
     }
   }
 
-  private fun disableLocked() {
+  private fun disableLocked(signalWaiters: Boolean = true) {
     state = State.DISABLED
     thresholdUploadScheduled = false
+    thresholdSubmissionInProgress = false
     buffer.clear()
     uploadTask?.cancel(false)
     uploadTask = null
-    uploadFinished.signalAll()
+    onFailure = {}
+    if (signalWaiters) uploadFinished.signalAll()
   }
 
-  private fun reportFailure(message: String) {
+  private fun failAndDisable(message: String) {
+    val failureCallback = lifecycleLock.withLock { failAndDisableLocked() } ?: return
+    reportFailure(failureCallback, message)
+  }
+
+  private fun failAndDisableLocked(signalWaiters: Boolean = true): ((String) -> Unit)? {
+    if (failureReported) return null
+    failureReported = true
+    val callback = onFailure
+    disableLocked(signalWaiters)
+    return callback
+  }
+
+  private fun reportFailure(
+    failureCallback: (String) -> Unit,
+    message: String,
+  ) {
     try {
-      onFailure(message)
-    } catch (_: Throwable) {
+      failureCallback(message)
+    } catch (failure: Throwable) {
+      handleCaughtFailure(failure)
       // Logging failures must not affect workload execution.
     }
+  }
+
+  private fun handleCaughtFailure(failure: Throwable) {
+    if (failure is VirtualMachineError) throw failure
+    if (failure is InterruptedException) Thread.currentThread().interrupt()
   }
 
   private fun GcsLogUploadTarget.hasSameScope(other: GcsLogUploadTarget): Boolean =

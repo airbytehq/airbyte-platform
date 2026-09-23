@@ -17,14 +17,18 @@ import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.serde.PayloadDeserializer
+import io.airbyte.workload.api.domain.LogDeliveryMode
 import io.airbyte.workload.api.domain.Workload
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.slot
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
@@ -58,9 +62,10 @@ class CheckHydrationProcessorTest {
       )
   }
 
-  @Test
-  fun `parses input, hydrates and writes output to expected file`() {
-    val input = Fixtures.workload
+  @ParameterizedTest
+  @EnumSource(value = LogDeliveryMode::class, names = ["STANDARD", "FLEX"])
+  fun `parses input, hydrates and writes workload mode in sidecar input`(mode: LogDeliveryMode) {
+    val input = Fixtures.workload.copy(logDeliveryMode = mode)
 
     val unhydrated = StandardCheckConnectionInput()
     val parsed =
@@ -76,20 +81,12 @@ class CheckHydrationProcessorTest {
     val serializedConfig = "serialized hydrated config"
     val serializedInput = "serialized hydrated blob"
 
-    val sidecarInput =
-      SidecarInput(
-        hydrated,
-        null,
-        input.id,
-        parsed.launcherConfig,
-        SidecarInput.OperationType.CHECK,
-        input.logPath,
-      )
+    val sidecarInput = slot<SidecarInput>()
 
     every { deserializer.toCheckConnectionInput(input.inputPayload) } returns parsed
     every { inputHydrator.getHydratedStandardCheckInput(unhydrated) } returns hydrated
     every { serializer.serialize(connectionConfiguration) } returns serializedConfig
-    every { serializer.serialize(sidecarInput) } returns serializedInput
+    every { serializer.serialize(capture(sidecarInput)) } returns serializedInput
     every { fileClient.writeInputFile(FileConstants.CONNECTION_CONFIGURATION_FILE, serializedConfig) } returns Unit
     every { fileClient.writeInputFile(FileConstants.SIDECAR_INPUT_FILE, serializedInput) } returns Unit
 
@@ -98,7 +95,8 @@ class CheckHydrationProcessorTest {
     verify { deserializer.toCheckConnectionInput(input.inputPayload) }
     verify { inputHydrator.getHydratedStandardCheckInput(unhydrated) }
     verify { serializer.serialize(connectionConfiguration) }
-    verify { serializer.serialize(sidecarInput) }
+    verify { serializer.serialize(capture(sidecarInput)) }
+    assertEquals(mode.name, Jsons.deserialize(Jsons.serialize(sidecarInput.captured))["logDeliveryMode"]?.asText())
     verify { fileClient.writeInputFile(FileConstants.CONNECTION_CONFIGURATION_FILE, serializedConfig) }
     verify { fileClient.writeInputFile(FileConstants.SIDECAR_INPUT_FILE, serializedInput) }
   }

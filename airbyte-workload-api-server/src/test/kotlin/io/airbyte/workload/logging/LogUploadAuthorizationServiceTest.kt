@@ -38,6 +38,7 @@ import io.mockk.verifyAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -151,7 +152,7 @@ class LogUploadAuthorizationServiceTest {
 
   @ParameterizedTest
   @MethodSource("ineligibleTokenTypes")
-  fun `authenticated non-service-account identity is not found before workload lookup`(tokenType: TokenType) {
+  fun `authenticated non-dataplane identity is not found before workload lookup`(tokenType: TokenType) {
     every { authorizationRequest.subject } returns
       io.airbyte.commons.server.authorization.RoleResolver
         .Subject(SERVICE_ACCOUNT_ID.toString(), tokenType)
@@ -162,6 +163,18 @@ class LogUploadAuthorizationServiceTest {
     assertSanitized(error.message)
     verify(exactly = 0) { workloadHandler.getWorkload(any()) }
     verify(exactly = 0) { broker.issue(any(), any()) }
+  }
+
+  @Suppress("DEPRECATION")
+  @Test
+  fun `issues authorization for the dataplane token used by deployed workloads`() {
+    every { authorizationRequest.subject } returns
+      io.airbyte.commons.server.authorization.RoleResolver
+        .Subject(SERVICE_ACCOUNT_ID.toString(), TokenType.DATAPLANE_V1)
+
+    assertEquals(AUTHORIZATION, service.authorize(WORKLOAD_ID))
+
+    assertMetric("issued")
   }
 
   @Test
@@ -343,6 +356,77 @@ class LogUploadAuthorizationServiceTest {
     assertMetric("broker_error")
   }
 
+  @Test
+  fun `broker interruption is sanitized and restores interrupt status`() {
+    every { broker.issue(BUCKET, OBJECT_PREFIX) } throws InterruptedException("secret token")
+
+    try {
+      val error = assertThrows<LogUploadAuthorizationBrokerException> { service.authorize(WORKLOAD_ID) }
+
+      assertSanitized(error.message)
+      assertTrue(Thread.currentThread().isInterrupted)
+      assertMetric("broker_error")
+    } finally {
+      Thread.interrupted()
+    }
+  }
+
+  @Test
+  fun `nonfatal metric failures do not replace successful authorization`() {
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    every { metricClient.count(any(), any(), *anyVararg()) } throws IllegalStateException("metrics unavailable")
+
+    assertEquals(AUTHORIZATION, service(metricClient).authorize(WORKLOAD_ID))
+
+    verify(exactly = 1) { metricClient.distribution(any(), any(), *anyVararg()) }
+  }
+
+  @Test
+  fun `metric virtual machine error propagates on successful authorization`() {
+    val failure = OutOfMemoryError("fatal metrics")
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    every { metricClient.count(any(), any(), *anyVararg()) } throws failure
+
+    assertSame(failure, assertThrows<OutOfMemoryError> { service(metricClient).authorize(WORKLOAD_ID) })
+  }
+
+  @Test
+  fun `metric virtual machine error replaces recoverable broker failure`() {
+    val failure = OutOfMemoryError("fatal metrics")
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    every { broker.issue(BUCKET, OBJECT_PREFIX) } throws IllegalStateException("recoverable broker failure")
+    every { metricClient.count(any(), any(), *anyVararg()) } throws failure
+
+    assertSame(failure, assertThrows<OutOfMemoryError> { service(metricClient).authorize(WORKLOAD_ID) })
+  }
+
+  @Test
+  fun `metric failure cannot replace broker virtual machine error`() {
+    val brokerFailure = OutOfMemoryError("fatal broker")
+    val metricFailure = OutOfMemoryError("fatal metrics")
+    val metricClient = mockk<MetricClient>(relaxed = true)
+    every { broker.issue(BUCKET, OBJECT_PREFIX) } throws brokerFailure
+    every { metricClient.count(any(), any(), *anyVararg()) } throws metricFailure
+
+    assertSame(brokerFailure, assertThrows<OutOfMemoryError> { service(metricClient).authorize(WORKLOAD_ID) })
+  }
+
+  private fun service(metricClient: MetricClient): LogUploadAuthorizationService =
+    LogUploadAuthorizationService(
+      workloadHandler = workloadHandler,
+      roleResolver = roleResolver,
+      dataplaneService = dataplaneService,
+      dataplaneGroupService = dataplaneGroupService,
+      featureFlagClient = featureFlagClient,
+      storageConfig =
+        AirbyteStorageConfig(
+          type = StorageType.GCS,
+          bucket = AirbyteStorageConfig.AirbyteStorageBucketConfig(log = BUCKET),
+        ),
+      credentialBroker = broker,
+      metricClient = metricClient,
+    )
+
   private fun assertMetric(outcome: String) {
     assertEquals(
       1.0,
@@ -408,8 +492,9 @@ class LogUploadAuthorizationServiceTest {
         arrayOf(dataplane(), dataplaneGroup(tombstone = true)),
       )
 
+    @Suppress("DEPRECATION")
     @JvmStatic
-    fun ineligibleTokenTypes(): List<TokenType> = TokenType.entries.filterNot { it == TokenType.SERVICE_ACCOUNT }
+    fun ineligibleTokenTypes(): List<TokenType> = TokenType.entries.filterNot { it == TokenType.SERVICE_ACCOUNT || it == TokenType.DATAPLANE_V1 }
 
     @JvmStatic
     fun eligibleActiveWorkloads(): List<Array<Any>> =

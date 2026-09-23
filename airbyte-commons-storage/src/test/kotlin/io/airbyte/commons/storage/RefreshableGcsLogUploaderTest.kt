@@ -8,14 +8,19 @@ import com.google.api.client.util.Clock
 import com.google.auth.oauth2.OAuth2CredentialsWithRefresh
 import com.google.auth.oauth2.useTestClock
 import io.airbyte.micronaut.runtime.StorageType
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.io.IOException
 import java.net.URI
 import java.time.Instant
@@ -33,8 +38,188 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.locks.Condition
+import java.util.concurrent.locks.ReentrantLock
 
 internal class RefreshableGcsLogUploaderTest {
+  @Test
+  fun `initial scheduler rejection is observable with a sanitized diagnostic`() {
+    val diagnostics = mutableListOf<String>()
+    val uploader = uploader(TestStorageClient(BUCKET) { _, _ -> }, diagnostics::add)
+    val failure = RejectedExecutionException("sensitive token at $PREFIX")
+    mockkObject(CloudStorageBulkUploaderExecutor)
+    try {
+      every { CloudStorageBulkUploaderExecutor.scheduleTask(any(), any(), any(), any()) } throws failure
+
+      val thrown = assertThrows(RejectedExecutionException::class.java) { uploader.start() }
+
+      assertSame(failure, thrown)
+      assertEquals(listOf("Unable to schedule GCS log uploads."), diagnostics)
+      assertTrue(diagnostics.none { it.contains("sensitive") || it.contains(PREFIX) })
+    } finally {
+      unmockkObject(CloudStorageBulkUploaderExecutor)
+    }
+  }
+
+  @Test
+  fun `initial scheduler rejection disables before releasing the lifecycle lock`() {
+    val lifecycleLock = PausingAfterUnlockLock()
+    val writes = AtomicInteger()
+    val callbacks = AtomicInteger()
+    val uploader =
+      uploader(
+        TestStorageClient(BUCKET) { _, _ -> writes.incrementAndGet() },
+        onFailure = { callbacks.incrementAndGet() },
+      )
+    uploader.replaceLifecycleSynchronization(lifecycleLock, lifecycleLock.newCondition())
+    uploader.append("queued")
+    val failure = RejectedExecutionException("schedule failed")
+    val executor = Executors.newFixedThreadPool(2)
+    mockkObject(CloudStorageBulkUploaderExecutor)
+    try {
+      every { CloudStorageBulkUploaderExecutor.scheduleTask(any(), any(), any(), any()) } answers {
+        lifecycleLock.pauseAfterNextUnlockByCurrentThread()
+        throw failure
+      }
+      val start = executor.submit { assertSame(failure, assertThrows(RejectedExecutionException::class.java) { uploader.start() }) }
+
+      assertTrue(lifecycleLock.pausedAfterUnlock.await(5, TimeUnit.SECONDS))
+      assertDoesNotThrow { executor.submit { uploader.flush() }.get(5, TimeUnit.SECONDS) }
+      lifecycleLock.resumeAfterUnlock.countDown()
+      assertDoesNotThrow { start.get(5, TimeUnit.SECONDS) }
+    } finally {
+      lifecycleLock.resumeAfterUnlock.countDown()
+      executor.shutdownNow()
+      unmockkObject(CloudStorageBulkUploaderExecutor)
+    }
+
+    assertEquals(0, writes.get())
+    assertEquals(1, callbacks.get())
+    assertEquals(0, uploader.queuedEventCount())
+    assertTrue(uploader.isDisabled)
+  }
+
+  @Test
+  fun `virtual machine error from initial scheduling propagates`() {
+    val uploader = uploader(TestStorageClient(BUCKET) { _, _ -> })
+    val failure = OutOfMemoryError("sensitive token")
+    mockkObject(CloudStorageBulkUploaderExecutor)
+    try {
+      every { CloudStorageBulkUploaderExecutor.scheduleTask(any(), any(), any(), any()) } throws failure
+
+      assertSame(failure, assertThrows(OutOfMemoryError::class.java) { uploader.start() })
+    } finally {
+      unmockkObject(CloudStorageBulkUploaderExecutor)
+    }
+  }
+
+  @ParameterizedTest
+  @EnumSource(ThresholdSubmissionCompetitor::class)
+  fun `threshold scheduling rejection disables before competing work can upload`(competitor: ThresholdSubmissionCompetitor) {
+    val submissionStarted = CountDownLatch(1)
+    val rejectSubmission = CountDownLatch(1)
+    val waitingForSubmission = CompletableFuture<String>()
+    val operationFinished = CompletableFuture<String>()
+    val lifecycleLock = ReentrantLock()
+    val writes = AtomicInteger()
+    val callbacks = AtomicInteger()
+    val submissions = AtomicInteger()
+    val uploaderReference = AtomicReference<RefreshableGcsLogUploader<String>>()
+    val uploader =
+      RefreshableGcsLogUploader<String>(
+        initialTarget = target("token-1", "2030-01-01T00:00:00Z"),
+        refreshAuthorization = { LogUploadAuthorizationRefreshResult.TerminalFailure },
+        encode = { it.single() },
+        flushSize = 1,
+        onFailure = {
+          callbacks.incrementAndGet()
+          uploaderReference.get().stop()
+        },
+        executeTask = {
+          submissions.incrementAndGet()
+          submissionStarted.countDown()
+          check(rejectSubmission.await(5, TimeUnit.SECONDS)) { "Timed out waiting to reject threshold submission." }
+          throw RejectedExecutionException("threshold submission rejected")
+        },
+        storageClientFactory = { _, _ -> TestStorageClient(BUCKET) { _, _ -> writes.incrementAndGet() } },
+      )
+    uploaderReference.set(uploader)
+    uploader.replaceLifecycleSynchronization(
+      lifecycleLock,
+      FutureSignallingCondition(lifecycleLock.newCondition(), waitingForSubmission),
+    )
+    val executor = Executors.newFixedThreadPool(2)
+    val append = executor.submit { uploader.append("threshold") }
+
+    try {
+      assertTrue(submissionStarted.await(5, TimeUnit.SECONDS))
+      val competingOperation =
+        executor.submit {
+          try {
+            competitor.run(uploader)
+            operationFinished.complete("completed")
+          } catch (failure: Throwable) {
+            operationFinished.completeExceptionally(failure)
+            throw failure
+          }
+        }
+
+      assertEquals("waiting", CompletableFuture.anyOf(waitingForSubmission, operationFinished).get(5, TimeUnit.SECONDS))
+      rejectSubmission.countDown()
+      assertDoesNotThrow { append.get(5, TimeUnit.SECONDS) }
+      assertDoesNotThrow { competingOperation.get(5, TimeUnit.SECONDS) }
+    } finally {
+      rejectSubmission.countDown()
+      executor.shutdownNow()
+    }
+
+    assertEquals(0, writes.get())
+    assertEquals(1, callbacks.get())
+    assertEquals(1, submissions.get())
+    assertEquals(0, uploader.queuedEventCount())
+    assertFalse(uploader.booleanField("thresholdUploadScheduled"))
+    assertFalse(uploader.booleanField("thresholdSubmissionInProgress"))
+    assertFalse(uploader.booleanField("uploadInFlight"))
+    assertTrue(uploader.isDisabled)
+
+    uploader.append("ignored")
+    uploader.flush()
+    uploader.stop()
+    assertEquals(0, writes.get())
+    assertEquals(1, callbacks.get())
+    assertEquals(1, submissions.get())
+  }
+
+  @Test
+  fun `interrupted failure callback is suppressed and restores interrupt status`() {
+    val uploader = uploader(TestStorageClient(BUCKET) { _, _ -> throw IOException("upload failed") }) { throw InterruptedException("diagnostic") }
+    uploader.append("event")
+
+    try {
+      assertDoesNotThrow { uploader.flush() }
+      assertTrue(Thread.currentThread().isInterrupted)
+    } finally {
+      Thread.interrupted()
+    }
+  }
+
+  @Test
+  fun `assertion error from failure callback is suppressed`() {
+    val uploader = uploader(TestStorageClient(BUCKET) { _, _ -> throw IOException("upload failed") }) { throw AssertionError("diagnostic") }
+    uploader.append("event")
+
+    assertDoesNotThrow { uploader.flush() }
+  }
+
+  @Test
+  fun `virtual machine error from failure callback propagates`() {
+    val failure = OutOfMemoryError("diagnostic")
+    val uploader = uploader(TestStorageClient(BUCKET) { _, _ -> throw IOException("upload failed") }) { throw failure }
+    uploader.append("event")
+
+    assertSame(failure, assertThrows(OutOfMemoryError::class.java) { uploader.flush() })
+  }
+
   @Test
   fun `first uploaded object ID uses batch reservation time`() {
     val writtenIds = mutableListOf<String>()
@@ -151,16 +336,30 @@ internal class RefreshableGcsLogUploaderTest {
   }
 
   @Test
-  fun `unexpected uploader failure remains non-fatal and drops the batch`() {
-    val uploader = uploader(TestStorageClient(BUCKET) { _, _ -> throw AssertionError("sensitive") })
+  fun `unexpected uploader failure remains non-fatal and permanently disables delivery`() {
+    val diagnostics = mutableListOf<String>()
+    val writes = AtomicInteger()
+    val uploader =
+      uploader(
+        TestStorageClient(BUCKET) { _, _ ->
+          writes.incrementAndGet()
+          throw AssertionError("sensitive")
+        },
+        diagnostics::add,
+      )
     runBlocking { uploader.append("event") }
 
     assertDoesNotThrow { uploader.flush() }
-    assertFalse(uploader.isDisabled)
+    runBlocking { uploader.append("ignored") }
+    uploader.flush()
+
+    assertTrue(uploader.isDisabled)
+    assertEquals(1, writes.get())
+    assertEquals(listOf("Unable to upload the current log batch."), diagnostics)
   }
 
   @Test
-  fun `drops failed upload and accepts a later batch`() {
+  fun `failed upload disables delivery before a later batch can be accepted`() {
     val attempts = AtomicInteger()
     val storageIds = mutableListOf<String>()
     val uploaded = mutableListOf<String>()
@@ -178,14 +377,71 @@ internal class RefreshableGcsLogUploaderTest {
     runBlocking { uploader.append("second") }
     uploader.flush()
 
-    assertEquals(listOf("second"), uploaded)
-    assertNotEquals(storageIds.first(), storageIds.last())
-    assertFalse(uploader.isDisabled)
+    assertTrue(uploaded.isEmpty())
+    assertEquals(1, storageIds.size)
+    assertTrue(uploader.isDisabled)
+    assertEquals(listOf("Unable to upload the current log batch."), statuses)
     assertTrue(statuses.all { !it.contains("sensitive upload failure") && !it.contains(PREFIX) })
   }
 
   @Test
-  fun `retryable refresh failure drops only its batch and later refresh succeeds`() {
+  fun `failed upload disables before a waiting shutdown drain can start another remote call`() {
+    val lifecycleLock = PausingAfterUnlockLock()
+    val stopWaiting = CountDownLatch(1)
+    val uploadFinished = AwaitSignallingCondition(lifecycleLock.newCondition(), stopWaiting)
+    val firstWriteStarted = CountDownLatch(1)
+    val releaseFirstWrite = CountDownLatch(1)
+    val writes = AtomicInteger()
+    val callbacks = AtomicInteger()
+    val uploader =
+      uploader(
+        storageClient =
+          TestStorageClient(BUCKET) { _, _ ->
+            if (writes.incrementAndGet() == 1) {
+              firstWriteStarted.countDown()
+              check(releaseFirstWrite.await(5, TimeUnit.SECONDS)) { "Timed out waiting to fail the first storage write." }
+              lifecycleLock.pauseAfterNextUnlockByCurrentThread()
+              throw IOException("first write failed")
+            }
+          },
+        onFailure = { callbacks.incrementAndGet() },
+      )
+    uploader.replaceLifecycleSynchronization(lifecycleLock, uploadFinished)
+    uploader.append("failing")
+    val executor = Executors.newFixedThreadPool(2)
+    val upload = executor.submit { uploader.flush() }
+
+    try {
+      assertTrue(firstWriteStarted.await(5, TimeUnit.SECONDS))
+      uploader.append("queued")
+      val stop = executor.submit { uploader.stop() }
+      assertTrue(stopWaiting.await(5, TimeUnit.SECONDS))
+
+      releaseFirstWrite.countDown()
+      assertTrue(lifecycleLock.pausedAfterUnlock.await(5, TimeUnit.SECONDS))
+      assertDoesNotThrow { stop.get(5, TimeUnit.SECONDS) }
+      lifecycleLock.resumeAfterUnlock.countDown()
+      assertDoesNotThrow { upload.get(5, TimeUnit.SECONDS) }
+    } finally {
+      releaseFirstWrite.countDown()
+      lifecycleLock.resumeAfterUnlock.countDown()
+      executor.shutdownNow()
+    }
+
+    assertEquals(1, writes.get())
+    assertEquals(1, callbacks.get())
+    assertEquals(0, uploader.queuedEventCount())
+    assertTrue(uploader.isDisabled)
+
+    uploader.append("ignored")
+    uploader.flush()
+    uploader.stop()
+    assertEquals(1, writes.get())
+    assertEquals(1, callbacks.get())
+  }
+
+  @Test
+  fun `retryable refresh failure disables delivery and prevents later refresh or upload`() {
     lateinit var credentials: OAuth2CredentialsWithRefresh
     val refreshes = AtomicInteger()
     val uploaded = mutableListOf<String>()
@@ -216,9 +472,9 @@ internal class RefreshableGcsLogUploaderTest {
     runBlocking { uploader.append("second") }
     uploader.flush()
 
-    assertEquals(listOf("second"), uploaded)
-    assertEquals(2, refreshes.get())
-    assertFalse(uploader.isDisabled)
+    assertTrue(uploaded.isEmpty())
+    assertEquals(1, refreshes.get())
+    assertTrue(uploader.isDisabled)
   }
 
   @Test
@@ -699,6 +955,35 @@ internal class RefreshableGcsLogUploaderTest {
       storageClientFactory = { _, _ -> storageClient },
     )
 
+  private fun RefreshableGcsLogUploader<*>.replaceLifecycleSynchronization(
+    lifecycleLock: ReentrantLock,
+    uploadFinished: Condition,
+  ) {
+    javaClass.getDeclaredField("lifecycleLock").apply {
+      isAccessible = true
+      set(this@replaceLifecycleSynchronization, lifecycleLock)
+    }
+    javaClass.getDeclaredField("uploadFinished").apply {
+      isAccessible = true
+      set(this@replaceLifecycleSynchronization, uploadFinished)
+    }
+  }
+
+  private fun RefreshableGcsLogUploader<*>.queuedEventCount(): Int {
+    val buffer =
+      javaClass.getDeclaredField("buffer").let {
+        it.isAccessible = true
+        it.get(this) as ArrayDeque<*>
+      }
+    return buffer.size
+  }
+
+  private fun RefreshableGcsLogUploader<*>.booleanField(name: String): Boolean =
+    javaClass.getDeclaredField(name).let {
+      it.isAccessible = true
+      it.getBoolean(this)
+    }
+
   private fun target(
     token: String,
     expiresAt: String,
@@ -712,6 +997,57 @@ internal class RefreshableGcsLogUploaderTest {
   private companion object {
     const val BUCKET = "bucket"
     const val PREFIX = "job-logging/workload/"
+  }
+
+  enum class ThresholdSubmissionCompetitor {
+    FLUSH {
+      override fun run(uploader: RefreshableGcsLogUploader<String>) = uploader.flush()
+    },
+    STOP {
+      override fun run(uploader: RefreshableGcsLogUploader<String>) = uploader.stop()
+    },
+    ;
+
+    abstract fun run(uploader: RefreshableGcsLogUploader<String>)
+  }
+}
+
+private class PausingAfterUnlockLock : ReentrantLock() {
+  val pausedAfterUnlock = CountDownLatch(1)
+  val resumeAfterUnlock = CountDownLatch(1)
+  private val threadToPause = AtomicReference<Thread?>()
+
+  fun pauseAfterNextUnlockByCurrentThread() {
+    check(threadToPause.compareAndSet(null, Thread.currentThread()))
+  }
+
+  override fun unlock() {
+    val shouldPause = threadToPause.compareAndSet(Thread.currentThread(), null)
+    super.unlock()
+    if (shouldPause) {
+      pausedAfterUnlock.countDown()
+      check(resumeAfterUnlock.await(5, TimeUnit.SECONDS)) { "Timed out while the failing upload was paused after unlocking." }
+    }
+  }
+}
+
+private class AwaitSignallingCondition(
+  private val delegate: Condition,
+  private val waiting: CountDownLatch,
+) : Condition by delegate {
+  override fun await() {
+    waiting.countDown()
+    delegate.await()
+  }
+}
+
+private class FutureSignallingCondition(
+  private val delegate: Condition,
+  private val waiting: CompletableFuture<String>,
+) : Condition by delegate {
+  override fun await() {
+    waiting.complete("waiting")
+    delegate.await()
   }
 }
 

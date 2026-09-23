@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2026 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.container.orchestrator
+package io.airbyte.connectorSidecar
 
 import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.LoggerContext
@@ -15,8 +15,7 @@ import io.airbyte.commons.logging.logback.CLOUD_OPERATIONS_JOB_LOGGER_NAME
 import io.airbyte.commons.logging.logback.FLEX_OPERATIONS_JOB_LOGGER_NAME
 import io.airbyte.commons.storage.GcsLogUploadTarget
 import io.airbyte.commons.storage.LogUploadAuthorizationRefreshResult
-import io.airbyte.micronaut.runtime.AirbyteContextConfig
-import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.GcsDownscopedOAuthLogUploadAuthorization
 import io.airbyte.workload.api.domain.LogDeliveryMode
@@ -28,10 +27,8 @@ import org.slf4j.Logger.ROOT_LOGGER_NAME
 import org.slf4j.LoggerFactory
 import java.io.IOException
 
-private val logger = KotlinLogging.logger {}
-
-private const val FLEX_INITIALIZATION_FAILURE_MESSAGE =
-  "Unable to initialize FLEX log delivery. Continuing with STANDARD operations-log delivery."
+internal const val FLEX_INITIALIZATION_FAILURE_MESSAGE =
+  "Unable to initialize FLEX log delivery. Continuing without FLEX operations-log delivery."
 
 private enum class FailureStage(
   val label: String,
@@ -41,34 +38,41 @@ private enum class FailureStage(
   FLEX_RUNTIME_DELIVERY("FLEX runtime delivery"),
 }
 
-/** When the init-container selects FLEX delivery, changes only the remote operations-log appender; console and unrelated appenders remain active. */
+private val logger = KotlinLogging.logger {}
+
+/** Selects direct FLEX operations-log delivery for CHECK and DISCOVER sidecars. */
 @Singleton
 class FlexLogAppenderInitializer internal constructor(
-  private val replicationInput: ReplicationInput,
-  private val contextConfig: AirbyteContextConfig,
+  private val sidecarInput: SidecarInput,
   private val workloadApiClient: WorkloadApiClient,
   private val loggerContextProvider: () -> LoggerContext,
   private val appenderFactory:
     (GcsLogUploadTarget, () -> LogUploadAuthorizationRefreshResult, (String) -> Unit, () -> Unit) -> Appender<ILoggingEvent>,
-  private val diagnostics: (String) -> Unit = { logger.warn { it } },
+  private val diagnostics: (String) -> Unit,
 ) {
   @Inject
   constructor(
-    replicationInput: ReplicationInput,
-    contextConfig: AirbyteContextConfig,
+    sidecarInput: SidecarInput,
     workloadApiClient: WorkloadApiClient,
   ) : this(
-    replicationInput = replicationInput,
-    contextConfig = contextConfig,
+    sidecarInput = sidecarInput,
     workloadApiClient = workloadApiClient,
     loggerContextProvider = { LoggerFactory.getILoggerFactory() as LoggerContext },
     appenderFactory = { target, refresh, onFailure, onStop ->
       AirbyteFlexLogbackAppender(target, refresh, onFailure, onStop)
     },
+    diagnostics = { logger.warn { it } },
   )
 
   fun initialize() {
-    if (readDeliveryMode() != LogDeliveryMode.FLEX) {
+    if (sidecarInput.operationType == SidecarInput.OperationType.SPEC) {
+      return
+    }
+
+    val deliveryMode =
+      sidecarInput.logDeliveryMode?.let { inputMode -> LogDeliveryMode.entries.firstOrNull { it.name == inputMode } }
+        ?: LogDeliveryMode.STANDARD
+    if (deliveryMode != LogDeliveryMode.FLEX) {
       return
     }
 
@@ -148,7 +152,7 @@ class FlexLogAppenderInitializer internal constructor(
 
       val initialTarget =
         try {
-          readInitialTarget()
+          readAuthorizationTarget()
         } catch (failure: Throwable) {
           handleCaughtFailure(failure)
           reportFailure(FailureStage.INITIAL_AUTHORIZATION)
@@ -181,23 +185,15 @@ class FlexLogAppenderInitializer internal constructor(
     }
   }
 
-  private fun readDeliveryMode(): LogDeliveryMode =
-    (replicationInput.additionalProperties["logDeliveryMode"] as? String)
-      ?.let { inputMode -> LogDeliveryMode.entries.firstOrNull { it.name == inputMode } }
-      ?: LogDeliveryMode.STANDARD
-
-  private fun readInitialTarget(): GcsLogUploadTarget? =
+  private fun readAuthorizationTarget(): GcsLogUploadTarget? =
     workloadApiClient
-      .workloadLogUploadAuthorization(contextConfig.workloadId)
+      .workloadLogUploadAuthorization(sidecarInput.workloadId)
       ?.toSharedTarget()
       ?.takeIf { it.isValid() }
 
   private fun refreshAuthorization(): LogUploadAuthorizationRefreshResult =
     try {
-      workloadApiClient
-        .workloadLogUploadAuthorization(contextConfig.workloadId)
-        ?.toSharedTarget()
-        ?.takeIf { it.isValid() }
+      readAuthorizationTarget()
         ?.let(LogUploadAuthorizationRefreshResult::Refreshed)
         ?: LogUploadAuthorizationRefreshResult.TerminalFailure
     } catch (e: ApiException) {

@@ -43,6 +43,7 @@ dependencies {
   implementation(libs.google.cloud.storage)
   implementation(libs.java.jwt)
   implementation(libs.kotlin.logging)
+  implementation(libs.bundles.logback)
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.slf4j.api)
   implementation(libs.bundles.micronaut.metrics)
@@ -65,7 +66,6 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.kotlin.reflect)
-  runtimeOnly(libs.bundles.logback)
   runtimeOnly(libs.bundles.bouncycastle) // cryptography package
 
   kspTest(platform(libs.micronaut.platform))

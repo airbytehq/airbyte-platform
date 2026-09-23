@@ -77,6 +77,7 @@ class DiscoverHydrationProcessor(
           parsed.launcherConfig,
           SidecarInput.OperationType.DISCOVER,
           workload.logPath,
+          workload.logDeliveryMode.name,
         ),
       ),
     )

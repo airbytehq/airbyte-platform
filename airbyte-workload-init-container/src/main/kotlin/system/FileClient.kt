@@ -18,8 +18,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption.ATOMIC_MOVE
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.attribute.PosixFilePermission
 
 /**
@@ -46,37 +44,6 @@ class FileClient(
     } catch (e: Exception) {
       metricClient.count(metric = OssMetricsRegistry.INIT_FILE_CLIENT_FAILURE, attributes = arrayOf(MetricAttribute("step", "input-file")))
       throw e
-    }
-  }
-
-  /**
-   * Writes the contents in UTF 8 to a temporary file before atomically replacing the designated file in the config directory.
-   */
-  fun writeInputFileAtomically(
-    fileName: String,
-    fileContents: String,
-    baseDir: String = DEFAULT_CONNECTOR_CONFIG_DIR,
-  ) {
-    var temporaryFile: Path? = null
-    try {
-      val destination = Path.of(baseDir).resolve(fileName)
-      temporaryFile = Files.createTempFile(destination.parent, ".$fileName-", ".tmp")
-      Files.writeString(temporaryFile, fileContents, StandardCharsets.UTF_8)
-      Files.move(temporaryFile, destination, ATOMIC_MOVE, REPLACE_EXISTING)
-    } catch (e: Exception) {
-      metricClient.count(metric = OssMetricsRegistry.INIT_FILE_CLIENT_FAILURE, attributes = arrayOf(MetricAttribute("step", "atomic-input-file")))
-      throw e
-    } finally {
-      temporaryFile?.let {
-        try {
-          Files.deleteIfExists(it)
-        } catch (_: Exception) {
-          metricClient.count(
-            metric = OssMetricsRegistry.INIT_FILE_CLIENT_FAILURE,
-            attributes = arrayOf(MetricAttribute("step", "atomic-input-file-cleanup")),
-          )
-        }
-      }
     }
   }
 

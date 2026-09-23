@@ -14,11 +14,8 @@ import io.mockk.junit5.MockKExtension
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import java.io.File
-import java.nio.file.FileSystemException
-import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createTempDirectory
@@ -26,8 +23,6 @@ import kotlin.io.path.deleteRecursively
 import kotlin.io.path.exists
 import kotlin.io.path.getPosixFilePermissions
 import kotlin.io.path.listDirectoryEntries
-import kotlin.io.path.readText
-import kotlin.io.path.writeText
 
 @ExtendWith(MockKExtension::class)
 internal class FileClientTest {
@@ -50,50 +45,6 @@ internal class FileClientTest {
       assertEquals(contents, inputFile.readText())
     } finally {
       inputFile.delete()
-    }
-  }
-
-  @OptIn(ExperimentalPathApi::class)
-  @Test
-  internal fun `atomically replaces an input file without leaving a temporary file`() {
-    val inputDir = createTempDirectory(prefix = "atomic-input")
-    val inputFile = inputDir.resolve("authorization.json")
-    try {
-      inputFile.writeText("old authorization")
-
-      fileClient.writeInputFileAtomically(
-        fileName = inputFile.fileName.toString(),
-        fileContents = "new authorization",
-        baseDir = inputDir.toString(),
-      )
-
-      assertEquals("new authorization", inputFile.readText())
-      assertEquals(listOf(inputFile), inputDir.listDirectoryEntries())
-    } finally {
-      inputDir.deleteRecursively()
-    }
-  }
-
-  @OptIn(ExperimentalPathApi::class)
-  @Test
-  internal fun `atomic replacement failure removes the temporary file`() {
-    val inputDir = createTempDirectory(prefix = "atomic-input-failure")
-    val destinationDirectory = inputDir.resolve("authorization.json")
-    try {
-      Files.createDirectory(destinationDirectory)
-      destinationDirectory.resolve("existing").writeText("prevent replacement")
-
-      assertThrows<FileSystemException> {
-        fileClient.writeInputFileAtomically(
-          fileName = destinationDirectory.fileName.toString(),
-          fileContents = "authorization",
-          baseDir = inputDir.toString(),
-        )
-      }
-
-      assertEquals(listOf(destinationDirectory), inputDir.listDirectoryEntries())
-    } finally {
-      inputDir.deleteRecursively()
     }
   }
 

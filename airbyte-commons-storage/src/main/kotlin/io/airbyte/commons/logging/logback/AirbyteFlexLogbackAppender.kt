@@ -16,12 +16,21 @@ import io.airbyte.commons.storage.RefreshableGcsLogUploader
 class AirbyteFlexLogbackAppender internal constructor(
   private val uploader: RefreshableGcsLogUploader<ILoggingEvent>,
   private val encoder: AirbyteLogEventEncoder,
+  private val onStop: () -> Unit = {},
 ) : AppenderBase<ILoggingEvent>() {
   constructor(
     initialTarget: GcsLogUploadTarget,
     refreshAuthorization: () -> LogUploadAuthorizationRefreshResult,
+    onFailure: (String) -> Unit = {},
+    onStop: () -> Unit = {},
     encoder: AirbyteLogEventEncoder = AirbyteLogEventEncoder(),
-  ) : this(RefreshableGcsLogUploader(initialTarget, refreshAuthorization, encoder::bulkEncode), encoder)
+  ) : this(
+    RefreshableGcsLogUploader(initialTarget, refreshAuthorization, encoder::bulkEncode, onFailure = onFailure),
+    encoder,
+    onStop,
+  )
+
+  private var stopNotified = false
 
   override fun start() {
     encoder.start()
@@ -33,6 +42,14 @@ class AirbyteFlexLogbackAppender internal constructor(
     uploader.stop()
     encoder.stop()
     super.stop()
+    notifyStopped()
+  }
+
+  /** Stops local FLEX delivery after its uploader has already disabled itself, without attempting a final drain. */
+  fun disableAfterFailure() {
+    uploader.disable()
+    encoder.stop()
+    super.stop()
   }
 
   override fun append(eventObject: ILoggingEvent) {
@@ -40,5 +57,13 @@ class AirbyteFlexLogbackAppender internal constructor(
       return
     }
     uploader.append(eventObject)
+  }
+
+  @Synchronized
+  private fun notifyStopped() {
+    if (!stopNotified) {
+      stopNotified = true
+      onStop()
+    }
   }
 }

@@ -15,6 +15,7 @@ data class SidecarInput(
   val integrationLauncherConfig: IntegrationLauncherConfig,
   val operationType: OperationType,
   val logPath: String,
+  val logDeliveryMode: String? = null,
 ) {
   enum class OperationType {
     CHECK,

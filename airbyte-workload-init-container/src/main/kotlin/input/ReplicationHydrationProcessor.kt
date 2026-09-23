@@ -54,6 +54,7 @@ class ReplicationHydrationProcessor(
 
     logger.info { "Hydrating replication input..." }
     val hydrated: ReplicationInput = replicationInputHydrator.getHydratedReplicationInput(parsed)
+    hydrated.setAdditionalProperty("logDeliveryMode", workload.logDeliveryMode.name)
 
     // orchestrator input
     logger.info { "Writing orchestrator inputs..." }

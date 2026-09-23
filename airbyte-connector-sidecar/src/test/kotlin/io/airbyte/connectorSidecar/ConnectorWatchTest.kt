@@ -80,6 +80,9 @@ internal class ConnectorWatchTest {
   private lateinit var logContextFactory: SidecarLogContextFactory
 
   @MockK
+  private lateinit var flexLogAppenderInitializer: FlexLogAppenderInitializer
+
+  @MockK
   private lateinit var streamFactory: AirbyteStreamFactory
 
   @MockK
@@ -116,6 +119,7 @@ internal class ConnectorWatchTest {
           workloadApiClient,
           outputWriter,
           logContextFactory,
+          flexLogAppenderInitializer,
           heartbeatMonitor,
           metricClient = metricClient,
         ),
@@ -135,6 +139,8 @@ internal class ConnectorWatchTest {
 
     every { logContextFactory.create(any()) } returns mapOf()
 
+    every { flexLogAppenderInitializer.initialize() } just Runs
+
     every { workloadApiClient.workloadHeartbeat(any()) } returns Unit
 
     every { heartbeatMonitor.startHeartbeatThread(any()) } just Runs
@@ -148,6 +154,94 @@ internal class ConnectorWatchTest {
     every { sidecarInput.checkConnectionInput } returns checkInput
     every { sidecarInput.discoverCatalogInput } returns discoveryInput
     every { sidecarInput.workloadId } returns workloadId
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = OperationType::class, names = ["CHECK", "DISCOVER"])
+  fun `flex bootstrap happens once before job logging context`(operationType: OperationType) {
+    val output =
+      ConnectorJobOutput()
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
+    every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
+    every { sidecarInput.operationType } returns operationType
+
+    connectorWatcher.run()
+
+    verifyOrder {
+      flexLogAppenderInitializer.initialize()
+      logContextFactory.create("")
+      connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
+    }
+    verify(exactly = 1) { flexLogAppenderInitializer.initialize() }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = OperationType::class, names = ["CHECK", "DISCOVER"])
+  fun `bootstrap failure is nonfatal and operation still runs`(operationType: OperationType) {
+    val output = ConnectorJobOutput()
+    every { flexLogAppenderInitializer.initialize() } throws IllegalStateException("sensitive authorization")
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
+    every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
+    every { sidecarInput.operationType } returns operationType
+
+    connectorWatcher.run()
+
+    verifyOrder {
+      flexLogAppenderInitializer.initialize()
+      logContextFactory.create("")
+      connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
+      outputWriter.write(workloadId, output)
+      workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId))
+      connectorWatcher.exitProperly()
+    }
+    verify(exactly = 1) { flexLogAppenderInitializer.initialize() }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = OperationType::class, names = ["CHECK", "DISCOVER"])
+  fun `interrupted bootstrap is nonfatal and restores interrupt status`(operationType: OperationType) {
+    val output = ConnectorJobOutput()
+    every { flexLogAppenderInitializer.initialize() } throws InterruptedException("interrupted bootstrap")
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
+    every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
+    every { sidecarInput.operationType } returns operationType
+
+    try {
+      connectorWatcher.run()
+
+      assertTrue(Thread.currentThread().isInterrupted)
+      verify(exactly = 1) { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) }
+    } finally {
+      Thread.interrupted()
+    }
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = OperationType::class, names = ["CHECK", "DISCOVER"])
+  fun `virtual machine error from bootstrap propagates without running the operation`(operationType: OperationType) {
+    val failure = OutOfMemoryError("fatal bootstrap")
+    every { flexLogAppenderInitializer.initialize() } throws failure
+    every { sidecarInput.operationType } returns operationType
+
+    assertEquals(failure, assertThrows<OutOfMemoryError> { connectorWatcher.run() })
+    verify(exactly = 0) { connectorMessageProcessor.run(any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `spec bypasses flex bootstrap`() {
+    val output = ConnectorJobOutput()
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(OperationType.SPEC)) } returns output
+    every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
+    every { sidecarInput.operationType } returns OperationType.SPEC
+
+    connectorWatcher.run()
+
+    verifyOrder {
+      logContextFactory.create("")
+      connectorMessageProcessor.run(any(), any(), any(), any(), eq(OperationType.SPEC))
+    }
+    verify(exactly = 0) { flexLogAppenderInitializer.initialize() }
   }
 
   @ParameterizedTest

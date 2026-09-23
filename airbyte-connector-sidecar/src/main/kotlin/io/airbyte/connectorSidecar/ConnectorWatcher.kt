@@ -61,10 +61,23 @@ class ConnectorWatcher(
   private val workloadApiClient: WorkloadApiClient,
   private val outputWriter: WorkloadOutputWriter,
   private val logContextFactory: SidecarLogContextFactory,
+  private val flexLogAppenderInitializer: FlexLogAppenderInitializer,
   private val heartbeatMonitor: HeartbeatMonitor,
   private val metricClient: MetricClient,
 ) {
   fun run() {
+    when (sidecarInput.operationType) {
+      SidecarInput.OperationType.CHECK,
+      SidecarInput.OperationType.DISCOVER,
+      ->
+        try {
+          flexLogAppenderInitializer.initialize()
+        } catch (failure: Exception) {
+          if (failure is InterruptedException) Thread.currentThread().interrupt()
+          logger.warn { FLEX_INITIALIZATION_FAILURE_MESSAGE }
+        }
+      SidecarInput.OperationType.SPEC -> Unit
+    }
     withLoggingContext(logContextFactory.create(sidecarInput.logPath)) {
       logger.info { LineGobbler.formatStartSection(sidecarInput.operationType.toString()) }
       var heartbeatStarted = false

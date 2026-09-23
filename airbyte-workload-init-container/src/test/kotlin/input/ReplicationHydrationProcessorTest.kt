@@ -27,11 +27,15 @@ import io.airbyte.workers.models.ArchitectureConstants
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.serde.PayloadDeserializer
+import io.airbyte.workload.api.domain.LogDeliveryMode
 import io.airbyte.workload.api.domain.Workload
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.slot
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
@@ -85,7 +89,7 @@ internal class ReplicationHydrationProcessorTest {
     state: State?,
     timesStateFileWritten: Int,
   ) {
-    val input = Fixtures.workload
+    val input = Fixtures.workload.copy(logDeliveryMode = LogDeliveryMode.FLEX)
     val catalog =
       ConfiguredAirbyteCatalog(
         listOf(
@@ -116,7 +120,6 @@ internal class ReplicationHydrationProcessorTest {
         hydrated.prefix,
       )
 
-    val serializedReplInput = "serialized hydrated blob"
     val serializedSrcCatalog = "serialized src catalog"
     val serializedSrcConfig = "serialized src config"
     val serializedDestCatalog = "serialized dest catalog"
@@ -125,7 +128,7 @@ internal class ReplicationHydrationProcessorTest {
 
     every { deserializer.toReplicationActivityInput(input.inputPayload) } returns activityInput
     every { replicationInputHydrator.getHydratedReplicationInput(activityInput) } returns hydrated
-    every { serializer.serialize(hydrated) } returns serializedReplInput
+    every { serializer.serialize(hydrated) } answers { Jsons.serialize(hydrated) }
     every { serializer.serialize(hydrated.sourceConfiguration) } returns serializedSrcConfig
     every { serializer.serialize(hydrated.destinationConfiguration) } returns serializedDestConfig
     every { serializer.serialize(hydrated.state?.state) } returns serializedState
@@ -142,7 +145,13 @@ internal class ReplicationHydrationProcessorTest {
     verify { deserializer.toReplicationActivityInput(input.inputPayload) }
     verify { replicationInputHydrator.getHydratedReplicationInput(activityInput) }
     verify { serializer.serialize(hydrated) }
-    verify { fileClient.writeInputFile(FileConstants.INIT_INPUT_FILE, serializedReplInput) }
+    val syncInput = slot<String>()
+    verify { fileClient.writeInputFile(FileConstants.INIT_INPUT_FILE, capture(syncInput)) }
+    verify(exactly = 0) { fileClient.writeInputFile("log-delivery-mode.json", any()) }
+    val syncJson = Jsons.deserialize(syncInput.captured)
+    assertEquals("FLEX", syncJson["logDeliveryMode"]?.asText())
+    assertNull(syncJson["accessToken"])
+    assertNull(syncJson["logUploadAuthorization"])
     verify { serializer.serialize(hydrated.sourceConfiguration) }
     verify { serializer.serialize(hydrated.destinationConfiguration) }
     verify { protocolSerializer.serialize(hydrated.catalog, false, SerializationTarget.SOURCE) }

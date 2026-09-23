@@ -77,6 +77,7 @@ class CheckHydrationProcessor(
           parsed.launcherConfig,
           SidecarInput.OperationType.CHECK,
           workload.logPath,
+          workload.logDeliveryMode.name,
         ),
       ),
     )
