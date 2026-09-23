@@ -80,6 +80,7 @@ object MetricTags {
   const val NOTIFICATION_CLIENT: String = "notification_client"
   const val ORGANIZATION_ID: String = "organization_id"
   const val RELEASE_STAGE: String = "release_stage"
+  const val ROUTE: String = "route"
   const val SECRET_COORDINATES_UPDATED: String = "secret_coordinates_updated"
 
   // Distinguishes what triggered a DELETE_SECRET: inline actor update/delete vs. the orphan-cleanup cron.
@@ -96,6 +97,7 @@ object MetricTags {
   const val SSO_OPERATION: String = "sso_operation"
   const val SSO_DEFAULT_ROLE: String = "sso_default_role"
   const val STATUS: String = "status"
+  const val OUTCOME: String = "outcome"
   const val SUCCESS: String = "success"
   const val DOWNGRADE_STEP: String = "downgrade_step"
   const val WEBHOOK_DOMAIN: String = "webhook_domain"

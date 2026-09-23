@@ -65,6 +65,21 @@ class WorkloadApiContractTest {
   }
 
   @Test
+  fun `GCS authorization string representation redacts its access token`() {
+    val authorization =
+      GcsDownscopedOAuthLogUploadAuthorization(
+        accessToken = "opaque-secret-token",
+        expiresAt = OffsetDateTime.parse("2026-09-02T12:34:56Z"),
+        bucketName = "customer-logs",
+        objectKeyPrefix = "job-logging/job/7/attempt/2/",
+      )
+
+    assertThat(authorization.toString())
+      .doesNotContain("opaque-secret-token")
+      .contains("accessToken=******")
+  }
+
+  @Test
   fun `authorization route is bodyless and contains only the workload path parameter`() {
     val method = WorkloadApi::class.java.getMethod("workloadLogUploadAuthorization", String::class.java)
 

@@ -420,6 +420,14 @@ enum class OssMetricsRegistry(
     metricName = "workloads_signal",
     metricDescription = "When emitting signal from the workload-api",
   ),
+  WORKLOAD_LOG_UPLOAD_AUTHORIZATION(
+    metricName = "workload_log_upload_authorization",
+    metricDescription = "Count of workload log upload authorization outcomes.",
+  ),
+  WORKLOAD_LOG_UPLOAD_AUTHORIZATION_LATENCY_MS(
+    metricName = "workload_log_upload_authorization_latency_ms",
+    metricDescription = "Latency of workload log upload authorization requests in milliseconds.",
+  ),
   NOTIFICATIONS_SENT(
     metricName = "notifications_sent",
     metricDescription = "number of notifications sent",

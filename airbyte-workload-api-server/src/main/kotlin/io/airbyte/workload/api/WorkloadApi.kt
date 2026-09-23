@@ -15,6 +15,7 @@ import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.domain.ClaimResponse
 import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
+import io.airbyte.workload.api.domain.LogUploadAuthorization
 import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
@@ -38,6 +39,7 @@ import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.handler.WorkloadHandler
+import io.airbyte.workload.logging.LogUploadAuthorizationService
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
@@ -67,6 +69,7 @@ open class WorkloadApi(
   private val roleResolver: RoleResolver,
   private val dataplaneService: DataplaneService,
   private val dataplaneGroupService: DataplaneGroupService,
+  private val logUploadAuthorizationService: LogUploadAuthorizationService,
 ) {
   /**
    * Create a workload
@@ -298,6 +301,23 @@ open class WorkloadApi(
     val workload = workloadHandler.getWorkload(workloadId)
     authorize(orgId = workload.organizationId)
     return workload
+  }
+
+  /**
+   * Issues a short-lived authorization for a workload to upload logs directly to managed storage.
+   */
+  @POST
+  @Path("/{workloadId}/log-upload-authorization")
+  @Produces("application/json")
+  fun workloadLogUploadAuthorization(
+    @PathParam("workloadId") workloadId: String,
+  ): HttpResponse<LogUploadAuthorization> {
+    val authorization = logUploadAuthorizationService.authorize(workloadId)
+    return if (authorization == null) {
+      HttpResponse.noContent()
+    } else {
+      HttpResponse.ok(authorization)
+    }
   }
 
   /**

@@ -216,6 +216,8 @@ object ReplicationDebugLogLevelEnabled : Permanent<Boolean>(key = "platform.repl
 
 object UseDeadlineInWorkloadMonitorQueries : Temporary<Boolean>(key = "platform.use-deadline-in-workload-monitor-queries", default = false)
 
+object FlexSyncLogging : Temporary<Boolean>(key = "platform.flex-sync-logging", default = false)
+
 object ForceDdRemoteConfigVar : Temporary<Boolean>(key = "platform.force-dd-remote-config-var", default = false)
 
 object ReplicationCommandFallsBackToWorkloadStatus : Temporary<Boolean>(

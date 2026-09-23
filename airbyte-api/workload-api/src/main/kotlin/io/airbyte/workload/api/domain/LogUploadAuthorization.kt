@@ -36,4 +36,7 @@ data class GcsDownscopedOAuthLogUploadAuthorization(
   val objectKeyPrefix: String,
 ) : LogUploadAuthorization {
   override val type: LogUploadAuthorizationType = LogUploadAuthorizationType.GCS_DOWNSCOPED_OAUTH
+
+  override fun toString(): String =
+    "GcsDownscopedOAuthLogUploadAuthorization(accessToken=******, expiresAt=$expiresAt, bucketName=******, objectKeyPrefix=******, type=$type)"
 }

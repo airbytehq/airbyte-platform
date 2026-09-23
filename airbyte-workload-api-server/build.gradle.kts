@@ -23,6 +23,7 @@ dependencies {
   implementation(libs.okhttp)
   implementation(libs.reactor.core)
   implementation(libs.kotlin.logging)
+  implementation(libs.google.auth.library.oauth2.http)
   implementation(libs.bundles.micronaut.metrics)
 
   implementation(project(":oss:airbyte-api:server-api-client"))

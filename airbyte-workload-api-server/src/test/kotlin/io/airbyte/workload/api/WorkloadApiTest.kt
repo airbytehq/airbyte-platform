@@ -12,6 +12,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.workload.api.domain.GcsDownscopedOAuthLogUploadAuthorization
 import io.airbyte.workload.api.domain.KnownExceptionInfo
 import io.airbyte.workload.api.domain.LogDeliveryMode
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
@@ -25,22 +26,30 @@ import io.airbyte.workload.api.domain.WorkloadQueueQueryRequest
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.common.WorkloadQueueService
+import io.airbyte.workload.errors.ConflictException
+import io.airbyte.workload.errors.ForbiddenException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
+import io.airbyte.workload.errors.LogUploadAuthorizationBrokerException
 import io.airbyte.workload.errors.NotFoundException
+import io.airbyte.workload.errors.UnauthorizedException
 import io.airbyte.workload.handler.ApiWorkload
 import io.airbyte.workload.handler.WorkloadHandler
 import io.airbyte.workload.handler.WorkloadHandlerImpl
+import io.airbyte.workload.logging.LogUploadAuthorizationService
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.env.Environment
 import io.micronaut.core.util.SupplierUtil
+import io.micronaut.http.HttpMethod
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.exceptions.HttpClientResponseException
 import io.micronaut.runtime.server.EmbeddedServer
+import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule
 import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.Runs
@@ -52,6 +61,7 @@ import jakarta.inject.Singleton
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.OffsetDateTime
 import java.util.UUID
 
 @Property(name = "airbyte.workload-api.workload-redelivery-window", value = "PT30M")
@@ -93,6 +103,12 @@ class WorkloadApiTest(
   @MockBean(DataplaneGroupService::class)
   @Replaces(DataplaneGroupService::class)
   fun dataplaneGroupService(): DataplaneGroupService = dataplaneGroupService
+
+  private val logUploadAuthorizationService = mockk<LogUploadAuthorizationService>()
+
+  @MockBean(LogUploadAuthorizationService::class)
+  @Replaces(LogUploadAuthorizationService::class)
+  fun logUploadAuthorizationService(): LogUploadAuthorizationService = logUploadAuthorizationService
 
   @Test
   fun `test create success`() {
@@ -171,6 +187,69 @@ class WorkloadApiTest(
 
     assertEquals(true, workloadSchema["properties"]["logDeliveryMode"]["readOnly"].asBoolean())
     assertEquals(false, workloadSchema["required"].map(JsonNode::asText).contains("logDeliveryMode"))
+  }
+
+  @Test
+  fun `POST log upload authorization is bodyless and returns a fresh authorization`() {
+    val authorization =
+      GcsDownscopedOAuthLogUploadAuthorization(
+        accessToken = "opaque-token",
+        expiresAt = OffsetDateTime.parse("2026-09-02T13:00:00Z"),
+        bucketName = "managed-log-bucket",
+        objectKeyPrefix = "job-logging/job/7/attempt/2/",
+      )
+    every { logUploadAuthorizationService.authorize("1") } returns authorization
+
+    val response =
+      client
+        .get()
+        .toBlocking()
+        .exchange(
+          HttpRequest.create<Any>(HttpMethod.POST, "/api/v1/workload/1/log-upload-authorization"),
+          GcsDownscopedOAuthLogUploadAuthorization::class.java,
+        )
+
+    assertEquals(HttpStatus.OK, response.status)
+    assertEquals(authorization, response.body())
+  }
+
+  @Test
+  fun `POST log upload authorization returns no content when issuance is disabled`() {
+    every { logUploadAuthorizationService.authorize("1") } returns null
+
+    testEndpointStatus(
+      HttpRequest.create(HttpMethod.POST, "/api/v1/workload/1/log-upload-authorization"),
+      HttpStatus.NO_CONTENT,
+    )
+  }
+
+  @Test
+  fun `POST log upload authorization inherits authenticated-only controller security`() {
+    val security = WorkloadApi::class.java.getAnnotation(Secured::class.java)
+
+    assertEquals(listOf(SecurityRule.IS_AUTHENTICATED), security.value.toList())
+  }
+
+  @Test
+  fun `POST log upload authorization maps sanitized service rejections`() {
+    val cases =
+      listOf(
+        UnauthorizedException("Log upload authorization is unavailable.") to HttpStatus.UNAUTHORIZED,
+        NotFoundException("Log upload authorization is unavailable.") to HttpStatus.NOT_FOUND,
+        ForbiddenException("Log upload authorization is unavailable.") to HttpStatus.FORBIDDEN,
+        ConflictException("Log upload authorization is unavailable.") to HttpStatus.CONFLICT,
+        InvalidStatusTransitionException("Log upload authorization is unavailable.") to HttpStatus.GONE,
+        LogUploadAuthorizationBrokerException() to HttpStatus.INTERNAL_SERVER_ERROR,
+      )
+
+    cases.forEach { (failure, status) ->
+      every { logUploadAuthorizationService.authorize("1") } throws failure
+      testErrorEndpointResponse(
+        HttpRequest.create(HttpMethod.POST, "/api/v1/workload/1/log-upload-authorization"),
+        status,
+        "Log upload authorization is unavailable.",
+      )
+    }
   }
 
   @Test

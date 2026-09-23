@@ -14,4 +14,10 @@ internal class FlagsTest {
     assertEquals("platform.scim-provisioning-pilot", ScimProvisioningPilot.key)
     assertFalse(ScimProvisioningPilot.default)
   }
+
+  @Test
+  fun `flex sync logging uses the approved key and defaults off`() {
+    assertEquals("platform.flex-sync-logging", FlexSyncLogging.key)
+    assertFalse(FlexSyncLogging.default)
+  }
 }
