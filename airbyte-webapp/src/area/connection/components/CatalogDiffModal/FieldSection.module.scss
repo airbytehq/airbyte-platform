@@ -1,6 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
-@use "./DiffSection.module.scss";
+@use "./DiffSection.module";
 
 .fieldHeader {
   @extend %sectionHeader;

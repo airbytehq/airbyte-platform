@@ -1,6 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
-@use "./builderVariables.scss";
+@use "./builderVariables";
 
 .label {
   flex-shrink: 1;

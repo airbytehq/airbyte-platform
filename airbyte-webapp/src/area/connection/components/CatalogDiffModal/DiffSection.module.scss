@@ -1,6 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
-@use "./StreamRow.module.scss";
+@use "./StreamRow.module";
 
 .sectionContainer {
   display: flex;
