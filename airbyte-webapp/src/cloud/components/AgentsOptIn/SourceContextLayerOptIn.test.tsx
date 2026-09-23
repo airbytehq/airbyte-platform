@@ -40,12 +40,12 @@ const mockUseGeneratedIntent = useGeneratedIntent as jest.MockedFunction<typeof 
 
 const messages = {
   "cloud.contextLayer.actor.notSupported": "This connector is not yet supported by the context layer.",
-  "cloud.contextLayer.agentAccess.title": "Agent Access",
-  "cloud.contextLayer.agentAccess.description":
-    "Allow AI agents with context layer access to query this {actorType, select, source {source} other {destination}} directly. This does not affect data replication.",
-  "cloud.contextLayer.semanticSearch.title": "Semantic Search",
-  "cloud.contextLayer.semanticSearch.description":
-    "Data will be indexed when this source is synced to an enabled Context Layer destination.",
+  "cloud.contextLayer.setup.agentAccess.title": "Agent access",
+  "cloud.contextLayer.setup.agentAccess.description":
+    "Agents can use the Airbyte MCP to read from and write to this {actorType, select, source {source} other {destination}} directly. No sync required.",
+  "cloud.contextLayer.setup.semanticSearch.title": "Semantic search",
+  "cloud.contextLayer.setup.semanticSearch.description":
+    "Agents can use the Airbyte MCP to search and reason about your data with greater accuracy and efficiency. Only if this source syncs to a destination that is also an agent connector.",
   "cloud.contextLayer.sourceOptIn.noPermission":
     "You need edit permission for this workspace's sources to change this.",
   "cloud.contextLayer.sourceOptIn.notEnrolled":
@@ -124,6 +124,22 @@ describe("SourceContextLayerOptIn", () => {
     renderOptIn();
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
     expect(screen.getAllByRole("checkbox").every((toggle) => (toggle as HTMLInputElement).checked)).toBe(true);
+    expect(screen.getByRole("group", { name: "Agent access" })).toContainElement(
+      screen.getByRole("checkbox", { name: "Agent access" })
+    );
+    expect(screen.getByRole("group", { name: "Semantic search" })).toContainElement(
+      screen.getByRole("checkbox", { name: "Semantic search" })
+    );
+    expect(
+      screen.getByText(
+        "Agents can use the Airbyte MCP to read from and write to this source directly. No sync required."
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Agents can use the Airbyte MCP to search and reason about your data with greater accuracy and efficiency. Only if this source syncs to a destination that is also an agent connector."
+      )
+    ).toBeInTheDocument();
     expect(mockUseGeneratedIntent).toHaveBeenCalledWith(Intent.CreateOrEditSource);
   });
 

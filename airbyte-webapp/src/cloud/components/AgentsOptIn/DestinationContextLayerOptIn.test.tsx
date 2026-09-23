@@ -39,9 +39,9 @@ const messages = {
   "cloud.contextLayer.actor.notSupported": "This connector is not yet supported by the context layer.",
   "cloud.contextLayer.actor.notEnrolled":
     "An organization admin needs to enable the Context layer for this organization and workspace before agent access can be turned on.",
-  "cloud.contextLayer.agentAccess.title": "Agent Access",
-  "cloud.contextLayer.agentAccess.description":
-    "Allow AI agents with context layer access to query this {actorType, select, source {source} other {destination}} directly. This does not affect data replication.",
+  "cloud.contextLayer.setup.agentAccess.title": "Agent access",
+  "cloud.contextLayer.setup.agentAccess.description":
+    "Agents can use the Airbyte MCP to read from and write to this {actorType, select, source {source} other {destination}} directly. No sync required.",
   "cloud.contextLayer.destinationOptIn.noPermission":
     "You need edit permission for this workspace's destinations to change this.",
 };
@@ -152,6 +152,12 @@ describe("DestinationContextLayerOptIn", () => {
     const toggle = screen.getByRole("checkbox");
     expect(toggle).toBeEnabled();
     expect(toggle).toBeChecked();
+    expect(toggle).toHaveAccessibleName("Agent access");
+    expect(
+      screen.getByText(
+        "Agents can use the Airbyte MCP to read from and write to this destination directly. No sync required."
+      )
+    ).toBeInTheDocument();
     expect(mockUseGeneratedIntent).toHaveBeenCalledWith(Intent.CreateOrEditDestination);
 
     fireEvent.click(toggle);

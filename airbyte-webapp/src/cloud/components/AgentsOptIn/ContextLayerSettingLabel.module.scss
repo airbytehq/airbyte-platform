@@ -10,3 +10,11 @@
 .description {
   margin: 0;
 }
+
+.setup {
+  gap: variables.$spacing-md;
+
+  .title {
+    font-weight: 500;
+  }
+}

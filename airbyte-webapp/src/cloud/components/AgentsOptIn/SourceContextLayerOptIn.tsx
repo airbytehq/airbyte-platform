@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -36,8 +35,8 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
   const isEnrolled = status?.is_enrolled === true;
   const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
   const canManage = useGeneratedIntent(Intent.CreateOrEditSource);
-  const agentAccessTitle = useContextLayerSettingTitle("agentAccess");
-  const semanticSearchTitle = useContextLayerSettingTitle("semanticSearch");
+  const agentAccessTitle = useContextLayerSettingTitle("agentAccess", "setup");
+  const semanticSearchTitle = useContextLayerSettingTitle("semanticSearch", "setup");
 
   if (!isCloudApp || !showAgentsOptIn) {
     return null;
@@ -70,9 +69,9 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
   );
 
   return (
-    <div className={styles.card}>
-      <div className={styles.row}>
-        <ContextLayerSettingLabel setting="agentAccess" actorType="source" />
+    <div className={styles.cards}>
+      <div className={styles.card} role="group" aria-label={agentAccessTitle}>
+        <ContextLayerSettingLabel setting="agentAccess" actorType="source" variant="setup" />
         {withPermissionTooltip(
           <Switch
             size="sm"
@@ -87,8 +86,8 @@ const SourceContextLayerOptInContent: React.FC<SourceContextLayerOptInProps> = (
           />
         )}
       </div>
-      <div className={classNames(styles.row, styles.tierTwo)}>
-        <ContextLayerSettingLabel setting="semanticSearch" actorType="source" />
+      <div className={styles.card} role="group" aria-label={semanticSearchTitle}>
+        <ContextLayerSettingLabel setting="semanticSearch" actorType="source" variant="setup" />
         {withPermissionTooltip(
           <Switch
             size="sm"

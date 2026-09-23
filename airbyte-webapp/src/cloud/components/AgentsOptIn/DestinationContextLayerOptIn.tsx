@@ -30,7 +30,7 @@ const DestinationContextLayerOptInContent: React.FC<DestinationContextLayerOptIn
   const isEnrolled = status?.is_enrolled === true;
   const supportedDestinationDefinitionIds = useAgentsSupportedDestinationDefinitionIds();
   const canManage = useGeneratedIntent(Intent.CreateOrEditDestination);
-  const agentAccessTitle = useContextLayerSettingTitle("agentAccess");
+  const agentAccessTitle = useContextLayerSettingTitle("agentAccess", "setup");
 
   if (!isCloudApp || !showAgentsOptIn || !destinationDefinitionId) {
     return null;
@@ -59,9 +59,9 @@ const DestinationContextLayerOptInContent: React.FC<DestinationContextLayerOptIn
   );
 
   return (
-    <div className={styles.card}>
-      <div className={styles.row}>
-        <ContextLayerSettingLabel setting="agentAccess" actorType="destination" />
+    <div className={styles.cards}>
+      <div className={styles.card}>
+        <ContextLayerSettingLabel setting="agentAccess" actorType="destination" variant="setup" />
         {withPermissionTooltip(
           <Switch
             size="sm"

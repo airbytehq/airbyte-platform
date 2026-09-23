@@ -1,25 +1,21 @@
 @use "scss/colors";
 @use "scss/variables";
 
-.card {
+.cards {
   display: flex;
   flex-direction: column;
   gap: variables.$spacing-lg;
-  padding: variables.$spacing-lg;
-  border: 1px solid colors.$grey-100;
-  border-radius: variables.$border-radius-xs;
-  background: colors.$foreground;
 }
 
-.row {
+.card {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: variables.$spacing-lg;
-}
-
-.tierTwo {
-  padding-left: variables.$spacing-xl;
+  padding: variables.$spacing-xl;
+  border: 1px solid colors.$grey-100;
+  border-radius: variables.$border-radius-xs;
+  background: colors.$foreground;
 }
 
 .control {
