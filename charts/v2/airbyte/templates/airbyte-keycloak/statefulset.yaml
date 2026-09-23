@@ -1,5 +1,5 @@
-# if Cloud or Pro/Enterprise, render the keycloak StatefulSet template.
-{{- if or (eq .Values.global.edition "cloud") (eq .Values.global.edition "enterprise") }}
+# If Cloud, render the keycloak StatefulSet template.
+{{- if eq .Values.global.edition "cloud" }}
 {{- if .Values.keycloak.enabled }}
 apiVersion: apps/v1
 kind: StatefulSet

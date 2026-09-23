@@ -24,7 +24,7 @@ internal class S3StorageConfigTest {
         workloadOutput = "workload-output",
         log = "log",
         activityPayload = "activity-payload",
-        // Audit logging is null by default as it is SME feature only
+        // Audit logging is null by default
         auditLogging = "",
         profilerOutput = "",
         replicationDump = "",

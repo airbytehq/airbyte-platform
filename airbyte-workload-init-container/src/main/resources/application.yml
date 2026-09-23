@@ -17,7 +17,6 @@ micronaut:
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
 airbyte:
-  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   container.orchestrator:
     platform-mode: ${PLATFORM_MODE:ORCHESTRATOR}
   context:

@@ -9,11 +9,6 @@
     "apiUrl": "https://frontend-dev-oss.internal.airbyte.dev",
     "description": "Remote OSS Community instance at frontend-dev-oss.internal.airbyte.dev"
   },
-  "enterprise": {
-    "name": "Enterprise (frontend-dev-ent.internal.airbyte.dev)",
-    "apiUrl": "https://frontend-dev-ent.internal.airbyte.dev",
-    "description": "Remote Enterprise instance at frontend-dev-ent.internal.airbyte.dev"
-  },
   "cloud": {
     "name": "Cloud (frontend-dev-cloud.internal.airbyte.dev)",
     "apiUrl": "https://frontend-dev-cloud.internal.airbyte.dev",

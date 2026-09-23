@@ -12,7 +12,6 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { ContextLayerPage } from "pages/ContextLayerPage/ContextLayerPage";
 import { OrganizationSettingsPage } from "pages/SettingsPage/OrganizationSettingsPage";
 import { DestinationsPage, SourcesPage } from "pages/SettingsPage/pages/ConnectorsPage";
-import { LicenseSettingsPage } from "pages/SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationAuditLogsPage } from "pages/SettingsPage/pages/Organization/OrganizationAuditLogsPage";
 import { OrganizationGroupsPage } from "pages/SettingsPage/pages/Organization/OrganizationGroupsPage";
@@ -30,7 +29,6 @@ const OrganizationInstallMcpPage = React.lazy(() => import("pages/SettingsPage/p
 
 export const OrganizationRoutes: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
-  const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const supportsSSO = useFeature(FeatureItem.AllowUpdateSSOConfig);
   const auditLogsEntitled = useFeature(FeatureItem.AllowAuditLogs);
   const canViewOrgSettings = useGeneratedIntent(Intent.ViewOrganizationSettings, { organizationId });
@@ -89,7 +87,6 @@ export const OrganizationRoutes: React.FC = () => {
           {auditLogsEntitled && isAuditLogsUiEnabled && canManageOrganizationPermissions && (
             <Route path={SettingsRoutePaths.OrganizationAuditLogs} element={<OrganizationAuditLogsPage />} />
           )}
-          {licenseUi && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}
           {canManageOrganizationBilling && (
             <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
           )}

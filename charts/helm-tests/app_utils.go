@@ -13,7 +13,6 @@ var AllApps = []string{
 	"worker",
 	"cron",
 	"keycloak",
-	"keycloak-setup",
 	"airbyte-bootloader",
 	"metrics",
 	"temporal",

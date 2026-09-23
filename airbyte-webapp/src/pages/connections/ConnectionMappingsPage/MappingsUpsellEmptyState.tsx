@@ -13,7 +13,6 @@ import { links } from "core/utils/links";
 import mappings_screenshot from "./mappings_screenshot.png";
 
 export const MappingsUpsellEmptyState = () => {
-  const enterpriseUpsell = useFeature(FeatureItem.EnterpriseUpsell);
   const cloudForTeamsUpsell = useFeature(FeatureItem.CloudForTeamsUpsell);
 
   const description = (
@@ -22,10 +21,7 @@ export const MappingsUpsellEmptyState = () => {
         <FormattedMessage id="connections.mappings.emptyState.upsellBody" />
       </Text>
       <Text>
-        <FormattedMessage
-          id="connections.mappings.emptyState.upsellFooter"
-          values={{ product: enterpriseUpsell ? "enterprise" : "teams" }}
-        />
+        <FormattedMessage id="connections.mappings.emptyState.upsellFooter" />
       </Text>
     </FlexContainer>
   );
@@ -43,7 +39,7 @@ export const MappingsUpsellEmptyState = () => {
 
   return (
     <UpsellCard
-      branding={enterpriseUpsell ? "enterprise" : cloudForTeamsUpsell ? "teams" : undefined}
+      branding={cloudForTeamsUpsell ? "teams" : undefined}
       header={<FormattedMessage id="connections.mappings.emptyState.upsellTitle" />}
       description={description}
       cta={cta}

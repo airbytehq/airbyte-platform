@@ -33,7 +33,6 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.time.Instant
 import java.util.UUID
 import java.util.stream.Stream
 import java.util.zip.ZipEntry
@@ -58,7 +57,6 @@ open class DiagnosticToolHandler(
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
   private val actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
-  private val instanceConfigurationHandler: InstanceConfigurationHandler,
   private val kubernetesClient: KubernetesClient,
   private val kubernetesClientPermissionHelper: KubernetesClientPermissionHelper,
   private val cspChecker: CspChecker,
@@ -131,8 +129,6 @@ open class DiagnosticToolHandler(
       mapOf(
         // Collect workspace information
         "workspaces" to collectWorkspaceInfo(),
-        // Collect license information
-        "license" to collectLicenseInfo(),
         // TODO: Collect other information here, e.g: application logs, etc.
       )
 
@@ -264,27 +260,6 @@ open class DiagnosticToolHandler(
       logger.error { "Error collecting connectors information. Message: ${e.message}" }
       emptyList()
     }
-
-  private fun collectLicenseInfo(): Map<String, Any> {
-    logger.info { "Collecting license data..." }
-    val license = instanceConfigurationHandler.licenseInfo()
-    if (license == null) {
-      logger.error { "Error collecting license information" }
-      return emptyMap()
-    }
-
-    val licenseInfo =
-      mapOf<String, Any>(
-        "edition" to license.edition,
-        "status" to license.licenseStatus.toString(),
-        "expiryDate" to Instant.ofEpochSecond(license.expirationDate).toString(),
-        "maxEditors" to (license.maxEditors ?: UNKNOWN),
-        "maxNodes" to (license.maxNodes ?: UNKNOWN),
-        "usedEditors" to (license.usedEditors ?: UNKNOWN),
-        "usedNodes" to (license.usedNodes ?: UNKNOWN),
-      )
-    return licenseInfo
-  }
 
   private fun addAirbyteDeploymentYaml(
     zipOut: ZipOutputStream,

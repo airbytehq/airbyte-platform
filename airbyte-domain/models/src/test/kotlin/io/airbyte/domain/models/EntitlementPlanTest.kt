@@ -12,7 +12,6 @@ internal class EntitlementPlanTest {
   @Test
   fun `fromId returns correct plan for valid ID`() {
     assertEquals(EntitlementPlan.CORE, EntitlementPlan.fromId("plan-airbyte-core"))
-    assertEquals(EntitlementPlan.SME, EntitlementPlan.fromId("plan-airbyte-sme"))
     assertEquals(EntitlementPlan.STANDARD, EntitlementPlan.fromId("plan-airbyte-standard"))
     assertEquals(EntitlementPlan.STANDARD_TRIAL, EntitlementPlan.fromId("plan-airbyte-standard-trial"))
     assertEquals(EntitlementPlan.FLEX, EntitlementPlan.fromId("plan-airbyte-flex"))

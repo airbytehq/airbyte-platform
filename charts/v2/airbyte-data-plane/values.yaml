@@ -56,13 +56,6 @@ dataPlane:
   clientSecretSecretName: ""
   clientSecretSecretKey: ""
 
-enterprise:
-  # -- Secret name where an Airbyte license key is stored
-  secretName: ""
-  # -- The key within `licenseKeySecretName` where the Airbyte license key is stored
-  licenseKey: ""
-  licenseKeySecretKey: ""
-
 logging:
   level: info
   platformLogFormat: "json"

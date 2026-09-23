@@ -4,7 +4,6 @@ import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
 import { FlexContainer } from "components/ui/Flex";
-import { LicenseBanner } from "components/ui/LicenseBanner/LicenseBanner";
 
 import { SideBar } from "area/layout/SideBar";
 import { PlusUpgradePromoBanner } from "cloud/area/billing/components/PlusUpgradePromoBanner";
@@ -14,7 +13,6 @@ import { AdpOrganizationBanner } from "cloud/components/AdpOrganizationBanner";
 import { AgentsOptInBanner } from "cloud/components/AgentsOptIn";
 import { usePrefetchOrganizationSummaries } from "core/api/";
 import { DefaultErrorBoundary, ForbiddenErrorBoundary } from "core/errors";
-import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 
 import styles from "./MainLayout.module.scss";
@@ -23,12 +21,9 @@ const MainLayout: React.FC<React.PropsWithChildren> = () => {
   usePrefetchOrganizationSummaries()();
   const isCloudApp = useIsCloudApp();
 
-  const checkEnterpriseLicense = useFeature(FeatureItem.EnterpriseLicenseChecking);
-
   return (
     <ForbiddenErrorBoundary>
       <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
-        {checkEnterpriseLicense && <LicenseBanner />}
         {isCloudApp && <StatusBanner />}
         {isCloudApp && <PlusUpgradePromoBanner />}
         {isCloudApp && <AdpOrganizationBanner />}

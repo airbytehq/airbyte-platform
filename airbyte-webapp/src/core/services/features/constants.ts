@@ -5,27 +5,6 @@ export const defaultOssFeatures = [
   FeatureItem.AllowSyncFrequencyUnderOneHour,
   FeatureItem.AllowUpdateConnectors,
   FeatureItem.AllowUploadCustomImage,
-  FeatureItem.EnterpriseUpsell,
-];
-
-export const defaultEnterpriseFeatures = [
-  ...defaultOssFeatures,
-  FeatureItem.AllowAllRBACRoles,
-  FeatureItem.AllowChangeDataplanes,
-  FeatureItem.ConnectionHistoryGraphs,
-  FeatureItem.ConnectorResourceAllocation,
-  FeatureItem.DiagnosticsExport,
-  FeatureItem.DisplayOrganizationUsers,
-  FeatureItem.EnterpriseBranding,
-  FeatureItem.EnterpriseLicenseChecking,
-  FeatureItem.IndicateGuestUsers,
-  FeatureItem.MappingsUI,
-  FeatureItem.AdvancedMappingsUI,
-  FeatureItem.CreateMultipleWorkspaces,
-  FeatureItem.OrganizationUI,
-  FeatureItem.OrganizationConnectorSettings,
-  FeatureItem.RBAC,
-  FeatureItem.ShowWorkspacePicker,
 ];
 
 export const defaultCloudFeatures = [

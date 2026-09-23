@@ -9,8 +9,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.entitlements.models.PlanNameEntitlement
-import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.config.Configs
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.domain.models.EntitlementPlan
@@ -23,7 +21,6 @@ import io.micronaut.context.annotation.Factory
 import io.stigg.sidecar.proto.v1.ApiConfig
 import io.stigg.sidecar.sdk.Stigg
 import io.stigg.sidecar.sdk.StiggConfig
-import io.stigg.sidecar.sdk.offline.CustomerEntitlements
 import jakarta.inject.Singleton
 import java.io.File
 import java.io.IOException
@@ -142,7 +139,6 @@ object MissingOrganizationService : Exception("Can't create an entitlements clie
 internal class EntitlementClientFactory(
   private val airbyteConfig: AirbyteConfig,
   private val airbyteStiggClientConfig: AirbyteStiggClientConfig,
-  private val activeLicense: ActiveAirbyteLicense? = null,
   private val organizationService: OrganizationService? = null,
   private val metricClient: MetricClient? = null,
   private val featureFlagClient: FeatureFlagClient? = null,
@@ -154,7 +150,6 @@ internal class EntitlementClientFactory(
         logger.info { "Creating StaticEntitlementClient" }
         StaticEntitlementClient()
       }
-      Configs.AirbyteEdition.ENTERPRISE -> createStiggEnterpriseClient()
       Configs.AirbyteEdition.CLOUD -> createStiggCloudClient()
     }
 
@@ -204,25 +199,5 @@ internal class EntitlementClientFactory(
       ),
       organizationService,
     )
-  }
-
-  private fun createStiggEnterpriseClient(): EntitlementClient {
-    logger.info { "Creating Stigg Enterprise client" }
-
-    val license = activeLicense?.license
-    if (license == null) {
-      logger.info { "License key is not set. Falling back to StaticEntitlementClient" }
-      return StaticEntitlementClient()
-    }
-
-    val rawEntitlements = license.stiggEntitlements
-    if (rawEntitlements.isNullOrEmpty()) {
-      logger.info { "Stigg entitlements from license are not set. Falling back to StaticEntitlementClient" }
-      return StaticEntitlementClient()
-    }
-
-    val entitlements = Jsons.deserialize(rawEntitlements, CustomerEntitlements::class.java)
-    logger.debug { "Found entitlements docs: $entitlements" }
-    return StiggEnterpriseEntitlementClient(entitlements)
   }
 }

@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.api.model.generated.LicenseInfoResponse
-import io.airbyte.api.model.generated.LicenseStatus
 import io.airbyte.commons.csp.CheckResult
 import io.airbyte.commons.csp.CspChecker
 import io.airbyte.commons.csp.Storage
@@ -43,7 +41,6 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.io.FileInputStream
-import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -80,10 +77,6 @@ internal class DiagnosticToolHandlerTest {
             Assertions.assertTrue(content.toString().contains("workspaces"))
             Assertions.assertTrue(content.toString().contains("connections"))
             Assertions.assertTrue(content.toString().contains("connectors"))
-            // license information
-            Assertions.assertTrue(content.toString().contains("license"))
-            Assertions.assertTrue(content.toString().contains("expiryDate"))
-            Assertions.assertTrue(content.toString().contains("usedNodes"))
           } else if (entry!!.name == AIRBYTE_DEPLOYMENT_YAML) {
             foundDeploymentYaml = true
 
@@ -139,10 +132,6 @@ internal class DiagnosticToolHandlerTest {
             Assertions.assertTrue(content.toString().contains("workspaces"))
             Assertions.assertTrue(content.toString().contains("connections"))
             Assertions.assertTrue(content.toString().contains("connectors"))
-            // license information
-            Assertions.assertTrue(content.toString().contains("license"))
-            Assertions.assertTrue(content.toString().contains("expiryDate"))
-            Assertions.assertTrue(content.toString().contains("usedNodes"))
           } else if (entry!!.name == AIRBYTE_DEPLOYMENT_YAML) {
             foundDeploymentYaml = true
 
@@ -207,17 +196,6 @@ private fun mockDiagnosticToolHandler(withNodes: Boolean): DiagnosticToolHandler
       every { check() } returns CheckResult(Storage(StorageType.LOCAL, emptyList()))
     }
 
-  val instanceConfigurationHandler: InstanceConfigurationHandler =
-    mockk {
-      every { licenseInfo() } returns
-        LicenseInfoResponse()
-          .edition(
-            "pro",
-          ).licenseStatus(LicenseStatus.PRO)
-          .expirationDate(OffsetDateTime.now().plusDays(10).toEpochSecond())
-          .usedNodes(2)
-    }
-
   val kubernetesClient: KubernetesClient = mockk {}
   val kubernetesClientPermissionHelper: KubernetesClientPermissionHelper = mockk {}
 
@@ -228,7 +206,6 @@ private fun mockDiagnosticToolHandler(withNodes: Boolean): DiagnosticToolHandler
       sourceService,
       destinationService,
       actorDefinitionVersionHelper,
-      instanceConfigurationHandler,
       kubernetesClient,
       kubernetesClientPermissionHelper,
       cspChecker,

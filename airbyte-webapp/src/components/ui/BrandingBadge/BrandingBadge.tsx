@@ -15,7 +15,6 @@ type ProductBranding = "enterprise" | "cloudForTeams" | "cloudInTrial" | null;
 const planIdToBrandingMap: Partial<Record<PlanId, ProductBranding>> = {
   [ORG_PLAN_IDS.CORE]: null,
   [ORG_PLAN_IDS.STANDARD]: null,
-  [ORG_PLAN_IDS.SME]: "enterprise",
   [ORG_PLAN_IDS.FLEX]: "enterprise",
   [ORG_PLAN_IDS.STANDARD_TRIAL]: "cloudInTrial",
   [ORG_PLAN_IDS.PRO]: "cloudForTeams",
@@ -61,7 +60,6 @@ export const useGetProductBranding = (): ProductBranding => {
   // default product type calculation
   // TODO: can be removed once we complete the migration to Stigg
   const currentOrganizationId = useCurrentOrganizationId();
-  const isEnterprise = useFeature(FeatureItem.EnterpriseBranding);
   const isCloudApp = useIsCloudApp();
   const isCloudForTeams = useFeature(FeatureItem.CloudForTeamsBranding);
   const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus);
@@ -76,5 +74,5 @@ export const useGetProductBranding = (): ProductBranding => {
   }
 
   // fallback to feature flag logic
-  return isEnterprise ? "enterprise" : isCloudForTeams ? "cloudForTeams" : isCloudInTrial ? "cloudInTrial" : null;
+  return isCloudForTeams ? "cloudForTeams" : isCloudInTrial ? "cloudInTrial" : null;
 };

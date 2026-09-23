@@ -202,49 +202,6 @@ describe("useOrganizationSubscriptionStatus", () => {
       expect(result.current.isStandardTrialPlan).toBe(false);
     });
 
-    // Tests for SME plan
-    it("should return true for isSmePlan when organizationPlanId matches SME", () => {
-      mockUseCurrentOrganizationInfo.mockReturnValue({
-        organizationId: mockOrganizationId,
-        organizationName: "Test Organization",
-        organizationPlanId: "plan-airbyte-sme",
-        sso: false,
-        scim: false,
-      });
-
-      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
-
-      expect(result.current.isSmePlan).toBe(true);
-    });
-
-    it("should return false for isSmePlan when organizationPlanId does not match SME", () => {
-      mockUseCurrentOrganizationInfo.mockReturnValue({
-        organizationId: mockOrganizationId,
-        organizationName: "Test Organization",
-        organizationPlanId: "plan-airbyte-standard",
-        sso: false,
-        scim: false,
-      });
-
-      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
-
-      expect(result.current.isSmePlan).toBe(false);
-    });
-
-    it("should return false for isSmePlan when organizationPlanId is undefined", () => {
-      mockUseCurrentOrganizationInfo.mockReturnValue({
-        organizationId: mockOrganizationId,
-        organizationName: "Test Organization",
-        organizationPlanId: undefined,
-        sso: false,
-        scim: false,
-      });
-
-      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
-
-      expect(result.current.isSmePlan).toBe(false);
-    });
-
     // Tests for Flex plan
     it("should return true for isFlexPlan when organizationPlanId matches FLEX", () => {
       mockUseCurrentOrganizationInfo.mockReturnValue({
@@ -307,7 +264,7 @@ describe("useOrganizationSubscriptionStatus", () => {
       mockUseCurrentOrganizationInfo.mockReturnValue({
         organizationId: mockOrganizationId,
         organizationName: "Test Organization",
-        organizationPlanId: "plan-airbyte-sme",
+        organizationPlanId: "plan-airbyte-standard",
         sso: false,
         scim: false,
       });

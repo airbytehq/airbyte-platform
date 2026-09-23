@@ -5579,19 +5579,6 @@ paths:
                 $ref: "#/components/schemas/InstanceConfigurationResponse"
         "401":
           description: Instance setup failed.
-  /v1/instance_configuration/license/info:
-    get:
-      summary: Fetch license limits and usage
-      tags:
-        - instance_configuration
-      operationId: licenseInfo
-      responses:
-        "200":
-          description: Successfully retrieve license usage information
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LicenseInfoResponse"
   /v1/jobs/retry_states/create_or_update:
     post:
       summary: Creates or updates a retry state for a job.
@@ -12795,7 +12782,6 @@ components:
           type: string
           enum:
             - CORE
-            - SME
             - STANDARD
             - STANDARD_TRIAL
             - PRO
@@ -20501,13 +20487,6 @@ components:
           type: string
         extraScopes:
           type: string
-    LicenseStatus:
-      type: string
-      enum:
-        - pro
-        - invalid
-        - exceeded
-        - expired
     InstanceConfigurationResponse:
       type: object
       required:
@@ -20521,24 +20500,16 @@ components:
         - initialSetupComplete
         - trackingStrategy
         - version
-        - licenseStatus
       properties:
         edition:
           type: string
           enum:
             - community
             - pro
-            - enterprise
             - trial
         version:
           description: release version for the corresponding edition
           type: string
-        licenseStatus:
-          $ref: "#/components/schemas/LicenseStatus"
-        licenseExpirationDate:
-          type: integer
-          format: int64
-          nullable: true
         auth:
           $ref: "#/components/schemas/AuthConfiguration"
         airbyteUrl:
@@ -20584,29 +20555,6 @@ components:
         organizationName:
           description: Optional name of the organization to create. Defaults to 'Default Organization' if not specified.
           type: string
-    LicenseInfoResponse:
-      type: object
-      required:
-        - edition
-        - licenseStatus
-        - usedEditors
-        - expirationDate
-      properties:
-        edition:
-          type: string
-        licenseStatus:
-          $ref: "#/components/schemas/LicenseStatus"
-        maxNodes:
-          type: integer
-        maxEditors:
-          type: integer
-        usedNodes:
-          type: integer
-        usedEditors:
-          type: integer
-        expirationDate:
-          type: integer
-          format: int64
     StreamStatusRead:
       type: object
       required:

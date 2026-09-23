@@ -30,7 +30,7 @@ private val log = KotlinLogging.logger { }
  * todo(cgardens) - I would hope consolidating builder endpoints into the server would remove the need for this to be tested at the acceptance test level.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Tags(Tag("builder"), Tag("enterprise"))
+@Tags(Tag("builder"))
 class ConnectorBuilderTest {
   private val atClient = AcceptanceTestClient()
 

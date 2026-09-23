@@ -38,10 +38,6 @@ class DataResidencyHelper(
         logger.warn { "Ignoring value for dataResidency=$dataResidency. dataResidency is not supported on $airbyteEdition." }
         dataplaneGroupService.getDefaultDataplaneGroup()
       }
-
-      AirbyteEdition.ENTERPRISE -> {
-        dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, dataResidency)
-      }
     }
   }
 }

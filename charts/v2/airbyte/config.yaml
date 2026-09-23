@@ -46,7 +46,7 @@ common:
 
     - env: API_AUTHORIZATION_ENABLED
       key: auth.enabled
-      defaultValueExp: (ternary "true" "false" (eq .Values.global.edition "enterprise"))
+      defaultValue: false
 
     - env: MANIFEST_SERVER_API_HOST
       key: manifestServer.apiHost
@@ -246,24 +246,6 @@ auth.identityProvider:
         - generic-oidc
       defaultValue: iss
 
-auth.instanceAdmin.enterprise:
-  keyBasePath: global.auth.instanceAdmin
-  config: 
-    - env: INITIAL_USER_FIRST_NAME
-      key: firstName
-
-    - env: INITIAL_USER_LAST_NAME
-      key: lastName
-
-    # DEPRECATED: ?
-    #- env: INITIAL_USER_EMAIL
-    #  key: email
-    #  sensitive: true
-
-    - env: INITIAL_USER_PASSWORD
-      key: password
-      sensitive: true
-
 auth.jwt:
   keyBasePath: global.auth.security
   secretNamePath: global.auth.instanceAdmin.secretName
@@ -458,13 +440,6 @@ dataplaneGroups:
     - env: DEFAULT_DATAPLANE_GROUP_NAME
       key: defaultDataplaneGroupName
 
-enterprise:
-  keyBasePath: global.enterprise
-  config:
-    - env: AIRBYTE_LICENSE_KEY
-      key: licenseKey
-      sensitive: true
-
 featureFlags:
   keyBasePath: global.featureFlags
   discriminatorField: client
@@ -583,11 +558,9 @@ keycloak:
     #  key: adminUrl
     #  defaultValueExp: (printf "http://localhost:%d/auth" (int (include "airbyte.keycloak.service.port" .)))
 
-    # HACK: When set, keycloak will return a 302 with the keycloak hostname. However, if we are running enterprise, this breaks the keycloak setup job because it cannot resolve
-    # local.airbyte.dev. Because of this, we only set this value if the edition is anything non-enterprise.
     - env: KEYCLOAK_HOSTNAME_URL
       key: url
-      valueExp: ternary (printf "%s/auth" .Values.global.airbyteUrl) "" (ne .Values.global.edition "enterprise")
+      valueExp: (printf "%s/auth" .Values.global.airbyteUrl)
 
     - env: KEYCLOAK_HOST
       key: host
@@ -601,7 +574,6 @@ keycloak:
       key: protocol
       defaultValue: https
 
-    # NOTE: we only want to use this for keycloak (NOT keycloak-setup)
     - env: JAVA_OPTS_APPEND
       key: javaOpts
       valueExp: (printf "-Djgroups.dns.query=%s-airbyte-keycloak-headless-svc" .Release.Name)
@@ -665,7 +637,7 @@ keycloak.admin.client:
 
     - env: KEYCLOAK_INTERNAL_HOST
       key: internalHost
-      defaultValueExp: (ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (ne .Values.global.edition "community")))
+      defaultValueExp: (ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.keycloak.service.port)) "localhost" (ne .Values.global.edition "community"))
 
     - env: KEYCLOAK_INTERNAL_PROTOCOL
       key: internalProtocol

@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.entitlements
 
-import io.airbyte.commons.license.ActiveAirbyteLicense
-import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled
 import io.airbyte.config.ActorType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.AllowConfigTemplateEndpoints
@@ -58,39 +56,6 @@ class DefaultEntitlementProvider : EntitlementProvider {
   override fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): Boolean = false
 
   override fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): Boolean = false
-}
-
-/**
- * An [EntitlementProvider] for Airbyte Enterprise edition, which uses the active license to determine access.
- */
-@Singleton
-@Replaces(DefaultEntitlementProvider::class)
-@RequiresAirbyteProEnabled
-class EnterpriseEntitlementProvider(
-  private val activeLicense: ActiveAirbyteLicense,
-) : EntitlementProvider {
-  override fun hasEnterpriseConnectorEntitlements(
-    organizationId: OrganizationId,
-    actorType: ActorType,
-    actorDefinitionIds: List<UUID>,
-  ): Map<UUID, Boolean> {
-    activeLicense.license?.let { license ->
-      return actorDefinitionIds.associateWith {
-        license.enterpriseConnectorIds.contains(it)
-      }
-    }
-
-    return actorDefinitionIds.associateWith { _ -> false }
-  }
-
-  override fun hasConfigTemplateEntitlements(organizationId: OrganizationId): Boolean = activeLicense.license?.isEmbedded ?: false
-
-  override fun hasDestinationObjectStorageEntitlement(organizationId: OrganizationId): Boolean = true
-
-  override fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): Boolean = false
-
-  // Allow all Enterprise users to manage dataplanes and dataplane groups by default
-  override fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): Boolean = true
 }
 
 /**

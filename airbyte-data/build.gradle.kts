@@ -21,7 +21,6 @@ dependencies {
   implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-protocol"))
-  implementation(project(":oss:airbyte-commons-license"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-secrets"))

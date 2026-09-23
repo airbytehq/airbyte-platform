@@ -87,7 +87,7 @@ open class WorkspacesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest): Response {
     // This request is hard-coded to the DEFAULT_ORGANIZATION_ID in OSS,
-    // because there's only one organization in OSS/SME.
+    // because there's only one organization in OSS.
     // This controller is overridden in Airbyte Cloud to allow multiple workspaces.
     roleResolver
       .newRequest()

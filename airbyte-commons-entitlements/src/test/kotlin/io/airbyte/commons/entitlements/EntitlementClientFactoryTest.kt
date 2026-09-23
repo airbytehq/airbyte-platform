@@ -10,9 +10,6 @@ import io.airbyte.commons.entitlements.models.FeatureEntitlement
 import io.airbyte.commons.entitlements.models.MappersEntitlement
 import io.airbyte.commons.entitlements.models.PlanNameEntitlement
 import io.airbyte.commons.entitlements.models.SsoEntitlement
-import io.airbyte.commons.license.ActiveAirbyteLicense
-import io.airbyte.commons.license.AirbyteLicense
-import io.airbyte.commons.license.AirbyteLicense.LicenseType
 import io.airbyte.config.Configs
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.domain.models.EntitlementPlan
@@ -44,75 +41,6 @@ class EntitlementClientFactoryTest {
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.COMMUNITY),
         airbyteStiggClientConfig = AirbyteStiggClientConfig(entitlementsFile = file.toString()),
-        activeLicense = null,
-      )
-
-    val client = factory.entitlementClient()
-    assertInstanceOf<StaticEntitlementClient>(client)
-    assertFalse(client.checkEntitlement(org, MappersEntitlement).isEntitled)
-    assertEquals(emptyList<EntitlementResult>(), client.getEntitlements(org))
-  }
-
-  @Test
-  fun `enterprise edition`() {
-    val license =
-      AirbyteLicense(
-        type = LicenseType.ENTERPRISE,
-        stiggEntitlements = EXAMPLE_ENTITLEMENTS_JSON,
-      )
-    val factory =
-      EntitlementClientFactory(
-        airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.ENTERPRISE),
-        airbyteStiggClientConfig = AirbyteStiggClientConfig(),
-        activeLicense = ActiveAirbyteLicense("").also { it.license = license },
-      )
-
-    val org = OrganizationId(UUID.randomUUID())
-    val client = factory.entitlementClient()
-    assertInstanceOf<StiggEnterpriseEntitlementClient>(client)
-
-    assertEquals(
-      listOf<EntitlementResult>(
-        EntitlementResult(featureId = "feature-a", isEntitled = true),
-        EntitlementResult(featureId = "feature-b", isEntitled = true),
-      ),
-      client.getEntitlements(org),
-    )
-
-    client.checkEntitlement(org, FeatureEntitlement("feature-a")).assertEntitled()
-    client.checkEntitlement(org, FeatureEntitlement("feature-b")).assertEntitled()
-    client.checkEntitlement(org, FeatureEntitlement("feature-c")).assertNotEntitled()
-  }
-
-  @Test
-  fun `enterprise edition with no entitlements in license denies all entitlements even when an entitlements file is set`(
-    @TempDir tempDir: Path,
-  ) {
-    val file = writeEntitlementsFile(tempDir, mapOf(MappersEntitlement.featureId to true))
-    val license = AirbyteLicense(LicenseType.ENTERPRISE)
-    val factory =
-      EntitlementClientFactory(
-        airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.ENTERPRISE),
-        airbyteStiggClientConfig = AirbyteStiggClientConfig(entitlementsFile = file.toString()),
-        activeLicense = ActiveAirbyteLicense("").also { it.license = license },
-      )
-
-    val client = factory.entitlementClient()
-    assertInstanceOf<StaticEntitlementClient>(client)
-    assertFalse(client.checkEntitlement(org, MappersEntitlement).isEntitled)
-    assertEquals(emptyList<EntitlementResult>(), client.getEntitlements(org))
-  }
-
-  @Test
-  fun `enterprise edition with no active license denies all entitlements even when an entitlements file is set`(
-    @TempDir tempDir: Path,
-  ) {
-    val file = writeEntitlementsFile(tempDir, mapOf(MappersEntitlement.featureId to true))
-    val factory =
-      EntitlementClientFactory(
-        airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.ENTERPRISE),
-        airbyteStiggClientConfig = AirbyteStiggClientConfig(entitlementsFile = file.toString()),
-        activeLicense = null,
       )
 
     val client = factory.entitlementClient()
@@ -334,22 +262,4 @@ class EntitlementClientFactoryTest {
     )
     return file
   }
-}
-
-private val EXAMPLE_ENTITLEMENTS_JSON =
-  """
-{
-    "entitlements": {
-      "feature-a": { "type": "BOOLEAN" },
-      "feature-b": { "type": "BOOLEAN" }
-    }
-}  
-  """.trimIndent()
-
-private fun EntitlementResult.assertEntitled() {
-  assertEquals(true, this.isEntitled)
-}
-
-private fun EntitlementResult.assertNotEntitled() {
-  assertEquals(false, this.isEntitled)
 }

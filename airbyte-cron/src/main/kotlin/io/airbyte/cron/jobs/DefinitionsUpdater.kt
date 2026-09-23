@@ -63,7 +63,7 @@ class CommunityDefinitionsUpdater(
   private val baseDefinitionsUpdater: BaseDefinitionsUpdater,
 ) {
   init {
-    log.info { "Creating connector definitions updater for COMMUNITY/ENTERPRISE" }
+    log.info { "Creating connector definitions updater for COMMUNITY" }
   }
 
   @WithSpan

@@ -61,6 +61,5 @@ export enum SettingsRoutePaths {
   OrganizationAuditLogs = "organizationAuditLogs",
   WorkspaceMembers = "workspaceMembers",
   Applications = "applications",
-  License = "license",
   User = "user",
 }

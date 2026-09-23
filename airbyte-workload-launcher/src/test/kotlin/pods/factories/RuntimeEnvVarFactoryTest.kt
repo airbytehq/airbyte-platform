@@ -220,7 +220,6 @@ internal class RuntimeEnvVarFactoryTest {
     value = [
       "CLOUD,CLOUD",
       "COMMUNITY,OSS",
-      "ENTERPRISE,OSS",
     ],
   )
   fun `builds metadata env vars for each edition`(

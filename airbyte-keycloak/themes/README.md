@@ -1,6 +1,6 @@
 # Airbyte Keycloak theme
 
-This directory contain a [keycloak themes](https://www.keycloak.org/docs/latest/server_development/#_themes) for Airbyte Cloud and Self Managed Enterprise. 
+This directory contain a [keycloak themes](https://www.keycloak.org/docs/latest/server_development/#_themes) for Airbyte Cloud. 
 
 The `airbyte-keycloak-theme` is based on the built-in Keycloak `common/base` theme, which provides minimal HTML templates and internationalized strings that the Airbyte theme builds upon. The `airbyte-cloud` theme extends `airbyte-keycloak-theme` with some cloud-specific styling.
 
@@ -19,7 +19,7 @@ After this, the `airbyte-keycloak` image needs to be built with gradle:
 
 `./gradlew :oss:airbyte-keycloak:assemble`.
 
-Then you can use the `make deploy.cloud` command to deploy Airbyte Cloud locally, or use helm directly to redeploy `airbyte-keycloak` for a Self Managed Enterprise instance. 
+Then you can use the `make deploy.cloud` command to deploy Airbyte Cloud locally.
 
 ## Making CSS changes
 

@@ -7,7 +7,6 @@ export interface UseOrganizationPlanReturn {
   isStandardTrialPlan: boolean;
   isStandardPlan: boolean;
   isPlusPlan: boolean;
-  isSmePlan: boolean;
   isFlexPlan: boolean;
   isProPlan: boolean;
 }
@@ -26,7 +25,6 @@ export const useOrganizationPlan = (): UseOrganizationPlanReturn => {
     isStandardTrialPlan: planId === ORG_PLAN_IDS.STANDARD_TRIAL,
     isStandardPlan: planId === ORG_PLAN_IDS.STANDARD,
     isPlusPlan: planId === ORG_PLAN_IDS.PLUS,
-    isSmePlan: planId === ORG_PLAN_IDS.SME,
     isFlexPlan: planId === ORG_PLAN_IDS.FLEX,
     isProPlan: planId === ORG_PLAN_IDS.PRO,
   };

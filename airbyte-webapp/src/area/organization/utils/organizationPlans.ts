@@ -3,7 +3,6 @@ export const AIRBYTE_PLAN_IDS = {
   CORE: "plan-airbyte-core",
   STANDARD: "plan-airbyte-standard",
   PLUS: "plan-airbyte-plus",
-  SME: "plan-airbyte-sme",
   FLEX: "plan-airbyte-flex",
   PRO: "plan-airbyte-pro",
   STANDARD_TRIAL: "plan-airbyte-standard-trial",

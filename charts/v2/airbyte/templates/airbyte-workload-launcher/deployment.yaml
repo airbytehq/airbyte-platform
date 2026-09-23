@@ -91,10 +91,6 @@ spec:
         {{- include "airbyte.workloadLauncher.images.envs" . | nindent 8 }}
         {{- include "airbyte.datadog.envs" .Values.workloadLauncher.datadog | nindent 8 }}
 
-        {{- if (eq .Values.global.edition "enterprise") }}
-        {{- include "airbyte.enterprise.envs" . | nindent 8 }}
-        {{- end }}
-
         {{- if (eq .Values.global.edition "cloud") }}
         {{- include "airbyte.featureFlags.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}

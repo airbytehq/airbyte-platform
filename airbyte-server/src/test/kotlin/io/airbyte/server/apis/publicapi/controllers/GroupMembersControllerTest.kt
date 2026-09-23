@@ -7,11 +7,11 @@ package io.airbyte.server.apis.publicapi.controllers
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.ScimEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
-import io.airbyte.config.Configs
 import io.airbyte.config.Group
 import io.airbyte.config.User
 import io.airbyte.config.persistence.UserPersistence
@@ -45,7 +45,7 @@ class GroupMembersControllerTest {
   private val roleResolver = mockk<RoleResolver>()
   private val currentUserService = mockk<CurrentUserService>()
   private val entitlementService = mockk<EntitlementService>()
-  private val groupsEntitlementHelper = GroupsEntitlementHelper(entitlementService, Configs.AirbyteEdition.ENTERPRISE)
+  private val groupsEntitlementHelper = GroupsEntitlementHelper(entitlementService)
   private val request = mockk<RoleResolver.Request>()
   private val groupId = UUID.randomUUID()
   private val userId = UUID.randomUUID()
@@ -79,6 +79,7 @@ class GroupMembersControllerTest {
     every { request.requireRole(any()) } just Runs
     every { userPersistence.getUser(userId) } returns Optional.of(User().withUserId(userId))
     every { currentUserService.getCurrentUser() } returns AuthenticatedUser().withUserId(currentUserId)
+    every { entitlementService.ensureEntitled(OrganizationId(organizationId), ScimEntitlement) } just Runs
     every { trackingHelper.callWithTracker<Any>(any(), any(), any(), any()) } answers {
       firstArg<Callable<Any>>().call()
     }

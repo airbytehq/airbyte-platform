@@ -33,7 +33,6 @@ micronaut:
       core-pool-size: 0
 airbyte:
   airbyte-url: ${AIRBYTE_URL:}
-  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   pod-sweeper:
     # Time-to-live (in minutes) for running pods. Empty string (mapped to null) by default,
     # meaning running pods are preserved indefinitely.

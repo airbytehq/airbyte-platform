@@ -498,7 +498,7 @@ open class RemoteDefinitionsProvider(
     @JvmStatic
     fun getRegistryName(airbyteEdition: AirbyteEdition): String =
       when (airbyteEdition) {
-        AirbyteEdition.COMMUNITY, AirbyteEdition.ENTERPRISE -> "oss"
+        AirbyteEdition.COMMUNITY -> "oss"
         AirbyteEdition.CLOUD -> "cloud"
       }
 

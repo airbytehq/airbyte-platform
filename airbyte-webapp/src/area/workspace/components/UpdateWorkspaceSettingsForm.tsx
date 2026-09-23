@@ -19,7 +19,7 @@ const workspaceSettingsSchema = z.object({
 type WorkspaceFormValues = z.infer<typeof workspaceSettingsSchema>;
 
 /**
- * OSS/Enterprise form for updating workspace settings
+ * OSS form for updating workspace settings
  */
 export const UpdateWorkspaceSettingsForm = () => {
   const { formatMessage } = useIntl();

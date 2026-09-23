@@ -21,7 +21,6 @@ const planFlags = (
   isStandardTrialPlan: false,
   isStandardPlan: false,
   isPlusPlan: false,
-  isSmePlan: false,
   isFlexPlan: false,
   isProPlan: false,
   ...overrides,
@@ -68,7 +67,6 @@ describe("PlusUpgradePromoBanner", () => {
 
   it.each([
     ["Plus", planFlags({ isPlusPlan: true })],
-    ["SME", planFlags({ isSmePlan: true })],
     ["Flex", planFlags({ isFlexPlan: true })],
     ["Pro", planFlags({ isProPlan: true })],
     ["no Stigg plan", planFlags({ isStiggPlanEnabled: false })],

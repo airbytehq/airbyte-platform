@@ -28,7 +28,6 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
   const useNestedRegionsView = useFeature(FeatureItem.SelfManagedRegions);
 
   // if EITHER flag OR feature is enabled, provide diagnostics
-  // effectively: flag controls OSS+Cloud, feature controls SME
   const isDownloadDiagnosticsEnabled = isDownloadDiagnosticsFlagEnabled || isDownloadDiagnosticsFeatureEnabled;
 
   const canDownloadDiagnostics = useIntent("DownloadDiagnostics", { organizationId }) && isDownloadDiagnosticsEnabled;

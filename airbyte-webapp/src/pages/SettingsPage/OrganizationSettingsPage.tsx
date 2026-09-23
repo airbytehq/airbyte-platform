@@ -26,7 +26,6 @@ export const OrganizationSettingsPage: React.FC = () => {
   const canViewOrganizationSettings = useGeneratedIntent(Intent.ViewOrganizationSettings, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
-  const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const isSelfServePlusPlanEnabled = useExperiment("billing.selfServePlusPlan");
   const isScimProvisioningEnabled = useExperiment("settings.scimProvisioning");
   const isAuditLogsUiEnabled = useExperiment("audit-log-ui");
@@ -103,13 +102,6 @@ export const OrganizationSettingsPage: React.FC = () => {
                     iconType="lock"
                     name={formatMessage({ id: isScimProvisioningEnabled ? "settings.ssoAndScim" : "settings.sso" })}
                     to={SettingsRoutePaths.OrganizationSSO}
-                  />
-                )}
-                {licenseUi && (
-                  <SettingsLink
-                    iconType="license"
-                    name={formatMessage({ id: "settings.license" })}
-                    to={SettingsRoutePaths.License}
                   />
                 )}
                 {defaultWorkspace && (

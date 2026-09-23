@@ -59,13 +59,6 @@ dataPlane:
       key: clientSecretSecretKey
       defaultValue: DATAPLANE_CLIENT_SECRET
 
-enterprise:
-  keyBasePath: enterprise
-  config:
-    - env: AIRBYTE_LICENSE_KEY
-      key: licenseKey
-      sensitive: true
-
 jobs:
   keyBasePath: jobs
   config:

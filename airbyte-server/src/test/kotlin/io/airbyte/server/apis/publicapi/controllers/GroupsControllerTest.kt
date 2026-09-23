@@ -10,7 +10,6 @@ import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
-import io.airbyte.config.Configs
 import io.airbyte.config.Group
 import io.airbyte.data.services.GroupManagedByScimException
 import io.airbyte.data.services.GroupNameNotUniqueException
@@ -37,7 +36,7 @@ class GroupsControllerTest {
   private val roleResolver = mockk<RoleResolver>(relaxed = true)
   private val currentUserService = mockk<CurrentUserService>()
   private val entitlementService = mockk<EntitlementService>(relaxed = true)
-  private val groupsEntitlementHelper = GroupsEntitlementHelper(entitlementService, Configs.AirbyteEdition.ENTERPRISE)
+  private val groupsEntitlementHelper = GroupsEntitlementHelper(entitlementService)
   private lateinit var controller: GroupsController
 
   @BeforeEach

@@ -94,12 +94,6 @@ internal class GcsBucketSpecFetcherTest {
       ossBucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG),
     )
 
-    val enterpriseBucketSpecFetcher = GcsBucketSpecFetcher(storage, BUCKET_NAME, Configs.AirbyteEdition.ENTERPRISE)
-    Assertions.assertEquals(
-      Optional.of(defaultSpecBlob),
-      enterpriseBucketSpecFetcher.getSpecAsBlob(DOCKER_REPOSITORY, DOCKER_IMAGE_TAG),
-    )
-
     val cloudBucketSpecFetcher = GcsBucketSpecFetcher(storage, BUCKET_NAME, Configs.AirbyteEdition.CLOUD)
     Assertions.assertEquals(
       Optional.of(cloudSpecBlob),
@@ -124,15 +118,6 @@ internal class GcsBucketSpecFetcherTest {
         DOCKER_IMAGE_TAG,
         GcsBucketSpecFetcher.DEFAULT_SPEC_FILE,
         Configs.AirbyteEdition.COMMUNITY,
-      ),
-    )
-    Assertions.assertEquals(
-      Optional.of(defaultSpecBlob),
-      bucketSpecFetcher.getSpecAsBlob(
-        DOCKER_REPOSITORY,
-        DOCKER_IMAGE_TAG,
-        GcsBucketSpecFetcher.DEFAULT_SPEC_FILE,
-        Configs.AirbyteEdition.ENTERPRISE,
       ),
     )
     Assertions.assertEquals(

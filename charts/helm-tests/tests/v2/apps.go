@@ -22,7 +22,6 @@ var apps = []struct {
 	{name: "featureflag-server", kind: "Deployment"},
 	{name: "featureflag-server", kind: "Deployment"},
 	{name: "keycloak", kind: "StatefulSet"},
-	{name: "keycloak-setup", kind: "Job"},
 	{name: "metrics", kind: "Deployment"},
 	{name: "server", kind: "Deployment"},
 	{name: "temporal", kind: "Deployment"},

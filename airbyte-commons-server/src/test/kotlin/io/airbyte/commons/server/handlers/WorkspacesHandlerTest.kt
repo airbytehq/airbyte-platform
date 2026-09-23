@@ -806,7 +806,7 @@ internal class WorkspacesHandlerTest {
   }
 
   @ParameterizedTest
-  @EnumSource(AirbyteEdition::class, names = ["COMMUNITY", "ENTERPRISE"])
+  @EnumSource(AirbyteEdition::class, names = ["COMMUNITY"])
   fun testCreateSecondWorkspaceWithoutMaximumWorkspacesEntitlementIsAllowedOutsideCloud(airbyteEdition: AirbyteEdition) {
     Mockito
       .`when`(entitlementService.getNumericEntitlement(any(), any()))

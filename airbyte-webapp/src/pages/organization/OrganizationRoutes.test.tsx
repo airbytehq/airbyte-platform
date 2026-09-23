@@ -39,7 +39,6 @@ jest.mock("core/services/features", () => ({
   FeatureItem: {
     AllowAuditLogs: "AllowAuditLogs",
     AllowUpdateSSOConfig: "AllowUpdateSSOConfig",
-    EnterpriseLicenseChecking: "EnterpriseLicenseChecking",
   },
   useFeature: jest.fn(),
 }));
@@ -72,10 +71,6 @@ jest.mock("pages/SettingsPage/OrganizationSettingsPage", () => ({
 jest.mock("pages/SettingsPage/pages/ConnectorsPage", () => ({
   DestinationsPage: () => null,
   SourcesPage: () => null,
-}));
-
-jest.mock("pages/SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage", () => ({
-  LicenseSettingsPage: () => null,
 }));
 
 jest.mock("pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage", () => ({

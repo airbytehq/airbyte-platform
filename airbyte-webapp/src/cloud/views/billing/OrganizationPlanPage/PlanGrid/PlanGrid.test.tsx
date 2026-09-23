@@ -55,7 +55,6 @@ const planFlags = (overrides: Partial<ReturnType<typeof useOrganizationPlan>> = 
     isStandardTrialPlan: false,
     isStandardPlan: false,
     isPlusPlan: false,
-    isSmePlan: false,
     isFlexPlan: false,
     isProPlan: false,
     ...overrides,
@@ -261,12 +260,9 @@ describe("PlanGrid", () => {
     expect(useGetOrganizationSubscriptionInfo).toHaveBeenCalledWith("test-organization-id", true);
   });
 
-  it.each([
-    ["Pro", { isProPlan: true }],
-    ["SME", { isSmePlan: true }],
-  ])("marks Pro as current and disables the self-serve subscribe buttons for a %s org", async (_label, flags) => {
+  it("marks Pro as current and disables the self-serve subscribe buttons for a Pro org", async () => {
     mocked(useOrgInfo).mockReturnValue(billingState());
-    mocked(useOrganizationPlan).mockReturnValue(planFlags(flags));
+    mocked(useOrganizationPlan).mockReturnValue(planFlags({ isProPlan: true }));
 
     await render(<PlanGrid />);
 
@@ -384,7 +380,6 @@ describe("PlanGrid", () => {
 
   it.each([
     ["Pro", { isProPlan: true }],
-    ["SME", { isSmePlan: true }],
     ["Flex", { isFlexPlan: true }],
   ])("hides the Plus promo credits callout for a %s org", async (_label, flags) => {
     mocked(useOrgInfo).mockReturnValue(billingState());
@@ -415,7 +410,6 @@ describe("PlanGrid", () => {
 
   it.each([
     ["Pro", { isProPlan: true }],
-    ["SME", { isSmePlan: true }],
     ["Flex", { isFlexPlan: true }],
   ])("hides the pricing calculator for a %s org", async (_label, flags) => {
     mocked(useOrgInfo).mockReturnValue(billingState());

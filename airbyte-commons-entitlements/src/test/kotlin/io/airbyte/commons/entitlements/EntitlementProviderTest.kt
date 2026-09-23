@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.entitlements
 
-import io.airbyte.commons.license.ActiveAirbyteLicense
-import io.airbyte.commons.license.AirbyteLicense
 import io.airbyte.config.ActorType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.AllowConfigTemplateEndpoints
@@ -20,7 +18,6 @@ import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -59,55 +56,6 @@ class EntitlementProviderTest {
       val organizationId = OrganizationId(UUID.randomUUID())
       val res = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId)
       assertFalse(res)
-    }
-  }
-
-  @Nested
-  inner class EnterpriseEntitlementProviderTest {
-    private val activeLicense = mockk<ActiveAirbyteLicense>()
-    private val license = mockk<AirbyteLicense>()
-    private lateinit var entitlementProvider: EntitlementProvider
-
-    @BeforeEach
-    fun setup() {
-      entitlementProvider = EnterpriseEntitlementProvider(activeLicense)
-      every { activeLicense.license } returns license
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = ["SOURCE", "DESTINATION"])
-    fun `test hasEnterpriseConnectorEntitlements`(actorType: ActorType) {
-      val entitledConnectorId = UUID.randomUUID()
-      val notEntitledConnectorId = UUID.randomUUID()
-      every { license.enterpriseConnectorIds } returns setOf(entitledConnectorId)
-
-      val organizationId = OrganizationId(UUID.randomUUID())
-      val actorDefinitionIds = listOf(entitledConnectorId, notEntitledConnectorId)
-      val res = entitlementProvider.hasEnterpriseConnectorEntitlements(organizationId, actorType, actorDefinitionIds)
-      assertEquals(
-        mapOf(
-          entitledConnectorId to true,
-          notEntitledConnectorId to false,
-        ),
-        res,
-      )
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun `test hasConfigTemplateEntitlements returns value from the license`(isEmbedded: Boolean) {
-      val organizationId = OrganizationId(UUID.randomUUID())
-
-      every { license.isEmbedded } returns isEmbedded
-      val res = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
-      assertEquals(res, license.isEmbedded)
-    }
-
-    @Test
-    fun `test hasDestinationObjectStorageEntitlement always returns true`() {
-      val organizationId = OrganizationId(UUID.randomUUID())
-      val res = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId)
-      assertEquals(true, res)
     }
   }
 

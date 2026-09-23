@@ -69,7 +69,7 @@ spec:
           - configMapRef:
               name: {{ .Release.Name }}-airbyte-telemetry-env
         env:
-        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "enterprise")) }}
+        {{- if (eq .Values.global.edition "community") }}
         {{- include "airbyte.auth.envs" . | nindent 8 }}
         {{- end}}
 
@@ -101,15 +101,7 @@ spec:
         {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
         {{- include "airbyte.datadog.envs" .Values.server.datadog | nindent 8 }}
 
-        {{- if (eq .Values.global.edition "enterprise") }}
-        {{- include "airbyte.auth.instanceAdmin.enterprise.envs" . | nindent 8 }} 
-        {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }} 
-        {{- include "airbyte.enterprise.envs" . | nindent 8 }}
-        {{- include "airbyte.keycloak.envs" . | nindent 8 }}
-        {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
-        {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
-        {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
-        {{- else if (eq .Values.global.edition "cloud") }}
+        {{- if (eq .Values.global.edition "cloud") }}
         {{- include "airbyte.aws.envs" . | nindent 8 }}
         {{- include "airbyte.connectorRollout.envs" . | nindent 8 }}
         {{- include "airbyte.featureFlags.envs" . | nindent 8 }}

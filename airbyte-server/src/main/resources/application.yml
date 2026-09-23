@@ -159,7 +159,6 @@ airbyte:
     max-organizations-per-request: ${DSR_DELETION_MAX_ORGANIZATIONS_PER_REQUEST:5}
     max-connections-per-request: ${DSR_DELETION_MAX_CONNECTIONS_PER_REQUEST:100}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
-  license-key: ${AIRBYTE_LICENSE_KEY:}
   shutdown:
     delay_ms: 20000
   notification:

@@ -28,7 +28,6 @@ In practice this means each environment is deployed by:
 | engineering-land | https://engineering-land.internal.airbyte.dev |
 | frontend-dev | https://frontend-dev.internal.airbyte.dev |
 | frontend-dev-cloud | https://frontend-dev-cloud.internal.airbyte.dev |
-| frontend-dev-ent | https://frontend-dev-ent.internal.airbyte.dev |
 | frontend-dev-oss | https://frontend-dev-oss.internal.airbyte.dev |
 | frontend-dev-preview | https://*.frontend-dev-preview.internal.airbyte.dev |
 | preview | https://preview.internal.airbyte.dev |

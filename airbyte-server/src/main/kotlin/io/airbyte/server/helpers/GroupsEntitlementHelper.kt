@@ -6,7 +6,6 @@ package io.airbyte.server.helpers
 
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ScimEntitlement
-import io.airbyte.config.Configs
 import io.airbyte.domain.models.OrganizationId
 import jakarta.inject.Singleton
 
@@ -18,10 +17,8 @@ import jakarta.inject.Singleton
 @Singleton
 class GroupsEntitlementHelper(
   private val entitlementService: EntitlementService,
-  private val airbyteEdition: Configs.AirbyteEdition,
 ) {
   fun ensureEntitled(organizationId: OrganizationId) {
-    if (airbyteEdition == Configs.AirbyteEdition.ENTERPRISE) return
     entitlementService.ensureEntitled(organizationId, ScimEntitlement)
   }
 }

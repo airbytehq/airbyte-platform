@@ -9,17 +9,10 @@ import io.airbyte.api.model.generated.InstanceConfigurationResponse
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStrategyEnum
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody
-import io.airbyte.api.model.generated.LicenseInfoResponse
-import io.airbyte.api.model.generated.LicenseStatus
 import io.airbyte.api.model.generated.WorkspaceUpdate
-import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.enums.convertTo
-import io.airbyte.commons.license.ActiveAirbyteLicense
-import io.airbyte.commons.license.AirbyteLicense
-import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper
-import io.airbyte.commons.server.helpers.PermissionDeniedException
 import io.airbyte.config.Organization
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.UserPersistence
@@ -32,9 +25,6 @@ import io.airbyte.micronaut.runtime.AnalyticsTrackingStrategy
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.io.IOException
-import java.time.Clock
-import java.util.Date
-import java.util.Optional
 import java.util.UUID
 
 /**
@@ -46,18 +36,12 @@ open class InstanceConfigurationHandler(
   private val airbyteConfig: AirbyteConfig,
   private val airbyteAuthConfig: AirbyteAuthConfig,
   private val airbyteAnalyticsConfig: AirbyteAnalyticsConfig,
-  private val activeAirbyteLicense: Optional<ActiveAirbyteLicense>,
   private val workspacePersistence: WorkspacePersistence,
   private val workspacesHandler: WorkspacesHandler,
   private val userPersistence: UserPersistence,
   private val organizationService: OrganizationService,
   private val authConfigs: AuthConfigs,
-  private val permissionHandler: PermissionHandler,
-  clock: Optional<Clock>,
-  private val kubernetesClientPermissionHelper: Optional<KubernetesClientPermissionHelper>,
 ) {
-  private val clock: Clock = clock.orElse(Clock.systemUTC())
-
   @get:Throws(IOException::class)
   val instanceConfiguration: InstanceConfigurationResponse
     get() {
@@ -68,8 +52,6 @@ open class InstanceConfigurationHandler(
         .airbyteUrl(airbyteConfig.airbyteUrl.ifBlank { "airbyte-url-not-configured" })
         .edition(airbyteConfig.edition.convertTo<EditionEnum>())
         .version(airbyteConfig.version)
-        .licenseStatus(currentLicenseStatus())
-        .licenseExpirationDate(licenseExpirationDate())
         .auth(authConfiguration)
         .initialSetupComplete(initialSetupComplete)
         .defaultUserId(defaultUserId)
@@ -204,79 +186,6 @@ open class InstanceConfigurationHandler(
   // use the default Organization ID to select a workspace to use for instance setup. This is a hack.
   // TODO persist instance configuration to a separate resource, rather than using a workspace.
   private fun getDefaultWorkspace(organizationId: UUID): StandardWorkspace = workspacePersistence.getDefaultWorkspaceForOrganization(organizationId)
-
-  fun licenseInfo(): LicenseInfoResponse? {
-    val license = activeAirbyteLicense.map(ActiveAirbyteLicense::license).orElse(null)
-    if (license != null) {
-      return LicenseInfoResponse()
-        .edition(license.type.toString())
-        .expirationDate(licenseExpirationDate())
-        .usedEditors(editorsUsage())
-        .maxEditors(license.maxEditors)
-        .maxNodes(license.maxNodes)
-        .usedNodes(nodesUsage())
-        .licenseStatus(currentLicenseStatus())
-    }
-    return null
-  }
-
-  private fun licenseExpirationDate(): Long? {
-    val license = activeAirbyteLicense.map(ActiveAirbyteLicense::license).orElse(null)
-
-    if (license != null) {
-      val expDate = license.expirationDate
-      if (expDate != null) {
-        return expDate.toInstant().toEpochMilli() / 1000
-      }
-    }
-    return null
-  }
-
-  private fun editorsUsage(): Int = permissionHandler.countInstanceEditors()
-
-  @InternalForTesting
-  fun currentLicenseStatus(): LicenseStatus? {
-    if (activeAirbyteLicense.isEmpty) {
-      return null
-    }
-    if (activeAirbyteLicense.get().license == null ||
-      activeAirbyteLicense.get().license!!.type == AirbyteLicense.LicenseType.INVALID ||
-      activeAirbyteLicense.get().license!!.type == AirbyteLicense.LicenseType.PRO
-    ) {
-      return LicenseStatus.INVALID
-    }
-    val actualLicense = activeAirbyteLicense.get().license
-    if (Optional
-        .ofNullable(actualLicense!!.expirationDate)
-        .map { exp: Date ->
-          exp.toInstant().isBefore(clock.instant())
-        }.orElse(false)
-    ) {
-      return LicenseStatus.EXPIRED
-    }
-    if (Optional.ofNullable(actualLicense.maxEditors).map { m: Int -> editorsUsage() > m }.orElse(false)) {
-      return LicenseStatus.EXCEEDED
-    }
-    return LicenseStatus.PRO
-  }
-
-  private fun nodesUsage(): Int? {
-    try {
-      val nodes =
-        kubernetesClientPermissionHelper
-          .map { obj: KubernetesClientPermissionHelper -> obj.listNodes() }
-          .orElse(null)
-
-      if (nodes != null) {
-        return nodes.list().items.size
-      }
-    } catch (e: PermissionDeniedException) {
-      log.warn { "Permission denied while attempting to get node usage: $e.message" }
-    } catch (e: Exception) {
-      log.error(e) { "Unexpected error while fetching Kubernetes nodes: $e.message" }
-    }
-    return null
-  }
 
   companion object {
     private val log = KotlinLogging.logger {}

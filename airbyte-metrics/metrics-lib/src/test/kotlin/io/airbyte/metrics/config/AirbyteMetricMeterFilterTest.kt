@@ -76,8 +76,6 @@ internal class AirbyteMetricMeterFilterTest {
     "CLOUD,TEST_PUBLIC_METRIC,ACCEPT",
     "COMMUNITY,TEST_INTERNAL_METRIC,DENY",
     "COMMUNITY,TEST_PUBLIC_METRIC,DENY",
-    "ENTERPRISE,TEST_INTERNAL_METRIC,DENY",
-    "ENTERPRISE,TEST_PUBLIC_METRIC,ACCEPT",
   )
   fun testMetricFiltering(
     airbyteEdition: AirbyteEdition,
@@ -100,7 +98,6 @@ internal class AirbyteMetricMeterFilterTest {
   @CsvSource(
     "CLOUD,ACCEPT",
     "COMMUNITY,DENY",
-    "ENTERPRISE,DENY",
   )
   fun testMetricFilteringUnknownMetric(
     airbyteEdition: AirbyteEdition,

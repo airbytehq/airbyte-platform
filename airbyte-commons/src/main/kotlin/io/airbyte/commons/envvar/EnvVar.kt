@@ -98,7 +98,7 @@ enum class EnvVar {
 
   /**
    * STORAGE_BUCKET_AUDIT_LOGGING is separate from other log storage buckets.
-   * It is by default unset unless the SME customer enables the audit-logging feature via `values.yaml`.
+   * It is by default unset unless the audit-logging feature is enabled via `values.yaml`.
    */
   STORAGE_BUCKET_AUDIT_LOGGING,
   STORAGE_BUCKET_LOG,

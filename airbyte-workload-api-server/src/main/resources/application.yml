@@ -67,7 +67,6 @@ micronaut:
 airbyte:
   dataplane-groups:
     default-dataplane-group-name: ${DEFAULT_DATAPLANE_GROUP_NAME:}
-  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:CONFIGFILE}

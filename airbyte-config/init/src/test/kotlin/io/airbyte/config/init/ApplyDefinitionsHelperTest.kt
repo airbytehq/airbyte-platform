@@ -447,7 +447,7 @@ internal class ApplyDefinitionsHelperTest {
   }
 
   @ParameterizedTest
-  @EnumSource(Configs.AirbyteEdition::class, names = ["COMMUNITY", "ENTERPRISE"])
+  @EnumSource(Configs.AirbyteEdition::class, names = ["COMMUNITY"])
   fun `applyReleaseCandidates should not write ConnectorRollout if not on Cloud`(airbyteEdition: Configs.AirbyteEdition) {
     val helper =
       ApplyDefinitionsHelper(

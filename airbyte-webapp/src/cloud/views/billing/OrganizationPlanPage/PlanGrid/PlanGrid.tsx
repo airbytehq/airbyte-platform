@@ -27,21 +27,21 @@ export const PlanGrid: React.FC = () => {
   const isLockedSubscription = billing?.paymentStatus === "locked";
   const isPlanDowngradeBannerEnabled = useExperiment("billing.plan-downgrade-banner");
 
-  const { isStandardPlan, isStandardTrialPlan, isPlusPlan, isProPlan, isSmePlan, isFlexPlan } = useOrganizationPlan();
+  const { isStandardPlan, isStandardTrialPlan, isPlusPlan, isProPlan, isFlexPlan } = useOrganizationPlan();
 
   const { data: subscription } = useGetOrganizationSubscriptionInfo(organizationId, isSubscribed);
   const cancellationDate = subscription?.cancellationDate;
   const selfServePlan = subscription?.selfServePlan;
 
   // The billing subscription decides which self-serve plan is current. The entitlement plan is the
-  // fallback for plans that are not self-serve (Pro, SME, Flex) and while the subscription is loading.
+  // fallback for plans that are not self-serve (Pro, Flex) and while the subscription is loading.
   const selfServeTier: PlanTier | null =
     selfServePlan === undefined ? null : selfServePlan === "standard" ? "standard" : "plus";
   const entitlementTier: PlanTier | null = isStandardPlan
     ? "standard"
     : isPlusPlan
     ? "plus"
-    : isProPlan || isSmePlan
+    : isProPlan
     ? "pro"
     : isFlexPlan
     ? "flex"

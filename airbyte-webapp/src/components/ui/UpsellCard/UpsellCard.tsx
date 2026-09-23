@@ -10,7 +10,7 @@ interface UpsellCardProps {
   cta: React.ReactNode;
   image: React.ReactNode;
   "data-testid"?: string;
-  branding?: "enterprise" | "teams";
+  branding?: "teams";
 }
 
 export const UpsellCard: React.FC<UpsellCardProps> = ({
@@ -24,7 +24,6 @@ export const UpsellCard: React.FC<UpsellCardProps> = ({
   <HighlightCard data-testid={dataTestId}>
     <FlexContainer direction="row" justifyContent="space-between">
       <FlexContainer direction="column" gap="lg">
-        {branding === "enterprise" && <BrandingBadge product="enterprise" />}
         {branding === "teams" && <BrandingBadge product="cloudForTeams" />}
         <Heading as="h3" size="md">
           {header}

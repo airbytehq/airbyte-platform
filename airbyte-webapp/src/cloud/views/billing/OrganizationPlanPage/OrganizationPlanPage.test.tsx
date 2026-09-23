@@ -76,7 +76,6 @@ const planFlags = (overrides: Partial<ReturnType<typeof useOrganizationPlan>> = 
     isStandardTrialPlan: false,
     isStandardPlan: false,
     isPlusPlan: false,
-    isSmePlan: false,
     isFlexPlan: false,
     isProPlan: false,
     ...overrides,
@@ -189,7 +188,6 @@ describe("OrganizationPlanPage", () => {
 
   it.each([
     ["Pro", { isProPlan: true }],
-    ["SME", { isSmePlan: true }],
     ["Flex", { isFlexPlan: true }],
   ])("hides upgrade cards for top-tier plan (%s)", async (_label, flags) => {
     mocked(useOrgInfo).mockReturnValue(billingState());

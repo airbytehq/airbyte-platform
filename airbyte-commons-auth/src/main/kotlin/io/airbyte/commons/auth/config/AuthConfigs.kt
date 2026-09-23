@@ -5,10 +5,8 @@
 package io.airbyte.commons.auth.config
 
 import io.airbyte.config.Configs.AirbyteEdition
-import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
-import io.airbyte.micronaut.runtime.DEFAULT_AUTH_IDENTITY_PROVIDER_TYPE
 import io.micronaut.context.annotation.Factory
 import io.micronaut.security.config.SecurityConfigurationProperties
 import jakarta.inject.Singleton
@@ -27,8 +25,8 @@ data class AuthConfigs(
 /**
  * Enum representing the different authentication modes that Airbyte can be configured to use.
  * Note that `SIMPLE` refers to the single-user username/password authentication mode that Community
- * edition uses, while `OIDC` refers to the OpenID Connect authentication mode that Enterprise and
- * Cloud use. `NONE` is used when authentication is disabled completely.
+ * edition uses, while `OIDC` refers to the OpenID Connect authentication mode that Cloud uses.
+ * `NONE` is used when authentication is disabled completely.
  */
 enum class AuthMode {
   OIDC,
@@ -39,7 +37,6 @@ enum class AuthMode {
 @Factory
 class AuthModeFactory(
   private val airbyteConfig: AirbyteConfig,
-  private val airbyteAuthConfig: AirbyteAuthConfig,
   private val micronautSecurityConfig: SecurityConfigurationProperties?,
 ) {
   /**
@@ -49,12 +46,6 @@ class AuthModeFactory(
   fun defaultAuthMode(): AuthMode =
     when (airbyteConfig.edition) {
       AirbyteEdition.CLOUD -> AuthMode.OIDC
-      AirbyteEdition.ENTERPRISE -> {
-        when (airbyteAuthConfig.identityProvider.type) {
-          DEFAULT_AUTH_IDENTITY_PROVIDER_TYPE -> AuthMode.SIMPLE
-          else -> AuthMode.OIDC
-        }
-      }
       AirbyteEdition.COMMUNITY -> {
         if (micronautSecurityConfig?.isEnabled == true) AuthMode.SIMPLE else AuthMode.NONE
       }

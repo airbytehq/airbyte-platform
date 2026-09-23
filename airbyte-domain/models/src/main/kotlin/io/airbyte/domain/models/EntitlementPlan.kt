@@ -23,7 +23,6 @@ enum class EntitlementPlan(
   val displayName: String,
 ) {
   CORE("plan-airbyte-core", displayName = "Core"),
-  SME("plan-airbyte-sme", displayName = "Self Managed Enterprise"),
 
   // Cloud plans
   // Self-serve

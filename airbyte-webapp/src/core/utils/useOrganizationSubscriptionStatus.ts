@@ -16,7 +16,6 @@ export interface UseOrganizationSubscriptionStatusReturn {
   isStiggPlanEnabled: boolean;
   isStandardTrialPlan: boolean;
   isStandardPlan: boolean;
-  isSmePlan: boolean;
   isFlexPlan: boolean;
   isProPlan: boolean;
 
@@ -54,8 +53,7 @@ export const useOrganizationSubscriptionStatus = (options?: {
 
   const { billing } = useOrgInfo(organizationId ?? "", canManageOrganizationBilling) || {};
 
-  const { isStiggPlanEnabled, isStandardTrialPlan, isStandardPlan, isSmePlan, isFlexPlan, isProPlan } =
-    useOrganizationPlan();
+  const { isStiggPlanEnabled, isStandardTrialPlan, isStandardPlan, isFlexPlan, isProPlan } = useOrganizationPlan();
 
   // Conditional trial status fetching - only when user has permissions and organization's plan is a standard trial plan
   const shouldFetchTrialStatus = canViewTrialStatus && isStandardTrialPlan;
@@ -99,7 +97,6 @@ export const useOrganizationSubscriptionStatus = (options?: {
     isStiggPlanEnabled,
     isStandardTrialPlan,
     isStandardPlan,
-    isSmePlan,
     isFlexPlan,
     isProPlan,
 

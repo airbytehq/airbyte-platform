@@ -57,10 +57,6 @@ spec:
             {{- include "airbyte-data-plane.workloadLauncher.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.workloadLauncher.images.envs" . | nindent 12 }}
 
-            {{- if (eq .Values.edition "enterprise") }}
-            {{- include "airbyte-data-plane.enterprise.envs" . | nindent 12 }}
-            {{- end }}
-
             {{- if .Values.workloadLauncher.extraEnv }}
             {{- toYaml .Values.workloadLauncher.extraEnv | nindent 12 }}
             {{- end }}

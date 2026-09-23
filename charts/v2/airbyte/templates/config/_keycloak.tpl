@@ -9,7 +9,7 @@
 Renders the keycloak.url value
 */}}
 {{- define "airbyte.keycloak.url" }}
-    {{- ternary (printf "%s/auth" .Values.global.airbyteUrl) "" (ne .Values.global.edition "enterprise") }}
+    {{- (printf "%s/auth" .Values.global.airbyteUrl) }}
 {{- end }}
 
 {{/*
@@ -193,7 +193,7 @@ Renders the keycloak.admin.client.internalBasePath environment variable
 Renders the keycloak.internalHost value
 */}}
 {{- define "airbyte.keycloak.admin.client.internalHost" }}
-    {{- .Values.keycloak.internalHost | default (ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (ne .Values.global.edition "community"))) }}
+    {{- .Values.keycloak.internalHost | default (ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name (include "airbyte.namespace" .) (int .Values.keycloak.service.port)) "localhost" (ne .Values.global.edition "community")) }}
 {{- end }}
 
 {{/*

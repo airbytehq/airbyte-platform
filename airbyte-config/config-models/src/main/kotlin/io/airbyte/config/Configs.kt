@@ -88,6 +88,5 @@ interface Configs {
   enum class AirbyteEdition {
     CLOUD,
     COMMUNITY,
-    ENTERPRISE,
   }
 }

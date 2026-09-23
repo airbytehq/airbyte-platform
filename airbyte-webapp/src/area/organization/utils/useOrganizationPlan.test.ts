@@ -44,7 +44,6 @@ describe("useOrganizationPlan", () => {
     ["isStandardTrialPlan", "plan-airbyte-standard-trial"],
     ["isStandardPlan", "plan-airbyte-standard"],
     ["isPlusPlan", "plan-airbyte-plus"],
-    ["isSmePlan", "plan-airbyte-sme"],
     ["isFlexPlan", "plan-airbyte-flex"],
     ["isProPlan", "plan-airbyte-pro"],
   ] as const)("%s", (flag, planId) => {

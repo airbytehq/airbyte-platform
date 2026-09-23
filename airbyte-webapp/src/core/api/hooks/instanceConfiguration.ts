@@ -2,13 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import omit from "lodash/omit";
 
 import { ApiCallOptions } from "../apiCall";
-import { getInstanceConfiguration, setupInstanceConfiguration, licenseInfo } from "../generated/AirbyteClient";
+import { getInstanceConfiguration, setupInstanceConfiguration } from "../generated/AirbyteClient";
 import { InstanceConfigurationSetupRequestBody } from "../generated/AirbyteClient.schemas";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 const QUERY_KEY_INSTANCE = "airbyte-instance";
-const QUERY_KEY_LICENSE = "airbyte-license";
 
 export function useGetInstanceConfiguration() {
   // The instance configuration endpoint is not authenticated, so we don't need to pass any auth headers.
@@ -33,11 +32,3 @@ export function useSetupInstanceConfiguration() {
     }
   );
 }
-
-export const useGetLicenseDetails = () => {
-  const requestOptions = useRequestOptions();
-
-  return useSuspenseQuery([QUERY_KEY_LICENSE], () => {
-    return licenseInfo(requestOptions);
-  });
-};

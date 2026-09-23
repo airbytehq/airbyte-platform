@@ -1,7 +1,7 @@
 global:
   # -- Service Account name override
   serviceAccountName: &service-account-name airbyte-admin
-  # -- Edition; "community" or "enterprise"
+  # -- Edition; "community" or "cloud"
   edition: community
 
   secretName: ""
@@ -21,12 +21,6 @@ global:
 
     dataPlane:
       controlPlaneAuthEndpoint: ""
-
-  enterprise:
-    # -- Secret name where an Airbyte license key is stored
-    secretName: ""
-    # -- The key within `licenseKeySecretName` where the Airbyte license key is stored
-    licenseKeySecretKey: ""
 
   # -- The URL where Airbyte will be reached; This should match your Ingress host
   airbyteUrl: ""
@@ -70,7 +64,7 @@ global:
       # -- The key within `passwordSecretName` where the initial user's password is stored
       passwordSecretKey: ""
 
-    # -- SSO Identify Provider configuration; (requires Enterprise)
+    # -- SSO Identify Provider configuration
     identityProvider:
       # -- Secret name where the OIDC configuration is stored
       secretName: ""
@@ -2519,63 +2513,6 @@ keycloak:
     timeoutSeconds: 1
     failureThreshold: 60
     successThreshold: 1
-
-  extraInitContainers: []
-  extraContainers: []
-
-keycloakSetup:
-  enabled: false
-  env_vars: {}
-
-  serviceAccountName:
-
-  image:
-    repository: airbyte/keycloak-setup
-    pullPolicy: IfNotPresent
-
-  annotations: {}
-
-  # -- Security context for the container
-  podSecurityContext:
-    # gid=1000(airbyte)
-    fsGroup: 1000
-
-  initContainerSecurityContext:
-    allowPrivilegeEscalation: false
-    runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
-    readOnlyRootFilesystem: false
-    capabilities:
-      drop: ["ALL"]
-    seccompProfile:
-      type: RuntimeDefault
-
-  containerSecurityContext:
-    allowPrivilegeEscalation: false
-    runAsNonRoot: true
-    # uid=1000(airbyte)
-    runAsUser: 1000
-    # gid=1000(airbyte)
-    runAsGroup: 1000
-    readOnlyRootFilesystem: false
-    capabilities:
-      drop: ["ALL"]
-    seccompProfile:
-      type: RuntimeDefault
-
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
-  nodeSelector: {}
-
-  # -- Tolerations for webapp pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  tolerations: []
-
-  # -- Affinity and anti-affinity for webapp pod assignment, see
-  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  affinity: {}
-
-  debug:
-    enabled: false
 
   extraInitContainers: []
   extraContainers: []

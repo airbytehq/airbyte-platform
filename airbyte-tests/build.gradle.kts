@@ -64,7 +64,6 @@ fun registerTestSuite(
 registerTestSuite(name = "syncAcceptanceTest", includeTags = arrayOf("sync"))
 registerTestSuite(name = "apiAcceptanceTest", includeTags = arrayOf("api"))
 registerTestSuite(name = "builderAcceptanceTest", includeTags = arrayOf("builder"))
-registerTestSuite(name = "enterpriseAcceptanceTest", includeTags = arrayOf("enterprise"))
 registerTestSuite(name = "acceptanceTest")
 
 configurations.configureEach {

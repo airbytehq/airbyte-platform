@@ -26,7 +26,7 @@ export interface AuthContextApi {
   redirectToRegistrationWithPassword?: () => Promise<void>;
 }
 
-// The AuthContext is implemented differently in Community vs. Self-Managed Enterprise vs. Cloud, but all implementations must fulfill the AuthContextApi interface
+// The AuthContext is implemented differently in Community vs. Cloud, but all implementations must fulfill the AuthContextApi interface
 export const AuthContext = React.createContext<AuthContextApi | null>(null);
 
 export const useCurrentUser = (): UserRead => {

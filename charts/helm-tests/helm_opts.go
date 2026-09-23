@@ -17,22 +17,6 @@ func BaseHelmOptions() *helm.Options {
 	}
 }
 
-func BaseHelmOptionsForEnterprise() *helm.Options {
-	opts := BaseHelmOptions()
-	opts.SetValues["global.edition"] = "enterprise"
-
-	return opts
-}
-
-func BaseHelmOptionsForEnterpriseWithValues() *helm.Options {
-	opts := BaseHelmOptions()
-	opts.SetValues["global.edition"] = "enterprise"
-	opts.SetValues["global.auth.instanceAdmin.firstName"] = "Octavia"
-	opts.SetValues["global.auth.instanceAdmin.lastName"] = "Squidington"
-
-	return opts
-}
-
 func BaseHelmOptionsForStorageType(t string) *helm.Options {
 	opts := BaseHelmOptions()
 	opts.SetValues = map[string]string{

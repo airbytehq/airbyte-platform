@@ -72,7 +72,7 @@ open class DataWorkerUsageService(
    * The function validates that the job meets the following criteria before recording usage:
    * 1. The job must be a sync job
    * 2. The data worker usage feature flag must be enabled for the organization
-   * 3. The organization must be on a Pro, Flex, or SME plan
+   * 3. The organization must be on a Pro or Flex plan
    *
    * CPU resources tracked include:
    * - Source connector CPU request
@@ -716,12 +716,12 @@ open class DataWorkerUsageService(
   }
 
   companion object {
+    val VALID_PLANS = setOf(EntitlementPlan.PRO.id, EntitlementPlan.FLEX.id)
     private const val ORGANIZATION_PAGE_SIZE = 1_000
     const val RECONCILIATION_BATCH_SIZE = 100
     private val TERMINAL_CANDIDATE_COMPARATOR =
       compareBy<DataWorkerUsageReservationCandidate> { it.terminalAt.toInstant() }
         .thenBy { it.jobId }
-    val VALID_PLANS = setOf(EntitlementPlan.PRO.id, EntitlementPlan.FLEX.id, EntitlementPlan.SME.id)
     const val INCREMENT_OPERATION = "INCREMENT"
     const val DECREMENT_OPERATION = "DECREMENT"
   }

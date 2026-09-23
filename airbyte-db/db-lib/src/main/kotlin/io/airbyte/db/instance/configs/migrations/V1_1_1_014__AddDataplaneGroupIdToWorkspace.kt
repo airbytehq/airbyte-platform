@@ -55,7 +55,6 @@ class V1_1_1_014__AddDataplaneGroupIdToWorkspace : BaseJavaMigration() {
       when (System.getenv("AIRBYTE_EDITION")?.uppercase()) {
         "CLOUD" -> AirbyteEdition.CLOUD
         "COMMUNITY" -> AirbyteEdition.COMMUNITY
-        "ENTERPRISE" -> AirbyteEdition.ENTERPRISE
         else -> null
       }
 

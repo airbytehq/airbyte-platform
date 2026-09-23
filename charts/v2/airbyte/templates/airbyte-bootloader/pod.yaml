@@ -57,7 +57,7 @@ spec:
         - configMapRef:
             name: {{ .Release.Name }}-airbyte-telemetry-env
       env:
-        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "enterprise")) }}
+        {{- if (eq .Values.global.edition "community") }}
         {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }}
         {{- end }}
 

@@ -19,7 +19,6 @@ import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ScimEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.AuthenticationId
-import io.airbyte.config.Configs
 import io.airbyte.config.Group
 import io.airbyte.config.Permission
 import io.airbyte.data.ConfigNotFoundException
@@ -430,7 +429,7 @@ class GroupPermissionApiControllerTest {
   private fun unentitledHelper(): GroupsEntitlementHelper {
     val entitlementService = mockk<EntitlementService>()
     every { entitlementService.ensureEntitled(organizationId, ScimEntitlement) } throws LicenseEntitlementProblem()
-    return GroupsEntitlementHelper(entitlementService, Configs.AirbyteEdition.CLOUD)
+    return GroupsEntitlementHelper(entitlementService)
   }
 
   private fun verifyAuthorizedAndEntitled() {

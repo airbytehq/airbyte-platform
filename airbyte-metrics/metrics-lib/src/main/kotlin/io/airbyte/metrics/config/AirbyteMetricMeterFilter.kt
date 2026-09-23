@@ -7,7 +7,6 @@ package io.airbyte.metrics.config
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.LoadingCache
 import io.airbyte.config.Configs.AirbyteEdition
-import io.airbyte.metrics.MetricVisibility
 import io.airbyte.metrics.MetricsRegistry
 import io.airbyte.metrics.MetricsResolver
 import io.airbyte.metrics.OssMetricsRegistry
@@ -49,12 +48,6 @@ class AirbyteMetricMeterFilter(
     return when (airbyteEdition) {
       AirbyteEdition.CLOUD -> MeterFilterReply.ACCEPT
       AirbyteEdition.COMMUNITY -> MeterFilterReply.DENY
-      AirbyteEdition.ENTERPRISE ->
-        if (metric?.getMetricVisibility() == MetricVisibility.PUBLIC) {
-          MeterFilterReply.ACCEPT
-        } else {
-          MeterFilterReply.DENY
-        }
     }
   }
 

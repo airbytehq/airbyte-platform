@@ -32,7 +32,6 @@ Common ones:
 - `:oss:airbyte-workload-launcher` — kube launcher
 - `:oss:airbyte-bootloader` — startup migrations / setup
 - `:oss:airbyte-cron` — scheduled jobs
-- `:oss:airbyte-keycloak-setup` — see [its AGENTS.md](airbyte-keycloak-setup/AGENTS.md)
 - `:oss:airbyte-api:*` — see [airbyte-api/AGENTS.md](airbyte-api/AGENTS.md)
 - `:oss:airbyte-db:db-lib`, `:oss:airbyte-db:jooq` — see [airbyte-db/AGENTS.md](airbyte-db/AGENTS.md)
 - `:oss:airbyte-domain:models`, `:oss:airbyte-domain:services` —

@@ -50,7 +50,6 @@ class V1_1_1_016__AddDataplaneGroupIdToConnection : BaseJavaMigration() {
       when (System.getenv("AIRBYTE_EDITION")?.uppercase()) {
         "CLOUD" -> AirbyteEdition.CLOUD
         "COMMUNITY" -> AirbyteEdition.COMMUNITY
-        "ENTERPRISE" -> AirbyteEdition.ENTERPRISE
         else -> null
       }
 

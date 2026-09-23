@@ -36,7 +36,6 @@ micronaut:
     enabled: false
 airbyte:
   airbyte-url: ${AIRBYTE_URL:}
-  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   container.orchestrator:
     platform-mode: ${PLATFORM_MODE:ORCHESTRATOR}
   context:

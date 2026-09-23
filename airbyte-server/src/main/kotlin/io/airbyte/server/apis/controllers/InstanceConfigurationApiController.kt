@@ -7,7 +7,6 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.generated.InstanceConfigurationApi
 import io.airbyte.api.model.generated.InstanceConfigurationResponse
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody
-import io.airbyte.api.model.generated.LicenseInfoResponse
 import io.airbyte.commons.server.handlers.InstanceConfigurationHandler
 import io.airbyte.server.apis.execute
 import io.micronaut.http.annotation.Body
@@ -24,8 +23,6 @@ class InstanceConfigurationApiController(
 ) : InstanceConfigurationApi {
   @Get
   override fun getInstanceConfiguration(): InstanceConfigurationResponse? = execute { instanceConfigurationHandler.instanceConfiguration }
-
-  override fun licenseInfo(): LicenseInfoResponse? = execute { instanceConfigurationHandler.licenseInfo() }
 
   override fun setupInstanceConfiguration(
     @Body instanceConfigurationSetupRequestBody: InstanceConfigurationSetupRequestBody,

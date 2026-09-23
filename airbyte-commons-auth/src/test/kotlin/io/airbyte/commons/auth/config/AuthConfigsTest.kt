@@ -5,7 +5,6 @@
 package io.airbyte.commons.auth.config
 
 import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
-import io.airbyte.micronaut.runtime.DEFAULT_AUTH_IDENTITY_PROVIDER_TYPE
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -73,39 +72,5 @@ class AuthConfigsForCloudTest {
   @Test
   fun `test cloud environment sets mode to OIDC`() {
     assertEquals(AuthMode.OIDC, authConfigs.authMode)
-  }
-}
-
-@MicronautTest(rebuildContext = true)
-@Property(name = "airbyte.edition", value = "enterprise")
-class AuthConfigsForEnterpriseTest {
-  @get:Primary
-  @get:Bean
-  val oidcConfig: OidcConfig =
-    mockk {
-      every { domain } returns "test-domain"
-      every { appName } returns "test-app-name"
-      every { clientId } returns "test-client-id"
-      every { clientSecret } returns "test-client-secret"
-    }
-
-  @Inject
-  lateinit var authConfigs: AuthConfigs
-
-  @Test
-  @Property(name = "airbyte.auth.identity-provider.type", value = "oidc")
-  fun `test Enterprise AuthConfigs sets mode to OIDC`() {
-    assertEquals(AuthMode.OIDC, authConfigs.authMode)
-    assertNotNull(authConfigs.oidcConfig)
-    assertEquals("test-client-id", authConfigs.oidcConfig!!.clientId)
-    assertEquals("test-client-secret", authConfigs.oidcConfig!!.clientSecret)
-    assertEquals("test-domain", authConfigs.oidcConfig!!.domain)
-    assertEquals("test-app-name", authConfigs.oidcConfig!!.appName)
-  }
-
-  @Test
-  @Property(name = "airbyte.auth.identity-provider.type", value = DEFAULT_AUTH_IDENTITY_PROVIDER_TYPE)
-  fun `test Enterprise AuthConfigs sets mode to SIMPLE when doing simple auth`() {
-    assertEquals(AuthMode.SIMPLE, authConfigs.authMode)
   }
 }

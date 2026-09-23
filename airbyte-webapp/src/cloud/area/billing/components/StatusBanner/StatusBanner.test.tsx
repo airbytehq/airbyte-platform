@@ -51,7 +51,6 @@ const mockSubscriptionStatus = (
     isInTrial: options.trialStatus === "in_trial",
     isStandardTrialPlan: options.isStandardTrialPlan ?? false,
     isStandardPlan: false,
-    isSmePlan: false,
     isFlexPlan: false,
     isProPlan: false,
     trialDaysLeft: options.trialDaysLeft ?? 0,

@@ -15,7 +15,6 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { useApiHealthPoll } from "core/services/Health";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useBuildUpdateCheck } from "core/utils/useBuildUpdateCheck";
-import { useEnterpriseLicenseCheck } from "core/utils/useEnterpriseLicenseCheck";
 import { useQuery } from "core/utils/useQuery";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { LoginPage } from "pages/login/LoginPage";
@@ -25,7 +24,6 @@ import { OrganizationRoutes } from "./organization/OrganizationRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
 import { AccountPage } from "./SettingsPage/pages/AccountPage";
 import { DestinationsPage, SourcesPage } from "./SettingsPage/pages/ConnectorsPage";
-import { LicenseSettingsPage } from "./SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
 import { MetricsPage } from "./SettingsPage/pages/MetricsPage";
 import { NotificationPage } from "./SettingsPage/pages/NotificationPage";
 import { GeneralWorkspaceSettingsPage } from "./SettingsPage/Workspace/GeneralWorkspaceSettingsPage";
@@ -76,7 +74,6 @@ const WorkspacesRoutes: React.FC = () => {
   useAddAnalyticsContextForWorkspace(workspace);
 
   const { authType } = useAuthService();
-  const licenseSettings = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const canViewWorkspaceSettings = useGeneratedIntent(Intent.ViewWorkspaceSettings);
 
   return (
@@ -125,8 +122,6 @@ const WorkspacesRoutes: React.FC = () => {
           )}
           <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
           <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
-
-          {licenseSettings && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}
           <Route path={SettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
           <Route path="*" element={<Navigate to={SettingsRoutePaths.Workspace} replace />} />
         </Route>
@@ -193,7 +188,6 @@ export const Routing: React.FC = () => {
 const AuthenticatedRoutes = () => {
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
   const { initialSetupComplete } = useGetInstanceConfiguration();
-  useEnterpriseLicenseCheck();
   const showOrganizationUI = useFeature(FeatureItem.OrganizationUI);
 
   if (loginRedirect) {

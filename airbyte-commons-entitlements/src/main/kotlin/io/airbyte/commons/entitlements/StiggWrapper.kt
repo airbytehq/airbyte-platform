@@ -129,7 +129,7 @@ data class EntitlementPlanResponse(
  * GraphQL-based API that is tricky to mock.
  *
  * This also provides a place to share code between entitlements clients like
- * [StiggCloudEntitlementClient] and [StiggEnterpriseEntitlementClient].
+ * [StiggCloudEntitlementClient].
  *
  * Try to keep this wrapper thin. It's harder to test, so try to keep the logic
  * dead simple.

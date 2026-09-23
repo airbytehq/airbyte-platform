@@ -74,19 +74,4 @@ class DataResidencyHelperTest {
 
     verify { dataplaneGroupService.getDefaultDataplaneGroup() }
   }
-
-  @Test
-  fun `getDataplaneGroupFromResidencyAndAirbyteEdition Enterprise edition returns custom dataplane group`() {
-    val cloudDataplaneGroup = DataplaneGroup().withId(UUID.randomUUID())
-    val customValue = "eu-west"
-
-    every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, customValue) } returns cloudDataplaneGroup
-
-    val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.ENTERPRISE)
-
-    val result = helper.getDataplaneGroupFromResidencyAndAirbyteEdition(customValue)
-    Assertions.assertEquals(cloudDataplaneGroup.id, result?.id)
-
-    verify { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, customValue) }
-  }
 }

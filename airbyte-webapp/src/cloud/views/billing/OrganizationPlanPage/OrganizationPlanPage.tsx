@@ -31,9 +31,9 @@ const OrganizationPlanPageContent: React.FC = () => {
 
   const isSubscribed = isOrganizationSubscribed(billing);
 
-  const { isStandardPlan, isPlusPlan, isProPlan, isSmePlan, isFlexPlan } = useOrganizationPlan();
+  const { isStandardPlan, isPlusPlan, isProPlan, isFlexPlan } = useOrganizationPlan();
   const isLockedSubscription = billing?.paymentStatus === "locked";
-  const isTopTier = isProPlan || isSmePlan || isFlexPlan;
+  const isTopTier = isProPlan || isFlexPlan;
 
   const activeTier: ActivePlanTier | null = isStandardPlan
     ? "standard"
