@@ -77,6 +77,19 @@ delegate to a handler or service.
 - **Do not add new direct `airbyte-data` dependencies** to application
   modules. New data access goes through `airbyte-domain:services`. If
   you're tempted to add a `:oss:airbyte-data` import, ask first.
+- **No connections, transactions, or SQL outside the data layer.**
+  Outside `airbyte-data`, `airbyte-config:config-persistence`, and
+  `airbyte-domain:services`, code must not reference
+  `javax.sql.DataSource`, `DSLContext`, `DataSourceUnwrapper`, or
+  `@Transactional`, and must not call `connection.autoCommit`,
+  `rollback()`, or `prepareStatement`. That covers advisory locks
+  (`pg_advisory_*`) too. Put the lock or transaction in one of those
+  modules and call it through `airbyte-domain:services`. See the root
+  AGENTS.md data-layer rule for the exceptions (`@Factory` bean
+  wiring, migrations). Existing usages in `airbyte-commons-server`
+  handlers (`UserHandler`, `ResourceBootstrapHandler`,
+  `DsrDeletionService`, and others) predate this rule. They are not a
+  pattern to follow.
 - **Multi-tenant safety**: see root AGENTS.md. Cloud services running
   in shared deployments must filter every org-scoped query by
   `organization_id`.
