@@ -24,6 +24,7 @@ create table "public"."actor" (
   "enable_indexing" boolean not null default false,
   "enable_backfill" boolean not null default false,
   "backfill_start_time" timestamp(6) with time zone,
+  "is_draft" boolean not null default false,
   constraint "actor_pkey" primary key ("id")
 );
 create table "public"."actor_catalog" (
