@@ -10,6 +10,7 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.workload.launcher.ArchitectureDecider
+import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
 import io.airbyte.workload.launcher.pipeline.stages.model.ArchitectureEnvironmentVariables
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -78,7 +79,12 @@ data class ReplicationPodFactory(
       replContainerFactory.createSource(
         resourceReqs = sourceResourceReqs,
         volumeMounts = replicationVolumes.sourceVolumeMounts,
-        runtimeEnvVars = sourceRuntimeEnvVars + architectureEnvironmentVariables.sourceEnvironmentVariables,
+        runtimeEnvVars =
+          sourceRuntimeEnvVars +
+            architectureEnvironmentVariables.sourceEnvironmentVariables.filterNot {
+              it.name in EnvVarConstants.SYNC_IDENTITY_NAMES || it.name.startsWith(EnvVarConstants.FUSION_COPY_PREFIX) ||
+                it.name == EnvVarConstants.FUSION_COPY_ENDPOINT || it.name == EnvVarConstants.AWS_ENDPOINT_URL
+            },
         image = sourceImage,
       )
 
@@ -86,7 +92,12 @@ data class ReplicationPodFactory(
       replContainerFactory.createDestination(
         resourceReqs = destResourceReqs,
         volumeMounts = replicationVolumes.destVolumeMounts,
-        runtimeEnvVars = destRuntimeEnvVars + architectureEnvironmentVariables.destinationEnvironmentVariables,
+        runtimeEnvVars =
+          destRuntimeEnvVars +
+            architectureEnvironmentVariables.destinationEnvironmentVariables.filterNot {
+              it.name in EnvVarConstants.SYNC_IDENTITY_NAMES || it.name.startsWith(EnvVarConstants.FUSION_COPY_PREFIX) ||
+                it.name == EnvVarConstants.FUSION_COPY_ENDPOINT || it.name == EnvVarConstants.AWS_ENDPOINT_URL
+            },
         image = destImage,
       )
 
@@ -171,7 +182,12 @@ data class ReplicationPodFactory(
       replContainerFactory.createDestination(
         resourceReqs = destResourceReqs,
         volumeMounts = replicationVolumes.destVolumeMounts,
-        runtimeEnvVars = destRuntimeEnvVars + architectureEnvironmentVariables.destinationEnvironmentVariables,
+        runtimeEnvVars =
+          destRuntimeEnvVars +
+            architectureEnvironmentVariables.destinationEnvironmentVariables.filterNot {
+              it.name in EnvVarConstants.SYNC_IDENTITY_NAMES || it.name.startsWith(EnvVarConstants.FUSION_COPY_PREFIX) ||
+                it.name == EnvVarConstants.FUSION_COPY_ENDPOINT || it.name == EnvVarConstants.AWS_ENDPOINT_URL
+            },
         image = destImage,
       )
 

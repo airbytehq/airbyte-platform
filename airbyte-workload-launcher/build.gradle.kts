@@ -58,6 +58,7 @@ dependencies {
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
+  testImplementation(libs.mockwebserver)
   testImplementation(libs.kotlin.test.runner.junit5)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)

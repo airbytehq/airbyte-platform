@@ -99,21 +99,34 @@ class RuntimeEnvVarFactory(
     launcherConfig: IntegrationLauncherConfig,
     resourceReqs: AirbyteResourceRequirements?,
     useFileTransfers: Boolean,
+    fusionDestination: Boolean = false,
   ): List<EnvVar> {
     val ddConfigEnvVars = getDdConfiguration()
-    val awsEnvVars = resolveAwsAssumedRoleEnvVars(launcherConfig)
+    val awsEnvVars = resolveAwsAssumedRoleEnvVars(launcherConfig, fusionDestination)
     val apmEnvVars = getConnectorApmEnvVars(launcherConfig.dockerImage, Workspace(launcherConfig.workspaceId))
     val configurationEnvVars = getConfigurationEnvVars(launcherConfig.dockerImage, launcherConfig.connectionId ?: ANONYMOUS, useFileTransfers)
     val metadataEnvVars = getMetadataEnvVars(launcherConfig)
     val resourceEnvVars = getResourceEnvVars(resourceReqs)
     val customCodeEnvVars = getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId))
-    val configPassThroughEnv = launcherConfig.additionalEnvironmentVariables?.toEnvVarList().orEmpty()
+    val configPassThroughEnv =
+      launcherConfig.additionalEnvironmentVariables?.toEnvVarList().orEmpty().filterNot {
+        it.name in EnvVarConstants.SYNC_IDENTITY_NAMES || it.name.startsWith(EnvVarConstants.FUSION_COPY_PREFIX) ||
+          it.name == EnvVarConstants.FUSION_COPY_ENDPOINT ||
+          (fusionDestination && it.name == EnvVarConstants.AWS_ENDPOINT_URL)
+      }
     val logLevelEnvVars =
       getLogLevelEnvVars(Multi(listOf(Workspace(launcherConfig.workspaceId), Connection(launcherConfig.connectionId))))
 
     return ddConfigEnvVars + awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + configPassThroughEnv +
       customCodeEnvVars +
       logLevelEnvVars
+  }
+
+  fun fusionDestinationEnvVars(environment: Map<String, String>): List<EnvVar> {
+    if (environment.isEmpty()) return emptyList()
+    val endpoint =
+      environment[EnvVarConstants.FUSION_COPY_ENDPOINT]?.let { listOf(EnvVar(EnvVarConstants.AWS_ENDPOINT_URL, it, null)) } ?: emptyList()
+    return environment.toEnvVarList() + endpoint
   }
 
   // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
@@ -281,22 +294,46 @@ class RuntimeEnvVarFactory(
    * Conditionally adds AWS assumed role env vars for use by connector pods.
    */
   @InternalForTesting
-  internal fun resolveAwsAssumedRoleEnvVars(launcherConfig: IntegrationLauncherConfig): List<EnvVar> {
+  internal fun resolveAwsAssumedRoleEnvVars(
+    launcherConfig: IntegrationLauncherConfig,
+    fusionDestination: Boolean = false,
+  ): List<EnvVar> {
     // Only inject into connectors we own.
-    if (launcherConfig.isCustomConnector) {
+    if (launcherConfig.isCustomConnector && !fusionDestination) {
       return listOf()
     }
     // Only inject into enabled workspaces.
-    val workspaceEnabled =
-      launcherConfig.workspaceId != null &&
-        this.featureFlagClient.boolVariation(InjectAwsSecretsToConnectorPods, Workspace(launcherConfig.workspaceId))
-    if (!workspaceEnabled) {
+    val workspaceId = launcherConfig.workspaceId ?: return listOf()
+    val workspaceEnabled = featureFlagClient.boolVariation(InjectAwsSecretsToConnectorPods, Workspace(workspaceId))
+    if (!workspaceEnabled && !fusionDestination) {
       return listOf()
     }
 
-    val externalIdVar = EnvVar(AWS_ASSUME_ROLE_EXTERNAL_ID, launcherConfig.workspaceId.toString(), null)
+    val credentials = connectorAwsAssumedRoleSecretEnvList
+    if (fusionDestination) {
+      val credentialNames = credentials.map { it.name }.toSet()
+      require(credentialNames.containsAll(listOf("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"))) {
+        "Fusion copy requires AWS bootstrap secret references"
+      }
+      require(
+        credentials.all {
+          it.value == null &&
+            !it.valueFrom
+              ?.secretKeyRef
+              ?.name
+              .isNullOrBlank() &&
+            !it.valueFrom
+              ?.secretKeyRef
+              ?.key
+              .isNullOrBlank()
+        },
+      ) {
+        "Fusion copy requires valid AWS bootstrap secret references"
+      }
+    }
+    val externalIdVar = EnvVar(AWS_ASSUME_ROLE_EXTERNAL_ID, workspaceId.toString(), null)
 
-    return connectorAwsAssumedRoleSecretEnvList + externalIdVar
+    return credentials + externalIdVar
   }
 
   companion object {

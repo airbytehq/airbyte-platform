@@ -10,6 +10,17 @@ package io.airbyte.workload.launcher.constants
  * Over time, we should try to collect the env vars here. Moving this to a shared library is also likely.
  */
 object EnvVarConstants {
+  val SYNC_IDENTITY_NAMES =
+    setOf("AIRBYTE_ORGANIZATION_ID", "AIRBYTE_WORKSPACE_ID", "AIRBYTE_SOURCE_ID", "AIRBYTE_DESTINATION_ID", "AIRBYTE_CONNECTION_ID")
+  const val FUSION_COPY_PREFIX = "AIRBYTE_FUSION_"
+  val FUSION_COPY_NAMES =
+    setOf("AIRBYTE_FUSION_ENABLED", "AIRBYTE_FUSION_S3_BUCKET", "AIRBYTE_FUSION_S3_REGION", "AIRBYTE_FUSION_S3_PREFIX", "AIRBYTE_FUSION_S3_ROLE_ARN")
+
+  // Optional S3/STS endpoint override (LocalStack in local development); production resolutions omit it.
+  const val FUSION_COPY_ENDPOINT = "AIRBYTE_S3_COPY_ENDPOINT"
+
+  // The AWS SDK reads this directly, so the destination needs no code to honour the endpoint override.
+  const val AWS_ENDPOINT_URL = "AWS_ENDPOINT_URL"
   const val DD_AGENT_HOST_ENV_VAR = "DD_AGENT_HOST"
   const val DD_DOGSTATSD_PORT_ENV_VAR = "DD_DOGSTATSD_PORT"
   const val DD_ENV_ENV_VAR = "DD_ENV"

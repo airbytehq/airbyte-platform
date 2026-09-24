@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorType
+import io.airbyte.config.ConnectionContext
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
@@ -159,6 +160,19 @@ internal class PayloadKubeInputMapperTest {
     every { input.connectionId } returns mockk<UUID>()
     every { input.workspaceId } returns mockk<UUID>()
     every { input.useFileTransfer } returns false
+    val context =
+      ConnectionContext()
+        .withOrganizationId(UUID.randomUUID())
+        .withWorkspaceId(UUID.randomUUID())
+        .withSourceId(UUID.randomUUID())
+        .withDestinationId(UUID.randomUUID())
+        .withConnectionId(UUID.randomUUID())
+    every { input.connectionContext } returns context
+    every { input.workspaceId } returns context.workspaceId
+    every { input.sourceId } returns context.sourceId
+    every { input.destinationId } returns context.destinationId
+    every { input.connectionId } returns context.connectionId
+    every { envVarFactory.fusionDestinationEnvVars(any()) } returns emptyList()
     val syncPayload = SyncPayload(input)
 
     val replLabels = mapOf("orchestrator" to "labels")
@@ -619,6 +633,19 @@ internal class PayloadKubeInputMapperTest {
     every { replInput.destinationLauncherConfig } returns testConfig
     every { replInput.syncResourceRequirements } returns SyncResourceRequirements()
     every { replInput.useFileTransfer } returns false
+    val context =
+      ConnectionContext()
+        .withOrganizationId(UUID.randomUUID())
+        .withWorkspaceId(UUID.randomUUID())
+        .withSourceId(UUID.randomUUID())
+        .withDestinationId(UUID.randomUUID())
+        .withConnectionId(UUID.randomUUID())
+    every { replInput.connectionContext } returns context
+    every { replInput.workspaceId } returns context.workspaceId
+    every { replInput.sourceId } returns context.sourceId
+    every { replInput.destinationId } returns context.destinationId
+    every { replInput.connectionId } returns context.connectionId
+    every { envVarFactory.fusionDestinationEnvVars(any()) } returns emptyList()
     val syncPayload = SyncPayload(replInput)
     val nodeSelector = KubeNodeSelector(ffClient)
 

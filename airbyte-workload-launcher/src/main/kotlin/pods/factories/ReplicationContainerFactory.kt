@@ -10,6 +10,7 @@ import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
 import io.airbyte.workload.launcher.constants.ContainerConstants.DESTINATION_CONTAINER_NAME
 import io.airbyte.workload.launcher.constants.ContainerConstants.ORCHESTRATOR_CONTAINER_NAME
 import io.airbyte.workload.launcher.constants.ContainerConstants.SOURCE_CONTAINER_NAME
+import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
@@ -61,8 +62,14 @@ class ReplicationContainerFactory(
       .withImage(image)
       .withImagePullPolicy(airbyteWorkerConfig.job.kubernetes.main.container.imagePullPolicy)
       .withCommand("sh", "-c", mainCommand)
-      .withEnv(sourceEnvVars + runtimeEnvVars)
-      .withWorkingDir(SOURCE_DIR)
+      .withEnv(
+        (
+          sourceEnvVars.filterNot {
+            it.name in EnvVarConstants.SYNC_IDENTITY_NAMES || it.name.startsWith(EnvVarConstants.FUSION_COPY_PREFIX) ||
+              it.name == EnvVarConstants.FUSION_COPY_ENDPOINT || it.name == EnvVarConstants.AWS_ENDPOINT_URL
+          } + runtimeEnvVars
+        ).associateBy { it.name }.values.toList(),
+      ).withWorkingDir(SOURCE_DIR)
       .withVolumeMounts(volumeMounts)
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .withResources(resourceReqs)
@@ -82,8 +89,14 @@ class ReplicationContainerFactory(
       .withImage(image)
       .withImagePullPolicy(airbyteWorkerConfig.job.kubernetes.main.container.imagePullPolicy)
       .withCommand("sh", "-c", mainCommand)
-      .withEnv(destinationEnvVars + runtimeEnvVars)
-      .withWorkingDir(DEST_DIR)
+      .withEnv(
+        (
+          destinationEnvVars.filterNot {
+            it.name in EnvVarConstants.SYNC_IDENTITY_NAMES || it.name.startsWith(EnvVarConstants.FUSION_COPY_PREFIX) ||
+              it.name == EnvVarConstants.FUSION_COPY_ENDPOINT || it.name == EnvVarConstants.AWS_ENDPOINT_URL
+          } + runtimeEnvVars
+        ).associateBy { it.name }.values.toList(),
+      ).withWorkingDir(DEST_DIR)
       .withVolumeMounts(volumeMounts)
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())
       .withResources(resourceReqs)

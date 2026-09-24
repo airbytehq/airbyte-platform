@@ -31,6 +31,7 @@ import reactor.core.publisher.Mono
 open class LaunchPodStage(
   private val launcher: KubePodClient,
   metricClient: MetricClient,
+  private val fusionLaunchResolver: FusionLaunchResolver,
 ) : LaunchStage(metricClient) {
   @WithSpan(MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME)
   @Instrument(
@@ -45,12 +46,14 @@ open class LaunchPodStage(
 
   override fun applyStage(input: LaunchStageIO): LaunchStageIO {
     when (val payload = input.payload!!) {
-      is SyncPayload ->
+      is SyncPayload -> {
+        fusionLaunchResolver.resolve(payload, input.workloadId)
         if (payload.input.isReset) {
           launcher.launchReset(payload, input.msg)
         } else {
           launcher.launchReplication(payload, input.msg)
         }
+      }
       is CheckPayload -> launcher.launchCheck(payload.input, input.msg)
       is DiscoverCatalogPayload -> launcher.launchDiscover(payload.input, input.msg)
       is SpecPayload -> launcher.launchSpec(payload.input, input.msg)

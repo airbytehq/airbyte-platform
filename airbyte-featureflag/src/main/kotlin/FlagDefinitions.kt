@@ -129,6 +129,8 @@ object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record
 
 object InjectAwsSecretsToConnectorPods : Temporary<Boolean>(key = "platform.inject-aws-secrets-to-connector-pods", default = false)
 
+object FusionLaunchEnabled : Temporary<Boolean>(key = "platform.fusion-launch-enabled", default = false)
+
 object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-on-invalid-checksum", default = false)
 
 object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = true)

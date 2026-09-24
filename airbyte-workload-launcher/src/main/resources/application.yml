@@ -342,4 +342,3 @@ logger:
     io.netty: INFO
 #   Uncomment to help resolve issues with conditional beans
 #      io.micronaut.context.condition: DEBUG
-

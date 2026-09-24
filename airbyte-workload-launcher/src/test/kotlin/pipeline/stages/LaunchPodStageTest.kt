@@ -19,10 +19,42 @@ import io.airbyte.workload.launcher.pods.KubePodClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 
 class LaunchPodStageTest {
+  @Test
+  fun `resolves sync and reset before creating their pods`() {
+    for (reset in listOf(false, true)) {
+      val launcher = mockk<KubePodClient>(relaxed = true)
+      val resolver = mockk<FusionLaunchResolver>(relaxed = true)
+      val payload = SyncPayload(ReplicationInput().withIsReset(reset))
+      val msg = RecordFixtures.launcherInput("workload")
+      LaunchPodStage(launcher, mockk(), resolver).applyStage(LaunchStageIO(msg, payload = payload))
+      verifyOrder {
+        resolver.resolve(payload, "workload")
+        if (reset) launcher.launchReset(payload, msg) else launcher.launchReplication(payload, msg)
+      }
+    }
+  }
+
+  @Test
+  fun `resolver failure prevents sync pod creation`() {
+    val launcher = mockk<KubePodClient>(relaxed = true)
+    val resolver = mockk<FusionLaunchResolver>()
+    every { resolver.resolve(any(), any()) } throws IllegalStateException("Config API failed")
+    assertThrows<IllegalStateException> {
+      LaunchPodStage(launcher, mockk(), resolver)
+        .applyStage(LaunchStageIO(RecordFixtures.launcherInput("workload"), payload = SyncPayload(ReplicationInput())))
+    }
+    verify(exactly = 0) {
+      launcher.launchReplication(any(), any())
+      launcher.launchReset(any(), any())
+    }
+  }
+
   @Test
   fun `launches replication`() {
     val replInput = ReplicationInput()
@@ -31,7 +63,7 @@ class LaunchPodStageTest {
     val launcher: KubePodClient = mockk()
     every { launcher.launchReplication(any(), any()) } returns Unit
 
-    val stage = LaunchPodStage(launcher, mockk())
+    val stage = LaunchPodStage(launcher, mockk(), mockk(relaxed = true))
     val workloadId = UUID.randomUUID().toString()
     val msg = RecordFixtures.launcherInput(workloadId)
     val io = LaunchStageIO(msg = msg, payload = payload)
@@ -53,7 +85,7 @@ class LaunchPodStageTest {
     val launcher: KubePodClient = mockk()
     every { launcher.launchReset(any(), any()) } returns Unit
 
-    val stage = LaunchPodStage(launcher, mockk())
+    val stage = LaunchPodStage(launcher, mockk(), mockk(relaxed = true))
     val workloadId = UUID.randomUUID().toString()
     val msg = RecordFixtures.launcherInput(workloadId)
     val io = LaunchStageIO(msg = msg, payload = payload)
@@ -82,7 +114,7 @@ class LaunchPodStageTest {
     val launcher: KubePodClient = mockk()
     every { launcher.launchCheck(any(), any()) } returns Unit
 
-    val stage = LaunchPodStage(launcher, mockk())
+    val stage = LaunchPodStage(launcher, mockk(), mockk(relaxed = true))
     val workloadId = UUID.randomUUID().toString()
     val msg = RecordFixtures.launcherInput(workloadId)
     val io = LaunchStageIO(msg = msg, payload = payload)
@@ -109,7 +141,7 @@ class LaunchPodStageTest {
     val launcher: KubePodClient = mockk()
     every { launcher.launchDiscover(any(), any()) } returns Unit
 
-    val stage = LaunchPodStage(launcher, mockk())
+    val stage = LaunchPodStage(launcher, mockk(), mockk(relaxed = true))
     val workloadId = UUID.randomUUID().toString()
     val msg = RecordFixtures.launcherInput(workloadId)
     val io = LaunchStageIO(msg = msg, payload = payload)

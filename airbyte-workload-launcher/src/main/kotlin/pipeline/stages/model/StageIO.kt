@@ -48,6 +48,7 @@ sealed class WorkloadPayload
 data class SyncPayload(
   var input: ReplicationInput,
   var architectureEnvironmentVariables: ArchitectureEnvironmentVariables? = null,
+  var fusionDestinationEnvironment: Map<String, String> = emptyMap(),
 ) : WorkloadPayload()
 
 data class CheckPayload(

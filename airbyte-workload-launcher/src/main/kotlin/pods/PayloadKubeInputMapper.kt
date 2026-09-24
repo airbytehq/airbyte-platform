@@ -50,6 +50,24 @@ class PayloadKubeInputMapper(
     sharedLabels: Map<String, String>,
   ): ReplicationKubeInput {
     val input = payload.input
+    val destinationIdentity =
+      if (payload.fusionDestinationEnvironment.isNotEmpty()) {
+        val context = requireNotNull(input.connectionContext) { "Fusion sync connection context is required" }
+        require(
+          context.workspaceId == input.workspaceId && context.connectionId == input.connectionId &&
+            context.sourceId == input.sourceId && context.destinationId == input.destinationId,
+        ) { "Inconsistent Fusion sync identity" }
+        mapOf(
+          "AIRBYTE_ORGANIZATION_ID" to requireNotNull(context.organizationId) { "Fusion organization id is required" },
+          "AIRBYTE_WORKSPACE_ID" to requireNotNull(input.workspaceId) { "Fusion workspace id is required" },
+          "AIRBYTE_SOURCE_ID" to requireNotNull(input.sourceId) { "Fusion source id is required" },
+          "AIRBYTE_DESTINATION_ID" to requireNotNull(input.destinationId) { "Fusion destination id is required" },
+          "AIRBYTE_CONNECTION_ID" to requireNotNull(input.connectionId) { "Fusion connection id is required" },
+        ).map { (name, id) -> EnvVar(name, id.toString(), null) }
+      } else {
+        emptyList()
+      }
+
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
 
@@ -67,16 +85,20 @@ class PayloadKubeInputMapper(
 
     val sourceImage = input.sourceLauncherConfig.dockerImage.withImageRegistry()
     val sourceReqs = resourceRequirementsFactory.replSource(input)
-    val sourceRuntimeEnvVars = runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig, sourceReqs, input.useFileTransfer)
+    val sourceRuntimeEnvVars =
+      runTimeEnvVarFactory.replicationConnectorEnvVars(input.sourceLauncherConfig, sourceReqs, input.useFileTransfer)
 
     val destinationImage = input.destinationLauncherConfig.dockerImage.withImageRegistry()
     val destinationReqs = resourceRequirementsFactory.replDestination(input)
     val destinationRuntimeEnvVars =
-      runTimeEnvVarFactory.replicationConnectorEnvVars(
-        input.destinationLauncherConfig,
-        destinationReqs,
-        input.useFileTransfer && (input.omitFileTransferEnvVar == null || input.omitFileTransferEnvVar == false),
-      )
+      runTimeEnvVarFactory
+        .replicationConnectorEnvVars(
+          input.destinationLauncherConfig,
+          destinationReqs,
+          input.useFileTransfer && (input.omitFileTransferEnvVar == null || input.omitFileTransferEnvVar == false),
+          fusionDestination = payload.fusionDestinationEnvironment.isNotEmpty(),
+        ) +
+        destinationIdentity + runTimeEnvVarFactory.fusionDestinationEnvVars(payload.fusionDestinationEnvironment)
 
     val labels =
       labeler.getReplicationLabels(
