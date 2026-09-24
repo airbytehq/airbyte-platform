@@ -68,6 +68,7 @@ val genApiClient =
         "SourceExecuteData" to "com.fasterxml.jackson.databind.JsonNode",
         "DestinationExecuteData" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
+        "FusionSearchResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "DestinationExecuteResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "SkillDocsResponse" to "com.fasterxml.jackson.databind.JsonNode",
         "SourceExecuteParams" to "com.fasterxml.jackson.databind.JsonNode",

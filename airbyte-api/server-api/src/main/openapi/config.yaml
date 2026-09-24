@@ -111,6 +111,92 @@ tags:
     description: Organization domain verification endpoints.
 
 paths:
+  /v1/sources/{sourceId}/search:
+    post:
+      tags: [fusion_search]
+      operationId: searchFusionSource
+      summary: Search indexed source records (Cloud only)
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FusionSearchRequest"
+      responses:
+        "200":
+          description: Search hits and per-index outcomes, including partial failures
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionSearchResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Workspace reader permission required
+        "404":
+          description: Actor not found
+        "409":
+          description: Search is unavailable in the current resource state
+        "413":
+          description: Request too large
+        "422":
+          description: Invalid search request
+        "502":
+          description: Invalid upstream response
+        "503":
+          description: Upstream unavailable
+        "504":
+          description: Upstream timed out
+  /v1/destinations/{destinationId}/search:
+    post:
+      tags: [fusion_search]
+      operationId: searchFusionDestination
+      summary: Search indexed destination records (Cloud only)
+      parameters:
+        - name: destinationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FusionSearchRequest"
+      responses:
+        "200":
+          description: Search hits and per-index outcomes, including partial failures
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FusionSearchResponse"
+        "401":
+          description: Authentication required
+        "403":
+          description: Workspace reader permission required
+        "404":
+          description: Actor not found
+        "409":
+          description: Search is unavailable in the current resource state
+        "413":
+          description: Request too large
+        "422":
+          description: Invalid search request
+        "502":
+          description: Invalid upstream response
+        "503":
+          description: Upstream unavailable
+        "504":
+          description: Upstream timed out
   /v1/sources/{sourceId}/enablement:
     post:
       tags: [fusion_source_enablement]
@@ -22105,6 +22191,152 @@ components:
         - clear
       type: string
       x-sdk-component: true
+    FusionSearchRequest:
+      type: object
+      additionalProperties: false
+      required: [type, prompt]
+      properties:
+        type:
+          type: string
+          enum: [keyword, semantic, hybrid]
+        prompt:
+          type: string
+          minLength: 1
+          maxLength: 2048
+          pattern: '\S'
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+        max_context_chars:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 32768
+        min_similarity:
+          type: number
+          format: double
+          nullable: true
+          minimum: -1
+          maximum: 1
+          default: 0.25
+        max_similarity_diff:
+          type: number
+          format: double
+          nullable: true
+          minimum: 0
+          maximum: 2
+          default: 0.15
+        lookback_s:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 316224000
+        streams:
+          type: array
+          nullable: true
+          maxItems: 64
+          description: Null or omission searches all eligible streams; empty searches none.
+          items:
+            $ref: "#/components/schemas/FusionSearchStreamSelector"
+        destination_id:
+          type: string
+          format: uuid
+          nullable: true
+    FusionSearchStreamSelector:
+      type: object
+      additionalProperties: false
+      required: [stream_name]
+      properties:
+        source_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required for destination search; must match the route for source search.
+        namespace:
+          type: string
+          nullable: true
+          description: Stream namespace, preserved as supplied without normalizing null or empty values.
+        stream_name:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        fields:
+          type: array
+          nullable: true
+          description: Projects entity_data only. Null returns all fields; empty returns an empty object. Context may include other indexed fields.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 1024
+    FusionSearchResponse:
+      type: object
+      required: [hits, metadata, response_time_ms]
+      properties:
+        hits:
+          type: array
+          items:
+            $ref: "#/components/schemas/FusionSearchHit"
+        metadata:
+          type: array
+          items:
+            $ref: "#/components/schemas/FusionSearchIndexMetadata"
+        response_time_ms:
+          type: integer
+          format: int64
+    FusionSearchHit:
+      type: object
+      required: [source_id, stream_name, entity_id, entity_data, score, context]
+      properties:
+        source_id:
+          type: string
+          format: uuid
+        stream_name:
+          type: string
+        entity_id:
+          type: string
+        entity_data:
+          type: object
+          additionalProperties: true
+        score:
+          type: number
+          format: double
+        context:
+          type: string
+          nullable: true
+    FusionSearchIndexMetadata:
+      type: object
+      required:
+        [
+          source_id,
+          destination_id,
+          stream_name,
+          index_name,
+          error,
+          search_time_ms,
+        ]
+      properties:
+        source_id:
+          type: string
+          format: uuid
+        destination_id:
+          type: string
+          format: uuid
+        namespace:
+          type: string
+          nullable: true
+          description: Stream namespace, preserved as supplied without normalizing null or empty values.
+        stream_name:
+          type: string
+        index_name:
+          type: string
+        error:
+          type: string
+          nullable: true
+        search_time_ms:
+          type: integer
+          format: int64
     SourceExecuteRequest:
       type: object
       additionalProperties: false
