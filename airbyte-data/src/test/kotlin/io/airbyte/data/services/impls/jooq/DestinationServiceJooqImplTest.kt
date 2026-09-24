@@ -24,6 +24,7 @@ import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.shared.ActorServicePaginationHelper
 import io.airbyte.data.services.shared.SortKey
 import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination.Companion.fromValues
+import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.JsonSchemaType
@@ -39,6 +40,8 @@ import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
@@ -108,6 +111,99 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(0, result[0].connectionCount)
     Assertions.assertEquals(helper.destination!!.destinationId, result[0].destination.destinationId)
     Assertions.assertNull(result[0].lastSync, "Should have no last sync when no connections exist")
+  }
+
+  @Test
+  fun `draft state persists and promotion is idempotent for sources and destinations`() {
+    val helper = JooqTestDbSetupHelper()
+    helper.setUpDependencies()
+
+    val source =
+      SourceConnection()
+        .withSourceId(UUID.randomUUID())
+        .withSourceDefinitionId(helper.source!!.sourceDefinitionId)
+        .withWorkspaceId(helper.source!!.workspaceId)
+        .withName("draft source")
+        .withConfiguration(emptyObject())
+        .withTombstone(false)
+        .withIsDraft(true)
+    val destination =
+      DestinationConnection()
+        .withDestinationId(UUID.randomUUID())
+        .withDestinationDefinitionId(helper.destination!!.destinationDefinitionId)
+        .withWorkspaceId(helper.destination!!.workspaceId)
+        .withName("draft destination")
+        .withConfiguration(emptyObject())
+        .withTombstone(false)
+        .withIsDraft(true)
+
+    sourceServiceJooqImpl.writeSourceConnectionNoSecrets(source)
+    destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(destination)
+
+    Assertions.assertTrue(sourceServiceJooqImpl.getSourceConnection(source.sourceId).isDraft)
+    Assertions.assertTrue(destinationServiceJooqImpl.getDestinationConnection(destination.destinationId).isDraft)
+
+    sourceServiceJooqImpl.promoteSourceFromDraft(source.sourceId)
+    sourceServiceJooqImpl.promoteSourceFromDraft(source.sourceId)
+    destinationServiceJooqImpl.promoteDestinationFromDraft(destination.destinationId)
+    destinationServiceJooqImpl.promoteDestinationFromDraft(destination.destinationId)
+
+    Assertions.assertFalse(sourceServiceJooqImpl.getSourceConnection(source.sourceId).isDraft)
+    Assertions.assertFalse(destinationServiceJooqImpl.getDestinationConnection(destination.destinationId).isDraft)
+
+    sourceServiceJooqImpl.writeSourceConnectionNoSecrets(source.withIsDraft(true))
+    destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(destination.withIsDraft(true))
+    Assertions.assertFalse(sourceServiceJooqImpl.getSourceConnection(source.sourceId).isDraft)
+    Assertions.assertFalse(destinationServiceJooqImpl.getDestinationConnection(destination.destinationId).isDraft)
+  }
+
+  @Test
+  fun `stale source update racing promotion cannot restore draft state`() {
+    val helper = JooqTestDbSetupHelper()
+    helper.setUpDependencies()
+    val source =
+      SourceConnection()
+        .withSourceId(UUID.randomUUID())
+        .withSourceDefinitionId(helper.source!!.sourceDefinitionId)
+        .withWorkspaceId(helper.source!!.workspaceId)
+        .withName("draft source")
+        .withConfiguration(emptyObject())
+        .withTombstone(false)
+        .withIsDraft(true)
+    sourceServiceJooqImpl.writeSourceConnectionNoSecrets(source)
+
+    lateinit var staleUpdate: CompletableFuture<Void>
+    database!!.transaction<Any?> { ctx ->
+      ctx
+        .select(Tables.ACTOR.ID)
+        .from(Tables.ACTOR)
+        .where(Tables.ACTOR.ID.eq(source.sourceId))
+        .forUpdate()
+        .fetchOne()
+      ctx
+        .update(Tables.ACTOR)
+        .set(Tables.ACTOR.IS_DRAFT, false)
+        .where(Tables.ACTOR.ID.eq(source.sourceId))
+        .execute()
+
+      staleUpdate = CompletableFuture.runAsync { sourceServiceJooqImpl.writeSourceConnectionNoSecrets(source) }
+      val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+      var waitingForLock = false
+      while (!waitingForLock && System.nanoTime() < deadline) {
+        waitingForLock =
+          database!!.query { observer ->
+            observer
+              .fetchOne("select exists(select 1 from pg_stat_activity where wait_event_type = 'Lock' and query ilike '%update%actor%')")
+              ?.get(0, Boolean::class.javaObjectType) ?: false
+          }
+        Thread.yield()
+      }
+      Assertions.assertTrue(waitingForLock, "stale update should be blocked behind the promotion transaction")
+      null
+    }
+
+    staleUpdate.get(10, TimeUnit.SECONDS)
+    Assertions.assertFalse(sourceServiceJooqImpl.getSourceConnection(source.sourceId).isDraft)
   }
 
   @Test

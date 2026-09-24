@@ -1,6 +1,8 @@
 import { renderHook } from "@testing-library/react";
 
 import { type ConnectorFormValues } from "area/connector/components/ConnectorForm/types";
+import { type DestinationRead, type SourceRead } from "core/api/types/AirbyteClient";
+import { type ConnectorT } from "core/domain/connector";
 
 import { useSubmitConfigurationTool } from "./useSubmitConfigurationTool";
 
@@ -93,5 +95,83 @@ describe("useSubmitConfigurationTool", () => {
 
     expect(onSubmitSourceStep).not.toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+
+  it.each([
+    { actorType: "source", draft: { sourceId: "source-draft-id", isDraft: true } as SourceRead },
+    {
+      actorType: "destination",
+      draft: { destinationId: "destination-draft-id", isDraft: true } as DestinationRead,
+    },
+  ])("reuses a checked $actorType draft instead of creating another actor", async ({ draft }) => {
+    const onSubmitSourceStep = jest.fn();
+    const onDraftPromoted = jest.fn();
+    const getFormValues = jest.fn(() => buildFormValues());
+
+    const { result } = renderHook(() =>
+      useSubmitConfigurationTool<ConnectorT>({
+        actorDefinitionId,
+        onSubmitSourceStep,
+        getFormValues,
+        getDraftConnector: () => draft,
+        wasDraftCheckSuccessful: () => true,
+        onDraftPromoted,
+      })
+    );
+    await result.current.execute({ name: "Promoted actor" }, jest.fn());
+
+    expect(onDraftPromoted).toHaveBeenCalledWith(
+      draft,
+      expect.objectContaining({
+        name: "Promoted actor",
+        serviceType: actorDefinitionId,
+        connectionConfiguration: { token: "abc" },
+        setupFlow: "agent",
+      })
+    );
+    expect(onSubmitSourceStep).not.toHaveBeenCalled();
+  });
+
+  it("does not finish a draft setup without a successful check", async () => {
+    const draft = { sourceId: "source-draft-id", isDraft: true } as SourceRead;
+    const onSubmitSourceStep = jest.fn();
+    const onDraftPromoted = jest.fn();
+
+    const { result } = renderHook(() =>
+      useSubmitConfigurationTool<ConnectorT>({
+        actorDefinitionId,
+        onSubmitSourceStep,
+        getFormValues: () => buildFormValues(),
+        getDraftConnector: () => draft,
+        wasDraftCheckSuccessful: () => false,
+        onDraftPromoted,
+      })
+    );
+
+    await result.current.execute({ name: "Draft actor" }, jest.fn());
+
+    expect(onDraftPromoted).not.toHaveBeenCalled();
+    expect(onSubmitSourceStep).not.toHaveBeenCalled();
+  });
+
+  it("does not create an actor when draft setup is submitted before a check", async () => {
+    const onSubmitSourceStep = jest.fn();
+    const onDraftPromoted = jest.fn();
+
+    const { result } = renderHook(() =>
+      useSubmitConfigurationTool<ConnectorT>({
+        actorDefinitionId,
+        onSubmitSourceStep,
+        getFormValues: () => buildFormValues(),
+        getDraftConnector: () => undefined,
+        wasDraftCheckSuccessful: () => false,
+        onDraftPromoted,
+      })
+    );
+
+    await result.current.execute({ name: "Unchecked actor" }, jest.fn());
+
+    expect(onDraftPromoted).not.toHaveBeenCalled();
+    expect(onSubmitSourceStep).not.toHaveBeenCalled();
   });
 });

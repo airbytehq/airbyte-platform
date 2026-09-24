@@ -31,8 +31,10 @@ interface IProps {
   connectionTestSuccess: boolean;
   hasDefinition: boolean;
   isEditMode: boolean;
+  isDraftMode?: boolean;
   leftSlot?: React.ReactNode;
   onSubmitWithoutCheck?: () => Promise<void>;
+  onSaveDraft?: () => Promise<void>;
   onCopyConfig?: () => {
     config: Record<string, unknown>;
     schema: unknown;
@@ -48,12 +50,14 @@ export const Controls: React.FC<IProps> = ({
   formType,
   hasDefinition,
   isEditMode,
+  isDraftMode = false,
   isValid,
   dirty,
   onDeleteClick,
   onCancelClick,
   leftSlot = null,
   onSubmitWithoutCheck,
+  onSaveDraft,
   onCopyConfig,
   ...restProps
 }) => {
@@ -62,12 +66,14 @@ export const Controls: React.FC<IProps> = ({
   const showTestCard =
     hasDefinition &&
     (isEditMode || isTestConnectionInProgress || restProps.connectionTestSuccess || restProps.errorMessage);
-  const buttonContent = isEditMode ? (
-    <FormattedMessage id="form.saveChangesAndTest" />
-  ) : (
-    <FormattedMessage id={`onboarding.${formType}SetUp.buttonText`} />
-  );
+  const buttonContent =
+    isEditMode && !isDraftMode ? (
+      <FormattedMessage id="form.saveChangesAndTest" />
+    ) : (
+      <FormattedMessage id={`onboarding.${formType}SetUp.buttonText`} />
+    );
   const [isSubmittingWithoutCheck, setIsSubmittingWithoutCheck] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const shouldAllowSavingWithoutTesting = useExperiment("connector.allowSavingWithoutTesting");
 
   return (
@@ -75,6 +81,7 @@ export const Controls: React.FC<IProps> = ({
       {showTestCard && (
         <TestCard
           {...restProps}
+          onRetestClick={isDraftMode ? undefined : restProps.onRetestClick}
           isValid={isValid}
           dirty={dirty}
           formType={formType}
@@ -118,6 +125,24 @@ export const Controls: React.FC<IProps> = ({
             <FormattedMessage id="form.cancel" />
           </Button>
         )}
+        {onSaveDraft && (
+          <Button
+            type="button"
+            variant="secondary"
+            isLoading={isSavingDraft}
+            disabled={isSubmitting || isSavingDraft}
+            onClick={async () => {
+              setIsSavingDraft(true);
+              try {
+                await onSaveDraft();
+              } finally {
+                setIsSavingDraft(false);
+              }
+            }}
+          >
+            <FormattedMessage id="connectorForm.saveDraft" />
+          </Button>
+        )}
         {onSubmitWithoutCheck && shouldAllowSavingWithoutTesting ? (
           <DropdownButton
             type="submit"
@@ -154,7 +179,7 @@ export const Controls: React.FC<IProps> = ({
             type="submit"
             data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
             isLoading={isSubmitting}
-            disabled={isSubmitting || (isEditMode && !dirty)}
+            disabled={isSubmitting || (isEditMode && !isDraftMode && !dirty)}
           >
             {buttonContent}
           </Button>

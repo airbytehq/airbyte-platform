@@ -25,7 +25,9 @@ import {
   useDestinationDefinitionList,
   useGetDestinationDefinitionSpecificationAsync,
   useSetFusionActorEnablement,
+  useUpdateDestination,
 } from "core/api";
+import { DestinationRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
@@ -49,6 +51,7 @@ export const CreateDestinationPage: React.FC = () => {
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { destinationDefinitions } = useDestinationDefinitionList();
   const { mutateAsync: createDestination } = useCreateDestination();
+  const { mutateAsync: updateDestination } = useUpdateDestination();
   const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
   const { registerNotification } = useNotificationService();
   const isCloudApp = useIsCloudApp();
@@ -116,6 +119,58 @@ export const CreateDestinationPage: React.FC = () => {
     navigate(`../${result.destinationId}/${DestinationPaths.Connections}`);
   };
 
+  const onSaveDestinationDraft = async (
+    values: {
+      name: string;
+      serviceType: string;
+      connectionConfiguration: ConnectionConfiguration;
+      setupFlow?: DestinationSetupFlow;
+    },
+    existingDraft?: DestinationRead
+  ) => {
+    if (existingDraft) {
+      return updateDestination({ values, destinationId: existingDraft.destinationId });
+    }
+    const connector = destinationDefinitions.find((item) => item.destinationDefinitionId === values.serviceType);
+    if (!connector) {
+      throw new Error("No Connector Found");
+    }
+    return createDestination({ values: { ...values, createAsDraft: true }, destinationConnector: connector });
+  };
+
+  const onDestinationDraftPromoted = async (
+    destination: DestinationRead,
+    values: { serviceType: string; setupFlow?: DestinationSetupFlow }
+  ) => {
+    const connector = destinationDefinitions.find((item) => item.destinationDefinitionId === values.serviceType);
+    if (!connector) {
+      throw new Error("No Connector Found");
+    }
+    const shouldSyncContextLayer =
+      isCloudApp &&
+      showAgentsOptIn &&
+      status?.is_enrolled === true &&
+      canManage &&
+      values.setupFlow !== "agent" &&
+      supportedDestinationDefinitionIds.has(connector.destinationDefinitionId);
+    if (shouldSyncContextLayer) {
+      void setFusionActorEnablement({
+        actorId: destination.destinationId,
+        actorKind: "destination",
+        workspaceId: destination.workspaceId,
+        enabled: contextLayerAgentAccess,
+      }).catch(() => {
+        registerNotification({
+          id: "cloud.contextLayer.destinationOptIn.syncFailed",
+          text: formatMessage({ id: "cloud.contextLayer.destinationOptIn.syncFailed" }),
+          type: "error",
+        });
+      });
+    }
+    clearAllFormChanges();
+    navigate(`../${destination.destinationId}/${DestinationPaths.Connections}`);
+  };
+
   const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Destination}`;
   const { formatMessage } = useIntl();
 
@@ -172,6 +227,8 @@ export const CreateDestinationPage: React.FC = () => {
                   onChange={setContextLayerAgentAccess}
                 />
               }
+              onSaveDraft={onSaveDestinationDraft}
+              onDraftPromoted={onDestinationDraftPromoted}
             />
           </div>
         </div>
@@ -188,6 +245,8 @@ export const CreateDestinationPage: React.FC = () => {
             </FlexContainer>
             <DestinationForm
               onSubmit={onSubmitDestinationForm}
+              onSaveDraft={onSaveDestinationDraft}
+              onDraftPromoted={onDestinationDraftPromoted}
               destinationDefinitions={destinationDefinitions}
               selectedDestinationDefinitionId={destinationDefinitionId}
               contextLayerOptIn={

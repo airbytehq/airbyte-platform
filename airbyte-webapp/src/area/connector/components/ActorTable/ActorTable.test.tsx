@@ -49,6 +49,19 @@ const destinationReadList: DestinationReadList = {
   destinations: [{ ...mockDestination, status: "active" }],
 };
 
+const draftActorLists: Array<[string, SourceReadList | DestinationReadList, string]> = [
+  [
+    "source",
+    { sources: [{ ...mockSource, name: "Draft source", status: "active", isDraft: true }] },
+    mockSource.sourceId,
+  ],
+  [
+    "destination",
+    { destinations: [{ ...mockDestination, name: "Draft destination", status: "active", isDraft: true }] },
+    mockDestination.destinationId,
+  ],
+];
+
 const renderActorTable = (actorReadList: SourceReadList | DestinationReadList) =>
   render(<ActorTable actorReadList={actorReadList} hasNextPage={false} fetchNextPage={jest.fn()} />);
 
@@ -92,4 +105,16 @@ describe("ActorTable", () => {
     expect(screen.queryByRole("columnheader", { name: "Agent Access" })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Semantic Search" })).not.toBeInTheDocument();
   });
+
+  it.each(draftActorLists)(
+    "shows a resumable Draft state for a draft %s",
+    async (_actorType, actorReadList, actorId) => {
+      mockUseShowActorContextLayerToggles.mockReturnValue(false);
+
+      await renderActorTable(actorReadList);
+
+      expect(screen.getByText("Draft")).toBeInTheDocument();
+      expect(screen.getAllByRole("link").some((link) => link.getAttribute("href")?.endsWith(`/${actorId}`))).toBe(true);
+    }
+  );
 });

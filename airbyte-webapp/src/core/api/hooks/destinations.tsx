@@ -61,6 +61,7 @@ interface ValuesProps {
   serviceType?: string;
   connectionConfiguration: ConnectionConfiguration;
   resourceAllocation?: ScopedResourceRequirements;
+  createAsDraft?: boolean;
 }
 
 interface ConnectorProps {
@@ -131,6 +132,7 @@ export const useCreateDestination = () => {
           workspaceId: workspace.workspaceId,
           connectionConfiguration: values.connectionConfiguration ?? {},
           resourceAllocation: values.resourceAllocation,
+          createAsDraft: values.createAsDraft,
         },
         requestOptions
       );

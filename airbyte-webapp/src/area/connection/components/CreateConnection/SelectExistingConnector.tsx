@@ -29,15 +29,17 @@ export const SelectExistingConnector = <T extends SourceRead | DestinationRead>(
   return (
     <Card noPadding>
       <ul className={styles.existingConnectors}>
-        {connectors.map((connector) => {
-          const key = isSource(connector) ? connector.sourceId : connector.destinationId;
+        {connectors
+          .filter((connector) => !connector.isDraft)
+          .map((connector) => {
+            const key = isSource(connector) ? connector.sourceId : connector.destinationId;
 
-          return (
-            <li key={key} className={styles.existingConnectors__item}>
-              <ExistingConnectorButton connector={connector} onClick={() => selectConnector(key)} />
-            </li>
-          );
-        })}
+            return (
+              <li key={key} className={styles.existingConnectors__item}>
+                <ExistingConnectorButton connector={connector} onClick={() => selectConnector(key)} />
+              </li>
+            );
+          })}
       </ul>
       {hasNextPage && (
         <Box pt="sm" pb="lg">

@@ -69,10 +69,13 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
@@ -271,7 +274,7 @@ internal class DestinationHandlerTest {
     } returns SecretReferenceHelpers.ConfigWithSecretReferenceIdsInjected(configWithSecretRefIds)
 
     // Mock the persisted destination connection that is retrieved after creation.
-    val persistedConnection = clone(destinationConnection).withConfiguration(configWithSecretRefIds)
+    val persistedConnection = clone(destinationConnection).withConfiguration(configWithSecretRefIds).withIsDraft(false)
     every {
       destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns persistedConnection
@@ -306,6 +309,7 @@ internal class DestinationHandlerTest {
           SUPPORT_STATE,
           RESOURCE_ALLOCATION,
         ).connectionConfiguration(configWithSecretRefIds)
+        .isDraft(false)
 
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead)
 
@@ -327,6 +331,55 @@ internal class DestinationHandlerTest {
     verify {
       validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, destinationCreate.connectionConfiguration)
     }
+  }
+
+  @Test
+  fun `create destination as draft uses partial validation and returns draft state`() {
+    val partialConfig = emptyObject()
+    val destinationCreate =
+      DestinationCreate()
+        .name(destinationConnection.name)
+        .workspaceId(destinationConnection.workspaceId)
+        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
+        .connectionConfiguration(partialConfig)
+        .createAsDraft(true)
+    val persistedDestination = clone(destinationConnection).withConfiguration(partialConfig).withIsDraft(true)
+    val persistedDestinationSlot = slot<DestinationConnection>()
+
+    every { uuidGenerator.get() } returns destinationConnection.destinationId
+    every {
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
+    } returns standardDestinationDefinition
+    every {
+      actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.workspaceId)
+    } returns destinationDefinitionVersion
+    every {
+      oAuthConfigSupplier.maskDestinationOAuthParameters(
+        standardDestinationDefinition.destinationDefinitionId,
+        destinationConnection.workspaceId,
+        partialConfig,
+        connectorSpecification,
+      )
+    } returns partialConfig
+    every { secretsRepositoryWriter.createFromConfig(any(), any(), any()) } returns partialConfig
+    every { secretStorageService.getByWorkspaceId(WorkspaceId(destinationConnection.workspaceId)) } returns null
+    every { currentUserService.getCurrentUserIdIfExists() } returns Optional.empty()
+    every { destinationService.writeDestinationConnectionNoSecrets(capture(persistedDestinationSlot)) } returns Unit
+    every { destinationService.getDestinationConnection(destinationConnection.destinationId) } returns persistedDestination
+    every {
+      secretReferenceService.getConfigWithSecretReferences(
+        ActorId(destinationConnection.destinationId),
+        partialConfig,
+        WorkspaceId(destinationConnection.workspaceId),
+      )
+    } returns buildConfigWithSecretRefsJava(partialConfig)
+    every { secretsProcessor.prepareSecretsForOutput(partialConfig, connectorSpecification.connectionSpecification) } returns partialConfig
+
+    val result = destinationHandler.createDestination(destinationCreate)
+
+    Assertions.assertTrue(persistedDestinationSlot.captured.isDraft)
+    Assertions.assertTrue(result.isDraft)
+    verify { validator.ensurePartial(connectorSpecification.connectionSpecification, partialConfig) }
   }
 
   @Test
@@ -462,8 +515,9 @@ internal class DestinationHandlerTest {
     )
   }
 
-  @Test
-  fun testUpdateDestination() {
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun testUpdateDestination(isDraft: Boolean) {
     // ===== GIVEN =====
     // Update the destination name and configuration.
     val updatedDestName = "my updated dest name"
@@ -476,6 +530,7 @@ internal class DestinationHandlerTest {
         .withName(updatedDestName)
         .withConfiguration(newConfiguration)
         .withTombstone(false)
+        .withIsDraft(isDraft)
         .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation))
 
     val destinationUpdate =
@@ -559,6 +614,7 @@ internal class DestinationHandlerTest {
         newConfigWithProcessedSecrets,
         destinationDefinitionVersion.spec.connectionSpecification,
         secretPersistence,
+        isDraft,
       )
     } returns newConfigWithProcessedSecrets.originalConfig
 
@@ -575,7 +631,9 @@ internal class DestinationHandlerTest {
 
     // Mock the updated config that is persisted and retrieved for building the destination read.
     val updatedDestinationWithSecretRefIds =
-      clone(updatedDestinationConnection).withConfiguration(newConfigWithSecretRefIds)
+      clone(updatedDestinationConnection)
+        .withConfiguration(newConfigWithSecretRefIds)
+        .withIsDraft(isDraft)
     every {
       destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns updatedDestinationWithSecretRefIds
@@ -635,8 +693,10 @@ internal class DestinationHandlerTest {
         destinationConnection.destinationId,
       )
     }
-    verify {
-      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, newConfiguration)
+    if (isDraft) {
+      verify { validator.ensurePartial(destinationDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
+    } else {
+      verify { validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
     }
   }
 
@@ -875,6 +935,7 @@ internal class DestinationHandlerTest {
         .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
+        .isDraft(destinationConnection.isDraft == true)
         .resourceAllocation(RESOURCE_ALLOCATION)
     val destinationIdRequestBody =
       DestinationIdRequestBody().destinationId(expectedDestinationRead.destinationId)
@@ -1005,6 +1066,7 @@ internal class DestinationHandlerTest {
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
         .status(ActorStatus.ACTIVE)
+        .isDraft(destinationConnectionWithCount.destination.isDraft == true)
         .resourceAllocation(RESOURCE_ALLOCATION)
         .numConnections(0)
     val workspaceIdRequestBody =
@@ -1464,6 +1526,7 @@ internal class DestinationHandlerTest {
         .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
+        .isDraft(destinationConnection.isDraft == true)
         .resourceAllocation(RESOURCE_ALLOCATION)
 
     every {

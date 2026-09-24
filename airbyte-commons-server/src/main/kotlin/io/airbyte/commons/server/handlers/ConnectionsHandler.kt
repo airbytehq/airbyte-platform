@@ -70,6 +70,7 @@ import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorsData
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemStreamDataItem
+import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
@@ -490,6 +491,9 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
       val sourceConnection = sourceService.getSourceConnection(connectionCreate.sourceId)
       val destinationConnection = destinationService.getDestinationConnection(connectionCreate.destinationId)
+      if (sourceConnection.isDraft == true || destinationConnection.isDraft == true) {
+        throw ActorNotReadyProblem()
+      }
 
       // Set this as default name if connectionCreate doesn't have it
       val defaultName = sourceConnection.name + " <> " + destinationConnection.name

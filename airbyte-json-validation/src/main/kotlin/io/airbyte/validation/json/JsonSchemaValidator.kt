@@ -160,6 +160,119 @@ class JsonSchemaValidator
     }
 
     /**
+     * Validates a partially completed connector configuration. Required fields may be omitted, but
+     * every supplied value is still validated against the connector schema.
+     */
+    fun ensurePartial(
+      schemaJson: JsonNode,
+      objectJson: JsonNode,
+    ) {
+      val schema = getSchemaValidator(schemaJson)
+      val validationMessages =
+        filterPartialValidationMessages(schema.validate(objectJson), schema)
+      if (validationMessages.isEmpty()) {
+        return
+      }
+
+      throw JsonValidationException(
+        String.format(
+          "json schema validation failed when comparing the data to the json schema. \nErrors: %s \nSchema: \n%s",
+          validationMessages.joinToString(", "),
+          schemaJson.toPrettyString(),
+        ),
+      )
+    }
+
+    private fun filterPartialValidationMessages(
+      validationMessages: Collection<ValidationMessage>,
+      rootSchema: JsonSchema,
+    ): Set<ValidationMessage> = filterPartialValidationMessages(validationMessages, 0, null, rootSchema).validationMessages
+
+    private fun filterPartialValidationMessages(
+      validationMessages: Collection<ValidationMessage>,
+      pathDepth: Int,
+      pathSegment: Any?,
+      rootSchema: JsonSchema,
+    ): PartialValidationResult {
+      val messagesAtCurrentPath =
+        validationMessages.filter { it.evaluationPath.nameCount == pathDepth }
+      val childResults =
+        validationMessages
+          .filter { it.evaluationPath.nameCount > pathDepth }
+          .groupBy { it.evaluationPath.getElement(pathDepth) }
+          .mapValues { (childPathSegment, childMessages) ->
+            filterPartialValidationMessages(childMessages, pathDepth + 1, childPathSegment, rootSchema)
+          }
+
+      val isAlternative = pathSegment == "oneOf" || pathSegment == "anyOf"
+      val isAmbiguousOneOf =
+        pathSegment == "oneOf" &&
+          messagesAtCurrentPath.any { it.type == "oneOf" && it.messageKey == "oneOf.indexes" }
+      val alternativeBranchResults =
+        if (isAlternative && !isAmbiguousOneOf) {
+          val currentPath =
+            (messagesAtCurrentPath.firstOrNull() ?: validationMessages.first())
+              .evaluationPath
+              .ancestorAtDepth(pathDepth)
+          val instanceNode =
+            (
+              messagesAtCurrentPath.firstOrNull()
+                ?: validationMessages.minBy { it.instanceLocation.nameCount }
+            ).instanceNode
+
+          childResults
+            .filterKeys { it is Int }
+            .mapKeys { (branchIndex, _) -> branchIndex as Int }
+            .mapValues { (branchIndex, _) ->
+              val branchPath = currentPath.append(branchIndex)
+              val branchMessages = rootSchema.getSubSchema(branchPath).validate(instanceNode)
+              filterPartialValidationMessages(
+                branchMessages,
+                branchPath.nameCount,
+                branchIndex,
+                rootSchema,
+              )
+            }
+        } else {
+          emptyMap()
+        }
+      val hasMissingOnlyBranch =
+        alternativeBranchResults.values.any { it.validationMessages.isEmpty() && it.hasMissingRequired }
+
+      if (isAlternative && !isAmbiguousOneOf && hasMissingOnlyBranch) {
+        return PartialValidationResult(emptySet(), true)
+      }
+
+      val requiredMessages = messagesAtCurrentPath.filter { it.type == "required" }
+      val remainingMessages =
+        buildSet {
+          addAll(messagesAtCurrentPath - requiredMessages.toSet())
+          val results = alternativeBranchResults.values.ifEmpty { childResults.values }
+          results.forEach { addAll(it.validationMessages) }
+        }
+
+      return PartialValidationResult(
+        validationMessages = remainingMessages,
+        hasMissingRequired =
+          requiredMessages.isNotEmpty() ||
+            alternativeBranchResults.values.ifEmpty { childResults.values }.any { it.hasMissingRequired },
+      )
+    }
+
+    private fun JsonNodePath.ancestorAtDepth(pathDepth: Int): JsonNodePath {
+      var ancestor = this
+      while (ancestor.nameCount > pathDepth) {
+        ancestor = ancestor.parent
+      }
+      return ancestor
+    }
+
+    private data class PartialValidationResult(
+      val validationMessages: Set<ValidationMessage>,
+      val hasMissingRequired: Boolean,
+    )
+
+    /**
      * Test if a JSON object conforms to a given JSONSchema. Throws an exception if the object is not
      * valid.
      *

@@ -31,6 +31,9 @@ const mockBaseUseDiscoverSchemaQuery = {
   refetch: () => Promise.resolve(),
 };
 
+const mockUseGetSourceFromSearchParams = jest.fn(() => mockConnection.source);
+const mockUseGetDestinationFromSearchParams = jest.fn(() => mockConnection.destination);
+
 jest.mock("area/workspace/utils", () => ({
   useCurrentWorkspaceId: () => "workspace-id",
   useCurrentWorkspaceLink: () => () => "/link/to/workspace",
@@ -90,8 +93,8 @@ jest.mock("core/api", () => ({
 }));
 
 jest.mock("area/connector/utils", () => ({
-  useGetSourceFromSearchParams: () => mockConnection.source,
-  useGetDestinationFromSearchParams: () => mockConnection.destination,
+  useGetSourceFromSearchParams: () => mockUseGetSourceFromSearchParams(),
+  useGetDestinationFromSearchParams: () => mockUseGetDestinationFromSearchParams(),
   ConnectorIds: jest.requireActual("area/connector/utils").ConnectorIds,
 }));
 
@@ -136,6 +139,8 @@ describe("CreateConnectionForm", () => {
 
   beforeEach(() => {
     useMockIntersectionObserver();
+    mockUseGetSourceFromSearchParams.mockReturnValue(mockConnection.source);
+    mockUseGetDestinationFromSearchParams.mockReturnValue(mockConnection.destination);
   });
 
   it("should render", async () => {
@@ -167,5 +172,21 @@ describe("CreateConnectionForm", () => {
 
     const renderResult = await render();
     expect(renderResult).toMatchSnapshot();
+  });
+
+  it("blocks schema discovery when the destination is still a draft", async () => {
+    mockUseGetDestinationFromSearchParams.mockReturnValue({ ...mockConnection.destination, isDraft: true });
+
+    const renderResult = await render();
+
+    expect(useDiscoverSchemaQuery).toHaveBeenCalledWith(mockConnection.source, {
+      enabled: false,
+      useErrorBoundary: false,
+    });
+    expect(
+      renderResult.getByText(
+        "The source or destination is still in draft and isn't usable in a connection yet. Finish setting up the connector first, then create a connection."
+      )
+    ).toBeVisible();
   });
 });

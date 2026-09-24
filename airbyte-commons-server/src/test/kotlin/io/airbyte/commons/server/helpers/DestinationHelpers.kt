@@ -102,5 +102,6 @@ object DestinationHelpers {
       .isVersionOverrideApplied(isVersionOverrideApplied)
       .isEntitled(isEntitled)
       .supportState(supportState)
+      .isDraft(destination.isDraft == true)
       .resourceAllocation(resourceAllocation)
 }

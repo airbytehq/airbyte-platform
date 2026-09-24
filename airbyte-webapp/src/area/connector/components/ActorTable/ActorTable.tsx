@@ -2,6 +2,7 @@ import { ColumnSort, createColumnHelper } from "@tanstack/react-table";
 import React, { useContext, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
+import { Badge } from "components/ui/Badge";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { ScrollParentContext } from "components/ui/ScrollParent";
@@ -54,6 +55,7 @@ interface ActorTableDataItem {
   enabled: boolean;
   connectorIcon?: string;
   isActive: boolean;
+  isDraft: boolean;
   breakingChanges?: ActorDefinitionVersionBreakingChanges;
   isVersionOverrideApplied: boolean;
   supportState?: SupportState;
@@ -92,6 +94,7 @@ export function createActorTableData(actorReadList: SourceReadList | Destination
       enabled: true,
       connectorIcon: source.icon,
       isActive: source.status === ActorStatus.active,
+      isDraft: source.isDraft ?? false,
       breakingChanges: source.breakingChanges,
       isVersionOverrideApplied: source.isVersionOverrideApplied ?? false,
       supportState: source.supportState,
@@ -109,6 +112,7 @@ export function createActorTableData(actorReadList: SourceReadList | Destination
     enabled: true,
     connectorIcon: destination.icon,
     isActive: destination.status === ActorStatus.active,
+    isDraft: destination.isDraft ?? false,
     breakingChanges: destination.breakingChanges,
     isVersionOverrideApplied: destination.isVersionOverrideApplied ?? false,
     supportState: destination.supportState,
@@ -202,7 +206,13 @@ export const ActorTable: React.FC<ActorTableProps> = ({
         },
         cell: (props) => (
           <Link to={props.row.original.id} variant="primary" className={styles.cellContent}>
-            <AllConnectionsStatusCell statuses={props.cell.getValue()} />
+            {props.row.original.isDraft ? (
+              <Badge variant="grey">
+                <FormattedMessage id="tables.draft" />
+              </Badge>
+            ) : (
+              <AllConnectionsStatusCell statuses={props.cell.getValue()} />
+            )}
           </Link>
         ),
         enableSorting: false,

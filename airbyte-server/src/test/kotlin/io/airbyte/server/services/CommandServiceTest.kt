@@ -4,25 +4,36 @@
 
 package io.airbyte.server.services
 
+import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.logging.LogEvents
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
+import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectionContext
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ConnectorJobOutput.OutputType
+import io.airbyte.config.DestinationConnection
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Organization
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
+import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
+import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
+import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.repositories.entities.Actor
 import io.airbyte.data.services.CatalogService
+import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.SourceService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
@@ -38,6 +49,8 @@ import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
+import io.airbyte.validation.json.JsonSchemaValidator
+import io.airbyte.validation.json.JsonValidationException
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.SpecInput
@@ -54,6 +67,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import io.mockk.verifyOrder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -61,14 +75,17 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.nio.file.Path
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType as JooqActorType
 
 class CommandServiceTest {
+  private lateinit var actorRepository: ActorRepository
   private lateinit var catalogService: CatalogService
   private lateinit var commandsRepository: CommandsRepository
   private lateinit var jobInputService: JobInputService
@@ -77,6 +94,9 @@ class CommandServiceTest {
   private lateinit var workloadQueueService: WorkloadQueueService
   private lateinit var workloadOutputReader: WorkloadOutputDocStoreReader
   private lateinit var featureFlagClient: FeatureFlagClient
+  private lateinit var sourceService: SourceService
+  private lateinit var destinationService: DestinationService
+  private lateinit var actorDefinitionVersionHelper: io.airbyte.config.persistence.ActorDefinitionVersionHelper
   private lateinit var service: CommandService
 
   @BeforeEach
@@ -95,9 +115,13 @@ class CommandServiceTest {
     workloadQueueService = mockk(relaxed = true)
     workloadOutputReader = mockk(relaxed = true)
     featureFlagClient = mockk(relaxed = true)
+    actorRepository = mockk(relaxed = true)
+    sourceService = mockk(relaxed = true)
+    destinationService = mockk(relaxed = true)
+    actorDefinitionVersionHelper = mockk(relaxed = true)
     service =
       CommandService(
-        actorRepository = mockk(relaxed = true),
+        actorRepository = actorRepository,
         catalogService = catalogService,
         commandsRepository = commandsRepository,
         jobInputService = jobInputService,
@@ -110,9 +134,10 @@ class CommandServiceTest {
         workspaceService = mockk(relaxed = true),
         secretSanitizer = mockk(relaxed = true),
         configurationUpdate = mockk(relaxed = true),
-        sourceService = mockk(relaxed = true),
-        destinationService = mockk(relaxed = true),
-        actorDefinitionVersionHelper = mockk(relaxed = true),
+        sourceService = sourceService,
+        destinationService = destinationService,
+        actorDefinitionVersionHelper = actorDefinitionVersionHelper,
+        jsonSchemaValidator = JsonSchemaValidator(),
         airbyteConfig = AirbyteConfig(workspaceRoot = "/test-root"),
         airbyteWorkerConfig =
           AirbyteWorkerConfig(
@@ -208,15 +233,37 @@ class CommandServiceTest {
 
   @Test
   fun `creating a check command successfully saves the command and enqueues the workload`() {
+    val actorId = UUID.randomUUID()
+    val actorDefinitionId = UUID.randomUUID()
+    val configurationOverride = Jsons.deserialize("""{"token":"ready-actor-override"}""")
     val jobId = UUID.randomUUID().toString()
     val attemptNumber = 0L
     val workloadInput = slot<String>()
     every { commandsRepository.existsById(COMMAND_ID) } returns false
-    every { jobInputService.getCheckInput(actorId = any(), jobId = any(), attemptId = any()) } returns
+    every { actorRepository.findByActorId(actorId) } returns
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = actorDefinitionId,
+        name = "ready source",
+        configuration = Jsons.emptyObject(),
+        actorType = JooqActorType.source,
+      )
+    every { sourceService.getSourceConnection(actorId) } returns
+      SourceConnection()
+        .withSourceId(actorId)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withSourceDefinitionId(actorDefinitionId)
+        .withConfiguration(Jsons.emptyObject())
+        .withIsDraft(false)
+    every { jobInputService.getCheckInput(actorId, null, null, configurationOverride, null, null) } returns
       CheckConnectionInput(
         jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptNumber),
         launcherConfig = IntegrationLauncherConfig(),
-        checkConnectionInput = StandardCheckConnectionInput().withActorType(ActorType.SOURCE),
+        checkConnectionInput =
+          StandardCheckConnectionInput()
+            .withActorType(ActorType.SOURCE)
+            .withConnectionConfiguration(configurationOverride),
       )
     every {
       workloadService.createWorkload(any(), any(), capture(workloadInput), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
@@ -228,7 +275,8 @@ class CommandServiceTest {
     val output =
       service.createCheckCommand(
         commandId = COMMAND_ID,
-        actorId = UUID.randomUUID(),
+        actorId = actorId,
+        configuration = configurationOverride,
         jobId = null,
         attemptNumber = null,
         workloadPriority = WorkloadPriority.HIGH,
@@ -243,6 +291,591 @@ class CommandServiceTest {
     // Ensuring this is added because it impacts nodepool selection in the launcher
     val actualInput = Jsons.deserialize(workloadInput.captured)
     assertEquals(WorkloadPriority.HIGH.toString(), actualInput["launcherConfig"]["priority"].asText())
+    assertEquals(configurationOverride, actualInput["checkConnectionInput"]["connectionConfiguration"])
+  }
+
+  @Test
+  fun `draft source check rejects a configuration override instead of validating stale data`() {
+    val actorId = UUID.randomUUID()
+    val definitionId = UUID.randomUUID()
+    val override = Jsons.deserialize("""{"token":"stale-but-valid"}""")
+    val storedConfiguration = Jsons.emptyObject()
+    val sourceDefinition = StandardSourceDefinition().withSourceDefinitionId(definitionId)
+    val specification =
+      ConnectorSpecification().withConnectionSpecification(
+        Jsons.deserialize("""{"type":"object","required":["token"],"properties":{"token":{"type":"string"}}}"""),
+      )
+
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { actorRepository.findByActorId(actorId) } returns
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = definitionId,
+        name = "draft source",
+        configuration = storedConfiguration,
+        actorType = JooqActorType.source,
+      )
+    every { sourceService.getSourceConnection(actorId) } returns
+      SourceConnection()
+        .withSourceId(actorId)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withSourceDefinitionId(definitionId)
+        .withConfiguration(storedConfiguration)
+        .withIsDraft(true)
+    every { sourceService.getStandardSourceDefinition(definitionId) } returns sourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, actorId) } returns
+      ActorDefinitionVersion().withSpec(specification)
+    every { jobInputService.getCheckInput(actorId, null, null, override, null, null) } returns
+      CheckConnectionInput(
+        jobRunConfig = JobRunConfig().withJobId(UUID.randomUUID().toString()).withAttemptId(0L),
+        launcherConfig = IntegrationLauncherConfig(),
+        checkConnectionInput =
+          StandardCheckConnectionInput()
+            .withActorType(ActorType.SOURCE)
+            .withConnectionConfiguration(override),
+      )
+
+    val problem =
+      assertThrows<BadRequestProblem> {
+        service.createCheckCommand(
+          commandId = COMMAND_ID,
+          actorId = actorId,
+          configuration = override,
+          workloadPriority = WorkloadPriority.DEFAULT,
+          signalInput = null,
+          commandInput = Jsons.deserialize("""{"actor_id":"$actorId","config":{"token":"stale-but-valid"}}"""),
+        )
+      }
+
+    assertEquals(
+      "Draft actor checks do not accept configuration overrides. Update the draft, then check it by actor ID.",
+      problem.problem.getDetail(),
+    )
+    verify(exactly = 0) { commandsRepository.save(any()) }
+    verify(exactly = 0) { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `draft destination check rejects a configuration override instead of validating stale data`() {
+    val actorId = UUID.randomUUID()
+    val definitionId = UUID.randomUUID()
+    val override = Jsons.deserialize("""{"token":"stale-but-valid"}""")
+    val storedConfiguration = Jsons.emptyObject()
+    val destinationDefinition = StandardDestinationDefinition().withDestinationDefinitionId(definitionId)
+    val specification =
+      ConnectorSpecification().withConnectionSpecification(
+        Jsons.deserialize("""{"type":"object","required":["token"],"properties":{"token":{"type":"string"}}}"""),
+      )
+
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { actorRepository.findByActorId(actorId) } returns
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = definitionId,
+        name = "draft destination",
+        configuration = storedConfiguration,
+        actorType = JooqActorType.destination,
+      )
+    every { destinationService.getDestinationConnection(actorId) } returns
+      DestinationConnection()
+        .withDestinationId(actorId)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withDestinationDefinitionId(definitionId)
+        .withConfiguration(storedConfiguration)
+        .withIsDraft(true)
+    every { destinationService.getStandardDestinationDefinition(definitionId) } returns destinationDefinition
+    every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, actorId) } returns
+      ActorDefinitionVersion().withSpec(specification)
+    every { jobInputService.getCheckInput(actorId, null, null, override, null, null) } returns
+      CheckConnectionInput(
+        jobRunConfig = JobRunConfig().withJobId(UUID.randomUUID().toString()).withAttemptId(0L),
+        launcherConfig = IntegrationLauncherConfig(),
+        checkConnectionInput =
+          StandardCheckConnectionInput()
+            .withActorType(ActorType.DESTINATION)
+            .withConnectionConfiguration(override),
+      )
+
+    val problem =
+      assertThrows<BadRequestProblem> {
+        service.createCheckCommand(
+          commandId = COMMAND_ID,
+          actorId = actorId,
+          configuration = override,
+          workloadPriority = WorkloadPriority.DEFAULT,
+          signalInput = null,
+          commandInput = Jsons.deserialize("""{"actor_id":"$actorId","config":{"token":"stale-but-valid"}}"""),
+        )
+      }
+
+    assertEquals(
+      "Draft actor checks do not accept configuration overrides. Update the draft, then check it by actor ID.",
+      problem.problem.getDetail(),
+    )
+    verify(exactly = 0) { commandsRepository.save(any()) }
+    verify(exactly = 0) { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `actor ID check fully validates a draft source before creating a workload`() {
+    val actorId = UUID.randomUUID()
+    val definitionId = UUID.randomUUID()
+    val actor =
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = definitionId,
+        name = "draft source",
+        configuration = Jsons.emptyObject(),
+        actorType = JooqActorType.source,
+      )
+    val source =
+      SourceConnection()
+        .withSourceId(actorId)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withSourceDefinitionId(definitionId)
+        .withConfiguration(Jsons.emptyObject())
+        .withIsDraft(true)
+    val sourceDefinition = StandardSourceDefinition().withSourceDefinitionId(definitionId)
+    val spec =
+      ConnectorSpecification().withConnectionSpecification(
+        Jsons.deserialize(
+          """{"type":"object","required":["password"],"properties":{"password":{"type":"string","airbyte_secret":true}}}""",
+        ),
+      )
+
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { actorRepository.findByActorId(actorId) } returns actor
+    every { sourceService.getSourceConnection(actorId) } returns source
+    every { sourceService.getStandardSourceDefinition(definitionId) } returns sourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, actorId) } returns
+      ActorDefinitionVersion().withSpec(spec)
+    every { jobInputService.getCheckInput(actorId, null, null) } returns
+      CheckConnectionInput(
+        jobRunConfig = JobRunConfig().withJobId(UUID.randomUUID().toString()).withAttemptId(0L),
+        launcherConfig = IntegrationLauncherConfig(),
+        checkConnectionInput =
+          StandardCheckConnectionInput()
+            .withActorType(ActorType.SOURCE)
+            .withConnectionConfiguration(Jsons.emptyObject()),
+      )
+
+    assertThrows<JsonValidationException> {
+      service.createCheckCommand(
+        commandId = COMMAND_ID,
+        actorId = actorId,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    }
+
+    verify(exactly = 0) { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `actor ID check fully validates a draft destination before creating a workload`() {
+    val actorId = UUID.randomUUID()
+    val definitionId = UUID.randomUUID()
+    val actor =
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = definitionId,
+        name = "draft destination",
+        configuration = Jsons.emptyObject(),
+        actorType = JooqActorType.destination,
+      )
+    val destination =
+      DestinationConnection()
+        .withDestinationId(actorId)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withDestinationDefinitionId(definitionId)
+        .withConfiguration(Jsons.emptyObject())
+        .withIsDraft(true)
+    val destinationDefinition = StandardDestinationDefinition().withDestinationDefinitionId(definitionId)
+    val spec =
+      ConnectorSpecification().withConnectionSpecification(
+        Jsons.deserialize("""{"type":"object","required":["host"],"properties":{"host":{"type":"string"}}}"""),
+      )
+
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { actorRepository.findByActorId(actorId) } returns actor
+    every { destinationService.getDestinationConnection(actorId) } returns destination
+    every { destinationService.getStandardDestinationDefinition(definitionId) } returns destinationDefinition
+    every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, actorId) } returns
+      ActorDefinitionVersion().withSpec(spec)
+    every { jobInputService.getCheckInput(actorId, null, null) } returns
+      CheckConnectionInput(
+        jobRunConfig = JobRunConfig().withJobId(UUID.randomUUID().toString()).withAttemptId(0L),
+        launcherConfig = IntegrationLauncherConfig(),
+        checkConnectionInput =
+          StandardCheckConnectionInput()
+            .withActorType(ActorType.DESTINATION)
+            .withConnectionConfiguration(Jsons.emptyObject()),
+      )
+
+    assertThrows<JsonValidationException> {
+      service.createCheckCommand(
+        commandId = COMMAND_ID,
+        actorId = actorId,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    }
+
+    verify(exactly = 0) { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `actor ID check validates draft secret references as textual placeholders`() {
+    val actorId = UUID.randomUUID()
+    val definitionId = UUID.randomUUID()
+    val secretReference = Jsons.deserialize("""{"password":{"_secret":"secret-coordinate"}}""")
+    val actor =
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = definitionId,
+        name = "draft source",
+        configuration = secretReference,
+        actorType = JooqActorType.source,
+      )
+    val source =
+      SourceConnection()
+        .withSourceId(actorId)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withSourceDefinitionId(definitionId)
+        .withConfiguration(secretReference)
+        .withIsDraft(true)
+    val sourceDefinition = StandardSourceDefinition().withSourceDefinitionId(definitionId)
+    val workloadInput = slot<String>()
+    val spec =
+      ConnectorSpecification().withConnectionSpecification(
+        Jsons.deserialize(
+          """{"type":"object","required":["password"],"properties":{"password":{"type":"string","airbyte_secret":true}}}""",
+        ),
+      )
+
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { commandsRepository.save(any()) } returns mockk()
+    every { actorRepository.findByActorId(actorId) } returns actor
+    every { sourceService.getSourceConnection(actorId) } returns source
+    every { sourceService.getStandardSourceDefinition(definitionId) } returns sourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, actorId) } returns
+      ActorDefinitionVersion().withSpec(spec)
+    every { jobInputService.getCheckInput(actorId, null, null) } returns
+      CheckConnectionInput(
+        jobRunConfig = JobRunConfig().withJobId(UUID.randomUUID().toString()).withAttemptId(0L),
+        launcherConfig = IntegrationLauncherConfig(),
+        checkConnectionInput =
+          StandardCheckConnectionInput()
+            .withActorType(ActorType.SOURCE)
+            .withConnectionConfiguration(secretReference),
+      )
+    every {
+      workloadService.createWorkload(any(), any(), capture(workloadInput), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+    } returns
+      mockk()
+    every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
+
+    val created =
+      service.createCheckCommand(
+        commandId = COMMAND_ID,
+        actorId = actorId,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+
+    assertTrue(created)
+    assertEquals(secretReference, Jsons.deserialize(workloadInput.captured)["checkConnectionInput"]["connectionConfiguration"])
+    verify(exactly = 1) { jobInputService.getCheckInput(actorId, null, null) }
+  }
+
+  @Test
+  fun `successful actor ID check promotes draft after reading sidecar output`() {
+    val actorId = UUID.randomUUID()
+    val source = SourceConnection().withSourceId(actorId).withIsDraft(true)
+    val command =
+      defaultCheckCommand.copy(
+        commandInput = Jsons.deserialize("""{"actor_id":"$actorId"}"""),
+      )
+    val connectorOutput =
+      ConnectorJobOutput()
+        .withOutputType(OutputType.CHECK_CONNECTION)
+        .withConnectorConfigurationUpdated(true)
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+    val workload: Workload = mockk { every { status } returns WorkloadStatus.SUCCESS }
+
+    every { commandsRepository.findById(COMMAND_ID) } returns Optional.of(command)
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns connectorOutput
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
+    every { actorRepository.findByActorId(actorId) } returns
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = UUID.randomUUID(),
+        name = "draft source",
+        configuration = Jsons.emptyObject(),
+        actorType = JooqActorType.source,
+      )
+    every { sourceService.getSourceConnection(actorId) } returns source
+
+    val output = service.getCheckJobOutput(COMMAND_ID, withLogs = false)
+
+    assertEquals(StandardCheckConnectionOutput.Status.SUCCEEDED, output?.status)
+    assertTrue(output?.connectorConfigUpdated == true)
+    verifyOrder {
+      workloadOutputReader.readConnectorOutput(WORKLOAD_ID)
+      sourceService.promoteSourceFromDraft(actorId)
+    }
+  }
+
+  @Test
+  fun `successful destination actor ID check promotes draft after reading sidecar output`() {
+    val actorId = UUID.randomUUID()
+    val destination = DestinationConnection().withDestinationId(actorId).withIsDraft(true)
+    val command =
+      defaultCheckCommand.copy(
+        commandInput = Jsons.deserialize("""{"actor_id":"$actorId"}"""),
+      )
+    val connectorOutput =
+      ConnectorJobOutput()
+        .withOutputType(OutputType.CHECK_CONNECTION)
+        .withConnectorConfigurationUpdated(true)
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+    val workload: Workload = mockk { every { status } returns WorkloadStatus.SUCCESS }
+
+    every { commandsRepository.findById(COMMAND_ID) } returns Optional.of(command)
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns connectorOutput
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
+    every { actorRepository.findByActorId(actorId) } returns
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = UUID.randomUUID(),
+        name = "draft destination",
+        configuration = Jsons.emptyObject(),
+        actorType = JooqActorType.destination,
+      )
+    every { destinationService.getDestinationConnection(actorId) } returns destination
+
+    val output = service.getCheckJobOutput(COMMAND_ID, withLogs = false)
+
+    assertEquals(StandardCheckConnectionOutput.Status.SUCCEEDED, output?.status)
+    assertTrue(output?.connectorConfigUpdated == true)
+    verifyOrder {
+      workloadOutputReader.readConnectorOutput(WORKLOAD_ID)
+      destinationService.promoteDestinationFromDraft(actorId)
+    }
+  }
+
+  @Test
+  fun `failed actor ID check retains destination draft`() {
+    val actorId = UUID.randomUUID()
+    val command = defaultCheckCommand.copy(commandInput = Jsons.deserialize("""{"actor_id":"$actorId"}"""))
+    every { commandsRepository.findById(COMMAND_ID) } returns Optional.of(command)
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns
+      ConnectorJobOutput()
+        .withOutputType(OutputType.CHECK_CONNECTION)
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.FAILED))
+
+    val output = service.getCheckJobOutput(COMMAND_ID, withLogs = false)
+
+    assertEquals(StandardCheckConnectionOutput.Status.FAILED, output?.status)
+    verify(exactly = 0) { destinationService.promoteDestinationFromDraft(any()) }
+    verify(exactly = 0) { sourceService.promoteSourceFromDraft(any()) }
+  }
+
+  @ParameterizedTest
+  @CsvSource("PENDING", "CLAIMED", "LAUNCHED", "RUNNING", "FAILURE", "CANCELLED")
+  fun `source actor ID check does not promote draft before workload succeeds`(workloadStatus: WorkloadStatus) {
+    val actorId = UUID.randomUUID()
+    val command = defaultCheckCommand.copy(commandInput = Jsons.deserialize("""{"actor_id":"$actorId"}"""))
+    val connectorOutput =
+      ConnectorJobOutput()
+        .withOutputType(OutputType.CHECK_CONNECTION)
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+    val workload: Workload =
+      mockk {
+        every { status } returns workloadStatus
+        every { terminationSource } returns "source"
+        every { terminationReason } returns "workload stopped"
+      }
+
+    every { commandsRepository.findById(COMMAND_ID) } returns Optional.of(command)
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns connectorOutput
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
+    every { actorRepository.findByActorId(actorId) } returns
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = UUID.randomUUID(),
+        name = "draft source",
+        configuration = Jsons.emptyObject(),
+        actorType = JooqActorType.source,
+      )
+    every { sourceService.getSourceConnection(actorId) } returns SourceConnection().withSourceId(actorId).withIsDraft(true)
+
+    val output = service.getCheckJobOutput(COMMAND_ID, withLogs = false)
+
+    assertEquals(StandardCheckConnectionOutput.Status.FAILED, output?.status)
+    verify(exactly = 0) { sourceService.promoteSourceFromDraft(any()) }
+  }
+
+  @ParameterizedTest
+  @CsvSource("PENDING", "CLAIMED", "LAUNCHED", "RUNNING", "FAILURE", "CANCELLED")
+  fun `destination actor ID check does not promote draft before workload succeeds`(workloadStatus: WorkloadStatus) {
+    val actorId = UUID.randomUUID()
+    val command = defaultCheckCommand.copy(commandInput = Jsons.deserialize("""{"actor_id":"$actorId"}"""))
+    val connectorOutput =
+      ConnectorJobOutput()
+        .withOutputType(OutputType.CHECK_CONNECTION)
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+    val workload: Workload =
+      mockk {
+        every { status } returns workloadStatus
+        every { terminationSource } returns "destination"
+        every { terminationReason } returns "workload stopped"
+      }
+
+    every { commandsRepository.findById(COMMAND_ID) } returns Optional.of(command)
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns connectorOutput
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
+    every { actorRepository.findByActorId(actorId) } returns
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = UUID.randomUUID(),
+        name = "draft destination",
+        configuration = Jsons.emptyObject(),
+        actorType = JooqActorType.destination,
+      )
+    every { destinationService.getDestinationConnection(actorId) } returns DestinationConnection().withDestinationId(actorId).withIsDraft(true)
+
+    val output = service.getCheckJobOutput(COMMAND_ID, withLogs = false)
+
+    assertEquals(StandardCheckConnectionOutput.Status.FAILED, output?.status)
+    verify(exactly = 0) { destinationService.promoteDestinationFromDraft(any()) }
+  }
+
+  @ParameterizedTest
+  @CsvSource("FAILURE", "CANCELLED")
+  fun `unsuccessful workload overrides stored successful check output`(workloadStatus: WorkloadStatus) {
+    val connectorOutput =
+      ConnectorJobOutput()
+        .withOutputType(OutputType.CHECK_CONNECTION)
+        .withConnectorConfigurationUpdated(true)
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+    val workload: Workload =
+      mockk {
+        every { status } returns workloadStatus
+        every { terminationSource } returns "source"
+        every { terminationReason } returns "workload stopped"
+      }
+
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns connectorOutput
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
+
+    val output = service.getCheckJobOutput(COMMAND_ID, withLogs = false)
+
+    assertEquals(StandardCheckConnectionOutput.Status.FAILED, output?.status)
+    assertFalse(output?.connectorConfigUpdated == true)
+    assertNotNull(output?.failureReason)
+    verify(exactly = 0) { destinationService.promoteDestinationFromDraft(any()) }
+    verify(exactly = 0) { sourceService.promoteSourceFromDraft(any()) }
+  }
+
+  @Test
+  fun `discover command rejects draft sources and destinations`() {
+    val sourceId = UUID.randomUUID()
+    val destinationId = UUID.randomUUID()
+    every { commandsRepository.existsById(any()) } returns false
+    every { actorRepository.findByActorId(sourceId) } returns
+      Actor(
+        id = sourceId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = UUID.randomUUID(),
+        name = "draft source",
+        configuration = Jsons.emptyObject(),
+        actorType = JooqActorType.source,
+      )
+    every { actorRepository.findByActorId(destinationId) } returns
+      Actor(
+        id = destinationId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = UUID.randomUUID(),
+        name = "draft destination",
+        configuration = Jsons.emptyObject(),
+        actorType = JooqActorType.destination,
+      )
+    every { sourceService.getSourceConnection(sourceId) } returns SourceConnection().withSourceId(sourceId).withIsDraft(true)
+    every { destinationService.getDestinationConnection(destinationId) } returns
+      DestinationConnection().withDestinationId(destinationId).withIsDraft(true)
+
+    assertThrows<ActorNotReadyProblem> {
+      service.createDiscoverCommand(
+        commandId = "source-discover",
+        actorId = sourceId,
+        jobId = null,
+        attemptNumber = null,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    }
+    assertThrows<ActorNotReadyProblem> {
+      service.createDiscoverCommand(
+        commandId = "destination-discover",
+        actorId = destinationId,
+        jobId = null,
+        attemptNumber = null,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    }
+
+    verify(exactly = 0) { jobInputService.getDiscoverInput(any(), any(), any()) }
+  }
+
+  @Test
+  fun `replicate command rejects a draft actor`() {
+    val connectionId = UUID.randomUUID()
+    val sourceId = UUID.randomUUID()
+    val destinationId = UUID.randomUUID()
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { jobInputService.getReplicationInput(connectionId, null, null, 123L, 0L) } returns
+      ReplicationActivityInput(
+        jobRunConfig = JobRunConfig().withJobId("123").withAttemptId(0L),
+        connectionContext =
+          ConnectionContext()
+            .withConnectionId(connectionId)
+            .withWorkspaceId(WORKSPACE_ID)
+            .withSourceId(sourceId)
+            .withDestinationId(destinationId),
+      )
+    every { sourceService.getSourceConnection(sourceId) } returns SourceConnection().withSourceId(sourceId).withIsDraft(true)
+    every { destinationService.getDestinationConnection(destinationId) } returns
+      DestinationConnection().withDestinationId(destinationId).withIsDraft(false)
+
+    assertThrows<ActorNotReadyProblem> {
+      service.createReplicateCommand(
+        commandId = COMMAND_ID,
+        connectionId = connectionId,
+        jobId = "123",
+        attemptNumber = 0,
+        appliedCatalogDiff = null,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    }
+
+    verify(exactly = 0) { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
   }
 
   @Test
@@ -382,6 +1015,7 @@ class CommandServiceTest {
             .withMessage("Success"),
         )
     every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns connectorOutput
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns mockk { every { status } returns WorkloadStatus.SUCCESS }
 
     val output = service.getCheckJobOutput(COMMAND_ID, withLogs = false)
     val expectedOutput =
@@ -634,13 +1268,33 @@ class CommandServiceTest {
   @Test
   fun `createCheckCommand passes null jobId and attemptNumber to JobInputService when not provided`() {
     val actorId = UUID.randomUUID()
+    val actorDefinitionId = UUID.randomUUID()
 
     every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { actorRepository.findByActorId(actorId) } returns
+      Actor(
+        id = actorId,
+        workspaceId = WORKSPACE_ID,
+        actorDefinitionId = actorDefinitionId,
+        name = "ready source",
+        configuration = Jsons.emptyObject(),
+        actorType = JooqActorType.source,
+      )
+    every { sourceService.getSourceConnection(actorId) } returns
+      SourceConnection()
+        .withSourceId(actorId)
+        .withWorkspaceId(WORKSPACE_ID)
+        .withSourceDefinitionId(actorDefinitionId)
+        .withConfiguration(Jsons.emptyObject())
+        .withIsDraft(false)
     every { jobInputService.getCheckInput(actorId, null, null) } returns
       CheckConnectionInput(
         jobRunConfig = JobRunConfig().withJobId(UUID.randomUUID().toString()).withAttemptId(0L),
         launcherConfig = IntegrationLauncherConfig(),
-        checkConnectionInput = StandardCheckConnectionInput().withActorType(ActorType.SOURCE),
+        checkConnectionInput =
+          StandardCheckConnectionInput()
+            .withActorType(ActorType.SOURCE)
+            .withConnectionConfiguration(Jsons.emptyObject()),
       )
     every { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
       mockk()

@@ -18,7 +18,7 @@ import { ConnectorCardValues } from "area/connector/components/ConnectorForm/typ
 import { ConnectionConfiguration } from "area/connector/types";
 import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { useGetSourceDefinitionSpecificationAsync } from "core/api";
-import { ActorType, SourceDefinitionRead } from "core/api/types/AirbyteClient";
+import { ActorType, SourceDefinitionRead, SourceRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
 import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
 import { SourcePaths } from "pages/routePaths";
@@ -38,6 +38,8 @@ interface SourceFormWithAgentProps {
   sourceDefinitions: SourceDefinitionRead[];
   selectedSourceDefinitionId?: string;
   contextLayerOptIn?: React.ReactNode;
+  onSaveDraft?: (values: SourceFormValues, existingDraft?: SourceRead) => Promise<SourceRead>;
+  onDraftPromoted?: (draft: SourceRead, values: SourceFormValues) => Promise<void> | void;
 }
 
 export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
@@ -46,6 +48,8 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
   sourceDefinitions,
   selectedSourceDefinitionId,
   contextLayerOptIn,
+  onSaveDraft,
+  onDraftPromoted,
 }) => {
   const { data: sourceDefinitionSpecification } = useGetSourceDefinitionSpecificationAsync(
     selectedSourceDefinitionId || null
@@ -189,6 +193,8 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
               selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
               selectedConnectorDefinitionId={selectedSourceDefinitionId || null}
               onSubmit={onSubmitConnectorCard}
+              onSaveDraft={onSaveDraft}
+              onDraftPromoted={onDraftPromoted}
               supportLevel={selectedSourceDefinition?.supportLevel}
               preFooterSlot={contextLayerOptIn}
               leftFooterSlot={
@@ -203,6 +209,8 @@ export const SourceFormWithAgent: React.FC<SourceFormWithAgentProps> = ({
                     onOAuthStateChange={handleOAuthStateChange}
                     onFormValuesReady={handleFormValuesReady}
                     onCheckComplete={handleCheckComplete}
+                    onSaveDraft={onSaveDraft}
+                    onDraftPromoted={onDraftPromoted}
                     touchedSecretFieldsRef={touchedSecretFieldsRef}
                     addTouchedSecretField={addTouchedSecretField}
                   />

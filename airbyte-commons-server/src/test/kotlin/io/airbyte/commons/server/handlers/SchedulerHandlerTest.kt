@@ -41,6 +41,7 @@ import io.airbyte.api.model.generated.StreamTransform
 import io.airbyte.api.model.generated.StreamTransformUpdateStream
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.model.generated.SynchronousJobRead
+import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
@@ -553,6 +554,133 @@ internal class SchedulerHandlerTest {
     verify(synchronousSchedulerClient).createSourceCheckConnectionJob(source, sourceVersion, false, null)
     verify(actorDefinitionVersionHelper)
       .getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId())
+  }
+
+  @Test
+  fun `successful actor ID checks validate and promote source and destination drafts after connector jobs`() {
+    val source = SourceHelpers.generateSource(UUID.randomUUID()).withIsDraft(true)
+    val destination = DestinationHelpers.generateDestination(UUID.randomUUID()).withIsDraft(true)
+    val sourceRequest = SourceIdRequestBody().sourceId(source.sourceId)
+    val destinationRequest = DestinationIdRequestBody().destinationId(destination.destinationId)
+    val sourceDefinition = StandardSourceDefinition().withSourceDefinitionId(source.sourceDefinitionId)
+    val destinationDefinition = StandardDestinationDefinition().withDestinationDefinitionId(destination.destinationDefinitionId)
+    val sourceVersion = ActorDefinitionVersion().withSpec(CONNECTOR_SPECIFICATION)
+    val destinationVersion = ActorDefinitionVersion().withSpec(CONNECTOR_SPECIFICATION)
+    val succeeded = StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED)
+    val sourceResponse = SynchronousResponse(succeeded, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_SOURCE))
+    val destinationResponse = SynchronousResponse(succeeded, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_DESTINATION))
+
+    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
+    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId)).thenReturn(sourceDefinition)
+    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)).thenReturn(sourceVersion)
+    whenever(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null)).thenReturn(sourceResponse)
+    doReturn(SynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(sourceResponse)
+    whenever(destinationService.getDestinationConnection(destination.destinationId)).thenReturn(destination)
+    whenever(destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)).thenReturn(destinationDefinition)
+    whenever(
+      actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId),
+    ).thenReturn(destinationVersion)
+    whenever(
+      synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null),
+    ).thenReturn(destinationResponse)
+    doReturn(SynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(destinationResponse)
+
+    schedulerHandler.checkSourceConnectionFromSourceId(sourceRequest)
+    schedulerHandler.checkDestinationConnectionFromDestinationId(destinationRequest)
+
+    verify(jsonSchemaValidator, times(2)).ensure(CONNECTOR_SPECIFICATION.connectionSpecification, source.configuration)
+    val sourcePromotionOrder = org.mockito.Mockito.inOrder(synchronousSchedulerClient, sourceService)
+    sourcePromotionOrder.verify(synchronousSchedulerClient).createSourceCheckConnectionJob(source, sourceVersion, false, null)
+    sourcePromotionOrder.verify(sourceService).promoteSourceFromDraft(source.sourceId)
+    val destinationPromotionOrder = org.mockito.Mockito.inOrder(synchronousSchedulerClient, destinationService)
+    destinationPromotionOrder
+      .verify(synchronousSchedulerClient)
+      .createDestinationCheckConnectionJob(destination, destinationVersion, false, null)
+    destinationPromotionOrder.verify(destinationService).promoteDestinationFromDraft(destination.destinationId)
+  }
+
+  @Test
+  fun `draft actor ID checks validate persisted secret references as textual placeholders`() {
+    val secretSpec =
+      ConnectorSpecification().withConnectionSpecification(
+        jsonNode(
+          mapOf(
+            "type" to "object",
+            "required" to listOf("password"),
+            "properties" to
+              mapOf(
+                "password" to mapOf("type" to "string", "airbyte_secret" to true),
+              ),
+          ),
+        ),
+      )
+    val persistedConfig = jsonNode(mapOf("password" to mapOf("_secret" to "airbyte_workspace_secret_v1")))
+    val validationConfig = jsonNode(mapOf("password" to "secret_placeholder"))
+    val source = SourceHelpers.generateSource(UUID.randomUUID()).withConfiguration(persistedConfig).withIsDraft(true)
+    val destination = DestinationHelpers.generateDestination(UUID.randomUUID()).withConfiguration(persistedConfig).withIsDraft(true)
+    val sourceDefinition = StandardSourceDefinition().withSourceDefinitionId(source.sourceDefinitionId)
+    val destinationDefinition = StandardDestinationDefinition().withDestinationDefinitionId(destination.destinationDefinitionId)
+    val sourceVersion = ActorDefinitionVersion().withSpec(secretSpec)
+    val destinationVersion = ActorDefinitionVersion().withSpec(secretSpec)
+    val succeeded = StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED)
+    val sourceResponse = SynchronousResponse(succeeded, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_SOURCE))
+    val destinationResponse = SynchronousResponse(succeeded, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_DESTINATION))
+
+    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
+    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId)).thenReturn(sourceDefinition)
+    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)).thenReturn(sourceVersion)
+    whenever(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null)).thenReturn(sourceResponse)
+    doReturn(SynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(sourceResponse)
+    whenever(destinationService.getDestinationConnection(destination.destinationId)).thenReturn(destination)
+    whenever(destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)).thenReturn(destinationDefinition)
+    whenever(
+      actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId),
+    ).thenReturn(destinationVersion)
+    whenever(
+      synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null),
+    ).thenReturn(destinationResponse)
+    doReturn(SynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(destinationResponse)
+
+    schedulerHandler.checkSourceConnectionFromSourceId(SourceIdRequestBody().sourceId(source.sourceId))
+    schedulerHandler.checkDestinationConnectionFromDestinationId(DestinationIdRequestBody().destinationId(destination.destinationId))
+
+    verify(jsonSchemaValidator, times(2)).ensure(secretSpec.connectionSpecification, validationConfig)
+    verify(synchronousSchedulerClient).createSourceCheckConnectionJob(source, sourceVersion, false, null)
+    verify(synchronousSchedulerClient).createDestinationCheckConnectionJob(destination, destinationVersion, false, null)
+  }
+
+  @Test
+  fun `failed actor ID checks leave source and destination drafts`() {
+    val source = SourceHelpers.generateSource(UUID.randomUUID()).withIsDraft(true)
+    val destination = DestinationHelpers.generateDestination(UUID.randomUUID()).withIsDraft(true)
+    val sourceDefinition = StandardSourceDefinition().withSourceDefinitionId(source.sourceDefinitionId)
+    val destinationDefinition = StandardDestinationDefinition().withDestinationDefinitionId(destination.destinationDefinitionId)
+    val sourceVersion = ActorDefinitionVersion().withSpec(CONNECTOR_SPECIFICATION)
+    val destinationVersion = ActorDefinitionVersion().withSpec(CONNECTOR_SPECIFICATION)
+    val failed = StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.FAILED)
+    val sourceResponse = SynchronousResponse(failed, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_SOURCE))
+    val destinationResponse = SynchronousResponse(failed, SynchronousJobMetadata.mock(ConfigType.CHECK_CONNECTION_DESTINATION))
+
+    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
+    whenever(sourceService.getStandardSourceDefinition(source.sourceDefinitionId)).thenReturn(sourceDefinition)
+    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)).thenReturn(sourceVersion)
+    whenever(synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, false, null)).thenReturn(sourceResponse)
+    doReturn(SynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(sourceResponse)
+    whenever(destinationService.getDestinationConnection(destination.destinationId)).thenReturn(destination)
+    whenever(destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)).thenReturn(destinationDefinition)
+    whenever(
+      actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId),
+    ).thenReturn(destinationVersion)
+    whenever(
+      synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, false, null),
+    ).thenReturn(destinationResponse)
+    doReturn(SynchronousJobRead()).whenever(jobConverter).getSynchronousJobRead(destinationResponse)
+
+    schedulerHandler.checkSourceConnectionFromSourceId(SourceIdRequestBody().sourceId(source.sourceId))
+    schedulerHandler.checkDestinationConnectionFromDestinationId(DestinationIdRequestBody().destinationId(destination.destinationId))
+
+    verify(sourceService, never()).promoteSourceFromDraft(any())
+    verify(destinationService, never()).promoteDestinationFromDraft(any())
   }
 
   @Test
@@ -1106,6 +1234,18 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
+  fun `draft source cannot be discovered`() {
+    val source = SourceHelpers.generateSource(UUID.randomUUID()).withIsDraft(true)
+    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
+
+    assertThrows<ActorNotReadyProblem> {
+      schedulerHandler.discoverSchemaForSourceFromSourceId(SourceDiscoverSchemaRequestBody().sourceId(source.sourceId))
+    }
+
+    verifyNoInteractions(synchronousSchedulerClient)
+  }
+
+  @Test
   fun testDiscoverSchemaForSourceFromSourceIdCachedCatalog() {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId())
@@ -1539,6 +1679,39 @@ internal class SchedulerHandlerTest {
     schedulerHandler.syncConnection(ConnectionIdRequestBody().connectionId(connectionId))
 
     verify(eventRunner).startNewManualSync(connectionId)
+  }
+
+  @Test
+  fun `draft actors cannot sync reset or create jobs`() {
+    val connectionId = UUID.randomUUID()
+    val sourceId = UUID.randomUUID()
+    val destinationId = UUID.randomUUID()
+    val sync =
+      StandardSync()
+        .withConnectionId(connectionId)
+        .withSourceId(sourceId)
+        .withDestinationId(destinationId)
+        .withStatus(StandardSync.Status.ACTIVE)
+    whenever(connectionService.getStandardSync(connectionId)).thenReturn(sync)
+    whenever(sourceService.getSourceConnection(sourceId)).thenReturn(SourceConnection().withSourceId(sourceId).withIsDraft(true))
+    whenever(destinationService.getDestinationConnection(destinationId)).thenReturn(
+      DestinationConnection().withDestinationId(destinationId).withIsDraft(false),
+    )
+
+    assertThrows<ActorNotReadyProblem> {
+      schedulerHandler.syncConnection(ConnectionIdRequestBody().connectionId(connectionId))
+    }
+    assertThrows<ActorNotReadyProblem> {
+      schedulerHandler.resetConnection(ConnectionIdRequestBody().connectionId(connectionId))
+    }
+    assertThrows<ActorNotReadyProblem> {
+      schedulerHandler.resetConnectionStream(ConnectionStreamRequestBody().connectionId(connectionId).streams(emptyList()))
+    }
+    assertThrows<ActorNotReadyProblem> {
+      schedulerHandler.createJob(JobCreate().connectionId(connectionId).isScheduled(false))
+    }
+
+    verifyNoInteractions(eventRunner)
   }
 
   @Test

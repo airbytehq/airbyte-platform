@@ -89,12 +89,15 @@ import io.airbyte.protocol.models.v0.Field
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
 import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer
@@ -320,7 +323,7 @@ internal class SourceHandlerTest {
     } returns ConfigWithSecretReferenceIdsInjected(configWithSecretRefIds)
 
     // Mock the persisted config that is retrieved after creation and persistence.
-    val persistedConfig = clone(sourceConnection).withConfiguration(configWithSecretRefIds)
+    val persistedConfig = clone(sourceConnection).withConfiguration(configWithSecretRefIds).withIsDraft(false)
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns persistedConfig
     val configWithRefsAfterPersist = buildConfigWithSecretRefsJava(configWithSecretRefIds)
     every {
@@ -349,6 +352,7 @@ internal class SourceHandlerTest {
       SourceHelpers
         .getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE, RESOURCE_ALLOCATION)
         .connectionConfiguration(configWithSecretRefIds)
+        .isDraft(false)
         .resourceAllocation(RESOURCE_ALLOCATION)
 
     Assertions.assertEquals(expectedSourceRead, actualSourceRead)
@@ -371,6 +375,58 @@ internal class SourceHandlerTest {
     verify {
       validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, sourceCreate.connectionConfiguration)
     }
+  }
+
+  @Test
+  fun `create source as draft uses partial validation and returns draft state`() {
+    val partialConfig = emptyObject()
+    val sourceCreate =
+      SourceCreate()
+        .name(sourceConnection.name)
+        .workspaceId(sourceConnection.workspaceId)
+        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
+        .connectionConfiguration(partialConfig)
+        .createAsDraft(true)
+    val persistedSource = clone(sourceConnection).withConfiguration(partialConfig).withIsDraft(true)
+    val persistedSourceSlot = slot<SourceConnection>()
+
+    every { uuidGenerator.get() } returns sourceConnection.sourceId
+    every { sourceService.getStandardSourceDefinition(standardSourceDefinition.sourceDefinitionId) } returns standardSourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.workspaceId) } returns sourceDefinitionVersion
+    every {
+      actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
+        standardSourceDefinition,
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
+      )
+    } returns sourceDefinitionVersionWithOverrideStatus
+    every {
+      oAuthConfigSupplier.maskSourceOAuthParameters(
+        standardSourceDefinition.sourceDefinitionId,
+        sourceConnection.workspaceId,
+        partialConfig,
+        connectorSpecification,
+      )
+    } returns partialConfig
+    every { secretsRepositoryWriter.createFromConfig(any(), any(), any()) } returns partialConfig
+    every { secretStorageService.getByWorkspaceId(WorkspaceId(sourceConnection.workspaceId)) } returns null
+    every { currentUserService.getCurrentUserIdIfExists() } returns Optional.empty()
+    every { sourceService.writeSourceConnectionNoSecrets(capture(persistedSourceSlot)) } returns Unit
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns persistedSource
+    every {
+      secretReferenceService.getConfigWithSecretReferences(
+        ActorId(sourceConnection.sourceId),
+        partialConfig,
+        WorkspaceId(sourceConnection.workspaceId),
+      )
+    } returns buildConfigWithSecretRefsJava(partialConfig)
+    every { secretsProcessor.prepareSecretsForOutput(partialConfig, connectorSpecification.connectionSpecification) } returns partialConfig
+
+    val result = sourceHandler.createSource(sourceCreate)
+
+    Assertions.assertTrue(persistedSourceSlot.captured.isDraft)
+    Assertions.assertTrue(result.isDraft)
+    verify { validator.ensurePartial(connectorSpecification.connectionSpecification, partialConfig) }
   }
 
   @Test
@@ -500,8 +556,9 @@ internal class SourceHandlerTest {
     )
   }
 
-  @Test
-  fun testUpdateSource() {
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun testUpdateSource(isDraft: Boolean) {
     // ===== GIVEN =====
     // Update the source name and configuration.
     val updatedSourceName = "my updated source name"
@@ -514,6 +571,7 @@ internal class SourceHandlerTest {
         .withName(updatedSourceName)
         .withConfiguration(newConfiguration)
         .withTombstone(false)
+        .withIsDraft(isDraft)
         .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation))
 
     val sourceUpdate =
@@ -585,6 +643,7 @@ internal class SourceHandlerTest {
         newConfigWithProcessedSecrets,
         sourceDefinitionVersion.spec.connectionSpecification,
         secretPersistence,
+        isDraft,
       )
     } returns newConfigWithProcessedSecrets.originalConfig
 
@@ -600,7 +659,10 @@ internal class SourceHandlerTest {
     } returns ConfigWithSecretReferenceIdsInjected(newConfigWithSecretRefIds)
 
     // Mock the updated config that is persisted and retrieved for building the source read.
-    val updatedSourceWithSecretRefIds = clone<SourceConnection>(updatedSource).withConfiguration(newConfigWithSecretRefIds)
+    val updatedSourceWithSecretRefIds =
+      clone<SourceConnection>(updatedSource)
+        .withConfiguration(newConfigWithSecretRefIds)
+        .withIsDraft(isDraft)
 
     // First call returns the original source connection, second call returns the updated one.
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection andThen updatedSourceWithSecretRefIds
@@ -660,7 +722,11 @@ internal class SourceHandlerTest {
         sourceConnection.sourceId,
       )
     }
-    verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
+    if (isDraft) {
+      verify { validator.ensurePartial(sourceDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
+    } else {
+      verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
+    }
   }
 
   @Test

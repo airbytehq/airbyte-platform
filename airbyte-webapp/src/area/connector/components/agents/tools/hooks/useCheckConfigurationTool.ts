@@ -1,25 +1,34 @@
-import { useMemo } from "react";
+import { type MutableRefObject, useMemo } from "react";
 
-import { type ConnectorFormValues } from "area/connector/components/ConnectorForm/types";
+import { type ConnectorCardValues, type ConnectorFormValues } from "area/connector/components/ConnectorForm/types";
 import { useTestConnectorCommand } from "core/api";
 import { ActorType } from "core/api/types/AirbyteClient";
+import { type ConnectorT } from "core/domain/connector";
 
 import { type ClientToolHandler } from "../../../chat/hooks/useChatMessages";
 import { TOOL_NAMES } from "../toolNames";
 
-export interface UseCheckConfigurationToolParams {
+type AgentConnectorValues = ConnectorCardValues & { createAsDraft: true; setupFlow: "agent" };
+
+export interface UseCheckConfigurationToolParams<T extends ConnectorT> {
   actorDefinitionId?: string;
   actorType?: ActorType;
   getFormValues: () => ConnectorFormValues;
   onCheckComplete?: (success: boolean) => void;
+  onSaveDraft?: (values: AgentConnectorValues, existingDraft?: T) => Promise<T>;
+  draftConnectorRef?: MutableRefObject<T | undefined>;
+  draftCheckSucceededRef?: MutableRefObject<boolean>;
 }
 
-export const useCheckConfigurationTool = ({
+export const useCheckConfigurationTool = <T extends ConnectorT>({
   actorDefinitionId,
   actorType,
   getFormValues,
   onCheckComplete,
-}: UseCheckConfigurationToolParams): ClientToolHandler => {
+  onSaveDraft,
+  draftConnectorRef,
+  draftCheckSucceededRef,
+}: UseCheckConfigurationToolParams<T>): ClientToolHandler => {
   const { testConnector } = useTestConnectorCommand({
     formType: actorType || "source",
   });
@@ -28,19 +37,47 @@ export const useCheckConfigurationTool = ({
     () => ({
       toolName: TOOL_NAMES.CHECK_CONFIGURATION,
       execute: async (_args: unknown, sendResult) => {
+        if (draftCheckSucceededRef) {
+          draftCheckSucceededRef.current = false;
+        }
         // Get the current form values at execution time
         const formValues = getFormValues();
         const configuration = formValues.connectionConfiguration;
 
         if (configuration && actorDefinitionId) {
           try {
-            // Use form values directly - they contain actual secrets
-            const result = await testConnector({
+            const connectorValues = {
+              ...formValues,
               name: formValues.name || "Test Configuration",
               serviceType: actorDefinitionId,
-              connectionConfiguration: configuration as Record<string, unknown>,
-              resourceAllocation: {},
-            });
+              createAsDraft: true,
+              setupFlow: "agent",
+            } as AgentConnectorValues;
+            const savedDraft = onSaveDraft ? await onSaveDraft(connectorValues, draftConnectorRef?.current) : undefined;
+
+            if (savedDraft && draftConnectorRef) {
+              draftConnectorRef.current = savedDraft;
+            }
+
+            const result = savedDraft
+              ? await testConnector(undefined, savedDraft)
+              : await testConnector(connectorValues);
+
+            if (result.status !== "succeeded") {
+              sendResult(
+                JSON.stringify({
+                  success: false,
+                  message: "Configuration test did not complete successfully",
+                  status: result.status,
+                })
+              );
+              onCheckComplete?.(false);
+              return;
+            }
+
+            if (savedDraft && draftCheckSucceededRef) {
+              draftCheckSucceededRef.current = true;
+            }
 
             sendResult(
               JSON.stringify({
@@ -74,6 +111,14 @@ export const useCheckConfigurationTool = ({
         }
       },
     }),
-    [actorDefinitionId, getFormValues, testConnector, onCheckComplete]
+    [
+      actorDefinitionId,
+      draftConnectorRef,
+      getFormValues,
+      onCheckComplete,
+      onSaveDraft,
+      draftCheckSucceededRef,
+      testConnector,
+    ]
   );
 };

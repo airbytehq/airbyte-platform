@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.services
 
+import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.DestinationDiscoverNotSupportedProblem
 import io.airbyte.commons.json.Jsons
@@ -93,6 +94,27 @@ class DestinationDiscoverServiceTest {
 
   @Nested
   inner class GetDestinationCatalog {
+    @Test
+    fun `should reject discovery for a draft destination`() {
+      val destination =
+        DestinationConnection()
+          .withWorkspaceId(workspaceId)
+          .withDestinationDefinitionId(destinationDefinitionId)
+          .withDestinationId(destinationId.value)
+          .withConfiguration(Jsons.emptyObject())
+          .withIsDraft(true)
+
+      every { destinationService.getDestinationConnection(destinationId.value) } returns destination
+
+      val problem =
+        assertThrows<ActorNotReadyProblem> {
+          service.getDestinationCatalog(destinationId)
+        }
+      problem.problem.getStatus() shouldBe 409
+
+      verify(exactly = 0) { synchronousSchedulerClient.createDestinationDiscoverJob(any(), any(), any()) }
+    }
+
     @Test
     fun `should return cached catalog when available`() {
       val destination =

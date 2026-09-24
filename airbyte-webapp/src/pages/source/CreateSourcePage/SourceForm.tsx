@@ -10,7 +10,7 @@ import { ConnectorCard } from "area/connector/components/ConnectorCard";
 import { ConnectorCardValues } from "area/connector/components/ConnectorForm/types";
 import { ConnectionConfiguration } from "area/connector/types";
 import { useGetSourceDefinitionSpecificationAsync } from "core/api";
-import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
+import { SourceDefinitionRead, SourceRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
 import { ForkConnectorButton } from "pages/connectorBuilder/components/ForkConnectorButton";
 
@@ -26,6 +26,8 @@ interface SourceFormProps {
   sourceDefinitions: SourceDefinitionRead[];
   selectedSourceDefinitionId?: string;
   contextLayerOptIn?: React.ReactNode;
+  onSaveDraft?: (values: SourceFormValues, existingDraft?: SourceRead) => Promise<SourceRead>;
+  onDraftPromoted?: (draft: SourceRead, values: SourceFormValues) => Promise<void> | void;
 }
 
 const hasSourceDefinitionId = (state: unknown): state is { sourceDefinitionId: string } => {
@@ -41,6 +43,8 @@ export const SourceForm: React.FC<SourceFormProps> = ({
   sourceDefinitions,
   selectedSourceDefinitionId,
   contextLayerOptIn,
+  onSaveDraft,
+  onDraftPromoted,
 }) => {
   const location = useLocation();
 
@@ -86,6 +90,8 @@ export const SourceForm: React.FC<SourceFormProps> = ({
       selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
       selectedConnectorDefinitionId={sourceDefinitionId}
       onSubmit={onSubmitForm}
+      onSaveDraft={onSaveDraft}
+      onDraftPromoted={onDraftPromoted}
       supportLevel={selectedSourceDefinition?.supportLevel}
       preFooterSlot={contextLayerOptIn}
       leftFooterSlot={selectedSourceDefinition && <ForkConnectorButton sourceDefinition={selectedSourceDefinition} />}

@@ -109,7 +109,12 @@ class DestinationHandler
       val destinationVersion =
         getDestinationVersionForWorkspaceId(destinationCreate.destinationDefinitionId, destinationCreate.workspaceId)
       val spec = destinationVersion.spec
-      validateDestination(spec, destinationCreate.connectionConfiguration)
+      val createAsDraft = destinationCreate.createAsDraft == true
+      if (createAsDraft) {
+        validator.ensurePartial(spec.connectionSpecification, destinationCreate.connectionConfiguration)
+      } else {
+        validateDestination(spec, destinationCreate.connectionConfiguration)
+      }
 
       // persist
       val destinationId = uuidGenerator.get()
@@ -120,6 +125,7 @@ class DestinationHandler
         destinationId,
         destinationCreate.connectionConfiguration,
         false,
+        createAsDraft,
         destinationVersion,
         destinationCreate.resourceAllocation,
       )
@@ -219,6 +225,7 @@ class DestinationHandler
         updatedDestination.destinationId,
         updatedDestination.configuration,
         updatedDestination.tombstone,
+        updatedDestination.isDraft == true,
         destinationVersion,
         destinationUpdate.resourceAllocation,
       )
@@ -264,6 +271,7 @@ class DestinationHandler
         updatedDestination.destinationId,
         updatedDestination.configuration,
         updatedDestination.tombstone,
+        updatedDestination.isDraft == true,
         destinationVersion,
         partialDestinationUpdate.resourceAllocation,
       )
@@ -454,7 +462,11 @@ class DestinationHandler
             )
           }.orElse(updatedDestinationConfigWithSecretPlaceholders)
 
-      validateDestination(spec, mergedConfig)
+      if (updatedDestination.isDraft == true) {
+        validator.ensurePartial(spec.connectionSpecification, mergedConfig)
+      } else {
+        validateDestination(spec, mergedConfig)
+      }
     }
 
     fun getDestinationVersionForDestinationId(
@@ -487,6 +499,7 @@ class DestinationHandler
       destinationId: UUID,
       configurationJson: JsonNode,
       tombstone: Boolean,
+      isDraft: Boolean,
       destinationVersion: ActorDefinitionVersion,
       resourceRequirements: ScopedResourceRequirements?,
     ) {
@@ -512,6 +525,7 @@ class DestinationHandler
           .withWorkspaceId(workspaceId)
           .withDestinationId(destinationId)
           .withTombstone(tombstone)
+          .withIsDraft(isDraft)
           .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
 
       // Capture the secret configs referenced before this write so we can reclaim any that become
@@ -523,7 +537,7 @@ class DestinationHandler
           emptySet()
         }
 
-      var updatedConfig: JsonNode = persistConfigRawSecretValues(validatedConfig, secretStorageId, workspaceId, spec, destinationId)
+      var updatedConfig: JsonNode = persistConfigRawSecretValues(validatedConfig, secretStorageId, workspaceId, spec, destinationId, isDraft)
       var reprocessedConfig: ConfigWithProcessedSecrets? = null
 
       if (secretStorageId.isPresent) {
@@ -582,6 +596,7 @@ class DestinationHandler
       workspaceId: UUID,
       spec: ConnectorSpecification,
       destinationId: UUID,
+      isDraft: Boolean,
     ): JsonNode {
       val secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(WorkspaceId(workspaceId))
       val processedConfig =
@@ -607,6 +622,7 @@ class DestinationHandler
           processedConfig,
           spec.connectionSpecification,
           secretPersistence,
+          validateAsPartial = isDraft,
         )
       } else {
         return secretsRepositoryWriter.createFromConfig(
@@ -705,6 +721,7 @@ class DestinationHandler
         .isEntitled(isEntitled)
         .breakingChanges(breakingChanges.orElse(null))
         .supportState(apiPojoConverters.toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion.supportState))
+        .isDraft(destinationConnection.isDraft == true)
         .createdAt(destinationConnection.createdAt)
         .resourceAllocation(apiPojoConverters.scopedResourceReqsToApi(destinationConnection.resourceRequirements))
     }

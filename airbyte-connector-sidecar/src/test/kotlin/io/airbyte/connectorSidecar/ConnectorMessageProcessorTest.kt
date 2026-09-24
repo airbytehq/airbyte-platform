@@ -8,7 +8,13 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.DestinationApi
 import io.airbyte.api.client.generated.SourceApi
+import io.airbyte.api.client.model.generated.DestinationIdRequestBody
+import io.airbyte.api.client.model.generated.DestinationRead
+import io.airbyte.api.client.model.generated.DestinationUpdate
 import io.airbyte.api.client.model.generated.DiscoverCatalogResult
+import io.airbyte.api.client.model.generated.SourceIdRequestBody
+import io.airbyte.api.client.model.generated.SourceRead
+import io.airbyte.api.client.model.generated.SourceUpdate
 import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.json.Jsons
@@ -38,6 +44,7 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -457,6 +464,100 @@ class ConnectorMessageProcessorTest {
 
     assertEquals(StandardCheckConnectionOutput.Status.SUCCEEDED, output.checkConnection.status)
     assertEquals("working", output.checkConnection.message)
+  }
+
+  @ParameterizedTest
+  @EnumSource(ActorType::class)
+  fun `successful check persists rotated single-use config before returning promotable output`(actorType: ActorType) {
+    val actorId = UUID.randomUUID()
+    val definitionId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+    val inputConfig = Jsons.deserialize("""{"access_token":"single-use","refresh_token":"preserved"}""")
+    val rotatedConfig =
+      Config()
+        .withAdditionalProperty("access_token", "rotated")
+        .withAdditionalProperty("refresh_token", "preserved")
+    val rotatedConfigJson = Jsons.jsonNode(rotatedConfig.additionalProperties)
+    val sourceUpdate = slot<SourceUpdate>()
+    val destinationUpdate = slot<DestinationUpdate>()
+    val sourceRead =
+      SourceRead(
+        sourceDefinitionId = definitionId,
+        sourceId = actorId,
+        workspaceId = workspaceId,
+        connectionConfiguration = inputConfig,
+        name = "draft source",
+        sourceName = "source",
+        createdAt = 1L,
+      )
+    val destinationRead =
+      DestinationRead(
+        destinationDefinitionId = definitionId,
+        destinationId = actorId,
+        workspaceId = workspaceId,
+        connectionConfiguration = inputConfig,
+        name = "draft destination",
+        destinationName = "destination",
+        createdAt = 1L,
+      )
+
+    every { sourceApi.getSource(SourceIdRequestBody(actorId)) } returns sourceRead
+    every { sourceApi.updateSource(capture(sourceUpdate)) } returns sourceRead.copy(connectionConfiguration = rotatedConfigJson)
+    every { destinationApi.getDestination(DestinationIdRequestBody(actorId)) } returns destinationRead
+    every { destinationApi.updateDestination(capture(destinationUpdate)) } returns
+      destinationRead.copy(connectionConfiguration = rotatedConfigJson)
+    every { streamFactory.create(any(), any()) } returns
+      listOf(
+        AirbyteMessage()
+          .withType(AirbyteMessage.Type.CONNECTION_STATUS)
+          .withConnectionStatus(AirbyteConnectionStatus().withStatus(AirbyteConnectionStatus.Status.SUCCEEDED)),
+        AirbyteMessage()
+          .withType(AirbyteMessage.Type.CONTROL)
+          .withControl(
+            AirbyteControlMessage()
+              .withType(AirbyteControlMessage.Type.CONNECTOR_CONFIG)
+              .withConnectorConfig(AirbyteControlConnectorConfigMessage().withConfig(rotatedConfig)),
+          ),
+      ).stream()
+    val processor =
+      ConnectorMessageProcessor(
+        ConnectorConfigUpdater(airbyteApiClient),
+        airbyteApiClient,
+        catalogClientConverters,
+        mockk(relaxed = true),
+        mockk(relaxed = true),
+      )
+
+    val output =
+      processor.run(
+        InputStream.nullInputStream(),
+        streamFactory,
+        ConnectorMessageProcessor.OperationInput(
+          StandardCheckConnectionInput()
+            .withActorId(actorId)
+            .withActorType(actorType)
+            .withConnectionConfiguration(inputConfig),
+        ),
+        0,
+        SidecarInput.OperationType.CHECK,
+      )
+
+    assertEquals(StandardCheckConnectionOutput.Status.SUCCEEDED, output.checkConnection.status)
+    assertTrue(output.connectorConfigurationUpdated)
+    when (actorType) {
+      ActorType.SOURCE -> {
+        assertEquals(rotatedConfigJson, sourceUpdate.captured.connectionConfiguration)
+        assertEquals("preserved", sourceUpdate.captured.connectionConfiguration["refresh_token"].asText())
+        verify(exactly = 1) { sourceApi.updateSource(any()) }
+        verify(exactly = 0) { destinationApi.updateDestination(any()) }
+      }
+      ActorType.DESTINATION -> {
+        assertEquals(rotatedConfigJson, destinationUpdate.captured.connectionConfiguration)
+        assertEquals("preserved", destinationUpdate.captured.connectionConfiguration["refresh_token"].asText())
+        verify(exactly = 1) { destinationApi.updateDestination(any()) }
+        verify(exactly = 0) { sourceApi.updateSource(any()) }
+      }
+    }
   }
 
   @Test

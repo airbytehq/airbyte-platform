@@ -1,29 +1,38 @@
 import { useMemo } from "react";
 
-import { type ConnectorFormValues } from "area/connector/components/ConnectorForm/types";
+import { type ConnectorCardValues, type ConnectorFormValues } from "area/connector/components/ConnectorForm/types";
+import { type ConnectorT } from "core/domain/connector";
 
 import { type ClientToolHandler } from "../../../chat/hooks/useChatMessages";
 import { TOOL_NAMES } from "../toolNames";
 
-export interface UseSubmitConfigurationToolParams {
+type AgentConnectorValues = ConnectorCardValues & { setupFlow: "agent" };
+
+export interface UseSubmitConfigurationToolParams<T extends ConnectorT> {
   actorDefinitionId?: string;
   onSubmitSourceStep?: (sourceValues: {
     name: string;
     serviceType: string;
     connectionConfiguration: Record<string, unknown>;
-  }) => void;
+  }) => Promise<void> | void;
   getFormValues: () => ConnectorFormValues;
+  getDraftConnector?: () => T | undefined;
+  wasDraftCheckSuccessful?: () => boolean;
+  onDraftPromoted?: (draft: T, values: AgentConnectorValues) => Promise<void> | void;
 }
 
-export const useSubmitConfigurationTool = ({
+export const useSubmitConfigurationTool = <T extends ConnectorT>({
   actorDefinitionId,
   onSubmitSourceStep,
   getFormValues,
-}: UseSubmitConfigurationToolParams): ClientToolHandler => {
+  getDraftConnector,
+  wasDraftCheckSuccessful,
+  onDraftPromoted,
+}: UseSubmitConfigurationToolParams<T>): ClientToolHandler => {
   return useMemo(
     () => ({
       toolName: TOOL_NAMES.SUBMIT_CONFIGURATION,
-      execute: (args: unknown) => {
+      execute: async (args: unknown) => {
         const { name: agentName } = (args ?? {}) as { name?: string };
         const formValues = getFormValues();
 
@@ -37,12 +46,23 @@ export const useSubmitConfigurationTool = ({
             connectionConfiguration: formValues.connectionConfiguration as Record<string, unknown>,
           };
 
-          onSubmitSourceStep(sourceValues);
+          if (getDraftConnector) {
+            const draft = getDraftConnector();
+            if (draft && onDraftPromoted && wasDraftCheckSuccessful?.()) {
+              await onDraftPromoted(draft, {
+                ...formValues,
+                ...sourceValues,
+                setupFlow: "agent",
+              });
+            }
+          } else {
+            await onSubmitSourceStep(sourceValues);
+          }
         } else {
           console.error("[useSubmitConfigurationTool] No configuration found or onSubmitSourceStep not provided");
         }
       },
     }),
-    [actorDefinitionId, onSubmitSourceStep, getFormValues]
+    [actorDefinitionId, getDraftConnector, getFormValues, onDraftPromoted, onSubmitSourceStep, wasDraftCheckSuccessful]
   );
 };

@@ -376,6 +376,20 @@ class SourceServiceJooqImpl(
     )
   }
 
+  override fun promoteSourceFromDraft(sourceId: UUID) {
+    database.transaction<Any?>({ ctx ->
+      ctx
+        .update(Tables.ACTOR)
+        .set(Tables.ACTOR.IS_DRAFT, false)
+        .where(
+          Tables.ACTOR.ID.eq(sourceId),
+          Tables.ACTOR.ACTOR_TYPE.eq(ActorType.source),
+          Tables.ACTOR.IS_DRAFT.eq(true),
+        ).execute()
+      null
+    })
+  }
+
   /**
    * Returns all sources in the database. Does not contain secrets.
    *
@@ -775,7 +789,7 @@ class SourceServiceJooqImpl(
             DSL
               .select()
               .from(Tables.ACTOR)
-              .where(Tables.ACTOR.ID.eq(sourceConnection!!.getSourceId())),
+              .where(Tables.ACTOR.ID.eq(sourceConnection!!.sourceId)),
           )
         if (isExistingConfig) {
           ctx
@@ -803,6 +817,7 @@ class SourceServiceJooqImpl(
             .set(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize(sourceConnection.getConfiguration())))
             .set(Tables.ACTOR.ACTOR_TYPE, ActorType.source)
             .set(Tables.ACTOR.TOMBSTONE, sourceConnection.getTombstone() != null && sourceConnection.getTombstone())
+            .set(Tables.ACTOR.IS_DRAFT, sourceConnection.isDraft ?: false)
             .set(Tables.ACTOR.CREATED_AT, timestamp)
             .set(Tables.ACTOR.UPDATED_AT, timestamp)
             .set(

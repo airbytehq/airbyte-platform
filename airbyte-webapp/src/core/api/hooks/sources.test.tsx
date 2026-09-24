@@ -4,13 +4,33 @@ import { ReactNode } from "react";
 
 import { mockSource } from "test-utils";
 
-import { useDeleteSource, sourcesKeys } from "./sources";
-import { deleteSource } from "../generated/AirbyteClient";
+import { useCreateSource, useDeleteSource, useDiscoverSchemaQuery, sourcesKeys } from "./sources";
+import { createSource, deleteSource, discoverSchemaForSource, runDiscoverCommand } from "../generated/AirbyteClient";
 import { SourceRead, SourceReadList } from "../types/AirbyteClient";
 
 // Mock the required modules
 jest.mock("../generated/AirbyteClient", () => ({
+  createSource: jest.fn(),
   deleteSource: jest.fn(),
+  discoverSchemaForSource: jest.fn(),
+  getCommandStatus: jest.fn(),
+  getDiscoverCommandOutput: jest.fn(),
+  runDiscoverCommand: jest.fn(),
+}));
+
+const mockCancelCommand = jest.fn();
+jest.mock("./commands", () => ({
+  pollCommandUntilResolved: jest.fn(),
+  useCancelCommand: jest.fn(() => ({ mutateAsync: mockCancelCommand })),
+}));
+
+const mockUseExperiment = jest.fn(() => true);
+jest.mock("core/services/Experiment", () => ({
+  useExperiment: () => mockUseExperiment(),
+}));
+
+jest.mock("./workspaces", () => ({
+  useCurrentWorkspace: jest.fn(() => ({ workspaceId: "test-workspace-id" })),
 }));
 
 jest.mock("./connections", () => ({
@@ -38,6 +58,9 @@ jest.mock("area/workspace/utils", () => ({
 }));
 
 const mockDeleteSource = deleteSource as jest.MockedFunction<typeof deleteSource>;
+const mockCreateSource = createSource as jest.MockedFunction<typeof createSource>;
+const mockDiscoverSchemaForSource = discoverSchemaForSource as jest.MockedFunction<typeof discoverSchemaForSource>;
+const mockRunDiscoverCommand = runDiscoverCommand as jest.MockedFunction<typeof runDiscoverCommand>;
 
 const SOURCE_ONE: SourceRead = {
   ...mockSource,
@@ -55,6 +78,52 @@ const SOURCE_FOUR: SourceRead = {
   ...mockSource,
   sourceId: "source-four-id",
 };
+
+describe("useDiscoverSchemaQuery", () => {
+  it.each([
+    ["asynchronous", true, mockRunDiscoverCommand],
+    ["synchronous", false, mockDiscoverSchemaForSource],
+  ] as const)("does not start %s discovery when disabled", (_mode, asyncEnabled, discover) => {
+    mockUseExperiment.mockReturnValue(asyncEnabled);
+    const queryClient = new QueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { unmount } = renderHook(() => useDiscoverSchemaQuery(SOURCE_ONE, { enabled: false }), { wrapper });
+
+    expect(
+      queryClient
+        .getQueryCache()
+        .getAll()
+        .every((query) => query.state.fetchStatus === "idle")
+    ).toBe(true);
+    expect(discover).not.toHaveBeenCalled();
+    unmount();
+    expect(mockCancelCommand).not.toHaveBeenCalled();
+  });
+});
+
+describe("useCreateSource", () => {
+  it("sends createAsDraft when saving an incomplete source", async () => {
+    const queryClient = new QueryClient();
+    mockCreateSource.mockResolvedValue(SOURCE_ONE);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useCreateSource(), { wrapper });
+
+    await result.current.mutateAsync({
+      values: { name: "Draft source", connectionConfiguration: {}, createAsDraft: true },
+      sourceConnector: { name: "Test", sourceDefinitionId: "source-definition-id" },
+    });
+
+    expect(mockCreateSource).toHaveBeenCalledWith(
+      expect.objectContaining({ createAsDraft: true, connectionConfiguration: {} }),
+      {}
+    );
+  });
+});
 
 describe("useDeleteSource", () => {
   let queryClient: QueryClient;

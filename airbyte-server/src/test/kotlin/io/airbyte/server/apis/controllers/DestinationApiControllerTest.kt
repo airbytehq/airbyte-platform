@@ -4,31 +4,39 @@
 
 package io.airbyte.server.apis.controllers
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.model.generated.CheckConnectionRead
 import io.airbyte.api.model.generated.DestinationCreate
+import io.airbyte.api.model.generated.DestinationDiscoverSchemaRequestBody
 import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationReadList
 import io.airbyte.api.model.generated.DestinationSearch
 import io.airbyte.api.model.generated.DestinationUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
+import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException
 import io.micronaut.context.ApplicationContext
+import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Replaces
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
+import io.micronaut.http.client.exceptions.HttpClientResponseException
 import io.micronaut.security.annotation.Secured
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import jakarta.validation.ConstraintViolationException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -36,16 +44,28 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
+import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
 internal class DestinationApiControllerTest {
+  @Factory
+  class TestFactory {
+    @Singleton
+    @Replaces(DestinationDiscoverService::class)
+    fun destinationDiscoverService(): DestinationDiscoverService = mockk()
+  }
+
   @Inject
   lateinit var context: ApplicationContext
 
   lateinit var schedulerHandler: SchedulerHandler
 
   lateinit var destinationHandler: DestinationHandler
+
+  @Inject
+  lateinit var destinationDiscoverService: DestinationDiscoverService
 
   @BeforeAll
   fun setupMock() {
@@ -96,6 +116,31 @@ internal class DestinationApiControllerTest {
     val path = "/api/v1/destinations/delete"
     assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, DestinationIdRequestBody())))
     assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationIdRequestBody())))
+  }
+
+  @Test
+  fun `draft destination discovery returns the stable actor-not-ready problem body`() {
+    every { destinationDiscoverService.getDestinationCatalog(any(), any()) } throws ActorNotReadyProblem()
+
+    val error =
+      assertThrows<HttpClientResponseException> {
+        client
+          .toBlocking()
+          .exchange(
+            HttpRequest.POST(
+              "/api/v1/destinations/discover_schema",
+              DestinationDiscoverSchemaRequestBody().destinationId(UUID.randomUUID()).disableCache(false),
+            ),
+            JsonNode::class.java,
+          )
+      }
+
+    assertEquals(HttpStatus.CONFLICT, error.status)
+    val body = error.response.getBody(JsonNode::class.java).orElseThrow()
+    assertEquals(409, body.path("status").asInt())
+    assertEquals("actor-not-ready", body.path("title").asText())
+    assertEquals("https://reference.airbyte.com/reference/errors#409-actor-not-ready", body.path("type").asText())
+    assertEquals("The source or destination is not ready. Complete connector setup first.", body.path("detail").asText())
   }
 
   @Test

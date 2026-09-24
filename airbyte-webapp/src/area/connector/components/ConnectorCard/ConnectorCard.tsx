@@ -38,7 +38,7 @@ import { WarningMessage } from "../ConnectorForm/components/WarningMessage";
 // TODO: need to clean up the ConnectorCard and ConnectorForm props,
 // since some of props are used in both components, and some of them used just as a prop-drill
 // https://github.com/airbytehq/airbyte/issues/18553
-interface ConnectorCardBaseProps {
+interface ConnectorCardBaseProps<T extends ConnectorT> {
   title?: string;
   headerBlock?: React.ReactNode;
   description?: React.ReactNode;
@@ -66,15 +66,17 @@ interface ConnectorCardBaseProps {
   preFooterSlot?: React.ReactNode;
   hideCopyConfig?: boolean;
   skipCheckConnection?: boolean;
+  onSaveDraft?: (values: ConnectorCardValues, existingDraft?: T) => Promise<T>;
+  onDraftPromoted?: (draft: T, values: ConnectorCardValues) => Promise<void> | void;
 }
 
-interface ConnectorCardCreateProps extends ConnectorCardBaseProps {
+interface ConnectorCardCreateProps<T extends ConnectorT> extends ConnectorCardBaseProps<T> {
   isEditMode?: false;
 }
 
-interface ConnectorCardEditProps extends ConnectorCardBaseProps {
+interface ConnectorCardEditProps<T extends ConnectorT> extends ConnectorCardBaseProps<T> {
   isEditMode: true;
-  connector: ConnectorT;
+  connector: T;
 }
 
 const getConnectorId = (connectorRead: DestinationRead | SourceRead) => {
@@ -98,7 +100,7 @@ const getConnectionConfigurationDefaults = (connectorDefinitionSpecification: Co
   );
 };
 
-export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEditProps> = ({
+export const ConnectorCard = <T extends ConnectorT>({
   onSubmit,
   onDeleteClick,
   selectedConnectorDefinitionId,
@@ -110,12 +112,17 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   preFooterSlot = null,
   hideCopyConfig = false,
   skipCheckConnection = false,
+  onSaveDraft,
+  onDraftPromoted,
   ...props
-}) => {
+}: ConnectorCardCreateProps<T> | ConnectorCardEditProps<T>) => {
   const canEditConnector = useGeneratedIntent(
     props.formType === "source" ? Intent.CreateOrEditSource : Intent.CreateOrEditDestination
   );
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
+  const [draftConnector, setDraftConnector] = useState<T | undefined>(
+    props.isEditMode && props.connector.isDraft ? props.connector : undefined
+  );
   const { formatMessage } = useIntl();
   const { workspaceId } = useCurrentWorkspace();
   const { registerNotification } = useNotificationService();
@@ -171,11 +178,18 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     setSelectedConnectorDefinition,
   ]);
 
-  const testConnectorWithTracking = async (connectorCardValues?: ConnectorCardValues) => {
+  const testConnectorWithTracking = async (
+    connectorCardValues?: ConnectorCardValues,
+    connectorOverride?: ConnectorT
+  ) => {
     trackTestConnectorStarted(selectedConnectorDefinition);
     try {
-      const response = await testConnector(connectorCardValues);
-      trackTestConnectorSuccess(selectedConnectorDefinition);
+      const response = await testConnector(connectorCardValues, connectorOverride);
+      if (response.status === "succeeded") {
+        trackTestConnectorSuccess(selectedConnectorDefinition);
+      } else {
+        trackTestConnectorFailure(selectedConnectorDefinition, null, response.status);
+      }
       return response;
     } catch (e) {
       trackTestConnectorFailure(selectedConnectorDefinition, CommandErrorWithJobInfo.getJobInfo(e), e.message);
@@ -206,6 +220,16 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     };
 
     try {
+      if (onSaveDraft) {
+        const savedDraft = await onSaveDraft(connectorCardValues, draftConnector);
+        setDraftConnector(savedDraft);
+        const checkResult = await testConnectorWithTracking(undefined, savedDraft);
+        if (checkResult.status !== "succeeded") {
+          return;
+        }
+        await onDraftPromoted?.(savedDraft, connectorCardValues);
+        return;
+      }
       if (shouldSkipCheckConnection) {
         await onSubmit(connectorCardValues);
       } else {
@@ -301,6 +325,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
             {preFooterSlot}
             <Controls
               isEditMode={Boolean(isEditMode)}
+              isDraftMode={Boolean(onSaveDraft)}
               isTestConnectionInProgress={isTestConnectionInProgress}
               onCancelTesting={onStopTesting}
               isSubmitting={isSubmitting || isTestConnectionInProgress}
@@ -325,15 +350,37 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               onCancelClick={() => {
                 resetConnectorForm();
               }}
-              onSubmitWithoutCheck={async () => {
-                const values = getValues();
-                await onHandleSubmit(values, true);
-                registerNotification({
-                  id: "connector.saveWithoutCheckSuccessful",
-                  type: "success",
-                  text: formatMessage({ id: "connectorForm.saveWithoutCheckSuccessful" }, { name: values.name }),
-                });
-              }}
+              onSubmitWithoutCheck={
+                onSaveDraft
+                  ? undefined
+                  : async () => {
+                      const values = getValues();
+                      await onHandleSubmit(values, true);
+                      registerNotification({
+                        id: "connector.saveWithoutCheckSuccessful",
+                        type: "success",
+                        text: formatMessage({ id: "connectorForm.saveWithoutCheckSuccessful" }, { name: values.name }),
+                      });
+                    }
+              }
+              onSaveDraft={
+                onSaveDraft
+                  ? async () => {
+                      const values = getValues();
+                      const connectorCardValues = {
+                        ...values,
+                        serviceType: Connector.id(selectedConnectorDefinition),
+                      };
+                      const savedDraft = await onSaveDraft(connectorCardValues, draftConnector);
+                      setDraftConnector(savedDraft);
+                      registerNotification({
+                        id: "connector.draftSaved",
+                        type: "success",
+                        text: formatMessage({ id: "connectorForm.draftSaved" }, { name: values.name }),
+                      });
+                    }
+                  : undefined
+              }
               connectionTestSuccess={connectionTestSuccess}
               leftSlot={leftFooterSlot}
               onCopyConfig={

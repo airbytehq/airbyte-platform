@@ -10,7 +10,7 @@ import { ConnectorCard } from "area/connector/components/ConnectorCard";
 import { ConnectorCardValues } from "area/connector/components/ConnectorForm";
 import { ConnectionConfiguration } from "area/connector/types";
 import { useGetDestinationDefinitionSpecificationAsync } from "core/api";
-import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
+import { DestinationDefinitionRead, DestinationRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
 
 export interface DestinationFormValues {
@@ -26,6 +26,8 @@ interface DestinationFormProps {
   selectedDestinationDefinitionId?: string;
   leftFooterSlot?: React.ReactNode;
   contextLayerOptIn?: React.ReactNode;
+  onSaveDraft?: (values: DestinationFormValues, existingDraft?: DestinationRead) => Promise<DestinationRead>;
+  onDraftPromoted?: (draft: DestinationRead, values: DestinationFormValues) => Promise<void> | void;
 }
 
 const hasDestinationDefinitionId = (state: unknown): state is { destinationDefinitionId: string } => {
@@ -42,6 +44,8 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
   selectedDestinationDefinitionId,
   leftFooterSlot = null,
   contextLayerOptIn,
+  onSaveDraft,
+  onDraftPromoted,
 }) => {
   const location = useLocation();
 
@@ -90,6 +94,8 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
       selectedConnectorDefinitionSpecification={destinationDefinitionSpecification}
       selectedConnectorDefinitionId={destinationDefinitionId}
       onSubmit={onSubmitForm}
+      onSaveDraft={onSaveDraft}
+      onDraftPromoted={onDraftPromoted}
       supportLevel={selectedDestinationDefinition?.supportLevel}
       preFooterSlot={contextLayerOptIn}
       leftFooterSlot={leftFooterSlot}

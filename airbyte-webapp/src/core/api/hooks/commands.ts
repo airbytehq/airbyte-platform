@@ -110,7 +110,7 @@ export const useTestConnectorCommand = (
   isTestConnectionInProgress: boolean;
   isSuccess: boolean;
   onStopTesting: () => void;
-  testConnector: (v?: ConnectorCardValues) => Promise<GetCheckCommandOutput200>;
+  testConnector: (v?: ConnectorCardValues, connectorOverride?: ConnectorT) => Promise<GetCheckCommandOutput200>;
   error: Error | null;
   reset: () => void;
 } => {
@@ -132,17 +132,18 @@ export const useTestConnectorCommand = (
     [cancelCommand]
   );
 
-  const mutation = useMutation(async (values?: ConnectorCardValues) => {
+  const mutation = useMutation(async ([values, connectorOverride]: [ConnectorCardValues | undefined, ConnectorT?]) => {
     try {
       abortControllerRef.current = new AbortController();
       const commandId = uuidv4();
       commandIdRef.current = commandId;
 
-      const checkCommandPayload = props.isEditMode
+      const actor = connectorOverride ?? (props.isEditMode ? props.connector : undefined);
+      const checkCommandPayload = actor
         ? {
             id: commandId,
-            actor_id: ConnectorHelper.id(props.connector),
-            config: values?.connectionConfiguration,
+            actor_id: ConnectorHelper.id(actor),
+            config: connectorOverride ? undefined : values?.connectionConfiguration,
           }
         : {
             id: commandId,
@@ -201,9 +202,9 @@ export const useTestConnectorCommand = (
   });
 
   return {
-    testConnector: mutation.mutateAsync,
+    testConnector: (values, connectorOverride) => mutation.mutateAsync([values, connectorOverride]),
     isTestConnectionInProgress: mutation.isLoading,
-    isSuccess: mutation.isSuccess,
+    isSuccess: mutation.isSuccess && mutation.data?.status === GetCheckCommandOutput200Status.succeeded,
     error: mutation.error as Error | null,
     reset: mutation.reset,
     onStopTesting: () => {

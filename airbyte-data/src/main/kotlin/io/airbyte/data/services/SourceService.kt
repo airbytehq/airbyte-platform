@@ -87,6 +87,8 @@ interface SourceService {
 
   fun writeSourceConnectionNoSecrets(partialSource: SourceConnection)
 
+  fun promoteSourceFromDraft(sourceId: UUID)
+
   fun tombstoneSource(
     name: String,
     workspaceId: UUID,

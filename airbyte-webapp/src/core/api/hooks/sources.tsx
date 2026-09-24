@@ -72,6 +72,7 @@ interface ValuesProps {
   connectionConfiguration: ConnectionConfiguration;
   resourceAllocation?: ScopedResourceRequirements;
   setupFlow?: SourceSetupFlow;
+  createAsDraft?: boolean;
 }
 
 interface ConnectorProps {
@@ -140,6 +141,7 @@ export const useCreateSource = () => {
             workspaceId: workspace.workspaceId,
             connectionConfiguration: values.connectionConfiguration,
             resourceAllocation: values.resourceAllocation,
+            createAsDraft: values.createAsDraft,
           },
           requestOptions
         );
@@ -288,7 +290,10 @@ export const useDiscoverSourceSchemaMutation = (source: SourceRead) => {
   });
 };
 
-export const useDiscoverSchemaQuery = (source: SourceRead, { useErrorBoundary = true } = {}) => {
+export const useDiscoverSchemaQuery = (
+  source: SourceRead,
+  { useErrorBoundary = true, enabled = true }: { useErrorBoundary?: boolean; enabled?: boolean } = {}
+) => {
   const [commandId, setCommandId] = useState(uuidv4());
   const { mutateAsync: cancelCommand } = useCancelCommand();
   const requestOptions = useRequestOptions();
@@ -298,12 +303,12 @@ export const useDiscoverSchemaQuery = (source: SourceRead, { useErrorBoundary = 
 
   useEffect(
     () => () => {
-      if (asyncSchemaDiscoveryEnabled) {
+      if (asyncSchemaDiscoveryEnabled && enabled) {
         // cancel command on unmount
         cancelCommand(commandId);
       }
     },
-    [commandId, cancelCommand, asyncSchemaDiscoveryEnabled]
+    [commandId, cancelCommand, asyncSchemaDiscoveryEnabled, enabled]
   );
 
   const runCommandQuery = useQuery({
@@ -313,7 +318,7 @@ export const useDiscoverSchemaQuery = (source: SourceRead, { useErrorBoundary = 
     useErrorBoundary,
     cacheTime: Infinity,
     staleTime: Infinity,
-    enabled: asyncSchemaDiscoveryEnabled,
+    enabled: enabled && asyncSchemaDiscoveryEnabled,
   });
 
   const commandStatusQuery = useQuery({
@@ -326,7 +331,7 @@ export const useDiscoverSchemaQuery = (source: SourceRead, { useErrorBoundary = 
       return res;
     },
     useErrorBoundary,
-    enabled: asyncSchemaDiscoveryEnabled && runCommandQuery.isSuccess && !!runCommandQuery.data?.id, // Only start polling for status once the command has been started
+    enabled: enabled && asyncSchemaDiscoveryEnabled && runCommandQuery.isSuccess && !!runCommandQuery.data?.id, // Only start polling for status once the command has been started
     refetchInterval: (data) =>
       data?.status === "running" || data?.status === "pending" ? COMMAND_STATUS_POLLING_INTERVAL : false, // Poll until the command is completed or fails
     cacheTime: Infinity,
@@ -357,7 +362,10 @@ export const useDiscoverSchemaQuery = (source: SourceRead, { useErrorBoundary = 
     },
     useErrorBoundary,
     enabled:
-      asyncSchemaDiscoveryEnabled && commandStatusQuery.isSuccess && commandStatusQuery.data?.status === "completed",
+      enabled &&
+      asyncSchemaDiscoveryEnabled &&
+      commandStatusQuery.isSuccess &&
+      commandStatusQuery.data?.status === "completed",
     cacheTime: Infinity,
     staleTime: Infinity,
   });
@@ -399,7 +407,7 @@ export const useDiscoverSchemaQuery = (source: SourceRead, { useErrorBoundary = 
       }
     },
     {
-      enabled: !asyncSchemaDiscoveryEnabled,
+      enabled: enabled && !asyncSchemaDiscoveryEnabled,
       useErrorBoundary,
       cacheTime: 0, // As soon as the query is not used, it should be removed from the cache
       staleTime: 1000 * 60 * 20, // A discovered schema should be valid for max 20 minutes on the client before refetching

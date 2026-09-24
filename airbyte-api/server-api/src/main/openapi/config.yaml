@@ -15155,6 +15155,9 @@ components:
           type: string
         resourceAllocation:
           $ref: "#/components/schemas/ScopedResourceRequirements"
+        createAsDraft:
+          type: boolean
+          default: false
     SourceDiscoverSchemaRequestBody:
       type: object
       required:
@@ -15272,6 +15275,8 @@ components:
         createdAt:
           type: integer
           format: int64
+        isDraft:
+          type: boolean
         resourceAllocation:
           $ref: "#/components/schemas/ScopedResourceRequirements"
         numConnections:
@@ -15735,6 +15740,9 @@ components:
           $ref: "#/components/schemas/DestinationConfiguration"
         resourceAllocation:
           $ref: "#/components/schemas/ScopedResourceRequirements"
+        createAsDraft:
+          type: boolean
+          default: false
     DestinationUpdate:
       type: object
       required:
@@ -15816,6 +15824,8 @@ components:
         createdAt:
           type: integer
           format: int64
+        isDraft:
+          type: boolean
         resourceAllocation:
           $ref: "#/components/schemas/ScopedResourceRequirements"
         numConnections:

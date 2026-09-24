@@ -59,6 +59,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.MapperValidationProblemResponse
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper
+import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
@@ -1365,6 +1366,18 @@ internal class ConnectionsHandlerTest {
             .notifySchemaChangesByEmail(null),
           connectionsHandler.createConnection(connectionCreate),
         )
+      }
+
+      @Test
+      fun `draft actors cannot be used to create connections`() {
+        val connectionCreate = buildConnectionCreateRequest(standardSync, generateBasicApiCatalog())
+
+        source.withIsDraft(true)
+        assertThrows(ActorNotReadyProblem::class.java) { connectionsHandler.createConnection(connectionCreate) }
+
+        source.withIsDraft(false)
+        destination.withIsDraft(true)
+        assertThrows(ActorNotReadyProblem::class.java) { connectionsHandler.createConnection(connectionCreate) }
       }
 
       @ParameterizedTest

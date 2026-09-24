@@ -51,6 +51,12 @@ export const SourceSettingsPage: React.FC = () => {
     });
   };
 
+  const onSaveDraft = async (values: ConnectorCardValues) =>
+    updateSource({
+      values,
+      sourceId: source.sourceId,
+    });
+
   const onDelete = useCallback(async () => {
     clearFormChange(formId);
     await deleteSource({ source });
@@ -81,6 +87,8 @@ export const SourceSettingsPage: React.FC = () => {
           connector={source}
           reloadConfig={reloadSource}
           onSubmit={onSubmit}
+          onSaveDraft={source.isDraft ? onSaveDraft : undefined}
+          onDraftPromoted={source.isDraft ? async () => reloadSource() : undefined}
           onDeleteClick={onDeleteClick}
           supportLevel={sourceDefinitionVersion.supportLevel}
         />

@@ -891,6 +891,7 @@ export const mockConnection: WebBackendConnectionRead = {
     name: "Scrafty",
     sourceName: "PokeAPI",
     createdAt: 966690000,
+    isDraft: false,
   },
   destination: {
     destinationDefinitionId: ConnectorIds.Destinations.Postgres,
@@ -911,6 +912,7 @@ export const mockConnection: WebBackendConnectionRead = {
     name: "Heroku Postgres",
     destinationName: "Postgres",
     createdAt: 966690000,
+    isDraft: false,
   },
   operations: [],
   latestSyncJobCreatedAt: 1660227512,

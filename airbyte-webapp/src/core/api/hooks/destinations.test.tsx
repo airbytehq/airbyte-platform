@@ -4,13 +4,18 @@ import { ReactNode } from "react";
 
 import { mockDestination } from "test-utils";
 
-import { useDeleteDestination, destinationsKeys } from "./destinations";
-import { deleteDestination } from "../generated/AirbyteClient";
+import { useCreateDestination, useDeleteDestination, destinationsKeys } from "./destinations";
+import { createDestination, deleteDestination } from "../generated/AirbyteClient";
 import { DestinationRead, DestinationReadList } from "../types/AirbyteClient";
 
 // Mock the required modules
 jest.mock("../generated/AirbyteClient", () => ({
+  createDestination: jest.fn(),
   deleteDestination: jest.fn(),
+}));
+
+jest.mock("./workspaces", () => ({
+  useCurrentWorkspace: jest.fn(() => ({ workspaceId: "test-workspace-id" })),
 }));
 
 jest.mock("./connections", () => ({
@@ -38,6 +43,7 @@ jest.mock("area/workspace/utils", () => ({
 }));
 
 const mockDeleteDestination = deleteDestination as jest.MockedFunction<typeof deleteDestination>;
+const mockCreateDestination = createDestination as jest.MockedFunction<typeof createDestination>;
 
 const DESTINATION_ONE: DestinationRead = {
   ...mockDestination,
@@ -55,6 +61,27 @@ const DESTINATION_FOUR: DestinationRead = {
   ...mockDestination,
   destinationId: "destination-four-id",
 };
+
+describe("useCreateDestination", () => {
+  it("sends createAsDraft when saving an incomplete destination", async () => {
+    const queryClient = new QueryClient();
+    mockCreateDestination.mockResolvedValue(DESTINATION_ONE);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useCreateDestination(), { wrapper });
+
+    await result.current.mutateAsync({
+      values: { name: "Draft destination", connectionConfiguration: {}, createAsDraft: true },
+      destinationConnector: { name: "Test", destinationDefinitionId: "destination-definition-id" },
+    });
+
+    expect(mockCreateDestination).toHaveBeenCalledWith(
+      expect.objectContaining({ createAsDraft: true, connectionConfiguration: {} }),
+      {}
+    );
+  });
+});
 
 describe("useDeleteDestination", () => {
   let queryClient: QueryClient;

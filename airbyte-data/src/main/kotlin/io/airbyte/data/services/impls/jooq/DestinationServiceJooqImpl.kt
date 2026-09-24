@@ -318,6 +318,20 @@ class DestinationServiceJooqImpl
       )
     }
 
+    override fun promoteDestinationFromDraft(destinationId: UUID) {
+      database.transaction<Any?>({ ctx ->
+        ctx
+          .update(Tables.ACTOR)
+          .set(Tables.ACTOR.IS_DRAFT, false)
+          .where(
+            Tables.ACTOR.ID.eq(destinationId),
+            Tables.ACTOR.ACTOR_TYPE.eq(ActorType.destination),
+            Tables.ACTOR.IS_DRAFT.eq(true),
+          ).execute()
+        null
+      })
+    }
+
     /**
      * Returns all destinations in the database. Does not contain secrets.
      *
@@ -715,6 +729,7 @@ class DestinationServiceJooqImpl
               .set(Tables.ACTOR.CONFIGURATION, JSONB.valueOf(Jsons.serialize(destinationConnection.configuration)))
               .set(Tables.ACTOR.ACTOR_TYPE, ActorType.destination)
               .set(Tables.ACTOR.TOMBSTONE, destinationConnection.tombstone != null && destinationConnection.tombstone)
+              .set(Tables.ACTOR.IS_DRAFT, destinationConnection.isDraft ?: false)
               .set(Tables.ACTOR.CREATED_AT, timestamp)
               .set(Tables.ACTOR.UPDATED_AT, timestamp)
               .set(

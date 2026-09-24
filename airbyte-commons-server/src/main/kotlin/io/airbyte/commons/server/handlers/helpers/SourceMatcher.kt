@@ -31,6 +31,7 @@ class SourceMatcher(
       isEntitled(query.isEntitled)
       breakingChanges(query.breakingChanges)
       supportState(query.supportState)
+      isDraft(query.isDraft)
       resourceAllocation(query.resourceAllocation)
 
       val connectionConfiguration =

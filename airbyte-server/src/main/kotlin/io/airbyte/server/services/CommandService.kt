@@ -5,6 +5,8 @@
 package io.airbyte.server.services
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
@@ -25,6 +27,7 @@ import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
+import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.configWithTextualSecretPlaceholders
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.CatalogService
@@ -41,6 +44,7 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
+import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.SpecInput
@@ -107,6 +111,7 @@ class CommandService(
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
   private val actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
+  private val jsonSchemaValidator: JsonSchemaValidator,
   private val airbyteConfig: AirbyteConfig,
   airbyteWorkerConfig: AirbyteWorkerConfig,
   private val featureFlagClient: FeatureFlagClient,
@@ -319,10 +324,13 @@ class CommandService(
         // Get stored config based on actor type
         val storedConfig =
           when (actor.actorType) {
-            JooqActorType.source ->
+            JooqActorType.source -> {
               sourceService.getSourceConnection(actorId).configuration
-            JooqActorType.destination ->
+            }
+
+            JooqActorType.destination -> {
               destinationService.getDestinationConnection(actorId).configuration
+            }
           }
 
         // Get connector spec for secret identification
@@ -384,7 +392,7 @@ class CommandService(
    * Unified method to create a Check command supporting all modes:
    * 1. Actor ID only (uses stored config)
    * 2. Definition ID + config (no stored actor)
-   * 3. Actor ID + config override (hybrid: stored credentials + provided config)
+   * 3. Ready actor ID + config override (hybrid: stored credentials + provided config)
    *
    * returns true if a command has been created, false if it already existed.
    */
@@ -404,6 +412,21 @@ class CommandService(
       return false
     }
 
+    if (actorId != null && configuration != null) {
+      val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
+      val isDraft =
+        when (actor.actorType) {
+          JooqActorType.source -> sourceService.getSourceConnection(actorId).isDraft
+          JooqActorType.destination -> destinationService.getDestinationConnection(actorId).isDraft
+        }
+      if (isDraft == true) {
+        throw BadRequestProblem(
+          "Draft actor checks do not accept configuration overrides. Update the draft, then check it by actor ID.",
+          null,
+        )
+      }
+    }
+
     val checkInput =
       jobInputService.getCheckInput(
         actorId = actorId,
@@ -413,6 +436,10 @@ class CommandService(
         jobId = jobId,
         attemptId = attemptNumber,
       )
+
+    if (actorId != null) {
+      validateDraftActorConfiguration(actorId, checkInput.checkConnectionInput.connectionConfiguration)
+    }
 
     // Adding the priority to the launcherConfig because it impacts node-pool selection
     checkInput.launcherConfig.priority = workloadPriority
@@ -458,6 +485,34 @@ class CommandService(
     )
 
     return true
+  }
+
+  private fun validateDraftActorConfiguration(
+    actorId: UUID,
+    configuration: JsonNode,
+  ) {
+    val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
+    val specification =
+      when (actor.actorType) {
+        JooqActorType.source -> {
+          val source = sourceService.getSourceConnection(actorId)
+          if (source.isDraft != true) return
+          val definition = sourceService.getStandardSourceDefinition(source.sourceDefinitionId)
+          actorDefinitionVersionHelper.getSourceVersion(definition, source.workspaceId, actorId).spec.connectionSpecification
+        }
+
+        JooqActorType.destination -> {
+          val destination = destinationService.getDestinationConnection(actorId)
+          if (destination.isDraft != true) return
+          val definition = destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)
+          actorDefinitionVersionHelper.getDestinationVersion(definition, destination.workspaceId, actorId).spec.connectionSpecification
+        }
+      }
+
+    jsonSchemaValidator.ensure(
+      specification,
+      configWithTextualSecretPlaceholders(configuration, specification),
+    )
   }
 
   private fun createCheckCreateWorkloadRequest(
@@ -515,6 +570,7 @@ class CommandService(
     }
 
     val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
+    ensureActorReady(actorId, actor.actorType)
     val workspaceId = actor.workspaceId
     val discoverInput = jobInputService.getDiscoverInput(actorId, jobId, attemptNumber)
     // Adding the priority to the launcherConfig because it impacts node-pool selection.
@@ -609,6 +665,16 @@ class CommandService(
         attemptNumber = attemptNumber,
         signalInput = signalInput,
       )
+    replicationInput.connectionContext?.sourceId?.let { sourceId ->
+      if (sourceService.getSourceConnection(sourceId).isDraft == true) {
+        throw ActorNotReadyProblem()
+      }
+    }
+    replicationInput.connectionContext?.destinationId?.let { destinationId ->
+      if (destinationService.getDestinationConnection(destinationId).isDraft == true) {
+        throw ActorNotReadyProblem()
+      }
+    }
     val workspaceId = replicationInput.connectionContext?.workspaceId ?: throw IllegalStateException("workspaceId is missing")
     val workloadPayload =
       createReplicateWorkloadRequest(
@@ -818,7 +884,7 @@ class CommandService(
     commandId: String,
     withLogs: Boolean,
   ): CheckJobOutput? =
-    getConnectorJobOutput(commandId) { failureReason ->
+    getConnectorJobOutput(commandId, failOnUnsuccessfulWorkload = true) { failureReason ->
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
         .withCheckConnection(
@@ -827,6 +893,9 @@ class CommandService(
             .withMessage(failureReason.externalMessage),
         ).withFailureReason(failureReason)
     }?.let { jobOutput ->
+      if (jobOutput.checkConnection.status == StandardCheckConnectionOutput.Status.SUCCEEDED) {
+        promoteDraftActorForCommand(commandId)
+      }
       return CheckJobOutput(
         status = jobOutput.checkConnection.status,
         connectorConfigUpdated = jobOutput.connectorConfigurationUpdated ?: false,
@@ -835,6 +904,48 @@ class CommandService(
         logs = if (withLogs) getJobLogs(commandId) else null,
       )
     }
+
+  private fun ensureActorReady(
+    actorId: UUID,
+    actorType: JooqActorType,
+  ) {
+    val isDraft =
+      when (actorType) {
+        JooqActorType.source -> sourceService.getSourceConnection(actorId).isDraft
+        JooqActorType.destination -> destinationService.getDestinationConnection(actorId).isDraft
+      }
+    if (isDraft == true) {
+      throw ActorNotReadyProblem()
+    }
+  }
+
+  private fun promoteDraftActorForCommand(commandId: String) {
+    val actorId =
+      commandsRepository
+        .findById(commandId)
+        .orElse(null)
+        ?.commandInput
+        ?.get("actor_id")
+        ?.takeUnless(JsonNode::isNull)
+        ?.asText()
+        ?.let(UUID::fromString)
+        ?: return
+    val actor = actorRepository.findByActorId(actorId) ?: return
+
+    when (actor.actorType) {
+      JooqActorType.source -> {
+        if (sourceService.getSourceConnection(actorId).isDraft == true) {
+          sourceService.promoteSourceFromDraft(actorId)
+        }
+      }
+
+      JooqActorType.destination -> {
+        if (destinationService.getDestinationConnection(actorId).isDraft == true) {
+          destinationService.promoteDestinationFromDraft(actorId)
+        }
+      }
+    }
+  }
 
   data class JobLogs(
     val logEvents: LogEvents? = null,
@@ -950,18 +1061,29 @@ class CommandService(
 
   private fun getConnectorJobOutput(
     commandId: String,
+    failOnUnsuccessfulWorkload: Boolean = false,
     onFailure: (FailureReason) -> ConnectorJobOutput,
   ): ConnectorJobOutput? =
     commandsRepository
       .findById(commandId)
       .map { command ->
-        try {
-          workloadOutputReader.readConnectorOutput(command.workloadId) ?: throw NotFoundException("no output found for $commandId")
-        } catch (e: Exception) {
+        val connectorOutput =
+          try {
+            workloadOutputReader.readConnectorOutput(command.workloadId) ?: throw NotFoundException("no output found for $commandId")
+          } catch (e: Exception) {
+            val workload = workloadService.getWorkload(command.workloadId)
+            val failureReason = getFailureReasonForMissingConnectorJobOutput(commandId, workload, e)
+            return@map onFailure(failureReason)
+          }
+
+        if (failOnUnsuccessfulWorkload) {
           val workload = workloadService.getWorkload(command.workloadId)
-          val failureReason = getFailureReasonForMissingConnectorJobOutput(commandId, workload, e)
-          onFailure(failureReason)
+          if (workload.status != WorkloadStatus.SUCCESS) {
+            val failureReason = getFailureReasonForMissingConnectorJobOutput(commandId, workload, null)
+            return@map onFailure(failureReason)
+          }
         }
+        connectorOutput
       }.orElse(null)
 
   private fun getFailureReasonForMissingConnectorJobOutput(
@@ -971,7 +1093,7 @@ class CommandService(
   ): FailureReason =
     when (workload.status) {
       // This is pretty bad, the workload succeeded, but we failed to read the output
-      WorkloadStatus.SUCCESS ->
+      WorkloadStatus.SUCCESS -> {
         FailureReason()
           .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
           .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
@@ -979,6 +1101,7 @@ class CommandService(
           .withInternalMessage("Failed to read the output of a successful workload $commandId")
           .withStacktrace(e?.stackTraceToString())
           .withTimestamp(clock.millis())
+      }
 
       // do some classification from workload.terminationSource
       WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE -> {
@@ -1004,12 +1127,13 @@ class CommandService(
 
       // We should never be in this situation, workload is still running not having an output is expected,
       // we should not be trying to read the output of a non-terminal workload.
-      else ->
+      else -> {
         FailureReason()
           .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
           .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
           .withExternalMessage("$commandId is still running, try again later.")
           .withInternalMessage("$commandId isn't in a terminal state, no output available")
           .withTimestamp(clock.millis())
+      }
     }
 }

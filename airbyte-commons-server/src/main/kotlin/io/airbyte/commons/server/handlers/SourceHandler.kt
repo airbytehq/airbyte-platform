@@ -197,7 +197,12 @@ class SourceHandler
           sourceCreate.workspaceId,
         )
       val spec = sourceVersion.spec
-      validateSource(spec, sourceCreate.connectionConfiguration)
+      val createAsDraft = sourceCreate.createAsDraft == true
+      if (createAsDraft) {
+        validator.ensurePartial(spec.connectionSpecification, sourceCreate.connectionConfiguration)
+      } else {
+        validateSource(spec, sourceCreate.connectionConfiguration)
+      }
 
       // persist
       val sourceId = uuidGenerator.get()
@@ -207,6 +212,7 @@ class SourceHandler
         sourceCreate.workspaceId,
         sourceId,
         false,
+        createAsDraft,
         sourceCreate.connectionConfiguration,
         sourceVersion,
         sourceCreate.resourceAllocation,
@@ -244,6 +250,7 @@ class SourceHandler
         updatedSource.workspaceId,
         updatedSource.sourceId,
         updatedSource.tombstone,
+        updatedSource.isDraft == true,
         updatedSource.configuration,
         sourceVersion,
         partialSourceUpdate.resourceAllocation,
@@ -282,6 +289,7 @@ class SourceHandler
         updatedSource.workspaceId,
         updatedSource.sourceId,
         updatedSource.tombstone,
+        updatedSource.isDraft == true,
         updatedSource.configuration,
         sourceVersion,
         sourceUpdate.resourceAllocation,
@@ -328,6 +336,7 @@ class SourceHandler
         .isEntitled(sourceRead.isEntitled)
         .breakingChanges(sourceRead.breakingChanges)
         .supportState(sourceRead.supportState)
+        .isDraft(sourceRead.isDraft)
         .status(sourceRead.status)
         .createdAt(sourceRead.createdAt)
         .resourceAllocation(sourceRead.resourceAllocation)
@@ -636,7 +645,11 @@ class SourceHandler
             )
           }.orElse(updatedSourceConfigWithSecretPlaceholders)
 
-      validateSource(spec, mergedConfig)
+      if (updatedSource.isDraft == true) {
+        validator.ensurePartial(spec.connectionSpecification, mergedConfig)
+      } else {
+        validateSource(spec, mergedConfig)
+      }
     }
 
     private fun getSourceVersionForSourceId(sourceId: UUID): ActorDefinitionVersion {
@@ -665,6 +678,7 @@ class SourceHandler
       workspaceId: UUID,
       sourceId: UUID,
       tombstone: Boolean,
+      isDraft: Boolean,
       configurationJson: JsonNode,
       sourceVersion: ActorDefinitionVersion,
       resourceRequirements: ScopedResourceRequirements?,
@@ -691,6 +705,7 @@ class SourceHandler
           .withWorkspaceId(workspaceId)
           .withSourceId(sourceId)
           .withTombstone(tombstone)
+          .withIsDraft(isDraft)
           .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
 
       // Capture the secret configs referenced before this write so we can reclaim any that become
@@ -702,7 +717,7 @@ class SourceHandler
           emptySet()
         }
 
-      var updatedConfig = persistConfigRawSecretValues(validatedConfig, secretStorageId, workspaceId, spec, sourceId)
+      var updatedConfig = persistConfigRawSecretValues(validatedConfig, secretStorageId, workspaceId, spec, sourceId, isDraft)
       var reprocessedConfig: ConfigWithProcessedSecrets? = null
 
       if (secretStorageId.isPresent) {
@@ -761,6 +776,7 @@ class SourceHandler
       workspaceId: UUID,
       spec: ConnectorSpecification,
       sourceId: UUID,
+      isDraft: Boolean,
     ): JsonNode {
       val secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(WorkspaceId(workspaceId))
       val processedConfig =
@@ -786,6 +802,7 @@ class SourceHandler
           processedConfig,
           spec.connectionSpecification,
           secretPersistence,
+          validateAsPartial = isDraft,
         )
       } else {
         return secretsRepositoryWriter.createFromConfig(
@@ -827,6 +844,7 @@ class SourceHandler
         .isEntitled(isEntitled)
         .breakingChanges(breakingChanges.orElse(null))
         .supportState(apiPojoConverters.toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion.supportState))
+        .isDraft(sourceConnection.isDraft == true)
         .createdAt(sourceConnection.createdAt)
         .resourceAllocation(apiPojoConverters.scopedResourceReqsToApi(sourceConnection.resourceRequirements))
     }

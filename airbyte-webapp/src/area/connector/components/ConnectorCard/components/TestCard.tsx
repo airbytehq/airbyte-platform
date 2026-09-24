@@ -15,7 +15,7 @@ import TestingConnectionSuccess from "./TestingConnectionSuccess";
 interface IProps {
   formType: "source" | "destination";
   isValid: boolean;
-  onRetestClick: () => void;
+  onRetestClick?: () => void;
   onCancelTesting: () => void;
   isTestConnectionInProgress?: boolean;
   successMessage?: React.ReactNode;
@@ -83,7 +83,7 @@ export const TestCard: React.FC<IProps> = ({
             >
               <FormattedMessage id="form.cancel" />
             </Button>
-          ) : (
+          ) : onRetestClick ? (
             <Button
               type="button"
               onClick={onRetestClick}
@@ -94,7 +94,7 @@ export const TestCard: React.FC<IProps> = ({
             >
               <FormattedMessage id={`form.${formType}Retest`} />
             </Button>
-          )}
+          ) : null}
         </FlexContainer>
         {isTestConnectionInProgress ? (
           <FlexContainer justifyContent="center">

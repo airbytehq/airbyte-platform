@@ -25,6 +25,7 @@ import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.model.generated.WorkloadPriority
+import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
@@ -55,6 +56,7 @@ import io.airbyte.config.WorkloadPriority.Companion.fromValue
 import io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.StreamResetPersistence
+import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.configWithTextualSecretPlaceholders
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
@@ -143,9 +145,17 @@ open class SchedulerHandler
       val resourceRequirements =
         getResourceRequirementsForJobType(sourceDef.resourceRequirements, JobTypeResourceLimit.JobType.CHECK_CONNECTION)
 
-      return reportConnectionStatus(
-        synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector, resourceRequirements),
-      )
+      if (source.isDraft == true) {
+        jsonSchemaValidator.ensure(
+          sourceVersion.spec.connectionSpecification,
+          configWithTextualSecretPlaceholders(source.configuration, sourceVersion.spec.connectionSpecification),
+        )
+      }
+      val response = synchronousSchedulerClient.createSourceCheckConnectionJob(source, sourceVersion, isCustomConnector, resourceRequirements)
+      if (source.isDraft == true && response.isSuccess && response.output.status == StandardCheckConnectionOutput.Status.SUCCEEDED) {
+        sourceService.promoteSourceFromDraft(sourceId)
+      }
+      return reportConnectionStatus(response)
     }
 
     fun checkSourceConnectionFromSourceCreate(sourceConfig: SourceCoreConfig): CheckConnectionRead {
@@ -217,9 +227,18 @@ open class SchedulerHandler
       // the default settings in WorkerConfig.
       val resourceRequirements =
         getResourceRequirementsForJobType(destinationDef.resourceRequirements, JobTypeResourceLimit.JobType.CHECK_CONNECTION)
-      return reportConnectionStatus(
-        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector, resourceRequirements),
-      )
+      if (destination.isDraft == true) {
+        jsonSchemaValidator.ensure(
+          destinationVersion.spec.connectionSpecification,
+          configWithTextualSecretPlaceholders(destination.configuration, destinationVersion.spec.connectionSpecification),
+        )
+      }
+      val response =
+        synchronousSchedulerClient.createDestinationCheckConnectionJob(destination, destinationVersion, isCustomConnector, resourceRequirements)
+      if (destination.isDraft == true && response.isSuccess && response.output.status == StandardCheckConnectionOutput.Status.SUCCEEDED) {
+        destinationService.promoteDestinationFromDraft(destination.destinationId)
+      }
+      return reportConnectionStatus(response)
     }
 
     fun checkDestinationConnectionFromDestinationCreate(destinationConfig: DestinationCoreConfig): CheckConnectionRead {
@@ -285,6 +304,9 @@ open class SchedulerHandler
 
     fun discoverSchemaForSourceFromSourceId(req: SourceDiscoverSchemaRequestBody): SourceDiscoverSchemaRead {
       val source = sourceService.getSourceConnection(req.sourceId)
+      if (source.isDraft == true) {
+        throw ActorNotReadyProblem()
+      }
 
       return discover(req, source)
     }
@@ -481,15 +503,23 @@ open class SchedulerHandler
       connectionIdRequestBody: ConnectionIdRequestBody,
       organizationId: UUID? = null,
       returnAfterJobId: Boolean = false,
-    ): JobInfoRead = submitManualSyncToWorker(connectionIdRequestBody.connectionId, organizationId, returnAfterJobId)
+    ): JobInfoRead {
+      ensureConnectionActorsReady(connectionIdRequestBody.connectionId)
+      return submitManualSyncToWorker(connectionIdRequestBody.connectionId, organizationId, returnAfterJobId)
+    }
 
-    fun resetConnection(connectionIdRequestBody: ConnectionIdRequestBody): JobInfoRead =
-      submitResetConnectionToWorker(connectionIdRequestBody.connectionId)
+    fun resetConnection(connectionIdRequestBody: ConnectionIdRequestBody): JobInfoRead {
+      ensureConnectionActorsReady(connectionIdRequestBody.connectionId)
+      return submitResetConnectionToWorker(connectionIdRequestBody.connectionId)
+    }
 
-    fun resetConnectionStream(connectionStreamRequestBody: ConnectionStreamRequestBody): JobInfoRead =
-      submitResetConnectionStreamsToWorker(connectionStreamRequestBody.connectionId, connectionStreamRequestBody.streams)
+    fun resetConnectionStream(connectionStreamRequestBody: ConnectionStreamRequestBody): JobInfoRead {
+      ensureConnectionActorsReady(connectionStreamRequestBody.connectionId)
+      return submitResetConnectionStreamsToWorker(connectionStreamRequestBody.connectionId, connectionStreamRequestBody.streams)
+    }
 
     fun createJob(jobCreate: JobCreate): JobInfoRead {
+      ensureConnectionActorsReady(jobCreate.connectionId)
       // Fail non-terminal jobs first to prevent failing to create a new job
       jobCreationAndStatusUpdateHelper.failNonTerminalJobs(jobCreate.connectionId)
 
@@ -561,6 +591,15 @@ open class SchedulerHandler
         }
 
         return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId))
+      }
+    }
+
+    private fun ensureConnectionActorsReady(connectionId: UUID) {
+      val connection = connectionService.getStandardSync(connectionId)
+      if ((connection.sourceId != null && sourceService.getSourceConnection(connection.sourceId).isDraft == true) ||
+        (connection.destinationId != null && destinationService.getDestinationConnection(connection.destinationId).isDraft == true)
+      ) {
+        throw ActorNotReadyProblem()
       }
     }
 

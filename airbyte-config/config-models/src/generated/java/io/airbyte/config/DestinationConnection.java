@@ -33,6 +33,7 @@ import java.util.UUID;
   "destinationId",
   "configuration",
   "tombstone",
+  "isDraft",
   "createdAt",
   "updatedAt",
   "resourceRequirements"
@@ -83,6 +84,8 @@ public class DestinationConnection implements Serializable {
   @JsonProperty("tombstone")
   @JsonPropertyDescription("if not set or false, the configuration is active. if true, then this configuration is permanently off.")
   private Boolean tombstone;
+  @JsonProperty("isDraft")
+  private Boolean isDraft;
   /**
    *
    * (Required)
@@ -253,6 +256,21 @@ public class DestinationConnection implements Serializable {
     return this;
   }
 
+  @JsonProperty("isDraft")
+  public Boolean getIsDraft() {
+    return isDraft;
+  }
+
+  @JsonProperty("isDraft")
+  public void setIsDraft(Boolean isDraft) {
+    this.isDraft = isDraft;
+  }
+
+  public DestinationConnection withIsDraft(Boolean isDraft) {
+    this.isDraft = isDraft;
+    return this;
+  }
+
   /**
    *
    * (Required)
@@ -363,6 +381,10 @@ public class DestinationConnection implements Serializable {
     sb.append('=');
     sb.append(((this.tombstone == null) ? "<null>" : this.tombstone));
     sb.append(',');
+    sb.append("isDraft");
+    sb.append('=');
+    sb.append(((this.isDraft == null) ? "<null>" : this.isDraft));
+    sb.append(',');
     sb.append("createdAt");
     sb.append('=');
     sb.append(((this.createdAt == null) ? "<null>" : this.createdAt));
@@ -393,6 +415,7 @@ public class DestinationConnection implements Serializable {
     result = ((result * 31) + ((this.resourceRequirements == null) ? 0 : this.resourceRequirements.hashCode()));
     result = ((result * 31) + ((this.createdAt == null) ? 0 : this.createdAt.hashCode()));
     result = ((result * 31) + ((this.tombstone == null) ? 0 : this.tombstone.hashCode()));
+    result = ((result * 31) + ((this.isDraft == null) ? 0 : this.isDraft.hashCode()));
     result = ((result * 31) + ((this.configuration == null) ? 0 : this.configuration.hashCode()));
     result = ((result * 31) + ((this.name == null) ? 0 : this.name.hashCode()));
     result = ((result * 31) + ((this.destinationDefinitionId == null) ? 0 : this.destinationDefinitionId.hashCode()));
@@ -412,7 +435,8 @@ public class DestinationConnection implements Serializable {
       return false;
     }
     return Objects.equals(this.resourceRequirements, rhs.resourceRequirements) && Objects.equals(this.createdAt, rhs.createdAt)
-        && Objects.equals(this.tombstone, rhs.tombstone) && Objects.equals(this.configuration, rhs.configuration)
+        && Objects.equals(this.tombstone, rhs.tombstone) && Objects.equals(this.isDraft, rhs.isDraft)
+        && Objects.equals(this.configuration, rhs.configuration)
         && Objects.equals(this.name, rhs.name) && Objects.equals(this.destinationDefinitionId, rhs.destinationDefinitionId)
         && Objects.equals(this.additionalProperties, rhs.additionalProperties) && Objects.equals(this.destinationId, rhs.destinationId)
         && Objects.equals(this.workspaceId, rhs.workspaceId) && Objects.equals(this.updatedAt, rhs.updatedAt);

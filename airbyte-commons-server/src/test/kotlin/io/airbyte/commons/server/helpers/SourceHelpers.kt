@@ -95,5 +95,6 @@ object SourceHelpers {
       .isVersionOverrideApplied(isVersionOverrideApplied)
       .isEntitled(isEntitled)
       .supportState(supportState)
+      .isDraft(source.isDraft == true)
       .resourceAllocation(resourceAllocation)
 }

@@ -62,6 +62,8 @@ interface DestinationService {
 
   fun writeDestinationConnectionNoSecrets(partialDestination: DestinationConnection)
 
+  fun promoteDestinationFromDraft(destinationId: UUID)
+
   fun listDestinationConnection(): List<DestinationConnection>
 
   fun listWorkspaceDestinationConnection(workspaceId: UUID): List<DestinationConnection>

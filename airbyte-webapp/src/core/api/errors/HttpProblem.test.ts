@@ -7,6 +7,7 @@ import { HttpProblem } from "./HttpProblem";
 import { KnownApiProblemTypeAndPrefixes } from "./problems";
 
 jest.mock("locales/en.errors.json", () => ({
+  ...jest.requireActual<Record<string, string>>("locales/en.errors.json"),
   validation: "Validation error: {reason}",
   "validation/invalid-email": "Invalid email: {reason}",
   "validation/invalid-email/already-exists": "Email already exists: {reason}",
@@ -148,6 +149,19 @@ describe("HttpProblem", () => {
       });
       expect(error).toHaveProperty("i18nType", "exact");
       expect(translate(error)).toBe("Old error: did not go well");
+    });
+
+    it("should show the connector setup guidance for actor-not-ready errors", () => {
+      const error = new HttpProblem(request, 409, {
+        type: "https://reference.airbyte.com/reference/errors#409-actor-not-ready",
+        title: "actor-not-ready",
+        detail: "The source or destination is not ready. Complete connector setup first.",
+      });
+
+      expect(error).toHaveProperty("i18nType", "exact");
+      expect(translate(error)).toBe(
+        "The source or destination is still in draft and isn't usable in a connection yet. Finish setting up the connector first, then create a connection."
+      );
     });
 
     it("should not try hierarchy on legacy error types", () => {

@@ -296,6 +296,27 @@ components:
               default: State conflict
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    ActorNotReadyProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: https://reference.airbyte.com/reference/errors#409-actor-not-ready
+            title:
+              type: string
+              default: actor-not-ready
+            detail:
+              type: string
+              default: The source or destination is not ready. Complete connector setup first.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
     ConnectionLockedProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

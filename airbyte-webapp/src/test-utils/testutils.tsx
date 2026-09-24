@@ -99,6 +99,7 @@ export const mockSource: SourceRead = {
   sourceDefinitionId: "test-source-definition-id",
   connectionConfiguration: {},
   createdAt: 966690000,
+  isDraft: false,
 };
 
 export const mockDestination: DestinationRead = {
@@ -109,4 +110,5 @@ export const mockDestination: DestinationRead = {
   destinationDefinitionId: "test-destination-definition-id",
   connectionConfiguration: {},
   createdAt: 966690000,
+  isDraft: false,
 };

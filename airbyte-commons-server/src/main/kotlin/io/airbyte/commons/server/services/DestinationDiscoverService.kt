@@ -6,6 +6,7 @@ package io.airbyte.commons.server.services
 
 import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogNotFoundData
 import io.airbyte.api.problems.model.generated.ProblemDestinationDiscoverData
+import io.airbyte.api.problems.throwable.generated.ActorNotReadyProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.DestinationDiscoverNotSupportedProblem
 import io.airbyte.commons.json.Jsons
@@ -53,6 +54,9 @@ class DestinationDiscoverService(
     skipCache: Boolean = false,
   ): DestinationCatalogWithId {
     val destination = destinationService.getDestinationConnection(destinationId.value)
+    if (destination.isDraft == true) {
+      throw ActorNotReadyProblem()
+    }
     val destinationDefinition = destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)
     val destinationVersion =
       actorDefinitionVersionHelper.getDestinationVersion(

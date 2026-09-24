@@ -15,6 +15,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.airbyte.validation.json.JsonValidationException
 import io.micrometer.core.instrument.Counter
 import io.mockk.every
 import io.mockk.mockk
@@ -72,6 +73,65 @@ internal class SecretsRepositoryWriterTest {
     fun setup() {
       every { metricClient.count(metric = any(), value = any()) } returns mockk<Counter>()
       every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
+    }
+
+    @Test
+    fun `draft update permits missing required fields`() {
+      val spec =
+        Jsons.deserialize(
+          """
+          {
+            "type": "object",
+            "required": ["host", "username"],
+            "additionalProperties": false,
+            "properties": {
+              "host": { "type": "string" },
+              "username": { "type": "string" }
+            }
+          }
+          """.trimIndent(),
+        )
+      val partialConfig = Jsons.deserialize("""{ "host": "localhost" }""")
+
+      val persistedConfig =
+        secretsRepositoryWriter.updateFromConfig(
+          WORKSPACE_ID,
+          buildConfigWithSecretRefsJava(Jsons.emptyObject()),
+          ConfigWithProcessedSecrets(partialConfig, emptyMap()),
+          spec,
+          secretPersistence,
+          validateAsPartial = true,
+        )
+
+      assertEquals(partialConfig, persistedConfig)
+    }
+
+    @Test
+    fun `ready update still requires all required fields`() {
+      val spec =
+        Jsons.deserialize(
+          """
+          {
+            "type": "object",
+            "required": ["host", "username"],
+            "properties": {
+              "host": { "type": "string" },
+              "username": { "type": "string" }
+            }
+          }
+          """.trimIndent(),
+        )
+      val partialConfig = Jsons.deserialize("""{ "host": "localhost" }""")
+
+      Assertions.assertThrows(JsonValidationException::class.java) {
+        secretsRepositoryWriter.updateFromConfig(
+          WORKSPACE_ID,
+          buildConfigWithSecretRefsJava(Jsons.emptyObject()),
+          ConfigWithProcessedSecrets(partialConfig, emptyMap()),
+          spec,
+          secretPersistence,
+        )
+      }
     }
 
     @Test

@@ -18,7 +18,7 @@ import { ConnectorCardValues } from "area/connector/components/ConnectorForm/typ
 import { ConnectionConfiguration } from "area/connector/types";
 import { CloudInviteUsersHint } from "area/organization/components/CloudInviteUsersHint";
 import { useGetDestinationDefinitionSpecificationAsync } from "core/api";
-import { ActorType, DestinationDefinitionRead } from "core/api/types/AirbyteClient";
+import { ActorType, DestinationDefinitionRead, DestinationRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
 import { DestinationPaths } from "pages/routePaths";
 
@@ -38,6 +38,8 @@ interface DestinationFormWithAgentProps {
   destinationDefinitions: DestinationDefinitionRead[];
   selectedDestinationDefinitionId?: string;
   contextLayerOptIn?: React.ReactNode;
+  onSaveDraft?: (values: DestinationFormValues, existingDraft?: DestinationRead) => Promise<DestinationRead>;
+  onDraftPromoted?: (draft: DestinationRead, values: DestinationFormValues) => Promise<void> | void;
 }
 
 export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> = ({
@@ -46,6 +48,8 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
   destinationDefinitions,
   selectedDestinationDefinitionId,
   contextLayerOptIn,
+  onSaveDraft,
+  onDraftPromoted,
 }) => {
   const { data: destinationDefinitionSpecification } = useGetDestinationDefinitionSpecificationAsync(
     selectedDestinationDefinitionId || null
@@ -193,6 +197,8 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
               selectedConnectorDefinitionSpecification={destinationDefinitionSpecification}
               selectedConnectorDefinitionId={selectedDestinationDefinitionId || null}
               onSubmit={onSubmitConnectorCard}
+              onSaveDraft={onSaveDraft}
+              onDraftPromoted={onDraftPromoted}
               supportLevel={selectedDestinationDefinition?.supportLevel}
               preFooterSlot={contextLayerOptIn}
               leftFooterSlot={
@@ -207,6 +213,8 @@ export const DestinationFormWithAgent: React.FC<DestinationFormWithAgentProps> =
                     onOAuthStateChange={handleOAuthStateChange}
                     onFormValuesReady={handleFormValuesReady}
                     onCheckComplete={handleCheckComplete}
+                    onSaveDraft={onSaveDraft}
+                    onDraftPromoted={onDraftPromoted}
                     touchedSecretFieldsRef={touchedSecretFieldsRef}
                     addTouchedSecretField={addTouchedSecretField}
                   />

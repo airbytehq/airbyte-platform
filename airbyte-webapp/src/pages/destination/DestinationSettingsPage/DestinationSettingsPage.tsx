@@ -50,6 +50,12 @@ export const DestinationSettingsPage: React.FC = () => {
     });
   };
 
+  const onSaveDraft = async (values: ConnectorCardValues) =>
+    updateDestination({
+      values,
+      destinationId: destination.destinationId,
+    });
+
   const onDelete = useCallback(async () => {
     clearFormChange(formId);
     await deleteDestination({
@@ -82,6 +88,8 @@ export const DestinationSettingsPage: React.FC = () => {
           connector={destination}
           reloadConfig={reloadDestination}
           onSubmit={onSubmitForm}
+          onSaveDraft={destination.isDraft ? onSaveDraft : undefined}
+          onDraftPromoted={destination.isDraft ? async () => reloadDestination() : undefined}
           onDeleteClick={onDeleteClick}
           supportLevel={destinationDefinitionVersion.supportLevel}
         />

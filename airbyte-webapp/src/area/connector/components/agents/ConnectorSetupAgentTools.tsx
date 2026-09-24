@@ -9,17 +9,20 @@ import { useSubmitConfigurationTool } from "area/connector/components/agents/too
 import { TOOL_NAMES } from "area/connector/components/agents/tools/toolNames";
 import { type ClientTools } from "area/connector/components/chat/hooks/useChatMessages";
 import { useConnectorForm } from "area/connector/components/ConnectorForm/connectorFormContext";
-import { type ConnectorFormValues } from "area/connector/components/ConnectorForm/types";
+import { type ConnectorCardValues, type ConnectorFormValues } from "area/connector/components/ConnectorForm/types";
 import { ActorType } from "core/api/types/AirbyteClient";
+import { type ConnectorT } from "core/domain/connector";
 
-interface ConnectorSetupAgentToolsProps {
+type AgentConnectorValues = ConnectorCardValues & { createAsDraft?: true; setupFlow: "agent" };
+
+interface ConnectorSetupAgentToolsProps<T extends ConnectorT> {
   actorDefinitionId?: string;
   actorType: ActorType;
   onSubmitStep: (values: {
     name: string;
     serviceType: string;
     connectionConfiguration: Record<string, unknown>;
-  }) => void;
+  }) => Promise<void> | void;
   onClientToolsReady: (tools: ClientTools) => void;
   onSecretInputStateChange: (state: {
     isSecretInputActive: boolean;
@@ -36,6 +39,8 @@ interface ConnectorSetupAgentToolsProps {
   }) => void;
   onFormValuesReady?: (getFormValues: () => Record<string, unknown>) => void;
   onCheckComplete?: (success: boolean) => void;
+  onSaveDraft?: (values: AgentConnectorValues, existingDraft?: T) => Promise<T>;
+  onDraftPromoted?: (draft: T, values: AgentConnectorValues) => Promise<void> | void;
   touchedSecretFieldsRef: React.MutableRefObject<Set<string>>;
   addTouchedSecretField: (path: string) => void;
 }
@@ -44,7 +49,7 @@ interface ConnectorSetupAgentToolsProps {
  * Component that sets up chat tools for the connector setup agent.
  * Must be rendered inside FormProvider as saveDraftTool needs form context.
  */
-export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> = ({
+export const ConnectorSetupAgentTools = <T extends ConnectorT>({
   actorDefinitionId,
   actorType,
   onSubmitStep,
@@ -53,20 +58,27 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
   onOAuthStateChange,
   onFormValuesReady,
   onCheckComplete,
+  onSaveDraft,
+  onDraftPromoted,
   touchedSecretFieldsRef,
   addTouchedSecretField,
-}) => {
+}: ConnectorSetupAgentToolsProps<T>) => {
   const { getValues: getRawValues } = useFormContext<ConnectorFormValues>();
   const { castValues } = useConnectorForm();
+  const draftConnectorRef = useRef<T>();
+  const draftCheckSucceededRef = useRef(false);
 
   // Create callback that returns cleaned form values (empty strings removed, schema-cast)
   const getFormValues = useCallback(() => castValues(getRawValues()), [getRawValues, castValues]);
 
   // Setup client tools - form is single source of truth
-  const submitTool = useSubmitConfigurationTool({
+  const submitTool = useSubmitConfigurationTool<T>({
     actorDefinitionId,
     onSubmitSourceStep: onSubmitStep,
     getFormValues,
+    getDraftConnector: () => draftConnectorRef.current,
+    wasDraftCheckSuccessful: () => draftCheckSucceededRef.current,
+    onDraftPromoted,
   });
   const saveDraftTool = useSaveConfigurationTool(touchedSecretFieldsRef.current);
 
@@ -90,11 +102,14 @@ export const ConnectorSetupAgentTools: React.FC<ConnectorSetupAgentToolsProps> =
     actorType,
   });
 
-  const checkTool = useCheckConfigurationTool({
+  const checkTool = useCheckConfigurationTool<T>({
     actorDefinitionId,
     actorType,
     getFormValues,
     onCheckComplete,
+    onSaveDraft,
+    draftConnectorRef,
+    draftCheckSucceededRef,
   });
 
   const clientTools: ClientTools = useMemo(

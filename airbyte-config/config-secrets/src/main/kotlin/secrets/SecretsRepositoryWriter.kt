@@ -184,6 +184,7 @@ open class SecretsRepositoryWriter(
     fullConfig: ConfigWithProcessedSecrets,
     spec: JsonNode,
     secretPersistence: SecretPersistence,
+    validateAsPartial: Boolean = false,
   ): JsonNode =
     updateFromConfig(
       workspaceId,
@@ -192,6 +193,7 @@ open class SecretsRepositoryWriter(
       spec,
       secretPersistence,
       AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
+      validateAsPartial,
     )
 
   /**
@@ -219,13 +221,18 @@ open class SecretsRepositoryWriter(
     spec: JsonNode,
     secretPersistence: SecretPersistence,
     secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
+    validateAsPartial: Boolean = false,
   ): JsonNode {
     val configWithSecretPlaceholders =
       SecretsHelpers.SecretReferenceHelpers.configWithTextualSecretPlaceholders(
         fullConfig.originalConfig,
         spec,
       )
-    validator.ensure(spec, configWithSecretPlaceholders)
+    if (validateAsPartial) {
+      validator.ensurePartial(spec, configWithSecretPlaceholders)
+    } else {
+      validator.ensure(spec, configWithSecretPlaceholders)
+    }
 
     val updatedSplitConfig: SplitSecretConfig =
       SecretsHelpers.splitAndUpdateConfig(secretBaseId, oldPartialConfig, fullConfig, secretPersistence, secretBasePrefix)

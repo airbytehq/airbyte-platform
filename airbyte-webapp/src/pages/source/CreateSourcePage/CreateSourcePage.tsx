@@ -25,7 +25,9 @@ import {
   useGetSourceDefinitionSpecificationAsync,
   useSetFusionActorEnablement,
   useSourceDefinitionList,
+  useUpdateSource,
 } from "core/api";
+import { SourceRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "core/services/Experiment";
 import { useFormChangeTrackerService } from "core/services/FormChangeTracker";
@@ -50,6 +52,7 @@ export const CreateSourcePage: React.FC = () => {
   const { isLoading: isLoadingSpec } = useGetSourceDefinitionSpecificationAsync(sourceDefinitionId || null);
   const { sourceDefinitions } = useSourceDefinitionList();
   const { mutateAsync: createSource } = useCreateSource();
+  const { mutateAsync: updateSource } = useUpdateSource();
   const { mutateAsync: setFusionActorEnablement } = useSetFusionActorEnablement();
   const { registerNotification } = useNotificationService();
   const isCloudApp = useIsCloudApp();
@@ -131,6 +134,61 @@ export const CreateSourcePage: React.FC = () => {
     navigate(`../${result.sourceId}/${SourcePaths.Connections}`);
   };
 
+  const onSaveSourceDraft = async (
+    values: {
+      name: string;
+      serviceType: string;
+      connectionConfiguration: ConnectionConfiguration;
+      setupFlow?: SourceSetupFlow;
+    },
+    existingDraft?: SourceRead
+  ) => {
+    if (existingDraft) {
+      return updateSource({ values, sourceId: existingDraft.sourceId });
+    }
+    const connector = sourceDefinitions.find((item) => item.sourceDefinitionId === values.serviceType);
+    if (!connector) {
+      throw new Error("No Connector Found");
+    }
+    return createSource({ values: { ...values, createAsDraft: true }, sourceConnector: connector });
+  };
+
+  const onSourceDraftPromoted = async (
+    source: SourceRead,
+    values: { serviceType: string; setupFlow?: SourceSetupFlow }
+  ) => {
+    const connector = sourceDefinitions.find((item) => item.sourceDefinitionId === values.serviceType);
+    if (!connector) {
+      throw new Error("No Connector Found");
+    }
+    const shouldSyncContextLayer =
+      isCloudApp &&
+      showAgentsOptIn &&
+      status?.is_enrolled === true &&
+      canManage &&
+      values.setupFlow !== "agent" &&
+      supportedSourceDefinitionIds.has(connector.sourceDefinitionId);
+    if (shouldSyncContextLayer) {
+      void setFusionActorEnablement({
+        actorId: source.sourceId,
+        actorKind: "source",
+        workspaceId: source.workspaceId,
+        state: {
+          enable_agent_access: contextLayerOptIn.agentAccess,
+          enable_indexing: contextLayerOptIn.agentAccess && contextLayerOptIn.semanticSearch,
+        },
+      }).catch(() => {
+        registerNotification({
+          id: "cloud.contextLayer.sourceOptIn.syncFailed",
+          text: formatMessage({ id: "cloud.contextLayer.sourceOptIn.syncFailed" }),
+          type: "error",
+        });
+      });
+    }
+    clearAllFormChanges();
+    navigate(`../${source.sourceId}/${SourcePaths.Connections}`);
+  };
+
   const location = useLocation();
   // save previous path on mount so that it remains unchanged even if search params are added on this page
   const [prevPath] = useState<string>(location.state?.prevPath || `../${SourcePaths.SelectSourceNew}`);
@@ -176,6 +234,8 @@ export const CreateSourcePage: React.FC = () => {
                   onChange={setContextLayerOptIn}
                 />
               }
+              onSaveDraft={onSaveSourceDraft}
+              onDraftPromoted={onSourceDraftPromoted}
             />
           </div>
         </div>
@@ -192,6 +252,8 @@ export const CreateSourcePage: React.FC = () => {
             </FlexContainer>
             <SourceForm
               onSubmit={onSubmitSourceStep}
+              onSaveDraft={onSaveSourceDraft}
+              onDraftPromoted={onSourceDraftPromoted}
               sourceDefinitions={sourceDefinitions}
               selectedSourceDefinitionId={sourceDefinitionId}
               contextLayerOptIn={
