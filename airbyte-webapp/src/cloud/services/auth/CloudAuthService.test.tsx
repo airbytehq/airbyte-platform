@@ -45,6 +45,27 @@ describe(`${initializeUserManager.name}()`, () => {
     expect(userManager.settings.authority).toMatch(/auth\/realms\/another-realm/);
   });
 
+  it("should strip IdP-initiated login params from the redirect_uri", () => {
+    windowSearchSpy.mockImplementation(() => ({
+      origin: DEFAULT_JEST_WINDOW_ORIGIN,
+      pathname: "/",
+      search:
+        "?iss=https%3A%2F%2Fexample.okta.com&login_hint=user%40example.com&target_link_uri=x&foo=bar&realm=another-realm",
+    }));
+    const userManager = initializeUserManager();
+    expect(userManager.settings.redirect_uri).toBe(`${DEFAULT_JEST_WINDOW_ORIGIN}/?foo=bar&realm=another-realm`);
+  });
+
+  it("should strip Keycloak callback params from the redirect_uri", () => {
+    windowSearchSpy.mockImplementation(() => ({
+      origin: DEFAULT_JEST_WINDOW_ORIGIN,
+      pathname: "/",
+      search: "?realm=another-realm&state=abc&session_state=def&iss=https%3A%2F%2Fkc.example.com&code=ghi&foo=bar",
+    }));
+    const userManager = initializeUserManager();
+    expect(userManager.settings.redirect_uri).toBe(`${DEFAULT_JEST_WINDOW_ORIGIN}/?foo=bar&realm=another-realm`);
+  });
+
   it("should initialize realm based on local storage", () => {
     const mockKey = `oidc.user:${DEFAULT_JEST_WINDOW_ORIGIN}/auth/realms/local-storage-realm:local-storage-client-id`;
     window.localStorage.setItem(mockKey, "no need to populate the value for this test");

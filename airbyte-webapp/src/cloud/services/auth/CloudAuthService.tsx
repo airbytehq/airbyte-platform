@@ -67,8 +67,16 @@ type KeycloakAuthStateAction =
 
 type BroadcastEvent = Extract<KeycloakAuthStateAction, { type: "userLoaded" | "userUnloaded" }>;
 
+// state, code, session_state and iss are from the keycloak callback. realm is added by us to indicate which realm the user is signing in to.
+const SSO_SEARCH_PARAMS = ["state", "code", "session_state", "iss", "realm"];
+// Params sent by an IdP for third-party (IdP-initiated) login, see OIDC Core 4.
+const IDP_INITIATED_LOGIN_PARAMS = ["iss", "login_hint", "target_link_uri"];
+
+// Keycloak rejects any redirect_uri containing OIDC response params (e.g. `iss`, `code`, `state`), so none of
+// the params from an IdP-initiated login or a previous callback may be forwarded into the redirect_uri.
 function createRedirectUri(realm: string) {
   const searchParams = new URLSearchParams(window.location.search);
+  [...SSO_SEARCH_PARAMS, ...IDP_INITIATED_LOGIN_PARAMS].forEach((param) => searchParams.delete(param));
   searchParams.set("realm", realm);
   return `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
 }
@@ -125,9 +133,6 @@ function clearLocalStorageOidcSessions() {
 
 // Removes OIDC params from URL, but doesn't remove other params that might be present
 export function createUriWithoutSsoParams() {
-  // state, code and session_state are from keycloak. realm is added by us to indicate which realm the user is signing in to.
-  const SSO_SEARCH_PARAMS = ["state", "code", "session_state", "realm"];
-
   const searchParams = new URLSearchParams(window.location.search);
 
   SSO_SEARCH_PARAMS.forEach((param) => searchParams.delete(param));
