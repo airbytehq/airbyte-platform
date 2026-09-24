@@ -18,8 +18,12 @@ import io.airbyte.api.model.generated.StreamTransformUpdateStream
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.config.SlackNotificationConfiguration
+import io.airbyte.notification.SlackNotificationClient.Companion.SLACK_SECTION_TEXT_MAX_LENGTH
+import io.airbyte.notification.SlackNotificationClient.Companion.buildSchemaDiffToApplyNotification
+import io.airbyte.notification.SlackNotificationClient.Companion.buildSchemaPropagationNotification
 import io.airbyte.notification.SlackNotificationClient.Companion.buildSummary
 import io.airbyte.notification.SlackNotificationClient.Companion.sanitizePayloadForWebhook
+import io.airbyte.notification.SlackNotificationClient.Companion.truncateSummary
 import io.airbyte.notification.messages.ConnectionInfo
 import io.airbyte.notification.messages.DestinationInfo
 import io.airbyte.notification.messages.SchemaUpdateNotification
@@ -689,6 +693,86 @@ internal class SlackNotificationClientTest {
     Assertions.assertEquals(expected, buildSummary(diff).trimIndent())
   }
 
+  @Test
+  fun truncateSummaryLeavesShortSummaryUntouched() {
+    val shortSummary = " • Fields (+1/~0/-0)\n   • stream\n     ＋ new_field\n"
+    Assertions.assertEquals(shortSummary, truncateSummary(shortSummary))
+    Assertions.assertNull(truncateSummary(null))
+  }
+
+  @Test
+  fun truncateSummaryCapsLongSummaryAtSlackLimit() {
+    val summary = buildSummary(buildDiffWithManyFields())
+    Assertions.assertTrue(summary.length > SLACK_SECTION_TEXT_MAX_LENGTH)
+
+    val result = truncateSummary(summary)!!
+    Assertions.assertTrue(result.length <= SLACK_SECTION_TEXT_MAX_LENGTH)
+    Assertions.assertTrue(result.endsWith(TRUNCATION_NOTICE))
+
+    val lastLine = result.removeSuffix(TRUNCATION_NOTICE).lines().last()
+    Assertions.assertTrue(lastLine.matches(Regex("\\s+＋ field_\\d+")))
+  }
+
+  @Test
+  fun buildSchemaDiffToApplyNotificationTruncatesSummary() {
+    val summary = buildSummary(buildDiffWithManyFields())
+
+    val notification =
+      buildSchemaDiffToApplyNotification(
+        "workspace",
+        "source",
+        summary,
+        "header",
+        "message",
+        "http://airbyte.io/workspaces/123",
+        "http://airbyte.io/workspaces/123/source/456",
+      )
+
+    val blocks = notification.toJsonNode()["blocks"]
+    val lastBlockText = blocks[blocks.size() - 1]["text"]["text"].asText()
+    Assertions.assertTrue(lastBlockText.length <= SLACK_SECTION_TEXT_MAX_LENGTH)
+    Assertions.assertTrue(lastBlockText.endsWith(TRUNCATION_NOTICE))
+  }
+
+  @Test
+  fun buildSchemaPropagationNotificationTruncatesSummary() {
+    val summary = buildSummary(buildDiffWithManyFields())
+
+    val notification =
+      buildSchemaPropagationNotification(
+        "workspace",
+        "source",
+        summary,
+        "header",
+        "http://airbyte.io/workspaces/123",
+        "http://airbyte.io/workspaces/123/source/456",
+      )
+
+    val blocks = notification.toJsonNode()["blocks"]
+    val lastBlockText = blocks[blocks.size() - 1]["text"]["text"].asText()
+    Assertions.assertTrue(lastBlockText.length <= SLACK_SECTION_TEXT_MAX_LENGTH)
+    Assertions.assertTrue(lastBlockText.endsWith(TRUNCATION_NOTICE))
+  }
+
+  private fun buildDiffWithManyFields(): CatalogDiff {
+    val diff = CatalogDiff()
+    diff.addTransformsItem(
+      StreamTransform()
+        .transformType(StreamTransform.TransformTypeEnum.UPDATE_STREAM)
+        .streamDescriptor(StreamDescriptor().name("big_stream").namespace("main"))
+        .updateStream(
+          StreamTransformUpdateStream().fieldTransforms(
+            (0 until 400).map { i ->
+              FieldTransform()
+                .transformType(FieldTransform.TransformTypeEnum.ADD_FIELD)
+                .fieldName(listOf("field_$i"))
+            },
+          ),
+        ),
+    )
+    return diff
+  }
+
   internal class ServerHandler(
     private val expectedMessage: String,
   ) : HttpHandler {
@@ -824,6 +908,7 @@ internal class SlackNotificationClientTest {
     private val SOURCE_ID: UUID = UUID.randomUUID()
     private val DESTINATION_ID: UUID = UUID.randomUUID()
     private const val TEST_PATH = "/test"
+    private const val TRUNCATION_NOTICE = "\n… (summary truncated — open the connection in Airbyte to see all changes)"
     private const val DESTINATION_TEST = "destination-test"
     private const val JOB_DESCRIPTION = "job description"
     private const val LOG_URL = "logUrl"

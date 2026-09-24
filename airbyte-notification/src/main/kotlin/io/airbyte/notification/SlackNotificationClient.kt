@@ -504,6 +504,19 @@ class SlackNotificationClient : NotificationClient {
     private val MAPPER = ObjectMapper()
 
     @InternalForTesting
+    const val SLACK_SECTION_TEXT_MAX_LENGTH = 3000
+
+    private const val SUMMARY_TRUNCATION_NOTICE = "\n… (summary truncated — open the connection in Airbyte to see all changes)"
+
+    @InternalForTesting
+    fun truncateSummary(summary: String?): String? {
+      if (summary == null || summary.length <= SLACK_SECTION_TEXT_MAX_LENGTH) return summary
+      val maxContentLength = SLACK_SECTION_TEXT_MAX_LENGTH - SUMMARY_TRUNCATION_NOTICE.length
+      val cutoff = summary.lastIndexOf('\n', maxContentLength).takeIf { it > 0 } ?: maxContentLength
+      return summary.substring(0, cutoff) + SUMMARY_TRUNCATION_NOTICE
+    }
+
+    @InternalForTesting
     fun sanitizePayloadForWebhook(
       node: JsonNode,
       webhookUrl: String?,
@@ -805,7 +818,7 @@ class SlackNotificationClient : NotificationClient {
       field.setText(Notification.createLink(sourceName, sourceUrl))
       slackNotification.addDivider()
       val changeSection = slackNotification.addSection()
-      changeSection.setText(summary)
+      changeSection.setText(truncateSummary(summary))
       return slackNotification
     }
 
@@ -839,7 +852,7 @@ class SlackNotificationClient : NotificationClient {
       field.setText(Notification.createLink(sourceName, sourceUrl))
       slackNotification.addDivider()
       val changeSection = slackNotification.addSection()
-      changeSection.setText(summary)
+      changeSection.setText(truncateSummary(summary))
       return slackNotification
     }
 
