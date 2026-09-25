@@ -353,6 +353,45 @@ describe("ContextLayerPage", () => {
     );
   });
 
+  it("hydrates connector enablement only for expanded workspaces", () => {
+    mockUseAgentsProvisioningStatus.mockReturnValue({
+      is_enrolled: true,
+      is_instance_admin: false,
+      provisioning_state: "provisioned",
+      organization_id: "test-org-123",
+      organization_kind: "external_cloud",
+      external_cloud_eligible: true,
+      eligible_external_organization_id: null,
+    });
+    mockUseListWorkspacesInOrganization.mockReturnValue({
+      data: {
+        pages: [
+          {
+            workspaces: [
+              { workspaceId: "workspace-1", name: "Workspace 1" },
+              { workspaceId: "workspace-2", name: "Workspace 2" },
+            ],
+          },
+        ],
+      },
+    } as never);
+
+    renderWithIntl();
+
+    expect(screen.getByRole("button", { name: /Workspace 1/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: /Workspace 2/ })).toHaveAttribute("aria-expanded", "false");
+    expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-1", { hydrate: false });
+    expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-2", { hydrate: false });
+    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-1", { hydrate: true });
+    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-2", { hydrate: true });
+
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
+
+    expect(screen.getByRole("button", { name: /Workspace 1/ })).toHaveAttribute("aria-expanded", "true");
+    expect(mockUseFusionWorkspaceConnectors).toHaveBeenCalledWith("workspace-1", { hydrate: true });
+    expect(mockUseFusionWorkspaceConnectors).not.toHaveBeenCalledWith("workspace-2", { hydrate: true });
+  });
+
   it("asks for confirmation before disabling the Context layer for an enrolled organization", async () => {
     mockUseAgentsProvisioningStatus.mockReturnValue({
       is_enrolled: true,
@@ -518,6 +557,9 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 2/ }));
+
     expect(screen.getByText("GitHub account")).toBeInTheDocument();
     expect(screen.getByText("Stripe account")).toBeInTheDocument();
     expect(screen.getByText("BigQuery warehouse")).toBeInTheDocument();
@@ -581,6 +623,8 @@ describe("ContextLayerPage", () => {
     } as never);
 
     renderWithIntl();
+
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
 
     fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
     expect(await screen.findByText("Disable Agents access?")).toBeInTheDocument();
@@ -709,6 +753,8 @@ describe("ContextLayerPage", () => {
 
     renderWithIntl();
 
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
+
     expect(screen.getByRole("checkbox", { name: "GitHub account" })).toBeDisabled();
     expect(screen.getByRole("checkbox", { name: "BigQuery warehouse" })).toBeDisabled();
     expect(mutateAsync).not.toHaveBeenCalled();
@@ -745,6 +791,8 @@ describe("ContextLayerPage", () => {
     } as never);
 
     renderWithIntl();
+
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
 
     expect(screen.getByTestId("context-layer-source-error")).toHaveTextContent(
       "Unable to load connectors. Please try again."
@@ -786,6 +834,7 @@ describe("ContextLayerPage", () => {
     } as never);
 
     const view = renderWithIntl();
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
     const checkbox = screen.getByRole("checkbox", { name: "GitHub account" });
     fireEvent.click(checkbox);
     fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
@@ -840,6 +889,7 @@ describe("ContextLayerPage", () => {
     } as never);
 
     renderWithIntl();
+    fireEvent.click(screen.getByRole("button", { name: /Workspace 1/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: "GitHub account" }));
     fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled());

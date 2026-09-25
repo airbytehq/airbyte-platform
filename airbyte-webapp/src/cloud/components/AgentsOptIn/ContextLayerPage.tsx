@@ -56,7 +56,7 @@ const WorkspaceConnectorCard: React.FC<{
   onClearOptimistic: (key: string) => void;
   canManageOrganizationPermissions: boolean;
 }> = ({ workspace, enabledConnectors, onToggle, onClearOptimistic, canManageOrganizationPermissions }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [pendingConnectors, setPendingConnectors] = useState<Record<string, boolean>>({});
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
