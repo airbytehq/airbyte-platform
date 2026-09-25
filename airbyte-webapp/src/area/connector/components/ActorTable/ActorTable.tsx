@@ -1,12 +1,13 @@
 import { ColumnSort, createColumnHelper } from "@tanstack/react-table";
 import React, { useContext, useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Badge } from "components/ui/Badge";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
+import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { AllConnectionsStatusCell } from "area/connection/components/EntityTable/components/AllConnectionsStatusCell";
@@ -15,11 +16,15 @@ import { EntityNameCell } from "area/connection/components/EntityTable/component
 import { LastSyncCell } from "area/connection/components/EntityTable/components/LastSyncCell";
 import { NumberOfConnectionsCell } from "area/connection/components/EntityTable/components/NumberOfConnectionsCell";
 import {
-  ActorAgentAccessToggle,
   ActorSemanticSearchToggle,
   useShowActorContextLayerToggles,
 } from "cloud/components/AgentsOptIn/ActorContextLayerToggles";
 import { AgentsSourceCta } from "cloud/components/AgentsOptIn/AgentsSourceCta";
+import {
+  useAgentsSupportedDestinationDefinitionIds,
+  useAgentsSupportedSourceDefinitionIds,
+  useFusionActorEnablement,
+} from "core/api";
 import {
   ActorDefinitionVersionBreakingChanges,
   ActorListSortKey,
@@ -49,6 +54,7 @@ function isSourceReadList(list: SourceReadList | DestinationReadList): list is S
 interface ActorTableDataItem {
   actorType: "source" | "destination";
   id: string;
+  workspaceId: string;
   actorName: string;
   actorDefinitionName: string;
   actorDefinitionId: string;
@@ -88,6 +94,7 @@ export function createActorTableData(actorReadList: SourceReadList | Destination
     return actorReadList.sources.map((source) => ({
       actorType: "source",
       id: source.sourceId,
+      workspaceId: source.workspaceId,
       actorName: source.name,
       actorDefinitionName: source.sourceName,
       actorDefinitionId: source.sourceDefinitionId,
@@ -106,6 +113,7 @@ export function createActorTableData(actorReadList: SourceReadList | Destination
   return actorReadList.destinations.map((destination) => ({
     actorType: "destination",
     id: destination.destinationId,
+    workspaceId: destination.workspaceId,
     actorName: destination.name,
     actorDefinitionName: destination.destinationName,
     actorDefinitionId: destination.destinationDefinitionId,
@@ -124,6 +132,46 @@ export function createActorTableData(actorReadList: SourceReadList | Destination
 
 const columnHelper = createColumnHelper<ActorTableDataItem>();
 
+const ActorAgentAccessStatus: React.FC<{
+  actor: ActorTableDataItem;
+  supported: boolean;
+}> = ({ actor, supported }) => {
+  const { formatMessage } = useIntl();
+  const { data, isLoading, isError } = useFusionActorEnablement(
+    { actorId: actor.id, actorKind: actor.actorType, workspaceId: actor.workspaceId },
+    supported
+  );
+  const label = formatMessage({ id: "tables.agentAccess" });
+  const state = !supported
+    ? "notApplicable"
+    : isLoading
+    ? "loading"
+    : isError
+    ? "unavailable"
+    : data?.enable_agent_access
+    ? "configured"
+    : "notConfigured";
+  const title = formatMessage({ id: `tables.featureStatus.${state}` }, { feature: label });
+
+  return (
+    <span className={styles.featureStatus} role="img" aria-label={title} title={title}>
+      {state === "configured" ? (
+        <Icon type="statusSuccess" color="success" size="sm" />
+      ) : state === "notConfigured" ? (
+        <Icon type="statusError" color="disabled" size="sm" />
+      ) : state === "loading" ? (
+        <Icon type="loading" color="disabled" size="sm" />
+      ) : state === "unavailable" ? (
+        <Icon type="statusWarning" color="disabled" size="sm" />
+      ) : (
+        <Text as="span" size="sm" color="grey">
+          –
+        </Text>
+      )}
+    </span>
+  );
+};
+
 export const ActorTable: React.FC<ActorTableProps> = ({
   actorReadList,
   hasNextPage,
@@ -134,6 +182,8 @@ export const ActorTable: React.FC<ActorTableProps> = ({
   const connectorBreakingChangeDeadlinesEnabled = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
   const showActorContextLayerToggles = useShowActorContextLayerToggles();
   const isSourceList = isSourceReadList(actorReadList);
+  const supportedSourceDefinitionIds = useAgentsSupportedSourceDefinitionIds();
+  const supportedDestinationDefinitionIds = useAgentsSupportedDestinationDefinitionIds();
 
   const tableData = useMemo(() => createActorTableData(actorReadList), [actorReadList]);
 
@@ -198,7 +248,7 @@ export const ActorTable: React.FC<ActorTableProps> = ({
         sortUndefined: 1,
       }),
       columnHelper.accessor("connectionJobStatuses", {
-        header: () => <FormattedMessage id="sources.status" />,
+        header: () => <FormattedMessage id="tables.syncStatus" />,
         id: "status",
         meta: {
           noPadding: true,
@@ -226,7 +276,13 @@ export const ActorTable: React.FC<ActorTableProps> = ({
                 noPadding: false,
               },
               cell: (props) => (
-                <ActorAgentAccessToggle actorId={props.row.original.id} actorType={props.row.original.actorType} />
+                <ActorAgentAccessStatus
+                  actor={props.row.original}
+                  supported={(props.row.original.actorType === "source"
+                    ? supportedSourceDefinitionIds
+                    : supportedDestinationDefinitionIds
+                  ).has(props.row.original.actorDefinitionId)}
+                />
               ),
               enableSorting: false,
             }),
@@ -300,7 +356,13 @@ export const ActorTable: React.FC<ActorTableProps> = ({
         enableSorting: false,
       }),
     ],
-    [connectorBreakingChangeDeadlinesEnabled, isSourceList, showActorContextLayerToggles]
+    [
+      connectorBreakingChangeDeadlinesEnabled,
+      isSourceList,
+      showActorContextLayerToggles,
+      supportedSourceDefinitionIds,
+      supportedDestinationDefinitionIds,
+    ]
   );
 
   const customScrollParent = useContext(ScrollParentContext);
